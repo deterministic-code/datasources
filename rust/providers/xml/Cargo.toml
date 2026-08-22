@@ -1,0 +1,12 @@
+[package]
+name = "datasources-xml"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "xml datasource stub"
+
+[dependencies]
+datasources = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

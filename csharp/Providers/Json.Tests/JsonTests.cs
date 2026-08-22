@@ -1,0 +1,133 @@
+using System.Text.Json.Nodes;
+using Datasources;
+using Datasources.Json;
+
+namespace Datasources.Json.Tests;
+
+public class JsonTests
+{
+    public JsonTests()
+    {
+        Datasource.Reset();
+        Datasource.Use(JsonDatasource.Factory);
+    }
+
+    [Fact]
+    public void FilterHelpers()
+    {
+        Assert.Empty(JsonCommand.ParseFilter(null));
+        Assert.Empty(JsonCommand.ParseFilter(""));
+        Assert.Equal(1, Convert.ToInt32(JsonCommand.ParseFilter("{\"id\":1}")["id"]));
+        Assert.Throws<DatasourceException>(() => JsonCommand.ParseFilter("[]"));
+        Assert.Throws<DatasourceException>(() => JsonCommand.ParseFilter("1"));
+        Assert.False(JsonCommand.Matches(new JsonArray(), new Dictionary<string, object?>()));
+        Assert.True(JsonCommand.Matches(new JsonObject { ["id"] = 1 }, new Dictionary<string, object?>()));
+    }
+
+    [Fact]
+    public async Task FileStoreAndConnection()
+    {
+        var store = new MemoryFileStore();
+        await Assert.ThrowsAsync<DatasourceException>(() => store.Read("a.json"));
+        Assert.False(await store.Exists("a.json"));
+        await store.Write("a.json", "[{\"id\":2}]");
+        Assert.True(await store.Exists("a.json"));
+
+        var existing = new JsonConnection(new JsonConnectionOptions { Path = "a.json", FileStore = store });
+        await existing.Open();
+        Assert.Single(existing.GetCollection());
+        await existing.Open();
+
+        var missing = new JsonConnection(new JsonConnectionOptions { Path = "none.json", FileStore = new MemoryFileStore() });
+        await missing.Open();
+        Assert.Empty(missing.GetCollection());
+
+        var memory = new JsonConnection(new JsonConnectionOptions { Data = new JsonArray { new JsonObject { ["id"] = 1 } } });
+        await memory.Open();
+        await memory.Close();
+
+        var collection = new JsonConnection(new JsonConnectionOptions { Collection = "users" });
+        await collection.Open();
+        collection.Data = JsonValue.Create((string?)null)!;
+        collection.GetCollection();
+        collection.Data = new JsonArray();
+        collection.GetCollection();
+        collection.Data = new JsonObject { ["users"] = "bad" };
+        collection.GetCollection();
+
+        var plain = new JsonConnection();
+        await plain.Open();
+        plain.Data = new JsonObject();
+        plain.GetCollection();
+        await plain.Close();
+        Assert.Throws<DatasourceException>(() => plain.EnsureOpen());
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonConnection().StartTransaction());
+    }
+
+    [Fact]
+    public async Task TransactionsAndCrud()
+    {
+        var store = new MemoryFileStore();
+        var conn = new JsonConnection(new JsonConnectionOptions
+        {
+            Path = "db.json",
+            FileStore = store,
+            Data = new JsonArray { new JsonObject { ["id"] = 1, ["name"] = "a" } },
+        });
+        await conn.Open();
+        var txn = await conn.StartTransaction();
+        conn.GetCollection().Add(new JsonObject { ["id"] = 2 });
+        await conn.Persist();
+        Assert.False(store.Files.ContainsKey("db.json"));
+        await txn.Commit();
+        Assert.True(store.Files.ContainsKey("db.json"));
+
+        var mem = new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() });
+        await mem.Open();
+        var t = await mem.StartTransaction();
+        await t.Abort();
+        var t2 = await mem.StartTransaction();
+        await t2.Commit();
+
+        var repo = new JsonRepository(conn);
+        var command = new JsonCommand(conn);
+        Assert.NotNull(await repo.GetSingle());
+        Assert.Null(await repo.GetSingle(new Query("{\"id\":9}")));
+        Assert.NotEmpty(await AsyncEnumerable.Collect(repo.Get(new Query("{\"id\":1}"))));
+        await repo.Add(new Dictionary<string, object?> { ["id"] = 4, ["name"] = "d" });
+        await repo.Update(new Dictionary<string, object?> { ["id"] = 4, ["name"] = "D" });
+        await repo.Update(new Dictionary<string, object?> { ["name"] = "Z" }, new Where("{\"id\":4}"));
+        await repo.Delete(new Dictionary<string, object?> { ["id"] = 4 });
+        await command.Execute("insert", new[] { new Parameter("id", 5) });
+        await command.Execute("update", new[] { new Parameter("id", 5), new Parameter("$where", "{\"id\":5}") });
+        await command.Execute("delete", new[] { new Parameter("id", 5) });
+        await command.Execute("delete");
+        await Assert.ThrowsAsync<DatasourceException>(() => command.Execute("nope"));
+        await Assert.ThrowsAsync<DatasourceException>(() => command.Execute());
+        await command.ExecuteReader(null, new[] { new Parameter("name", "a") });
+
+        var closed = new JsonConnection();
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonCommand(closed).ExecuteReader());
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Add(new Dictionary<string, object?>()));
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Update(new Dictionary<string, object?> { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Delete(new Dictionary<string, object?> { ["id"] = 1 }));
+
+        var ds = new JsonDatasource(new JsonConnectionOptions { Data = new JsonArray() });
+        Assert.Equal("json", ds.Create().Provider);
+        var created = ds.CreateConnection();
+        await ((JsonConnection)created).Open();
+        ds.CreateCommand(created);
+        ds.CreateCommand();
+        ds.CreateRepository<Dictionary<string, object?>>(created, new RepositoryOptions { Collection = "users" });
+        ds.CreateRepository<Dictionary<string, object?>>();
+        Assert.Equal("json", Datasource.Create("json").Provider);
+
+        var fromFile = new JsonConnection(new JsonConnectionOptions
+        {
+            Path = "c.json",
+            Collection = "users",
+            FileStore = new MemoryFileStore { Files = { ["c.json"] = "{}" } },
+        });
+        await fromFile.Open();
+    }
+}

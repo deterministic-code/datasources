@@ -1,0 +1,19 @@
+{
+  "name": "datasources-typescript",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "datasources",
+    "providers/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@vitest/coverage-v8": "^3.1.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}

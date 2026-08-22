@@ -1,0 +1,12 @@
+[package]
+name = "datasources-yaml"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "yaml datasource stub"
+
+[dependencies]
+datasources = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

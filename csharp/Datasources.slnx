@@ -1,0 +1,28 @@
+<Solution>
+  <Project Path="Datasources/Datasources.csproj" />
+  <Project Path="Datasources.Tests/Datasources.Tests.csproj" />
+  <Folder Name="/Providers/">
+    <Project Path="Providers/DynamoDb/Datasources.DynamoDb.csproj" />
+    <Project Path="Providers/DynamoDb.Tests/Datasources.DynamoDb.Tests.csproj" />
+    <Project Path="Providers/Json/Datasources.Json.csproj" />
+    <Project Path="Providers/Json.Tests/Datasources.Json.Tests.csproj" />
+    <Project Path="Providers/MongoDb/Datasources.MongoDb.csproj" />
+    <Project Path="Providers/MongoDb.Tests/Datasources.MongoDb.Tests.csproj" />
+    <Project Path="Providers/Mysql/Datasources.Mysql.csproj" />
+    <Project Path="Providers/Mysql.Tests/Datasources.Mysql.Tests.csproj" />
+    <Project Path="Providers/Oracle/Datasources.Oracle.csproj" />
+    <Project Path="Providers/Oracle.Tests/Datasources.Oracle.Tests.csproj" />
+    <Project Path="Providers/Postgres/Datasources.Postgres.csproj" />
+    <Project Path="Providers/Postgres.Tests/Datasources.Postgres.Tests.csproj" />
+    <Project Path="Providers/Sqlite/Datasources.Sqlite.csproj" />
+    <Project Path="Providers/Sqlite.Tests/Datasources.Sqlite.Tests.csproj" />
+    <Project Path="Providers/SqlServer/Datasources.SqlServer.csproj" />
+    <Project Path="Providers/SqlServer.Tests/Datasources.SqlServer.Tests.csproj" />
+    <Project Path="Providers/Text/Datasources.Text.csproj" />
+    <Project Path="Providers/Text.Tests/Datasources.Text.Tests.csproj" />
+    <Project Path="Providers/Xml/Datasources.Xml.csproj" />
+    <Project Path="Providers/Xml.Tests/Datasources.Xml.Tests.csproj" />
+    <Project Path="Providers/Yaml/Datasources.Yaml.csproj" />
+    <Project Path="Providers/Yaml.Tests/Datasources.Yaml.Tests.csproj" />
+  </Folder>
+</Solution>
