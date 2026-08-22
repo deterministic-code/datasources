@@ -1,0 +1,12 @@
+[package]
+name = "datasources-dynamodb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "dynamodb datasource stub"
+
+[dependencies]
+datasources = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

@@ -1,0 +1,12 @@
+[package]
+name = "datasources"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Async datasource interfaces, middleware, registry, and test doubles"
+
+[dependencies]
+async-trait = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

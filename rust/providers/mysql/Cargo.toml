@@ -1,0 +1,12 @@
+[package]
+name = "datasources-mysql"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "mysql datasource stub"
+
+[dependencies]
+datasources = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
