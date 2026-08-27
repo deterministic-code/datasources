@@ -7,6 +7,11 @@ public sealed class TextConnection : StubConnection
     public TextConnection() : base("text") { }
 }
 
+public sealed class TextCommand : StubCommand
+{
+    public TextCommand(IConnection connection) : base("text", connection) { }
+}
+
 public sealed class TextDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly TextDatasource Factory = new();
@@ -15,7 +20,7 @@ public sealed class TextDatasource : IDatasource, IDatasourceFactory
     IConnection NewConnection() => new TextConnection();
     public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new StubCommand(Provider, connection ?? NewConnection());
+        new TextCommand(connection ?? NewConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null) =>
         new StubRepository<T>(Provider, connection ?? NewConnection());
 }

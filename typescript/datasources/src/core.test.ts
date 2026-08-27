@@ -392,7 +392,10 @@ describe("published mocks", () => {
     const ds = new MockDatasource();
     expect(ds.create().provider).toBe("mock");
     expect(await ds.createConnection()).toBe(ds.connection);
-    expect(ds.createCommand()).toBeInstanceOf(MockCommand);
+    const mockCommand = ds.createCommand();
+    expect(mockCommand).toBeInstanceOf(MockCommand);
+    await mockCommand.execute();
+    await mockCommand.executeReader();
     const provided = new MockConnection();
     expect(ds.createCommand(provided).connection).toBe(provided);
     expect(ds.createRepository(provided, { table: "t" })).toBeInstanceOf(

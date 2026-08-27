@@ -194,7 +194,9 @@ public class CoreTests
         var ds = new MockDatasource();
         Assert.Equal("mock", ds.Create().Provider);
         await ds.CreateConnection();
-        Assert.IsType<MockCommand>(ds.CreateCommand());
+        var mockCommand = Assert.IsType<MockCommand>(ds.CreateCommand());
+        await mockCommand.Execute();
+        await mockCommand.ExecuteReader();
         var provided = new MockConnection();
         Assert.Same(provided, ds.CreateCommand(provided).Connection);
         Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>(provided, new RepositoryOptions { Table = "t" }));

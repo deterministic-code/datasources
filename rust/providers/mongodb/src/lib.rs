@@ -1,11 +1,12 @@
 use async_trait::async_trait;
 use datasources::{
-    named_stub_connection, Command, Connection, Datasource, DatasourceFactory, Repository, Result,
-    StubCommand, StubRepository,
+    named_stub_command, named_stub_connection, Command, Connection, Datasource, DatasourceFactory,
+    Repository, Result, StubRepository,
 };
 use std::sync::Arc;
 
 named_stub_connection!(MongoDbConnection, "mongodb");
+named_stub_command!(MongoDbCommand, "mongodb");
 
 pub struct MongoDbDatasource;
 
@@ -29,8 +30,10 @@ impl Datasource for MongoDbDatasource {
         Ok(self.new_connection())
     }
 
-    fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        Arc::new(StubCommand::new("mongodb"))
+    fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
+        Arc::new(MongoDbCommand::new(
+            connection.unwrap_or_else(|| self.new_connection()),
+        ))
     }
 
     fn create_repository(
@@ -67,5 +70,17 @@ mod tests {
     async fn creates_connection() {
         let connection = MongoDbDatasource.create_connection().await.unwrap();
         assert!(connection.open().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn creates_command() {
+        let ds = MongoDbDatasource;
+        let connection = ds.create_connection().await.unwrap();
+        let command = ds.create_command(Some(connection));
+        assert!(command.execute(None, None).await.is_err());
+        assert!(command.execute_reader(None, None).await.is_err());
+        let implicit = ds.create_command(None);
+        assert!(implicit.execute(None, None).await.is_err());
+        assert!(implicit.execute_reader(None, None).await.is_err());
     }
 }

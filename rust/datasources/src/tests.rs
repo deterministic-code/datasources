@@ -325,7 +325,9 @@ async fn published_mocks() {
     assert_eq!(Datasource::provider(&ds), "mock");
     assert_eq!(DatasourceFactory::provider(&ds), "mock");
     ds.create_connection().await.unwrap();
-    ds.create_command(None);
+    let command = ds.create_command(None);
+    command.execute(None, None).await.unwrap();
+    command.execute_reader(None, None).await.unwrap();
     ds.create_repository(None, Some("t"));
     DatasourceFactory::create(&ds, Some("{}"));
 

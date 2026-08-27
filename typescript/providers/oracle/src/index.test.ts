@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, ProviderNotImplementedError } from "@datasources/core";
-import { OracleConnection, OracleDatasource } from "./index.ts";
+import { OracleCommand, OracleConnection, OracleDatasource } from "./index.ts";
 
 afterEach(() => Datasource.reset());
 
@@ -15,8 +15,15 @@ describe("oracle", () => {
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(OracleConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
-    ds.createCommand();
-    ds.createCommand(connection);
+    const command = ds.createCommand(connection);
+    expect(command).toBeInstanceOf(OracleCommand);
+    expect(command.connection).toBe(connection);
+    await expect(command.execute()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(command.executeReader()).rejects.toThrow(ProviderNotImplementedError);
+    const implicit = ds.createCommand();
+    expect(implicit).toBeInstanceOf(OracleCommand);
+    await expect(implicit.execute()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(implicit.executeReader()).rejects.toThrow(ProviderNotImplementedError);
     ds.createRepository();
     ds.createRepository(connection, { table: "t" });
   });

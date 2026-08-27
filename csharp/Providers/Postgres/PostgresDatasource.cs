@@ -7,6 +7,11 @@ public sealed class PostgresConnection : StubConnection
     public PostgresConnection() : base("postgres") { }
 }
 
+public sealed class PostgresCommand : StubCommand
+{
+    public PostgresCommand(IConnection connection) : base("postgres", connection) { }
+}
+
 public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly PostgresDatasource Factory = new();
@@ -15,7 +20,7 @@ public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
     IConnection NewConnection() => new PostgresConnection();
     public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new StubCommand(Provider, connection ?? NewConnection());
+        new PostgresCommand(connection ?? NewConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null) =>
         new StubRepository<T>(Provider, connection ?? NewConnection());
 }

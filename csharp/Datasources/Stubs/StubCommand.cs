@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class StubCommand : MiddlewareHost, ICommand
+public class StubCommand : MiddlewareHost, ICommand
 {
     private readonly string _provider;
     public StubCommand(string provider, IConnection connection)

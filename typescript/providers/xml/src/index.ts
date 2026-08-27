@@ -16,6 +16,12 @@ export class XmlConnection extends StubConnection {
   }
 }
 
+export class XmlCommand extends StubCommand {
+  constructor(connection: IConnection) {
+    super("xml", connection);
+  }
+}
+
 export class XmlDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new XmlDatasource();
   readonly provider = "xml";
@@ -23,7 +29,7 @@ export class XmlDatasource implements IDatasource, DatasourceFactory {
   private newConnection = (): IConnection => new XmlConnection();
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new StubCommand(this.provider, connection ?? this.newConnection());
+    new XmlCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(
     connection?: IConnection,
     _options?: RepositoryOptions,

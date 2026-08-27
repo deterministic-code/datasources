@@ -59,3 +59,52 @@ impl Command for StubCommand {
             .await
     }
 }
+
+#[macro_export]
+macro_rules! named_stub_command {
+    ($name:ident, $provider:literal) => {
+        pub struct $name {
+            inner: $crate::StubCommand,
+            #[allow(dead_code)]
+            _connection: std::sync::Arc<dyn $crate::Connection>,
+        }
+
+        impl $name {
+            pub fn new(connection: std::sync::Arc<dyn $crate::Connection>) -> Self {
+                Self {
+                    inner: $crate::StubCommand::new($provider),
+                    _connection: connection,
+                }
+            }
+        }
+
+        impl $crate::MiddlewareAware for $name {
+            fn use_middleware(
+                &self,
+                before: Option<$crate::MiddlewareHook>,
+                after: Option<$crate::MiddlewareHook>,
+            ) {
+                self.inner.use_middleware(before, after);
+            }
+        }
+
+        #[async_trait::async_trait]
+        impl $crate::Command for $name {
+            async fn execute_reader(
+                &self,
+                text: Option<&str>,
+                parameters: Option<&[$crate::Parameter]>,
+            ) -> $crate::Result<Box<dyn $crate::Reader>> {
+                self.inner.execute_reader(text, parameters).await
+            }
+
+            async fn execute(
+                &self,
+                text: Option<&str>,
+                parameters: Option<&[$crate::Parameter]>,
+            ) -> $crate::Result<$crate::Response> {
+                self.inner.execute(text, parameters).await
+            }
+        }
+    };
+}

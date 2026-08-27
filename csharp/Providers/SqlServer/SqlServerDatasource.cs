@@ -7,6 +7,11 @@ public sealed class SqlServerConnection : StubConnection
     public SqlServerConnection() : base("sqlserver") { }
 }
 
+public sealed class SqlServerCommand : StubCommand
+{
+    public SqlServerCommand(IConnection connection) : base("sqlserver", connection) { }
+}
+
 public sealed class SqlServerDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly SqlServerDatasource Factory = new();
@@ -15,7 +20,7 @@ public sealed class SqlServerDatasource : IDatasource, IDatasourceFactory
     IConnection NewConnection() => new SqlServerConnection();
     public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new StubCommand(Provider, connection ?? NewConnection());
+        new SqlServerCommand(connection ?? NewConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null) =>
         new StubRepository<T>(Provider, connection ?? NewConnection());
 }
