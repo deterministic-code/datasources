@@ -36,7 +36,7 @@ public class SqliteTests
         driver.QueryResult = new List<IReadOnlyDictionary<string, object?>>();
         Assert.Null(await repo.GetSingle(new Query("id = 1")));
         driver.QueryResult = new List<IReadOnlyDictionary<string, object?>> { new Dictionary<string, object?> { ["id"] = 1 } };
-        Assert.NotEmpty(await AsyncEnumerable.Collect(repo.Get()));
+        Assert.NotEmpty(await repo.Get().ToListAsync());
         await repo.Add(new Dictionary<string, object?> { ["id"] = 2 });
         await repo.Add(new Dictionary<string, object?>());
         await repo.Update(new Dictionary<string, object?> { ["id"] = 2 });
@@ -44,7 +44,7 @@ public class SqliteTests
         await repo.Delete(new Dictionary<string, object?> { ["id"] = 2 });
         await repo.Delete(new Dictionary<string, object?> { ["id"] = 2 }, new Where("name = $name"));
         var named = new SqliteRepository(conn, "users");
-        await AsyncEnumerable.Collect(named.Get());
+        await named.Get().ToListAsync();
         Assert.Equal("users", named.Table);
 
         var txn = await conn.StartTransaction();

@@ -1,0 +1,32 @@
+---
+description: Prefer compact, expression-bodied code
+alwaysApply: true
+---
+
+# Compact code
+
+Prefer arrow / expression-bodied members and compact code over verbose blocks.
+
+- Use expression-bodied members (`=>`) for single-expression methods, properties, and constructors when the body is a lookup, assignment, throw, or simple return.
+- Collapse `if`/`return` or `if`/`throw` into a ternary or `throw` expression when it stays readable.
+- Do not expand a one-liner into a braced block unless there are multiple statements, meaningful locals, or the expression becomes harder to read.
+- Keep types and APIs small; avoid extra wrapper types when a parameter or existing type is enough.
+
+```csharp
+// ❌ BAD
+public static IDatasource Create(string provider, object? options = null)
+{
+    if (!Factories.TryGetValue(provider, out var factory))
+    {
+        throw new ProviderNotInstalledException(provider);
+    }
+
+    return factory.Create(options);
+}
+
+// ✅ GOOD
+public static IDatasource Create(string provider, object? options = null) =>
+    Factories.TryGetValue(provider, out var factory)
+        ? factory.Create(options)
+        : throw new ProviderNotInstalledException(provider);
+```

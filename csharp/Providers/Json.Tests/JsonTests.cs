@@ -93,7 +93,7 @@ public class JsonTests
         var command = new JsonCommand(conn);
         Assert.NotNull(await repo.GetSingle());
         Assert.Null(await repo.GetSingle(new Query("{\"id\":9}")));
-        Assert.NotEmpty(await AsyncEnumerable.Collect(repo.Get(new Query("{\"id\":1}"))));
+        Assert.NotEmpty(await repo.Get(new Query("{\"id\":1}")).ToListAsync());
         await repo.Add(new Dictionary<string, object?> { ["id"] = 4, ["name"] = "d" });
         await repo.Update(new Dictionary<string, object?> { ["id"] = 4, ["name"] = "D" });
         await repo.Update(new Dictionary<string, object?> { ["name"] = "Z" }, new Where("{\"id\":4}"));

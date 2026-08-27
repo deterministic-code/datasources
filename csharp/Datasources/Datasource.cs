@@ -6,15 +6,10 @@ public static class Datasource
 
     public static void Use(IDatasourceFactory factory) => Factories[factory.Provider] = factory;
 
-    public static IDatasource Create(string provider, object? options = null)
-    {
-        if (!Factories.TryGetValue(provider, out var factory))
-        {
-            throw new ProviderNotInstalledException(provider);
-        }
-
-        return factory.Create(options);
-    }
+    public static IDatasource Create(string provider, object? options = null) =>
+        Factories.TryGetValue(provider, out var factory)
+            ? factory.Create(options)
+            : throw new ProviderNotInstalledException(provider);
 
     public static void Reset() => Factories.Clear();
 
