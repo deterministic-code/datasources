@@ -14,25 +14,21 @@ export class StubCommand extends MiddlewareHost implements ICommand {
     super();
   }
 
-  async executeReader(
+  executeReader = (
     text?: string | null,
     parameters?: Parameter[],
-  ): Promise<IReader> {
-    return this.run(
-      "executeReader",
-      async () => notImplemented(this.provider),
-      { text, parameters },
-    );
-  }
+  ): Promise<IReader> =>
+    this.run("executeReader", async () => notImplemented(this.provider), {
+      text,
+      parameters,
+    });
 
-  async execute(
+  execute = (
     text?: string | null,
     parameters?: Parameter[],
-  ): Promise<IResponse> {
-    return this.run(
-      "execute",
-      async () => notImplemented(this.provider),
-      { text, parameters },
-    );
-  }
+  ): Promise<IResponse> =>
+    this.run("execute", async () => notImplemented(this.provider), {
+      text,
+      parameters,
+    });
 }

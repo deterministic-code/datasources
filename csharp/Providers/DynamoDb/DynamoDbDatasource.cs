@@ -2,16 +2,6 @@ using Datasources;
 
 namespace Datasources.DynamoDb;
 
-public sealed class DynamoDbConnection : StubConnection
-{
-    public DynamoDbConnection() : base("dynamodb") { }
-}
-
-public sealed class DynamoDbCommand : StubCommand
-{
-    public DynamoDbCommand(IConnection connection) : base("dynamodb", connection) { }
-}
-
 public sealed class DynamoDbDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly DynamoDbDatasource Factory = new();

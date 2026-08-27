@@ -1,36 +1,4 @@
-import {
-  type DatasourceFactory,
-  type ICommand,
-  type IConnection,
-  type IDatasource,
-  type IRepository,
-  StubCommand,
-  StubConnection,
-  StubRepository,
-} from "@datasources/core";
-
-export class DynamoDbConnection extends StubConnection {
-  constructor() {
-    super("dynamodb");
-  }
-}
-
-export class DynamoDbCommand extends StubCommand {
-  constructor(connection: IConnection) {
-    super("dynamodb", connection);
-  }
-}
-
-export class DynamoDbDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new DynamoDbDatasource();
-  readonly provider = "dynamodb";
-  create = (_options?: unknown): IDatasource => new DynamoDbDatasource();
-  private newConnection = (): IConnection => new DynamoDbConnection();
-  createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
-  createCommand = (connection?: IConnection): ICommand =>
-    new DynamoDbCommand(connection ?? this.newConnection());
-  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
-    new StubRepository<T>(this.provider, connection ?? this.newConnection());
-}
-
-export default DynamoDbDatasource;
+export { DynamoDbCommand } from "./command.ts";
+export { DynamoDbConnection } from "./connection.ts";
+export { DynamoDbDatasource } from "./datasource.ts";
+export { DynamoDbDatasource as default } from "./datasource.ts";

@@ -2,16 +2,6 @@ using Datasources;
 
 namespace Datasources.Yaml;
 
-public sealed class YamlConnection : StubConnection
-{
-    public YamlConnection() : base("yaml") { }
-}
-
-public sealed class YamlCommand : StubCommand
-{
-    public YamlCommand(IConnection connection) : base("yaml", connection) { }
-}
-
 public sealed class YamlDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly YamlDatasource Factory = new();

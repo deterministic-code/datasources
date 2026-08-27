@@ -6,7 +6,6 @@ public sealed class ArrayReader : IReader
     private int _index = -1;
 
     public ArrayReader(IReadOnlyList<object?> rows) => _rows = rows;
-
     public object? Current { get; private set; }
 
     public Task<bool> Next()

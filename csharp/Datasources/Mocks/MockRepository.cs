@@ -11,20 +11,16 @@ public sealed class MockRepository<T> : IRepository<T>
     public IConnection Connection { get; }
     public MockRepository(IConnection connection) => Connection = connection;
 
-    public Task<T?> GetSingle(IQuery? query = null)
-    {
-        if (GetSingleError is not null) throw GetSingleError;
-        return Task.FromResult(Items.Count == 0 ? default : Items[0]);
-    }
+    public Task<T?> GetSingle(IQuery? query = null) =>
+        GetSingleError is not null
+            ? throw GetSingleError
+            : Task.FromResult(Items.Count == 0 ? default : Items[0]);
 
     public async IAsyncEnumerable<T> Get(IQuery? query = null)
     {
         if (GetError is not null) throw GetError;
         await Task.Yield();
-        foreach (var item in Items)
-        {
-            yield return item;
-        }
+        foreach (var item in Items) yield return item;
     }
 
     public Task<Response> Add(T obj)
@@ -34,15 +30,9 @@ public sealed class MockRepository<T> : IRepository<T>
         return Task.FromResult(new Response(obj, 1));
     }
 
-    public Task<Response> Update(T obj, IWhere? byWhere = null)
-    {
-        if (UpdateError is not null) throw UpdateError;
-        return Task.FromResult(new Response(obj, 1));
-    }
+    public Task<Response> Update(T obj, IWhere? byWhere = null) =>
+        UpdateError is not null ? throw UpdateError : Task.FromResult(new Response(obj, 1));
 
-    public Task<Response> Delete(T obj, IWhere? byWhere = null)
-    {
-        if (DeleteError is not null) throw DeleteError;
-        return Task.FromResult(new Response(null, 1));
-    }
+    public Task<Response> Delete(T obj, IWhere? byWhere = null) =>
+        DeleteError is not null ? throw DeleteError : Task.FromResult(new Response(null, 1));
 }

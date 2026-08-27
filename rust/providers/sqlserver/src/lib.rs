@@ -1,62 +1,15 @@
-use async_trait::async_trait;
-use datasources::{
-    named_stub_command, named_stub_connection, Command, Connection, Datasource, DatasourceFactory,
-    Repository, Result, StubRepository,
-};
-use std::sync::Arc;
+mod command;
+mod connection;
+mod datasource;
 
-named_stub_connection!(SqlServerConnection, "sqlserver");
-named_stub_command!(SqlServerCommand, "sqlserver");
-
-pub struct SqlServerDatasource;
-
-impl SqlServerDatasource {
-    pub fn factory() -> Arc<Self> {
-        Arc::new(Self)
-    }
-
-    fn new_connection(&self) -> Arc<SqlServerConnection> {
-        Arc::new(SqlServerConnection::new())
-    }
-}
-
-#[async_trait]
-impl Datasource for SqlServerDatasource {
-    fn provider(&self) -> &str {
-        "sqlserver"
-    }
-
-    async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
-        Ok(self.new_connection())
-    }
-
-    fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        Arc::new(SqlServerCommand::new(
-            connection.unwrap_or_else(|| self.new_connection()),
-        ))
-    }
-
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
-        Arc::new(StubRepository::new("sqlserver"))
-    }
-}
-
-impl DatasourceFactory for SqlServerDatasource {
-    fn provider(&self) -> &str {
-        "sqlserver"
-    }
-    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
-        Arc::new(SqlServerDatasource)
-    }
-}
+pub use command::SqlServerCommand;
+pub use connection::SqlServerConnection;
+pub use datasource::SqlServerDatasource;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, register, reset};
+    use datasources::{create, register, reset, Datasource};
 
     #[test]
     fn creates() {

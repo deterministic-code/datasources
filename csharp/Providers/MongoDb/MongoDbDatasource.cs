@@ -2,16 +2,6 @@ using Datasources;
 
 namespace Datasources.MongoDb;
 
-public sealed class MongoDbConnection : StubConnection
-{
-    public MongoDbConnection() : base("mongodb") { }
-}
-
-public sealed class MongoDbCommand : StubCommand
-{
-    public MongoDbCommand(IConnection connection) : base("mongodb", connection) { }
-}
-
 public sealed class MongoDbDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly MongoDbDatasource Factory = new();

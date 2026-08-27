@@ -1,0 +1,107 @@
+using System.Text.Json.Nodes;
+using Datasources;
+
+namespace Datasources.Json;
+
+public sealed class JsonConnection : MiddlewareHost, IConnection
+{
+    public string Path { get; }
+    public string? Collection { get; set; }
+    public IFileStore FileStore { get; }
+    public JsonNode Data { get; set; }
+    public bool Opened { get; private set; }
+    public bool InTransaction { get; private set; }
+    private JsonNode? _snapshot;
+    private readonly JsonNode? _initial;
+    private readonly bool _hasInitial;
+
+    public JsonConnection(JsonConnectionOptions? options = null)
+    {
+        options ??= new JsonConnectionOptions();
+        Path = options.Path;
+        Collection = options.Collection;
+        FileStore = options.FileStore ?? new MemoryFileStore();
+        _hasInitial = options.Data is not null;
+        _initial = options.Data;
+        Data = Empty();
+    }
+
+    public Task Open() => Run("open", async () =>
+    {
+        if (Opened) return;
+        if (_hasInitial)
+            Data = _initial?.DeepClone() ?? Empty();
+        else if (!string.IsNullOrEmpty(Path) && await FileStore.Exists(Path))
+            Data = JsonNode.Parse(await FileStore.Read(Path)) ?? Empty();
+        else
+            Data = Empty();
+
+        if (Collection is not null) GetCollection();
+        Opened = true;
+    });
+
+    public Task Close() => Run("close", () =>
+    {
+        Opened = false;
+        return Task.CompletedTask;
+    });
+
+    public Task<ITransaction> StartTransaction() => Run("startTransaction", () =>
+    {
+        EnsureOpen();
+        _snapshot = Data.DeepClone();
+        InTransaction = true;
+        return Task.FromResult<ITransaction>(new JsonTransaction(this));
+    });
+
+    public JsonArray GetCollection()
+    {
+        if (Collection is not null)
+        {
+            if (Data is not JsonObject obj)
+            {
+                Data = new JsonObject();
+                obj = (JsonObject)Data;
+            }
+
+            if (obj[Collection] is not JsonArray array)
+            {
+                array = new JsonArray();
+                obj[Collection] = array;
+            }
+
+            return array;
+        }
+
+        if (Data is not JsonArray)
+            Data = new JsonArray();
+
+        return (JsonArray)Data;
+    }
+
+    public async Task Persist()
+    {
+        if (InTransaction || string.IsNullOrEmpty(Path)) return;
+        await FileStore.Write(Path, Data.ToJsonString());
+    }
+
+    public void FinishCommit()
+    {
+        InTransaction = false;
+        _snapshot = null;
+    }
+
+    public void FinishAbort()
+    {
+        Data = _snapshot ?? Empty();
+        InTransaction = false;
+        _snapshot = null;
+    }
+
+    public void EnsureOpen()
+    {
+        if (!Opened) throw new DatasourceException("Connection is not open");
+    }
+
+    private JsonNode Empty() => Collection is null ? new JsonArray() : new JsonObject();
+}

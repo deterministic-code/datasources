@@ -2,16 +2,6 @@ using Datasources;
 
 namespace Datasources.Xml;
 
-public sealed class XmlConnection : StubConnection
-{
-    public XmlConnection() : base("xml") { }
-}
-
-public sealed class XmlCommand : StubCommand
-{
-    public XmlCommand(IConnection connection) : base("xml", connection) { }
-}
-
 public sealed class XmlDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly XmlDatasource Factory = new();

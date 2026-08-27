@@ -12,11 +12,7 @@ public sealed class MockReader : IReader
     public Task<bool> Next()
     {
         NextCalls++;
-        if (NextError is not null)
-        {
-            throw NextError;
-        }
-
+        if (NextError is not null) throw NextError;
         _index++;
         if (_index < _rows.Count)
         {
