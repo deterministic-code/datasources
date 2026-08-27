@@ -7,18 +7,20 @@ export {
   SqliteDatasource,
   type SqliteDatasourceOptions,
 } from "./datasource.ts";
+export { BetterSqliteDriver } from "./better-sqlite-driver.ts";
 export {
-  BetterSqliteDriver,
   bindParameters,
   loadBetterSqlite3Driver,
   requireDriver,
-  type BetterSqlite3Module,
-  type ISqliteDriver,
-  type SqliteDatabase,
-  type SqliteDatabaseCtor,
-  type SqliteExecuteResult,
-  type SqliteStatement,
 } from "./driver.ts";
+export type {
+  BetterSqlite3Module,
+  ISqliteDriver,
+  SqliteDatabase,
+  SqliteDatabaseCtor,
+  SqliteExecuteResult,
+  SqliteStatement,
+} from "./i-sqlite-driver.ts";
 export {
   SqliteRepository,
   type SqliteRepositoryOptions,

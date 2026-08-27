@@ -2,16 +2,6 @@ using Datasources;
 
 namespace Datasources.Postgres;
 
-public sealed class PostgresConnection : StubConnection
-{
-    public PostgresConnection() : base("postgres") { }
-}
-
-public sealed class PostgresCommand : StubCommand
-{
-    public PostgresCommand(IConnection connection) : base("postgres", connection) { }
-}
-
 public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly PostgresDatasource Factory = new();

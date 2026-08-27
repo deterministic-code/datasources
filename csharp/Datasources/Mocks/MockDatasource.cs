@@ -15,6 +15,7 @@ public sealed class MockDatasource : IDatasource, IDatasourceFactory
     }
 
     public IDatasource Create(object? options = null) => new MockDatasource(Provider);
+
     public Task<IConnection> CreateConnection()
     {
         CreateConnectionCalls++;

@@ -7,16 +7,8 @@ public class MiddlewareHost : IMiddlewareHost
 
     public IMiddlewareHost Use(MiddlewareHook? before = null, MiddlewareHook? after = null)
     {
-        if (before is not null)
-        {
-            _befores.Add(before);
-        }
-
-        if (after is not null)
-        {
-            _afters.Add(after);
-        }
-
+        if (before is not null) _befores.Add(before);
+        if (after is not null) _afters.Add(after);
         return this;
     }
 
@@ -34,35 +26,24 @@ public class MiddlewareHost : IMiddlewareHost
             Parameters = parameters,
         };
 
-        foreach (var before in _befores)
-        {
-            await before(ctx);
-        }
+        foreach (var before in _befores) await before(ctx);
 
         try
         {
             var result = await action();
-            foreach (var after in _afters)
-            {
-                await after(ctx);
-            }
-
+            foreach (var after in _afters) await after(ctx);
             return result;
         }
         catch (Exception ex)
         {
             ctx.Error = ex;
-            foreach (var after in _afters)
-            {
-                await after(ctx);
-            }
-
+            foreach (var after in _afters) await after(ctx);
             throw;
         }
     }
 
-    public Task Run(string operation, Func<Task> action, string? text = null, IReadOnlyList<Parameter>? parameters = null)
-        => Run(operation, async () =>
+    public Task Run(string operation, Func<Task> action, string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+        Run(operation, async () =>
         {
             await action();
             return 0;

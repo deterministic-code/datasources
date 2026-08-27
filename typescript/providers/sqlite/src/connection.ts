@@ -49,8 +49,6 @@ export class SqliteConnection extends MiddlewareHost implements IConnection {
   }
 
   ensureOpen(): void {
-    if (!this.opened) {
-      throw new DatasourceError("Connection is not open");
-    }
+    if (!this.opened) throw new DatasourceError("Connection is not open");
   }
 }

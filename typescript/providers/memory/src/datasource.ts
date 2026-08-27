@@ -19,37 +19,27 @@ export class MemoryDatasource implements IDatasource {
   private readonly options: MemoryConnectionOptions;
 
   constructor(options: MemoryConnectionOptions = {}) {
-    this.options = {
-      ...options,
-      store: options.store ?? new MemoryStore(),
-    };
+    this.options = { ...options, store: options.store ?? new MemoryStore() };
   }
 
-  static create(options?: unknown): IDatasource {
-    return new MemoryDatasource((options ?? {}) as MemoryConnectionOptions);
-  }
+  static create = (options?: unknown): IDatasource =>
+    new MemoryDatasource((options ?? {}) as MemoryConnectionOptions);
 
-  create(options?: unknown): IDatasource {
-    return MemoryDatasource.create(options);
-  }
+  create = (options?: unknown): IDatasource => MemoryDatasource.create(options);
 
-  private newConnection(): MemoryConnection {
-    return new MemoryConnection(this.options);
-  }
+  private newConnection = (): MemoryConnection =>
+    new MemoryConnection(this.options);
 
-  createConnection(): Promise<IConnection> {
-    return Promise.resolve(this.newConnection());
-  }
+  createConnection = (): Promise<IConnection> =>
+    Promise.resolve(this.newConnection());
 
-  createCommand(connection?: IConnection): ICommand {
-    return new MemoryCommand(
+  createCommand = (connection?: IConnection): ICommand =>
+    new MemoryCommand(
       (connection as MemoryConnection | undefined) ?? this.newConnection(),
     );
-  }
 
-  createRepository<T = unknown>(connection?: IConnection): IRepository<T> {
-    return new MemoryRepository<T>(
+  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
+    new MemoryRepository<T>(
       (connection as MemoryConnection | undefined) ?? this.newConnection(),
     );
-  }
 }

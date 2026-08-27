@@ -6,12 +6,9 @@ export {
   type JsonConnectionOptions,
 } from "./connection.ts";
 export { JsonDatasource } from "./datasource.ts";
-export {
-  MemoryFileStore,
-  NodeFileStore,
-  type FileSystemApi,
-  type IFileStore,
-} from "./file-store.ts";
+export type { FileSystemApi, IFileStore } from "./i-file-store.ts";
+export { MemoryFileStore } from "./memory-file-store.ts";
+export { NodeFileStore } from "./node-file-store.ts";
 export {
   asRecord,
   matches,

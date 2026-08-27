@@ -2,16 +2,6 @@ using Datasources;
 
 namespace Datasources.Mysql;
 
-public sealed class MysqlConnection : StubConnection
-{
-    public MysqlConnection() : base("mysql") { }
-}
-
-public sealed class MysqlCommand : StubCommand
-{
-    public MysqlCommand(IConnection connection) : base("mysql", connection) { }
-}
-
 public sealed class MysqlDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly MysqlDatasource Factory = new();

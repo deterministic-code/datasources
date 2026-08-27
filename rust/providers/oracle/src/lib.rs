@@ -1,62 +1,15 @@
-use async_trait::async_trait;
-use datasources::{
-    named_stub_command, named_stub_connection, Command, Connection, Datasource, DatasourceFactory,
-    Repository, Result, StubRepository,
-};
-use std::sync::Arc;
+mod command;
+mod connection;
+mod datasource;
 
-named_stub_connection!(OracleConnection, "oracle");
-named_stub_command!(OracleCommand, "oracle");
-
-pub struct OracleDatasource;
-
-impl OracleDatasource {
-    pub fn factory() -> Arc<Self> {
-        Arc::new(Self)
-    }
-
-    fn new_connection(&self) -> Arc<OracleConnection> {
-        Arc::new(OracleConnection::new())
-    }
-}
-
-#[async_trait]
-impl Datasource for OracleDatasource {
-    fn provider(&self) -> &str {
-        "oracle"
-    }
-
-    async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
-        Ok(self.new_connection())
-    }
-
-    fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        Arc::new(OracleCommand::new(
-            connection.unwrap_or_else(|| self.new_connection()),
-        ))
-    }
-
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
-        Arc::new(StubRepository::new("oracle"))
-    }
-}
-
-impl DatasourceFactory for OracleDatasource {
-    fn provider(&self) -> &str {
-        "oracle"
-    }
-    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
-        Arc::new(OracleDatasource)
-    }
-}
+pub use command::OracleCommand;
+pub use connection::OracleConnection;
+pub use datasource::OracleDatasource;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, register, reset};
+    use datasources::{create, register, reset, Datasource};
 
     #[test]
     fn creates() {

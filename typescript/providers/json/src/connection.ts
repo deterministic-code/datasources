@@ -106,12 +106,8 @@ export class JsonConnection extends MiddlewareHost implements IConnection {
   }
 
   ensureOpen(): void {
-    if (!this.opened) {
-      throw new DatasourceError("Connection is not open");
-    }
+    if (!this.opened) throw new DatasourceError("Connection is not open");
   }
 
-  private emptyData(): unknown {
-    return this.collection ? {} : [];
-  }
+  private emptyData = (): unknown => (this.collection ? {} : []);
 }

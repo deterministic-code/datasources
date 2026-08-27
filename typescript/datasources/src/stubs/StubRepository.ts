@@ -11,23 +11,18 @@ export class StubRepository<T = unknown> implements IRepository<T> {
     readonly connection: IConnection,
   ) {}
 
-  async getSingle(_query?: IQuery): Promise<T | undefined> {
+  getSingle = async (_query?: IQuery): Promise<T | undefined> =>
     notImplemented(this.provider);
-  }
 
   async *get(_query?: IQuery): AsyncIterable<T> {
     notImplemented(this.provider);
   }
 
-  async add(_obj: T): Promise<IResponse> {
-    notImplemented(this.provider);
-  }
+  add = async (_obj: T): Promise<IResponse> => notImplemented(this.provider);
 
-  async update(_obj: T, _byWhere?: IWhere): Promise<IResponse> {
+  update = async (_obj: T, _byWhere?: IWhere): Promise<IResponse> =>
     notImplemented(this.provider);
-  }
 
-  async delete(_obj: T, _byWhere?: IWhere): Promise<IResponse> {
+  delete = async (_obj: T, _byWhere?: IWhere): Promise<IResponse> =>
     notImplemented(this.provider);
-  }
 }

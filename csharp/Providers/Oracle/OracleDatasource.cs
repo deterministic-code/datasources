@@ -2,16 +2,6 @@ using Datasources;
 
 namespace Datasources.Oracle;
 
-public sealed class OracleConnection : StubConnection
-{
-    public OracleConnection() : base("oracle") { }
-}
-
-public sealed class OracleCommand : StubCommand
-{
-    public OracleCommand(IConnection connection) : base("oracle", connection) { }
-}
-
 public sealed class OracleDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly OracleDatasource Factory = new();

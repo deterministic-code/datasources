@@ -1,0 +1,57 @@
+using System.Text.Json.Nodes;
+using Datasources;
+
+namespace Datasources.Json;
+
+public sealed class JsonRepository : IRepository<Dictionary<string, object?>>
+{
+    public JsonRepository(JsonConnection connection) => Connection = connection;
+    public IConnection Connection { get; }
+    private JsonConnection Typed => (JsonConnection)Connection;
+
+    public async Task<Dictionary<string, object?>?> GetSingle(IQuery? query = null)
+    {
+        var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText());
+        return await reader.Next() ? ToRecord(reader.Current) : null;
+    }
+
+    public async IAsyncEnumerable<Dictionary<string, object?>> Get(IQuery? query = null)
+    {
+        var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText());
+        while (await reader.Next())
+        {
+            var record = ToRecord(reader.Current);
+            if (record is not null) yield return record;
+        }
+    }
+
+    public async Task<Response> Add(Dictionary<string, object?> obj)
+    {
+        Typed.EnsureOpen();
+        Typed.GetCollection().Add(JsonCommand.ToObject(obj));
+        await Typed.Persist();
+        return new Response(obj, 1);
+    }
+
+    public async Task<Response> Update(Dictionary<string, object?> obj, IWhere? byWhere = null)
+    {
+        Typed.EnsureOpen();
+        return await new JsonCommand(Typed).Execute("update", ToParams(obj, byWhere));
+    }
+
+    public async Task<Response> Delete(Dictionary<string, object?> obj, IWhere? byWhere = null)
+    {
+        Typed.EnsureOpen();
+        return await new JsonCommand(Typed).Execute("delete", ToParams(obj, byWhere));
+    }
+
+    private static IReadOnlyList<Parameter> ToParams(Dictionary<string, object?> obj, IWhere? byWhere) =>
+        obj.Select(p => new Parameter(p.Key, p.Value))
+            .Concat(byWhere is not null ? [new Parameter("$where", byWhere.GetText())] : [])
+            .ToList();
+
+    private static Dictionary<string, object?>? ToRecord(object? current) =>
+        current is JsonObject obj
+            ? obj.ToDictionary(k => k.Key, v => JsonCommand.JsonValueToObject(v.Value))
+            : null;
+}

@@ -2,16 +2,6 @@ using Datasources;
 
 namespace Datasources.SqlServer;
 
-public sealed class SqlServerConnection : StubConnection
-{
-    public SqlServerConnection() : base("sqlserver") { }
-}
-
-public sealed class SqlServerCommand : StubCommand
-{
-    public SqlServerCommand(IConnection connection) : base("sqlserver", connection) { }
-}
-
 public sealed class SqlServerDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly SqlServerDatasource Factory = new();
