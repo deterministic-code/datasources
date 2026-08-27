@@ -5,9 +5,9 @@ Async interfaces for reading, writing, updating, and deleting resources. Provide
 ## Layout
 
 ```
-typescript/   npm workspaces (datasources + providers/{json,sqlite,stubs})
-rust/         cargo workspace (datasources + providers/{json,sqlite,stubs})
-csharp/       .NET 10 solution (Datasources + Providers/{Json,Sqlite,stubs})
+typescript/   npm workspaces (datasources + providers/{json,memory,sqlite,stubs})
+rust/         cargo workspace (datasources + providers/{json,memory,sqlite,stubs})
+csharp/       .NET 10 solution (Datasources + Providers/{Json,Memory,Sqlite,stubs})
 ```
 
 ## Install one provider
@@ -59,7 +59,7 @@ await ds.CreateConnection().Open();
 
 ## Providers
 
-Working: **json**, **sqlite** (inject `IFileStore` / `ISqliteDriver`; production adapters wrap the OS filesystem or a native SQLite module).
+Working: **json**, **memory**, **sqlite** (inject `IFileStore` / `ISqliteDriver`; production adapters wrap the OS filesystem or a native SQLite module).
 
 Stubs (installable, throw “not implemented”): text, xml, yaml, mysql, sqlserver, postgres, oracle, mongodb, dynamodb.
 

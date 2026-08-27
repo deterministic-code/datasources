@@ -6,6 +6,8 @@
     <Project Path="Providers/DynamoDb.Tests/Datasources.DynamoDb.Tests.csproj" />
     <Project Path="Providers/Json/Datasources.Json.csproj" />
     <Project Path="Providers/Json.Tests/Datasources.Json.Tests.csproj" />
+    <Project Path="Providers/Memory/Datasources.Memory.csproj" />
+    <Project Path="Providers/Memory.Tests/Datasources.Memory.Tests.csproj" />
     <Project Path="Providers/MongoDb/Datasources.MongoDb.csproj" />
     <Project Path="Providers/MongoDb.Tests/Datasources.MongoDb.Tests.csproj" />
     <Project Path="Providers/Mysql/Datasources.Mysql.csproj" />
