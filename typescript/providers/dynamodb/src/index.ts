@@ -16,6 +16,12 @@ export class DynamoDbConnection extends StubConnection {
   }
 }
 
+export class DynamoDbCommand extends StubCommand {
+  constructor(connection: IConnection) {
+    super("dynamodb", connection);
+  }
+}
+
 export class DynamoDbDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new DynamoDbDatasource();
   readonly provider = "dynamodb";
@@ -23,7 +29,7 @@ export class DynamoDbDatasource implements IDatasource, DatasourceFactory {
   private newConnection = (): IConnection => new DynamoDbConnection();
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new StubCommand(this.provider, connection ?? this.newConnection());
+    new DynamoDbCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(
     connection?: IConnection,
     _options?: RepositoryOptions,

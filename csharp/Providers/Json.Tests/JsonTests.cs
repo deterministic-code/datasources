@@ -116,8 +116,14 @@ public class JsonTests
         Assert.Equal("json", ds.Create().Provider);
         var created = await ds.CreateConnection();
         await ((JsonConnection)created).Open();
-        ds.CreateCommand(created);
-        ds.CreateCommand();
+        var bound = Assert.IsType<JsonCommand>(ds.CreateCommand(created));
+        Assert.Same(created, bound.Connection);
+        await bound.Execute("insert", [new Parameter("id", 99)]);
+        await bound.ExecuteReader();
+        var implicitCommand = Assert.IsType<JsonCommand>(ds.CreateCommand());
+        await implicitCommand.Connection.Open();
+        await implicitCommand.Execute("insert", [new Parameter("id", 1)]);
+        await implicitCommand.ExecuteReader();
         ds.CreateRepository<Dictionary<string, object?>>(created, new RepositoryOptions { Collection = "users" });
         ds.CreateRepository<Dictionary<string, object?>>();
         Assert.Equal("json", Datasource.Create("json").Provider);

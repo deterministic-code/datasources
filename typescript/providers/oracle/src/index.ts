@@ -16,6 +16,12 @@ export class OracleConnection extends StubConnection {
   }
 }
 
+export class OracleCommand extends StubCommand {
+  constructor(connection: IConnection) {
+    super("oracle", connection);
+  }
+}
+
 export class OracleDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new OracleDatasource();
   readonly provider = "oracle";
@@ -23,7 +29,7 @@ export class OracleDatasource implements IDatasource, DatasourceFactory {
   private newConnection = (): IConnection => new OracleConnection();
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new StubCommand(this.provider, connection ?? this.newConnection());
+    new OracleCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(
     connection?: IConnection,
     _options?: RepositoryOptions,

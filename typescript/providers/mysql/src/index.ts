@@ -16,6 +16,12 @@ export class MysqlConnection extends StubConnection {
   }
 }
 
+export class MysqlCommand extends StubCommand {
+  constructor(connection: IConnection) {
+    super("mysql", connection);
+  }
+}
+
 export class MysqlDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new MysqlDatasource();
   readonly provider = "mysql";
@@ -23,7 +29,7 @@ export class MysqlDatasource implements IDatasource, DatasourceFactory {
   private newConnection = (): IConnection => new MysqlConnection();
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new StubCommand(this.provider, connection ?? this.newConnection());
+    new MysqlCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(
     connection?: IConnection,
     _options?: RepositoryOptions,

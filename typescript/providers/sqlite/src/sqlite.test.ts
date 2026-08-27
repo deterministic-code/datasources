@@ -329,9 +329,17 @@ describe("SqliteDatasource", () => {
     expect(ds.create({ driver }).provider).toBe("sqlite");
     const connection = await ds.createConnection();
     await (connection as SqliteConnection).open();
-    expect(ds.createCommand(connection).connection).toBe(connection);
+    const command = ds.createCommand(connection);
+    expect(command).toBeInstanceOf(SqliteCommand);
+    expect(command.connection).toBe(connection);
+    await command.execute("DELETE FROM items");
+    await command.executeReader("SELECT 1");
     const implicit = new SqliteDatasource({ driver }).createCommand();
+    expect(implicit).toBeInstanceOf(SqliteCommand);
     expect(implicit.connection).toBeInstanceOf(SqliteConnection);
+    await implicit.connection.open();
+    await implicit.execute("DELETE FROM items");
+    await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection, { table: "accounts" });
     expect((repo as SqliteRepository).table).toBe("accounts");
     expect((ds.createRepository(connection) as SqliteRepository).table).toBe(

@@ -16,6 +16,12 @@ export class MongoDbConnection extends StubConnection {
   }
 }
 
+export class MongoDbCommand extends StubCommand {
+  constructor(connection: IConnection) {
+    super("mongodb", connection);
+  }
+}
+
 export class MongoDbDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new MongoDbDatasource();
   readonly provider = "mongodb";
@@ -23,7 +29,7 @@ export class MongoDbDatasource implements IDatasource, DatasourceFactory {
   private newConnection = (): IConnection => new MongoDbConnection();
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new StubCommand(this.provider, connection ?? this.newConnection());
+    new MongoDbCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(
     connection?: IConnection,
     _options?: RepositoryOptions,

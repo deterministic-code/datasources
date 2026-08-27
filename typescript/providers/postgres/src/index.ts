@@ -16,6 +16,12 @@ export class PostgresConnection extends StubConnection {
   }
 }
 
+export class PostgresCommand extends StubCommand {
+  constructor(connection: IConnection) {
+    super("postgres", connection);
+  }
+}
+
 export class PostgresDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new PostgresDatasource();
   readonly provider = "postgres";
@@ -23,7 +29,7 @@ export class PostgresDatasource implements IDatasource, DatasourceFactory {
   private newConnection = (): IConnection => new PostgresConnection();
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new StubCommand(this.provider, connection ?? this.newConnection());
+    new PostgresCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(
     connection?: IConnection,
     _options?: RepositoryOptions,

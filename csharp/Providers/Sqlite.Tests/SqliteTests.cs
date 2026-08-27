@@ -62,8 +62,14 @@ public class SqliteTests
         Assert.Equal("sqlite", ds.Create().Provider);
         var created = await ds.CreateConnection();
         await ((SqliteConnection)created).Open();
-        ds.CreateCommand(created);
-        ds.CreateCommand();
+        var bound = Assert.IsType<SqliteCommand>(ds.CreateCommand(created));
+        Assert.Same(created, bound.Connection);
+        await bound.Execute("DELETE FROM items");
+        await bound.ExecuteReader("SELECT 1");
+        var implicitCommand = Assert.IsType<SqliteCommand>(ds.CreateCommand());
+        await implicitCommand.Connection.Open();
+        await implicitCommand.Execute("DELETE FROM items");
+        await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created, new RepositoryOptions { Table = "accounts" });
         Assert.Equal("accounts", ((SqliteRepository)(object)repo2).Table);
         Assert.Equal("people", ((SqliteRepository)(object)ds.CreateRepository<Dictionary<string, object?>>(created)).Table);

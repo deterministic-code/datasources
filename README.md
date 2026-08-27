@@ -24,6 +24,12 @@ Create a closed connection, then open it. See:
 - [TypeScript](create-connection-typescript.md)
 - [Rust](create-connection-rust.md)
 
+Create a named command, then execute it. See:
+
+- [C#](create-command-csharp.md)
+- [TypeScript](create-command-typescript.md)
+- [Rust](create-command-rust.md)
+
 ## Interfaces
 
 | Type | Role |

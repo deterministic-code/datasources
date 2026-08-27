@@ -16,6 +16,12 @@ export class SqlServerConnection extends StubConnection {
   }
 }
 
+export class SqlServerCommand extends StubCommand {
+  constructor(connection: IConnection) {
+    super("sqlserver", connection);
+  }
+}
+
 export class SqlServerDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new SqlServerDatasource();
   readonly provider = "sqlserver";
@@ -23,7 +29,7 @@ export class SqlServerDatasource implements IDatasource, DatasourceFactory {
   private newConnection = (): IConnection => new SqlServerConnection();
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new StubCommand(this.provider, connection ?? this.newConnection());
+    new SqlServerCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(
     connection?: IConnection,
     _options?: RepositoryOptions,

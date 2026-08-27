@@ -7,6 +7,11 @@ public sealed class MongoDbConnection : StubConnection
     public MongoDbConnection() : base("mongodb") { }
 }
 
+public sealed class MongoDbCommand : StubCommand
+{
+    public MongoDbCommand(IConnection connection) : base("mongodb", connection) { }
+}
+
 public sealed class MongoDbDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly MongoDbDatasource Factory = new();
@@ -15,7 +20,7 @@ public sealed class MongoDbDatasource : IDatasource, IDatasourceFactory
     IConnection NewConnection() => new MongoDbConnection();
     public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new StubCommand(Provider, connection ?? NewConnection());
+        new MongoDbCommand(connection ?? NewConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null) =>
         new StubRepository<T>(Provider, connection ?? NewConnection());
 }

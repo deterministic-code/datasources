@@ -16,6 +16,12 @@ export class TextConnection extends StubConnection {
   }
 }
 
+export class TextCommand extends StubCommand {
+  constructor(connection: IConnection) {
+    super("text", connection);
+  }
+}
+
 export class TextDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new TextDatasource();
   readonly provider = "text";
@@ -23,7 +29,7 @@ export class TextDatasource implements IDatasource, DatasourceFactory {
   private newConnection = (): IConnection => new TextConnection();
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new StubCommand(this.provider, connection ?? this.newConnection());
+    new TextCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(
     connection?: IConnection,
     _options?: RepositoryOptions,

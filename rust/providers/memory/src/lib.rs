@@ -651,8 +651,12 @@ mod tests {
         let ds = create("memory", None).unwrap();
         assert_eq!(ds.provider(), "memory");
         ds.create_connection().await.unwrap();
-        ds.create_command(None);
-        ds.create_command(Some(ds.create_connection().await.unwrap()));
+        let command = ds.create_command(None);
+        assert!(command.execute(Some("insert"), None).await.is_err());
+        assert!(command.execute_reader(None, None).await.is_err());
+        let bound = ds.create_command(Some(ds.create_connection().await.unwrap()));
+        assert!(bound.execute(Some("insert"), None).await.is_err());
+        assert!(bound.execute_reader(None, None).await.is_err());
         ds.create_repository(None, Some("users"));
         ds.create_repository(Some(ds.create_connection().await.unwrap()), None);
         let factory = MemoryDatasource::default();

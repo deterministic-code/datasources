@@ -7,6 +7,11 @@ public sealed class XmlConnection : StubConnection
     public XmlConnection() : base("xml") { }
 }
 
+public sealed class XmlCommand : StubCommand
+{
+    public XmlCommand(IConnection connection) : base("xml", connection) { }
+}
+
 public sealed class XmlDatasource : IDatasource, IDatasourceFactory
 {
     public static readonly XmlDatasource Factory = new();
@@ -15,7 +20,7 @@ public sealed class XmlDatasource : IDatasource, IDatasourceFactory
     IConnection NewConnection() => new XmlConnection();
     public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new StubCommand(Provider, connection ?? NewConnection());
+        new XmlCommand(connection ?? NewConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null) =>
         new StubRepository<T>(Provider, connection ?? NewConnection());
 }
