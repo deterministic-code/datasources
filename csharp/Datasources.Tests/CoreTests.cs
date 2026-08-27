@@ -45,6 +45,11 @@ public class CoreTests
         Assert.Equal("a", reader.Current);
         Assert.True(await reader.Next());
         Assert.False(await reader.Next());
+        var typed = new ArrayReader<string>(new[] { "x", "y" });
+        Assert.True(await typed.Next());
+        Assert.Equal("x", typed.Current);
+        Assert.True(await typed.Next());
+        Assert.False(await typed.Next());
     }
 
     [Fact]

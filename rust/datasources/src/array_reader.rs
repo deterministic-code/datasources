@@ -3,14 +3,14 @@ use crate::record::Record;
 use crate::result::Result;
 use async_trait::async_trait;
 
-pub struct ArrayReader {
-    rows: Vec<Record>,
+pub struct ArrayReader<T = Record> {
+    rows: Vec<T>,
     index: std::sync::Mutex<isize>,
-    current: std::sync::Mutex<Option<Record>>,
+    current: std::sync::Mutex<Option<T>>,
 }
 
-impl ArrayReader {
-    pub fn new(rows: Vec<Record>) -> Self {
+impl<T> ArrayReader<T> {
+    pub fn new(rows: Vec<T>) -> Self {
         Self {
             rows,
             index: std::sync::Mutex::new(-1),
@@ -20,8 +20,11 @@ impl ArrayReader {
 }
 
 #[async_trait]
-impl Reader for ArrayReader {
-    fn current(&self) -> Option<Record> {
+impl<T> Reader<T> for ArrayReader<T>
+where
+    T: Clone + Send + Sync,
+{
+    fn current(&self) -> Option<T> {
         self.current.lock().expect("reader").clone()
     }
 
