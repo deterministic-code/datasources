@@ -55,7 +55,7 @@ fn identity_helpers() {
 
 #[tokio::test]
 async fn readers() {
-    let empty = ArrayReader::new(vec![]);
+    let empty = ArrayReader::<Record>::new(vec![]);
     assert!(empty.current().is_none());
     assert!(!empty.next().await.unwrap());
     let reader = ArrayReader::new(vec![record(&[("id", Value::Int(1))])]);
@@ -101,6 +101,16 @@ async fn readers() {
     .await
     .unwrap();
     assert!(items.is_empty());
+
+    let typed = ArrayReader::new(vec!["x".to_string(), "y".to_string()]);
+    assert!(typed.next().await.unwrap());
+    assert_eq!(typed.current().as_deref(), Some("x"));
+    assert!(typed.next().await.unwrap());
+    assert!(!typed.next().await.unwrap());
+    let collected = collect_reader(&ArrayReader::new(vec!["z".to_string()]))
+        .await
+        .unwrap();
+    assert_eq!(collected, vec!["z".to_string()]);
 }
 
 #[tokio::test]
@@ -237,7 +247,7 @@ async fn stubs_throw() {
     let txn = StubTransaction::new("text");
     assert!(txn.commit().await.is_err());
     assert!(txn.abort().await.is_err());
-    let reader = StubReader::new("text");
+    let reader = StubReader::<Record>::new("text");
     assert!(reader.current().is_none());
     assert!(reader.next().await.is_err());
     let conn = StubConnection::new("text");

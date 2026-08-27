@@ -3,22 +3,28 @@ use crate::reader::Reader;
 use crate::record::Record;
 use crate::result::Result;
 use async_trait::async_trait;
+use std::marker::PhantomData;
 
-pub struct StubReader {
+pub struct StubReader<T = Record> {
     provider: String,
+    _item: PhantomData<T>,
 }
 
-impl StubReader {
+impl<T> StubReader<T> {
     pub fn new(provider: impl Into<String>) -> Self {
         Self {
             provider: provider.into(),
+            _item: PhantomData,
         }
     }
 }
 
 #[async_trait]
-impl Reader for StubReader {
-    fn current(&self) -> Option<Record> {
+impl<T> Reader<T> for StubReader<T>
+where
+    T: Send + Sync,
+{
+    fn current(&self) -> Option<T> {
         None
     }
 

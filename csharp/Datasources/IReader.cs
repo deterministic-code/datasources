@@ -1,7 +1,9 @@
 namespace Datasources;
 
-public interface IReader
+public interface IReader<out T>
 {
-    object? Current { get; }
+    T? Current { get; }
     Task<bool> Next();
 }
+
+public interface IReader : IReader<object>;

@@ -1,13 +1,13 @@
 namespace Datasources;
 
-public sealed class MockReader : IReader
+public class MockReader<T> : IReader<T>
 {
-    private readonly IReadOnlyList<object?> _rows;
+    private readonly IReadOnlyList<T?> _rows;
     private int _index = -1;
     public int NextCalls { get; private set; }
     public Exception? NextError { get; set; }
-    public MockReader(IReadOnlyList<object?>? rows = null) => _rows = rows ?? Array.Empty<object?>();
-    public object? Current { get; private set; }
+    public MockReader(IReadOnlyList<T?>? rows = null) => _rows = rows ?? Array.Empty<T?>();
+    public T? Current { get; private set; }
 
     public Task<bool> Next()
     {
@@ -20,7 +20,12 @@ public sealed class MockReader : IReader
             return Task.FromResult(true);
         }
 
-        Current = null;
+        Current = default;
         return Task.FromResult(false);
     }
+}
+
+public sealed class MockReader : MockReader<object>, IReader
+{
+    public MockReader(IReadOnlyList<object?>? rows = null) : base(rows) { }
 }

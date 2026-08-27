@@ -6,13 +6,13 @@ use crate::result::Result;
 use async_trait::async_trait;
 use std::sync::Mutex;
 
-pub struct MockReader {
-    inner: ArrayReader,
+pub struct MockReader<T = Record> {
+    inner: ArrayReader<T>,
     error: Mutex<Option<String>>,
 }
 
-impl MockReader {
-    pub fn new(rows: Vec<Record>) -> Self {
+impl<T> MockReader<T> {
+    pub fn new(rows: Vec<T>) -> Self {
         Self {
             inner: ArrayReader::new(rows),
             error: Mutex::new(None),
@@ -25,8 +25,11 @@ impl MockReader {
 }
 
 #[async_trait]
-impl Reader for MockReader {
-    fn current(&self) -> Option<Record> {
+impl<T> Reader<T> for MockReader<T>
+where
+    T: Clone + Send + Sync,
+{
+    fn current(&self) -> Option<T> {
         self.inner.current()
     }
 
