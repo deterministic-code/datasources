@@ -341,14 +341,6 @@ public sealed class MemoryDatasource : IDatasource, IDatasourceFactory
     public ICommand CreateCommand(IConnection? connection = null) =>
         new MemoryCommand(connection as MemoryConnection ?? NewConnection());
 
-    public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null)
-    {
-        var conn = connection as MemoryConnection ?? NewConnection();
-        if (options?.Collection is not null)
-        {
-            conn.Collection = options.Collection;
-        }
-
-        return (IRepository<T>)(object)new MemoryRepository(conn);
-    }
+    public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
+        (IRepository<T>)(object)new MemoryRepository(connection as MemoryConnection ?? NewConnection());
 }

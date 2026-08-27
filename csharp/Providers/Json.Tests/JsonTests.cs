@@ -124,7 +124,7 @@ public class JsonTests
         await implicitCommand.Connection.Open();
         await implicitCommand.Execute("insert", [new Parameter("id", 1)]);
         await implicitCommand.ExecuteReader();
-        ds.CreateRepository<Dictionary<string, object?>>(created, new RepositoryOptions { Collection = "users" });
+        ds.CreateRepository<Dictionary<string, object?>>(created);
         ds.CreateRepository<Dictionary<string, object?>>();
         Assert.Equal("json", Datasource.Create("json").Provider);
 

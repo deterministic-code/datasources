@@ -43,7 +43,6 @@ impl Datasource for StubDatasource {
     fn create_repository(
         &self,
         _connection: Option<Arc<dyn Connection>>,
-        _table: Option<&str>,
     ) -> Arc<dyn Repository> {
         Arc::new(StubRepository::new(self.provider.clone()))
     }

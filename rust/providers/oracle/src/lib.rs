@@ -39,7 +39,6 @@ impl Datasource for OracleDatasource {
     fn create_repository(
         &self,
         _connection: Option<Arc<dyn Connection>>,
-        _table: Option<&str>,
     ) -> Arc<dyn Repository> {
         Arc::new(StubRepository::new("oracle"))
     }

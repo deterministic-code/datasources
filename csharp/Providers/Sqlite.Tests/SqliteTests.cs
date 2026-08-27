@@ -70,9 +70,8 @@ public class SqliteTests
         await implicitCommand.Connection.Open();
         await implicitCommand.Execute("DELETE FROM items");
         await implicitCommand.ExecuteReader("SELECT 1");
-        var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created, new RepositoryOptions { Table = "accounts" });
-        Assert.Equal("accounts", ((SqliteRepository)(object)repo2).Table);
-        Assert.Equal("people", ((SqliteRepository)(object)ds.CreateRepository<Dictionary<string, object?>>(created)).Table);
+        var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created);
+        Assert.Equal("people", ((SqliteRepository)(object)repo2).Table);
         new SqliteDatasource(new SqliteConnectionOptions { Driver = driver }).CreateRepository<Dictionary<string, object?>>();
         Assert.Equal("sqlite", Datasource.Create("sqlite").Provider);
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteDatasource().CreateConnection());

@@ -13,6 +13,5 @@ pub trait Datasource: Send + Sync {
     fn create_repository(
         &self,
         connection: Option<Arc<dyn Connection>>,
-        table: Option<&str>,
     ) -> Arc<dyn Repository>;
 }

@@ -3,7 +3,6 @@ import type {
   IConnection,
   IDatasource,
   IRepository,
-  RepositoryOptions,
 } from "@datasources/core";
 import {
   SqliteConnection,
@@ -47,15 +46,10 @@ export class SqliteDatasource implements IDatasource {
     return new SqliteCommand(conn);
   }
 
-  createRepository<T = unknown>(
-    connection?: IConnection,
-    options?: RepositoryOptions,
-  ): IRepository<T> {
+  createRepository<T = unknown>(connection?: IConnection): IRepository<T> {
     const conn =
       (connection as SqliteConnection | undefined) ?? this.newConnection();
-    return new SqliteRepository<T>(conn, {
-      table: options?.table ?? this.options.table,
-    });
+    return new SqliteRepository<T>(conn, { table: this.options.table });
   }
 }
 

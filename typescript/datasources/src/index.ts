@@ -12,7 +12,6 @@ export type { DatasourceFactory } from "./DatasourceFactory.ts";
 export type { MiddlewareContext } from "./MiddlewareContext.ts";
 export type { MiddlewareHook } from "./MiddlewareHook.ts";
 export type { Parameter } from "./Parameter.ts";
-export type { RepositoryOptions } from "./RepositoryOptions.ts";
 export { ArrayReader } from "./ArrayReader.ts";
 export { collectAsync } from "./collectAsync.ts";
 export { Datasource } from "./Datasource.ts";
