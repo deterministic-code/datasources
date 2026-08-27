@@ -241,14 +241,15 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
     public IDatasource Create(object? options = null) =>
         new SqliteDatasource(options as SqliteConnectionOptions ?? new SqliteConnectionOptions());
 
-    public IConnection CreateConnection() => new SqliteConnection(_options);
+    SqliteConnection NewConnection() => new(_options);
+    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(NewConnection());
 
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new SqliteCommand(connection as SqliteConnection ?? (SqliteConnection)CreateConnection());
+        new SqliteCommand(connection as SqliteConnection ?? NewConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null)
     {
-        var conn = connection as SqliteConnection ?? (SqliteConnection)CreateConnection();
+        var conn = connection as SqliteConnection ?? NewConnection();
         return (IRepository<T>)(object)new SqliteRepository(conn, options?.Table ?? _table);
     }
 }

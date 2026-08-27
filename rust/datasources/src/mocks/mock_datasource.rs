@@ -6,6 +6,8 @@ use crate::connection::Connection;
 use crate::datasource::Datasource;
 use crate::datasource_factory::DatasourceFactory;
 use crate::repository::Repository;
+use crate::result::Result;
+use async_trait::async_trait;
 use std::sync::Arc;
 
 pub struct MockDatasource {
@@ -26,13 +28,14 @@ impl MockDatasource {
     }
 }
 
+#[async_trait]
 impl Datasource for MockDatasource {
     fn provider(&self) -> &str {
         &self.provider
     }
 
-    fn create_connection(&self) -> Arc<dyn Connection> {
-        self.connection.clone()
+    async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
+        Ok(self.connection.clone())
     }
 
     fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {

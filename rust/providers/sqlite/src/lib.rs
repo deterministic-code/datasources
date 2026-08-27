@@ -414,14 +414,16 @@ impl SqliteDatasource {
     }
 }
 
+#[async_trait]
 impl Datasource for SqliteDatasource {
     fn provider(&self) -> &str {
         "sqlite"
     }
 
-    fn create_connection(&self) -> Arc<dyn Connection> {
-        self.typed_connection()
-            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(ScriptedDriver::new()))))
+    async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
+        Ok(self
+            .typed_connection()
+            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(ScriptedDriver::new())))))
     }
 
     fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
@@ -536,14 +538,14 @@ mod tests {
         register(SqliteDatasource::factory());
         let ds = create("sqlite", None).unwrap();
         assert_eq!(ds.provider(), "sqlite");
-        ds.create_connection();
+        ds.create_connection().await.unwrap();
         ds.create_command(None);
         ds.create_repository(None, Some("people"));
         let factory = SqliteDatasource::new(None, None, None);
         assert_eq!(Datasource::provider(&factory), "sqlite");
-        factory.create_connection();
-        factory.create_command(Some(factory.create_connection()));
-        factory.create_repository(Some(factory.create_connection()), None);
+        factory.create_connection().await.unwrap();
+        factory.create_command(Some(factory.create_connection().await.unwrap()));
+        factory.create_repository(Some(factory.create_connection().await.unwrap()), None);
         DatasourceFactory::create(&factory, None);
         assert_eq!(DatasourceFactory::provider(&factory), "sqlite");
 

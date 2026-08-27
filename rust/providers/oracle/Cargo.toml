@@ -6,6 +6,7 @@ license.workspace = true
 description = "oracle datasource stub"
 
 [dependencies]
+async-trait = { workspace = true }
 datasources = { workspace = true }
 
 [dev-dependencies]

@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class StubConnection : MiddlewareHost, IConnection
+public class StubConnection : MiddlewareHost, IConnection
 {
     private readonly string _provider;
     public StubConnection(string provider) => _provider = provider;

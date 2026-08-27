@@ -5,7 +5,7 @@ import type { RepositoryOptions } from "./RepositoryOptions.ts";
 
 export interface IDatasource {
   readonly provider: string;
-  createConnection(): IConnection;
+  createConnection(): Promise<IConnection>;
   createCommand(connection?: IConnection): ICommand;
   createRepository<T = unknown>(
     connection?: IConnection,

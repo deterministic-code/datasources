@@ -26,9 +26,9 @@ export class MockDatasource implements IDatasource {
     return new MockDatasource(this.provider);
   }
 
-  createConnection(): IConnection {
+  createConnection(): Promise<IConnection> {
     this.createConnectionCalls += 1;
-    return this.connection;
+    return Promise.resolve(this.connection);
   }
 
   createCommand(connection?: IConnection): ICommand {

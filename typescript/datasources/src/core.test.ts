@@ -252,7 +252,7 @@ describe("stubs", () => {
     const ds = createStubDatasource("text");
     expect(ds.provider).toBe("text");
     expect(ds.create().provider).toBe("text");
-    const connection = ds.createConnection();
+    const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(StubConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
     await expect(connection.close()).rejects.toThrow(ProviderNotImplementedError);
@@ -388,10 +388,10 @@ describe("published mocks", () => {
     await expect(repo.delete({ id: 0 })).rejects.toThrow("del");
   });
 
-  it("builds commands and repositories from a mock datasource", () => {
+  it("builds commands and repositories from a mock datasource", async () => {
     const ds = new MockDatasource();
     expect(ds.create().provider).toBe("mock");
-    expect(ds.createConnection()).toBe(ds.connection);
+    expect(await ds.createConnection()).toBe(ds.connection);
     expect(ds.createCommand()).toBeInstanceOf(MockCommand);
     const provided = new MockConnection();
     expect(ds.createCommand(provided).connection).toBe(provided);

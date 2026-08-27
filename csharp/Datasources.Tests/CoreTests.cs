@@ -106,7 +106,7 @@ public class CoreTests
         var ds = StubFactory.Create("text");
         Assert.Equal("text", ds.Provider);
         Assert.Equal("text", ds.Create().Provider);
-        var connection = ds.CreateConnection();
+        var connection = await ds.CreateConnection();
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.Open());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.Close());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.StartTransaction());
@@ -193,7 +193,7 @@ public class CoreTests
 
         var ds = new MockDatasource();
         Assert.Equal("mock", ds.Create().Provider);
-        ds.CreateConnection();
+        await ds.CreateConnection();
         Assert.IsType<MockCommand>(ds.CreateCommand());
         var provided = new MockConnection();
         Assert.Same(provided, ds.CreateCommand(provided).Connection);
