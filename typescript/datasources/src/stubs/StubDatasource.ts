@@ -14,15 +14,16 @@ export class StubDatasource implements IDatasource {
     return new StubDatasource(this.provider);
   }
 
-  createConnection(): IConnection {
+  private newConnection(): IConnection {
     return new StubConnection(this.provider);
   }
 
+  createConnection(): Promise<IConnection> {
+    return Promise.resolve(this.newConnection());
+  }
+
   createCommand(connection?: IConnection): ICommand {
-    return new StubCommand(
-      this.provider,
-      connection ?? this.createConnection(),
-    );
+    return new StubCommand(this.provider, connection ?? this.newConnection());
   }
 
   createRepository<T = unknown>(
@@ -31,7 +32,7 @@ export class StubDatasource implements IDatasource {
   ): IRepository<T> {
     return new StubRepository<T>(
       this.provider,
-      connection ?? this.createConnection(),
+      connection ?? this.newConnection(),
     );
   }
 }

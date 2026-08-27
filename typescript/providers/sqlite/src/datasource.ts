@@ -32,15 +32,18 @@ export class SqliteDatasource implements IDatasource {
     return SqliteDatasource.create(options);
   }
 
-  createConnection(): IConnection {
+  private newConnection(): SqliteConnection {
     requireDriver(this.options.driver);
     return new SqliteConnection(this.options);
   }
 
+  createConnection(): Promise<IConnection> {
+    return Promise.resolve(this.newConnection());
+  }
+
   createCommand(connection?: IConnection): ICommand {
     const conn =
-      (connection as SqliteConnection | undefined) ??
-      (this.createConnection() as SqliteConnection);
+      (connection as SqliteConnection | undefined) ?? this.newConnection();
     return new SqliteCommand(conn);
   }
 
@@ -49,8 +52,7 @@ export class SqliteDatasource implements IDatasource {
     options?: RepositoryOptions,
   ): IRepository<T> {
     const conn =
-      (connection as SqliteConnection | undefined) ??
-      (this.createConnection() as SqliteConnection);
+      (connection as SqliteConnection | undefined) ?? this.newConnection();
     return new SqliteRepository<T>(conn, {
       table: options?.table ?? this.options.table,
     });

@@ -583,13 +583,14 @@ impl JsonDatasource {
     }
 }
 
+#[async_trait]
 impl Datasource for JsonDatasource {
     fn provider(&self) -> &str {
         "json"
     }
 
-    fn create_connection(&self) -> Arc<dyn Connection> {
-        self.typed_connection()
+    async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
+        Ok(self.typed_connection())
     }
 
     fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
@@ -733,11 +734,11 @@ mod tests {
         register(JsonDatasource::factory());
         let ds = create("json", None).unwrap();
         assert_eq!(ds.provider(), "json");
-        ds.create_connection();
+        ds.create_connection().await.unwrap();
         ds.create_command(None);
-        ds.create_command(Some(ds.create_connection()));
+        ds.create_command(Some(ds.create_connection().await.unwrap()));
         ds.create_repository(None, Some("users"));
-        ds.create_repository(Some(ds.create_connection()), None);
+        ds.create_repository(Some(ds.create_connection().await.unwrap()), None);
         let factory = JsonDatasource::new("", None, Arc::new(MemoryFileStore::new()), None);
         assert_eq!(DatasourceFactory::provider(&factory), "json");
         DatasourceFactory::create(&factory, None);

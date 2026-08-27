@@ -60,7 +60,7 @@ public class SqliteTests
 
         var ds = new SqliteDatasource(new SqliteConnectionOptions { Driver = driver }, "people");
         Assert.Equal("sqlite", ds.Create().Provider);
-        var created = ds.CreateConnection();
+        var created = await ds.CreateConnection();
         await ((SqliteConnection)created).Open();
         ds.CreateCommand(created);
         ds.CreateCommand();
@@ -69,7 +69,7 @@ public class SqliteTests
         Assert.Equal("people", ((SqliteRepository)(object)ds.CreateRepository<Dictionary<string, object?>>(created)).Table);
         new SqliteDatasource(new SqliteConnectionOptions { Driver = driver }).CreateRepository<Dictionary<string, object?>>();
         Assert.Equal("sqlite", Datasource.Create("sqlite").Provider);
-        Assert.Throws<DatasourceException>(() => new SqliteDatasource().CreateConnection());
+        await Assert.ThrowsAsync<DatasourceException>(() => new SqliteDatasource().CreateConnection());
 
         var closed = new SqliteConnection(new SqliteConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).Execute("x"));

@@ -15,10 +15,10 @@ public sealed class MockDatasource : IDatasource, IDatasourceFactory
     }
 
     public IDatasource Create(object? options = null) => new MockDatasource(Provider);
-    public IConnection CreateConnection()
+    public Task<IConnection> CreateConnection()
     {
         CreateConnectionCalls++;
-        return Connection;
+        return Task.FromResult(Connection);
     }
 
     public ICommand CreateCommand(IConnection? connection = null) =>

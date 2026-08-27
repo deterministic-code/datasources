@@ -327,7 +327,7 @@ describe("SqliteDatasource", () => {
     );
     const ds = new SqliteDatasource({ driver, table: "people" });
     expect(ds.create({ driver }).provider).toBe("sqlite");
-    const connection = ds.createConnection();
+    const connection = await ds.createConnection();
     await (connection as SqliteConnection).open();
     expect(ds.createCommand(connection).connection).toBe(connection);
     const implicit = new SqliteDatasource({ driver }).createCommand();

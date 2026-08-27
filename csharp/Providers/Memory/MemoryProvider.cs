@@ -335,14 +335,15 @@ public sealed class MemoryDatasource : IDatasource, IDatasourceFactory
     public IDatasource Create(object? options = null) =>
         new MemoryDatasource(options as MemoryConnectionOptions ?? new MemoryConnectionOptions());
 
-    public IConnection CreateConnection() => new MemoryConnection(_options);
+    MemoryConnection NewConnection() => new(_options);
+    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(NewConnection());
 
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new MemoryCommand(connection as MemoryConnection ?? (MemoryConnection)CreateConnection());
+        new MemoryCommand(connection as MemoryConnection ?? NewConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null)
     {
-        var conn = connection as MemoryConnection ?? (MemoryConnection)CreateConnection();
+        var conn = connection as MemoryConnection ?? NewConnection();
         if (options?.Collection is not null)
         {
             conn.Collection = options.Collection;

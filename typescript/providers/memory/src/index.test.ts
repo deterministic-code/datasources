@@ -226,7 +226,7 @@ describe("MemoryDatasource", () => {
     expect(MemoryDatasource.factory.provider).toBe("memory");
     const ds = new MemoryDatasource({ data: [{ id: 1 }] });
     expect(ds.create({ data: [] }).provider).toBe("memory");
-    const connection = ds.createConnection() as MemoryConnection;
+    const connection = (await ds.createConnection()) as MemoryConnection;
     await connection.open();
     const command = ds.createCommand(connection);
     expect(command.connection).toBe(connection);

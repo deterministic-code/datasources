@@ -120,7 +120,7 @@ public class MemoryTests
         var ds = new MemoryDatasource(new MemoryConnectionOptions { Data = new List<Dictionary<string, object?>>() });
         Assert.Equal("memory", ds.Create().Provider);
         Assert.Equal("memory", MemoryDatasource.Factory.Provider);
-        var created = ds.CreateConnection();
+        var created = await ds.CreateConnection();
         await ((MemoryConnection)created).Open();
         ds.CreateCommand(created);
         ds.CreateCommand();

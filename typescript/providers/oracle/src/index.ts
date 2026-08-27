@@ -1,9 +1,34 @@
-import { type DatasourceFactory, type IDatasource, StubDatasource } from "@datasources/core";
+import {
+  type DatasourceFactory,
+  type ICommand,
+  type IConnection,
+  type IDatasource,
+  type IRepository,
+  type RepositoryOptions,
+  StubCommand,
+  StubConnection,
+  StubRepository,
+} from "@datasources/core";
 
-export class OracleDatasource implements DatasourceFactory {
+export class OracleConnection extends StubConnection {
+  constructor() {
+    super("oracle");
+  }
+}
+
+export class OracleDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new OracleDatasource();
   readonly provider = "oracle";
-  create = (_options?: unknown): IDatasource => new StubDatasource("oracle");
+  create = (_options?: unknown): IDatasource => new OracleDatasource();
+  private newConnection = (): IConnection => new OracleConnection();
+  createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
+  createCommand = (connection?: IConnection): ICommand =>
+    new StubCommand(this.provider, connection ?? this.newConnection());
+  createRepository = <T = unknown>(
+    connection?: IConnection,
+    _options?: RepositoryOptions,
+  ): IRepository<T> =>
+    new StubRepository<T>(this.provider, connection ?? this.newConnection());
 }
 
 export default OracleDatasource;

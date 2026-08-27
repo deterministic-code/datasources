@@ -212,9 +212,15 @@ async fn stubs_throw() {
     assert_eq!(Datasource::provider(&*ds), "text");
     let created = DatasourceFactory::create(&*ds, None);
     assert_eq!(created.provider(), "text");
-    assert!(ds.create_connection().open().await.is_err());
-    assert!(ds.create_connection().close().await.is_err());
-    assert!(ds.create_connection().start_transaction().await.is_err());
+    assert!(ds.create_connection().await.unwrap().open().await.is_err());
+    assert!(ds.create_connection().await.unwrap().close().await.is_err());
+    assert!(ds
+        .create_connection()
+        .await
+        .unwrap()
+        .start_transaction()
+        .await
+        .is_err());
     let command = ds.create_command(None);
     assert!(command.execute(None, None).await.is_err());
     assert!(command
@@ -318,7 +324,7 @@ async fn published_mocks() {
     let ds = MockDatasource::new("mock");
     assert_eq!(Datasource::provider(&ds), "mock");
     assert_eq!(DatasourceFactory::provider(&ds), "mock");
-    ds.create_connection();
+    ds.create_connection().await.unwrap();
     ds.create_command(None);
     ds.create_repository(None, Some("t"));
     DatasourceFactory::create(&ds, Some("{}"));

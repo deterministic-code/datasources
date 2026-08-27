@@ -395,12 +395,13 @@ public sealed class JsonDatasource : IDatasource, IDatasourceFactory
     public string Provider => "json";
     public JsonDatasource(JsonConnectionOptions? options = null) => _options = options ?? new JsonConnectionOptions();
     public IDatasource Create(object? options = null) => new JsonDatasource(options as JsonConnectionOptions ?? new JsonConnectionOptions());
-    public IConnection CreateConnection() => new JsonConnection(_options);
+    JsonConnection NewConnection() => new(_options);
+    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(NewConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new JsonCommand(connection as JsonConnection ?? (JsonConnection)CreateConnection());
+        new JsonCommand(connection as JsonConnection ?? NewConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null)
     {
-        var conn = connection as JsonConnection ?? (JsonConnection)CreateConnection();
+        var conn = connection as JsonConnection ?? NewConnection();
         if (options?.Collection is not null)
         {
             conn.Collection = options.Collection;

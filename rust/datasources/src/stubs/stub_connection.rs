@@ -48,3 +48,45 @@ impl Connection for StubConnection {
             .await
     }
 }
+
+#[macro_export]
+macro_rules! named_stub_connection {
+    ($name:ident, $provider:literal) => {
+        pub struct $name {
+            inner: $crate::StubConnection,
+        }
+
+        impl $name {
+            pub fn new() -> Self {
+                Self {
+                    inner: $crate::StubConnection::new($provider),
+                }
+            }
+        }
+
+        impl $crate::MiddlewareAware for $name {
+            fn use_middleware(
+                &self,
+                before: Option<$crate::MiddlewareHook>,
+                after: Option<$crate::MiddlewareHook>,
+            ) {
+                self.inner.use_middleware(before, after);
+            }
+        }
+
+        #[async_trait::async_trait]
+        impl $crate::Connection for $name {
+            async fn open(&self) -> $crate::Result<()> {
+                self.inner.open().await
+            }
+            async fn close(&self) -> $crate::Result<()> {
+                self.inner.close().await
+            }
+            async fn start_transaction(
+                &self,
+            ) -> $crate::Result<std::sync::Arc<dyn $crate::Transaction>> {
+                self.inner.start_transaction().await
+            }
+        }
+    };
+}

@@ -34,14 +34,17 @@ export class MemoryDatasource implements IDatasource {
     return MemoryDatasource.create(options);
   }
 
-  createConnection(): IConnection {
+  private newConnection(): MemoryConnection {
     return new MemoryConnection(this.options);
+  }
+
+  createConnection(): Promise<IConnection> {
+    return Promise.resolve(this.newConnection());
   }
 
   createCommand(connection?: IConnection): ICommand {
     return new MemoryCommand(
-      (connection as MemoryConnection | undefined) ??
-        (this.createConnection() as MemoryConnection),
+      (connection as MemoryConnection | undefined) ?? this.newConnection(),
     );
   }
 
@@ -50,8 +53,7 @@ export class MemoryDatasource implements IDatasource {
     options?: RepositoryOptions,
   ): IRepository<T> {
     const conn =
-      (connection as MemoryConnection | undefined) ??
-      (this.createConnection() as MemoryConnection);
+      (connection as MemoryConnection | undefined) ?? this.newConnection();
     if (options?.collection) {
       conn.collection = options.collection;
     }

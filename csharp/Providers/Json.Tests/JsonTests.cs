@@ -114,7 +114,7 @@ public class JsonTests
 
         var ds = new JsonDatasource(new JsonConnectionOptions { Data = new JsonArray() });
         Assert.Equal("json", ds.Create().Provider);
-        var created = ds.CreateConnection();
+        var created = await ds.CreateConnection();
         await ((JsonConnection)created).Open();
         ds.CreateCommand(created);
         ds.CreateCommand();

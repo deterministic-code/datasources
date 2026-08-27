@@ -484,13 +484,14 @@ impl Default for MemoryDatasource {
     }
 }
 
+#[async_trait]
 impl Datasource for MemoryDatasource {
     fn provider(&self) -> &str {
         "memory"
     }
 
-    fn create_connection(&self) -> Arc<dyn Connection> {
-        self.typed_connection()
+    async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
+        Ok(self.typed_connection())
     }
 
     fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
@@ -649,11 +650,11 @@ mod tests {
         register(MemoryDatasource::factory());
         let ds = create("memory", None).unwrap();
         assert_eq!(ds.provider(), "memory");
-        ds.create_connection();
+        ds.create_connection().await.unwrap();
         ds.create_command(None);
-        ds.create_command(Some(ds.create_connection()));
+        ds.create_command(Some(ds.create_connection().await.unwrap()));
         ds.create_repository(None, Some("users"));
-        ds.create_repository(Some(ds.create_connection()), None);
+        ds.create_repository(Some(ds.create_connection().await.unwrap()), None);
         let factory = MemoryDatasource::default();
         assert_eq!(DatasourceFactory::provider(&factory), "memory");
         DatasourceFactory::create(&factory, None);

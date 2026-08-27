@@ -6,6 +6,8 @@ use crate::connection::Connection;
 use crate::datasource::Datasource;
 use crate::datasource_factory::DatasourceFactory;
 use crate::repository::Repository;
+use crate::result::Result;
+use async_trait::async_trait;
 use std::sync::Arc;
 
 pub struct StubDatasource {
@@ -18,15 +20,20 @@ impl StubDatasource {
             provider: provider.into(),
         }
     }
+
+    fn new_connection(&self) -> Arc<StubConnection> {
+        Arc::new(StubConnection::new(self.provider.clone()))
+    }
 }
 
+#[async_trait]
 impl Datasource for StubDatasource {
     fn provider(&self) -> &str {
         &self.provider
     }
 
-    fn create_connection(&self) -> Arc<dyn Connection> {
-        Arc::new(StubConnection::new(self.provider.clone()))
+    async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
+        Ok(self.new_connection())
     }
 
     fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {

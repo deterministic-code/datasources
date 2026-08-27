@@ -18,11 +18,17 @@ Register a factory, then create by provider name. See:
 - [TypeScript](create-factory-typescript.md)
 - [Rust](create-factory-rust.md)
 
+Create a closed connection, then open it. See:
+
+- [C#](create-connection-csharp.md)
+- [TypeScript](create-connection-typescript.md)
+- [Rust](create-connection-rust.md)
+
 ## Interfaces
 
 | Type | Role |
 | --- | --- |
-| `IDatasource` | Factory: `createConnection`, `createCommand`, `createRepository` |
+| `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository` |
 | `IConnection` | `open`, `close`, `startTransaction` |
 | `ITransaction` | `commit`, `abort` |
 | `ICommand` | `executeReader`, `execute` |

@@ -27,14 +27,17 @@ export class JsonDatasource implements IDatasource {
     return JsonDatasource.create(options);
   }
 
-  createConnection(): IConnection {
+  private newConnection(): JsonConnection {
     return new JsonConnection(this.options);
+  }
+
+  createConnection(): Promise<IConnection> {
+    return Promise.resolve(this.newConnection());
   }
 
   createCommand(connection?: IConnection): ICommand {
     return new JsonCommand(
-      (connection as JsonConnection | undefined) ??
-        (this.createConnection() as JsonConnection),
+      (connection as JsonConnection | undefined) ?? this.newConnection(),
     );
   }
 
@@ -43,8 +46,7 @@ export class JsonDatasource implements IDatasource {
     options?: RepositoryOptions,
   ): IRepository<T> {
     const conn =
-      (connection as JsonConnection | undefined) ??
-      (this.createConnection() as JsonConnection);
+      (connection as JsonConnection | undefined) ?? this.newConnection();
     if (options?.collection) {
       conn.collection = options.collection;
     }
