@@ -2,12 +2,9 @@ using Datasources;
 
 namespace Datasources.Xml;
 
-public static class XmlProvider
+public sealed class XmlDatasource : IDatasourceFactory
 {
-    public static readonly StubDatasource Factory = StubFactory.Create("xml");
-
-    static XmlProvider()
-    {
-        Datasource.Use(Factory);
-    }
+    public static readonly XmlDatasource Factory = new();
+    public string Provider => "xml";
+    public IDatasource Create(object? options = null) => new StubDatasource("xml");
 }

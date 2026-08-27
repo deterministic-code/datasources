@@ -1,8 +1,3 @@
-import { Datasource } from "@datasources/core";
-import { JsonDatasource } from "./datasource.ts";
-
-Datasource.use(JsonDatasource);
-
 export {
   JsonCommand,
 } from "./command.ts";

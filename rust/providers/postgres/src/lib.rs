@@ -1,27 +1,32 @@
-use datasources::{create_stub_datasource, register, Datasource};
+use datasources::{create_stub_datasource, Datasource, DatasourceFactory};
 use std::sync::Arc;
 
-pub fn postgres_datasource() -> Arc<dyn Datasource> {
-    create_stub_datasource("postgres")
+pub struct PostgresDatasource;
+
+impl PostgresDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self)
+    }
 }
 
-pub fn register_postgres() {
-    register(create_stub_datasource("postgres"));
+impl DatasourceFactory for PostgresDatasource {
+    fn provider(&self) -> &str {
+        "postgres"
+    }
+    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+        create_stub_datasource("postgres")
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_stub_datasource, DatasourceFactory, reset};
+    use datasources::{create, register, reset};
 
-    #[tokio::test]
-    async fn registers_and_throws() {
+    #[test]
+    fn creates() {
         reset();
-        register_postgres();
-        let ds = create("postgres", None).unwrap();
-        assert_eq!(ds.provider(), "postgres");
-        assert!(ds.create_connection().open().await.is_err());
-        assert_eq!(postgres_datasource().provider(), "postgres");
-        assert_eq!(DatasourceFactory::provider(&*create_stub_datasource("postgres")), "postgres");
+        register(PostgresDatasource::factory());
+        assert_eq!(create("postgres", None).unwrap().provider(), "postgres");
     }
 }

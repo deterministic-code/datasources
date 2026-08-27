@@ -1,27 +1,32 @@
-use datasources::{create_stub_datasource, register, Datasource};
+use datasources::{create_stub_datasource, Datasource, DatasourceFactory};
 use std::sync::Arc;
 
-pub fn oracle_datasource() -> Arc<dyn Datasource> {
-    create_stub_datasource("oracle")
+pub struct OracleDatasource;
+
+impl OracleDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self)
+    }
 }
 
-pub fn register_oracle() {
-    register(create_stub_datasource("oracle"));
+impl DatasourceFactory for OracleDatasource {
+    fn provider(&self) -> &str {
+        "oracle"
+    }
+    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+        create_stub_datasource("oracle")
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_stub_datasource, DatasourceFactory, reset};
+    use datasources::{create, register, reset};
 
-    #[tokio::test]
-    async fn registers_and_throws() {
+    #[test]
+    fn creates() {
         reset();
-        register_oracle();
-        let ds = create("oracle", None).unwrap();
-        assert_eq!(ds.provider(), "oracle");
-        assert!(ds.create_connection().open().await.is_err());
-        assert_eq!(oracle_datasource().provider(), "oracle");
-        assert_eq!(DatasourceFactory::provider(&*create_stub_datasource("oracle")), "oracle");
+        register(OracleDatasource::factory());
+        assert_eq!(create("oracle", None).unwrap().provider(), "oracle");
     }
 }

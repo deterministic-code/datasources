@@ -13,6 +13,7 @@ import { JsonCommand } from "./command.ts";
 import { JsonRepository } from "./repository.ts";
 
 export class JsonDatasource implements IDatasource {
+  static readonly factory = new JsonDatasource();
   static readonly provider = "json";
   readonly provider = "json";
 

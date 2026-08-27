@@ -2,12 +2,9 @@ using Datasources;
 
 namespace Datasources.Mysql;
 
-public static class MysqlProvider
+public sealed class MysqlDatasource : IDatasourceFactory
 {
-    public static readonly StubDatasource Factory = StubFactory.Create("mysql");
-
-    static MysqlProvider()
-    {
-        Datasource.Use(Factory);
-    }
+    public static readonly MysqlDatasource Factory = new();
+    public string Provider => "mysql";
+    public IDatasource Create(object? options = null) => new StubDatasource("mysql");
 }

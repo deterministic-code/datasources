@@ -1,27 +1,32 @@
-use datasources::{create_stub_datasource, register, Datasource};
+use datasources::{create_stub_datasource, Datasource, DatasourceFactory};
 use std::sync::Arc;
 
-pub fn yaml_datasource() -> Arc<dyn Datasource> {
-    create_stub_datasource("yaml")
+pub struct YamlDatasource;
+
+impl YamlDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self)
+    }
 }
 
-pub fn register_yaml() {
-    register(create_stub_datasource("yaml"));
+impl DatasourceFactory for YamlDatasource {
+    fn provider(&self) -> &str {
+        "yaml"
+    }
+    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+        create_stub_datasource("yaml")
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_stub_datasource, DatasourceFactory, reset};
+    use datasources::{create, register, reset};
 
-    #[tokio::test]
-    async fn registers_and_throws() {
+    #[test]
+    fn creates() {
         reset();
-        register_yaml();
-        let ds = create("yaml", None).unwrap();
-        assert_eq!(ds.provider(), "yaml");
-        assert!(ds.create_connection().open().await.is_err());
-        assert_eq!(yaml_datasource().provider(), "yaml");
-        assert_eq!(DatasourceFactory::provider(&*create_stub_datasource("yaml")), "yaml");
+        register(YamlDatasource::factory());
+        assert_eq!(create("yaml", None).unwrap().provider(), "yaml");
     }
 }

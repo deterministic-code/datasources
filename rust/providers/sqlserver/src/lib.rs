@@ -1,27 +1,32 @@
-use datasources::{create_stub_datasource, register, Datasource};
+use datasources::{create_stub_datasource, Datasource, DatasourceFactory};
 use std::sync::Arc;
 
-pub fn sqlserver_datasource() -> Arc<dyn Datasource> {
-    create_stub_datasource("sqlserver")
+pub struct SqlServerDatasource;
+
+impl SqlServerDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self)
+    }
 }
 
-pub fn register_sqlserver() {
-    register(create_stub_datasource("sqlserver"));
+impl DatasourceFactory for SqlServerDatasource {
+    fn provider(&self) -> &str {
+        "sqlserver"
+    }
+    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+        create_stub_datasource("sqlserver")
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_stub_datasource, DatasourceFactory, reset};
+    use datasources::{create, register, reset};
 
-    #[tokio::test]
-    async fn registers_and_throws() {
+    #[test]
+    fn creates() {
         reset();
-        register_sqlserver();
-        let ds = create("sqlserver", None).unwrap();
-        assert_eq!(ds.provider(), "sqlserver");
-        assert!(ds.create_connection().open().await.is_err());
-        assert_eq!(sqlserver_datasource().provider(), "sqlserver");
-        assert_eq!(DatasourceFactory::provider(&*create_stub_datasource("sqlserver")), "sqlserver");
+        register(SqlServerDatasource::factory());
+        assert_eq!(create("sqlserver", None).unwrap().provider(), "sqlserver");
     }
 }

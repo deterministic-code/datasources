@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, parameters_to_map, register, ArrayReader, Command, Connection, Datasource,
+    identity_filter, parameters_to_map, ArrayReader, Command, Connection, Datasource,
     DatasourceError, DatasourceFactory, MiddlewareAware, MiddlewareHook, MiddlewareHost, Parameter,
     Query, Reader, Record, Repository, Response, Result, Transaction, Value, Where,
 };
@@ -550,6 +550,15 @@ pub struct JsonDatasource {
 }
 
 impl JsonDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self::new(
+            "",
+            None,
+            Arc::new(MemoryFileStore::new()),
+            Some(JsonValue::Array(vec![])),
+        ))
+    }
+
     pub fn new(
         path: impl Into<String>,
         collection: Option<String>,
@@ -615,19 +624,11 @@ impl DatasourceFactory for JsonDatasource {
     }
 }
 
-pub fn register_json() {
-    register(Arc::new(JsonDatasource::new(
-        "",
-        None,
-        Arc::new(MemoryFileStore::new()),
-        Some(JsonValue::Array(vec![])),
-    )));
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, reset, TextQuery, TextWhere};
+    use datasources::{create, register, reset, TextQuery, TextWhere};
 
     fn rec(id: i64, name: &str) -> Record {
         let mut r = Record::new();
@@ -729,7 +730,7 @@ mod tests {
         txn.commit().await.unwrap();
 
         reset();
-        register_json();
+        register(JsonDatasource::factory());
         let ds = create("json", None).unwrap();
         assert_eq!(ds.provider(), "json");
         ds.create_connection();

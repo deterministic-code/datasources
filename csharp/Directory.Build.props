@@ -7,4 +7,7 @@
   <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <Using Include="Xunit" />
   </ItemGroup>
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) AND $(MSBuildProjectName) != 'Datasources.Tests'">
+    <Compile Include="$(MSBuildThisFileDirectory)Providers\RegisterCreateTests.cs" Link="RegisterCreateTests.cs" />
+  </ItemGroup>
 </Project>

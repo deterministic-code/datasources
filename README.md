@@ -10,37 +10,13 @@ rust/         cargo workspace (datasources + providers/{json,memory,sqlite,stubs
 csharp/       .NET 10 solution (Datasources + Providers/{Json,Memory,Sqlite,stubs})
 ```
 
-## Install one provider
+## Create
 
-TypeScript:
+Register a factory, then create by provider name. See:
 
-```ts
-import { Datasource } from "@datasources/core";
-import { SqliteDatasource } from "@datasources/sqlite";
-
-Datasource.use(SqliteDatasource);
-const ds = Datasource.create("sqlite", { filename: ":memory:", driver });
-const conn = ds.createConnection();
-await conn.open();
-```
-
-Rust:
-
-```rust
-use datasources::{create, register};
-use datasources_sqlite::register_sqlite;
-
-register_sqlite();
-let ds = create("sqlite", None)?;
-```
-
-C#:
-
-```csharp
-Datasource.Use(SqliteDatasource.Factory);
-var ds = Datasource.Create("sqlite");
-await ds.CreateConnection().Open();
-```
+- [C#](create-factory-csharp.md)
+- [TypeScript](create-factory-typescript.md)
+- [Rust](create-factory-rust.md)
 
 ## Interfaces
 

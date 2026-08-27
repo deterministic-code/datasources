@@ -1,5 +1,9 @@
-import { createStubDatasource, Datasource } from "@datasources/core";
+import { type DatasourceFactory, type IDatasource, StubDatasource } from "@datasources/core";
 
-export const YamlDatasource = createStubDatasource("yaml");
-Datasource.use(YamlDatasource);
+export class YamlDatasource implements DatasourceFactory {
+  static readonly factory = new YamlDatasource();
+  readonly provider = "yaml";
+  create = (_options?: unknown): IDatasource => new StubDatasource("yaml");
+}
+
 export default YamlDatasource;

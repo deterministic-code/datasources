@@ -237,8 +237,8 @@ describe("Datasource registry", () => {
   it("registers, lists, creates, and resets", () => {
     const factory = new MockDatasource("json");
     expect(Datasource.registered()).toEqual([]);
-    Datasource.use(factory);
-    expect(Datasource.registered()).toEqual(["json"]);
+    Datasource.use(factory, new MockDatasource("memory"));
+    expect(Datasource.registered()).toEqual(["json", "memory"]);
     const created = Datasource.create("json", { path: "x" });
     expect(created.provider).toBe("json");
     Datasource.reset();

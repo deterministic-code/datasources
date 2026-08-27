@@ -6,6 +6,13 @@ public static class Datasource
 
     public static void Use(IDatasourceFactory factory) => Factories[factory.Provider] = factory;
 
+    public static void Use(IDatasourceFactory first, params IDatasourceFactory[] rest)
+    {
+        Use(first);
+        foreach (var factory in rest)
+            Use(factory);
+    }
+
     public static IDatasource Create(string provider, object? options = null) =>
         Factories.TryGetValue(provider, out var factory)
             ? factory.Create(options)

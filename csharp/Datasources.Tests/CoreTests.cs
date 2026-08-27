@@ -93,8 +93,8 @@ public class CoreTests
     public void Registry()
     {
         Assert.Empty(Datasource.Registered());
-        Datasource.Use(new MockDatasource("json"));
-        Assert.Equal(new[] { "json" }, Datasource.Registered());
+        Datasource.Use(new MockDatasource("json"), new MockDatasource("memory"));
+        Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
         Assert.Equal("json", Datasource.Create("json").Provider);
         Datasource.Reset();
         Assert.Throws<ProviderNotInstalledException>(() => Datasource.Create("json"));

@@ -2,12 +2,9 @@ using Datasources;
 
 namespace Datasources.Oracle;
 
-public static class OracleProvider
+public sealed class OracleDatasource : IDatasourceFactory
 {
-    public static readonly StubDatasource Factory = StubFactory.Create("oracle");
-
-    static OracleProvider()
-    {
-        Datasource.Use(Factory);
-    }
+    public static readonly OracleDatasource Factory = new();
+    public string Provider => "oracle";
+    public IDatasource Create(object? options = null) => new StubDatasource("oracle");
 }

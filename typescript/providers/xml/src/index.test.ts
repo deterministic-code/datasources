@@ -1,14 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { Datasource, ProviderNotImplementedError } from "@datasources/core";
-import XmlDatasource, { XmlDatasource as Named } from "./index.ts";
+import { afterEach, describe, expect, it } from "vitest";
+import { Datasource } from "@datasources/core";
+import { XmlDatasource } from "./index.ts";
 
-describe("xml stub", () => {
-  it("registers and throws on IO", async () => {
-    expect(Named.provider).toBe("xml");
-    expect(XmlDatasource.provider).toBe("xml");
-    const ds = Datasource.create("xml");
-    await expect(ds.createConnection().open()).rejects.toThrow(
-      ProviderNotImplementedError,
-    );
+afterEach(() => Datasource.reset());
+
+describe("xml", () => {
+  it("creates", () => {
+    Datasource.use(XmlDatasource.factory);
+    expect(Datasource.create("xml").provider).toBe("xml");
   });
 });

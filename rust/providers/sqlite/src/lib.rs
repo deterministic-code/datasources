@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use datasources::{
-    identity_where_text, parameters_to_map, register, ArrayReader, Command, Connection, Datasource,
+    identity_where_text, parameters_to_map, ArrayReader, Command, Connection, Datasource,
     DatasourceError, DatasourceFactory, MiddlewareAware, MiddlewareHook, MiddlewareHost, Parameter,
     Query, Reader, Record, Repository, Response, Result, Transaction, Value, Where,
 };
@@ -386,6 +386,14 @@ pub struct SqliteDatasource {
 }
 
 impl SqliteDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self::new(
+            Some(":memory:".into()),
+            Some(Arc::new(ScriptedDriver::new())),
+            None,
+        ))
+    }
+
     pub fn new(
         filename: Option<String>,
         driver: Option<Arc<dyn SqliteDriver>>,
@@ -452,18 +460,11 @@ impl DatasourceFactory for SqliteDatasource {
     }
 }
 
-pub fn register_sqlite() {
-    register(Arc::new(SqliteDatasource::new(
-        Some(":memory:".into()),
-        Some(Arc::new(ScriptedDriver::new())),
-        None,
-    )));
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, reset, TextQuery, TextWhere};
+    use datasources::{create, register, reset, TextQuery, TextWhere};
 
     fn rec(id: i64) -> Record {
         let mut r = Record::new();
@@ -532,7 +533,7 @@ mod tests {
         defaulted.use_middleware(None, None);
 
         reset();
-        register_sqlite();
+        register(SqliteDatasource::factory());
         let ds = create("sqlite", None).unwrap();
         assert_eq!(ds.provider(), "sqlite");
         ds.create_connection();

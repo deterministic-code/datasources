@@ -124,7 +124,7 @@ class FakeDatabase implements SqliteDatabase {
 
 afterEach(() => {
   Datasource.reset();
-  Datasource.use(SqliteDatasource);
+  Datasource.use(SqliteDatasource.factory);
 });
 
 describe("requireDriver and bindParameters", () => {
