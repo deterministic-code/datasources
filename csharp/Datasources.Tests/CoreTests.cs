@@ -45,10 +45,6 @@ public class CoreTests
         Assert.Equal("a", reader.Current);
         Assert.True(await reader.Next());
         Assert.False(await reader.Next());
-        var collected = await AsyncEnumerable.Collect(AsyncEnumerable.FromReader<string>(new ArrayReader(new object?[] { "z" })));
-        Assert.Equal(new[] { "z" }, collected);
-        var skipped = await AsyncEnumerable.Collect(AsyncEnumerable.FromReader<string>(new ArrayReader(new object?[] { 1 })));
-        Assert.Empty(skipped);
     }
 
     [Fact]
@@ -179,15 +175,15 @@ public class CoreTests
         Assert.Null(await repo.GetSingle());
         repo.Items.Add(new Dictionary<string, object?> { ["id"] = 1 });
         Assert.NotNull(await repo.GetSingle(new MockQuery("id=1")));
-        Assert.Single(await AsyncEnumerable.Collect(repo.Get()));
-        Assert.Single(await AsyncEnumerable.Collect(repo.Get(new MockQuery("all"))));
+        Assert.Single(await repo.Get().ToListAsync());
+        Assert.Single(await repo.Get(new MockQuery("all")).ToListAsync());
         await repo.Add(new Dictionary<string, object?> { ["id"] = 3 });
         await repo.Update(new Dictionary<string, object?> { ["id"] = 3 }, new MockWhere("id=3"));
         await repo.Delete(new Dictionary<string, object?> { ["id"] = 3 });
         repo.GetSingleError = new InvalidOperationException("gs");
         await Assert.ThrowsAsync<InvalidOperationException>(() => repo.GetSingle());
         repo.GetError = new InvalidOperationException("g");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => AsyncEnumerable.Collect(repo.Get()));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await repo.Get().ToListAsync());
         repo.AddError = new InvalidOperationException("ad");
         await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Add(new Dictionary<string, object?>()));
         repo.UpdateError = new InvalidOperationException("up");
