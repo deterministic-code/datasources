@@ -2,7 +2,6 @@ import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
 import type { IRepository } from "../IRepository.ts";
-import type { RepositoryOptions } from "../RepositoryOptions.ts";
 import { MockCommand } from "./mock-command.ts";
 import { MockConnection } from "./mock-connection.ts";
 import { MockRepository } from "./mock-repository.ts";
@@ -10,10 +9,7 @@ import { MockRepository } from "./mock-repository.ts";
 export class MockDatasource implements IDatasource {
   createConnectionCalls = 0;
   createCommandCalls: Array<IConnection | undefined> = [];
-  createRepositoryCalls: Array<{
-    connection?: IConnection;
-    options?: RepositoryOptions;
-  }> = [];
+  createRepositoryCalls: Array<IConnection | undefined> = [];
   connection: IConnection;
   command?: ICommand;
   repository?: IRepository;
@@ -39,11 +35,8 @@ export class MockDatasource implements IDatasource {
     return new MockCommand(connection ?? this.connection);
   }
 
-  createRepository<T = unknown>(
-    connection?: IConnection,
-    options?: RepositoryOptions,
-  ): IRepository<T> {
-    this.createRepositoryCalls.push({ connection, options });
+  createRepository<T = unknown>(connection?: IConnection): IRepository<T> {
+    this.createRepositoryCalls.push(connection);
     if (this.repository) {
       return this.repository as IRepository<T>;
     }

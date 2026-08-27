@@ -45,7 +45,6 @@ impl Datasource for MockDatasource {
     fn create_repository(
         &self,
         _connection: Option<Arc<dyn Connection>>,
-        _table: Option<&str>,
     ) -> Arc<dyn Repository> {
         self.repository.clone()
     }

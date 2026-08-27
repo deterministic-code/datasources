@@ -247,9 +247,6 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
     public ICommand CreateCommand(IConnection? connection = null) =>
         new SqliteCommand(connection as SqliteConnection ?? NewConnection());
 
-    public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null)
-    {
-        var conn = connection as SqliteConnection ?? NewConnection();
-        return (IRepository<T>)(object)new SqliteRepository(conn, options?.Table ?? _table);
-    }
+    public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
+        (IRepository<T>)(object)new SqliteRepository(connection as SqliteConnection ?? NewConnection(), _table);
 }

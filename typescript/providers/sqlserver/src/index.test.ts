@@ -25,6 +25,6 @@ describe("sqlserver", () => {
     await expect(implicit.execute()).rejects.toThrow(ProviderNotImplementedError);
     await expect(implicit.executeReader()).rejects.toThrow(ProviderNotImplementedError);
     ds.createRepository();
-    ds.createRepository(connection, { table: "t" });
+    ds.createRepository(connection);
   });
 });

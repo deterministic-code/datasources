@@ -4,7 +4,6 @@ import {
   type IConnection,
   type IDatasource,
   type IRepository,
-  type RepositoryOptions,
   StubCommand,
   StubConnection,
   StubRepository,
@@ -30,10 +29,7 @@ export class SqlServerDatasource implements IDatasource, DatasourceFactory {
   createConnection = (): Promise<IConnection> => Promise.resolve(this.newConnection());
   createCommand = (connection?: IConnection): ICommand =>
     new SqlServerCommand(connection ?? this.newConnection());
-  createRepository = <T = unknown>(
-    connection?: IConnection,
-    _options?: RepositoryOptions,
-  ): IRepository<T> =>
+  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
     new StubRepository<T>(this.provider, connection ?? this.newConnection());
 }
 

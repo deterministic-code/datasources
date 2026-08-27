@@ -436,15 +436,11 @@ impl Datasource for SqliteDatasource {
     fn create_repository(
         &self,
         _connection: Option<Arc<dyn Connection>>,
-        table: Option<&str>,
     ) -> Arc<dyn Repository> {
         let conn = self
             .typed_connection()
             .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(ScriptedDriver::new()))));
-        Arc::new(SqliteRepository::new(
-            conn,
-            table.map(ToOwned::to_owned).or_else(|| self.table.clone()),
-        ))
+        Arc::new(SqliteRepository::new(conn, self.table.clone()))
     }
 }
 
@@ -542,14 +538,14 @@ mod tests {
         let command = ds.create_command(None);
         assert!(command.execute(Some("DELETE FROM items"), None).await.is_err());
         assert!(command.execute_reader(Some("SELECT 1"), None).await.is_err());
-        ds.create_repository(None, Some("people"));
+        ds.create_repository(None);
         let factory = SqliteDatasource::new(None, None, None);
         assert_eq!(Datasource::provider(&factory), "sqlite");
         factory.create_connection().await.unwrap();
         let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
         assert!(bound.execute(Some("DELETE FROM items"), None).await.is_err());
         assert!(bound.execute_reader(Some("SELECT 1"), None).await.is_err());
-        factory.create_repository(Some(factory.create_connection().await.unwrap()), None);
+        factory.create_repository(Some(factory.create_connection().await.unwrap()));
         DatasourceFactory::create(&factory, None);
         assert_eq!(DatasourceFactory::provider(&factory), "sqlite");
 

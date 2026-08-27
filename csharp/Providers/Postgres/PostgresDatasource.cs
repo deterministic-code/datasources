@@ -21,6 +21,6 @@ public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
     public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
         new PostgresCommand(connection ?? NewConnection());
-    public IRepository<T> CreateRepository<T>(IConnection? connection = null, RepositoryOptions? options = null) =>
+    public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
         new StubRepository<T>(Provider, connection ?? NewConnection());
 }

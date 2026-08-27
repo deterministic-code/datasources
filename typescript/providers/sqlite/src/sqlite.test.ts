@@ -340,11 +340,8 @@ describe("SqliteDatasource", () => {
     await implicit.connection.open();
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
-    const repo = ds.createRepository(connection, { table: "accounts" });
-    expect((repo as SqliteRepository).table).toBe("accounts");
-    expect((ds.createRepository(connection) as SqliteRepository).table).toBe(
-      "people",
-    );
+    const repo = ds.createRepository(connection);
+    expect((repo as SqliteRepository).table).toBe("people");
     expect(
       (new SqliteDatasource({ driver }).createRepository() as SqliteRepository)
         .table,

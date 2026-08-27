@@ -271,7 +271,7 @@ describe("stubs", () => {
     const bound = ds.createCommand(provided);
     expect(bound.connection).toBe(provided);
 
-    const repo = ds.createRepository(provided, { table: "items" });
+    const repo = ds.createRepository(provided);
     expect(repo).toBeInstanceOf(StubRepository);
     await expect(repo.getSingle()).rejects.toThrow(ProviderNotImplementedError);
     await expect(collectAsync(repo.get())).rejects.toThrow(
@@ -398,7 +398,7 @@ describe("published mocks", () => {
     await mockCommand.executeReader();
     const provided = new MockConnection();
     expect(ds.createCommand(provided).connection).toBe(provided);
-    expect(ds.createRepository(provided, { table: "t" })).toBeInstanceOf(
+    expect(ds.createRepository(provided)).toBeInstanceOf(
       MockRepository,
     );
     expect(ds.createRepository()).toBeInstanceOf(MockRepository);

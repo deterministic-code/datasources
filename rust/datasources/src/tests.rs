@@ -227,7 +227,7 @@ async fn stubs_throw() {
         .execute_reader(Some("select"), Some(&[Parameter::new("id", 1_i64)]))
         .await
         .is_err());
-    let repo = ds.create_repository(None, Some("items"));
+    let repo = ds.create_repository(None);
     let empty = Record::new();
     assert!(repo.get_single(None).await.is_err());
     assert!(repo.get(None).await.is_err());
@@ -328,7 +328,7 @@ async fn published_mocks() {
     let command = ds.create_command(None);
     command.execute(None, None).await.unwrap();
     command.execute_reader(None, None).await.unwrap();
-    ds.create_repository(None, Some("t"));
+    ds.create_repository(None);
     DatasourceFactory::create(&ds, Some("{}"));
 
     let q = MockQuery::new("q");

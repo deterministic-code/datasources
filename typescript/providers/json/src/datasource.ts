@@ -3,7 +3,6 @@ import {
   type IConnection,
   type IDatasource,
   type IRepository,
-  type RepositoryOptions,
 } from "@datasources/core";
 import {
   JsonConnection,
@@ -41,15 +40,9 @@ export class JsonDatasource implements IDatasource {
     );
   }
 
-  createRepository<T = unknown>(
-    connection?: IConnection,
-    options?: RepositoryOptions,
-  ): IRepository<T> {
-    const conn =
-      (connection as JsonConnection | undefined) ?? this.newConnection();
-    if (options?.collection) {
-      conn.collection = options.collection;
-    }
-    return new JsonRepository<T>(conn);
+  createRepository<T = unknown>(connection?: IConnection): IRepository<T> {
+    return new JsonRepository<T>(
+      (connection as JsonConnection | undefined) ?? this.newConnection(),
+    );
   }
 }

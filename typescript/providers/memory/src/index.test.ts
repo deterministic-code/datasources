@@ -239,9 +239,8 @@ describe("MemoryDatasource", () => {
     await implicit.connection.open();
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader();
-    const repo = ds.createRepository(connection, { collection: "users" });
+    const repo = ds.createRepository(connection);
     expect(repo.connection).toBe(connection);
-    expect(connection.collection).toBe("users");
     expect(ds.createRepository()).toBeInstanceOf(MemoryRepository);
 
     const fromRegistry = Datasource.create("memory", { data: [] });

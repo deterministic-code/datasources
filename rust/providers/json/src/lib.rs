@@ -600,13 +600,8 @@ impl Datasource for JsonDatasource {
     fn create_repository(
         &self,
         _connection: Option<Arc<dyn Connection>>,
-        table: Option<&str>,
     ) -> Arc<dyn Repository> {
-        let conn = self.typed_connection();
-        if let Some(name) = table {
-            conn.set_collection(name);
-        }
-        Arc::new(JsonRepository::new(conn))
+        Arc::new(JsonRepository::new(self.typed_connection()))
     }
 }
 
@@ -741,8 +736,8 @@ mod tests {
         let bound = ds.create_command(Some(ds.create_connection().await.unwrap()));
         assert!(bound.execute(Some("insert"), None).await.is_err());
         assert!(bound.execute_reader(None, None).await.is_err());
-        ds.create_repository(None, Some("users"));
-        ds.create_repository(Some(ds.create_connection().await.unwrap()), None);
+        ds.create_repository(None);
+        ds.create_repository(Some(ds.create_connection().await.unwrap()));
         let factory = JsonDatasource::new("", None, Arc::new(MemoryFileStore::new()), None);
         assert_eq!(DatasourceFactory::provider(&factory), "json");
         DatasourceFactory::create(&factory, None);

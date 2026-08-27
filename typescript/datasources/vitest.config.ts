@@ -22,7 +22,6 @@ export default defineConfig({
         "src/MiddlewareContext.ts",
         "src/MiddlewareHook.ts",
         "src/Parameter.ts",
-        "src/RepositoryOptions.ts",
       ],
       thresholds: {
         lines: 100,

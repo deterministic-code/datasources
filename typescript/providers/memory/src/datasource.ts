@@ -3,7 +3,6 @@ import {
   type IConnection,
   type IDatasource,
   type IRepository,
-  type RepositoryOptions,
 } from "@datasources/core";
 import {
   MemoryConnection,
@@ -48,15 +47,9 @@ export class MemoryDatasource implements IDatasource {
     );
   }
 
-  createRepository<T = unknown>(
-    connection?: IConnection,
-    options?: RepositoryOptions,
-  ): IRepository<T> {
-    const conn =
-      (connection as MemoryConnection | undefined) ?? this.newConnection();
-    if (options?.collection) {
-      conn.collection = options.collection;
-    }
-    return new MemoryRepository<T>(conn);
+  createRepository<T = unknown>(connection?: IConnection): IRepository<T> {
+    return new MemoryRepository<T>(
+      (connection as MemoryConnection | undefined) ?? this.newConnection(),
+    );
   }
 }

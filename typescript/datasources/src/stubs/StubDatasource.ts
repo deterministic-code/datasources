@@ -2,7 +2,6 @@ import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
 import type { IRepository } from "../IRepository.ts";
-import type { RepositoryOptions } from "../RepositoryOptions.ts";
 import { StubCommand } from "./StubCommand.ts";
 import { StubConnection } from "./StubConnection.ts";
 import { StubRepository } from "./StubRepository.ts";
@@ -26,10 +25,7 @@ export class StubDatasource implements IDatasource {
     return new StubCommand(this.provider, connection ?? this.newConnection());
   }
 
-  createRepository<T = unknown>(
-    connection?: IConnection,
-    _options?: RepositoryOptions,
-  ): IRepository<T> {
+  createRepository<T = unknown>(connection?: IConnection): IRepository<T> {
     return new StubRepository<T>(
       this.provider,
       connection ?? this.newConnection(),
