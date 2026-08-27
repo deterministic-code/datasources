@@ -2,12 +2,9 @@ using Datasources;
 
 namespace Datasources.Text;
 
-public static class TextProvider
+public sealed class TextDatasource : IDatasourceFactory
 {
-    public static readonly StubDatasource Factory = StubFactory.Create("text");
-
-    static TextProvider()
-    {
-        Datasource.Use(Factory);
-    }
+    public static readonly TextDatasource Factory = new();
+    public string Provider => "text";
+    public IDatasource Create(object? options = null) => new StubDatasource("text");
 }

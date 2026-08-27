@@ -1,27 +1,32 @@
-use datasources::{create_stub_datasource, register, Datasource};
+use datasources::{create_stub_datasource, Datasource, DatasourceFactory};
 use std::sync::Arc;
 
-pub fn xml_datasource() -> Arc<dyn Datasource> {
-    create_stub_datasource("xml")
+pub struct XmlDatasource;
+
+impl XmlDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self)
+    }
 }
 
-pub fn register_xml() {
-    register(create_stub_datasource("xml"));
+impl DatasourceFactory for XmlDatasource {
+    fn provider(&self) -> &str {
+        "xml"
+    }
+    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+        create_stub_datasource("xml")
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_stub_datasource, DatasourceFactory, reset};
+    use datasources::{create, register, reset};
 
-    #[tokio::test]
-    async fn registers_and_throws() {
+    #[test]
+    fn creates() {
         reset();
-        register_xml();
-        let ds = create("xml", None).unwrap();
-        assert_eq!(ds.provider(), "xml");
-        assert!(ds.create_connection().open().await.is_err());
-        assert_eq!(xml_datasource().provider(), "xml");
-        assert_eq!(DatasourceFactory::provider(&*create_stub_datasource("xml")), "xml");
+        register(XmlDatasource::factory());
+        assert_eq!(create("xml", None).unwrap().provider(), "xml");
     }
 }

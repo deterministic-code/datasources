@@ -351,8 +351,3 @@ public sealed class MemoryDatasource : IDatasource, IDatasourceFactory
         return (IRepository<T>)(object)new MemoryRepository(conn);
     }
 }
-
-public static class MemoryProvider
-{
-    public static readonly MemoryDatasource Factory = MemoryDatasource.Factory;
-}

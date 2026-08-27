@@ -1,5 +1,9 @@
-import { createStubDatasource, Datasource } from "@datasources/core";
+import { type DatasourceFactory, type IDatasource, StubDatasource } from "@datasources/core";
 
-export const SqlServerDatasource = createStubDatasource("sqlserver");
-Datasource.use(SqlServerDatasource);
+export class SqlServerDatasource implements DatasourceFactory {
+  static readonly factory = new SqlServerDatasource();
+  readonly provider = "sqlserver";
+  create = (_options?: unknown): IDatasource => new StubDatasource("sqlserver");
+}
+
 export default SqlServerDatasource;

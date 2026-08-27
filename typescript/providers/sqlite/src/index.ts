@@ -1,8 +1,3 @@
-import { Datasource } from "@datasources/core";
-import { SqliteDatasource } from "./datasource.ts";
-
-Datasource.use(SqliteDatasource);
-
 export { SqliteCommand } from "./command.ts";
 export {
   SqliteConnection,

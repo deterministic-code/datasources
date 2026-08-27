@@ -1,5 +1,9 @@
-import { createStubDatasource, Datasource } from "@datasources/core";
+import { type DatasourceFactory, type IDatasource, StubDatasource } from "@datasources/core";
 
-export const TextDatasource = createStubDatasource("text");
-Datasource.use(TextDatasource);
+export class TextDatasource implements DatasourceFactory {
+  static readonly factory = new TextDatasource();
+  readonly provider = "text";
+  create = (_options?: unknown): IDatasource => new StubDatasource("text");
+}
+
 export default TextDatasource;

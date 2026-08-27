@@ -2,12 +2,9 @@ using Datasources;
 
 namespace Datasources.MongoDb;
 
-public static class MongoDbProvider
+public sealed class MongoDbDatasource : IDatasourceFactory
 {
-    public static readonly StubDatasource Factory = StubFactory.Create("mongodb");
-
-    static MongoDbProvider()
-    {
-        Datasource.Use(Factory);
-    }
+    public static readonly MongoDbDatasource Factory = new();
+    public string Provider => "mongodb";
+    public IDatasource Create(object? options = null) => new StubDatasource("mongodb");
 }

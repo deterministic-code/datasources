@@ -2,12 +2,9 @@ using Datasources;
 
 namespace Datasources.Postgres;
 
-public static class PostgresProvider
+public sealed class PostgresDatasource : IDatasourceFactory
 {
-    public static readonly StubDatasource Factory = StubFactory.Create("postgres");
-
-    static PostgresProvider()
-    {
-        Datasource.Use(Factory);
-    }
+    public static readonly PostgresDatasource Factory = new();
+    public string Provider => "postgres";
+    public IDatasource Create(object? options = null) => new StubDatasource("postgres");
 }

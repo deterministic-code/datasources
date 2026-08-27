@@ -1,5 +1,9 @@
-import { createStubDatasource, Datasource } from "@datasources/core";
+import { type DatasourceFactory, type IDatasource, StubDatasource } from "@datasources/core";
 
-export const OracleDatasource = createStubDatasource("oracle");
-Datasource.use(OracleDatasource);
+export class OracleDatasource implements DatasourceFactory {
+  static readonly factory = new OracleDatasource();
+  readonly provider = "oracle";
+  create = (_options?: unknown): IDatasource => new StubDatasource("oracle");
+}
+
 export default OracleDatasource;

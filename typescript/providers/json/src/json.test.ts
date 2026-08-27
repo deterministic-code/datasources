@@ -32,7 +32,7 @@ import {
 
 afterEach(() => {
   Datasource.reset();
-  Datasource.use(JsonDatasource);
+  Datasource.use(JsonDatasource.factory);
 });
 
 describe("filter helpers", () => {

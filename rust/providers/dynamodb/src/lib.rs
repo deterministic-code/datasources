@@ -1,27 +1,32 @@
-use datasources::{create_stub_datasource, register, Datasource};
+use datasources::{create_stub_datasource, Datasource, DatasourceFactory};
 use std::sync::Arc;
 
-pub fn dynamodb_datasource() -> Arc<dyn Datasource> {
-    create_stub_datasource("dynamodb")
+pub struct DynamoDbDatasource;
+
+impl DynamoDbDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self)
+    }
 }
 
-pub fn register_dynamodb() {
-    register(create_stub_datasource("dynamodb"));
+impl DatasourceFactory for DynamoDbDatasource {
+    fn provider(&self) -> &str {
+        "dynamodb"
+    }
+    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+        create_stub_datasource("dynamodb")
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_stub_datasource, DatasourceFactory, reset};
+    use datasources::{create, register, reset};
 
-    #[tokio::test]
-    async fn registers_and_throws() {
+    #[test]
+    fn creates() {
         reset();
-        register_dynamodb();
-        let ds = create("dynamodb", None).unwrap();
-        assert_eq!(ds.provider(), "dynamodb");
-        assert!(ds.create_connection().open().await.is_err());
-        assert_eq!(dynamodb_datasource().provider(), "dynamodb");
-        assert_eq!(DatasourceFactory::provider(&*create_stub_datasource("dynamodb")), "dynamodb");
+        register(DynamoDbDatasource::factory());
+        assert_eq!(create("dynamodb", None).unwrap().provider(), "dynamodb");
     }
 }

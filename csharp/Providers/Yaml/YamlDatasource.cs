@@ -2,12 +2,9 @@ using Datasources;
 
 namespace Datasources.Yaml;
 
-public static class YamlProvider
+public sealed class YamlDatasource : IDatasourceFactory
 {
-    public static readonly StubDatasource Factory = StubFactory.Create("yaml");
-
-    static YamlProvider()
-    {
-        Datasource.Use(Factory);
-    }
+    public static readonly YamlDatasource Factory = new();
+    public string Provider => "yaml";
+    public IDatasource Create(object? options = null) => new StubDatasource("yaml");
 }

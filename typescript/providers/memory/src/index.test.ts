@@ -12,7 +12,6 @@ import {
   MemoryCommand,
   MemoryConnection,
   MemoryDatasource,
-  MemoryProvider,
   MemoryRepository,
   MemoryStore,
   parametersToObject,
@@ -21,7 +20,7 @@ import {
 
 afterEach(() => {
   Datasource.reset();
-  Datasource.use(MemoryDatasource);
+  Datasource.use(MemoryDatasource.factory);
 });
 
 describe("filter helpers", () => {
@@ -224,7 +223,7 @@ describe("MemoryDatasource", () => {
   it("registers and constructs children", async () => {
     const created = MemoryDatasource.create();
     expect(created.provider).toBe("memory");
-    expect(MemoryProvider.provider).toBe("memory");
+    expect(MemoryDatasource.factory.provider).toBe("memory");
     const ds = new MemoryDatasource({ data: [{ id: 1 }] });
     expect(ds.create({ data: [] }).provider).toBe("memory");
     const connection = ds.createConnection() as MemoryConnection;

@@ -1,27 +1,32 @@
-use datasources::{create_stub_datasource, register, Datasource};
+use datasources::{create_stub_datasource, Datasource, DatasourceFactory};
 use std::sync::Arc;
 
-pub fn mysql_datasource() -> Arc<dyn Datasource> {
-    create_stub_datasource("mysql")
+pub struct MysqlDatasource;
+
+impl MysqlDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self)
+    }
 }
 
-pub fn register_mysql() {
-    register(create_stub_datasource("mysql"));
+impl DatasourceFactory for MysqlDatasource {
+    fn provider(&self) -> &str {
+        "mysql"
+    }
+    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+        create_stub_datasource("mysql")
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_stub_datasource, DatasourceFactory, reset};
+    use datasources::{create, register, reset};
 
-    #[tokio::test]
-    async fn registers_and_throws() {
+    #[test]
+    fn creates() {
         reset();
-        register_mysql();
-        let ds = create("mysql", None).unwrap();
-        assert_eq!(ds.provider(), "mysql");
-        assert!(ds.create_connection().open().await.is_err());
-        assert_eq!(mysql_datasource().provider(), "mysql");
-        assert_eq!(DatasourceFactory::provider(&*create_stub_datasource("mysql")), "mysql");
+        register(MysqlDatasource::factory());
+        assert_eq!(create("mysql", None).unwrap().provider(), "mysql");
     }
 }

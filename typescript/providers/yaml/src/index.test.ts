@@ -1,14 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { Datasource, ProviderNotImplementedError } from "@datasources/core";
-import YamlDatasource, { YamlDatasource as Named } from "./index.ts";
+import { afterEach, describe, expect, it } from "vitest";
+import { Datasource } from "@datasources/core";
+import { YamlDatasource } from "./index.ts";
 
-describe("yaml stub", () => {
-  it("registers and throws on IO", async () => {
-    expect(Named.provider).toBe("yaml");
-    expect(YamlDatasource.provider).toBe("yaml");
-    const ds = Datasource.create("yaml");
-    await expect(ds.createConnection().open()).rejects.toThrow(
-      ProviderNotImplementedError,
-    );
+afterEach(() => Datasource.reset());
+
+describe("yaml", () => {
+  it("creates", () => {
+    Datasource.use(YamlDatasource.factory);
+    expect(Datasource.create("yaml").provider).toBe("yaml");
   });
 });

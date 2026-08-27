@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, parameters_to_map, register, ArrayReader, Command, Connection, Datasource,
+    identity_filter, parameters_to_map, ArrayReader, Command, Connection, Datasource,
     DatasourceError, DatasourceFactory, MiddlewareAware, MiddlewareHook, MiddlewareHost, Parameter,
     Query, Reader, Record, Repository, Response, Result, Transaction, Value, Where,
 };
@@ -453,6 +453,10 @@ pub struct MemoryDatasource {
 }
 
 impl MemoryDatasource {
+    pub fn factory() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
     pub fn new(
         store: Arc<MemoryStore>,
         collection: Option<String>,
@@ -520,16 +524,11 @@ impl DatasourceFactory for MemoryDatasource {
     }
 }
 
-pub type MemoryProvider = MemoryDatasource;
-
-pub fn register_memory() {
-    register(Arc::new(MemoryDatasource::default()));
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, reset, TextQuery, TextWhere};
+    use datasources::{create, register, reset, TextQuery, TextWhere};
 
     fn rec(id: i64, name: &str) -> Record {
         let mut r = Record::new();
@@ -647,7 +646,7 @@ mod tests {
             .unwrap();
 
         reset();
-        register_memory();
+        register(MemoryDatasource::factory());
         let ds = create("memory", None).unwrap();
         assert_eq!(ds.provider(), "memory");
         ds.create_connection();
@@ -658,7 +657,7 @@ mod tests {
         let factory = MemoryDatasource::default();
         assert_eq!(DatasourceFactory::provider(&factory), "memory");
         DatasourceFactory::create(&factory, None);
-        assert_eq!(<MemoryProvider as Datasource>::provider(&MemoryProvider::default()), "memory");
+        assert_eq!(create("memory", None).unwrap().provider(), "memory");
 
         assert!(parse_filter(None).unwrap().is_empty());
         assert!(parse_filter(Some("   ")).unwrap().is_empty());
