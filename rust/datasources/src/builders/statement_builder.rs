@@ -1,12 +1,11 @@
 use super::column::Column;
-use super::where_builder::WhereBuilder;
 use crate::parameter::Parameter;
-use crate::statement::Statement;
-use crate::text_query::TextQuery;
 use crate::statements::{
     TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
     TextStoredProcedureStatement, TextUpdateStatement,
 };
+use crate::text_query::TextQuery;
+use crate::text_where::TextWhere;
 use crate::where_trait::Where;
 
 pub struct StatementBuilder;
@@ -15,14 +14,14 @@ impl StatementBuilder {
     pub fn create_query(
         table: impl AsRef<str>,
         fields: &[&str],
-        where_clause: Option<WhereBuilder>,
+        where_clause: Option<&dyn Where>,
     ) -> TextQuery {
         let sql = with_where(
             format!("SELECT {} FROM {}", select_list(fields), table.as_ref()),
-            where_clause.as_ref(),
+            where_clause,
         );
         match where_clause {
-            Some(predicate) => TextQuery::with_where(sql, predicate),
+            Some(predicate) => TextQuery::with_where(sql, TextWhere::new(predicate.get_text())),
             None => TextQuery::new(sql),
         }
     }
@@ -39,23 +38,23 @@ impl StatementBuilder {
     pub fn create_update(
         table: impl AsRef<str>,
         fields: &[Parameter],
-        where_clause: Option<WhereBuilder>,
+        where_clause: Option<&dyn Where>,
     ) -> TextUpdateStatement {
         let sql = format!("UPDATE {} SET {}", table.as_ref(), assignments(fields));
         TextUpdateStatement::new(
-            with_where(sql, where_clause.as_ref()),
-            where_clause.map(|w| Box::new(w) as Box<dyn Where>),
+            with_where(sql, where_clause),
+            where_clause.map(|w| Box::new(TextWhere::new(w.get_text())) as Box<dyn Where>),
         )
     }
 
     pub fn create_delete(
         table: impl AsRef<str>,
-        where_clause: Option<WhereBuilder>,
+        where_clause: Option<&dyn Where>,
     ) -> TextDeleteStatement {
         let sql = format!("DELETE FROM {}", table.as_ref());
         TextDeleteStatement::new(
-            with_where(sql, where_clause.as_ref()),
-            where_clause.map(|w| Box::new(w) as Box<dyn Where>),
+            with_where(sql, where_clause),
+            where_clause.map(|w| Box::new(TextWhere::new(w.get_text())) as Box<dyn Where>),
         )
     }
 
@@ -112,7 +111,7 @@ fn assignments(fields: &[Parameter]) -> String {
         .join(", ")
 }
 
-fn with_where(sql: String, where_clause: Option<&WhereBuilder>) -> String {
+fn with_where(sql: String, where_clause: Option<&dyn Where>) -> String {
     match where_clause {
         Some(predicate) => format!("{sql} WHERE {}", predicate.get_text()),
         None => sql,

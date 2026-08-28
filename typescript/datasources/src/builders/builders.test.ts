@@ -26,6 +26,10 @@ describe("WhereBuilder", () => {
       WhereBuilder.greaterThan("age", 18),
     );
     expect(where.getText()).toBe("id = $id AND age > $age");
+    expect(where.parameters).toEqual([
+      { name: "id", value: 1 },
+      { name: "age", value: 18 },
+    ]);
     expect(WhereBuilder.ne("id", 2).getText()).toBe("id <> $id");
     expect(WhereBuilder.lt("n", 0).getText()).toBe("n < $n");
     expect(WhereBuilder.gte("n", 0).getText()).toBe("n >= $n");
@@ -40,6 +44,9 @@ describe("WhereBuilder", () => {
     expect(WhereBuilder.not(WhereBuilder.equals("id", 1)).getText()).toBe(
       "NOT (id = $id)",
     );
+    expect(WhereBuilder.not(WhereBuilder.equals("id", 1)).parameters).toEqual([
+      { name: "id", value: 1 },
+    ]);
   });
 });
 

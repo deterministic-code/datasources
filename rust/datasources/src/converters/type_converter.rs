@@ -32,7 +32,13 @@ pub fn reset() {
 }
 
 pub fn mapping<T: ConvertSchema>(source: &str, destination: &str) -> Result<TypeMapping> {
-    mapping_with::<T>(source, destination, HashMap::new(), HashMap::new())
+    mapping_with::<T>(
+        source,
+        destination,
+        HashMap::new(),
+        HashMap::new(),
+        HashMap::new(),
+    )
 }
 
 pub fn mapping_with<T: ConvertSchema>(
@@ -40,6 +46,7 @@ pub fn mapping_with<T: ConvertSchema>(
     destination: &str,
     schema: HashMap<String, String>,
     converters: HashMap<String, FieldConverter>,
+    names: HashMap<String, String>,
 ) -> Result<TypeMapping> {
     if destination != HOST {
         return Err(DatasourceError::message(format!(
@@ -51,10 +58,15 @@ pub fn mapping_with<T: ConvertSchema>(
         .and_then(|map| map.get(source))
         .cloned()
         .ok_or_else(|| DatasourceError::message(format!("Provider \"{source}\" is not registered")))?;
+    let name_pairs: Vec<(String, String)> = names.into_iter().collect();
+    let name_refs: Vec<(&str, &str)> = name_pairs
+        .iter()
+        .map(|(src, dest)| (src.as_str(), dest.as_str()))
+        .collect();
     let names = DatasourceMapper::mapping(
         if table.rename { "sql" } else { HOST },
         HOST,
-        &[],
+        &name_refs,
     );
     let mut merged: HashMap<String, String> = T::schema()
         .into_iter()

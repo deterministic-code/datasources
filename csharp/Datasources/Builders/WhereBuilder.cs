@@ -19,14 +19,17 @@ public sealed class WhereBuilder : IWhere
         new(new Node.Comparison(field, op, value));
 
     public string GetText() => _node.Text();
+    public IReadOnlyList<Parameter> Parameters => _node.Parameters();
 
     private abstract record Node
     {
         public abstract string Text();
+        public abstract IReadOnlyList<Parameter> Parameters();
 
         public sealed record Comparison(string Field, string Op, object? Value) : Node
         {
             public override string Text() => $"{Field} {Op} ${Field}";
+            public override IReadOnlyList<Parameter> Parameters() => [new(Field, Value)];
         }
 
         public sealed record Group(string Join, string Empty, WhereBuilder[] Children) : Node
@@ -35,11 +38,14 @@ public sealed class WhereBuilder : IWhere
                 Children.Length == 0 ? Empty
                 : Children.Length == 1 ? Children[0].GetText()
                 : string.Join($" {Join} ", Children.Select(Wrap));
+            public override IReadOnlyList<Parameter> Parameters() =>
+                Children.SelectMany(child => child.Parameters).ToArray();
         }
 
         public sealed record Negation(WhereBuilder Child) : Node
         {
             public override string Text() => $"NOT ({Child.GetText()})";
+            public override IReadOnlyList<Parameter> Parameters() => Child.Parameters;
         }
 
         private static string Wrap(WhereBuilder child) =>

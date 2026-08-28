@@ -1,4 +1,5 @@
 import type { IWhere } from "../IWhere.ts";
+import type { Parameter } from "../Parameter.ts";
 import type { Scalar } from "./Scalar.ts";
 
 type CompareNode = { kind: "compare"; field: string; op: string; value: Scalar };
@@ -54,4 +55,11 @@ export class WhereBuilder implements IWhere {
       )
       .join(` ${node.join} `);
   };
+
+  get parameters(): Parameter[] {
+    const { node } = this;
+    if (node.kind === "compare") return [{ name: node.field, value: node.value }];
+    if (node.kind === "not") return node.child.parameters;
+    return node.children.flatMap((child) => child.parameters);
+  }
 }
