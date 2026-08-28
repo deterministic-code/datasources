@@ -3,6 +3,7 @@ mod collect_reader;
 mod command;
 mod command_middleware;
 mod command_middleware_host;
+pub mod converters;
 mod connection;
 mod console_command_middleware;
 mod create;
@@ -12,6 +13,7 @@ mod datasource_factory;
 mod identity_filter;
 mod identity_where_text;
 mod isolation_level;
+pub mod mappers;
 pub mod mocks;
 mod parameter;
 mod parameters_to_map;
@@ -38,6 +40,10 @@ pub use command::Command;
 pub use command_middleware::CommandMiddleware;
 pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
+pub use converters::{
+    mapping as type_mapping, mapping_with as type_mapping_with, reset as reset_type_converter,
+    use_provider as use_type_converter, ConvertSchema, FieldConverter, ProviderTypes, TypeMapping,
+};
 pub use console_command_middleware::{
     format_elapsed, utc_iso_millis, ConsoleCommandMiddleware,
 };
@@ -48,6 +54,7 @@ pub use datasource_factory::DatasourceFactory;
 pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
+pub use mappers::DatasourceMapper;
 pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockQuery, MockReader, MockRepository,
     MockTransaction, MockWhere,

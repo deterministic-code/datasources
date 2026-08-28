@@ -21,6 +21,11 @@ export default defineConfig({
         "src/DatasourceFactory.ts",
         "src/Parameter.ts",
         "src/Row.ts",
+        "src/converters/Cell.ts",
+        "src/converters/FieldConverter.ts",
+        "src/converters/ProviderTypes.ts",
+        "src/converters/Constructable.ts",
+        "src/converters/TypeMapping.ts",
       ],
       thresholds: {
         lines: 100,

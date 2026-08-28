@@ -26,3 +26,4 @@ export {
   type SqliteRepositoryOptions,
 } from "./repository.ts";
 export { SqliteTransaction } from "./transaction.ts";
+export { sqliteTypes, registerConverters } from "./converters/index.ts";
