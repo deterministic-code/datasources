@@ -1,7 +1,7 @@
 use super::not_implemented::fail;
 use crate::query::Query;
 use crate::record::Record;
-use crate::repository::Repository;
+use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::where_trait::Where;
@@ -20,7 +20,7 @@ impl StubRepository {
 }
 
 #[async_trait]
-impl Repository for StubRepository {
+impl ReadonlyRepository for StubRepository {
     async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Record>> {
         Err(fail(&self.provider))
     }
@@ -28,7 +28,10 @@ impl Repository for StubRepository {
     async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Record>> {
         Err(fail(&self.provider))
     }
+}
 
+#[async_trait]
+impl Repository for StubRepository {
     async fn add(&self, _obj: &Record) -> Result<Response> {
         Err(fail(&self.provider))
     }

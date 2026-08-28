@@ -238,6 +238,7 @@ describe("MysqlDatasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(MysqlRepository);
     expect((repo as MysqlRepository<never>).table).toBe("people");
     expect(
       (new MysqlDatasource({ driver }).createRepository() as MysqlRepository<never>)

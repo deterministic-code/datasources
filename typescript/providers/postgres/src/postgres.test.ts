@@ -259,6 +259,7 @@ describe("PostgresDatasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(PostgresRepository);
     expect((repo as PostgresRepository<never>).table).toBe("people");
     expect(
       (new PostgresDatasource({ driver }).createRepository() as PostgresRepository<never>)

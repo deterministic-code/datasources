@@ -368,6 +368,9 @@ async fn stubs_throw() {
     assert!(repo.add(&empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
+    let readonly = ds.create_readonly_repository(None);
+    assert!(readonly.get_single(None).await.is_err());
+    assert!(readonly.get(None).await.is_err());
     let txn = StubTransaction::new("text");
     assert!(txn.commit().await.is_err());
     assert!(txn.abort().await.is_err());
@@ -475,6 +478,7 @@ async fn published_mocks() {
     command.execute(None, None).await.unwrap();
     command.execute_reader(None, None).await.unwrap();
     ds.create_repository(None);
+    ds.create_readonly_repository(None);
     DatasourceFactory::create(&ds, Some("{}"));
 
     let q = MockQuery::new("q");

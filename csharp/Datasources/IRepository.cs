@@ -1,10 +1,7 @@
 namespace Datasources;
 
-public interface IRepository<T>
+public interface IRepository<T> : IReadonlyRepository<T>
 {
-    IConnection Connection { get; }
-    Task<T?> GetSingle(IQuery? query = null);
-    IAsyncEnumerable<T> Get(IQuery? query = null);
     Task<Response> Add(T obj);
     Task<Response> Update(T obj, IWhere? byWhere = null);
     Task<Response> Delete(T obj, IWhere? byWhere = null);

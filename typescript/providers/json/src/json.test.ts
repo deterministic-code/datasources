@@ -332,6 +332,7 @@ describe("JsonDatasource", () => {
     const repo = ds.createRepository(connection);
     expect(repo.connection).toBe(connection);
     expect(ds.createRepository()).toBeInstanceOf(JsonRepository);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(JsonRepository);
 
     const fromRegistry = Datasource.create("json", { data: [] });
     expect(fromRegistry.provider).toBe("json");

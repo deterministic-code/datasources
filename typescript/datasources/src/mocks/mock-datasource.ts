@@ -1,6 +1,7 @@
 import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
+import type { IReadonlyRepository } from "../IReadonlyRepository.ts";
 import type { IRepository } from "../IRepository.ts";
 import { MockCommand } from "./mock-command.ts";
 import { MockConnection } from "./mock-connection.ts";
@@ -41,5 +42,11 @@ export class MockDatasource implements IDatasource {
       return this.repository as IRepository<T>;
     }
     return new MockRepository<T>(connection ?? this.connection);
+  }
+
+  createReadonlyRepository<T = unknown>(
+    connection?: IConnection,
+  ): IReadonlyRepository<T> {
+    return this.createRepository(connection);
   }
 }

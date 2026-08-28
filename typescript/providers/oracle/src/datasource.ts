@@ -3,6 +3,7 @@ import {
   type ICommand,
   type IConnection,
   type IDatasource,
+  type IReadonlyRepository,
   type IRepository,
   StubRepository,
 } from "@datasources/core";
@@ -20,4 +21,8 @@ export class OracleDatasource implements IDatasource, DatasourceFactory {
     new OracleCommand(connection ?? this.newConnection());
   createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
     new StubRepository<T>(this.provider, connection ?? this.newConnection());
+
+  createReadonlyRepository = <T = unknown>(
+    connection?: IConnection,
+  ): IReadonlyRepository<T> => this.createRepository(connection);
 }

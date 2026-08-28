@@ -24,7 +24,7 @@ mod tests {
     use super::*;
     use datasources::{
         create, register, reset, Command, Connection, DatasourceFactory, Parameter,
-        Record, Repository, TextQuery, TextWhere, Value,
+        Record, ReadonlyRepository, Repository, TextQuery, TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
     use std::sync::Arc;

@@ -281,6 +281,7 @@ describe("SqliteDatasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(SqliteRepository);
     expect((repo as SqliteRepository).table).toBe("people");
     expect(
       (new SqliteDatasource({ driver }).createRepository() as SqliteRepository)

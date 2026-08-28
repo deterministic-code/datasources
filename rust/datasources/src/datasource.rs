@@ -1,6 +1,6 @@
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::repository::Repository;
+use crate::repository::{as_readonly, ReadonlyRepository, Repository};
 use crate::result::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -14,4 +14,10 @@ pub trait Datasource: Send + Sync {
         &self,
         connection: Option<Arc<dyn Connection>>,
     ) -> Arc<dyn Repository>;
+    fn create_readonly_repository(
+        &self,
+        connection: Option<Arc<dyn Connection>>,
+    ) -> Arc<dyn ReadonlyRepository> {
+        as_readonly(self.create_repository(connection))
+    }
 }

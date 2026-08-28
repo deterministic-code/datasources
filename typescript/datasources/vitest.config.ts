@@ -14,6 +14,7 @@ export default defineConfig({
         "src/IDatasource.ts",
         "src/IQuery.ts",
         "src/IReader.ts",
+        "src/IReadonlyRepository.ts",
         "src/IRepository.ts",
         "src/IResponse.ts",
         "src/ITransaction.ts",

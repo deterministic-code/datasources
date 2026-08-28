@@ -1,6 +1,8 @@
 use crate::connection::PostgresConnection;
 use async_trait::async_trait;
-use datasources::{DatasourceError, Query, Record, Repository, Response, Result, Where};
+use datasources::{
+    DatasourceError, Query, Record, ReadonlyRepository, Repository, Response, Result, Where,
+};
 use std::sync::Arc;
 
 pub struct PostgresRepository {
@@ -19,7 +21,7 @@ impl PostgresRepository {
 }
 
 #[async_trait]
-impl Repository for PostgresRepository {
+impl ReadonlyRepository for PostgresRepository {
     async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Record>> {
         Err(DatasourceError::not_implemented("postgres"))
     }
@@ -27,7 +29,10 @@ impl Repository for PostgresRepository {
     async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Record>> {
         Err(DatasourceError::not_implemented("postgres"))
     }
+}
 
+#[async_trait]
+impl Repository for PostgresRepository {
     async fn add(&self, _obj: &Record) -> Result<Response> {
         Err(DatasourceError::not_implemented("postgres"))
     }

@@ -2,6 +2,7 @@ import type {
   ICommand,
   IConnection,
   IDatasource,
+  IReadonlyRepository,
   IRepository,
 } from "@datasources/core";
 import {
@@ -46,6 +47,10 @@ export class SqliteDatasource implements IDatasource {
       (connection as SqliteConnection | undefined) ?? this.newConnection(),
       { table: this.options.table },
     );
+
+  createReadonlyRepository = <T = unknown>(
+    connection?: IConnection,
+  ): IReadonlyRepository<T> => this.createRepository(connection);
 }
 
 export { requireDriver } from "./driver.ts";

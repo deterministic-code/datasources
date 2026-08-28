@@ -1,6 +1,8 @@
 use crate::connection::MysqlConnection;
 use async_trait::async_trait;
-use datasources::{DatasourceError, Query, Record, Repository, Response, Result, Where};
+use datasources::{
+    DatasourceError, Query, Record, ReadonlyRepository, Repository, Response, Result, Where,
+};
 use std::sync::Arc;
 
 pub struct MysqlRepository {
@@ -19,7 +21,7 @@ impl MysqlRepository {
 }
 
 #[async_trait]
-impl Repository for MysqlRepository {
+impl ReadonlyRepository for MysqlRepository {
     async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Record>> {
         Err(DatasourceError::not_implemented("mysql"))
     }
@@ -27,7 +29,10 @@ impl Repository for MysqlRepository {
     async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Record>> {
         Err(DatasourceError::not_implemented("mysql"))
     }
+}
 
+#[async_trait]
+impl Repository for MysqlRepository {
     async fn add(&self, _obj: &Record) -> Result<Response> {
         Err(DatasourceError::not_implemented("mysql"))
     }

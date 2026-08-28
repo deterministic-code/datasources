@@ -1,6 +1,8 @@
 use crate::connection::SqliteConnection;
 use async_trait::async_trait;
-use datasources::{DatasourceError, Query, Record, Repository, Response, Result, Where};
+use datasources::{
+    DatasourceError, Query, Record, ReadonlyRepository, Repository, Response, Result, Where,
+};
 use std::sync::Arc;
 
 pub struct SqliteRepository {
@@ -19,7 +21,7 @@ impl SqliteRepository {
 }
 
 #[async_trait]
-impl Repository for SqliteRepository {
+impl ReadonlyRepository for SqliteRepository {
     async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Record>> {
         Err(DatasourceError::not_implemented("sqlite"))
     }
@@ -27,7 +29,10 @@ impl Repository for SqliteRepository {
     async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Record>> {
         Err(DatasourceError::not_implemented("sqlite"))
     }
+}
 
+#[async_trait]
+impl Repository for SqliteRepository {
     async fn add(&self, _obj: &Record) -> Result<Response> {
         Err(DatasourceError::not_implemented("sqlite"))
     }

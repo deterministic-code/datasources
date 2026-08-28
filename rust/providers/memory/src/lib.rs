@@ -22,7 +22,7 @@ mod tests {
     use super::*;
     use datasources::{
         create, register, reset, Command, Connection, DatasourceFactory, Parameter,
-        Record, Repository, TextQuery, TextWhere, Value,
+        Record, ReadonlyRepository, Repository, TextQuery, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
