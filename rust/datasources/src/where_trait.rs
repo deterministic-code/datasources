@@ -1,3 +1,3 @@
-pub trait Where: Send + Sync {
-    fn get_text(&self) -> String;
-}
+use crate::statement::Statement;
+
+pub trait Where: Statement {}
