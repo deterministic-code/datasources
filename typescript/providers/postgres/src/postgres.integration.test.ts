@@ -1,4 +1,5 @@
-import { describe, it } from "vitest";
+import { beforeAll, describe, it } from "vitest";
+import { ensureCompose } from "../../../ensure-compose.ts";
 import {
   loadDialect,
   runSpec,
@@ -12,8 +13,10 @@ import {
 import type { PgModule } from "./i-postgres-driver.ts";
 
 const dialect = loadDialect("postgres");
-const url = process.env.POSTGRES_URL;
-if (!url) throw new Error("POSTGRES_URL is required (npm run test:e2e)");
+const url = (process.env.POSTGRES_URL ??=
+  "postgres://ds:ds@127.0.0.1:5432/datasources");
+
+beforeAll(() => ensureCompose("postgres"), 120_000);
 
 const isolate = async (base: string) => {
   const pg = (await import("pg")) as PgModule;

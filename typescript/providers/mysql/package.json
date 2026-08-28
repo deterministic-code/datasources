@@ -10,6 +10,7 @@
   "scripts": {
     "test": "vitest run --coverage --exclude src/**/*.integration.test.ts",
     "test:e2e": "vitest run src/mysql.integration.test.ts",
+    "test:e2e:ci": "SKIP_DOCKER=1 vitest run src/mysql.integration.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -40,6 +40,6 @@ jobs:
           dotnet-version: 10.0.x
       - run: docker compose up -d --wait
       - run: npm ci --prefix typescript
-      - run: npm run test:e2e
+      - run: npm run test:e2e:ci
       - run: npm run test:e2e:rust
       - run: npm run test:e2e:csharp

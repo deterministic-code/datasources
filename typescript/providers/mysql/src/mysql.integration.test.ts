@@ -1,4 +1,5 @@
-import { describe, it } from "vitest";
+import { beforeAll, describe, it } from "vitest";
+import { ensureCompose } from "../../../ensure-compose.ts";
 import {
   loadDialect,
   runSpec,
@@ -12,8 +13,10 @@ import {
 import type { Mysql2Module } from "./i-mysql-driver.ts";
 
 const dialect = loadDialect("mysql");
-const url = process.env.MYSQL_URL;
-if (!url) throw new Error("MYSQL_URL is required (npm run test:e2e)");
+const url = (process.env.MYSQL_URL ??=
+  "mysql://ds:ds@127.0.0.1:3306/datasources");
+
+beforeAll(() => ensureCompose("mysql"), 120_000);
 
 const replaceDatabase = (base: string, name: string): string => {
   const parsed = new URL(base);
