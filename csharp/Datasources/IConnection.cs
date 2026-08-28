@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public interface IConnection : IMiddlewareHost
+public interface IConnection
 {
     Task Open();
     Task Close();

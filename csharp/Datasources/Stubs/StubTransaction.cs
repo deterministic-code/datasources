@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class StubTransaction : MiddlewareHost, ITransaction
+public sealed class StubTransaction : ITransaction
 {
     private readonly string _provider;
     public StubTransaction(string provider, IConnection connection)
@@ -11,6 +11,6 @@ public sealed class StubTransaction : MiddlewareHost, ITransaction
 
     public IConnection Connection { get; }
     public IsolationLevel Isolation { get; } = IsolationLevel.Serializable;
-    public Task Commit() => Run("commit", () => throw new ProviderNotImplementedException(_provider));
-    public Task Abort() => Run("abort", () => throw new ProviderNotImplementedException(_provider));
+    public Task Commit() => throw new ProviderNotImplementedException(_provider);
+    public Task Abort() => throw new ProviderNotImplementedException(_provider);
 }

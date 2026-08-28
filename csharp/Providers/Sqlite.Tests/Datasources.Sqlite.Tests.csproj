@@ -15,6 +15,7 @@
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Sqlite\Datasources.Sqlite.csproj" />
+    <Compile Include="..\SqlSpec.cs" Link="SqlSpec.cs" />
+    <ProjectReference Include="..\Sqlite.Microsoft\Datasources.Sqlite.Microsoft.csproj" />
   </ItemGroup>
 </Project>

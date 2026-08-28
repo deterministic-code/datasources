@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public class StubCommand : MiddlewareHost, ICommand
+public class StubCommand : CommandMiddlewareHost, ICommand
 {
     private readonly string _provider;
     public StubCommand(string provider, IConnection connection)
@@ -12,8 +12,8 @@ public class StubCommand : MiddlewareHost, ICommand
     public IConnection Connection { get; }
 
     public Task<IReader> ExecuteReader(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
-        Run<IReader>("executeReader", () => throw new ProviderNotImplementedException(_provider), text, parameters);
+        Run<IReader>(text, parameters, (_, _) => throw new ProviderNotImplementedException(_provider));
 
     public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
-        Run<Response>("execute", () => throw new ProviderNotImplementedException(_provider), text, parameters);
+        Run<Response>(text, parameters, (_, _) => throw new ProviderNotImplementedException(_provider));
 }

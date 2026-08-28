@@ -20,7 +20,7 @@ pub(crate) use filter::{json_to_value, matches, parse_filter};
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, DatasourceFactory, MiddlewareAware, Parameter,
+        create, register, reset, Command, Connection, DatasourceFactory, Parameter,
         Record, Repository, TextQuery, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
@@ -110,8 +110,6 @@ mod tests {
             .execute_reader(Some("{\"id\":1}"), Some(&[Parameter::new("name", "a")]))
             .await
             .unwrap();
-        command.use_middleware(None, None);
-
         let txn = conn.start_transaction(None).await.unwrap();
         assert!(conn.in_transaction());
         repo.add(&rec(9, "t")).await.unwrap();
@@ -119,7 +117,6 @@ mod tests {
         let txn = conn.start_transaction(None).await.unwrap();
         repo.add(&rec(8, "c")).await.unwrap();
         txn.commit().await.unwrap();
-        txn.use_middleware(None, None);
         let _ = conn.start_transaction(None).await.unwrap();
         conn.finish_abort();
         assert!(!conn.in_transaction());
@@ -210,7 +207,6 @@ mod tests {
             .await
             .is_err());
 
-        conn.use_middleware(None, None);
         let empty = Arc::new(MemoryConnection::new(
             Arc::new(MemoryStore::new()),
             "",

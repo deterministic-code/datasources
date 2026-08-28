@@ -1,7 +1,7 @@
 import {
   ArrayReader,
+  CommandMiddlewareHost,
   identityFilter,
-  MiddlewareHost,
   type ICommand,
   type IReader,
   type IResponse,
@@ -15,7 +15,7 @@ import {
   parseFilter,
 } from "./filter.ts";
 
-export class JsonCommand extends MiddlewareHost implements ICommand {
+export class JsonCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: JsonConnection) {
     super();
   }
@@ -24,37 +24,31 @@ export class JsonCommand extends MiddlewareHost implements ICommand {
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IReader> {
-    return this.run(
-      "executeReader",
-      async () => {
-        this.connection.ensureOpen();
-        const filter = {
-          ...parseFilter(text),
-          ...parametersToObject(parameters),
-        };
-        const rows = this.connection
-          .getCollection()
-          .filter((row) => matches(asRecord(row), filter));
-        return new ArrayReader(rows);
-      },
-      { text, parameters },
-    );
+    return this.run(text, parameters, async (query, params) => {
+      this.connection.ensureOpen();
+      const filter = {
+        ...parseFilter(query),
+        ...parametersToObject(params),
+      };
+      const rows = this.connection
+        .getCollection()
+        .filter((row) => matches(asRecord(row), filter));
+      return { value: new ArrayReader(rows), rows: rows.map(asRecord) };
+    });
   }
 
   async execute(
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IResponse> {
-    return this.run(
-      "execute",
-      async () => {
+    return this.run(text, parameters, async (query, params) => {
         this.connection.ensureOpen();
-        const op = (text ?? "").trim().toLowerCase();
-        const obj = parametersToObject(parameters);
+        const op = query.trim().toLowerCase();
+        const obj = parametersToObject(params);
         if (op === "insert") {
           this.connection.getCollection().push(obj);
           await this.connection.persist();
-          return { result: obj, rowsAffected: 1 };
+          return { value: { result: obj, rowsAffected: 1 }, rows: [] };
         }
         if (op === "update") {
           const whereText =
@@ -62,17 +56,15 @@ export class JsonCommand extends MiddlewareHost implements ICommand {
           const next = { ...obj };
           delete next.$where;
           const filter = whereText ? parseFilter(whereText) : identityFilter(next);
-          return this.applyUpdate(next, filter);
+          return { value: await this.applyUpdate(next, filter), rows: [] };
         }
         if (op === "delete") {
           const filter =
             Object.keys(obj).length === 0 ? {} : identityFilter(obj);
-          return this.applyDelete(filter);
+          return { value: await this.applyDelete(filter), rows: [] };
         }
-        throw new Error(`Unsupported JSON command: ${text ?? ""}`);
-      },
-      { text, parameters },
-    );
+        throw new Error(`Unsupported JSON command: ${query}`);
+    });
   }
 
   private async applyUpdate(

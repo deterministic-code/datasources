@@ -17,6 +17,7 @@
     <Project Path="Providers/Postgres/Datasources.Postgres.csproj" />
     <Project Path="Providers/Postgres.Tests/Datasources.Postgres.Tests.csproj" />
     <Project Path="Providers/Sqlite/Datasources.Sqlite.csproj" />
+    <Project Path="Providers/Sqlite.Microsoft/Datasources.Sqlite.Microsoft.csproj" />
     <Project Path="Providers/Sqlite.Tests/Datasources.Sqlite.Tests.csproj" />
     <Project Path="Providers/SqlServer/Datasources.SqlServer.csproj" />
     <Project Path="Providers/SqlServer.Tests/Datasources.SqlServer.Tests.csproj" />

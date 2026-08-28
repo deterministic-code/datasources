@@ -1,6 +1,6 @@
 import {
   ArrayReader,
-  MiddlewareHost,
+  CommandMiddlewareHost,
   type ICommand,
   type IReader,
   type IResponse,
@@ -9,7 +9,7 @@ import {
 import type { SqliteConnection } from "./connection.ts";
 import { bindParameters } from "./driver.ts";
 
-export class SqliteCommand extends MiddlewareHost implements ICommand {
+export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: SqliteConnection) {
     super();
   }
@@ -18,35 +18,30 @@ export class SqliteCommand extends MiddlewareHost implements ICommand {
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IReader> {
-    return this.run(
-      "executeReader",
-      async () => {
-        this.connection.ensureOpen();
-        const rows = await this.connection.driver.query(
-          text ?? "",
-          bindParameters(parameters),
-        );
-        return new ArrayReader(rows);
-      },
-      { text, parameters },
-    );
+    return this.run(text, parameters, async (query, params) => {
+      this.connection.ensureOpen();
+      const rows = await this.connection.driver.query(
+        query,
+        bindParameters(params),
+      );
+      return { value: new ArrayReader(rows), rows };
+    });
   }
 
   async execute(
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IResponse> {
-    return this.run(
-      "execute",
-      async () => {
-        this.connection.ensureOpen();
-        const result = await this.connection.driver.execute(
-          text ?? "",
-          bindParameters(parameters),
-        );
-        return { result: result.result, rowsAffected: result.rowsAffected };
-      },
-      { text, parameters },
-    );
+    return this.run(text, parameters, async (query, params) => {
+      this.connection.ensureOpen();
+      const result = await this.connection.driver.execute(
+        query,
+        bindParameters(params),
+      );
+      return {
+        value: { result: result.result, rowsAffected: result.rowsAffected },
+        rows: [],
+      };
+    });
   }
 }

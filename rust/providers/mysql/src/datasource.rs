@@ -1,20 +1,39 @@
 use crate::command::MysqlCommand;
 use crate::connection::MysqlConnection;
+use crate::driver::{require_driver, MysqlDriver};
+use crate::repository::MysqlRepository;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, Datasource, DatasourceFactory, Repository, Result, StubRepository,
-};
+use datasources::{Command, Connection, Datasource, DatasourceFactory, Repository, Result};
 use std::sync::Arc;
 
-pub struct MysqlDatasource;
+pub struct MysqlDatasource {
+    url: Option<String>,
+    driver: Option<Arc<dyn MysqlDriver>>,
+    table: Option<String>,
+}
 
 impl MysqlDatasource {
     pub fn factory() -> Arc<Self> {
-        Arc::new(Self)
+        Arc::new(Self::new(None, None, None))
     }
 
-    fn new_connection(&self) -> Arc<MysqlConnection> {
-        Arc::new(MysqlConnection::new())
+    pub fn new(
+        url: Option<String>,
+        driver: Option<Arc<dyn MysqlDriver>>,
+        table: Option<String>,
+    ) -> Self {
+        Self { url, driver, table }
+    }
+
+    fn typed_connection(&self) -> Result<Arc<MysqlConnection>> {
+        Ok(Arc::new(MysqlConnection::new(
+            self.url.clone(),
+            require_driver(self.driver.clone())?,
+        )))
+    }
+
+    fn connection(&self) -> Arc<MysqlConnection> {
+        self.typed_connection().expect("MySQL driver is required")
     }
 }
 
@@ -25,20 +44,15 @@ impl Datasource for MysqlDatasource {
     }
 
     async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
-        Ok(self.new_connection())
+        Ok(self.typed_connection()?)
     }
 
-    fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        Arc::new(MysqlCommand::new(
-            connection.unwrap_or_else(|| self.new_connection()),
-        ))
+    fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
+        Arc::new(MysqlCommand::new(self.connection()))
     }
 
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
-        Arc::new(StubRepository::new("mysql"))
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
+        Arc::new(MysqlRepository::new(self.connection(), self.table.clone()))
     }
 }
 
@@ -46,7 +60,12 @@ impl DatasourceFactory for MysqlDatasource {
     fn provider(&self) -> &str {
         "mysql"
     }
+
     fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
-        Arc::new(MysqlDatasource)
+        Arc::new(MysqlDatasource::new(
+            self.url.clone(),
+            self.driver.clone(),
+            self.table.clone(),
+        ))
     }
 }

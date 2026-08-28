@@ -1,0 +1,19 @@
+connection:
+  kind: url
+  env: POSTGRES_URL
+createUserTable: |
+  CREATE TABLE "user" (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL,
+    created TEXT NOT NULL
+  )
+createUserTableVersioned: |
+  CREATE TABLE "user" (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL,
+    created TEXT NOT NULL,
+    version INTEGER NOT NULL
+  )
+dirtyReadRows: []

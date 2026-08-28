@@ -1,0 +1,99 @@
+using Datasources;
+using Datasources.Postgres;
+
+namespace Datasources.Postgres.Tests;
+
+public class PostgresTests
+{
+    public PostgresTests()
+    {
+        Datasource.Reset();
+        Datasource.Use(PostgresDatasource.Factory);
+    }
+
+    [Fact]
+    public async Task CommandRepositoryAndFactory()
+    {
+        Assert.Throws<DatasourceException>(() => PostgresGuard.Require(null));
+        var driver = new FakePostgresDriver();
+        Assert.Same(driver, PostgresGuard.Require(driver));
+        var (sql, values) = PostgresBind.ToPostgres("SELECT * FROM t WHERE id = $id AND n = $id", new Dictionary<string, object?> { ["id"] = 1 });
+        Assert.Equal("SELECT * FROM t WHERE id = $1 AND n = $1", sql);
+        Assert.Equal(new object?[] { 1 }, values);
+        Assert.Equal("INSERT INTO t (id) VALUES (1) RETURNING id", PostgresBind.WithReturning("INSERT INTO t (id) VALUES (1)"));
+        Assert.Equal("INSERT INTO t VALUES (1) RETURNING id", PostgresBind.WithReturning("INSERT INTO t VALUES (1) RETURNING id"));
+        Assert.Equal("UPDATE t SET x = 1", PostgresBind.WithReturning("UPDATE t SET x = 1"));
+        Assert.Equal("READ UNCOMMITTED", PostgresBind.IsolationSql(IsolationLevel.ReadUncommitted));
+        Assert.Equal("READ COMMITTED", PostgresBind.IsolationSql(IsolationLevel.ReadCommitted));
+        Assert.Equal("REPEATABLE READ", PostgresBind.IsolationSql(IsolationLevel.RepeatableRead));
+        Assert.Equal("SERIALIZABLE", PostgresBind.IsolationSql(IsolationLevel.Serializable));
+
+        var conn = new PostgresConnection(new PostgresConnectionOptions { Url = "postgres://db/app", Schema = "s", Driver = driver });
+        await conn.Open();
+        await conn.Open();
+        Assert.Equal("s", conn.Schema);
+        var command = new PostgresCommand(conn);
+        await command.Execute();
+        await command.ExecuteReader("SELECT 1");
+        await command.ExecuteReader();
+
+        var repo = new PostgresRepository(conn);
+        Assert.Equal("items", repo.Table);
+        Assert.Same(conn, repo.Connection);
+        Assert.Equal("users", new PostgresRepository(conn, "users").Table);
+
+        var txn = await conn.StartTransaction();
+        Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
+        await txn.Commit();
+        var dirty = await conn.StartTransaction(IsolationLevel.ReadUncommitted);
+        Assert.Equal(IsolationLevel.ReadUncommitted, dirty.Isolation);
+        await dirty.Abort();
+        await conn.Close();
+        Assert.Throws<DatasourceException>(() => conn.EnsureOpen());
+        await Assert.ThrowsAsync<DatasourceException>(() => conn.StartTransaction());
+
+        Assert.Throws<DatasourceException>(() => new PostgresConnection());
+        var defaulted = new PostgresConnection(new PostgresConnectionOptions { Driver = driver });
+        Assert.Equal("", defaulted.Url);
+
+        var ds = new PostgresDatasource(new PostgresConnectionOptions { Driver = driver }, "people");
+        Assert.Equal("postgres", ds.Create().Provider);
+        var created = await ds.CreateConnection();
+        await ((PostgresConnection)created).Open();
+        var bound = Assert.IsType<PostgresCommand>(ds.CreateCommand(created));
+        Assert.Same(created, bound.Connection);
+        await bound.Execute();
+        await bound.ExecuteReader("SELECT 1");
+        var implicitCommand = Assert.IsType<PostgresCommand>(ds.CreateCommand());
+        await implicitCommand.Connection.Open();
+        await implicitCommand.Execute();
+        await implicitCommand.ExecuteReader("SELECT 1");
+        var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created);
+        Assert.Equal("people", ((PostgresRepository)(object)repo2).Table);
+        Assert.Throws<DatasourceException>(() =>
+            new PostgresDatasource().CreateRepository<Dictionary<string, object?>>());
+        Assert.Equal("postgres", Datasource.Create("postgres").Provider);
+        await Assert.ThrowsAsync<DatasourceException>(() => new PostgresDatasource().CreateConnection());
+
+        var closed = new PostgresConnection(new PostgresConnectionOptions { Driver = driver });
+        await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute("x"));
+        await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).ExecuteReader("x"));
+
+        await driver.Execute("   ", new Dictionary<string, object?>());
+        await driver.Query("   ", new Dictionary<string, object?>());
+    }
+
+    sealed class FakePostgresDriver : IPostgresDriver
+    {
+        public Task Open(string url) => Task.CompletedTask;
+        public Task Close() => Task.CompletedTask;
+        public Task<PostgresExecuteResult> Execute(string sql, IReadOnlyDictionary<string, object?> parameters) =>
+            Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new PostgresExecuteResult(0, null) : new PostgresExecuteResult(2, 5));
+        public Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Query(string sql, IReadOnlyDictionary<string, object?> parameters) =>
+            Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>(
+                string.IsNullOrWhiteSpace(sql) ? [] : [new Dictionary<string, object?> { ["id"] = 1 }]);
+        public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => Task.CompletedTask;
+        public Task Commit() => Task.CompletedTask;
+        public Task Rollback() => Task.CompletedTask;
+    }
+}

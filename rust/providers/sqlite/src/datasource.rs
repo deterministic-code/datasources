@@ -1,7 +1,6 @@
 use crate::command::SqliteCommand;
 use crate::connection::SqliteConnection;
 use crate::driver::{require_driver, SqliteDriver};
-use crate::rusqlite_driver::RusqliteDriver;
 use crate::repository::SqliteRepository;
 use async_trait::async_trait;
 use datasources::{
@@ -17,11 +16,7 @@ pub struct SqliteDatasource {
 
 impl SqliteDatasource {
     pub fn factory() -> Arc<Self> {
-        Arc::new(Self::new(
-            Some(":memory:".into()),
-            Some(Arc::new(RusqliteDriver::new())),
-            None,
-        ))
+        Arc::new(Self::new(Some(":memory:".into()), None, None))
     }
 
     pub fn new(
@@ -42,6 +37,10 @@ impl SqliteDatasource {
             require_driver(self.driver.clone())?,
         )))
     }
+
+    fn connection(&self) -> Arc<SqliteConnection> {
+        self.typed_connection().expect("SQLite driver is required")
+    }
 }
 
 #[async_trait]
@@ -51,26 +50,18 @@ impl Datasource for SqliteDatasource {
     }
 
     async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
-        Ok(self
-            .typed_connection()
-            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(RusqliteDriver::new())))))
+        Ok(self.typed_connection()?)
     }
 
     fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        let conn = self
-            .typed_connection()
-            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(RusqliteDriver::new()))));
-        Arc::new(SqliteCommand::new(conn))
+        Arc::new(SqliteCommand::new(self.connection()))
     }
 
     fn create_repository(
         &self,
         _connection: Option<Arc<dyn Connection>>,
     ) -> Arc<dyn Repository> {
-        let conn = self
-            .typed_connection()
-            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(RusqliteDriver::new()))));
-        Arc::new(SqliteRepository::new(conn, self.table.clone()))
+        Arc::new(SqliteRepository::new(self.connection(), self.table.clone()))
     }
 }
 

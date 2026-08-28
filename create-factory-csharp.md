@@ -6,7 +6,7 @@ Register a factory, then create by provider name. Install only the dialect packa
 | --- | --- | --- |
 | json | `json` | `Datasources.Json` |
 | memory | `memory` | `Datasources.Memory` |
-| sqlite | `sqlite` | `Datasources.Sqlite` |
+| sqlite | `sqlite` | `Datasources.Sqlite` (optional engine: `Datasources.Sqlite.Microsoft`) |
 | text | `text` | `Datasources.Text` |
 | xml | `xml` | `Datasources.Xml` |
 | yaml | `yaml` | `Datasources.Yaml` |

@@ -3,10 +3,10 @@ import type { IConnection } from "../IConnection.ts";
 import type { IReader } from "../IReader.ts";
 import type { IResponse } from "../IResponse.ts";
 import type { Parameter } from "../Parameter.ts";
-import { MiddlewareHost } from "../MiddlewareHost.ts";
+import { CommandMiddlewareHost } from "../CommandMiddlewareHost.ts";
 import { notImplemented } from "./notImplemented.ts";
 
-export class StubCommand extends MiddlewareHost implements ICommand {
+export class StubCommand extends CommandMiddlewareHost implements ICommand {
   constructor(
     readonly provider: string,
     readonly connection: IConnection,
@@ -18,17 +18,11 @@ export class StubCommand extends MiddlewareHost implements ICommand {
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IReader> =>
-    this.run("executeReader", async () => notImplemented(this.provider), {
-      text,
-      parameters,
-    });
+    this.run(text, parameters, async () => notImplemented(this.provider));
 
   execute = (
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IResponse> =>
-    this.run("execute", async () => notImplemented(this.provider), {
-      text,
-      parameters,
-    });
+    this.run(text, parameters, async () => notImplemented(this.provider));
 }

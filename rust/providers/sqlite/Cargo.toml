@@ -5,12 +5,17 @@ edition.workspace = true
 license.workspace = true
 description = "SQLite datasource provider"
 
+[features]
+default = []
+rusqlite = ["dep:rusqlite"]
+
 [dependencies]
 async-trait = { workspace = true }
 datasources = { workspace = true }
-rusqlite = { workspace = true }
+rusqlite = { workspace = true, optional = true }
 
 [dev-dependencies]
+rusqlite = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = { workspace = true }

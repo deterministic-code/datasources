@@ -2,52 +2,44 @@ use crate::connection::JsonConnection;
 use crate::filter::{matches, parse_filter, record_from_json, value_to_json};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, parameters_to_map, ArrayReader, Command, DatasourceError, MiddlewareAware,
-    MiddlewareHook, MiddlewareHost, Parameter, Reader, Response, Result, Value,
+    identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
+    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, Value,
 };
 use serde_json::{Map, Value as JsonValue};
 use std::sync::Arc;
 
 pub struct JsonCommand {
-    host: MiddlewareHost,
+    host: CommandMiddlewareHost,
     connection: Arc<JsonConnection>,
 }
 
 impl JsonCommand {
     pub fn new(connection: Arc<JsonConnection>) -> Self {
         Self {
-            host: MiddlewareHost::new(),
+            host: CommandMiddlewareHost::new(),
             connection,
         }
     }
 }
 
-impl MiddlewareAware for JsonCommand {
-    fn use_middleware(&self, before: Option<MiddlewareHook>, after: Option<MiddlewareHook>) {
-        self.host.use_middleware(before, after);
-    }
-}
-
 #[async_trait]
 impl Command for JsonCommand {
+    fn use_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.host.use_middleware(middleware);
+    }
+
     async fn execute_reader(
         &self,
         text: Option<&str>,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        let extras = Some((
-            text.map(ToOwned::to_owned),
-            parameters.map(|items| items.to_vec()),
-        ));
         let connection = self.connection.clone();
-        let text_owned = text.map(ToOwned::to_owned);
-        let params = parameters.map(|items| items.to_vec());
         self.host
-            .run("executeReader", extras, move || {
+            .run(text, parameters, move |query, params| {
                 let connection = connection.clone();
                 async move {
                     connection.ensure_open()?;
-                    let mut filter = parse_filter(text_owned.as_deref())?;
+                    let mut filter = parse_filter(Some(&query))?;
                     for (k, v) in parameters_to_map(params.as_deref()) {
                         filter.insert(k, value_to_json(&v));
                     }
@@ -58,7 +50,10 @@ impl Command for JsonCommand {
                             .map(record_from_json)
                             .collect::<Vec<_>>()
                     });
-                    Ok(Box::new(ArrayReader::new(rows)) as Box<dyn Reader>)
+                    Ok((
+                        Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
+                        rows,
+                    ))
                 }
             })
             .await
@@ -69,19 +64,14 @@ impl Command for JsonCommand {
         text: Option<&str>,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
-        let extras = Some((
-            text.map(ToOwned::to_owned),
-            parameters.map(|items| items.to_vec()),
-        ));
         let connection = self.connection.clone();
-        let op = text.unwrap_or("").trim().to_ascii_lowercase();
-        let params = parameters_to_map(parameters);
         self.host
-            .run("execute", extras, move || {
+            .run(text, parameters, move |query, params| {
                 let connection = connection.clone();
-                let op = op.clone();
                 async move {
                     connection.ensure_open()?;
+                    let op = query.trim().to_ascii_lowercase();
+                    let params = parameters_to_map(params.as_deref());
                     let mut obj: Map<String, JsonValue> = params
                         .iter()
                         .map(|(k, v)| (k.clone(), value_to_json(v)))
@@ -91,7 +81,7 @@ impl Command for JsonCommand {
                             connection
                                 .collection_mut(|items| items.push(JsonValue::Object(obj.clone())));
                             connection.persist()?;
-                            Ok(Response::new(Value::Null, 1))
+                            Ok((Response::new(Value::Null, 1), vec![]))
                         }
                         "update" => {
                             let where_text = obj
@@ -120,7 +110,7 @@ impl Command for JsonCommand {
                                 count
                             });
                             connection.persist()?;
-                            Ok(Response::new(Value::Null, affected))
+                            Ok((Response::new(Value::Null, affected), vec![]))
                         }
                         "delete" => {
                             let filter = if obj.is_empty() {
@@ -137,7 +127,7 @@ impl Command for JsonCommand {
                                 (before - items.len()) as i64
                             });
                             connection.persist()?;
-                            Ok(Response::new(Value::Null, affected))
+                            Ok((Response::new(Value::Null, affected), vec![]))
                         }
                         _ => Err(DatasourceError::message(format!(
                             "Unsupported JSON command: {op}"

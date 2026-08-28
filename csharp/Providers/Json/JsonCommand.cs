@@ -3,32 +3,33 @@ using Datasources;
 
 namespace Datasources.Json;
 
-public sealed class JsonCommand : MiddlewareHost, ICommand
+public sealed class JsonCommand : CommandMiddlewareHost, ICommand
 {
     public JsonCommand(JsonConnection connection) => Connection = connection;
     public IConnection Connection { get; }
     private JsonConnection Typed => (JsonConnection)Connection;
 
     public Task<IReader> ExecuteReader(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
-        Run("executeReader", () =>
+        Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();
-            var filter = Merge(ParseFilter(text), Helpers.ParametersToRecord(parameters));
-            var rows = Typed.GetCollection().Where(row => Matches(row, filter)).Cast<object?>().ToList();
-            return Task.FromResult<IReader>(new ArrayReader(rows));
-        }, text, parameters);
+            var filter = Merge(ParseFilter(query), Helpers.ParametersToRecord(paramsList));
+            var nodes = Typed.GetCollection().Where(row => Matches(row, filter)).ToList();
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> rows = nodes.Select(ToRow).ToList();
+            return Task.FromResult(((IReader)new ArrayReader(nodes.Cast<object?>().ToList()), rows));
+        });
 
     public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
-        Run("execute", async () =>
+        Run(text, parameters, async (query, paramsList) =>
         {
             Typed.EnsureOpen();
-            var op = (text ?? "").Trim().ToLowerInvariant();
-            var obj = Helpers.ParametersToRecord(parameters).ToDictionary(k => k.Key, v => v.Value);
+            var op = query.Trim().ToLowerInvariant();
+            var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
                 Typed.GetCollection().Add(ToObject(obj));
                 await Typed.Persist();
-                return new Response(obj, 1);
+                return (new Response(obj, 1), EmptyRows());
             }
 
             if (op == "update")
@@ -36,17 +37,17 @@ public sealed class JsonCommand : MiddlewareHost, ICommand
                 var whereText = obj.TryGetValue("$where", out var where) ? where as string : null;
                 obj.Remove("$where");
                 var filter = whereText is not null ? ParseFilter(whereText) : Helpers.IdentityFilter(obj);
-                return await ApplyUpdate(obj, filter);
+                return (await ApplyUpdate(obj, filter), EmptyRows());
             }
 
             if (op == "delete")
             {
                 var filter = obj.Count == 0 ? new Dictionary<string, object?>() : Helpers.IdentityFilter(obj);
-                return await ApplyDelete(filter);
+                return (await ApplyDelete(filter), EmptyRows());
             }
 
-            throw new DatasourceException($"Unsupported JSON command: {text ?? ""}");
-        }, text, parameters);
+            throw new DatasourceException($"Unsupported JSON command: {query}");
+        });
 
     private async Task<Response> ApplyUpdate(IReadOnlyDictionary<string, object?> obj, IReadOnlyDictionary<string, object?> filter)
     {
@@ -110,4 +111,11 @@ public sealed class JsonCommand : MiddlewareHost, ICommand
         if (value.TryGetValue<string>(out var s)) return s;
         return value.ToString();
     }
+
+    private static Dictionary<string, object?> ToRow(JsonNode? row) =>
+        row is JsonObject obj
+            ? obj.ToDictionary(k => k.Key, v => JsonValueToObject(v.Value))
+            : new Dictionary<string, object?>();
+
+    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> EmptyRows() => [];
 }

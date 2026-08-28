@@ -55,43 +55,87 @@ public class CoreTests
     [Fact]
     public async Task Middleware()
     {
-        var host = new MiddlewareHost();
-        var order = new List<string>();
-        host.Use();
-        Assert.Equal(0, await host.Run("close", () => Task.FromResult(0)));
-        host.Use(async ctx =>
-        {
-            order.Add($"b:{ctx.Operation}");
-            await Task.CompletedTask;
-        }, async ctx =>
-        {
-            order.Add($"a:{ctx.Operation}");
-            await Task.CompletedTask;
-        });
-        await host.Run("open", () => Task.FromResult(7));
-        Assert.Equal(new[] { "b:open", "a:open" }, order);
+        var host = new RecordingCommand();
+        Assert.Equal("ok", await host.Run(null, null, (_, _) => Task.FromResult(("ok", EmptyRows()))));
 
-        var blocked = new MiddlewareHost();
+        var seen = new List<string>();
+        string? used = null;
+        host.Use(new DelegateMiddleware(
+            (query, _) =>
+            {
+                seen.Add($"before:{query}");
+                return Task.FromResult<(string, IReadOnlyList<Parameter>?)?>(("SELECT 2", null));
+            },
+            (query, _, results, _, _) =>
+            {
+                seen.Add($"after:{query}:{results.Count}");
+                return Task.CompletedTask;
+            }));
+        await host.Run("SELECT 1", null, (query, _) =>
+        {
+            used = query;
+            seen.Add("op");
+            return Task.FromResult((7, Rows(new Dictionary<string, object?> { ["id"] = 1 })));
+        });
+        Assert.Equal("SELECT 2", used);
+        Assert.Equal(new[] { "before:SELECT 1", "op", "after:SELECT 2:1" }, seen);
+
+        var blocked = new RecordingCommand();
         var ran = false;
-        blocked.Use(_ => throw new InvalidOperationException("blocked"), _ => { ran = true; return Task.CompletedTask; });
-        await Assert.ThrowsAsync<InvalidOperationException>(() => blocked.Run("execute", () =>
+        blocked.Use(new DelegateMiddleware(
+            (_, _) => throw new InvalidOperationException("blocked"),
+            (_, _, _, _, _) => { ran = true; return Task.CompletedTask; }));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => blocked.Run("select", null, (_, _) =>
         {
             ran = true;
-            return Task.FromResult(1);
+            return Task.FromResult((1, EmptyRows()));
         }));
         Assert.False(ran);
 
         Exception? captured = null;
-        var failed = new MiddlewareHost();
-        failed.Use(after: ctx =>
-        {
-            captured = ctx.Error;
-            return Task.CompletedTask;
-        });
-        await Assert.ThrowsAsync<InvalidOperationException>(() => failed.Run("abort", () => throw new InvalidOperationException("fail-op")));
+        var failed = new RecordingCommand();
+        failed.Use(new DelegateMiddleware(
+            (_, _) => Task.FromResult<(string, IReadOnlyList<Parameter>?)?>(null),
+            (_, _, _, _, error) => { captured = error; return Task.CompletedTask; }));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => failed.Run<int>("select", null, (_, _) => throw new InvalidOperationException("fail-op")));
         Assert.Equal("fail-op", captured?.Message);
+    }
 
-        await host.Run("execute", () => Task.CompletedTask, "insert", new[] { new Parameter("id", 1) });
+    [Fact]
+    public void ConsoleMiddlewareFormat()
+    {
+        Assert.Equal("2ms", ConsoleCommandMiddleware.FormatElapsed(2));
+        Assert.Equal("1ms", ConsoleCommandMiddleware.FormatElapsed(1));
+        Assert.Equal("850μs", ConsoleCommandMiddleware.FormatElapsed(0.85));
+        Assert.Equal("400μs", ConsoleCommandMiddleware.FormatElapsed(0.4));
+    }
+
+    [Fact]
+    public async Task ConsoleMiddlewareLines()
+    {
+        var lines = new List<string>();
+        var stamps = new Queue<DateTimeOffset>(new[]
+        {
+            new DateTimeOffset(2026, 8, 28, 1, 54, 12, 101, TimeSpan.Zero),
+            new DateTimeOffset(2026, 8, 28, 1, 54, 12, 103, TimeSpan.Zero),
+        });
+        var host = new RecordingCommand();
+        host.Use(new ConsoleCommandMiddleware(lines.Add, () => stamps.Dequeue()));
+        await host.Run("SELECT * FROM \"widget\" ORDER BY \"id\"", null, (_, _) => Task.FromResult((1, EmptyRows())));
+        Assert.Equal("[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT * FROM \"widget\" ORDER BY \"id\"]", lines[0]);
+        Assert.StartsWith("[2026-08-28T01:54:12.103Z]-[datasource][Finish]-[SELECT * FROM \"widget\" ORDER BY \"id\"] ", lines[1]);
+        new ConsoleCommandMiddleware();
+    }
+
+    [Fact]
+    public async Task ConsoleMiddlewareTrimsQuery()
+    {
+        var lines = new List<string>();
+        var host = new RecordingCommand();
+        host.Use(new ConsoleCommandMiddleware(lines.Add));
+        await host.Run("SELECT 1\n", null, (_, _) => Task.FromResult((1, EmptyRows())));
+        var signature = System.Text.RegularExpressions.Regex.Replace(lines[0], @"^\[[^\]]+\]-", "");
+        Assert.Equal("[datasource][Start]-[SELECT 1]", signature);
     }
 
     [Fact]
@@ -220,9 +264,49 @@ public class CoreTests
         Assert.Equal(1, w.GetTextCalls);
 
         var seen = new List<string>();
-        connection.Use(_ => { seen.Add("before"); return Task.CompletedTask; }, _ => { seen.Add("after"); return Task.CompletedTask; });
-        connection.OpenError = null;
-        await connection.Open();
-        Assert.Equal(new[] { "before", "after" }, seen);
+        command.Use(new DelegateMiddleware(
+            (query, _) => { seen.Add($"before:{query}"); return Task.FromResult<(string, IReadOnlyList<Parameter>?)?>(null); },
+            (query, _, _, _, _) => { seen.Add($"after:{query}"); return Task.CompletedTask; }));
+        command.ExecuteError = null;
+        await command.Execute("insert");
+        Assert.Equal(new[] { "before:insert", "after:insert" }, seen);
+    }
+
+    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> EmptyRows() => [];
+
+    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows(params IReadOnlyDictionary<string, object?>[] rows) => rows;
+
+    private sealed class RecordingCommand : CommandMiddlewareHost, ICommand
+    {
+        public IConnection Connection { get; } = new MockConnection();
+        public Task<IReader> ExecuteReader(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+            throw new NotSupportedException();
+        public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class DelegateMiddleware : ICommandMiddleware
+    {
+        private readonly Func<string, IReadOnlyList<Parameter>?, Task<(string Query, IReadOnlyList<Parameter>? Parameters)?>> _before;
+        private readonly Func<string, IReadOnlyList<Parameter>?, IReadOnlyList<IReadOnlyDictionary<string, object?>>, double, Exception?, Task> _after;
+
+        public DelegateMiddleware(
+            Func<string, IReadOnlyList<Parameter>?, Task<(string Query, IReadOnlyList<Parameter>? Parameters)?>> before,
+            Func<string, IReadOnlyList<Parameter>?, IReadOnlyList<IReadOnlyDictionary<string, object?>>, double, Exception?, Task> after)
+        {
+            _before = before;
+            _after = after;
+        }
+
+        public Task<(string Query, IReadOnlyList<Parameter>? Parameters)?> BeforeQuery(string query, IReadOnlyList<Parameter>? parameters) =>
+            _before(query, parameters);
+
+        public Task AfterQuery(
+            string query,
+            IReadOnlyList<Parameter>? parameters,
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> results,
+            double elapsedMs,
+            Exception? error = null) =>
+            _after(query, parameters, results, elapsedMs, error);
     }
 }

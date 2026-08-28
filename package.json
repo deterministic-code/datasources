@@ -1,0 +1,10 @@
+{
+  "name": "datasources",
+  "private": true,
+  "scripts": {
+    "test": "npm test --prefix typescript",
+    "test:e2e": "npm run test:e2e --prefix typescript",
+    "test:e2e:rust": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} cargo test --manifest-path rust/Cargo.toml -p datasources-mysql -p datasources-postgres",
+    "test:e2e:csharp": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} dotnet test csharp/Providers/Mysql.Tests/Datasources.Mysql.Tests.csproj && MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} dotnet test csharp/Providers/Postgres.Tests/Datasources.Postgres.Tests.csproj"
+  }
+}

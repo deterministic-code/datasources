@@ -1,0 +1,197 @@
+# Shared optimistic-concurrency contract. C#, Rust, and TypeScript must all pass this file.
+# Stale writes return rowsAffected: 0; callers throw when they see 0.
+name: optimistic-concurrency
+connections:
+  - writer
+  - reader
+steps:
+  - execute:
+      connection: writer
+      sql: createUserTableVersioned
+      expect:
+        rowsAffected: 0
+
+  # 1. Add, increment, stale update
+  - execute:
+      connection: writer
+      sql: INSERT INTO "user" (id, username, is_enabled, created, version) VALUES ($id, $username, $is_enabled, $created, $version)
+      parameters:
+        id: 1
+        username: alice
+        is_enabled: 1
+        created: "2024-01-15T10:00:00Z"
+        version: 1
+      expect:
+        rowsAffected: 1
+        result: 1
+  - execute:
+      connection: writer
+      sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
+      parameters:
+        username: alice-v2
+        id: 1
+        version: 1
+      expect:
+        rowsAffected: 1
+  - executeReader:
+      connection: writer
+      sql: SELECT username, version FROM "user" WHERE id = $id
+      parameters:
+        id: 1
+      expect:
+        rows:
+          - username: alice-v2
+            version: 2
+  - execute:
+      connection: writer
+      sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
+      parameters:
+        username: alice-stale
+        id: 1
+        version: 1
+      expect:
+        rowsAffected: 0
+  - executeReader:
+      connection: writer
+      sql: SELECT username, version FROM "user" WHERE id = $id
+      parameters:
+        id: 1
+      expect:
+        rows:
+          - username: alice-v2
+            version: 2
+
+  # 2. Retry with the current version succeeds
+  - execute:
+      connection: writer
+      sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
+      parameters:
+        username: alice-v3
+        id: 1
+        version: 2
+      expect:
+        rowsAffected: 1
+  - executeReader:
+      connection: writer
+      sql: SELECT username, version FROM "user" WHERE id = $id
+      parameters:
+        id: 1
+      expect:
+        rows:
+          - username: alice-v3
+            version: 3
+
+  # 3. Stale delete, then current delete
+  - execute:
+      connection: writer
+      sql: INSERT INTO "user" (id, username, is_enabled, created, version) VALUES ($id, $username, $is_enabled, $created, $version)
+      parameters:
+        id: 2
+        username: bob
+        is_enabled: 1
+        created: "2024-02-20T15:30:00Z"
+        version: 1
+      expect:
+        rowsAffected: 1
+        result: 2
+  - execute:
+      connection: writer
+      sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
+      parameters:
+        username: bob-v2
+        id: 2
+        version: 1
+      expect:
+        rowsAffected: 1
+  - execute:
+      connection: writer
+      sql: DELETE FROM "user" WHERE id = $id AND version = $version
+      parameters:
+        id: 2
+        version: 1
+      expect:
+        rowsAffected: 0
+  - executeReader:
+      connection: writer
+      sql: SELECT username, version FROM "user" WHERE id = $id
+      parameters:
+        id: 2
+      expect:
+        rows:
+          - username: bob-v2
+            version: 2
+  - execute:
+      connection: writer
+      sql: DELETE FROM "user" WHERE id = $id AND version = $version
+      parameters:
+        id: 2
+        version: 2
+      expect:
+        rowsAffected: 1
+  - executeReader:
+      connection: writer
+      sql: SELECT username, version FROM "user" WHERE id = $id
+      parameters:
+        id: 2
+      expect:
+        rows: []
+
+  # 4. Two connections, same version (lost update prevented)
+  - execute:
+      connection: writer
+      sql: INSERT INTO "user" (id, username, is_enabled, created, version) VALUES ($id, $username, $is_enabled, $created, $version)
+      parameters:
+        id: 3
+        username: carol
+        is_enabled: 1
+        created: "2024-03-10T08:00:00Z"
+        version: 1
+      expect:
+        rowsAffected: 1
+        result: 3
+  - execute:
+      connection: writer
+      sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
+      parameters:
+        username: carol-writer
+        id: 3
+        version: 1
+      expect:
+        rowsAffected: 1
+  - execute:
+      connection: reader
+      sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
+      parameters:
+        username: carol-reader
+        id: 3
+        version: 1
+      expect:
+        rowsAffected: 0
+  - executeReader:
+      connection: reader
+      sql: SELECT username, version FROM "user" WHERE id = $id
+      parameters:
+        id: 3
+      expect:
+        rows:
+          - username: carol-writer
+            version: 2
+
+  # 5. Missing row uses the same 0 signal
+  - execute:
+      connection: writer
+      sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
+      parameters:
+        username: missing
+        id: 999
+        version: 1
+      expect:
+        rowsAffected: 0
+  - execute:
+      connection: writer
+      sql: DELETE FROM "user" WHERE id = $id AND version = $version
+      parameters:
+        id: 999
+        version: 1
+      expect:
+        rowsAffected: 0

@@ -8,7 +8,7 @@ Register a factory, then create by provider name. Install only the dialect crate
 | --- | --- | --- |
 | json | `json` | `datasources-json` |
 | memory | `memory` | `datasources-memory` |
-| sqlite | `sqlite` | `datasources-sqlite` |
+| sqlite | `sqlite` | `datasources-sqlite` (optional feature: `rusqlite`) |
 | text | `text` | `datasources-text` |
 | xml | `xml` | `datasources-xml` |
 | yaml | `yaml` | `datasources-yaml` |

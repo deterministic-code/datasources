@@ -2,8 +2,7 @@ use crate::file_store::FileStore;
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Connection, DatasourceError, IsolationLevel, MiddlewareAware, MiddlewareHook, MiddlewareHost,
-    Result, Transaction,
+    Connection, DatasourceError, IsolationLevel, Result, Transaction,
 };
 use serde_json::{Map, Value as JsonValue};
 use std::sync::{Arc, Mutex};
@@ -20,7 +19,6 @@ pub(crate) struct JsonState {
 }
 
 pub struct JsonConnection {
-    host: MiddlewareHost,
     pub(crate) state: Arc<JsonState>,
 }
 
@@ -32,7 +30,6 @@ impl JsonConnection {
         initial: Option<JsonValue>,
     ) -> Self {
         Self {
-            host: MiddlewareHost::new(),
             state: Arc::new(JsonState {
                 path: path.into(),
                 collection: Mutex::new(collection),
@@ -98,65 +95,45 @@ impl JsonConnection {
     }
 }
 
-impl MiddlewareAware for JsonConnection {
-    fn use_middleware(&self, before: Option<MiddlewareHook>, after: Option<MiddlewareHook>) {
-        self.host.use_middleware(before, after);
-    }
-}
-
 #[async_trait]
 impl Connection for JsonConnection {
     async fn open(&self) -> Result<()> {
-        self.host
-            .run("open", None, || async {
-                if *self.state.opened.lock().unwrap() {
-                    return Ok(());
-                }
-                let collection = self.state.collection.lock().unwrap().clone();
-                let next = if let Some(initial) = &self.state.initial {
-                    initial.clone()
-                } else if !self.state.path.is_empty() && self.state.store.exists(&self.state.path) {
-                    let contents = self.state.store.read(&self.state.path)?;
-                    serde_json::from_str(&contents)
-                        .map_err(|e| DatasourceError::message(e.to_string()))?
-                } else {
-                    JsonConnection::empty_data(&collection)
-                };
-                *self.state.data.lock().unwrap() = next;
-                if collection.is_some() {
-                    self.collection_mut(|_| {});
-                }
-                *self.state.opened.lock().unwrap() = true;
-                Ok(())
-            })
-            .await
+        if *self.state.opened.lock().unwrap() {
+            return Ok(());
+        }
+        let collection = self.state.collection.lock().unwrap().clone();
+        let next = if let Some(initial) = &self.state.initial {
+            initial.clone()
+        } else if !self.state.path.is_empty() && self.state.store.exists(&self.state.path) {
+            let contents = self.state.store.read(&self.state.path)?;
+            serde_json::from_str(&contents)
+                .map_err(|e| DatasourceError::message(e.to_string()))?
+        } else {
+            JsonConnection::empty_data(&collection)
+        };
+        *self.state.data.lock().unwrap() = next;
+        if collection.is_some() {
+            self.collection_mut(|_| {});
+        }
+        *self.state.opened.lock().unwrap() = true;
+        Ok(())
     }
 
     async fn close(&self) -> Result<()> {
-        self.host
-            .run("close", None, || async {
-                *self.state.opened.lock().unwrap() = false;
-                Ok(())
-            })
-            .await
+        *self.state.opened.lock().unwrap() = false;
+        Ok(())
     }
 
     async fn start_transaction(
         &self,
         isolation: Option<IsolationLevel>,
     ) -> Result<Arc<dyn Transaction>> {
-        self.host
-            .run("startTransaction", None, || async {
-                self.ensure_open()?;
-                *self.state.snapshot.lock().unwrap() =
-                    Some(self.state.data.lock().unwrap().clone());
-                *self.state.in_transaction.lock().unwrap() = true;
-                Ok(Arc::new(JsonTransaction {
-                    host: MiddlewareHost::new(),
-                    state: self.state.clone(),
-                    isolation: isolation.unwrap_or_default(),
-                }) as Arc<dyn Transaction>)
-            })
-            .await
+        self.ensure_open()?;
+        *self.state.snapshot.lock().unwrap() = Some(self.state.data.lock().unwrap().clone());
+        *self.state.in_transaction.lock().unwrap() = true;
+        Ok(Arc::new(JsonTransaction {
+            state: self.state.clone(),
+            isolation: isolation.unwrap_or_default(),
+        }) as Arc<dyn Transaction>)
     }
 }

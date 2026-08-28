@@ -5,6 +5,7 @@
     <RootNamespace>Datasources.Postgres</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Npgsql" Version="9.0.3" />
     <ProjectReference Include="..\..\Datasources\Datasources.csproj" />
   </ItemGroup>
 </Project>

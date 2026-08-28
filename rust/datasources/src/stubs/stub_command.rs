@@ -1,47 +1,43 @@
 use super::not_implemented::fail;
 use crate::command::Command;
-use crate::middleware_aware::MiddlewareAware;
-use crate::middleware_hook::MiddlewareHook;
-use crate::middleware_host::MiddlewareHost;
+use crate::command_middleware::CommandMiddleware;
+use crate::command_middleware_host::CommandMiddlewareHost;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
 use crate::response::Response;
 use crate::result::Result;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 pub struct StubCommand {
     provider: String,
-    host: MiddlewareHost,
+    host: CommandMiddlewareHost,
 }
 
 impl StubCommand {
     pub fn new(provider: impl Into<String>) -> Self {
         Self {
             provider: provider.into(),
-            host: MiddlewareHost::new(),
+            host: CommandMiddlewareHost::new(),
         }
-    }
-}
-
-impl MiddlewareAware for StubCommand {
-    fn use_middleware(&self, before: Option<MiddlewareHook>, after: Option<MiddlewareHook>) {
-        self.host.use_middleware(before, after);
     }
 }
 
 #[async_trait]
 impl Command for StubCommand {
+    fn use_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.host.use_middleware(middleware);
+    }
+
     async fn execute_reader(
         &self,
         text: Option<&str>,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        let extras = Some((
-            text.map(ToOwned::to_owned),
-            parameters.map(|items| items.to_vec()),
-        ));
         self.host
-            .run("executeReader", extras, || async { Err(fail(&self.provider)) })
+            .run(text, parameters, |_query, _params| async {
+                Err(fail(&self.provider))
+            })
             .await
     }
 
@@ -50,12 +46,10 @@ impl Command for StubCommand {
         text: Option<&str>,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
-        let extras = Some((
-            text.map(ToOwned::to_owned),
-            parameters.map(|items| items.to_vec()),
-        ));
         self.host
-            .run("execute", extras, || async { Err(fail(&self.provider)) })
+            .run(text, parameters, |_query, _params| async {
+                Err(fail(&self.provider))
+            })
             .await
     }
 }
@@ -78,18 +72,15 @@ macro_rules! named_stub_command {
             }
         }
 
-        impl $crate::MiddlewareAware for $name {
-            fn use_middleware(
-                &self,
-                before: Option<$crate::MiddlewareHook>,
-                after: Option<$crate::MiddlewareHook>,
-            ) {
-                self.inner.use_middleware(before, after);
-            }
-        }
-
         #[async_trait::async_trait]
         impl $crate::Command for $name {
+            fn use_middleware(
+                &self,
+                middleware: std::sync::Arc<dyn $crate::CommandMiddleware>,
+            ) {
+                self.inner.use_middleware(middleware);
+            }
+
             async fn execute_reader(
                 &self,
                 text: Option<&str>,

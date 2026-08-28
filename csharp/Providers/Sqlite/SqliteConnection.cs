@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteConnection : MiddlewareHost, IConnection
+public sealed class SqliteConnection : IConnection
 {
     public string Filename { get; }
     public ISqliteDriver Driver { get; }
@@ -12,29 +12,28 @@ public sealed class SqliteConnection : MiddlewareHost, IConnection
     {
         options ??= new SqliteConnectionOptions();
         Filename = options.Filename ?? ":memory:";
-        Driver = options.Driver ?? new SqliteDriver();
+        Driver = SqliteGuard.Require(options.Driver);
     }
 
-    public Task Open() => Run("open", async () =>
+    public async Task Open()
     {
         if (Opened) return;
         await Driver.Open(Filename);
         Opened = true;
-    });
+    }
 
-    public Task Close() => Run("close", async () =>
+    public async Task Close()
     {
         await Driver.Close();
         Opened = false;
-    });
+    }
 
-    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
-        Run("startTransaction", async () =>
-        {
-            EnsureOpen();
-            await Driver.Begin(isolation);
-            return (ITransaction)new SqliteTransaction(this, isolation);
-        });
+    public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+    {
+        EnsureOpen();
+        await Driver.Begin(isolation);
+        return new SqliteTransaction(this, isolation);
+    }
 
     public void EnsureOpen()
     {

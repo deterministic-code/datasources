@@ -1,19 +1,17 @@
 mod array_reader;
 mod collect_reader;
 mod command;
+mod command_middleware;
+mod command_middleware_host;
 mod connection;
+mod console_command_middleware;
 mod create;
 mod datasource;
 mod datasource_error;
 mod datasource_factory;
-mod hook;
 mod identity_filter;
 mod identity_where_text;
 mod isolation_level;
-mod middleware_aware;
-mod middleware_context;
-mod middleware_hook;
-mod middleware_host;
 pub mod mocks;
 mod parameter;
 mod parameters_to_map;
@@ -37,19 +35,19 @@ mod where_trait;
 pub use array_reader::ArrayReader;
 pub use collect_reader::collect_reader;
 pub use command::Command;
+pub use command_middleware::CommandMiddleware;
+pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
+pub use console_command_middleware::{
+    format_elapsed, utc_iso_millis, ConsoleCommandMiddleware,
+};
 pub use create::create;
 pub use datasource::Datasource;
 pub use datasource_error::DatasourceError;
 pub use datasource_factory::DatasourceFactory;
-pub use hook::hook;
 pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
-pub use middleware_aware::MiddlewareAware;
-pub use middleware_context::MiddlewareContext;
-pub use middleware_hook::MiddlewareHook;
-pub use middleware_host::MiddlewareHost;
 pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockQuery, MockReader, MockRepository,
     MockTransaction, MockWhere,

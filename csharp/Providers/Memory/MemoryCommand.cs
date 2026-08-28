@@ -3,31 +3,32 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryCommand : MiddlewareHost, ICommand
+public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
 {
     public MemoryCommand(MemoryConnection connection) => Connection = connection;
     public IConnection Connection { get; }
     private MemoryConnection Typed => (MemoryConnection)Connection;
 
     public Task<IReader> ExecuteReader(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
-        Run("executeReader", () =>
+        Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();
-            var filter = Merge(ParseFilter(text), Helpers.ParametersToRecord(parameters));
-            var rows = Typed.GetCollection().Where(row => Matches(row, filter)).Cast<object?>().ToList();
-            return Task.FromResult<IReader>(new ArrayReader(rows));
-        }, text, parameters);
+            var filter = Merge(ParseFilter(query), Helpers.ParametersToRecord(paramsList));
+            var rows = Typed.GetCollection().Where(row => Matches(row, filter)).ToList();
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> resultRows = rows;
+            return Task.FromResult(((IReader)new ArrayReader(rows.Cast<object?>().ToList()), resultRows));
+        });
 
     public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
-        Run("execute", () =>
+        Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();
-            var op = (text ?? "").Trim().ToLowerInvariant();
-            var obj = Helpers.ParametersToRecord(parameters).ToDictionary(k => k.Key, v => v.Value);
+            var op = query.Trim().ToLowerInvariant();
+            var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
                 Typed.GetCollection().Add(new Dictionary<string, object?>(obj));
-                return Task.FromResult(new Response(obj, 1));
+                return Task.FromResult((new Response(obj, 1), EmptyRows()));
             }
 
             if (op == "update")
@@ -35,14 +36,14 @@ public sealed class MemoryCommand : MiddlewareHost, ICommand
                 var whereText = obj.TryGetValue("$where", out var where) ? where as string : null;
                 obj.Remove("$where");
                 var filter = whereText is not null ? ParseFilter(whereText) : Helpers.IdentityFilter(obj);
-                return Task.FromResult(ApplyUpdate(obj, filter));
+                return Task.FromResult((ApplyUpdate(obj, filter), EmptyRows()));
             }
 
             if (op == "delete")
-                return Task.FromResult(ApplyDelete(obj.Count == 0 ? new Dictionary<string, object?>() : Helpers.IdentityFilter(obj)));
+                return Task.FromResult((ApplyDelete(obj.Count == 0 ? new Dictionary<string, object?>() : Helpers.IdentityFilter(obj)), EmptyRows()));
 
-            throw new DatasourceException($"Unsupported Memory command: {text ?? ""}");
-        }, text, parameters);
+            throw new DatasourceException($"Unsupported Memory command: {query}");
+        });
 
     private Response ApplyUpdate(IReadOnlyDictionary<string, object?> obj, IReadOnlyDictionary<string, object?> filter)
     {
@@ -90,4 +91,6 @@ public sealed class MemoryCommand : MiddlewareHost, ICommand
         if (value.TryGetValue<string>(out var s)) return s;
         return value.ToString();
     }
+
+    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> EmptyRows() => [];
 }

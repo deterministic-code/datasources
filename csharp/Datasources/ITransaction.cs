@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public interface ITransaction : IMiddlewareHost
+public interface ITransaction
 {
     IConnection Connection { get; }
     IsolationLevel Isolation { get; }
