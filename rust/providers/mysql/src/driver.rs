@@ -49,7 +49,6 @@ pub fn isolation_sql(isolation: IsolationLevel) -> &'static str {
     match isolation {
         IsolationLevel::ReadUncommitted => "READ UNCOMMITTED",
         IsolationLevel::ReadCommitted => "READ COMMITTED",
-        IsolationLevel::RepeatableRead => "REPEATABLE READ",
-        IsolationLevel::Serializable => "SERIALIZABLE",
+        IsolationLevel::RepeatableRead | IsolationLevel::Serializable => "REPEATABLE READ",
     }
 }

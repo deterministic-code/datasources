@@ -12,7 +12,6 @@ public static class MysqlBind
     {
         IsolationLevel.ReadUncommitted => "READ UNCOMMITTED",
         IsolationLevel.ReadCommitted => "READ COMMITTED",
-        IsolationLevel.RepeatableRead => "REPEATABLE READ",
-        _ => "SERIALIZABLE"
+        _ => "REPEATABLE READ"
     };
 }

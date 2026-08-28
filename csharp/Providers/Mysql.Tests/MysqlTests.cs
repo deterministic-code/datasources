@@ -21,7 +21,7 @@ public class MysqlTests
         Assert.Equal("READ UNCOMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadUncommitted));
         Assert.Equal("READ COMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadCommitted));
         Assert.Equal("REPEATABLE READ", MysqlBind.IsolationSql(IsolationLevel.RepeatableRead));
-        Assert.Equal("SERIALIZABLE", MysqlBind.IsolationSql(IsolationLevel.Serializable));
+        Assert.Equal("REPEATABLE READ", MysqlBind.IsolationSql(IsolationLevel.Serializable));
 
         var conn = new MysqlConnection(new MysqlConnectionOptions { Url = "mysql://db/app", Driver = driver });
         await conn.Open();
