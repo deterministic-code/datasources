@@ -5,7 +5,7 @@ import {
   TypeConverter,
   Where,
   WhereBuilder,
-  createRepositoryOptions,
+  createRepositoryBuilderOptions,
   identityProviderTypes,
   sqlProviderTypes,
 } from "./index.ts";
@@ -25,16 +25,30 @@ class Label {
 
 const schema = { id: "INTEGER", name: "TEXT" };
 
-const create = (overrides: Partial<ConstructorParameters<typeof Repository<Cells>>[0]> = {}) => {
+const create = (
+  overrides: Partial<ConstructorParameters<typeof Repository<Cells>>[0]> & {
+    schema?: Record<string, string>;
+    names?: Record<string, string>;
+  } = {},
+) => {
   TypeConverter.use("memory", identityProviderTypes());
   const connection = new MockConnection(undefined, "memory");
   const command = new MockCommand(connection);
   connection.command = command;
+  const { schema: schemaOverride, converters, names, mapping, ...rest } = overrides;
   const repo = new Repository<Cells>({
-    datasourceName: "users",
     connection,
-    schema,
-    ...overrides,
+    mapping:
+      mapping ??
+      TypeConverter.mapping({
+        source: "memory",
+        destination: "typescript",
+        name: "users",
+        schema: schemaOverride ?? schema,
+        converters,
+        names,
+      }),
+    ...rest,
   });
   return { repo, command };
 };
@@ -112,7 +126,6 @@ describe("Repository", () => {
     expect(
       () =>
         new Repository({
-          datasourceName: "users",
           connection,
         }),
     ).toThrow("Provider \"mock\" is not registered");
@@ -138,9 +151,9 @@ describe("Repository", () => {
       source: "memory",
       destination: "typescript",
       type: Item,
+      name: "users",
     });
     const typed = new Repository<Item>({
-      datasourceName: "users",
       connection,
       mapping,
     });
@@ -153,11 +166,10 @@ describe("Repository", () => {
   it("builds repository options from a type and connection", () => {
     TypeConverter.use("mock", identityProviderTypes());
     const connection = new MockConnection();
-    const fromId = createRepositoryOptions(Item, connection);
-    expect(fromId.datasourceName).toBe("Item");
+    const fromId = createRepositoryBuilderOptions(Item, connection);
     expect(fromId.ids).toEqual(["id"]);
     expect(fromId.connection).toBe(connection);
-    expect(createRepositoryOptions(Label, connection).ids).toEqual([]);
+    expect(createRepositoryBuilderOptions(Label, connection).ids).toEqual([]);
     const repo = new Repository(fromId);
     expect(repo.connection).toBe(connection);
     expect(new Repository(Item, connection).connection).toBe(connection);

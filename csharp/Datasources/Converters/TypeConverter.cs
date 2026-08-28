@@ -16,7 +16,8 @@ public static class TypeConverter
         string destination = Host,
         IReadOnlyDictionary<string, string>? schema = null,
         IReadOnlyDictionary<string, IFieldConverter>? converters = null,
-        IReadOnlyDictionary<string, string>? names = null) where T : new()
+        IReadOnlyDictionary<string, string>? names = null,
+        string? name = null) where T : new()
     {
         if (destination != Host)
             throw new DatasourceException($"TypeConverter destination must be \"{Host}\"");
@@ -48,6 +49,7 @@ public static class TypeConverter
         }
         return new TypeMapping<T>
         {
+            Name = name ?? typeof(T).Name,
             Source = source,
             Destination = Host,
             Schema = merged,

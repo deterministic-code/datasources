@@ -3,17 +3,16 @@ using System.Reflection;
 
 namespace Datasources;
 
-public static class RepositoryOptions
+public static class CreateRepositoryBuilderOptions
 {
-    public static RepositoryOptions<T> FromType<T>(IConnection connection)
+    public static RepositoryBuilderOptions<T> FromType<T>(IConnection connection)
         where T : new() =>
         FromType<T>(typeof(T), connection);
 
-    public static RepositoryOptions<T> FromType<T>(Type type, IConnection connection)
+    public static RepositoryBuilderOptions<T> FromType<T>(Type type, IConnection connection)
         where T : new() =>
         new()
         {
-            DatasourceName = type.Name,
             Ids = DefaultId(type),
             Connection = connection
         };

@@ -32,6 +32,7 @@ export const TypeConverter = {
     source: string;
     destination: string;
     type?: Constructable<T>;
+    name?: string;
     schema?: Record<string, string>;
     converters?: Record<string, FieldConverter>;
     names?: Record<string, string>;
@@ -64,6 +65,7 @@ export const TypeConverter = {
         : identityFieldConverter;
     };
     return {
+      name: opts.name ?? opts.type?.name ?? "",
       source: opts.source,
       destination: host,
       schema,

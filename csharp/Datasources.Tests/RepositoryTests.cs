@@ -29,15 +29,17 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var options = new RepositoryOptions<Dictionary<string, object?>>
+        var options = new RepositoryBuilderOptions<Dictionary<string, object?>>
         {
-            DatasourceName = "users",
             Connection = connection,
             Ids = id ?? ["id"],
             AssignIdentityOnAdd = assignIdentityOnAdd,
-            Schema = schema ?? new Dictionary<string, string> { ["id"] = "INTEGER", ["name"] = "TEXT" },
-            Converters = converters,
-            Names = names
+            Mapping = TypeConverter.Mapping<Dictionary<string, object?>>(
+                "memory",
+                schema: schema ?? new Dictionary<string, string> { ["id"] = "INTEGER", ["name"] = "TEXT" },
+                converters: converters,
+                names: names,
+                name: "users")
         };
         return (new Repository<Dictionary<string, object?>>(options), command);
     }
@@ -123,9 +125,8 @@ public class RepositoryTests
     public async Task MissingIdAndBadRowAndCtor()
     {
         Assert.Throws<DatasourceException>(() =>
-            new Repository<Dictionary<string, object?>>(new RepositoryOptions<Dictionary<string, object?>>
+            new Repository<Dictionary<string, object?>>(new RepositoryBuilderOptions<Dictionary<string, object?>>
             {
-                DatasourceName = "users",
                 Connection = new MockConnection()
             }));
         var (repo, command) = Create();
@@ -141,13 +142,12 @@ public class RepositoryTests
         await Assert.ThrowsAsync<DatasourceException>(() =>
             repo.Update(new Dictionary<string, object?> { ["id"] = 1 }));
         TypeConverter.Use("memory", TypeConverter.SqlProviderTypes());
-        var mapping = TypeConverter.Mapping<Item>("memory");
+        var mapping = TypeConverter.Mapping<Item>("memory", name: "users");
         var connection2 = new MockConnection();
         var command2 = new MockCommand(connection2);
         connection2.Command = command2;
-        var typed = new Repository<Item>(new RepositoryOptions<Item>
+        var typed = new Repository<Item>(new RepositoryBuilderOptions<Item>
         {
-            DatasourceName = "users",
             Connection = connection2,
             Mapping = mapping
         });
@@ -163,11 +163,10 @@ public class RepositoryTests
     {
         TypeConverter.Use("mock", TypeConverter.IdentityProviderTypes());
         var connection = new MockConnection();
-        var fromId = RepositoryOptions.FromType<Item>(typeof(Item), connection);
-        Assert.Equal("Item", fromId.DatasourceName);
+        var fromId = CreateRepositoryBuilderOptions.FromType<Item>(typeof(Item), connection);
         Assert.Equal(new[] { "Id" }, fromId.Ids);
         Assert.Same(connection, fromId.Connection);
-        Assert.Empty(RepositoryOptions.FromType<Label>(connection).Ids);
+        Assert.Empty(CreateRepositoryBuilderOptions.FromType<Label>(connection).Ids);
         Assert.Same(connection, new Repository<Item>(fromId).Connection);
         Assert.Same(connection, new Repository<Item>(connection).Connection);
     }

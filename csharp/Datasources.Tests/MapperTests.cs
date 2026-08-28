@@ -11,7 +11,8 @@ public class MapperTests
         {
             ["user_accounts"] = "UserAccounts",
             ["created_at"] = "CreatedAt"
-        });
+        }, name: "users");
+        Assert.Equal("users", mapping.Name);
         Assert.Equal("sql", mapping.Source);
         Assert.Equal("csharp", mapping.Destination);
         Assert.Equal("UserAccounts", mapping.To("user_accounts"));
