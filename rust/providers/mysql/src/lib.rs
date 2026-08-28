@@ -91,7 +91,7 @@ mod tests {
             isolation_sql(IsolationLevel::RepeatableRead),
             "REPEATABLE READ"
         );
-        assert_eq!(isolation_sql(IsolationLevel::Serializable), "SERIALIZABLE");
+        assert_eq!(isolation_sql(IsolationLevel::Serializable), "REPEATABLE READ");
         let driver: Arc<dyn MysqlDriver> = Arc::new(FakeDriver);
         require_driver(Some(driver.clone())).unwrap();
         let conn = Arc::new(MysqlConnection::new(

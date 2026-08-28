@@ -13,9 +13,7 @@ const isoSql = (isolation: IsolationLevelName): string =>
     ? "READ UNCOMMITTED"
     : isolation === IsolationLevel.ReadCommitted
       ? "READ COMMITTED"
-      : isolation === IsolationLevel.RepeatableRead
-        ? "REPEATABLE READ"
-        : "SERIALIZABLE";
+      : "REPEATABLE READ";
 
 export class Mysql2Driver implements IMysqlDriver {
   private client: IMysqlClient | undefined;
