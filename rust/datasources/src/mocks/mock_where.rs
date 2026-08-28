@@ -1,3 +1,4 @@
+use crate::statement::Statement;
 use crate::where_trait::Where;
 use std::sync::Mutex;
 
@@ -19,9 +20,11 @@ impl MockWhere {
     }
 }
 
-impl Where for MockWhere {
+impl Statement for MockWhere {
     fn get_text(&self) -> String {
         *self.calls.lock().expect("mock") += 1;
         self.text.clone()
     }
 }
+
+impl Where for MockWhere {}

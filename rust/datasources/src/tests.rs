@@ -513,3 +513,116 @@ async fn published_mocks() {
         vec!["b:insert".to_string(), "a:insert".to_string()]
     );
 }
+
+#[test]
+fn statements_and_builders() {
+    let where_clause = WhereBuilder::and(vec![
+        WhereBuilder::equals("id", 1_i64),
+        WhereBuilder::greater_than("age", 18_i64),
+    ]);
+    assert_eq!(where_clause.get_text(), "id = $id AND age > $age");
+    assert_eq!(WhereBuilder::ne("id", 2_i64).get_text(), "id <> $id");
+    assert_eq!(WhereBuilder::lt("n", 0_i64).get_text(), "n < $n");
+    assert_eq!(WhereBuilder::gte("n", 0_i64).get_text(), "n >= $n");
+    assert_eq!(WhereBuilder::lte("n", 0_i64).get_text(), "n <= $n");
+    assert_eq!(WhereBuilder::and(vec![]).get_text(), "1 = 1");
+    assert_eq!(WhereBuilder::or(vec![]).get_text(), "1 = 0");
+    assert_eq!(
+        WhereBuilder::and(vec![WhereBuilder::equals("id", 1_i64)]).get_text(),
+        "id = $id"
+    );
+    assert_eq!(
+        WhereBuilder::or(vec![WhereBuilder::equals("id", 1_i64)]).get_text(),
+        "id = $id"
+    );
+    assert_eq!(
+        WhereBuilder::or(vec![where_clause.clone(), WhereBuilder::equals("name", "a")]).get_text(),
+        "(id = $id AND age > $age) OR name = $name"
+    );
+    assert_eq!(
+        WhereBuilder::not(WhereBuilder::equals("id", 1_i64)).get_text(),
+        "NOT (id = $id)"
+    );
+
+    let fields = [
+        Parameter::new("id", 1_i64),
+        Parameter::new("name", "a"),
+    ];
+    let query = StatementBuilder::create_query(
+        "users",
+        &["id", "name"],
+        Some(where_clause.clone()),
+    );
+    assert_eq!(
+        query.get_text(),
+        "SELECT id, name FROM users WHERE id = $id AND age > $age"
+    );
+    assert!(query.where_clause().is_some());
+    assert_eq!(
+        StatementBuilder::create_query("users", &[], None::<WhereBuilder>).get_text(),
+        "SELECT * FROM users"
+    );
+    assert!(
+        StatementBuilder::create_query("users", &[], None::<WhereBuilder>)
+            .where_clause()
+            .is_none()
+    );
+    assert_eq!(
+        StatementBuilder::create_query("users", &["id", "name"], None::<WhereBuilder>).get_text(),
+        "SELECT id, name FROM users"
+    );
+    assert_eq!(
+        StatementBuilder::create_insert("users", &fields).get_text(),
+        "INSERT INTO users (id, name) VALUES ($id, $name)"
+    );
+    let update = StatementBuilder::create_update("users", &fields, Some(where_clause.clone()));
+    assert_eq!(
+        update.get_text(),
+        "UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age"
+    );
+    assert!(update.where_clause().is_some());
+    assert!(StatementBuilder::create_update("users", &fields, None::<WhereBuilder>)
+        .where_clause()
+        .is_none());
+    let delete = StatementBuilder::create_delete("users", Some(where_clause));
+    assert_eq!(
+        delete.get_text(),
+        "DELETE FROM users WHERE id = $id AND age > $age"
+    );
+    assert!(delete.where_clause().is_some());
+    assert_eq!(
+        StatementBuilder::create_delete("users", None::<WhereBuilder>).get_text(),
+        "DELETE FROM users"
+    );
+    assert_eq!(
+        StatementBuilder::create_table(
+            "users",
+            &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")]
+        )
+        .get_text(),
+        "CREATE TABLE users (id INTEGER, name TEXT)"
+    );
+    assert_eq!(
+        StatementBuilder::create_stored_procedure("save", &fields).get_text(),
+        "CALL save($id, $name)"
+    );
+    assert_eq!(
+        StatementBuilder::create_stored_procedure("save", &[]).get_text(),
+        "CALL save()"
+    );
+
+    let query = TextQuery::with_where("SELECT 1", TextWhere::new("id = 1"));
+    assert_eq!(query.get_text(), "SELECT 1");
+    assert!(query.where_clause().is_some());
+    assert!(TextQuery::new("SELECT 1").where_clause().is_none());
+    let mock = MockQuery::with_where("q", MockWhere::new("w"));
+    assert!(mock.where_clause().is_some());
+    assert_eq!(
+        TextInsertStatement::new("x").get_text(),
+        "x"
+    );
+    assert_eq!(TextUpdateStatement::new("x", None).get_text(), "x");
+    assert_eq!(TextDeleteStatement::new("x", None).get_text(), "x");
+    assert_eq!(TextCreateTableStatement::new("x").get_text(), "x");
+    assert_eq!(TextStoredProcedureStatement::new("x").get_text(), "x");
+}

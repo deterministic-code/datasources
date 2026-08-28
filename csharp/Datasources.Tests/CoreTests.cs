@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.Builders;
 
 namespace Datasources.Tests;
 
@@ -24,7 +25,10 @@ public class CoreTests
         Assert.Empty(Helpers.ParametersToRecord(null));
         Assert.Equal(1, Helpers.ParametersToRecord(new[] { new Parameter("id", 1) })["id"]);
         Assert.Equal("SELECT 1", new Query("SELECT 1").GetText());
-        Assert.Equal("id = 1", new Where("id = 1").GetText());
+        Assert.Null(new Query("SELECT 1").Where);
+        var byId = new Where("id = 1");
+        Assert.Same(byId, new Query("SELECT 1", byId).Where);
+        Assert.Equal("id = 1", byId.GetText());
         var withId = new Dictionary<string, object?> { ["id"] = 9, ["name"] = "a" };
         Assert.Single(Helpers.IdentityFilter(withId));
         Assert.Equal("id = $id", Helpers.IdentityWhereText(withId));
@@ -32,6 +36,54 @@ public class CoreTests
         Assert.Equal(2, Helpers.IdentityFilter(noId).Count);
         Assert.Contains("name = $name", Helpers.IdentityWhereText(noId));
         Assert.Equal("1 = 1", Helpers.IdentityWhereText(new Dictionary<string, object?>()));
+    }
+
+    [Fact]
+    public void StatementsAndBuilders()
+    {
+        var where = WhereBuilder.And(WhereBuilder.Equals("id", 1), WhereBuilder.GreaterThan("age", 18));
+        Assert.Equal("id = $id AND age > $age", where.GetText());
+        Assert.Equal("id <> $id", WhereBuilder.Ne("id", 2).GetText());
+        Assert.Equal("n < $n", WhereBuilder.Lt("n", 0).GetText());
+        Assert.Equal("n >= $n", WhereBuilder.Gte("n", 0).GetText());
+        Assert.Equal("n <= $n", WhereBuilder.Lte("n", 0).GetText());
+        Assert.Equal("1 = 1", WhereBuilder.And().GetText());
+        Assert.Equal("1 = 0", WhereBuilder.Or().GetText());
+        Assert.Equal("id = $id", WhereBuilder.And(WhereBuilder.Equals("id", 1)).GetText());
+        Assert.Equal("id = $id", WhereBuilder.Or(WhereBuilder.Equals("id", 1)).GetText());
+        Assert.Equal(
+            "(id = $id AND age > $age) OR name = $name",
+            WhereBuilder.Or(where, WhereBuilder.Equals("name", "a")).GetText());
+        Assert.Equal("NOT (id = $id)", WhereBuilder.Not(WhereBuilder.Equals("id", 1)).GetText());
+
+        var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+        var query = StatementBuilder.CreateQuery("users", ["id", "name"], where);
+        Assert.Equal("SELECT id, name FROM users WHERE id = $id AND age > $age", query.GetText());
+        Assert.Same(where, query.Where);
+        Assert.Equal("SELECT * FROM users", StatementBuilder.CreateQuery("users", []).GetText());
+        Assert.Null(StatementBuilder.CreateQuery("users", []).Where);
+        Assert.Equal("SELECT id, name FROM users", StatementBuilder.CreateQuery("users", ["id", "name"]).GetText());
+        var insert = StatementBuilder.CreateInsert("users", fields);
+        Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", insert.GetText());
+        var update = StatementBuilder.CreateUpdate("users", fields, where);
+        Assert.Equal("UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age", update.GetText());
+        Assert.Same(where, update.Where);
+        Assert.Null(StatementBuilder.CreateUpdate("users", fields).Where);
+        Assert.Equal("UPDATE users SET id = $id, name = $name", StatementBuilder.CreateUpdate("users", fields).GetText());
+        var delete = StatementBuilder.CreateDelete("users", where);
+        Assert.Equal("DELETE FROM users WHERE id = $id AND age > $age", delete.GetText());
+        Assert.Same(where, delete.Where);
+        Assert.Equal("DELETE FROM users", StatementBuilder.CreateDelete("users").GetText());
+        Assert.Equal(
+            "CREATE TABLE users (id INTEGER, name TEXT)",
+            StatementBuilder.CreateTable("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]).GetText());
+        Assert.Equal("CALL save($id, $name)", StatementBuilder.CreateStoredProcedure("save", fields).GetText());
+        Assert.Equal("CALL save()", StatementBuilder.CreateStoredProcedure("save").GetText());
+        Assert.Equal("INSERT INTO t () VALUES ()", new InsertStatement("INSERT INTO t () VALUES ()").GetText());
+        Assert.Equal("x", new UpdateStatement("x").GetText());
+        Assert.Equal("x", new DeleteStatement("x").GetText());
+        Assert.Equal("x", new CreateTableStatement("x").GetText());
+        Assert.Equal("x", new StoredProcedureStatement("x").GetText());
     }
 
     [Fact]
@@ -173,6 +225,7 @@ public class CoreTests
         Assert.IsType<StubConnection>(ds.CreateRepository<object>().Connection);
         Assert.IsType<StubRepository<object>>(((IDatasource)ds).CreateReadonlyRepository<object>(provided));
         var txn = new StubTransaction("text", provided);
+        Assert.Same(provided, txn.Connection);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => txn.Commit());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => txn.Abort());
         var reader = new StubReader("text");
@@ -199,6 +252,7 @@ public class CoreTests
         Assert.Same(custom, new MockConnection(custom).Transaction);
 
         var txn = new MockTransaction(connection);
+        Assert.Same(connection, txn.Connection);
         await txn.Commit();
         Assert.True(txn.Committed);
         await txn.Abort();
@@ -223,6 +277,7 @@ public class CoreTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => reader.Next());
 
         var repo = new MockRepository<Dictionary<string, object?>>(connection);
+        Assert.Same(connection, repo.Connection);
         Assert.Null(await repo.GetSingle());
         repo.Items.Add(new Dictionary<string, object?> { ["id"] = 1 });
         Assert.NotNull(await repo.GetSingle(new MockQuery("id=1")));
@@ -250,6 +305,7 @@ public class CoreTests
         await mockCommand.ExecuteReader();
         var provided = new MockConnection();
         Assert.Same(provided, ds.CreateCommand(provided).Connection);
+        Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>());
         Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>(provided));
         ds.Command = new MockCommand(ds.Connection);
         ds.Repository = new MockRepository<object>(ds.Connection);

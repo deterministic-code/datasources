@@ -3,6 +3,7 @@ mod collect_reader;
 mod command;
 mod command_middleware;
 mod command_middleware_host;
+pub mod builders;
 pub mod converters;
 mod connection;
 mod console_command_middleware;
@@ -26,6 +27,8 @@ mod registry_state;
 mod repository;
 mod reset;
 mod response;
+mod statement;
+mod statements;
 mod result;
 pub mod stubs;
 mod text_query;
@@ -34,6 +37,7 @@ mod transaction;
 mod value;
 mod where_trait;
 
+pub use builders::{Column, StatementBuilder, WhereBuilder};
 pub use array_reader::ArrayReader;
 pub use collect_reader::collect_reader;
 pub use command::Command;
@@ -67,6 +71,12 @@ pub use record::Record;
 pub use register::register;
 pub use registered::registered;
 pub use repository::{ReadonlyRepository, Repository};
+pub use statement::Statement;
+pub use statements::{
+    CreateTableStatement, DeleteStatement, InsertStatement, StoredProcedureStatement,
+    TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
+    TextStoredProcedureStatement, TextUpdateStatement, UpdateStatement,
+};
 pub use reset::reset;
 pub use response::Response;
 pub use result::Result;
