@@ -99,7 +99,7 @@ export const canonicalConverters = (
 });
 
 export const sqlProviderTypes = (
-  aliases: Record<string, string>,
+  aliases: Record<string, string> = {},
   options: { rename?: boolean; booleanStorage?: "integer" | "native" } = {},
 ): ProviderTypes => {
   const types = canonicalConverters(options.booleanStorage ?? "integer");

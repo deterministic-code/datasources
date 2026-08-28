@@ -15,7 +15,7 @@ public class RepositoryTests
 
     static (Repository<Dictionary<string, object?>> Repo, MockCommand Command) Create(
         IReadOnlyList<string>? id = null,
-        bool generated = false,
+        bool assignIdentityOnAdd = true,
         IReadOnlyDictionary<string, string>? schema = null,
         IReadOnlyDictionary<string, IFieldConverter>? converters = null,
         IReadOnlyDictionary<string, string>? names = null)
@@ -30,7 +30,7 @@ public class RepositoryTests
             CreateCommand = _ => command,
             Provider = "memory",
             Id = id ?? ["id"],
-            Generated = generated,
+            AssignIdentityOnAdd = assignIdentityOnAdd,
             Schema = schema ?? new Dictionary<string, string> { ["id"] = "INTEGER", ["name"] = "TEXT" },
             Converters = converters,
             Names = names
@@ -75,7 +75,7 @@ public class RepositoryTests
     [Fact]
     public async Task AddUpdateDeleteUseBuilders()
     {
-        var (repo, command) = Create();
+        var (repo, command) = Create(assignIdentityOnAdd: false);
         var obj = new Dictionary<string, object?> { ["id"] = 1, ["name"] = "a" };
         await repo.Add(obj);
         Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
@@ -88,12 +88,12 @@ public class RepositoryTests
     }
 
     [Fact]
-    public async Task CompositeIdAndGeneratedAndOverrides()
+    public async Task CompositeIdAndAssignIdentityOnAddAndOverrides()
     {
         var twice = new FieldConverter(v => v, v => v is int n ? n * 2 : v);
         var (repo, command) = Create(
             id: ["org_id", "user_id"],
-            generated: true,
+            assignIdentityOnAdd: true,
             schema: new Dictionary<string, string>
             {
                 ["org_id"] = "INTEGER",
