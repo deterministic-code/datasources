@@ -1,7 +1,9 @@
 import {
   DatasourceError,
+  IsolationLevel,
   MiddlewareHost,
   type IConnection,
+  type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
 import { MemoryStore, type MemoryRecord } from "./store.ts";
@@ -47,12 +49,14 @@ export class MemoryConnection extends MiddlewareHost implements IConnection {
     });
   }
 
-  async startTransaction(): Promise<ITransaction> {
+  async startTransaction(
+    isolation: IsolationLevelName = IsolationLevel.Serializable,
+  ): Promise<ITransaction> {
     return this.run("startTransaction", async () => {
       this.ensureOpen();
       this.snapshot = this.store.snapshot();
       this.inTransaction = true;
-      return new MemoryTransaction(this);
+      return new MemoryTransaction(this, isolation);
     });
   }
 

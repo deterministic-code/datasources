@@ -8,6 +8,9 @@ description = "SQLite datasource provider"
 [dependencies]
 async-trait = { workspace = true }
 datasources = { workspace = true }
+rusqlite = { workspace = true }
 
 [dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
 tokio = { workspace = true }

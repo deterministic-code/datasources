@@ -2,8 +2,8 @@ use crate::file_store::FileStore;
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Connection, DatasourceError, MiddlewareAware, MiddlewareHook, MiddlewareHost, Result,
-    Transaction,
+    Connection, DatasourceError, IsolationLevel, MiddlewareAware, MiddlewareHook, MiddlewareHost,
+    Result, Transaction,
 };
 use serde_json::{Map, Value as JsonValue};
 use std::sync::{Arc, Mutex};
@@ -141,7 +141,10 @@ impl Connection for JsonConnection {
             .await
     }
 
-    async fn start_transaction(&self) -> Result<Arc<dyn Transaction>> {
+    async fn start_transaction(
+        &self,
+        isolation: Option<IsolationLevel>,
+    ) -> Result<Arc<dyn Transaction>> {
         self.host
             .run("startTransaction", None, || async {
                 self.ensure_open()?;
@@ -151,6 +154,7 @@ impl Connection for JsonConnection {
                 Ok(Arc::new(JsonTransaction {
                     host: MiddlewareHost::new(),
                     state: self.state.clone(),
+                    isolation: isolation.unwrap_or_default(),
                 }) as Arc<dyn Transaction>)
             })
             .await

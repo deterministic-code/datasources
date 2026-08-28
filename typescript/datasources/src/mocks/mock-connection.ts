@@ -1,5 +1,6 @@
 import type { IConnection } from "../IConnection.ts";
 import type { ITransaction } from "../ITransaction.ts";
+import { IsolationLevel, type IsolationLevel as Isolation } from "../IsolationLevel.ts";
 import { MiddlewareHost } from "../MiddlewareHost.ts";
 import { MockTransaction } from "./mock-transaction.ts";
 
@@ -38,11 +39,14 @@ export class MockConnection extends MiddlewareHost implements IConnection {
     });
   }
 
-  async startTransaction(): Promise<ITransaction> {
+  async startTransaction(isolation: Isolation = IsolationLevel.Serializable): Promise<ITransaction> {
     return this.run("startTransaction", async () => {
       this.startTransactionCalls += 1;
       if (this.startTransactionError) {
         throw this.startTransactionError;
+      }
+      if (this.transaction instanceof MockTransaction) {
+        this.transaction.isolation = isolation;
       }
       return this.transaction;
     });

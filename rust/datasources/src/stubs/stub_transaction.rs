@@ -1,4 +1,5 @@
 use super::not_implemented::fail;
+use crate::isolation_level::IsolationLevel;
 use crate::middleware_aware::MiddlewareAware;
 use crate::middleware_hook::MiddlewareHook;
 use crate::middleware_host::MiddlewareHost;
@@ -28,6 +29,10 @@ impl MiddlewareAware for StubTransaction {
 
 #[async_trait]
 impl Transaction for StubTransaction {
+    fn isolation(&self) -> IsolationLevel {
+        IsolationLevel::Serializable
+    }
+
     async fn commit(&self) -> Result<()> {
         self.host
             .run("commit", None, || async { Err(fail(&self.provider)) })

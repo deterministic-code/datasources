@@ -112,15 +112,15 @@ mod tests {
             .unwrap();
         command.use_middleware(None, None);
 
-        let txn = conn.start_transaction().await.unwrap();
+        let txn = conn.start_transaction(None).await.unwrap();
         assert!(conn.in_transaction());
         repo.add(&rec(9, "t")).await.unwrap();
         txn.abort().await.unwrap();
-        let txn = conn.start_transaction().await.unwrap();
+        let txn = conn.start_transaction(None).await.unwrap();
         repo.add(&rec(8, "c")).await.unwrap();
         txn.commit().await.unwrap();
         txn.use_middleware(None, None);
-        let _ = conn.start_transaction().await.unwrap();
+        let _ = conn.start_transaction(None).await.unwrap();
         conn.finish_abort();
         assert!(!conn.in_transaction());
         conn.finish_abort();
@@ -206,7 +206,7 @@ mod tests {
             .await
             .is_err());
         assert!(MemoryConnection::new(Arc::new(MemoryStore::new()), "", None)
-            .start_transaction()
+            .start_transaction(None)
             .await
             .is_err());
 

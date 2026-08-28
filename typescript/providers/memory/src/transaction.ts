@@ -1,8 +1,16 @@
-import { MiddlewareHost, type ITransaction } from "@datasources/core";
+import {
+  IsolationLevel,
+  MiddlewareHost,
+  type ITransaction,
+  type IsolationLevelName,
+} from "@datasources/core";
 import type { MemoryConnection } from "./connection.ts";
 
 export class MemoryTransaction extends MiddlewareHost implements ITransaction {
-  constructor(readonly connection: MemoryConnection) {
+  constructor(
+    readonly connection: MemoryConnection,
+    readonly isolation: IsolationLevelName = IsolationLevel.Serializable,
+  ) {
     super();
   }
 

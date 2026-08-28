@@ -99,10 +99,10 @@ mod tests {
             .unwrap();
         command.use_middleware(None, None);
 
-        let txn = conn.start_transaction().await.unwrap();
+        let txn = conn.start_transaction(None).await.unwrap();
         repo.add(&rec(9, "t")).await.unwrap();
         txn.abort().await.unwrap();
-        let txn = conn.start_transaction().await.unwrap();
+        let txn = conn.start_transaction(None).await.unwrap();
         repo.add(&rec(8, "c")).await.unwrap();
         txn.commit().await.unwrap();
         txn.use_middleware(None, None);
@@ -124,7 +124,7 @@ mod tests {
         memory.collection_mut(|_| {});
         *memory.state.data.lock().unwrap() = JsonValue::Array(vec![]);
         memory.collection_mut(|_| {});
-        let txn = memory.start_transaction().await.unwrap();
+        let txn = memory.start_transaction(None).await.unwrap();
         txn.commit().await.unwrap();
 
         reset();
@@ -198,7 +198,7 @@ mod tests {
             .await
             .is_err());
         assert!(JsonConnection::new("", None, Arc::new(MemoryFileStore::new()), None)
-            .start_transaction()
+            .start_transaction(None)
             .await
             .is_err());
 

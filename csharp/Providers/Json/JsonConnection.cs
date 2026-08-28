@@ -46,13 +46,14 @@ public sealed class JsonConnection : MiddlewareHost, IConnection
         return Task.CompletedTask;
     });
 
-    public Task<ITransaction> StartTransaction() => Run("startTransaction", () =>
-    {
-        EnsureOpen();
-        _snapshot = Data.DeepClone();
-        InTransaction = true;
-        return Task.FromResult<ITransaction>(new JsonTransaction(this));
-    });
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
+        Run("startTransaction", () =>
+        {
+            EnsureOpen();
+            _snapshot = Data.DeepClone();
+            InTransaction = true;
+            return Task.FromResult<ITransaction>(new JsonTransaction(this, isolation));
+        });
 
     public JsonArray GetCollection()
     {

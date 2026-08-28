@@ -1,8 +1,16 @@
-import { MiddlewareHost, type ITransaction } from "@datasources/core";
+import {
+  IsolationLevel,
+  MiddlewareHost,
+  type ITransaction,
+  type IsolationLevelName,
+} from "@datasources/core";
 import type { SqliteConnection } from "./connection.ts";
 
 export class SqliteTransaction extends MiddlewareHost implements ITransaction {
-  constructor(readonly connection: SqliteConnection) {
+  constructor(
+    readonly connection: SqliteConnection,
+    readonly isolation: IsolationLevelName = IsolationLevel.Serializable,
+  ) {
     super();
   }
 

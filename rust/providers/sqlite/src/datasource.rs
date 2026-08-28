@@ -1,6 +1,7 @@
 use crate::command::SqliteCommand;
 use crate::connection::SqliteConnection;
-use crate::driver::{require_driver, ScriptedDriver, SqliteDriver};
+use crate::driver::{require_driver, SqliteDriver};
+use crate::rusqlite_driver::RusqliteDriver;
 use crate::repository::SqliteRepository;
 use async_trait::async_trait;
 use datasources::{
@@ -18,7 +19,7 @@ impl SqliteDatasource {
     pub fn factory() -> Arc<Self> {
         Arc::new(Self::new(
             Some(":memory:".into()),
-            Some(Arc::new(ScriptedDriver::new())),
+            Some(Arc::new(RusqliteDriver::new())),
             None,
         ))
     }
@@ -52,13 +53,13 @@ impl Datasource for SqliteDatasource {
     async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
         Ok(self
             .typed_connection()
-            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(ScriptedDriver::new())))))
+            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(RusqliteDriver::new())))))
     }
 
     fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
         let conn = self
             .typed_connection()
-            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(ScriptedDriver::new()))));
+            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(RusqliteDriver::new()))));
         Arc::new(SqliteCommand::new(conn))
     }
 
@@ -68,7 +69,7 @@ impl Datasource for SqliteDatasource {
     ) -> Arc<dyn Repository> {
         let conn = self
             .typed_connection()
-            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(ScriptedDriver::new()))));
+            .unwrap_or_else(|_| Arc::new(SqliteConnection::new(None, Arc::new(RusqliteDriver::new()))));
         Arc::new(SqliteRepository::new(conn, self.table.clone()))
     }
 }

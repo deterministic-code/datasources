@@ -9,6 +9,7 @@ public sealed class MockTransaction : MiddlewareHost, ITransaction
     public bool Committed { get; private set; }
     public bool Aborted { get; private set; }
     public IConnection Connection { get; }
+    public IsolationLevel Isolation { get; set; } = IsolationLevel.Serializable;
 
     public MockTransaction(IConnection connection) => Connection = connection;
 

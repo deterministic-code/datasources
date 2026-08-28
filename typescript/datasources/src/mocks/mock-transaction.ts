@@ -1,5 +1,6 @@
 import type { IConnection } from "../IConnection.ts";
 import type { ITransaction } from "../ITransaction.ts";
+import { IsolationLevel } from "../IsolationLevel.ts";
 import { MiddlewareHost } from "../MiddlewareHost.ts";
 
 export class MockTransaction extends MiddlewareHost implements ITransaction {
@@ -9,6 +10,7 @@ export class MockTransaction extends MiddlewareHost implements ITransaction {
   abortError?: unknown;
   committed = false;
   aborted = false;
+  isolation: IsolationLevel = IsolationLevel.Serializable;
 
   constructor(readonly connection: IConnection) {
     super();
