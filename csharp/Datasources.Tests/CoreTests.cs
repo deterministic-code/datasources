@@ -43,6 +43,9 @@ public class CoreTests
     {
         var where = WhereBuilder.And(WhereBuilder.Equals("id", 1), WhereBuilder.GreaterThan("age", 18));
         Assert.Equal("id = $id AND age > $age", where.GetText());
+        Assert.Equal(2, where.Parameters.Count);
+        Assert.Equal(1, where.Parameters[0].Value);
+        Assert.Equal(18, where.Parameters[1].Value);
         Assert.Equal("id <> $id", WhereBuilder.Ne("id", 2).GetText());
         Assert.Equal("n < $n", WhereBuilder.Lt("n", 0).GetText());
         Assert.Equal("n >= $n", WhereBuilder.Gte("n", 0).GetText());

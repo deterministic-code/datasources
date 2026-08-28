@@ -1,3 +1,4 @@
+use crate::parameter::Parameter;
 use crate::statement::Statement;
 use crate::value::Value;
 use crate::where_trait::Where;
@@ -7,7 +8,6 @@ enum Node {
     Compare {
         field: String,
         op: &'static str,
-        #[allow(dead_code)]
         value: Value,
     },
     Group {
@@ -97,6 +97,14 @@ impl WhereBuilder {
 }
 
 impl Statement for WhereBuilder {
+    fn parameters(&self) -> Vec<Parameter> {
+        match &self.node {
+            Node::Compare { field, value, .. } => vec![Parameter::new(field.clone(), value.clone())],
+            Node::Not { child } => child.parameters(),
+            Node::Group { children, .. } => children.iter().flat_map(Self::parameters).collect(),
+        }
+    }
+
     fn get_text(&self) -> String {
         match &self.node {
             Node::Compare { field, op, .. } => format!("{field} {op} ${field}"),

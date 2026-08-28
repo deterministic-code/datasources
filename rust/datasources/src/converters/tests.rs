@@ -69,6 +69,7 @@ fn merges_schema_and_converters() {
         "rust",
         HashMap::from([("username".into(), "VARCHAR(32)".into())]),
         HashMap::from([("id".into(), twice)]),
+        HashMap::new(),
     )
     .unwrap();
     assert_eq!(mapping.schema.get("username").unwrap(), "VARCHAR(32)");
@@ -198,6 +199,7 @@ fn unknown_sql_type_uses_identity() {
         "sqlite",
         "rust",
         HashMap::from([("label".into(), "FOO".into())]),
+        HashMap::new(),
         HashMap::new(),
     )
     .unwrap();

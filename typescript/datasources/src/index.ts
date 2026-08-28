@@ -12,6 +12,7 @@ export type { IUpdateStatement } from "./IUpdateStatement.ts";
 export type { IReader } from "./IReader.ts";
 export type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 export type { IRepository } from "./IRepository.ts";
+export { Repository, type RepositoryOptions } from "./Repository.ts";
 export type { IResponse } from "./IResponse.ts";
 export type { ITransaction } from "./ITransaction.ts";
 export { IsolationLevel } from "./IsolationLevel.ts";

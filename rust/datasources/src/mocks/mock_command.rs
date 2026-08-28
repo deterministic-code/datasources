@@ -19,6 +19,8 @@ pub struct MockCommand {
     execute_error: Mutex<Option<String>>,
     reader_error: Mutex<Option<String>>,
     pub execute_calls: Mutex<usize>,
+    pub execute_logs: Mutex<Vec<(String, Vec<Parameter>)>>,
+    pub reader_logs: Mutex<Vec<(String, Vec<Parameter>)>>,
 }
 
 impl MockCommand {
@@ -30,6 +32,8 @@ impl MockCommand {
             execute_error: Mutex::new(None),
             reader_error: Mutex::new(None),
             execute_calls: Mutex::new(0),
+            execute_logs: Mutex::new(Vec::new()),
+            reader_logs: Mutex::new(Vec::new()),
         }
     }
 
@@ -54,7 +58,11 @@ impl Command for MockCommand {
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         self.host
-            .run(text, parameters, |_query, _params| async {
+            .run(text, parameters, |query, params| async {
+                self.reader_logs.lock().expect("mock").push((
+                    query,
+                    params.unwrap_or_default(),
+                ));
                 if let Some(error) = &*self.reader_error.lock().expect("mock") {
                     return Err(DatasourceError::message(error.clone()));
                 }
@@ -73,7 +81,11 @@ impl Command for MockCommand {
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
         self.host
-            .run(text, parameters, |_query, _params| async {
+            .run(text, parameters, |query, params| async {
+                self.execute_logs.lock().expect("mock").push((
+                    query,
+                    params.unwrap_or_default(),
+                ));
                 *self.execute_calls.lock().expect("mock") += 1;
                 if let Some(error) = &*self.execute_error.lock().expect("mock") {
                     return Err(DatasourceError::message(error.clone()));
