@@ -139,7 +139,6 @@ describe("Repository", () => {
       connection: command.connection,
       createCommand: () => command,
       mapping,
-      type: Item,
     });
     await typed.add(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
