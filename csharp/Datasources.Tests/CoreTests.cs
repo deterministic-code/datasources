@@ -141,7 +141,8 @@ public class CoreTests
         var connection = new MockConnection();
         await connection.Open();
         Assert.True(connection.Opened);
-        await connection.StartTransaction();
+        var started = await connection.StartTransaction(IsolationLevel.ReadUncommitted);
+        Assert.Equal(IsolationLevel.ReadUncommitted, started.Isolation);
         await connection.Close();
         connection.OpenError = new InvalidOperationException("open-fail");
         await Assert.ThrowsAsync<InvalidOperationException>(() => connection.Open());

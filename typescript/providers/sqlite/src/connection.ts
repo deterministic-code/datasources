@@ -1,7 +1,9 @@
 import {
   DatasourceError,
+  IsolationLevel,
   MiddlewareHost,
   type IConnection,
+  type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
 import { requireDriver, type ISqliteDriver } from "./driver.ts";
@@ -40,11 +42,13 @@ export class SqliteConnection extends MiddlewareHost implements IConnection {
     });
   }
 
-  async startTransaction(): Promise<ITransaction> {
+  async startTransaction(
+    isolation: IsolationLevelName = IsolationLevel.Serializable,
+  ): Promise<ITransaction> {
     return this.run("startTransaction", async () => {
       this.ensureOpen();
-      await this.driver.begin();
-      return new SqliteTransaction(this);
+      await this.driver.begin(isolation);
+      return new SqliteTransaction(this, isolation);
     });
   }
 

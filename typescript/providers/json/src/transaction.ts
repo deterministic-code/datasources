@@ -1,8 +1,16 @@
-import { MiddlewareHost, type ITransaction } from "@datasources/core";
+import {
+  IsolationLevel,
+  MiddlewareHost,
+  type ITransaction,
+  type IsolationLevelName,
+} from "@datasources/core";
 import type { JsonConnection } from "./connection.ts";
 
 export class JsonTransaction extends MiddlewareHost implements ITransaction {
-  constructor(readonly connection: JsonConnection) {
+  constructor(
+    readonly connection: JsonConnection,
+    readonly isolation: IsolationLevelName = IsolationLevel.Serializable,
+  ) {
     super();
   }
 

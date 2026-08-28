@@ -1,0 +1,93 @@
+# Shared Command contract. C#, Rust, and TypeScript must all pass this file.
+name: command-crud
+filename: ":memory:"
+steps:
+  - execute:
+      sql: |
+        CREATE TABLE user (
+          id INTEGER PRIMARY KEY,
+          username TEXT NOT NULL,
+          is_enabled INTEGER NOT NULL,
+          created TEXT NOT NULL
+        )
+      expect:
+        rowsAffected: 0
+  - execute:
+      sql: INSERT INTO user (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
+      parameters:
+        id: 1
+        username: alice
+        is_enabled: 1
+        created: "2024-01-15T10:00:00Z"
+      expect:
+        rowsAffected: 1
+        result: 1
+  - execute:
+      sql: INSERT INTO user (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
+      parameters:
+        id: 2
+        username: bob
+        is_enabled: 0
+        created: "2024-02-20T15:30:00Z"
+      expect:
+        rowsAffected: 1
+        result: 2
+  - executeReader:
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        rows:
+          - id: 1
+            username: alice
+            is_enabled: 1
+            created: "2024-01-15T10:00:00Z"
+          - id: 2
+            username: bob
+            is_enabled: 0
+            created: "2024-02-20T15:30:00Z"
+  - execute:
+      sql: UPDATE user SET is_enabled = $is_enabled WHERE username = $username
+      parameters:
+        is_enabled: 1
+        username: bob
+      expect:
+        rowsAffected: 1
+  - executeReader:
+      sql: SELECT is_enabled FROM user WHERE username = $username
+      parameters:
+        username: bob
+      expect:
+        rows:
+          - is_enabled: 1
+  - execute:
+      sql: DELETE FROM user WHERE username = $username
+      parameters:
+        username: bob
+      expect:
+        rowsAffected: 1
+  - executeReader:
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        rows:
+          - id: 1
+            username: alice
+            is_enabled: 1
+            created: "2024-01-15T10:00:00Z"
+  - close: {}
+  - execute:
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        error: Connection is not open
+  - executeReader:
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        error: Connection is not open
+  - execute:
+      sql: SELECT * FROM user ORDER BY id
+      open: false
+      expect:
+        error: Connection is not open
+  - executeReader:
+      sql: SELECT * FROM user ORDER BY id
+      open: false
+      expect:
+        error: Connection is not open

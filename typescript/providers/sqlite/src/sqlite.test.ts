@@ -14,13 +14,7 @@ vi.mock("better-sqlite3", () => {
   }
   return { default: Database };
 });
-import {
-  collectAsync,
-  Datasource,
-  DatasourceError,
-  Query,
-  Where,
-} from "@datasources/core";
+import { Datasource, DatasourceError, IsolationLevel } from "@datasources/core";
 import {
   BetterSqliteDriver,
   bindParameters,
@@ -30,58 +24,8 @@ import {
   SqliteConnection,
   SqliteDatasource,
   SqliteRepository,
-  type ISqliteDriver,
   type SqliteDatabase,
-  type SqliteExecuteResult,
 } from "./index.ts";
-
-class ScriptedDriver implements ISqliteDriver {
-  opened = false;
-  closed = false;
-  begins = 0;
-  commits = 0;
-  rollbacks = 0;
-  executes: Array<{ sql: string; params?: Record<string, unknown> }> = [];
-  queries: Array<{ sql: string; params?: Record<string, unknown> }> = [];
-  queryResult: Record<string, unknown>[] = [];
-  executeResult: SqliteExecuteResult = { rowsAffected: 1, result: 10 };
-
-  async open(_filename: string): Promise<void> {
-    this.opened = true;
-  }
-
-  async close(): Promise<void> {
-    this.closed = true;
-  }
-
-  async execute(
-    sql: string,
-    params?: Record<string, unknown>,
-  ): Promise<SqliteExecuteResult> {
-    this.executes.push({ sql, params });
-    return this.executeResult;
-  }
-
-  async query(
-    sql: string,
-    params?: Record<string, unknown>,
-  ): Promise<Record<string, unknown>[]> {
-    this.queries.push({ sql, params });
-    return this.queryResult;
-  }
-
-  async begin(): Promise<void> {
-    this.begins += 1;
-  }
-
-  async commit(): Promise<void> {
-    this.commits += 1;
-  }
-
-  async rollback(): Promise<void> {
-    this.rollbacks += 1;
-  }
-}
 
 class FakeStatement {
   constructor(
@@ -122,6 +66,20 @@ class FakeDatabase implements SqliteDatabase {
   }
 }
 
+function fakeDriver(filename = ":memory:") {
+  let instance: FakeDatabase | undefined;
+  const Database = class {
+    constructor(name: string) {
+      instance = new FakeDatabase(name);
+      return instance;
+    }
+  } as unknown as new (filename: string) => SqliteDatabase;
+  return {
+    driver: new BetterSqliteDriver(filename, Database),
+    db: () => instance,
+  };
+}
+
 afterEach(() => {
   Datasource.reset();
   Datasource.use(SqliteDatasource.factory);
@@ -130,7 +88,7 @@ afterEach(() => {
 describe("requireDriver and bindParameters", () => {
   it("requires a driver", () => {
     expect(() => requireDriver(undefined)).toThrow(DatasourceError);
-    const driver = new ScriptedDriver();
+    const { driver } = fakeDriver();
     expect(requireDriver(driver)).toBe(driver);
   });
 
@@ -163,9 +121,17 @@ describe("BetterSqliteDriver", () => {
     ]);
     expect(await driver.query("")).toEqual([]);
     await driver.begin();
+    await driver.begin(IsolationLevel.ReadUncommitted);
     await driver.commit();
     await driver.rollback();
-    expect(instance?.execs).toEqual(["BEGIN", "COMMIT", "ROLLBACK"]);
+    expect(instance?.execs).toEqual([
+      "PRAGMA read_uncommitted = 0",
+      "BEGIN",
+      "PRAGMA read_uncommitted = 1",
+      "BEGIN",
+      "COMMIT",
+      "ROLLBACK",
+    ]);
     await driver.close();
     expect(instance?.closed).toBe(true);
     await expect(driver.execute("x")).rejects.toThrow("not open");
@@ -224,39 +190,46 @@ describe("BetterSqliteDriver", () => {
 
 describe("SqliteConnection", () => {
   it("opens, reopens, transacts, and closes", async () => {
-    const driver = new ScriptedDriver();
+    const { driver, db } = fakeDriver("x.db");
     const connection = new SqliteConnection({ filename: "x.db", driver });
     await connection.open();
     await connection.open();
-    expect(driver.opened).toBe(true);
+    expect(connection.opened).toBe(true);
     const txn = await connection.startTransaction();
-    expect(driver.begins).toBe(1);
     await txn.commit();
-    expect(driver.commits).toBe(1);
-    const txn2 = await connection.startTransaction();
+    const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);
+    expect(txn2.isolation).toBe(IsolationLevel.ReadUncommitted);
     await txn2.abort();
-    expect(driver.rollbacks).toBe(1);
+    expect(db()?.execs).toEqual([
+      "PRAGMA read_uncommitted = 0",
+      "BEGIN",
+      "COMMIT",
+      "PRAGMA read_uncommitted = 1",
+      "BEGIN",
+      "ROLLBACK",
+    ]);
+    expect(txn.isolation).toBe("serializable");
     await connection.close();
-    expect(driver.closed).toBe(true);
+    expect(db()?.closed).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);
     await expect(connection.startTransaction()).rejects.toThrow(DatasourceError);
   });
 
   it("defaults filename and requires a driver", () => {
     expect(() => new SqliteConnection()).toThrow(DatasourceError);
-    const connection = new SqliteConnection({ driver: new ScriptedDriver() });
+    const connection = new SqliteConnection({ driver: fakeDriver().driver });
     expect(connection.filename).toBe(":memory:");
   });
 });
 
 describe("SqliteCommand and SqliteRepository", () => {
   async function setup() {
-    const driver = new ScriptedDriver();
-    driver.queryResult = [{ id: 1, name: "a" }];
+    const { driver, db } = fakeDriver();
     const connection = new SqliteConnection({ driver });
     await connection.open();
     return {
       driver,
+      db,
       connection,
       command: new SqliteCommand(connection),
       repo: new SqliteRepository<{ id?: number; name?: string }>(connection),
@@ -264,63 +237,30 @@ describe("SqliteCommand and SqliteRepository", () => {
   }
 
   it("executes SQL through the driver", async () => {
-    const { command, driver } = await setup();
+    const { command, db } = await setup();
+    db()!.rows = [{ id: 1, name: "a" }];
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
-      .toEqual({ result: 10, rowsAffected: 1 });
-    expect(await command.execute()).toEqual({ result: 10, rowsAffected: 1 });
+      .toEqual({ result: 5, rowsAffected: 2 });
+    expect(await command.execute()).toEqual({ rowsAffected: 0 });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1, name: "a" });
-    await command.executeReader();
-    expect(driver.queries.at(-1)?.sql).toBe("");
+    const empty = await command.executeReader();
+    expect(await empty.next()).toBe(false);
   });
 
-  it("maps repository operations to SQL", async () => {
-    const { repo, driver } = await setup();
-    expect(await repo.getSingle()).toEqual({ id: 1, name: "a" });
-    expect(driver.queries.at(-1)?.sql).toBe("SELECT * FROM items LIMIT 1");
-    driver.queryResult = [];
-    expect(await repo.getSingle(new Query("id = $id"))).toBeUndefined();
-
-    const withParams = new Query("id = $id") as Query & {
-      parameters?: { name: string; value: unknown }[];
-    };
-    withParams.parameters = [{ name: "id", value: 1 }];
-    driver.queryResult = [{ id: 1 }];
-    expect(await collectAsync(repo.get(withParams))).toEqual([{ id: 1 }]);
-    expect(await collectAsync(repo.get())).toEqual([{ id: 1 }]);
-
-    await repo.add({ id: 2, name: "b" });
-    expect(driver.executes.at(-1)?.sql).toContain("INSERT INTO items (id, name)");
-    await repo.add({});
-    expect(driver.executes.at(-1)?.sql).toBe(
-      "INSERT INTO items DEFAULT VALUES",
-    );
-    await repo.update({ id: 2, name: "B" });
-    expect(driver.executes.at(-1)?.sql).toContain("UPDATE items SET");
-    await repo.update({}, new Where("id = 1"));
-    expect(driver.executes.at(-1)?.sql).toContain("SET id = id");
-    await repo.delete({ id: 2 });
-    expect(driver.executes.at(-1)?.sql).toBe("DELETE FROM items WHERE id = $id");
-    await repo.delete({ id: 2 }, new Where("name = $name"));
-    expect(driver.executes.at(-1)?.sql).toContain("WHERE name = $name");
-    await expect(repo.add("nope" as never)).rejects.toThrow("plain objects");
-    await expect(repo.add(null as never)).rejects.toThrow("plain objects");
-  });
-
-  it("uses a custom table name", async () => {
-    const driver = new ScriptedDriver();
-    const connection = new SqliteConnection({ driver });
-    await connection.open();
-    const repo = new SqliteRepository(connection, { table: "users" });
-    await collectAsync(repo.get());
-    expect(driver.queries[0]?.sql).toBe("SELECT * FROM users");
+  it("holds connection and table as a placeholder", async () => {
+    const { repo, connection } = await setup();
+    expect(repo.connection).toBe(connection);
+    expect(repo.table).toBe("items");
+    const named = new SqliteRepository(connection, { table: "users" });
+    expect(named.table).toBe("users");
   });
 });
 
 describe("SqliteDatasource", () => {
   it("registers and constructs children", async () => {
-    const driver = new ScriptedDriver();
+    const { driver } = fakeDriver();
     expect(SqliteDatasource.create().provider).toBe("sqlite");
     expect(() => new SqliteDatasource().createConnection()).toThrow(
       DatasourceError,

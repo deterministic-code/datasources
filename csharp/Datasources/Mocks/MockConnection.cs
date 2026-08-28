@@ -32,10 +32,12 @@ public sealed class MockConnection : MiddlewareHost, IConnection
         return Task.CompletedTask;
     });
 
-    public Task<ITransaction> StartTransaction() => Run("startTransaction", () =>
-    {
-        StartTransactionCalls++;
-        if (StartTransactionError is not null) throw StartTransactionError;
-        return Task.FromResult(Transaction);
-    });
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
+        Run("startTransaction", () =>
+        {
+            StartTransactionCalls++;
+            if (StartTransactionError is not null) throw StartTransactionError;
+            if (Transaction is MockTransaction mock) mock.Isolation = isolation;
+            return Task.FromResult(Transaction);
+        });
 }

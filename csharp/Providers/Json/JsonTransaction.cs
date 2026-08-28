@@ -4,8 +4,13 @@ namespace Datasources.Json;
 
 public sealed class JsonTransaction : MiddlewareHost, ITransaction
 {
-    public JsonTransaction(JsonConnection connection) => Connection = connection;
+    public JsonTransaction(JsonConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+    {
+        Connection = connection;
+        Isolation = isolation;
+    }
     public IConnection Connection { get; }
+    public IsolationLevel Isolation { get; }
     private JsonConnection Typed => (JsonConnection)Connection;
 
     public Task Commit() => Run("commit", async () =>

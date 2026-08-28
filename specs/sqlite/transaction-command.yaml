@@ -1,0 +1,151 @@
+# Shared Transaction contract. C#, Rust, and TypeScript must all pass this file.
+name: transaction-command
+filename: "file:transaction-command?mode=memory&cache=shared"
+connections:
+  - writer
+  - reader
+steps:
+  - execute:
+      connection: writer
+      sql: |
+        CREATE TABLE user (
+          id INTEGER PRIMARY KEY,
+          username TEXT NOT NULL,
+          is_enabled INTEGER NOT NULL,
+          created TEXT NOT NULL
+        )
+
+  # Multiple inserts rolled back are not visible
+  - startTransaction:
+      connection: writer
+      isolation: serializable
+      as: rollbackTx
+  - execute:
+      connection: writer
+      sql: INSERT INTO user (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
+      parameters:
+        id: 1
+        username: alice
+        is_enabled: 1
+        created: "2024-01-15T10:00:00Z"
+      expect:
+        rowsAffected: 1
+        result: 1
+  - execute:
+      connection: writer
+      sql: INSERT INTO user (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
+      parameters:
+        id: 2
+        username: bob
+        is_enabled: 0
+        created: "2024-02-20T15:30:00Z"
+      expect:
+        rowsAffected: 1
+        result: 2
+  - abort:
+      transaction: rollbackTx
+  - executeReader:
+      connection: writer
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        rows: []
+  - executeReader:
+      connection: reader
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        rows: []
+
+  # Uncommitted writes are hidden from the other connection (SQLite snapshot)
+  - startTransaction:
+      connection: writer
+      isolation: readUncommitted
+      as: dirtyWriteTx
+  - execute:
+      connection: writer
+      sql: INSERT INTO user (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
+      parameters:
+        id: 1
+        username: alice
+        is_enabled: 1
+        created: "2024-01-15T10:00:00Z"
+      expect:
+        rowsAffected: 1
+        result: 1
+  - execute:
+      connection: writer
+      sql: INSERT INTO user (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
+      parameters:
+        id: 2
+        username: bob
+        is_enabled: 0
+        created: "2024-02-20T15:30:00Z"
+      expect:
+        rowsAffected: 1
+        result: 2
+  - startTransaction:
+      connection: reader
+      isolation: readUncommitted
+      as: dirtyReadTx
+  - executeReader:
+      connection: reader
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        rows: []
+  - abort:
+      transaction: dirtyWriteTx
+  - abort:
+      transaction: dirtyReadTx
+
+  # Serializable reader also sees only committed rows
+  - startTransaction:
+      connection: writer
+      isolation: serializable
+      as: cleanWriteTx
+  - execute:
+      connection: writer
+      sql: INSERT INTO user (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
+      parameters:
+        id: 1
+        username: alice
+        is_enabled: 1
+        created: "2024-01-15T10:00:00Z"
+      expect:
+        rowsAffected: 1
+        result: 1
+  - execute:
+      connection: writer
+      sql: INSERT INTO user (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
+      parameters:
+        id: 2
+        username: bob
+        is_enabled: 0
+        created: "2024-02-20T15:30:00Z"
+      expect:
+        rowsAffected: 1
+        result: 2
+  - startTransaction:
+      connection: reader
+      isolation: serializable
+      as: cleanReadTx
+  - executeReader:
+      connection: reader
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        rows: []
+  - abort:
+      transaction: cleanReadTx
+  - commit:
+      transaction: cleanWriteTx
+  - executeReader:
+      connection: reader
+      sql: SELECT * FROM user ORDER BY id
+      expect:
+        rows:
+          - id: 1
+            username: alice
+            is_enabled: 1
+            created: "2024-01-15T10:00:00Z"
+          - id: 2
+            username: bob
+            is_enabled: 0
+            created: "2024-02-20T15:30:00Z"

@@ -1,4 +1,5 @@
 use crate::datasource_error::DatasourceError;
+use crate::isolation_level::IsolationLevel;
 use crate::middleware_aware::MiddlewareAware;
 use crate::middleware_hook::MiddlewareHook;
 use crate::middleware_host::MiddlewareHost;
@@ -9,6 +10,7 @@ use std::sync::Mutex;
 
 pub struct MockTransaction {
     host: MiddlewareHost,
+    isolation: Mutex<IsolationLevel>,
     commit_calls: Mutex<usize>,
     abort_calls: Mutex<usize>,
     commit_error: Mutex<Option<String>>,
@@ -21,6 +23,7 @@ impl MockTransaction {
     pub fn new_unbound() -> Self {
         Self {
             host: MiddlewareHost::new(),
+            isolation: Mutex::new(IsolationLevel::Serializable),
             commit_calls: Mutex::new(0),
             abort_calls: Mutex::new(0),
             commit_error: Mutex::new(None),
@@ -28,6 +31,10 @@ impl MockTransaction {
             committed: Mutex::new(false),
             aborted: Mutex::new(false),
         }
+    }
+
+    pub fn set_isolation(&self, isolation: IsolationLevel) {
+        *self.isolation.lock().expect("mock") = isolation;
     }
 
     pub fn set_commit_error(&self, message: impl Into<String>) {
@@ -55,6 +62,10 @@ impl MiddlewareAware for MockTransaction {
 
 #[async_trait]
 impl Transaction for MockTransaction {
+    fn isolation(&self) -> IsolationLevel {
+        *self.isolation.lock().expect("mock")
+    }
+
     async fn commit(&self) -> Result<()> {
         self.host
             .run("commit", None, || async {

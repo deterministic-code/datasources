@@ -2,8 +2,8 @@ use crate::store::{MemoryData, MemoryStore};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Connection, DatasourceError, MiddlewareAware, MiddlewareHook, MiddlewareHost, Record, Result,
-    Transaction,
+    Connection, DatasourceError, IsolationLevel, MiddlewareAware, MiddlewareHook, MiddlewareHost,
+    Record, Result, Transaction,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -110,7 +110,10 @@ impl Connection for MemoryConnection {
             .await
     }
 
-    async fn start_transaction(&self) -> Result<Arc<dyn Transaction>> {
+    async fn start_transaction(
+        &self,
+        isolation: Option<IsolationLevel>,
+    ) -> Result<Arc<dyn Transaction>> {
         self.host
             .run("startTransaction", None, || async {
                 self.ensure_open()?;
@@ -119,6 +122,7 @@ impl Connection for MemoryConnection {
                 Ok(Arc::new(MemoryTransaction {
                     host: MiddlewareHost::new(),
                     state: self.state.clone(),
+                    isolation: isolation.unwrap_or_default(),
                 }) as Arc<dyn Transaction>)
             })
             .await

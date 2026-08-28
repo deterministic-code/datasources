@@ -7,6 +7,8 @@ export type { IReader } from "./IReader.ts";
 export type { IRepository } from "./IRepository.ts";
 export type { IResponse } from "./IResponse.ts";
 export type { ITransaction } from "./ITransaction.ts";
+export { IsolationLevel } from "./IsolationLevel.ts";
+export type { IsolationLevel as IsolationLevelName } from "./IsolationLevel.ts";
 export type { IWhere } from "./IWhere.ts";
 export type { DatasourceFactory } from "./DatasourceFactory.ts";
 export type { MiddlewareContext } from "./MiddlewareContext.ts";

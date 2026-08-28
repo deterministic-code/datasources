@@ -1,3 +1,5 @@
+import type { IsolationLevelName } from "@datasources/core";
+
 export interface SqliteExecuteResult {
   rowsAffected: number;
   result?: unknown;
@@ -14,7 +16,7 @@ export interface ISqliteDriver {
     sql: string,
     params?: Record<string, unknown>,
   ): Promise<Record<string, unknown>[]>;
-  begin(): Promise<void>;
+  begin(isolation?: IsolationLevelName): Promise<void>;
   commit(): Promise<void>;
   rollback(): Promise<void>;
 }
@@ -33,7 +35,10 @@ export interface SqliteDatabase {
   close(): void;
 }
 
-export type SqliteDatabaseCtor = new (filename: string) => SqliteDatabase;
+export type SqliteDatabaseCtor = new (
+  filename: string,
+  options?: { timeout?: number },
+) => SqliteDatabase;
 
 export type BetterSqlite3Module = {
   default?: SqliteDatabaseCtor;

@@ -1,11 +1,14 @@
 use crate::driver::SqliteDriver;
 use async_trait::async_trait;
-use datasources::{MiddlewareAware, MiddlewareHook, MiddlewareHost, Result, Transaction};
+use datasources::{
+    IsolationLevel, MiddlewareAware, MiddlewareHook, MiddlewareHost, Result, Transaction,
+};
 use std::sync::Arc;
 
 pub struct SqliteTransaction {
     pub(crate) host: MiddlewareHost,
     pub(crate) driver: Arc<dyn SqliteDriver>,
+    pub(crate) isolation: IsolationLevel,
 }
 
 impl MiddlewareAware for SqliteTransaction {
@@ -16,6 +19,10 @@ impl MiddlewareAware for SqliteTransaction {
 
 #[async_trait]
 impl Transaction for SqliteTransaction {
+    fn isolation(&self) -> IsolationLevel {
+        self.isolation
+    }
+
     async fn commit(&self) -> Result<()> {
         let driver = self.driver.clone();
         self.host

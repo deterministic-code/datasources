@@ -16,3 +16,4 @@ coverage.cobertura.xml
 coverage.info
 *.nupkg
 .deterministic-cache/
+file:*

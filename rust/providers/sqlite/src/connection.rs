@@ -2,8 +2,8 @@ use crate::driver::SqliteDriver;
 use crate::transaction::SqliteTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Connection, DatasourceError, MiddlewareAware, MiddlewareHook, MiddlewareHost, Result,
-    Transaction,
+    Connection, DatasourceError, IsolationLevel, MiddlewareAware, MiddlewareHook, MiddlewareHost,
+    Result, Transaction,
 };
 use std::sync::{Arc, Mutex};
 
@@ -63,14 +63,19 @@ impl Connection for SqliteConnection {
             .await
     }
 
-    async fn start_transaction(&self) -> Result<Arc<dyn Transaction>> {
+    async fn start_transaction(
+        &self,
+        isolation: Option<IsolationLevel>,
+    ) -> Result<Arc<dyn Transaction>> {
         self.host
             .run("startTransaction", None, || async {
                 self.ensure_open()?;
-                self.driver.begin().await?;
+                let isolation = isolation.unwrap_or_default();
+                self.driver.begin(isolation).await?;
                 Ok(Arc::new(SqliteTransaction {
                     host: MiddlewareHost::new(),
                     driver: self.driver.clone(),
+                    isolation,
                 }) as Arc<dyn Transaction>)
             })
             .await

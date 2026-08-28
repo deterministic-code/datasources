@@ -4,7 +4,7 @@ namespace Datasources.Sqlite;
 
 public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly SqliteDatasource Factory = new(new SqliteConnectionOptions { Driver = new ScriptedDriver() });
+    public static readonly SqliteDatasource Factory = new();
     private readonly SqliteConnectionOptions _options;
     private readonly string? _table;
     public string Provider => "sqlite";

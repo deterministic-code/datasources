@@ -5,6 +5,8 @@
     <RootNamespace>Datasources.Sqlite</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <ProjectReference Include="..\..\Datasources\Datasources.csproj" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+import { IsolationLevel, type IsolationLevelName } from "@datasources/core";
 import type {
   ISqliteDriver,
   SqliteDatabase,
@@ -15,7 +16,7 @@ export class BetterSqliteDriver implements ISqliteDriver {
 
   async open(_filename: string): Promise<void> {
     if (this.db) return;
-    this.db = new this.Database(this.filename);
+    this.db = new this.Database(this.filename, { timeout: 0 });
   }
 
   async close(): Promise<void> {
@@ -40,7 +41,12 @@ export class BetterSqliteDriver implements ISqliteDriver {
     return this.requireDb().prepare(sql).all(params);
   }
 
-  async begin(): Promise<void> {
+  async begin(isolation: IsolationLevelName = IsolationLevel.Serializable): Promise<void> {
+    this.requireDb().exec(
+      isolation === IsolationLevel.ReadUncommitted
+        ? "PRAGMA read_uncommitted = 1"
+        : "PRAGMA read_uncommitted = 0",
+    );
     this.requireDb().exec("BEGIN");
   }
 

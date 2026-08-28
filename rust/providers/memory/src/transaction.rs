@@ -1,11 +1,14 @@
 use crate::connection::MemoryState;
 use async_trait::async_trait;
-use datasources::{MiddlewareAware, MiddlewareHook, MiddlewareHost, Result, Transaction};
+use datasources::{
+    IsolationLevel, MiddlewareAware, MiddlewareHook, MiddlewareHost, Result, Transaction,
+};
 use std::sync::Arc;
 
 pub struct MemoryTransaction {
     pub(crate) host: MiddlewareHost,
     pub(crate) state: Arc<MemoryState>,
+    pub(crate) isolation: IsolationLevel,
 }
 
 impl MiddlewareAware for MemoryTransaction {
@@ -16,6 +19,10 @@ impl MiddlewareAware for MemoryTransaction {
 
 #[async_trait]
 impl Transaction for MemoryTransaction {
+    fn isolation(&self) -> IsolationLevel {
+        self.isolation
+    }
+
     async fn commit(&self) -> Result<()> {
         self.host
             .run("commit", None, || async {

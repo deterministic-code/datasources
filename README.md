@@ -35,8 +35,9 @@ Create a named command, then execute it. See:
 | Type | Role |
 | --- | --- |
 | `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository` |
-| `IConnection` | `open`, `close`, `startTransaction` |
-| `ITransaction` | `commit`, `abort` |
+| `IConnection` | `open`, `close`, `startTransaction(isolation)` |
+| `ITransaction` | `isolation`, `commit`, `abort` |
+| `IsolationLevel` | `readUncommitted`, `readCommitted`, `repeatableRead`, `serializable` |
 | `ICommand` | `executeReader`, `execute` |
 | `IRepository<T>` | `getSingle`, `get`, `add`, `update`, `delete` |
 | `IReader` | `current`, `next` |
@@ -53,7 +54,7 @@ Stubs (installable, throw “not implemented”): text, xml, yaml, mysql, sqlser
 
 ## Unit tests and coverage
 
-This repo ships **unit tests only** (mocks / injectable ports). No real files, SQLite, or network. Integration and e2e tests are deferred.
+Unit tests use mocks and injectable ports (no real files or network). SQLite Command and Transaction behavior is confirmed across C#, TypeScript, and Rust by shared specs in `specs/sqlite/*.yaml` (same SQL, parameters, and assertions).
 
 - TypeScript: `cd typescript && npm test` (Vitest, 100% line/branch/function/statement)
 - Rust: `cd rust && cargo test --workspace` (optional: `./coverage.sh` with cargo-llvm-cov)

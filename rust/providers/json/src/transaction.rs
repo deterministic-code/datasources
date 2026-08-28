@@ -1,11 +1,14 @@
 use crate::connection::JsonState;
 use async_trait::async_trait;
-use datasources::{MiddlewareAware, MiddlewareHook, MiddlewareHost, Result, Transaction};
+use datasources::{
+    IsolationLevel, MiddlewareAware, MiddlewareHook, MiddlewareHost, Result, Transaction,
+};
 use std::sync::Arc;
 
 pub struct JsonTransaction {
     pub(crate) host: MiddlewareHost,
     pub(crate) state: Arc<JsonState>,
+    pub(crate) isolation: IsolationLevel,
 }
 
 impl MiddlewareAware for JsonTransaction {
@@ -16,6 +19,10 @@ impl MiddlewareAware for JsonTransaction {
 
 #[async_trait]
 impl Transaction for JsonTransaction {
+    fn isolation(&self) -> IsolationLevel {
+        self.isolation
+    }
+
     async fn commit(&self) -> Result<()> {
         self.host
             .run("commit", None, || async {

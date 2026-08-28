@@ -12,7 +12,7 @@ public sealed class SqliteConnection : MiddlewareHost, IConnection
     {
         options ??= new SqliteConnectionOptions();
         Filename = options.Filename ?? ":memory:";
-        Driver = SqliteGuard.Require(options.Driver);
+        Driver = options.Driver ?? new SqliteDriver();
     }
 
     public Task Open() => Run("open", async () =>
@@ -28,12 +28,13 @@ public sealed class SqliteConnection : MiddlewareHost, IConnection
         Opened = false;
     });
 
-    public Task<ITransaction> StartTransaction() => Run("startTransaction", async () =>
-    {
-        EnsureOpen();
-        await Driver.Begin();
-        return (ITransaction)new SqliteTransaction(this);
-    });
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
+        Run("startTransaction", async () =>
+        {
+            EnsureOpen();
+            await Driver.Begin(isolation);
+            return (ITransaction)new SqliteTransaction(this, isolation);
+        });
 
     public void EnsureOpen()
     {

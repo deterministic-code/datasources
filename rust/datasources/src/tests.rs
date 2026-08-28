@@ -11,6 +11,27 @@ fn record(pairs: &[(&str, Value)]) -> Record {
 }
 
 #[test]
+fn isolation_from_name() {
+    assert_eq!(
+        IsolationLevel::from_name("readUncommitted"),
+        IsolationLevel::ReadUncommitted
+    );
+    assert_eq!(
+        IsolationLevel::from_name("readCommitted"),
+        IsolationLevel::ReadCommitted
+    );
+    assert_eq!(
+        IsolationLevel::from_name("repeatableRead"),
+        IsolationLevel::RepeatableRead
+    );
+    assert_eq!(
+        IsolationLevel::from_name("serializable"),
+        IsolationLevel::Serializable
+    );
+    assert_eq!(IsolationLevel::from_name("other"), IsolationLevel::Serializable);
+}
+
+#[test]
 fn errors_display() {
     let installed = DatasourceError::not_installed("mysql");
     let implemented = DatasourceError::not_implemented("oracle");
@@ -228,7 +249,7 @@ async fn stubs_throw() {
         .create_connection()
         .await
         .unwrap()
-        .start_transaction()
+        .start_transaction(None)
         .await
         .is_err());
     let command = ds.create_command(None);
@@ -263,19 +284,28 @@ async fn published_mocks() {
     connection.open().await.unwrap();
     assert!(connection.opened());
     assert_eq!(connection.open_calls(), 1);
-    connection.start_transaction().await.unwrap();
+    connection
+        .start_transaction(Some(IsolationLevel::ReadUncommitted))
+        .await
+        .unwrap();
+    assert_eq!(
+        connection.last_isolation(),
+        IsolationLevel::ReadUncommitted
+    );
     connection.close().await.unwrap();
     connection.set_open_error("open-fail");
     assert!(connection.open().await.is_err());
     connection.set_close_error("close-fail");
     assert!(connection.close().await.is_err());
     connection.set_start_error("tx-fail");
-    assert!(connection.start_transaction().await.is_err());
+    assert!(connection.start_transaction(None).await.is_err());
     let custom = Arc::new(MockTransaction::new_unbound());
     let with_txn = MockConnection::with_transaction(custom);
-    with_txn.start_transaction().await.unwrap();
+    with_txn.start_transaction(None).await.unwrap();
 
     let txn = MockTransaction::new_unbound();
+    txn.set_isolation(IsolationLevel::ReadCommitted);
+    assert_eq!(txn.isolation(), IsolationLevel::ReadCommitted);
     txn.commit().await.unwrap();
     assert!(txn.committed());
     txn.abort().await.unwrap();

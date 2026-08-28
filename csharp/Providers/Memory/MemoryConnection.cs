@@ -34,13 +34,14 @@ public sealed class MemoryConnection : MiddlewareHost, IConnection
         return Task.CompletedTask;
     });
 
-    public Task<ITransaction> StartTransaction() => Run("startTransaction", () =>
-    {
-        EnsureOpen();
-        _snapshot = Store.Snapshot();
-        InTransaction = true;
-        return Task.FromResult<ITransaction>(new MemoryTransaction(this));
-    });
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
+        Run("startTransaction", () =>
+        {
+            EnsureOpen();
+            _snapshot = Store.Snapshot();
+            InTransaction = true;
+            return Task.FromResult<ITransaction>(new MemoryTransaction(this, isolation));
+        });
 
     public List<Dictionary<string, object?>> GetCollection() => Store.GetCollection(Collection);
 

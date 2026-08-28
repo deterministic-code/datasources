@@ -1,5 +1,6 @@
 use crate::connection::Connection;
 use crate::datasource_error::DatasourceError;
+use crate::isolation_level::IsolationLevel;
 use crate::middleware_aware::MiddlewareAware;
 use crate::middleware_hook::MiddlewareHook;
 use crate::middleware_host::MiddlewareHost;
@@ -19,6 +20,7 @@ struct CallState {
     close_error: Option<String>,
     start_error: Option<String>,
     opened: bool,
+    last_isolation: IsolationLevel,
 }
 
 pub struct MockConnection {
@@ -63,6 +65,10 @@ impl MockConnection {
     pub fn opened(&self) -> bool {
         self.state.lock().expect("mock").opened
     }
+
+    pub fn last_isolation(&self) -> IsolationLevel {
+        self.state.lock().expect("mock").last_isolation
+    }
 }
 
 impl MiddlewareAware for MockConnection {
@@ -101,7 +107,10 @@ impl Connection for MockConnection {
             .await
     }
 
-    async fn start_transaction(&self) -> Result<Arc<dyn Transaction>> {
+    async fn start_transaction(
+        &self,
+        isolation: Option<IsolationLevel>,
+    ) -> Result<Arc<dyn Transaction>> {
         self.host
             .run("startTransaction", None, || async {
                 let mut state = self.state.lock().expect("mock");
@@ -109,6 +118,7 @@ impl Connection for MockConnection {
                 if let Some(error) = &state.start_error {
                     return Err(DatasourceError::message(error.clone()));
                 }
+                state.last_isolation = isolation.unwrap_or_default();
                 Ok(self.transaction.clone())
             })
             .await

@@ -3,85 +3,83 @@ mod connection;
 mod datasource;
 mod driver;
 mod repository;
+mod rusqlite_driver;
 mod transaction;
 
 pub use command::SqliteCommand;
 pub use connection::SqliteConnection;
 pub use datasource::SqliteDatasource;
-pub use driver::{require_driver, ScriptedDriver, SqliteDriver, SqliteExecuteResult};
+pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
 pub use repository::SqliteRepository;
+pub use rusqlite_driver::RusqliteDriver;
 pub use transaction::SqliteTransaction;
+
+#[cfg(test)]
+mod integration;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, Datasource, DatasourceFactory, MiddlewareAware,
-        Parameter, Record, Repository, TextQuery, TextWhere, Value,
+        create, register, reset, Command, Connection, Datasource, DatasourceFactory, IsolationLevel,
+        MiddlewareAware,
     };
     use std::sync::Arc;
-
-    fn rec(id: i64) -> Record {
-        let mut r = Record::new();
-        r.insert("id".into(), Value::Int(id));
-        r
-    }
 
     #[tokio::test]
     async fn sqlite_command_and_repository() {
         assert!(require_driver(None).is_err());
-        let driver = Arc::new(ScriptedDriver::new());
+        let driver: Arc<dyn SqliteDriver> = Arc::new(RusqliteDriver::new());
         require_driver(Some(driver.clone())).unwrap();
-        driver
-            .query_result
-            .lock()
-            .unwrap()
-            .push(rec(1));
-        let conn = Arc::new(SqliteConnection::new(Some("x.db".into()), driver.clone()));
+        let conn = Arc::new(SqliteConnection::new(Some(":memory:".into()), driver.clone()));
         conn.open().await.unwrap();
         conn.open().await.unwrap();
         let command = SqliteCommand::new(conn.clone());
-        command
-            .execute(Some("DELETE FROM items"), Some(&[Parameter::new("id", 1_i64)]))
-            .await
-            .unwrap();
         command.execute(None, None).await.unwrap();
         command.execute_reader(Some("SELECT 1"), None).await.unwrap();
         command.execute_reader(None, None).await.unwrap();
         command.use_middleware(None, None);
 
         let repo = SqliteRepository::new(conn.clone(), None);
-        assert!(repo.get_single(None).await.unwrap().is_some());
-        driver.query_result.lock().unwrap().clear();
-        assert!(repo
-            .get_single(Some(&TextQuery::new("id = 1")))
-            .await
-            .unwrap()
-            .is_none());
-        driver.query_result.lock().unwrap().push(rec(1));
-        assert_eq!(repo.get(None).await.unwrap().len(), 1);
-        repo.add(&rec(2)).await.unwrap();
-        repo.add(&Record::new()).await.unwrap();
-        repo.update(&rec(2), None).await.unwrap();
-        repo.update(&Record::new(), Some(&TextWhere::new("id = 1")))
-            .await
-            .unwrap();
-        repo.delete(&rec(2), None).await.unwrap();
-        repo.delete(&rec(2), Some(&TextWhere::new("name = $name")))
-            .await
-            .unwrap();
+        assert_eq!(repo.table, "items");
         let named = SqliteRepository::new(conn.clone(), Some("users".into()));
-        named.get(None).await.unwrap();
-        assert!(named.table == "users");
+        assert_eq!(named.table, "users");
 
-        let txn = conn.start_transaction().await.unwrap();
+        let txn = conn.start_transaction(None).await.unwrap();
+        assert_eq!(
+            datasources::Transaction::isolation(&*txn),
+            IsolationLevel::Serializable
+        );
         txn.commit().await.unwrap();
-        let txn = conn.start_transaction().await.unwrap();
+        let txn = conn
+            .start_transaction(Some(IsolationLevel::ReadUncommitted))
+            .await
+            .unwrap();
+        assert_eq!(
+            datasources::Transaction::isolation(&*txn),
+            IsolationLevel::ReadUncommitted
+        );
         txn.abort().await.unwrap();
         txn.use_middleware(None, None);
         conn.close().await.unwrap();
         assert!(conn.ensure_open().is_err());
-        assert!(conn.start_transaction().await.is_err());
+        assert!(conn.start_transaction(None).await.is_err());
+
+        let shared = Arc::new(SqliteConnection::new(
+            Some("file:iso?mode=memory&cache=shared".into()),
+            Arc::new(RusqliteDriver::new()),
+        ));
+        shared.open().await.unwrap();
+        let read_committed = shared
+            .start_transaction(Some(IsolationLevel::ReadCommitted))
+            .await
+            .unwrap();
+        assert_eq!(
+            datasources::Transaction::isolation(&*read_committed),
+            IsolationLevel::ReadCommitted
+        );
+        read_committed.abort().await.unwrap();
+        shared.close().await.unwrap();
 
         let defaulted = SqliteConnection::new(None, driver.clone());
         assert_eq!(defaulted.filename, ":memory:");

@@ -7,6 +7,7 @@ import {
   DatasourceError,
   identityFilter,
   identityWhereText,
+  IsolationLevel,
   MiddlewareHost,
   MockCommand,
   MockConnection,
@@ -34,6 +35,17 @@ import {
 
 afterEach(() => {
   Datasource.reset();
+});
+
+describe("isolation", () => {
+  it("names the ANSI levels", () => {
+    expect(IsolationLevel).toEqual({
+      ReadUncommitted: "readUncommitted",
+      ReadCommitted: "readCommitted",
+      RepeatableRead: "repeatableRead",
+      Serializable: "serializable",
+    });
+  });
 });
 
 describe("errors", () => {
@@ -305,8 +317,9 @@ describe("published mocks", () => {
     await connection.open();
     expect(connection.openCalls).toBe(1);
     expect(connection.opened).toBe(true);
-    const txn = await connection.startTransaction();
+    const txn = await connection.startTransaction(IsolationLevel.ReadUncommitted);
     expect(txn).toBe(connection.transaction);
+    expect(txn.isolation).toBe(IsolationLevel.ReadUncommitted);
     await connection.close();
     expect(connection.opened).toBe(false);
 

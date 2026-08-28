@@ -1,5 +1,6 @@
 use super::not_implemented::fail;
 use crate::connection::Connection;
+use crate::isolation_level::IsolationLevel;
 use crate::middleware_aware::MiddlewareAware;
 use crate::middleware_hook::MiddlewareHook;
 use crate::middleware_host::MiddlewareHost;
@@ -42,7 +43,10 @@ impl Connection for StubConnection {
             .await
     }
 
-    async fn start_transaction(&self) -> Result<Arc<dyn Transaction>> {
+    async fn start_transaction(
+        &self,
+        _isolation: Option<IsolationLevel>,
+    ) -> Result<Arc<dyn Transaction>> {
         self.host
             .run("startTransaction", None, || async { Err(fail(&self.provider)) })
             .await
@@ -84,8 +88,9 @@ macro_rules! named_stub_connection {
             }
             async fn start_transaction(
                 &self,
+                isolation: Option<$crate::IsolationLevel>,
             ) -> $crate::Result<std::sync::Arc<dyn $crate::Transaction>> {
-                self.inner.start_transaction().await
+                self.inner.start_transaction(isolation).await
             }
         }
     };

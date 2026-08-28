@@ -1,7 +1,9 @@
 import {
   DatasourceError,
+  IsolationLevel,
   MiddlewareHost,
   type IConnection,
+  type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
 import { MemoryFileStore, type IFileStore } from "./file-store.ts";
@@ -61,12 +63,14 @@ export class JsonConnection extends MiddlewareHost implements IConnection {
     });
   }
 
-  async startTransaction(): Promise<ITransaction> {
+  async startTransaction(
+    isolation: IsolationLevelName = IsolationLevel.Serializable,
+  ): Promise<ITransaction> {
     return this.run("startTransaction", async () => {
       this.ensureOpen();
       this.snapshot = structuredClone(this.data);
       this.inTransaction = true;
-      return new JsonTransaction(this);
+      return new JsonTransaction(this, isolation);
     });
   }
 
