@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DatasourceMapper {
+    pub name: String,
     pub source: String,
     pub destination: String,
     to: HashMap<String, String>,
@@ -10,6 +11,15 @@ pub struct DatasourceMapper {
 
 impl DatasourceMapper {
     pub fn mapping(source: &str, destination: &str, names: &[(&str, &str)]) -> Self {
+        Self::mapping_named("", source, destination, names)
+    }
+
+    pub fn mapping_named(
+        name: impl Into<String>,
+        source: &str,
+        destination: &str,
+        names: &[(&str, &str)],
+    ) -> Self {
         let to = names
             .iter()
             .map(|(src, dest)| (src.to_string(), dest.to_string()))
@@ -19,6 +29,7 @@ impl DatasourceMapper {
             .map(|(src, dest)| (dest.to_string(), src.to_string()))
             .collect();
         Self {
+            name: name.into(),
             source: source.to_string(),
             destination: destination.to_string(),
             to,
@@ -47,11 +58,13 @@ mod tests {
 
     #[test]
     fn maps_names_the_caller_supplies() {
-        let mapping = DatasourceMapper::mapping(
+        let mapping = DatasourceMapper::mapping_named(
+            "users",
             "sql",
             "rust",
             &[("user_accounts", "accounts"), ("created_at", "created_at")],
         );
+        assert_eq!(mapping.name, "users");
         assert_eq!(mapping.source, "sql");
         assert_eq!(mapping.destination, "rust");
         assert_eq!(mapping.to("user_accounts"), "accounts");

@@ -1,4 +1,5 @@
 export type Mapping = {
+  name: string;
   source: string;
   destination: string;
   names: Record<string, string>;
@@ -8,10 +9,12 @@ export type Mapping = {
 
 export const DatasourceMapper = {
   mapping: ({
+    name = "",
     source,
     destination,
     names = {},
   }: {
+    name?: string;
     source: string;
     destination: string;
     names?: Record<string, string>;
@@ -20,11 +23,12 @@ export const DatasourceMapper = {
       Object.entries(names).map(([src, dest]) => [dest, src]),
     );
     return {
+      name,
       source,
       destination,
       names,
-      to: (name) => names[name] ?? name,
-      from: (name) => back[name] ?? name,
+      to: (column) => names[column] ?? column,
+      from: (column) => back[column] ?? column,
     };
   },
 };

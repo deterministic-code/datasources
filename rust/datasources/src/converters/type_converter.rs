@@ -74,6 +74,7 @@ pub fn mapping_with<T: ConvertSchema>(
         .collect();
     merged.extend(schema);
     Ok(TypeMapping::new(
+        type_name::<T>(),
         source.to_string(),
         HOST.to_string(),
         merged,
@@ -81,6 +82,14 @@ pub fn mapping_with<T: ConvertSchema>(
         table,
         converters,
     ))
+}
+
+fn type_name<T>() -> String {
+    std::any::type_name::<T>()
+        .rsplit("::")
+        .next()
+        .unwrap_or_default()
+        .into()
 }
 
 pub fn canonical_converters(boolean_storage: &str) -> HashMap<String, FieldConverter> {

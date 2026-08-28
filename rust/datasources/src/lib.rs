@@ -25,7 +25,10 @@ mod register;
 mod registered;
 mod registry_state;
 mod repository;
+mod create_repository_builder_options;
 mod table_repository;
+mod table_repository_builder;
+mod table_repository_builder_options;
 mod reset;
 mod response;
 mod statement;
@@ -72,7 +75,10 @@ pub use record::Record;
 pub use register::register;
 pub use registered::registered;
 pub use repository::{ReadonlyRepository, Repository};
-pub use table_repository::{TableRepository, TableRepositoryOptions};
+pub use create_repository_builder_options::create_repository_builder_options;
+pub use table_repository::TableRepository;
+pub use table_repository_builder::TableRepositoryBuilder;
+pub use table_repository_builder_options::TableRepositoryBuilderOptions;
 pub use statement::Statement;
 pub use statements::{
     CreateTableStatement, DeleteStatement, InsertStatement, StoredProcedureStatement,

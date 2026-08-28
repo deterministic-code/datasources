@@ -8,6 +8,7 @@ use crate::result::Result;
 use std::collections::HashMap;
 
 pub struct TypeMapping {
+    pub name: String,
     pub source: String,
     pub destination: String,
     pub schema: HashMap<String, String>,
@@ -18,6 +19,7 @@ pub struct TypeMapping {
 
 impl TypeMapping {
     pub(crate) fn new(
+        name: String,
         source: String,
         destination: String,
         schema: HashMap<String, String>,
@@ -26,6 +28,7 @@ impl TypeMapping {
         converters: HashMap<String, FieldConverter>,
     ) -> Self {
         Self {
+            name,
             source,
             destination,
             schema,

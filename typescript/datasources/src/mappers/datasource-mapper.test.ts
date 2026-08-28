@@ -4,10 +4,12 @@ import { DatasourceMapper } from "./DatasourceMapper.ts";
 describe("DatasourceMapper", () => {
   it("maps names the caller supplies and leaves the rest unchanged", () => {
     const mapping = DatasourceMapper.mapping({
+      name: "users",
       source: "sql",
       destination: "typescript",
       names: { user_accounts: "userAccounts", created_at: "createdAt" },
     });
+    expect(mapping.name).toBe("users");
     expect(mapping.source).toBe("sql");
     expect(mapping.destination).toBe("typescript");
     expect(mapping.names).toEqual({
