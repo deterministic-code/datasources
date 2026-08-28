@@ -40,7 +40,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
 
     public async Task<Response> Add(T obj)
     {
-        var fields = Params(mapping.From(obj), col => !options.Generated || !ids.Contains(col));
+        var fields = Params(mapping.From(obj), col => !options.AssignIdentityOnAdd || !ids.Contains(col));
         return await Command().Execute(
             StatementBuilder.CreateInsert(options.DatasourceName, fields).GetText(), fields);
     }

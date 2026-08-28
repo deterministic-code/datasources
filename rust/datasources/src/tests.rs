@@ -661,6 +661,18 @@ async fn table_repository() {
     );
 
     let obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
+    let mut include_id = TableRepositoryOptions::with_factory(
+        "users",
+        MockConnection::new(),
+        command.clone(),
+    );
+    include_id.provider = Some("memory".into());
+    include_id.assign_identity_on_add = false;
+    include_id.schema = HashMap::from([
+        ("id".into(), "INTEGER".into()),
+        ("name".into(), "TEXT".into()),
+    ]);
+    let repo = TableRepository::new(include_id).unwrap();
     repo.add(&obj).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
@@ -688,7 +700,7 @@ async fn table_repository() {
     let mut options = TableRepositoryOptions::with_factory("users", MockConnection::new(), generated.clone());
     options.provider = Some("memory".into());
     options.id = vec!["org_id".into(), "user_id".into()];
-    options.generated = true;
+    options.assign_identity_on_add = true;
     options.schema = HashMap::from([
         ("org_id".into(), "INTEGER".into()),
         ("user_id".into(), "INTEGER".into()),

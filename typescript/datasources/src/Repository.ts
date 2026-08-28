@@ -20,7 +20,7 @@ export type RepositoryOptions<T extends Cells> = {
   createCommand: (connection: IConnection) => ICommand;
   provider?: string;
   id?: string[];
-  generated?: boolean;
+  assignIdentityOnAdd?: boolean;
   schema?: Record<string, string>;
   converters?: Record<string, FieldConverter>;
   names?: Record<string, string>;
@@ -85,7 +85,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
   add = async (obj: T): Promise<IResponse> => {
     const fields = fieldsOf(
       this.mapping.from(obj),
-      (col) => !this.options.generated || !this.ids.has(col),
+      (col) => this.options.assignIdentityOnAdd === false || !this.ids.has(col),
     );
     return this.command().execute(
       StatementBuilder.createInsert(this.options.datasourceName, fields).getText(),

@@ -21,7 +21,7 @@ pub struct TableRepositoryOptions {
     pub create_command: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn Command> + Send + Sync>,
     pub provider: Option<String>,
     pub id: Vec<String>,
-    pub generated: bool,
+    pub assign_identity_on_add: bool,
     pub schema: HashMap<String, String>,
     pub converters: HashMap<String, FieldConverter>,
     pub names: HashMap<String, String>,
@@ -40,7 +40,7 @@ impl TableRepositoryOptions {
             create_command: Arc::new(move |_| command.clone()),
             provider: None,
             id: vec!["id".into()],
-            generated: false,
+            assign_identity_on_add: true,
             schema: HashMap::new(),
             converters: HashMap::new(),
             names: HashMap::new(),
@@ -56,7 +56,7 @@ pub struct TableRepository {
     mapping: TypeMapping,
     id: Vec<String>,
     ids: HashSet<String>,
-    generated: bool,
+    assign_identity_on_add: bool,
 }
 
 impl TableRepository {
@@ -84,7 +84,7 @@ impl TableRepository {
             mapping,
             id: options.id,
             ids,
-            generated: options.generated,
+            assign_identity_on_add: options.assign_identity_on_add,
         })
     }
 
@@ -178,7 +178,7 @@ impl ReadonlyRepository for TableRepository {
 impl Repository for TableRepository {
     async fn add(&self, obj: &Record) -> Result<Response> {
         let record = self.mapping.from(obj)?;
-        let fields = self.params(&record, !self.generated);
+        let fields = self.params(&record, !self.assign_identity_on_add);
         let statement = StatementBuilder::create_insert(&self.datasource_name, &fields);
         self.command()
             .execute(Some(&statement.get_text()), Some(&fields))

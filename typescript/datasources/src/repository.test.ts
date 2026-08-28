@@ -66,7 +66,7 @@ describe("Repository", () => {
   });
 
   it("adds updates and deletes through builders", async () => {
-    const { repo, command } = create();
+    const { repo, command } = create({ assignIdentityOnAdd: false });
     const obj = { id: 1, name: "a" };
     await repo.add(obj);
     expect(command.executeCalls[0]?.text).toBe(
@@ -80,14 +80,14 @@ describe("Repository", () => {
     expect(command.executeCalls[2]?.text).toBe("DELETE FROM users WHERE id = $id");
   });
 
-  it("supports composite id, generated insert, and overrides", async () => {
+  it("supports composite id, assignIdentityOnAdd, and overrides", async () => {
     const twice = {
       to: (value: Cell) => value,
       from: (value: Cell) => (typeof value === "number" ? value * 2 : value),
     };
     const { repo, command } = create({
       id: ["org_id", "user_id"],
-      generated: true,
+      assignIdentityOnAdd: true,
       schema: { org_id: "INTEGER", user_id: "INTEGER", name: "TEXT" },
       converters: { name: twice },
       names: { name: "label" },
@@ -128,7 +128,7 @@ describe("Repository", () => {
       }
     }).rejects.toThrow("Reader current must be a row dictionary");
     await repo.update({ id: 1, name: "a" }, new Where("id = 1"));
-    TypeConverter.use("memory", sqlProviderTypes({}));
+    TypeConverter.use("memory", sqlProviderTypes());
     const mapping = TypeConverter.mapping<Item>({
       source: "memory",
       destination: "typescript",

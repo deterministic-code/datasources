@@ -54,7 +54,7 @@ afterEach(() => {
 });
 
 const registerSqlite = () =>
-  TypeConverter.use("sqlite", sqlProviderTypes({}, { booleanStorage: "integer" }));
+  TypeConverter.use("sqlite", sqlProviderTypes());
 
 describe("TypeConverter", () => {
   it("infers the User schema and round-trips a row", () => {
@@ -225,7 +225,7 @@ describe("TypeConverter", () => {
     expect(table.rename).toBe(true);
     expect(table.types.VARCHAR).toBe(table.types.TEXT);
     expect(table.types.NOPE).toBe(identityFieldConverter);
-    expect(sqlProviderTypes({}, { rename: false }).rename).toBe(false);
+    expect(sqlProviderTypes(undefined, { rename: false }).rename).toBe(false);
     expect(canonicalConverters("native").BOOLEAN.from(true)).toBe(true);
     expect(normalizeSqlType(" varchar(32) ")).toBe("VARCHAR");
     expect(normalizeSqlType("TINYINT(1)")).toBe("TINYINT(1)");
