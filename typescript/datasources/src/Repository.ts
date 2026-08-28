@@ -9,7 +9,6 @@ import { StatementBuilder, WhereBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
-import type { Constructable } from "./converters/Constructable.ts";
 import type { FieldConverter } from "./converters/FieldConverter.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import type { TypeMapping } from "./converters/TypeMapping.ts";
@@ -25,7 +24,6 @@ export type RepositoryOptions<T extends Cells> = {
   converters?: Record<string, FieldConverter>;
   names?: Record<string, string>;
   mapping?: TypeMapping<T>;
-  type?: Constructable<T>;
 };
 
 const asRow = (current: object | null | undefined): Cells =>
@@ -60,7 +58,6 @@ export class Repository<T extends Cells> implements IRepository<T> {
             throw new DatasourceError("Repository requires Provider or Mapping");
           })(),
         destination: "typescript",
-        type: options.type,
         schema: options.schema,
         converters: options.converters,
         names: options.names,
