@@ -6,6 +6,8 @@ public sealed class MemoryConnection : IConnection
 {
     public MemoryStore Store { get; }
     public string Collection { get; set; }
+    public string Provider => "memory";
+    public ICommand CreateCommand() => new MemoryCommand(this);
     public bool Opened { get; private set; }
     public bool InTransaction { get; private set; }
     private readonly object? _data;

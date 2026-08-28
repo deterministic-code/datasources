@@ -1,7 +1,7 @@
 use crate::builders::{StatementBuilder, WhereBuilder};
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::converters::{mapping_with, Cells, FieldConverter, TypeMapping};
+use crate::converters::{mapping_with, Cells, ConvertSchema, FieldConverter, TypeMapping};
 use crate::datasource_error::DatasourceError;
 use crate::parameter::Parameter;
 use crate::query::Query;
@@ -18,9 +18,7 @@ use std::sync::Arc;
 pub struct TableRepositoryOptions {
     pub datasource_name: String,
     pub connection: Arc<dyn Connection>,
-    pub create_command: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn Command> + Send + Sync>,
-    pub provider: Option<String>,
-    pub id: Vec<String>,
+    pub ids: Vec<String>,
     pub assign_identity_on_add: bool,
     pub schema: HashMap<String, String>,
     pub converters: HashMap<String, FieldConverter>,
@@ -32,14 +30,11 @@ impl TableRepositoryOptions {
     pub fn with_factory(
         datasource_name: impl Into<String>,
         connection: Arc<dyn Connection>,
-        command: Arc<dyn Command>,
     ) -> Self {
         Self {
             datasource_name: datasource_name.into(),
             connection,
-            create_command: Arc::new(move |_| command.clone()),
-            provider: None,
-            id: vec!["id".into()],
+            ids: vec!["id".into()],
             assign_identity_on_add: true,
             schema: HashMap::new(),
             converters: HashMap::new(),
@@ -47,12 +42,43 @@ impl TableRepositoryOptions {
             mapping: None,
         }
     }
+
+    pub fn from_type<T: ConvertSchema>(connection: Arc<dyn Connection>) -> Self {
+        Self {
+            datasource_name: type_name::<T>(),
+            ids: default_id::<T>(),
+            assign_identity_on_add: true,
+            schema: HashMap::new(),
+            converters: HashMap::new(),
+            names: HashMap::new(),
+            mapping: None,
+            connection,
+        }
+    }
+}
+
+fn type_name<T>() -> String {
+    std::any::type_name::<T>()
+        .rsplit("::")
+        .next()
+        .unwrap_or_default()
+        .into()
+}
+
+fn default_id<T: ConvertSchema>() -> Vec<String> {
+    let names: Vec<_> = T::schema().into_iter().map(|(name, _)| name).collect();
+    if names.contains(&"id") {
+        vec!["id".into()]
+    } else if names.contains(&"Id") {
+        vec!["Id".into()]
+    } else {
+        vec![]
+    }
 }
 
 pub struct TableRepository {
     datasource_name: String,
     connection: Arc<dyn Connection>,
-    create_command: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn Command> + Send + Sync>,
     mapping: TypeMapping,
     id: Vec<String>,
     ids: HashSet<String>,
@@ -60,15 +86,16 @@ pub struct TableRepository {
 }
 
 impl TableRepository {
+    pub fn from_type<T: ConvertSchema>(connection: Arc<dyn Connection>) -> Result<Self> {
+        Self::new(TableRepositoryOptions::from_type::<T>(connection))
+    }
+
     pub fn new(options: TableRepositoryOptions) -> Result<Self> {
         let mapping = match options.mapping {
             Some(mapping) => mapping,
             None => {
-                let provider = options.provider.ok_or_else(|| {
-                    DatasourceError::message("Repository requires Provider or Mapping")
-                })?;
                 mapping_with::<Cells>(
-                    &provider,
+                    options.connection.provider(),
                     "rust",
                     options.schema,
                     options.converters,
@@ -76,20 +103,19 @@ impl TableRepository {
                 )?
             }
         };
-        let ids = options.id.iter().cloned().collect();
+        let ids = options.ids.iter().cloned().collect();
         Ok(Self {
             datasource_name: options.datasource_name,
             connection: options.connection,
-            create_command: options.create_command,
             mapping,
-            id: options.id,
+            id: options.ids,
             ids,
             assign_identity_on_add: options.assign_identity_on_add,
         })
     }
 
     fn command(&self) -> Arc<dyn Command> {
-        (self.create_command)(self.connection.clone())
+        self.connection.create_command()
     }
 
     fn fields(&self) -> Vec<String> {

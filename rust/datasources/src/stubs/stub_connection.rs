@@ -1,4 +1,6 @@
 use super::not_implemented::fail;
+use super::stub_command::StubCommand;
+use crate::command::Command;
 use crate::connection::Connection;
 use crate::isolation_level::IsolationLevel;
 use crate::result::Result;
@@ -20,6 +22,14 @@ impl StubConnection {
 
 #[async_trait]
 impl Connection for StubConnection {
+    fn provider(&self) -> &str {
+        &self.provider
+    }
+
+    fn create_command(&self) -> Arc<dyn Command> {
+        Arc::new(StubCommand::new(&self.provider))
+    }
+
     async fn open(&self) -> Result<()> {
         Err(fail(&self.provider))
     }
@@ -53,6 +63,12 @@ macro_rules! named_stub_connection {
 
         #[async_trait::async_trait]
         impl $crate::Connection for $name {
+            fn provider(&self) -> &str {
+                self.inner.provider()
+            }
+            fn create_command(&self) -> std::sync::Arc<dyn $crate::Command> {
+                self.inner.create_command()
+            }
             async fn open(&self) -> $crate::Result<()> {
                 self.inner.open().await
             }

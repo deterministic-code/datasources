@@ -5,6 +5,7 @@ import {
   TypeConverter,
   Where,
   WhereBuilder,
+  createRepositoryOptions,
   identityProviderTypes,
   sqlProviderTypes,
 } from "./index.ts";
@@ -18,17 +19,20 @@ class Item {
   name = "";
 }
 
+class Label {
+  name = "";
+}
+
 const schema = { id: "INTEGER", name: "TEXT" };
 
 const create = (overrides: Partial<ConstructorParameters<typeof Repository<Cells>>[0]> = {}) => {
   TypeConverter.use("memory", identityProviderTypes());
-  const connection = new MockConnection();
+  const connection = new MockConnection(undefined, "memory");
   const command = new MockCommand(connection);
+  connection.command = command;
   const repo = new Repository<Cells>({
     datasourceName: "users",
     connection,
-    createCommand: () => command,
-    provider: "memory",
     schema,
     ...overrides,
   });
@@ -86,7 +90,7 @@ describe("Repository", () => {
       from: (value: Cell) => (typeof value === "number" ? value * 2 : value),
     };
     const { repo, command } = create({
-      id: ["org_id", "user_id"],
+      ids: ["org_id", "user_id"],
       assignIdentityOnAdd: true,
       schema: { org_id: "INTEGER", user_id: "INTEGER", name: "TEXT" },
       converters: { name: twice },
@@ -102,15 +106,16 @@ describe("Repository", () => {
   });
 
   it("throws on missing provider, id, bad rows, and empty update", async () => {
-    const command = new MockCommand(new MockConnection());
+    const connection = new MockConnection();
+    const command = new MockCommand(connection);
+    connection.command = command;
     expect(
       () =>
         new Repository({
           datasourceName: "users",
-          connection: command.connection,
-          createCommand: () => command,
+          connection,
         }),
-    ).toThrow("Repository requires Provider or Mapping");
+    ).toThrow("Provider \"mock\" is not registered");
     const { repo, command: query } = create();
     query.reader = new MockReader(["nope" as never]);
     await expect(async () => {
@@ -136,13 +141,25 @@ describe("Repository", () => {
     });
     const typed = new Repository<Item>({
       datasourceName: "users",
-      connection: command.connection,
-      createCommand: () => command,
+      connection,
       mapping,
     });
     await typed.add(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
     await typed.delete(Object.assign(new Item(), { name: "z" }), WhereBuilder.equals("name", "z"));
     expect(command.executeCalls[1]?.text).toBe("DELETE FROM users WHERE name = $name");
+  });
+
+  it("builds repository options from a type and connection", () => {
+    TypeConverter.use("mock", identityProviderTypes());
+    const connection = new MockConnection();
+    const fromId = createRepositoryOptions(Item, connection);
+    expect(fromId.datasourceName).toBe("Item");
+    expect(fromId.ids).toEqual(["id"]);
+    expect(fromId.connection).toBe(connection);
+    expect(createRepositoryOptions(Label, connection).ids).toEqual([]);
+    const repo = new Repository(fromId);
+    expect(repo.connection).toBe(connection);
+    expect(new Repository(Item, connection).connection).toBe(connection);
   });
 });

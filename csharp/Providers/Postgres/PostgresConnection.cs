@@ -5,6 +5,8 @@ public sealed class PostgresConnection : IConnection
     public string Url { get; }
     public string? Schema { get; }
     public IPostgresDriver Driver { get; }
+    public string Provider => "postgres";
+    public ICommand CreateCommand() => new PostgresCommand(this);
     public bool Opened { get; private set; }
 
     public PostgresConnection(PostgresConnectionOptions? options = null)

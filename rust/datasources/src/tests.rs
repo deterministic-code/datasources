@@ -636,8 +636,7 @@ async fn table_repository() {
         ("id", Value::Int(1)),
         ("name", Value::from("a")),
     ]));
-    let mut options = TableRepositoryOptions::with_factory("users", MockConnection::new(), command.clone());
-    options.provider = Some("memory".into());
+    let mut options = TableRepositoryOptions::with_factory("users", MockConnection::with_command_provider(command.clone(), "memory"));
     options.schema = HashMap::from([
         ("id".into(), "INTEGER".into()),
         ("name".into(), "TEXT".into()),
@@ -663,10 +662,8 @@ async fn table_repository() {
     let obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
     let mut include_id = TableRepositoryOptions::with_factory(
         "users",
-        MockConnection::new(),
-        command.clone(),
+        MockConnection::with_command_provider(command.clone(), "memory"),
     );
-    include_id.provider = Some("memory".into());
     include_id.assign_identity_on_add = false;
     include_id.schema = HashMap::from([
         ("id".into(), "INTEGER".into()),
@@ -697,9 +694,8 @@ async fn table_repository() {
         },
     );
     let generated = Arc::new(MockCommand::new());
-    let mut options = TableRepositoryOptions::with_factory("users", MockConnection::new(), generated.clone());
-    options.provider = Some("memory".into());
-    options.id = vec!["org_id".into(), "user_id".into()];
+    let mut options = TableRepositoryOptions::with_factory("users", MockConnection::with_command_provider(generated.clone(), "memory"));
+    options.ids = vec!["org_id".into(), "user_id".into()];
     options.assign_identity_on_add = true;
     options.schema = HashMap::from([
         ("org_id".into(), "INTEGER".into()),
@@ -739,10 +735,9 @@ async fn table_repository() {
         .contains("org_id = $org_id AND user_id = $user_id"));
 
     let command = Arc::new(MockCommand::new());
-    assert!(TableRepository::new(TableRepositoryOptions::with_factory("users", MockConnection::new(), command.clone()))
+    assert!(TableRepository::new(TableRepositoryOptions::with_factory("users", MockConnection::with_command(command.clone())))
         .is_err());
-    let mut options = TableRepositoryOptions::with_factory("users", MockConnection::new(), command.clone());
-    options.provider = Some("memory".into());
+    let mut options = TableRepositoryOptions::with_factory("users", MockConnection::with_command_provider(command.clone(), "memory"));
     options.schema = HashMap::from([
         ("id".into(), "INTEGER".into()),
         ("name".into(), "TEXT".into()),
@@ -761,12 +756,38 @@ async fn table_repository() {
         .await
         .is_err());
     let mapping = type_mapping::<Cells>("memory", "rust").unwrap();
-    let mut options = TableRepositoryOptions::with_factory("users", MockConnection::new(), command.clone());
+    let mut options = TableRepositoryOptions::with_factory("users", MockConnection::with_command(command.clone()));
     options.mapping = Some(mapping);
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[("id", Value::Int(1))])).await.unwrap();
     repo.delete(&record(&[("name", Value::from("z"))]), Some(&WhereBuilder::equals("name", "z")))
         .await
         .unwrap();
+
+    use_type_converter("mock", identity_provider_types());
+    let from_id = TableRepositoryOptions::from_type::<Item>(MockConnection::new());
+    assert_eq!(from_id.datasource_name, "Item");
+    assert_eq!(from_id.ids, vec!["id".to_string()]);
+    assert!(TableRepositoryOptions::from_type::<Label>(MockConnection::new())
+        .ids
+        .is_empty());
+    TableRepository::new(from_id).unwrap();
+    TableRepository::from_type::<Item>(MockConnection::new()).unwrap();
     reset_type_converter();
+}
+
+struct Item;
+
+impl ConvertSchema for Item {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("id", "INTEGER"), ("name", "TEXT")]
+    }
+}
+
+struct Label;
+
+impl ConvertSchema for Label {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("name", "TEXT")]
+    }
 }

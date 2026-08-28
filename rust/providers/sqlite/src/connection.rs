@@ -1,15 +1,16 @@
+use crate::command::SqliteCommand;
 use crate::driver::SqliteDriver;
 use crate::transaction::SqliteTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Connection, DatasourceError, IsolationLevel, Result, Transaction,
+    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
 };
 use std::sync::{Arc, Mutex};
 
 pub struct SqliteConnection {
     pub filename: String,
     pub driver: Arc<dyn SqliteDriver>,
-    opened: Mutex<bool>,
+    opened: Arc<Mutex<bool>>,
 }
 
 impl SqliteConnection {
@@ -17,7 +18,7 @@ impl SqliteConnection {
         Self {
             filename: filename.unwrap_or_else(|| ":memory:".to_string()),
             driver,
-            opened: Mutex::new(false),
+            opened: Arc::new(Mutex::new(false)),
         }
     }
 
@@ -31,6 +32,18 @@ impl SqliteConnection {
 
 #[async_trait]
 impl Connection for SqliteConnection {
+    fn provider(&self) -> &str {
+        "sqlite"
+    }
+
+    fn create_command(&self) -> Arc<dyn Command> {
+        Arc::new(SqliteCommand::new(Arc::new(SqliteConnection {
+            filename: self.filename.clone(),
+            driver: self.driver.clone(),
+            opened: self.opened.clone(),
+        })))
+    }
+
     async fn open(&self) -> Result<()> {
         if *self.opened.lock().unwrap() {
             return Ok(());

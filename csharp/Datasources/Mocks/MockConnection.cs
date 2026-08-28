@@ -10,6 +10,9 @@ public sealed class MockConnection : IConnection
     public Exception? StartTransactionError { get; set; }
     public bool Opened { get; private set; }
     public ITransaction Transaction { get; }
+    public string Provider { get; set; } = "mock";
+    public ICommand? Command { get; set; }
+    public ICommand CreateCommand() => Command ?? new MockCommand(this);
 
     public MockConnection(ITransaction? transaction = null) =>
         Transaction = transaction ?? new MockTransaction(this);

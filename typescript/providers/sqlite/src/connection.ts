@@ -1,10 +1,12 @@
 import {
   DatasourceError,
   IsolationLevel,
+  type ICommand,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
+import { SqliteCommand } from "./command.ts";
 import { requireDriver, type ISqliteDriver } from "./driver.ts";
 import { SqliteTransaction } from "./transaction.ts";
 
@@ -14,6 +16,7 @@ export interface SqliteConnectionOptions {
 }
 
 export class SqliteConnection implements IConnection {
+  readonly provider = "sqlite";
   filename: string;
   driver: ISqliteDriver;
   opened = false;
@@ -22,6 +25,8 @@ export class SqliteConnection implements IConnection {
     this.filename = options.filename ?? ":memory:";
     this.driver = requireDriver(options.driver);
   }
+
+  createCommand = (): ICommand => new SqliteCommand(this);
 
   async open(): Promise<void> {
     if (this.opened) {

@@ -13,6 +13,11 @@ public class RepositoryTests
         public string Name { get; set; } = "";
     }
 
+    sealed class Label
+    {
+        public string Name { get; set; } = "";
+    }
+
     static (Repository<Dictionary<string, object?>> Repo, MockCommand Command) Create(
         IReadOnlyList<string>? id = null,
         bool assignIdentityOnAdd = true,
@@ -21,15 +26,14 @@ public class RepositoryTests
         IReadOnlyDictionary<string, string>? names = null)
     {
         TypeConverter.Use("memory", TypeConverter.IdentityProviderTypes());
-        var connection = new MockConnection();
+        var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
+        connection.Command = command;
         var options = new RepositoryOptions<Dictionary<string, object?>>
         {
             DatasourceName = "users",
             Connection = connection,
-            CreateCommand = _ => command,
-            Provider = "memory",
-            Id = id ?? ["id"],
+            Ids = id ?? ["id"],
             AssignIdentityOnAdd = assignIdentityOnAdd,
             Schema = schema ?? new Dictionary<string, string> { ["id"] = "INTEGER", ["name"] = "TEXT" },
             Converters = converters,
@@ -122,8 +126,7 @@ public class RepositoryTests
             new Repository<Dictionary<string, object?>>(new RepositoryOptions<Dictionary<string, object?>>
             {
                 DatasourceName = "users",
-                Connection = new MockConnection(),
-                CreateCommand = conn => new MockCommand(conn)
+                Connection = new MockConnection()
             }));
         var (repo, command) = Create();
         command.Reader = new MockReader(new object?[] { "nope" });
@@ -139,12 +142,13 @@ public class RepositoryTests
             repo.Update(new Dictionary<string, object?> { ["id"] = 1 }));
         TypeConverter.Use("memory", TypeConverter.SqlProviderTypes());
         var mapping = TypeConverter.Mapping<Item>("memory");
-        var command2 = new MockCommand(new MockConnection());
+        var connection2 = new MockConnection();
+        var command2 = new MockCommand(connection2);
+        connection2.Command = command2;
         var typed = new Repository<Item>(new RepositoryOptions<Item>
         {
             DatasourceName = "users",
-            Connection = command2.Connection,
-            CreateCommand = _ => command2,
+            Connection = connection2,
             Mapping = mapping
         });
         await typed.Add(new Item { Id = 1, Name = "a" });
@@ -152,5 +156,19 @@ public class RepositoryTests
         var where = WhereBuilder.Equals("name", "z");
         await typed.Delete(new Item { Name = "z" }, where);
         Assert.Equal("DELETE FROM users WHERE name = $name", command2.ExecuteCalls[1].Text);
+    }
+
+    [Fact]
+    public void FromTypeBuildsOptionsFromConnection()
+    {
+        TypeConverter.Use("mock", TypeConverter.IdentityProviderTypes());
+        var connection = new MockConnection();
+        var fromId = RepositoryOptions.FromType<Item>(typeof(Item), connection);
+        Assert.Equal("Item", fromId.DatasourceName);
+        Assert.Equal(new[] { "Id" }, fromId.Ids);
+        Assert.Same(connection, fromId.Connection);
+        Assert.Empty(RepositoryOptions.FromType<Label>(connection).Ids);
+        Assert.Same(connection, new Repository<Item>(fromId).Connection);
+        Assert.Same(connection, new Repository<Item>(connection).Connection);
     }
 }

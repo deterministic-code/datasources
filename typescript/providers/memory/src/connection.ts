@@ -1,10 +1,12 @@
 import {
   DatasourceError,
   IsolationLevel,
+  type ICommand,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
+import { MemoryCommand } from "./command.ts";
 import { MemoryStore, type MemoryRecord } from "./store.ts";
 import { MemoryTransaction } from "./transaction.ts";
 
@@ -15,6 +17,7 @@ export interface MemoryConnectionOptions {
 }
 
 export class MemoryConnection implements IConnection {
+  readonly provider = "memory";
   store: MemoryStore;
   collection: string;
   opened = false;
@@ -27,6 +30,8 @@ export class MemoryConnection implements IConnection {
     this.collection = options.collection ?? "";
     this.data = options.data;
   }
+
+  createCommand = (): ICommand => new MemoryCommand(this);
 
   async open(): Promise<void> {
     if (this.opened) {

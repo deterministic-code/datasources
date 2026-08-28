@@ -9,6 +9,8 @@ public sealed class JsonConnection : IConnection
     public string? Collection { get; set; }
     public IFileStore FileStore { get; }
     public JsonNode Data { get; set; }
+    public string Provider => "json";
+    public ICommand CreateCommand() => new JsonCommand(this);
     public bool Opened { get; private set; }
     public bool InTransaction { get; private set; }
     private JsonNode? _snapshot;

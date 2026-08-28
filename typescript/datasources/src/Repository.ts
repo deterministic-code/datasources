@@ -9,6 +9,7 @@ import { StatementBuilder, WhereBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
+import type { Constructable } from "./converters/Constructable.ts";
 import type { FieldConverter } from "./converters/FieldConverter.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import type { TypeMapping } from "./converters/TypeMapping.ts";
@@ -16,15 +17,30 @@ import type { TypeMapping } from "./converters/TypeMapping.ts";
 export type RepositoryOptions<T extends Cells> = {
   datasourceName: string;
   connection: IConnection;
-  createCommand: (connection: IConnection) => ICommand;
-  provider?: string;
-  id?: string[];
+  ids?: string[];
   assignIdentityOnAdd?: boolean;
   schema?: Record<string, string>;
   converters?: Record<string, FieldConverter>;
   names?: Record<string, string>;
   mapping?: TypeMapping<T>;
+  type?: Constructable<T>;
 };
+
+const fieldNamesOf = <T>(type: Constructable<T>): string[] =>
+  Object.keys(new type() as object);
+
+const defaultId = (fields: string[]): string[] =>
+  fields.includes("id") ? ["id"] : fields.includes("Id") ? ["Id"] : [];
+
+export const createRepositoryOptions = <T extends Cells>(
+  type: Constructable<T>,
+  connection: IConnection,
+): RepositoryOptions<T> => ({
+  type,
+  datasourceName: type.name,
+  ids: defaultId(fieldNamesOf(type)),
+  connection,
+});
 
 const asRow = (current: object | null | undefined): Cells =>
   current && typeof current === "object" && !Array.isArray(current)
@@ -45,22 +61,27 @@ export class Repository<T extends Cells> implements IRepository<T> {
   private readonly mapping: TypeMapping<T>;
   private readonly ids: Set<string>;
 
-  constructor(options: RepositoryOptions<T>) {
-    this.options = options;
-    this.ids = new Set(options.id ?? ["id"]);
-    this.connection = options.connection;
+  constructor(type: Constructable<T>, connection: IConnection);
+  constructor(options: RepositoryOptions<T>);
+  constructor(
+    typeOrOptions: Constructable<T> | RepositoryOptions<T>,
+    connection?: IConnection,
+  ) {
+    this.options =
+      connection === undefined
+        ? (typeOrOptions as RepositoryOptions<T>)
+        : createRepositoryOptions(typeOrOptions as Constructable<T>, connection);
+    this.ids = new Set(this.options.ids ?? ["id"]);
+    this.connection = this.options.connection;
     this.mapping =
-      options.mapping ??
+      this.options.mapping ??
       TypeConverter.mapping<T>({
-        source:
-          options.provider ??
-          (() => {
-            throw new DatasourceError("Repository requires Provider or Mapping");
-          })(),
+        source: this.options.connection.provider,
         destination: "typescript",
-        schema: options.schema,
-        converters: options.converters,
-        names: options.names,
+        type: this.options.type,
+        schema: this.options.schema,
+        converters: this.options.converters,
+        names: this.options.names,
       });
   }
 
@@ -110,7 +131,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
     );
   };
 
-  private command = (): ICommand => this.options.createCommand(this.options.connection);
+  private command = (): ICommand => this.options.connection.createCommand();
 
   private fields = (): string[] => Object.keys(this.mapping.schema).sort();
 
@@ -123,5 +144,5 @@ export class Repository<T extends Cells> implements IRepository<T> {
       }),
     );
 
-  private idColumns = (): string[] => this.options.id ?? ["id"];
+  private idColumns = (): string[] => this.options.ids ?? ["id"];
 }

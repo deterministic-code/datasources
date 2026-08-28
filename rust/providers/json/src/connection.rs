@@ -1,8 +1,9 @@
+use crate::command::JsonCommand;
 use crate::file_store::FileStore;
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Connection, DatasourceError, IsolationLevel, Result, Transaction,
+    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
 };
 use serde_json::{Map, Value as JsonValue};
 use std::sync::{Arc, Mutex};
@@ -97,6 +98,16 @@ impl JsonConnection {
 
 #[async_trait]
 impl Connection for JsonConnection {
+    fn provider(&self) -> &str {
+        "json"
+    }
+
+    fn create_command(&self) -> Arc<dyn Command> {
+        Arc::new(JsonCommand::new(Arc::new(JsonConnection {
+            state: self.state.clone(),
+        })))
+    }
+
     async fn open(&self) -> Result<()> {
         if *self.state.opened.lock().unwrap() {
             return Ok(());

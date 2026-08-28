@@ -1,10 +1,12 @@
 import {
   DatasourceError,
   IsolationLevel,
+  type ICommand,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
+import { MysqlCommand } from "./command.ts";
 import { requireDriver, type IMysqlDriver } from "./driver.ts";
 import { MysqlTransaction } from "./transaction.ts";
 
@@ -14,6 +16,7 @@ export interface MysqlConnectionOptions {
 }
 
 export class MysqlConnection implements IConnection {
+  readonly provider = "mysql";
   url: string;
   driver: IMysqlDriver;
   opened = false;
@@ -22,6 +25,8 @@ export class MysqlConnection implements IConnection {
     this.url = options.url ?? "";
     this.driver = requireDriver(options.driver);
   }
+
+  createCommand = (): ICommand => new MysqlCommand(this);
 
   async open(): Promise<void> {
     if (this.opened) return;

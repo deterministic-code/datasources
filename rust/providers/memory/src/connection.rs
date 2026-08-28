@@ -1,8 +1,9 @@
+use crate::command::MemoryCommand;
 use crate::store::{MemoryData, MemoryStore};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Connection, DatasourceError, IsolationLevel, Record, Result, Transaction,
+    Command, Connection, DatasourceError, IsolationLevel, Record, Result, Transaction,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -76,6 +77,16 @@ impl MemoryConnection {
 
 #[async_trait]
 impl Connection for MemoryConnection {
+    fn provider(&self) -> &str {
+        "memory"
+    }
+
+    fn create_command(&self) -> Arc<dyn Command> {
+        Arc::new(MemoryCommand::new(Arc::new(MemoryConnection {
+            state: self.state.clone(),
+        })))
+    }
+
     async fn open(&self) -> Result<()> {
         if *self.state.opened.lock().unwrap() {
             return Ok(());
