@@ -22,6 +22,29 @@ export {
 } from "./ConsoleCommandMiddleware.ts";
 export { Datasource } from "./Datasource.ts";
 export { DatasourceError } from "./DatasourceError.ts";
+export type { Cell, Cells } from "./converters/Cell.ts";
+export type { FieldConverter } from "./converters/FieldConverter.ts";
+export type { ProviderTypes } from "./converters/ProviderTypes.ts";
+export type { Constructable } from "./converters/Constructable.ts";
+export type { TypeMapping } from "./converters/TypeMapping.ts";
+export { binaryFieldConverter } from "./converters/binaryFieldConverter.ts";
+export { booleanFieldConverter } from "./converters/booleanFieldConverter.ts";
+export { dateTimeFieldConverter } from "./converters/dateTimeFieldConverter.ts";
+export { decimalFieldConverter } from "./converters/decimalFieldConverter.ts";
+export { identityFieldConverter } from "./converters/identityFieldConverter.ts";
+export { uuidFieldConverter } from "./converters/uuidFieldConverter.ts";
+export {
+  TypeConverter,
+  canonicalConverters,
+  identityProviderTypes,
+  inferSqlType,
+  normalizeSqlType,
+  sqlProviderTypes,
+} from "./converters/TypeConverter.ts";
+export {
+  DatasourceMapper,
+  type Mapping,
+} from "./mappers/DatasourceMapper.ts";
 export { identityFilter } from "./identityFilter.ts";
 export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";

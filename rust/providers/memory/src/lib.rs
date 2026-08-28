@@ -1,3 +1,4 @@
+mod converters;
 mod command;
 mod connection;
 mod datasource;
@@ -217,3 +218,5 @@ mod tests {
         empty.finish_abort();
     }
 }
+
+pub use converters::{register as register_converters, types as converter_types};

@@ -17,3 +17,4 @@ export {
 } from "./filter.ts";
 export { JsonRepository } from "./repository.ts";
 export { JsonTransaction } from "./transaction.ts";
+export { jsonTypes, registerConverters } from "./converters/index.ts";

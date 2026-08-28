@@ -1,3 +1,4 @@
+mod converters;
 mod command;
 mod connection;
 mod datasource;
@@ -163,3 +164,5 @@ mod tests {
             .is_err());
     }
 }
+
+pub use converters::{register as register_converters, types as converter_types};
