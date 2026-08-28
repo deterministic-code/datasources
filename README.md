@@ -56,17 +56,16 @@ Shared SQL scenarios live in `specs/*.yaml`. Engine-specific DDL and isolation e
 
 ## Tests
 
-`npm test` is offline: mocks, injectable ports, and in-process SQLite specs. MySQL/Postgres Docker specs are `npm run test:e2e`.
+`npm test` is offline: mocks, injectable ports, and in-process SQLite specs. MySQL/Postgres Docker specs are `npm run test:e2e`, which starts the matching Compose services.
 
 ```
 npm test
-docker compose up -d --wait
 npm run test:e2e
 ```
 
 `test:e2e` defaults to `MYSQL_URL=mysql://ds:ds@127.0.0.1:3306/datasources` and `POSTGRES_URL=postgres://ds:ds@127.0.0.1:5432/datasources`. Override those env vars if the servers are elsewhere.
 
-All languages against Docker:
+All languages against Docker (Rust/C# expect Compose already up):
 
 ```
 npm run test:e2e
@@ -78,6 +77,6 @@ npm run test:e2e:csharp
 - Rust: `cd rust && cargo test --workspace` (optional: `./coverage.sh` with cargo-llvm-cov)
 - C#: `cd csharp && dotnet test Datasources.slnx`
 
-CI (`.github/workflows/ci.yml`) runs `npm test` plus Rust/C# unit tests, then a second job that starts Compose and runs the e2e scripts.
+CI (`.github/workflows/ci.yml`) runs `npm test` plus Rust/C# unit tests, then a second job that starts Compose and runs `test:e2e:ci` (skips starting Docker) plus Rust/C# e2e.
 
 `Datasources` publishes test doubles (`MockConnection`, `MockCommand`, `MockRepository`, …) for consumers.

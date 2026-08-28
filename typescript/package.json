@@ -9,6 +9,7 @@
   "scripts": {
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} npm run test:e2e --workspaces --if-present",
+    "test:e2e:ci": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} npm run test:e2e:ci --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
