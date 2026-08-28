@@ -1,13 +1,14 @@
+use crate::command::MysqlCommand;
 use crate::driver::MysqlDriver;
 use crate::transaction::MysqlTransaction;
 use async_trait::async_trait;
-use datasources::{Connection, DatasourceError, IsolationLevel, Result, Transaction};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
 use std::sync::{Arc, Mutex};
 
 pub struct MysqlConnection {
     pub url: String,
     pub driver: Arc<dyn MysqlDriver>,
-    opened: Mutex<bool>,
+    opened: Arc<Mutex<bool>>,
 }
 
 impl MysqlConnection {
@@ -15,7 +16,7 @@ impl MysqlConnection {
         Self {
             url: url.unwrap_or_default(),
             driver,
-            opened: Mutex::new(false),
+            opened: Arc::new(Mutex::new(false)),
         }
     }
 
@@ -29,6 +30,18 @@ impl MysqlConnection {
 
 #[async_trait]
 impl Connection for MysqlConnection {
+    fn provider(&self) -> &str {
+        "mysql"
+    }
+
+    fn create_command(&self) -> Arc<dyn Command> {
+        Arc::new(MysqlCommand::new(Arc::new(MysqlConnection {
+            url: self.url.clone(),
+            driver: self.driver.clone(),
+            opened: self.opened.clone(),
+        })))
+    }
+
     async fn open(&self) -> Result<()> {
         if *self.opened.lock().unwrap() {
             return Ok(());

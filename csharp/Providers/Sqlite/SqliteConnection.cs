@@ -6,6 +6,8 @@ public sealed class SqliteConnection : IConnection
 {
     public string Filename { get; }
     public ISqliteDriver Driver { get; }
+    public string Provider => "sqlite";
+    public ICommand CreateCommand() => new SqliteCommand(this);
     public bool Opened { get; private set; }
 
     public SqliteConnection(SqliteConnectionOptions? options = null)

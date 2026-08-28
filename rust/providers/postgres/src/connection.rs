@@ -1,14 +1,15 @@
+use crate::command::PostgresCommand;
 use crate::driver::PostgresDriver;
 use crate::transaction::PostgresTransaction;
 use async_trait::async_trait;
-use datasources::{Connection, DatasourceError, IsolationLevel, Result, Transaction};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
 use std::sync::{Arc, Mutex};
 
 pub struct PostgresConnection {
     pub url: String,
     pub schema: Option<String>,
     pub driver: Arc<dyn PostgresDriver>,
-    opened: Mutex<bool>,
+    opened: Arc<Mutex<bool>>,
 }
 
 impl PostgresConnection {
@@ -21,7 +22,7 @@ impl PostgresConnection {
             url: url.unwrap_or_default(),
             schema,
             driver,
-            opened: Mutex::new(false),
+            opened: Arc::new(Mutex::new(false)),
         }
     }
 
@@ -35,6 +36,19 @@ impl PostgresConnection {
 
 #[async_trait]
 impl Connection for PostgresConnection {
+    fn provider(&self) -> &str {
+        "postgres"
+    }
+
+    fn create_command(&self) -> Arc<dyn Command> {
+        Arc::new(PostgresCommand::new(Arc::new(PostgresConnection {
+            url: self.url.clone(),
+            schema: self.schema.clone(),
+            driver: self.driver.clone(),
+            opened: self.opened.clone(),
+        })))
+    }
+
     async fn open(&self) -> Result<()> {
         if *self.opened.lock().unwrap() {
             return Ok(());

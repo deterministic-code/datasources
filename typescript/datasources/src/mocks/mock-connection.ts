@@ -1,9 +1,12 @@
+import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { ITransaction } from "../ITransaction.ts";
 import { IsolationLevel, type IsolationLevel as Isolation } from "../IsolationLevel.ts";
+import { MockCommand } from "./mock-command.ts";
 import { MockTransaction } from "./mock-transaction.ts";
 
 export class MockConnection implements IConnection {
+  readonly provider: string;
   openCalls = 0;
   closeCalls = 0;
   startTransactionCalls = 0;
@@ -11,11 +14,15 @@ export class MockConnection implements IConnection {
   closeError?: unknown;
   startTransactionError?: unknown;
   transaction: ITransaction;
+  command?: ICommand;
   opened = false;
 
-  constructor(transaction?: ITransaction) {
+  constructor(transaction?: ITransaction, provider = "mock") {
+    this.provider = provider;
     this.transaction = transaction ?? new MockTransaction(this);
   }
+
+  createCommand = (): ICommand => this.command ?? new MockCommand(this);
 
   async open(): Promise<void> {
     this.openCalls += 1;

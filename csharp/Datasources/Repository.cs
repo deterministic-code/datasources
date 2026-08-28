@@ -8,19 +8,21 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     readonly TypeMapping<T> mapping;
     readonly HashSet<string> ids;
 
+    public Repository(IConnection connection) : this(RepositoryOptions.FromType<T>(connection)) { }
+
     public Repository(RepositoryOptions<T> options)
     {
         this.options = options;
-        ids = new(options.Id);
+        ids = new(options.Ids);
         mapping = options.Mapping ?? TypeConverter.Mapping<T>(
-            options.Provider ?? throw new DatasourceException("Repository requires Provider or Mapping"),
+            options.Connection.Provider,
             schema: options.Schema,
             converters: options.Converters,
             names: options.Names);
     }
 
     public IConnection Connection => options.Connection;
-    ICommand Command() => options.CreateCommand(options.Connection);
+    ICommand Command() => options.Connection.CreateCommand();
 
     public async Task<T?> GetSingle(IQuery? query = null)
     {
@@ -67,7 +69,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     IReadOnlyList<string> Fields() => mapping.Schema.Keys.OrderBy(key => key).ToArray();
 
     IWhere IdWhere(IReadOnlyDictionary<string, object?> record) =>
-        WhereBuilder.And([.. options.Id.Select(col =>
+        WhereBuilder.And([.. options.Ids.Select(col =>
             record.TryGetValue(col, out var value)
                 ? WhereBuilder.Equals(col, value)
                 : throw new DatasourceException($"Missing Id value \"{col}\""))]);

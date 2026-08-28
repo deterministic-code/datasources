@@ -4,6 +4,8 @@ public sealed class MysqlConnection : IConnection
 {
     public string Url { get; }
     public IMysqlDriver Driver { get; }
+    public string Provider => "mysql";
+    public ICommand CreateCommand() => new MysqlCommand(this);
     public bool Opened { get; private set; }
 
     public MysqlConnection(MysqlConnectionOptions? options = null)
