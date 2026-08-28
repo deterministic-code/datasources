@@ -1,7 +1,6 @@
 import {
   DatasourceError,
   IsolationLevel,
-  MiddlewareHost,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
@@ -15,7 +14,7 @@ export interface MemoryConnectionOptions {
   data?: MemoryRecord[] | Record<string, MemoryRecord[]>;
 }
 
-export class MemoryConnection extends MiddlewareHost implements IConnection {
+export class MemoryConnection implements IConnection {
   store: MemoryStore;
   collection: string;
   opened = false;
@@ -24,40 +23,33 @@ export class MemoryConnection extends MiddlewareHost implements IConnection {
   private readonly data?: MemoryRecord[] | Record<string, MemoryRecord[]>;
 
   constructor(options: MemoryConnectionOptions = {}) {
-    super();
     this.store = options.store ?? new MemoryStore();
     this.collection = options.collection ?? "";
     this.data = options.data;
   }
 
   async open(): Promise<void> {
-    return this.run("open", async () => {
-      if (this.opened) {
-        return;
-      }
-      if (this.data !== undefined) {
-        this.store.seed(this.data, this.collection);
-      }
-      this.store.getCollection(this.collection);
-      this.opened = true;
-    });
+    if (this.opened) {
+      return;
+    }
+    if (this.data !== undefined) {
+      this.store.seed(this.data, this.collection);
+    }
+    this.store.getCollection(this.collection);
+    this.opened = true;
   }
 
   async close(): Promise<void> {
-    return this.run("close", async () => {
-      this.opened = false;
-    });
+    this.opened = false;
   }
 
   async startTransaction(
     isolation: IsolationLevelName = IsolationLevel.Serializable,
   ): Promise<ITransaction> {
-    return this.run("startTransaction", async () => {
-      this.ensureOpen();
-      this.snapshot = this.store.snapshot();
-      this.inTransaction = true;
-      return new MemoryTransaction(this, isolation);
-    });
+    this.ensureOpen();
+    this.snapshot = this.store.snapshot();
+    this.inTransaction = true;
+    return new MemoryTransaction(this, isolation);
   }
 
   getCollection(): MemoryRecord[] {

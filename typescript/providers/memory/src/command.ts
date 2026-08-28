@@ -1,7 +1,7 @@
 import {
   ArrayReader,
+  CommandMiddlewareHost,
   identityFilter,
-  MiddlewareHost,
   type ICommand,
   type IReader,
   type IResponse,
@@ -11,7 +11,7 @@ import type { MemoryConnection } from "./connection.ts";
 import type { MemoryRecord } from "./store.ts";
 import { matches, parametersToObject, parseFilter } from "./filter.ts";
 
-export class MemoryCommand extends MiddlewareHost implements ICommand {
+export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: MemoryConnection) {
     super();
   }
@@ -20,36 +20,30 @@ export class MemoryCommand extends MiddlewareHost implements ICommand {
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IReader> {
-    return this.run(
-      "executeReader",
-      async () => {
-        this.connection.ensureOpen();
-        const filter = {
-          ...parseFilter(text),
-          ...parametersToObject(parameters),
-        };
-        const rows = this.connection
-          .getCollection()
-          .filter((row) => matches(row, filter));
-        return new ArrayReader(rows);
-      },
-      { text, parameters },
-    );
+    return this.run(text, parameters, async (query, params) => {
+      this.connection.ensureOpen();
+      const filter = {
+        ...parseFilter(query),
+        ...parametersToObject(params),
+      };
+      const rows = this.connection
+        .getCollection()
+        .filter((row) => matches(row, filter));
+      return { value: new ArrayReader(rows), rows };
+    });
   }
 
   async execute(
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IResponse> {
-    return this.run(
-      "execute",
-      async () => {
+    return this.run(text, parameters, async (query, params) => {
         this.connection.ensureOpen();
-        const op = (text ?? "").trim().toLowerCase();
-        const obj = parametersToObject(parameters);
+        const op = query.trim().toLowerCase();
+        const obj = parametersToObject(params);
         if (op === "insert") {
           this.connection.getCollection().push({ ...obj });
-          return { result: obj, rowsAffected: 1 };
+          return { value: { result: obj, rowsAffected: 1 }, rows: [] };
         }
         if (op === "update") {
           const whereText =
@@ -57,17 +51,15 @@ export class MemoryCommand extends MiddlewareHost implements ICommand {
           const next = { ...obj };
           delete next.$where;
           const filter = whereText ? parseFilter(whereText) : identityFilter(next);
-          return this.applyUpdate(next, filter);
+          return { value: this.applyUpdate(next, filter), rows: [] };
         }
         if (op === "delete") {
           const filter =
             Object.keys(obj).length === 0 ? {} : identityFilter(obj);
-          return this.applyDelete(filter);
+          return { value: this.applyDelete(filter), rows: [] };
         }
-        throw new Error(`Unsupported Memory command: ${text ?? ""}`);
-      },
-      { text, parameters },
-    );
+        throw new Error(`Unsupported Memory command: ${query}`);
+    });
   }
 
   private applyUpdate(

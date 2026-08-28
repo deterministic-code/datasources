@@ -5,9 +5,9 @@ Async interfaces for reading, writing, updating, and deleting resources. Provide
 ## Layout
 
 ```
-typescript/   npm workspaces (datasources + providers/{json,memory,sqlite,stubs})
-rust/         cargo workspace (datasources + providers/{json,memory,sqlite,stubs})
-csharp/       .NET 10 solution (Datasources + Providers/{Json,Memory,Sqlite,stubs})
+typescript/   npm workspaces (datasources + providers/{json,memory,sqlite,mysql,postgres,stubs})
+rust/         cargo workspace (datasources + providers/{json,memory,sqlite,mysql,postgres,stubs})
+csharp/       .NET 10 solution (Datasources + Providers/{Json,Memory,Sqlite,Mysql,Postgres,stubs})
 ```
 
 ## Create
@@ -44,20 +44,40 @@ Create a named command, then execute it. See:
 | `IQuery` / `Where` | `getText()` — provider-specific |
 | `Parameter` / `IResponse` | `{ name, value }` / `{ result, rowsAffected }` |
 
-`IConnection`, `ITransaction`, and `ICommand` support `use(before, after)` middleware. A `before` error skips the operation. An operation error still runs `after` with `ctx.error` set.
+`ICommand` supports `use(ICommandMiddleware)` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
 
 ## Providers
 
-Working: **json**, **memory**, **sqlite** (inject `IFileStore` / `ISqliteDriver`; production adapters wrap the OS filesystem or a native SQLite module).
+Working: **json**, **memory**, **sqlite**, **mysql**, **postgres** (inject `IFileStore` / `ISqliteDriver` / `IMysqlDriver` / `IPostgresDriver`). Native engines are opt-in: `better-sqlite3` / `mysql2` / `pg` (optional npm peers), `rusqlite` / `mysql_async` / `tokio-postgres`, or `Datasources.Sqlite.Microsoft` / MySqlConnector / Npgsql.
 
-Stubs (installable, throw “not implemented”): text, xml, yaml, mysql, sqlserver, postgres, oracle, mongodb, dynamodb.
+Stubs (installable, throw “not implemented”): text, xml, yaml, sqlserver, oracle, mongodb, dynamodb.
 
-## Unit tests and coverage
+Shared SQL scenarios live in `specs/*.yaml`. Engine-specific DDL and isolation expects are in `specs/dialects/{sqlite,mysql,postgres}.yaml` (fragment names such as `createUserTable` and `dirtyReadRows`).
 
-Unit tests use mocks and injectable ports (no real files or network). SQLite Command and Transaction behavior is confirmed across C#, TypeScript, and Rust by shared specs in `specs/sqlite/*.yaml` (same SQL, parameters, and assertions).
+## Tests
 
-- TypeScript: `cd typescript && npm test` (Vitest, 100% line/branch/function/statement)
+`npm test` is offline: mocks, injectable ports, and in-process SQLite specs. MySQL/Postgres Docker specs are `npm run test:e2e`.
+
+```
+npm test
+docker compose up -d --wait
+npm run test:e2e
+```
+
+`test:e2e` defaults to `MYSQL_URL=mysql://ds:ds@127.0.0.1:3306/datasources` and `POSTGRES_URL=postgres://ds:ds@127.0.0.1:5432/datasources`. Override those env vars if the servers are elsewhere.
+
+All languages against Docker:
+
+```
+npm run test:e2e
+npm run test:e2e:rust
+npm run test:e2e:csharp
+```
+
+- TypeScript: `npm test` / `npm run test:e2e` (Vitest; unit coverage 100% line/branch/function/statement)
 - Rust: `cd rust && cargo test --workspace` (optional: `./coverage.sh` with cargo-llvm-cov)
 - C#: `cd csharp && dotnet test Datasources.slnx`
+
+CI (`.github/workflows/ci.yml`) runs `npm test` plus Rust/C# unit tests, then a second job that starts Compose and runs the e2e scripts.
 
 `Datasources` publishes test doubles (`MockConnection`, `MockCommand`, `MockRepository`, …) for consumers.

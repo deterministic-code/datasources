@@ -134,94 +134,197 @@ async fn readers() {
     assert_eq!(collected, vec!["z".to_string()]);
 }
 
+struct RecordingMiddleware {
+    before: Arc<dyn Fn(&str) -> Result<Option<(String, Option<Vec<Parameter>>)>> + Send + Sync>,
+    after: Arc<dyn Fn(&str, Option<&DatasourceError>) -> Result<()> + Send + Sync>,
+}
+
+#[async_trait]
+impl CommandMiddleware for RecordingMiddleware {
+    async fn before_query(
+        &self,
+        query: &str,
+        _params: Option<&[Parameter]>,
+    ) -> Result<Option<(String, Option<Vec<Parameter>>)>> {
+        (self.before)(query)
+    }
+
+    async fn after_query(
+        &self,
+        query: &str,
+        _params: Option<&[Parameter]>,
+        _results: &[Record],
+        _elapsed_ms: f64,
+        error: Option<&DatasourceError>,
+    ) -> Result<()> {
+        (self.after)(query, error)
+    }
+}
+
 #[tokio::test]
 async fn middleware_paths() {
-    let host = MiddlewareHost::new();
-    host.use_middleware(None, None);
-    assert_eq!(host.run("close", None, || async { Ok(1) }).await.unwrap(), 1);
+    let host = CommandMiddlewareHost::new();
+    assert_eq!(
+        host.run(None, None, |_q, _p| async { Ok((1, vec![])) })
+            .await
+            .unwrap(),
+        1
+    );
 
     let order = Arc::new(Mutex::new(Vec::new()));
     let seen = order.clone();
-    host.use_middleware(
-        Some(hook({
+    host.use_middleware(Arc::new(RecordingMiddleware {
+        before: {
             let seen = seen.clone();
-            move |ctx| {
-                let seen = seen.clone();
-                async move {
-                    seen.lock().unwrap().push(format!("b:{}", ctx.operation));
-                    Ok(())
-                }
-            }
-        })),
-        Some(hook({
+            Arc::new(move |query| {
+                seen.lock().unwrap().push(format!("b:{query}"));
+                Ok(Some(("SELECT 2".into(), None)))
+            })
+        },
+        after: {
             let seen = seen.clone();
-            move |ctx| {
-                let seen = seen.clone();
-                async move {
-                    seen.lock().unwrap().push(format!("a:{}", ctx.operation));
-                    assert!(ctx.error.is_none());
-                    Ok(())
-                }
-            }
-        })),
+            Arc::new(move |query, error| {
+                seen.lock().unwrap().push(format!("a:{query}"));
+                assert!(error.is_none());
+                Ok(())
+            })
+        },
+    }));
+    let used = Arc::new(Mutex::new(String::new()));
+    let used_clone = used.clone();
+    host.run(Some("SELECT 1"), None, move |query, _p| {
+        let used_clone = used_clone.clone();
+        async move {
+            *used_clone.lock().unwrap() = query;
+            Ok(((), vec![Record::new()]))
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(*used.lock().unwrap(), "SELECT 2");
+    assert_eq!(
+        *order.lock().unwrap(),
+        vec!["b:SELECT 1".to_string(), "a:SELECT 2".to_string()]
     );
-    host.run("open", None, || async { Ok(()) }).await.unwrap();
-    assert_eq!(*order.lock().unwrap(), vec!["b:open", "a:open"]);
 
-    let blocked = MiddlewareHost::new();
+    let blocked = CommandMiddlewareHost::new();
     let ran = Arc::new(Mutex::new(false));
-    blocked.use_middleware(
-        Some(hook(|_| async { Err(DatasourceError::message("blocked")) })),
-        Some(hook({
+    blocked.use_middleware(Arc::new(RecordingMiddleware {
+        before: Arc::new(|_| Err(DatasourceError::message("blocked"))),
+        after: {
             let ran = ran.clone();
-            move |_| {
+            Arc::new(move |_, _| {
+                *ran.lock().unwrap() = true;
+                Ok(())
+            })
+        },
+    }));
+    assert!(blocked
+        .run(Some("select"), None, {
+            let ran = ran.clone();
+            move |_q, _p| {
                 let ran = ran.clone();
                 async move {
                     *ran.lock().unwrap() = true;
-                    Ok(())
+                    Ok((1, vec![]))
                 }
             }
-        })),
-    );
-    assert!(blocked
-        .run("execute", None, || async {
-            *ran.lock().unwrap() = true;
-            Ok(1)
         })
         .await
         .is_err());
     assert!(!*ran.lock().unwrap());
 
-    let failed = MiddlewareHost::new();
+    let failed = CommandMiddlewareHost::new();
     let captured = Arc::new(Mutex::new(None));
-    failed.use_middleware(
-        None,
-        Some(hook({
+    failed.use_middleware(Arc::new(RecordingMiddleware {
+        before: Arc::new(|_| Ok(None)),
+        after: {
             let captured = captured.clone();
-            move |ctx| {
-                let captured = captured.clone();
-                async move {
-                    *captured.lock().unwrap() = ctx.error.clone();
-                    Ok(())
-                }
-            }
-        })),
-    );
+            Arc::new(move |_, error| {
+                *captured.lock().unwrap() = error.map(ToString::to_string);
+                Ok(())
+            })
+        },
+    }));
     assert!(failed
-        .run("abort", None, || async { Err::<(), _>(DatasourceError::message("fail-op")) })
+        .run(Some("select"), None, |_q, _p| async {
+            Err::<((), Vec<Record>), _>(DatasourceError::message("fail-op"))
+        })
         .await
         .is_err());
     assert_eq!(*captured.lock().unwrap(), Some("fail-op".into()));
+}
 
-    let extras = MiddlewareHost::new();
-    extras
-        .run(
-            "execute",
-            Some((Some("insert".into()), Some(vec![Parameter::new("id", 1_i64)]))),
-            || async { Ok(()) },
-        )
+#[test]
+fn console_format() {
+    assert_eq!(format_elapsed(2.0), "2ms");
+    assert_eq!(format_elapsed(1.0), "1ms");
+    assert_eq!(format_elapsed(0.85), "850μs");
+    assert_eq!(format_elapsed(0.4), "400μs");
+    assert_eq!(
+        utc_iso_millis(std::time::UNIX_EPOCH + std::time::Duration::from_millis(0)),
+        "1970-01-01T00:00:00.000Z"
+    );
+    assert_eq!(
+        utc_iso_millis(std::time::UNIX_EPOCH + std::time::Duration::from_secs(200 * 86_400)),
+        "1970-07-20T00:00:00.000Z"
+    );
+    assert_eq!(
+        utc_iso_millis(std::time::UNIX_EPOCH - std::time::Duration::from_secs(1)),
+        "1970-01-01T00:00:00.000Z"
+    );
+    let _ = ConsoleCommandMiddleware::new();
+    let _ = ConsoleCommandMiddleware::default();
+}
+
+#[tokio::test]
+async fn console_lines() {
+    let lines = Arc::new(Mutex::new(Vec::new()));
+    let stamps = Arc::new(Mutex::new(vec![
+        "2026-08-28T01:54:12.101Z".to_string(),
+        "2026-08-28T01:54:12.103Z".to_string(),
+    ]));
+    let write_lines = lines.clone();
+    let write_stamps = stamps.clone();
+    let middleware = ConsoleCommandMiddleware::with_sink(
+        move |line| write_lines.lock().unwrap().push(line.to_string()),
+        move || write_stamps.lock().unwrap().remove(0),
+    );
+    let host = CommandMiddlewareHost::new();
+    host.use_middleware(Arc::new(middleware));
+    host.run(
+        Some(r#"SELECT * FROM "widget" ORDER BY "id""#),
+        None,
+        |_q, _p| async { Ok(((), vec![])) },
+    )
+    .await
+    .unwrap();
+    let logged = lines.lock().unwrap().clone();
+    assert_eq!(
+        logged[0],
+        r#"[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT * FROM "widget" ORDER BY "id"]"#
+    );
+    assert!(logged[1].starts_with(
+        r#"[2026-08-28T01:54:12.103Z]-[datasource][Finish]-[SELECT * FROM "widget" ORDER BY "id"] "#
+    ));
+}
+
+#[tokio::test]
+async fn console_trims_query() {
+    let lines = Arc::new(Mutex::new(Vec::new()));
+    let write_lines = lines.clone();
+    let middleware = ConsoleCommandMiddleware::with_sink(
+        move |line| write_lines.lock().unwrap().push(line.to_string()),
+        || "2026-08-28T01:54:12.101Z".to_string(),
+    );
+    let host = CommandMiddlewareHost::new();
+    host.use_middleware(Arc::new(middleware));
+    host.run(Some("SELECT 1\n"), None, |_q, _p| async { Ok(((), vec![])) })
         .await
         .unwrap();
+    let logged = lines.lock().unwrap()[0].clone();
+    let signature = logged.replacen("[2026-08-28T01:54:12.101Z]-", "", 1);
+    assert_eq!(signature, "[datasource][Start]-[SELECT 1]");
 }
 
 #[test]
@@ -272,10 +375,13 @@ async fn stubs_throw() {
     assert!(reader.current().is_none());
     assert!(reader.next().await.is_err());
     let conn = StubConnection::new("text");
-    conn.use_middleware(None, None);
     let cmd = StubCommand::new("text");
-    cmd.use_middleware(None, None);
-    txn.use_middleware(None, None);
+    cmd.use_middleware(Arc::new(RecordingMiddleware {
+        before: Arc::new(|_| Ok(None)),
+        after: Arc::new(|_, _| Ok(())),
+    }));
+    let _ = conn;
+    let _ = txn;
 }
 
 #[tokio::test]
@@ -379,29 +485,27 @@ async fn published_mocks() {
     assert_eq!(w.calls(), 1);
     assert_eq!(TextWhere::new("x").get_text(), "x");
 
-    let conn = MockConnection::new();
-    conn.use_middleware(None, None);
-    let seen = Arc::new(Mutex::new(false));
-    conn.use_middleware(
-        Some(hook({
+    let command = MockCommand::new();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    command.use_middleware(Arc::new(RecordingMiddleware {
+        before: {
             let seen = seen.clone();
-            move |_| {
-                let seen = seen.clone();
-                async move {
-                    *seen.lock().unwrap() = true;
-                    Ok(())
-                }
-            }
-        })),
-        None,
+            Arc::new(move |query| {
+                seen.lock().unwrap().push(format!("b:{query}"));
+                Ok(None)
+            })
+        },
+        after: {
+            let seen = seen.clone();
+            Arc::new(move |query, _| {
+                seen.lock().unwrap().push(format!("a:{query}"));
+                Ok(())
+            })
+        },
+    }));
+    command.execute(Some("insert"), None).await.unwrap();
+    assert_eq!(
+        *seen.lock().unwrap(),
+        vec!["b:insert".to_string(), "a:insert".to_string()]
     );
-    conn.open().await.unwrap();
-    assert!(*seen.lock().unwrap());
-}
-
-#[test]
-fn middleware_context_constructor() {
-    let ctx = MiddlewareContext::new("open");
-    assert_eq!(ctx.operation, "open");
-    assert!(ctx.text.is_none());
 }

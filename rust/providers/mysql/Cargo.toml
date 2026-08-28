@@ -3,11 +3,15 @@ name = "datasources-mysql"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "mysql datasource stub"
+description = "MySQL datasource provider"
 
 [dependencies]
 async-trait = { workspace = true }
 datasources = { workspace = true }
+mysql_async = "0.34"
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "time", "sync"] }
 
 [dev-dependencies]
-tokio = { workspace = true }
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "time", "sync"] }

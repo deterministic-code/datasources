@@ -22,7 +22,7 @@ pub(crate) use filter::{
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, DatasourceFactory, MiddlewareAware, Parameter,
+        create, register, reset, Command, Connection, DatasourceFactory, Parameter,
         Record, Repository, TextQuery, TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
@@ -97,15 +97,12 @@ mod tests {
             .execute_reader(Some("{\"id\":1}"), Some(&[Parameter::new("name", "a")]))
             .await
             .unwrap();
-        command.use_middleware(None, None);
-
         let txn = conn.start_transaction(None).await.unwrap();
         repo.add(&rec(9, "t")).await.unwrap();
         txn.abort().await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
         repo.add(&rec(8, "c")).await.unwrap();
         txn.commit().await.unwrap();
-        txn.use_middleware(None, None);
         conn.close().await.unwrap();
         assert!(conn.ensure_open().is_err());
 
@@ -230,7 +227,6 @@ mod tests {
         ));
         empty_file.open().await.unwrap();
 
-        conn.use_middleware(None, None);
         json_to_value(&JsonValue::Number(serde_json::Number::from_f64(1.25).unwrap()));
         json_to_value(&serde_json::json!([1]));
         if let JsonValue::Number(n) = serde_json::json!(1) {

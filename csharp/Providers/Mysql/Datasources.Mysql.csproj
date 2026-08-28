@@ -5,6 +5,7 @@
     <RootNamespace>Datasources.Mysql</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
     <ProjectReference Include="..\..\Datasources\Datasources.csproj" />
   </ItemGroup>
 </Project>

@@ -2,8 +2,7 @@ use crate::store::{MemoryData, MemoryStore};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Connection, DatasourceError, IsolationLevel, MiddlewareAware, MiddlewareHook, MiddlewareHost,
-    Record, Result, Transaction,
+    Connection, DatasourceError, IsolationLevel, Record, Result, Transaction,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -18,7 +17,6 @@ pub(crate) struct MemoryState {
 }
 
 pub struct MemoryConnection {
-    host: MiddlewareHost,
     pub(crate) state: Arc<MemoryState>,
 }
 
@@ -29,7 +27,6 @@ impl MemoryConnection {
         data: Option<MemoryData>,
     ) -> Self {
         Self {
-            host: MiddlewareHost::new(),
             state: Arc::new(MemoryState {
                 store,
                 collection: Mutex::new(collection.into()),
@@ -77,54 +74,35 @@ impl MemoryConnection {
     }
 }
 
-impl MiddlewareAware for MemoryConnection {
-    fn use_middleware(&self, before: Option<MiddlewareHook>, after: Option<MiddlewareHook>) {
-        self.host.use_middleware(before, after);
-    }
-}
-
 #[async_trait]
 impl Connection for MemoryConnection {
     async fn open(&self) -> Result<()> {
-        self.host
-            .run("open", None, || async {
-                if *self.state.opened.lock().unwrap() {
-                    return Ok(());
-                }
-                if let Some(data) = &self.state.data {
-                    self.state.store.seed(data, &self.collection_name());
-                }
-                self.collection(|_| {});
-                *self.state.opened.lock().unwrap() = true;
-                Ok(())
-            })
-            .await
+        if *self.state.opened.lock().unwrap() {
+            return Ok(());
+        }
+        if let Some(data) = &self.state.data {
+            self.state.store.seed(data, &self.collection_name());
+        }
+        self.collection(|_| {});
+        *self.state.opened.lock().unwrap() = true;
+        Ok(())
     }
 
     async fn close(&self) -> Result<()> {
-        self.host
-            .run("close", None, || async {
-                *self.state.opened.lock().unwrap() = false;
-                Ok(())
-            })
-            .await
+        *self.state.opened.lock().unwrap() = false;
+        Ok(())
     }
 
     async fn start_transaction(
         &self,
         isolation: Option<IsolationLevel>,
     ) -> Result<Arc<dyn Transaction>> {
-        self.host
-            .run("startTransaction", None, || async {
-                self.ensure_open()?;
-                *self.state.snapshot.lock().unwrap() = Some(self.state.store.snapshot());
-                *self.state.in_transaction.lock().unwrap() = true;
-                Ok(Arc::new(MemoryTransaction {
-                    host: MiddlewareHost::new(),
-                    state: self.state.clone(),
-                    isolation: isolation.unwrap_or_default(),
-                }) as Arc<dyn Transaction>)
-            })
-            .await
+        self.ensure_open()?;
+        *self.state.snapshot.lock().unwrap() = Some(self.state.store.snapshot());
+        *self.state.in_transaction.lock().unwrap() = true;
+        Ok(Arc::new(MemoryTransaction {
+            state: self.state.clone(),
+            isolation: isolation.unwrap_or_default(),
+        }) as Arc<dyn Transaction>)
     }
 }

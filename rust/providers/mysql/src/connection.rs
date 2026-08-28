@@ -1,3 +1,59 @@
-use datasources::named_stub_connection;
+use crate::driver::MysqlDriver;
+use crate::transaction::MysqlTransaction;
+use async_trait::async_trait;
+use datasources::{Connection, DatasourceError, IsolationLevel, Result, Transaction};
+use std::sync::{Arc, Mutex};
 
-named_stub_connection!(MysqlConnection, "mysql");
+pub struct MysqlConnection {
+    pub url: String,
+    pub driver: Arc<dyn MysqlDriver>,
+    opened: Mutex<bool>,
+}
+
+impl MysqlConnection {
+    pub fn new(url: Option<String>, driver: Arc<dyn MysqlDriver>) -> Self {
+        Self {
+            url: url.unwrap_or_default(),
+            driver,
+            opened: Mutex::new(false),
+        }
+    }
+
+    pub fn ensure_open(&self) -> Result<()> {
+        if !*self.opened.lock().unwrap() {
+            return Err(DatasourceError::message("Connection is not open"));
+        }
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl Connection for MysqlConnection {
+    async fn open(&self) -> Result<()> {
+        if *self.opened.lock().unwrap() {
+            return Ok(());
+        }
+        self.driver.open(&self.url).await?;
+        *self.opened.lock().unwrap() = true;
+        Ok(())
+    }
+
+    async fn close(&self) -> Result<()> {
+        self.driver.close().await?;
+        *self.opened.lock().unwrap() = false;
+        Ok(())
+    }
+
+    async fn start_transaction(
+        &self,
+        isolation: Option<IsolationLevel>,
+    ) -> Result<Arc<dyn Transaction>> {
+        self.ensure_open()?;
+        let isolation = isolation.unwrap_or_default();
+        self.driver.begin(isolation).await?;
+        Ok(Arc::new(MysqlTransaction {
+            driver: self.driver.clone(),
+            isolation,
+        }) as Arc<dyn Transaction>)
+    }
+}

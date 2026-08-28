@@ -2,11 +2,12 @@ import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IReader } from "../IReader.ts";
 import type { IResponse } from "../IResponse.ts";
-import { MiddlewareHost } from "../MiddlewareHost.ts";
+import { CommandMiddlewareHost } from "../CommandMiddlewareHost.ts";
 import type { Parameter } from "../Parameter.ts";
+import type { Row } from "../Row.ts";
 import { MockReader } from "./mock-reader.ts";
 
-export class MockCommand extends MiddlewareHost implements ICommand {
+export class MockCommand extends CommandMiddlewareHost implements ICommand {
   executeCalls: { text?: string | null; parameters?: Parameter[] }[] = [];
   executeReaderCalls: { text?: string | null; parameters?: Parameter[] }[] = [];
   executeError?: unknown;
@@ -22,33 +23,29 @@ export class MockCommand extends MiddlewareHost implements ICommand {
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IReader> {
-    return this.run(
-      "executeReader",
-      async () => {
-        this.executeReaderCalls.push({ text, parameters });
-        if (this.executeReaderError) {
-          throw this.executeReaderError;
-        }
-        return this.reader;
-      },
-      { text, parameters },
-    );
+    return this.run(text, parameters, async (query, params) => {
+      this.executeReaderCalls.push({ text: query, parameters: params });
+      if (this.executeReaderError) {
+        throw this.executeReaderError;
+      }
+      const rows =
+        this.reader instanceof MockReader
+          ? (this.reader.rows as readonly Row[])
+          : [];
+      return { value: this.reader, rows };
+    });
   }
 
   async execute(
     text?: string | null,
     parameters?: Parameter[],
   ): Promise<IResponse> {
-    return this.run(
-      "execute",
-      async () => {
-        this.executeCalls.push({ text, parameters });
-        if (this.executeError) {
-          throw this.executeError;
-        }
-        return this.response;
-      },
-      { text, parameters },
-    );
+    return this.run(text, parameters, async (query, params) => {
+      this.executeCalls.push({ text: query, parameters: params });
+      if (this.executeError) {
+        throw this.executeError;
+      }
+      return { value: this.response, rows: [] };
+    });
   }
 }

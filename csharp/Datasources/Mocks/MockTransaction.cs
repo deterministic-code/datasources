@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class MockTransaction : MiddlewareHost, ITransaction
+public sealed class MockTransaction : ITransaction
 {
     public int CommitCalls { get; private set; }
     public int AbortCalls { get; private set; }
@@ -13,19 +13,19 @@ public sealed class MockTransaction : MiddlewareHost, ITransaction
 
     public MockTransaction(IConnection connection) => Connection = connection;
 
-    public Task Commit() => Run("commit", () =>
+    public Task Commit()
     {
         CommitCalls++;
         if (CommitError is not null) throw CommitError;
         Committed = true;
         return Task.CompletedTask;
-    });
+    }
 
-    public Task Abort() => Run("abort", () =>
+    public Task Abort()
     {
         AbortCalls++;
         if (AbortError is not null) throw AbortError;
         Aborted = true;
         return Task.CompletedTask;
-    });
+    }
 }

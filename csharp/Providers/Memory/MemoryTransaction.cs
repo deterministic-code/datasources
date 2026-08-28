@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryTransaction : MiddlewareHost, ITransaction
+public sealed class MemoryTransaction : ITransaction
 {
     public MemoryTransaction(MemoryConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
     {
@@ -13,15 +13,15 @@ public sealed class MemoryTransaction : MiddlewareHost, ITransaction
     public IsolationLevel Isolation { get; }
     private MemoryConnection Typed => (MemoryConnection)Connection;
 
-    public Task Commit() => Run("commit", () =>
+    public Task Commit()
     {
         Typed.FinishCommit();
         return Task.CompletedTask;
-    });
+    }
 
-    public Task Abort() => Run("abort", () =>
+    public Task Abort()
     {
         Typed.FinishAbort();
         return Task.CompletedTask;
-    });
+    }
 }

@@ -9,9 +9,9 @@ export default defineConfig({
       exclude: [
         "src/**/*.test.ts",
         "src/ICommand.ts",
+        "src/ICommandMiddleware.ts",
         "src/IConnection.ts",
         "src/IDatasource.ts",
-        "src/IMiddlewareHost.ts",
         "src/IQuery.ts",
         "src/IReader.ts",
         "src/IRepository.ts",
@@ -19,9 +19,8 @@ export default defineConfig({
         "src/ITransaction.ts",
         "src/IWhere.ts",
         "src/DatasourceFactory.ts",
-        "src/MiddlewareContext.ts",
-        "src/MiddlewareHook.ts",
         "src/Parameter.ts",
+        "src/Row.ts",
       ],
       thresholds: {
         lines: 100,

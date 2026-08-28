@@ -2,51 +2,43 @@ use crate::connection::MemoryConnection;
 use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, parameters_to_map, ArrayReader, Command, DatasourceError, MiddlewareAware,
-    MiddlewareHook, MiddlewareHost, Parameter, Reader, Record, Response, Result, Value,
+    identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
+    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Record, Response, Result, Value,
 };
 use std::sync::Arc;
 
 pub struct MemoryCommand {
-    host: MiddlewareHost,
+    host: CommandMiddlewareHost,
     connection: Arc<MemoryConnection>,
 }
 
 impl MemoryCommand {
     pub fn new(connection: Arc<MemoryConnection>) -> Self {
         Self {
-            host: MiddlewareHost::new(),
+            host: CommandMiddlewareHost::new(),
             connection,
         }
     }
 }
 
-impl MiddlewareAware for MemoryCommand {
-    fn use_middleware(&self, before: Option<MiddlewareHook>, after: Option<MiddlewareHook>) {
-        self.host.use_middleware(before, after);
-    }
-}
-
 #[async_trait]
 impl Command for MemoryCommand {
+    fn use_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.host.use_middleware(middleware);
+    }
+
     async fn execute_reader(
         &self,
         text: Option<&str>,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        let extras = Some((
-            text.map(ToOwned::to_owned),
-            parameters.map(|items| items.to_vec()),
-        ));
         let connection = self.connection.clone();
-        let text_owned = text.map(ToOwned::to_owned);
-        let params = parameters.map(|items| items.to_vec());
         self.host
-            .run("executeReader", extras, move || {
+            .run(text, parameters, move |query, params| {
                 let connection = connection.clone();
                 async move {
                     connection.ensure_open()?;
-                    let mut filter = parse_filter(text_owned.as_deref())?;
+                    let mut filter = parse_filter(Some(&query))?;
                     filter.extend(parameters_to_map(params.as_deref()));
                     let rows = connection.collection(|items| {
                         items
@@ -55,7 +47,10 @@ impl Command for MemoryCommand {
                             .cloned()
                             .collect::<Vec<_>>()
                     });
-                    Ok(Box::new(ArrayReader::new(rows)) as Box<dyn Reader>)
+                    Ok((
+                        Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
+                        rows,
+                    ))
                 }
             })
             .await
@@ -66,23 +61,18 @@ impl Command for MemoryCommand {
         text: Option<&str>,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
-        let extras = Some((
-            text.map(ToOwned::to_owned),
-            parameters.map(|items| items.to_vec()),
-        ));
         let connection = self.connection.clone();
-        let op = text.unwrap_or("").trim().to_ascii_lowercase();
-        let params = parameters_to_map(parameters);
         self.host
-            .run("execute", extras, move || {
+            .run(text, parameters, move |query, params| {
                 let connection = connection.clone();
-                let op = op.clone();
                 async move {
                     connection.ensure_open()?;
+                    let op = query.trim().to_ascii_lowercase();
+                    let params = parameters_to_map(params.as_deref());
                     match op.as_str() {
                         "insert" => {
                             connection.collection(|items| items.push(params.clone()));
-                            Ok(Response::new(Value::Null, 1))
+                            Ok((Response::new(Value::Null, 1), vec![]))
                         }
                         "update" => {
                             let mut obj = params.clone();
@@ -105,7 +95,7 @@ impl Command for MemoryCommand {
                                 }
                                 count
                             });
-                            Ok(Response::new(Value::Null, affected))
+                            Ok((Response::new(Value::Null, affected), vec![]))
                         }
                         "delete" => {
                             let filter = if params.is_empty() {
@@ -118,7 +108,7 @@ impl Command for MemoryCommand {
                                 items.retain(|row| !matches(row, &filter));
                                 (before - items.len()) as i64
                             });
-                            Ok(Response::new(Value::Null, affected))
+                            Ok((Response::new(Value::Null, affected), vec![]))
                         }
                         _ => Err(DatasourceError::message(format!(
                             "Unsupported Memory command: {op}"

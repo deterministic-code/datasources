@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ArrayReader,
   collectAsync,
@@ -8,7 +8,9 @@ import {
   identityFilter,
   identityWhereText,
   IsolationLevel,
-  MiddlewareHost,
+  CommandMiddlewareHost,
+  ConsoleCommandMiddleware,
+  formatElapsed,
   MockCommand,
   MockConnection,
   MockDatasource,
@@ -30,7 +32,6 @@ import {
   StubTransaction,
   Where,
   type IReader,
-  type MiddlewareContext,
 } from "./index.ts";
 
 afterEach(() => {
@@ -155,93 +156,146 @@ describe("readers", () => {
 });
 
 describe("middleware", () => {
-  it("runs before then the operation then after", async () => {
-    const host = new MiddlewareHost();
-    const order: string[] = [];
-    const contexts: MiddlewareContext[] = [];
-    host.use(
-      (ctx) => {
-        order.push(`before:${ctx.operation}`);
-        contexts.push({ ...ctx });
+  it("rewrites the query and runs afterQuery", async () => {
+    const host = new CommandMiddlewareHost();
+    const seen: string[] = [];
+    let used = "";
+    host.use({
+      beforeQuery: (query) => {
+        seen.push(`before:${query}`);
+        return { query: "SELECT 2" };
       },
-      (ctx) => {
-        order.push(`after:${ctx.operation}`);
-        contexts.push({ ...ctx });
+      afterQuery: (query, _params, results, elapsedMs) => {
+        seen.push(`after:${query}:${results.length}:${elapsedMs >= 0}`);
       },
-    );
-    const result = await host.run("open", async () => {
-      order.push("op");
-      return 7;
+    });
+    const result = await host.run("SELECT 1", undefined, async (query) => {
+      used = query;
+      seen.push("op");
+      return { value: 7, rows: [{ id: 1 }] };
     });
     expect(result).toBe(7);
-    expect(order).toEqual(["before:open", "op", "after:open"]);
-    expect(contexts[1]?.error).toBeUndefined();
+    expect(used).toBe("SELECT 2");
+    expect(seen[0]).toBe("before:SELECT 1");
+    expect(seen[1]).toBe("op");
+    expect(seen[2]?.startsWith("after:SELECT 2:1:true")).toBe(true);
   });
 
-  it("accepts use() with neither hook", async () => {
-    const host = new MiddlewareHost();
-    expect(host.use()).toBe(host);
-    expect(await host.run("close", async () => "ok")).toBe("ok");
+  it("runs with no middleware", async () => {
+    const host = new CommandMiddlewareHost();
+    expect(await host.run(null, undefined, async () => ({ value: "ok", rows: [] }))).toBe(
+      "ok",
+    );
   });
 
-  it("accepts before-only and after-only hooks", async () => {
-    const host = new MiddlewareHost();
-    const seen: string[] = [];
-    host.use((ctx) => {
-      seen.push(`b:${ctx.operation}`);
-    });
-    host.use(undefined, (ctx) => {
-      seen.push(`a:${ctx.operation}`);
-    });
-    await host.run("commit", async () => undefined);
-    expect(seen).toEqual(["b:commit", "a:commit"]);
-  });
-
-  it("skips the operation when before throws", async () => {
-    const host = new MiddlewareHost();
+  it("skips the query when beforeQuery throws", async () => {
+    const host = new CommandMiddlewareHost();
     let ran = false;
-    host.use(async () => {
-      throw new Error("blocked");
-    }, () => {
-      ran = true;
+    host.use({
+      beforeQuery: () => {
+        throw new Error("blocked");
+      },
+      afterQuery: () => {
+        ran = true;
+      },
     });
     await expect(
-      host.run("execute", async () => {
+      host.run("select", undefined, async () => {
         ran = true;
-        return 1;
+        return { value: 1, rows: [] };
       }),
     ).rejects.toThrow("blocked");
     expect(ran).toBe(false);
   });
 
-  it("runs after with error when the operation fails", async () => {
-    const host = new MiddlewareHost();
-    let captured: unknown;
-    host.use(undefined, (ctx) => {
-      captured = ctx.error;
+  it("runs afterQuery with error when the query fails", async () => {
+    const host = new CommandMiddlewareHost();
+    let captured: Error | undefined;
+    host.use({
+      beforeQuery: () => undefined,
+      afterQuery: (_q, _p, _r, _e, error) => {
+        captured = error;
+      },
     });
     await expect(
-      host.run("abort", async () => {
+      host.run("select", undefined, async () => {
         throw new Error("fail-op");
       }),
     ).rejects.toThrow("fail-op");
-    expect(captured).toBeInstanceOf(Error);
-    expect((captured as Error).message).toBe("fail-op");
+    expect(captured?.message).toBe("fail-op");
   });
 
-  it("forwards extras onto the context", async () => {
-    const host = new MiddlewareHost();
-    let ctx: MiddlewareContext | undefined;
-    host.use((c) => {
-      ctx = c;
+  it("wraps a non-Error throw for afterQuery", async () => {
+    const host = new CommandMiddlewareHost();
+    let captured: Error | undefined;
+    host.use({
+      beforeQuery: () => undefined,
+      afterQuery: (_q, _p, _r, _e, error) => {
+        captured = error;
+      },
     });
-    await host.run("execute", async () => 1, {
-      text: "insert",
-      parameters: [{ name: "id", value: 1 }],
+    await expect(
+      host.run("select", undefined, async () => {
+        throw "string-fail";
+      }),
+    ).rejects.toBe("string-fail");
+    expect(captured?.message).toBe("string-fail");
+  });
+});
+
+describe("console middleware", () => {
+  it("formats elapsed time as ms or μs", () => {
+    expect(formatElapsed(2)).toBe("2ms");
+    expect(formatElapsed(1)).toBe("1ms");
+    expect(formatElapsed(0.85)).toBe("850μs");
+    expect(formatElapsed(0.4)).toBe("400μs");
+  });
+
+  it("logs Start and Finish with an injected clock", async () => {
+    const lines: string[] = [];
+    const stamps = [
+      new Date("2026-08-28T01:54:12.101Z"),
+      new Date("2026-08-28T01:54:12.103Z"),
+    ];
+    const middleware = new ConsoleCommandMiddleware(
+      (line) => lines.push(line),
+      () => stamps.shift() ?? new Date("2026-08-28T01:54:12.103Z"),
+    );
+    const host = new CommandMiddlewareHost();
+    host.use(middleware);
+    await host.run('SELECT * FROM "widget" ORDER BY "id"', undefined, async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2));
+      return { value: 1, rows: [] };
     });
-    expect(ctx?.text).toBe("insert");
-    expect(ctx?.parameters).toEqual([{ name: "id", value: 1 }]);
-    expect(ctx?.host).toBe(host);
+    expect(lines[0]).toBe(
+      '[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT * FROM "widget" ORDER BY "id"]',
+    );
+    expect(lines[1]).toMatch(
+      /^\[2026-08-28T01:54:12.103Z\]-\[datasource\]\[Finish\]-\[SELECT \* FROM "widget" ORDER BY "id"\] \d+(ms|μs)$/,
+    );
+  });
+
+  it("uses console.log and Date by default", async () => {
+    const logged: unknown[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((...args) => {
+      logged.push(args[0]);
+    });
+    const middleware = new ConsoleCommandMiddleware();
+    middleware.beforeQuery("SELECT 1");
+    middleware.afterQuery("SELECT 1", undefined, [], 2);
+    expect(String(logged[0])).toMatch(
+      /^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]-\[datasource\]\[Start\]-\[SELECT 1\]$/,
+    );
+    expect(String(logged[1])).toMatch(/\[Finish\]-\[SELECT 1\] 2ms$/);
+    spy.mockRestore();
+  });
+
+  it("trims trailing newlines before logging", async () => {
+    const lines: string[] = [];
+    const host = new CommandMiddlewareHost();
+    host.use(new ConsoleCommandMiddleware((line) => lines.push(line)));
+    await host.run("SELECT 1\n", undefined, async () => ({ value: 1, rows: [] }));
+    expect(lines[0].replace(/^\[[^\]]+\]-/, "")).toBe("[datasource][Start]-[SELECT 1]");
   });
 });
 
@@ -361,6 +415,9 @@ describe("published mocks", () => {
     const reader = await command.executeReader();
     expect(reader).toBe(command.reader);
 
+    command.reader = { current: undefined, next: async () => false };
+    expect(await command.executeReader("plain")).toBe(command.reader);
+
     command.executeError = new Error("exec");
     await expect(command.execute()).rejects.toThrow("exec");
     command.executeReaderError = new Error("read");
@@ -434,18 +491,19 @@ describe("published mocks", () => {
     expect(where.getTextCalls).toBe(1);
   });
 
-  it("runs middleware on mock hosts", async () => {
+  it("runs command middleware on mock commands", async () => {
     const connection = new MockConnection();
+    const command = new MockCommand(connection);
     const seen: string[] = [];
-    connection.use(
-      () => {
-        seen.push("before");
+    command.use({
+      beforeQuery: (query) => {
+        seen.push(`before:${query}`);
       },
-      () => {
-        seen.push("after");
+      afterQuery: (query) => {
+        seen.push(`after:${query}`);
       },
-    );
-    await connection.open();
-    expect(seen).toEqual(["before", "after"]);
+    });
+    await command.execute("insert");
+    expect(seen).toEqual(["before:insert", "after:insert"]);
   });
 });

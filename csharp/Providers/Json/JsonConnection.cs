@@ -3,7 +3,7 @@ using Datasources;
 
 namespace Datasources.Json;
 
-public sealed class JsonConnection : MiddlewareHost, IConnection
+public sealed class JsonConnection : IConnection
 {
     public string Path { get; }
     public string? Collection { get; set; }
@@ -26,7 +26,7 @@ public sealed class JsonConnection : MiddlewareHost, IConnection
         Data = Empty();
     }
 
-    public Task Open() => Run("open", async () =>
+    public async Task Open()
     {
         if (Opened) return;
         if (_hasInitial)
@@ -38,22 +38,21 @@ public sealed class JsonConnection : MiddlewareHost, IConnection
 
         if (Collection is not null) GetCollection();
         Opened = true;
-    });
+    }
 
-    public Task Close() => Run("close", () =>
+    public Task Close()
     {
         Opened = false;
         return Task.CompletedTask;
-    });
+    }
 
-    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
-        Run("startTransaction", () =>
-        {
-            EnsureOpen();
-            _snapshot = Data.DeepClone();
-            InTransaction = true;
-            return Task.FromResult<ITransaction>(new JsonTransaction(this, isolation));
-        });
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+    {
+        EnsureOpen();
+        _snapshot = Data.DeepClone();
+        InTransaction = true;
+        return Task.FromResult<ITransaction>(new JsonTransaction(this, isolation));
+    }
 
     public JsonArray GetCollection()
     {

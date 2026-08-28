@@ -1,7 +1,6 @@
 import {
   DatasourceError,
   IsolationLevel,
-  MiddlewareHost,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
@@ -16,7 +15,7 @@ export interface JsonConnectionOptions {
   data?: unknown;
 }
 
-export class JsonConnection extends MiddlewareHost implements IConnection {
+export class JsonConnection implements IConnection {
   path: string;
   collection?: string;
   fileStore: IFileStore;
@@ -28,7 +27,6 @@ export class JsonConnection extends MiddlewareHost implements IConnection {
   private readonly hasInitialData: boolean;
 
   constructor(options: JsonConnectionOptions = {}) {
-    super();
     this.path = options.path ?? "";
     this.collection = options.collection;
     this.fileStore = options.fileStore ?? new MemoryFileStore();
@@ -38,40 +36,34 @@ export class JsonConnection extends MiddlewareHost implements IConnection {
   }
 
   async open(): Promise<void> {
-    return this.run("open", async () => {
-      if (this.opened) {
-        return;
-      }
-      if (this.hasInitialData) {
-        this.data = structuredClone(this.initialData);
-      } else if (this.path && (await this.fileStore.exists(this.path))) {
-        const contents = await this.fileStore.read(this.path);
-        this.data = JSON.parse(contents);
-      } else {
-        this.data = this.emptyData();
-      }
-      if (this.collection) {
-        this.getCollection();
-      }
-      this.opened = true;
-    });
+    if (this.opened) {
+      return;
+    }
+    if (this.hasInitialData) {
+      this.data = structuredClone(this.initialData);
+    } else if (this.path && (await this.fileStore.exists(this.path))) {
+      const contents = await this.fileStore.read(this.path);
+      this.data = JSON.parse(contents);
+    } else {
+      this.data = this.emptyData();
+    }
+    if (this.collection) {
+      this.getCollection();
+    }
+    this.opened = true;
   }
 
   async close(): Promise<void> {
-    return this.run("close", async () => {
-      this.opened = false;
-    });
+    this.opened = false;
   }
 
   async startTransaction(
     isolation: IsolationLevelName = IsolationLevel.Serializable,
   ): Promise<ITransaction> {
-    return this.run("startTransaction", async () => {
-      this.ensureOpen();
-      this.snapshot = structuredClone(this.data);
-      this.inTransaction = true;
-      return new JsonTransaction(this, isolation);
-    });
+    this.ensureOpen();
+    this.snapshot = structuredClone(this.data);
+    this.inTransaction = true;
+    return new JsonTransaction(this, isolation);
   }
 
   getCollection(): unknown[] {

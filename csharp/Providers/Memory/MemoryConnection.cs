@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryConnection : MiddlewareHost, IConnection
+public sealed class MemoryConnection : IConnection
 {
     public MemoryStore Store { get; }
     public string Collection { get; set; }
@@ -19,29 +19,28 @@ public sealed class MemoryConnection : MiddlewareHost, IConnection
         _data = options.Data;
     }
 
-    public Task Open() => Run("open", () =>
+    public Task Open()
     {
         if (Opened) return Task.CompletedTask;
         if (_data is not null) Store.Seed(_data, Collection);
         Store.GetCollection(Collection);
         Opened = true;
         return Task.CompletedTask;
-    });
+    }
 
-    public Task Close() => Run("close", () =>
+    public Task Close()
     {
         Opened = false;
         return Task.CompletedTask;
-    });
+    }
 
-    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
-        Run("startTransaction", () =>
-        {
-            EnsureOpen();
-            _snapshot = Store.Snapshot();
-            InTransaction = true;
-            return Task.FromResult<ITransaction>(new MemoryTransaction(this, isolation));
-        });
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+    {
+        EnsureOpen();
+        _snapshot = Store.Snapshot();
+        InTransaction = true;
+        return Task.FromResult<ITransaction>(new MemoryTransaction(this, isolation));
+    }
 
     public List<Dictionary<string, object?>> GetCollection() => Store.GetCollection(Collection);
 

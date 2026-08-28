@@ -6,7 +6,7 @@ Register a factory, then create by provider name. Install only the dialect packa
 | --- | --- | --- |
 | json | `json` | `@datasources/json` |
 | memory | `memory` | `@datasources/memory` |
-| sqlite | `sqlite` | `@datasources/sqlite` |
+| sqlite | `sqlite` | `@datasources/sqlite` (optional peer: `better-sqlite3`) |
 | text | `text` | `@datasources/text` |
 | xml | `xml` | `@datasources/xml` |
 | yaml | `yaml` | `@datasources/yaml` |

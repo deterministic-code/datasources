@@ -1,0 +1,94 @@
+using Datasources;
+using Datasources.Mysql;
+
+namespace Datasources.Mysql.Tests;
+
+public class MysqlTests
+{
+    public MysqlTests()
+    {
+        Datasource.Reset();
+        Datasource.Use(MysqlDatasource.Factory);
+    }
+
+    [Fact]
+    public async Task CommandRepositoryAndFactory()
+    {
+        Assert.Throws<DatasourceException>(() => MysqlGuard.Require(null));
+        var driver = new FakeMysqlDriver();
+        Assert.Same(driver, MysqlGuard.Require(driver));
+        Assert.Equal("SELECT * FROM t WHERE id = @id", MysqlBind.ToMysql("SELECT * FROM t WHERE id = $id"));
+        Assert.Equal("READ UNCOMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadUncommitted));
+        Assert.Equal("READ COMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadCommitted));
+        Assert.Equal("REPEATABLE READ", MysqlBind.IsolationSql(IsolationLevel.RepeatableRead));
+        Assert.Equal("SERIALIZABLE", MysqlBind.IsolationSql(IsolationLevel.Serializable));
+
+        var conn = new MysqlConnection(new MysqlConnectionOptions { Url = "mysql://db/app", Driver = driver });
+        await conn.Open();
+        await conn.Open();
+        var command = new MysqlCommand(conn);
+        await command.Execute();
+        await command.ExecuteReader("SELECT 1");
+        await command.ExecuteReader();
+
+        var repo = new MysqlRepository(conn);
+        Assert.Equal("items", repo.Table);
+        Assert.Same(conn, repo.Connection);
+        Assert.Equal("users", new MysqlRepository(conn, "users").Table);
+
+        var txn = await conn.StartTransaction();
+        Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
+        await txn.Commit();
+        var dirty = await conn.StartTransaction(IsolationLevel.ReadUncommitted);
+        Assert.Equal(IsolationLevel.ReadUncommitted, dirty.Isolation);
+        await dirty.Abort();
+        await conn.Close();
+        Assert.Throws<DatasourceException>(() => conn.EnsureOpen());
+        await Assert.ThrowsAsync<DatasourceException>(() => conn.StartTransaction());
+
+        Assert.Throws<DatasourceException>(() => new MysqlConnection());
+        var defaulted = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
+        Assert.Equal("", defaulted.Url);
+
+        var ds = new MysqlDatasource(new MysqlConnectionOptions { Driver = driver }, "people");
+        Assert.Equal("mysql", ds.Create().Provider);
+        var created = await ds.CreateConnection();
+        await ((MysqlConnection)created).Open();
+        var bound = Assert.IsType<MysqlCommand>(ds.CreateCommand(created));
+        Assert.Same(created, bound.Connection);
+        await bound.Execute();
+        await bound.ExecuteReader("SELECT 1");
+        var implicitCommand = Assert.IsType<MysqlCommand>(ds.CreateCommand());
+        await implicitCommand.Connection.Open();
+        await implicitCommand.Execute();
+        await implicitCommand.ExecuteReader("SELECT 1");
+        var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created);
+        Assert.Equal("people", ((MysqlRepository)(object)repo2).Table);
+        Assert.Throws<DatasourceException>(() =>
+            new MysqlDatasource().CreateRepository<Dictionary<string, object?>>());
+        Assert.Equal("mysql", Datasource.Create("mysql").Provider);
+        await Assert.ThrowsAsync<DatasourceException>(() => new MysqlDatasource().CreateConnection());
+
+        var closed = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
+        await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));
+        await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).ExecuteReader("x"));
+
+        await driver.Execute("   ", new Dictionary<string, object?>());
+        await driver.Query("   ", new Dictionary<string, object?>());
+    }
+
+    sealed class FakeMysqlDriver : IMysqlDriver
+    {
+        public bool Opened { get; private set; }
+        public Task Open(string url) { Opened = true; return Task.CompletedTask; }
+        public Task Close() { Opened = false; return Task.CompletedTask; }
+        public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyDictionary<string, object?> parameters) =>
+            Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new MysqlExecuteResult(0, null) : new MysqlExecuteResult(2, 5));
+        public Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Query(string sql, IReadOnlyDictionary<string, object?> parameters) =>
+            Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>(
+                string.IsNullOrWhiteSpace(sql) ? [] : [new Dictionary<string, object?> { ["id"] = 1 }]);
+        public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => Task.CompletedTask;
+        public Task Commit() => Task.CompletedTask;
+        public Task Rollback() => Task.CompletedTask;
+    }
+}

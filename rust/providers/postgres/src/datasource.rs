@@ -1,20 +1,48 @@
 use crate::command::PostgresCommand;
 use crate::connection::PostgresConnection;
+use crate::driver::{require_driver, PostgresDriver};
+use crate::repository::PostgresRepository;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, Datasource, DatasourceFactory, Repository, Result, StubRepository,
-};
+use datasources::{Command, Connection, Datasource, DatasourceFactory, Repository, Result};
 use std::sync::Arc;
 
-pub struct PostgresDatasource;
+pub struct PostgresDatasource {
+    url: Option<String>,
+    schema: Option<String>,
+    driver: Option<Arc<dyn PostgresDriver>>,
+    table: Option<String>,
+}
 
 impl PostgresDatasource {
     pub fn factory() -> Arc<Self> {
-        Arc::new(Self)
+        Arc::new(Self::new(None, None, None, None))
     }
 
-    fn new_connection(&self) -> Arc<PostgresConnection> {
-        Arc::new(PostgresConnection::new())
+    pub fn new(
+        url: Option<String>,
+        schema: Option<String>,
+        driver: Option<Arc<dyn PostgresDriver>>,
+        table: Option<String>,
+    ) -> Self {
+        Self {
+            url,
+            schema,
+            driver,
+            table,
+        }
+    }
+
+    fn typed_connection(&self) -> Result<Arc<PostgresConnection>> {
+        Ok(Arc::new(PostgresConnection::new(
+            self.url.clone(),
+            self.schema.clone(),
+            require_driver(self.driver.clone())?,
+        )))
+    }
+
+    fn connection(&self) -> Arc<PostgresConnection> {
+        self.typed_connection()
+            .expect("Postgres driver is required")
     }
 }
 
@@ -25,20 +53,18 @@ impl Datasource for PostgresDatasource {
     }
 
     async fn create_connection(&self) -> Result<Arc<dyn Connection>> {
-        Ok(self.new_connection())
+        Ok(self.typed_connection()?)
     }
 
-    fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        Arc::new(PostgresCommand::new(
-            connection.unwrap_or_else(|| self.new_connection()),
+    fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
+        Arc::new(PostgresCommand::new(self.connection()))
+    }
+
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
+        Arc::new(PostgresRepository::new(
+            self.connection(),
+            self.table.clone(),
         ))
-    }
-
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
-        Arc::new(StubRepository::new("postgres"))
     }
 }
 
@@ -46,7 +72,13 @@ impl DatasourceFactory for PostgresDatasource {
     fn provider(&self) -> &str {
         "postgres"
     }
+
     fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
-        Arc::new(PostgresDatasource)
+        Arc::new(PostgresDatasource::new(
+            self.url.clone(),
+            self.schema.clone(),
+            self.driver.clone(),
+            self.table.clone(),
+        ))
     }
 }

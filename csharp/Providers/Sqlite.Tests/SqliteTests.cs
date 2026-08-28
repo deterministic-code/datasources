@@ -55,9 +55,10 @@ public class SqliteTests
         await readCommitted.Abort();
         await shared.Close();
 
-        var defaulted = new SqliteConnection();
+        Assert.Throws<DatasourceException>(() => new SqliteConnection());
+        var defaulted = new SqliteConnection(new SqliteConnectionOptions { Driver = driver });
         Assert.Equal(":memory:", defaulted.Filename);
-        Assert.IsType<SqliteDriver>(defaulted.Driver);
+        Assert.Same(driver, defaulted.Driver);
 
         var ds = new SqliteDatasource(new SqliteConnectionOptions { Driver = driver }, "people");
         Assert.Equal("sqlite", ds.Create().Provider);
@@ -73,11 +74,12 @@ public class SqliteTests
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created);
         Assert.Equal("people", ((SqliteRepository)(object)repo2).Table);
-        new SqliteDatasource().CreateRepository<Dictionary<string, object?>>();
+        Assert.Throws<DatasourceException>(() =>
+            new SqliteDatasource().CreateRepository<Dictionary<string, object?>>());
         Assert.Equal("sqlite", Datasource.Create("sqlite").Provider);
-        Assert.IsType<SqliteConnection>(await new SqliteDatasource().CreateConnection());
+        await Assert.ThrowsAsync<DatasourceException>(() => new SqliteDatasource().CreateConnection());
 
-        var closed = new SqliteConnection();
+        var closed = new SqliteConnection(new SqliteConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).ExecuteReader("x"));
     }

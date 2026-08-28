@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class MockConnection : MiddlewareHost, IConnection
+public sealed class MockConnection : IConnection
 {
     public int OpenCalls { get; private set; }
     public int CloseCalls { get; private set; }
@@ -11,33 +11,30 @@ public sealed class MockConnection : MiddlewareHost, IConnection
     public bool Opened { get; private set; }
     public ITransaction Transaction { get; }
 
-    public MockConnection(ITransaction? transaction = null)
-    {
+    public MockConnection(ITransaction? transaction = null) =>
         Transaction = transaction ?? new MockTransaction(this);
-    }
 
-    public Task Open() => Run("open", () =>
+    public Task Open()
     {
         OpenCalls++;
         if (OpenError is not null) throw OpenError;
         Opened = true;
         return Task.CompletedTask;
-    });
+    }
 
-    public Task Close() => Run("close", () =>
+    public Task Close()
     {
         CloseCalls++;
         if (CloseError is not null) throw CloseError;
         Opened = false;
         return Task.CompletedTask;
-    });
+    }
 
-    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
-        Run("startTransaction", () =>
-        {
-            StartTransactionCalls++;
-            if (StartTransactionError is not null) throw StartTransactionError;
-            if (Transaction is MockTransaction mock) mock.Isolation = isolation;
-            return Task.FromResult(Transaction);
-        });
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+    {
+        StartTransactionCalls++;
+        if (StartTransactionError is not null) throw StartTransactionError;
+        if (Transaction is MockTransaction mock) mock.Isolation = isolation;
+        return Task.FromResult(Transaction);
+    }
 }
