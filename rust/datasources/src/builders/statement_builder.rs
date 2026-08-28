@@ -1,6 +1,6 @@
 use super::column::Column;
 use crate::parameter::Parameter;
-use crate::statements::{
+use super::statements::{
     TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
     TextStoredProcedureStatement, TextUpdateStatement,
 };

@@ -13,7 +13,7 @@ import { asRecord, matches, parseFilter } from "./filter.ts";
 export class MemoryRepository<T = unknown> implements IRepository<T> {
   constructor(readonly connection: MemoryConnection) {}
 
-  async getSingle(query?: IQuery): Promise<T | undefined> {
+  async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     const reader = await new MemoryCommand(this.connection).executeReader(
       query?.getText() ?? null,
     );
@@ -23,7 +23,7 @@ export class MemoryRepository<T = unknown> implements IRepository<T> {
     return undefined;
   }
 
-  get(query?: IQuery): AsyncIterable<T> {
+  get(query?: IQuery | IWhere): AsyncIterable<T> {
     const command = new MemoryCommand(this.connection);
     const text = query?.getText() ?? null;
     return {

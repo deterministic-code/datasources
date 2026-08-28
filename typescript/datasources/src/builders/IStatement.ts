@@ -1,4 +1,4 @@
-import type { Parameter } from "./Parameter.ts";
+import type { Parameter } from "../Parameter.ts";
 
 export interface IStatement {
   getText(): string;

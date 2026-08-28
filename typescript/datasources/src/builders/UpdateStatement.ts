@@ -1,5 +1,5 @@
 import type { IUpdateStatement } from "./IUpdateStatement.ts";
-import type { IWhere } from "./IWhere.ts";
+import type { IWhere } from "../IWhere.ts";
 
 export class UpdateStatement implements IUpdateStatement {
   constructor(

@@ -2,13 +2,13 @@ export type { ICommand } from "./ICommand.ts";
 export type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
-export type { ICreateTableStatement } from "./ICreateTableStatement.ts";
-export type { IDeleteStatement } from "./IDeleteStatement.ts";
-export type { IInsertStatement } from "./IInsertStatement.ts";
+export type { ICreateTableStatement } from "./builders/ICreateTableStatement.ts";
+export type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
+export type { IInsertStatement } from "./builders/IInsertStatement.ts";
 export type { IQuery } from "./IQuery.ts";
-export type { IStatement } from "./IStatement.ts";
-export type { IStoredProcedureStatement } from "./IStoredProcedureStatement.ts";
-export type { IUpdateStatement } from "./IUpdateStatement.ts";
+export type { IStatement } from "./builders/IStatement.ts";
+export type { IStoredProcedureStatement } from "./builders/IStoredProcedureStatement.ts";
+export type { IUpdateStatement } from "./builders/IUpdateStatement.ts";
 export type { IReader } from "./IReader.ts";
 export type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 export type { IRepository } from "./IRepository.ts";
@@ -68,12 +68,12 @@ export {
   type Field,
   type Scalar,
 } from "./builders/index.ts";
-export { CreateTableStatement } from "./CreateTableStatement.ts";
-export { DeleteStatement } from "./DeleteStatement.ts";
-export { InsertStatement } from "./InsertStatement.ts";
+export { CreateTableStatement } from "./builders/CreateTableStatement.ts";
+export { DeleteStatement } from "./builders/DeleteStatement.ts";
+export { InsertStatement } from "./builders/InsertStatement.ts";
 export { Query } from "./Query.ts";
-export { StoredProcedureStatement } from "./StoredProcedureStatement.ts";
-export { UpdateStatement } from "./UpdateStatement.ts";
+export { StoredProcedureStatement } from "./builders/StoredProcedureStatement.ts";
+export { UpdateStatement } from "./builders/UpdateStatement.ts";
 export { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 export { Where } from "./Where.ts";
 export {

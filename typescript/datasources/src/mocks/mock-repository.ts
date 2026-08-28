@@ -6,8 +6,8 @@ import type { IWhere } from "../IWhere.ts";
 
 export class MockRepository<T = unknown> implements IRepository<T> {
   items: T[] = [];
-  getSingleCalls: Array<IQuery | undefined> = [];
-  getCalls: Array<IQuery | undefined> = [];
+  getSingleCalls: Array<IQuery | IWhere | undefined> = [];
+  getCalls: Array<IQuery | IWhere | undefined> = [];
   addCalls: T[] = [];
   updateCalls: Array<{ obj: T; byWhere?: IWhere }> = [];
   deleteCalls: Array<{ obj: T; byWhere?: IWhere }> = [];
@@ -22,7 +22,7 @@ export class MockRepository<T = unknown> implements IRepository<T> {
 
   constructor(readonly connection: IConnection) {}
 
-  async getSingle(query?: IQuery): Promise<T | undefined> {
+  async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     this.getSingleCalls.push(query);
     if (this.getSingleError) {
       throw this.getSingleError;
@@ -30,7 +30,7 @@ export class MockRepository<T = unknown> implements IRepository<T> {
     return this.items[0];
   }
 
-  async *get(query?: IQuery): AsyncIterable<T> {
+  async *get(query?: IQuery | IWhere): AsyncIterable<T> {
     this.getCalls.push(query);
     if (this.getError) {
       throw this.getError;

@@ -29,6 +29,14 @@ impl ReadonlyRepository for MysqlRepository {
     async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Record>> {
         Err(DatasourceError::not_implemented("mysql"))
     }
+
+    async fn get_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Record>> {
+        self.get_single(None).await
+    }
+
+    async fn get_where(&self, _where_clause: &dyn Where) -> Result<Vec<Record>> {
+        self.get(None).await
+    }
 }
 
 #[async_trait]

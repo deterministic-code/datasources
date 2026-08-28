@@ -72,13 +72,13 @@ export class Repository<T extends Cells> implements IRepository<T> {
     return this.commands.get.connection;
   }
 
-  getSingle = async (query?: IQuery): Promise<T | undefined> => {
+  getSingle = async (query?: IQuery | IWhere): Promise<T | undefined> => {
     for await (const item of this.get(query)) return item;
     return undefined;
   };
 
-  async *get(query?: IQuery): AsyncIterable<T> {
-    const statement = query ?? this.statements.query();
+  async *get(query?: IQuery | IWhere): AsyncIterable<T> {
+    const statement = this.readQuery(query);
     const reader = await this.commands.get.executeReader(
       statement.getText(),
       statement.where?.parameters ?? statement.parameters,
@@ -113,6 +113,9 @@ export class Repository<T extends Cells> implements IRepository<T> {
       where.parameters,
     );
   };
+
+  private readQuery = (query?: IQuery | IWhere): IQuery =>
+    !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);
 
   private idWhere = (record: Cells): IWhere =>
     WhereBuilder.and(

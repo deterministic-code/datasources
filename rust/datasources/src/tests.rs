@@ -366,12 +366,22 @@ async fn stubs_throw() {
     let empty = Record::new();
     assert!(repo.get_single(None).await.is_err());
     assert!(repo.get(None).await.is_err());
+    assert!(repo
+        .get_single_where(&TextWhere::new("1=1"))
+        .await
+        .is_err());
+    assert!(repo.get_where(&TextWhere::new("1=1")).await.is_err());
     assert!(repo.add(&empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
     let readonly = ds.create_readonly_repository(None);
     assert!(readonly.get_single(None).await.is_err());
     assert!(readonly.get(None).await.is_err());
+    assert!(readonly
+        .get_single_where(&TextWhere::new("1=1"))
+        .await
+        .is_err());
+    assert!(readonly.get_where(&TextWhere::new("1=1")).await.is_err());
     let txn = StubTransaction::new("text");
     assert!(txn.commit().await.is_err());
     assert!(txn.abort().await.is_err());
@@ -453,6 +463,15 @@ async fn published_mocks() {
         .unwrap()
         .is_some());
     assert_eq!(repo.get(Some(&MockQuery::new("all"))).await.unwrap().len(), 1);
+    assert!(repo
+        .get_single_where(&MockWhere::new("id=1"))
+        .await
+        .unwrap()
+        .is_some());
+    assert_eq!(
+        repo.get_where(&MockWhere::new("all")).await.unwrap().len(),
+        1
+    );
     repo.add(&record(&[("id", Value::Int(2))])).await.unwrap();
     repo.update(&record(&[("id", Value::Int(2))]), Some(&MockWhere::new("id=2")))
         .await
@@ -670,6 +689,22 @@ async fn table_repository() {
         command.reader_logs.lock().unwrap().last().unwrap().0,
         "SELECT id FROM users WHERE id = $id"
     );
+
+    command.reader_rows.lock().unwrap().clear();
+    assert!(repo
+        .get_single_where(&WhereBuilder::equals("id", 9_i64))
+        .await
+        .unwrap()
+        .is_none());
+    let last = command.reader_logs.lock().unwrap().last().unwrap().clone();
+    assert_eq!(last.0, "SELECT id, name FROM users WHERE id = $id");
+    assert_eq!(last.1[0].name, "id");
+    assert_eq!(last.1[0].value, Value::Int(9));
+    assert!(repo
+        .get_where(&WhereBuilder::equals("id", 9_i64))
+        .await
+        .unwrap()
+        .is_empty());
 
     let obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
     let mut include_id = TableRepositoryBuilderOptions::with_factory(

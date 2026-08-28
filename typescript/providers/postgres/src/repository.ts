@@ -21,11 +21,11 @@ export class PostgresRepository<T> implements IRepository<T> {
     this.table = options.table ?? "items";
   }
 
-  getSingle = async (_query?: IQuery): Promise<T | undefined> => {
+  getSingle = async (_query?: IQuery | IWhere): Promise<T | undefined> => {
     throw new ProviderNotImplementedError("postgres");
   };
 
-  async *get(_query?: IQuery): AsyncIterable<T> {
+  async *get(_query?: IQuery | IWhere): AsyncIterable<T> {
     throw new ProviderNotImplementedError("postgres");
   }
 

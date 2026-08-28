@@ -10,6 +10,8 @@ use std::sync::Arc;
 pub trait ReadonlyRepository: Send + Sync {
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Record>>;
     async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Record>>;
+    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Record>>;
+    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Record>>;
 }
 
 #[async_trait]
@@ -29,6 +31,14 @@ impl ReadonlyRepository for AsReadonly {
 
     async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Record>> {
         self.0.get(query).await
+    }
+
+    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Record>> {
+        self.0.get_single_where(where_clause).await
+    }
+
+    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Record>> {
+        self.0.get_where(where_clause).await
     }
 }
 

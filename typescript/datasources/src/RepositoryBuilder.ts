@@ -1,9 +1,9 @@
 import type { ICommand } from "./ICommand.ts";
 import type { IConnection } from "./IConnection.ts";
-import type { IDeleteStatement } from "./IDeleteStatement.ts";
-import type { IInsertStatement } from "./IInsertStatement.ts";
+import type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
+import type { IInsertStatement } from "./builders/IInsertStatement.ts";
 import type { IQuery } from "./IQuery.ts";
-import type { IUpdateStatement } from "./IUpdateStatement.ts";
+import type { IUpdateStatement } from "./builders/IUpdateStatement.ts";
 import type { IWhere } from "./IWhere.ts";
 import { StatementBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";

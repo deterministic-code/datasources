@@ -13,7 +13,7 @@ import { asRecord, matches, parseFilter } from "./filter.ts";
 export class JsonRepository<T = unknown> implements IRepository<T> {
   constructor(readonly connection: JsonConnection) {}
 
-  async getSingle(query?: IQuery): Promise<T | undefined> {
+  async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     const reader = await new JsonCommand(this.connection).executeReader(
       query?.getText() ?? null,
     );
@@ -23,7 +23,7 @@ export class JsonRepository<T = unknown> implements IRepository<T> {
     return undefined;
   }
 
-  get(query?: IQuery): AsyncIterable<T> {
+  get(query?: IQuery | IWhere): AsyncIterable<T> {
     const command = new JsonCommand(this.connection);
     const text = query?.getText() ?? null;
     return {

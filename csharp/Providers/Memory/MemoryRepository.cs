@@ -8,6 +8,12 @@ public sealed class MemoryRepository : IRepository<Dictionary<string, object?>>
     public IConnection Connection { get; }
     private MemoryConnection Typed => (MemoryConnection)Connection;
 
+    public Task<Dictionary<string, object?>?> GetSingle(IWhere where) =>
+        GetSingle(new Query(where.GetText(), where));
+
+    public IAsyncEnumerable<Dictionary<string, object?>> Get(IWhere where) =>
+        Get(new Query(where.GetText(), where));
+
     public async Task<Dictionary<string, object?>?> GetSingle(IQuery? query = null)
     {
         var reader = await new MemoryCommand(Typed).ExecuteReader(query?.GetText());

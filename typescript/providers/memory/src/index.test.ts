@@ -195,6 +195,10 @@ describe("MemoryCommand and MemoryRepository", () => {
     expect(await collectAsync(repo.get(new Query('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
+    expect(await repo.getSingle(new Where('{"id":1}'))).toEqual({ id: 1, name: "a" });
+    expect(await collectAsync(repo.get(new Where('{"id":1}')))).toEqual([
+      { id: 1, name: "a" },
+    ]);
     expect((await repo.add({ id: 2, name: "b" })).rowsAffected).toBe(1);
     expect((await repo.update({ id: 2, name: "B" })).rowsAffected).toBe(1);
     expect(

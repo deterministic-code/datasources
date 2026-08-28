@@ -11,6 +11,10 @@ public sealed class MockRepository<T> : IRepository<T>
     public IConnection Connection { get; }
     public MockRepository(IConnection connection) => Connection = connection;
 
+    public Task<T?> GetSingle(IWhere where) => GetSingle((IQuery?)null);
+
+    public IAsyncEnumerable<T> Get(IWhere where) => Get((IQuery?)null);
+
     public Task<T?> GetSingle(IQuery? query = null) =>
         GetSingleError is not null
             ? throw GetSingleError

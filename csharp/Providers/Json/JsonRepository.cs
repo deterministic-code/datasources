@@ -9,6 +9,12 @@ public sealed class JsonRepository : IRepository<Dictionary<string, object?>>
     public IConnection Connection { get; }
     private JsonConnection Typed => (JsonConnection)Connection;
 
+    public Task<Dictionary<string, object?>?> GetSingle(IWhere where) =>
+        GetSingle(new Query(where.GetText(), where));
+
+    public IAsyncEnumerable<Dictionary<string, object?>> Get(IWhere where) =>
+        Get(new Query(where.GetText(), where));
+
     public async Task<Dictionary<string, object?>?> GetSingle(IQuery? query = null)
     {
         var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText());

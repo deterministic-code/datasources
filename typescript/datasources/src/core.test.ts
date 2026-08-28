@@ -340,7 +340,13 @@ describe("stubs", () => {
     const repo = ds.createRepository(provided);
     expect(repo).toBeInstanceOf(StubRepository);
     await expect(repo.getSingle()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(repo.getSingle(new Where("1=1"))).rejects.toThrow(
+      ProviderNotImplementedError,
+    );
     await expect(collectAsync(repo.get())).rejects.toThrow(
+      ProviderNotImplementedError,
+    );
+    await expect(collectAsync(repo.get(new Where("1=1")))).rejects.toThrow(
       ProviderNotImplementedError,
     );
     await expect(repo.add({})).rejects.toThrow(ProviderNotImplementedError);
@@ -441,6 +447,8 @@ describe("published mocks", () => {
     expect(await repo.getSingle(new MockQuery("id=1"))).toEqual({ id: 1 });
     expect(await collectAsync(repo.get())).toEqual([{ id: 1 }, { id: 2 }]);
     expect(await collectAsync(repo.get(new MockQuery("all")))).toHaveLength(2);
+    expect(await repo.getSingle(new MockWhere("id=1"))).toEqual({ id: 1 });
+    expect(await collectAsync(repo.get(new MockWhere("all")))).toHaveLength(2);
     expect((await repo.add({ id: 3 })).rowsAffected).toBe(1);
     expect(
       (await repo.update({ id: 3 }, new MockWhere("id=3"))).rowsAffected,

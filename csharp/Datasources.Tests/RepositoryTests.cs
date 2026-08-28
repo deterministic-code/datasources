@@ -79,6 +79,18 @@ public class RepositoryTests
     }
 
     [Fact]
+    public async Task GetAttachesWhereToDefaultSelect()
+    {
+        var (repo, command) = Create();
+        command.Reader = new MockReader([]);
+        await repo.GetSingle(WhereBuilder.Equals("id", 9));
+        Assert.Equal("SELECT id, name FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
+        Assert.Equal(9, command.ExecuteReaderCalls[0].Parameters![0].Value);
+        await foreach (var _ in repo.Get(WhereBuilder.Equals("id", 9)))
+            break;
+    }
+
+    [Fact]
     public async Task AddUpdateDeleteUseBuilders()
     {
         var (repo, command) = Create(assignIdentityOnAdd: false);
