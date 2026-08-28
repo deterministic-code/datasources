@@ -171,6 +171,7 @@ public class CoreTests
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Update(new object()));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Delete(new object(), new Where("1=1")));
         Assert.IsType<StubConnection>(ds.CreateRepository<object>().Connection);
+        Assert.IsType<StubRepository<object>>(((IDatasource)ds).CreateReadonlyRepository<object>(provided));
         var txn = new StubTransaction("text", provided);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => txn.Commit());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => txn.Abort());
@@ -254,6 +255,7 @@ public class CoreTests
         ds.Repository = new MockRepository<object>(ds.Connection);
         Assert.Same(ds.Command, ds.CreateCommand());
         Assert.Same(ds.Repository, ds.CreateRepository<object>());
+        Assert.Same(ds.Repository, ((IDatasource)ds).CreateReadonlyRepository<object>());
         Assert.Equal("custom", new MockDatasource("custom").Create().Provider);
 
         var q = new MockQuery("q");

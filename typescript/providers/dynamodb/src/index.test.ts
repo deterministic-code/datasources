@@ -26,5 +26,7 @@ describe("dynamodb", () => {
     await expect(implicit.executeReader()).rejects.toThrow(ProviderNotImplementedError);
     ds.createRepository();
     ds.createRepository(connection);
+    ds.createReadonlyRepository();
+    ds.createReadonlyRepository(connection);
   });
 });

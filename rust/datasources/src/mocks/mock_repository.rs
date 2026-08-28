@@ -1,7 +1,7 @@
 use crate::datasource_error::DatasourceError;
 use crate::query::Query;
 use crate::record::Record;
-use crate::repository::Repository;
+use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::value::Value;
@@ -52,7 +52,7 @@ impl MockRepository {
 }
 
 #[async_trait]
-impl Repository for MockRepository {
+impl ReadonlyRepository for MockRepository {
     async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Record>> {
         if let Some(error) = &*self.get_single_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
@@ -66,7 +66,10 @@ impl Repository for MockRepository {
         }
         Ok(self.items.lock().expect("mock").clone())
     }
+}
 
+#[async_trait]
+impl Repository for MockRepository {
     async fn add(&self, obj: &Record) -> Result<Response> {
         if let Some(error) = &*self.add_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));

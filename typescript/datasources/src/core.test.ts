@@ -351,6 +351,7 @@ describe("stubs", () => {
 
     const unbound = ds.createRepository();
     expect(unbound.connection).toBeInstanceOf(StubConnection);
+    expect(ds.createReadonlyRepository(provided)).toBeInstanceOf(StubRepository);
 
     const txn = new StubTransaction("text", provided);
     await expect(txn.commit()).rejects.toThrow(ProviderNotImplementedError);
@@ -477,6 +478,7 @@ describe("published mocks", () => {
     ds.repository = new MockRepository(ds.connection);
     expect(ds.createCommand()).toBe(ds.command);
     expect(ds.createRepository()).toBe(ds.repository);
+    expect(ds.createReadonlyRepository()).toBe(ds.repository);
 
     const named = new MockDatasource("custom");
     expect(named.create().provider).toBe("custom");

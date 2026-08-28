@@ -3,7 +3,8 @@ use crate::connection::JsonConnection;
 use crate::filter::{json_from_record, matches, parse_filter, value_to_json};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, Command, Query, Record, Repository, Response, Result, Value, Where,
+    identity_filter, Command, Query, Record, ReadonlyRepository, Repository, Response, Result,
+    Value, Where,
 };
 use serde_json::Value as JsonValue;
 use std::sync::Arc;
@@ -19,7 +20,7 @@ impl JsonRepository {
 }
 
 #[async_trait]
-impl Repository for JsonRepository {
+impl ReadonlyRepository for JsonRepository {
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Record>> {
         let text = query.map(|q| q.get_text());
         let reader = JsonCommand::new(self.connection.clone())
@@ -39,7 +40,10 @@ impl Repository for JsonRepository {
             .await?;
         datasources::collect_reader(&*reader).await
     }
+}
 
+#[async_trait]
+impl Repository for JsonRepository {
     async fn add(&self, obj: &Record) -> Result<Response> {
         self.connection.ensure_open()?;
         self.connection

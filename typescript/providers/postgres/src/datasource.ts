@@ -3,6 +3,7 @@ import type {
   ICommand,
   IConnection,
   IDatasource,
+  IReadonlyRepository,
   IRepository,
 } from "@datasources/core";
 import {
@@ -47,4 +48,8 @@ export class PostgresDatasource implements IDatasource, DatasourceFactory {
       (connection as PostgresConnection | undefined) ?? this.newConnection(),
       { table: this.options.table },
     );
+
+  createReadonlyRepository = <T>(
+    connection?: IConnection,
+  ): IReadonlyRepository<T> => this.createRepository(connection);
 }

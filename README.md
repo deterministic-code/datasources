@@ -34,12 +34,13 @@ Create a named command, then execute it. See:
 
 | Type | Role |
 | --- | --- |
-| `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository` |
+| `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository`, `createReadonlyRepository` |
 | `IConnection` | `open`, `close`, `startTransaction(isolation)` |
 | `ITransaction` | `isolation`, `commit`, `abort` |
 | `IsolationLevel` | `readUncommitted`, `readCommitted`, `repeatableRead`, `serializable` |
 | `ICommand` | `executeReader`, `execute` |
-| `IRepository<T>` | `getSingle`, `get`, `add`, `update`, `delete` |
+| `IReadonlyRepository<T>` | `connection`, `getSingle`, `get` |
+| `IRepository<T>` | extends `IReadonlyRepository<T>` with `add`, `update`, `delete` |
 | `IReader` | `current`, `next` |
 | `IQuery` / `Where` | `getText()` — provider-specific |
 | `Parameter` / `IResponse` | `{ name, value }` / `{ result, rowsAffected }` |

@@ -242,6 +242,7 @@ describe("MemoryDatasource", () => {
     const repo = ds.createRepository(connection);
     expect(repo.connection).toBe(connection);
     expect(ds.createRepository()).toBeInstanceOf(MemoryRepository);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(MemoryRepository);
 
     const fromRegistry = Datasource.create("memory", { data: [] });
     expect(fromRegistry.provider).toBe("memory");

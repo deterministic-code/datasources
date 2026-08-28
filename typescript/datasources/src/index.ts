@@ -4,6 +4,7 @@ export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
 export type { IQuery } from "./IQuery.ts";
 export type { IReader } from "./IReader.ts";
+export type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 export type { IRepository } from "./IRepository.ts";
 export type { IResponse } from "./IResponse.ts";
 export type { ITransaction } from "./ITransaction.ts";

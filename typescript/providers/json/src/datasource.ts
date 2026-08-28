@@ -2,6 +2,7 @@ import {
   type ICommand,
   type IConnection,
   type IDatasource,
+  type IReadonlyRepository,
   type IRepository,
 } from "@datasources/core";
 import {
@@ -38,4 +39,8 @@ export class JsonDatasource implements IDatasource {
     new JsonRepository<T>(
       (connection as JsonConnection | undefined) ?? this.newConnection(),
     );
+
+  createReadonlyRepository = <T = unknown>(
+    connection?: IConnection,
+  ): IReadonlyRepository<T> => this.createRepository(connection);
 }

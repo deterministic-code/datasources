@@ -66,7 +66,7 @@ pub use reader::Reader;
 pub use record::Record;
 pub use register::register;
 pub use registered::registered;
-pub use repository::Repository;
+pub use repository::{ReadonlyRepository, Repository};
 pub use reset::reset;
 pub use response::Response;
 pub use result::Result;
