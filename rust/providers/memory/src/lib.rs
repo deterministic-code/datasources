@@ -64,6 +64,16 @@ mod tests {
             .unwrap()
             .is_none());
         assert!(!repo.get(Some(&TextQuery::new("{\"id\":1}"))).await.unwrap().is_empty());
+        assert!(repo
+            .get_single_where(&TextWhere::new("{\"id\":1}"))
+            .await
+            .unwrap()
+            .is_some());
+        assert!(!repo
+            .get_where(&TextWhere::new("{\"id\":1}"))
+            .await
+            .unwrap()
+            .is_empty());
         repo.add(&rec(2, "b")).await.unwrap();
         repo.update(&rec(2, "B"), None).await.unwrap();
         repo.update(&rec(2, "C"), Some(&TextWhere::new("{\"id\":2}")))

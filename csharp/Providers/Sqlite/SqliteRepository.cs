@@ -16,8 +16,12 @@ public sealed class SqliteRepository : IRepository<Dictionary<string, object?>>
     public Task<Dictionary<string, object?>?> GetSingle(IQuery? query = null) =>
         throw new ProviderNotImplementedException("sqlite");
 
+    public Task<Dictionary<string, object?>?> GetSingle(IWhere where) => GetSingle((IQuery?)null);
+
     public IAsyncEnumerable<Dictionary<string, object?>> Get(IQuery? query = null) =>
         throw new ProviderNotImplementedException("sqlite");
+
+    public IAsyncEnumerable<Dictionary<string, object?>> Get(IWhere where) => Get((IQuery?)null);
 
     public Task<Response> Add(Dictionary<string, object?> obj) =>
         throw new ProviderNotImplementedException("sqlite");

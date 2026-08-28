@@ -31,8 +31,6 @@ mod table_repository_builder;
 mod table_repository_builder_options;
 mod reset;
 mod response;
-mod statement;
-mod statements;
 mod result;
 pub mod stubs;
 mod text_query;
@@ -41,7 +39,13 @@ mod transaction;
 mod value;
 mod where_trait;
 
-pub use builders::{Column, StatementBuilder, WhereBuilder};
+pub use builders::{
+    Column, CreateTableStatement, DeleteStatement, InsertStatement, Statement, StatementBuilder,
+    StoredProcedureStatement, TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
+    TextStoredProcedureStatement, TextUpdateStatement, UpdateStatement, WhereBuilder,
+};
+pub use builders::statement;
+pub use builders::statements;
 pub use array_reader::ArrayReader;
 pub use collect_reader::collect_reader;
 pub use command::Command;
@@ -79,12 +83,6 @@ pub use create_repository_builder_options::create_repository_builder_options;
 pub use table_repository::TableRepository;
 pub use table_repository_builder::TableRepositoryBuilder;
 pub use table_repository_builder_options::TableRepositoryBuilderOptions;
-pub use statement::Statement;
-pub use statements::{
-    CreateTableStatement, DeleteStatement, InsertStatement, StoredProcedureStatement,
-    TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
-    TextStoredProcedureStatement, TextUpdateStatement, UpdateStatement,
-};
 pub use reset::reset;
 pub use response::Response;
 pub use result::Result;

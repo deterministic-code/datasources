@@ -1,5 +1,16 @@
 export type { Column } from "./Column.ts";
 export type { Field } from "./Field.ts";
 export type { Scalar } from "./Scalar.ts";
+export type { ICreateTableStatement } from "./ICreateTableStatement.ts";
+export type { IDeleteStatement } from "./IDeleteStatement.ts";
+export type { IInsertStatement } from "./IInsertStatement.ts";
+export type { IStatement } from "./IStatement.ts";
+export type { IStoredProcedureStatement } from "./IStoredProcedureStatement.ts";
+export type { IUpdateStatement } from "./IUpdateStatement.ts";
+export { CreateTableStatement } from "./CreateTableStatement.ts";
+export { DeleteStatement } from "./DeleteStatement.ts";
+export { InsertStatement } from "./InsertStatement.ts";
 export { StatementBuilder } from "./StatementBuilder.ts";
+export { StoredProcedureStatement } from "./StoredProcedureStatement.ts";
+export { UpdateStatement } from "./UpdateStatement.ts";
 export { WhereBuilder } from "./WhereBuilder.ts";

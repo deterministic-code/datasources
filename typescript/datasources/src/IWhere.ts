@@ -1,3 +1,3 @@
-import type { IStatement } from "./IStatement.ts";
+import type { IStatement } from "./builders/IStatement.ts";
 
 export interface IWhere extends IStatement {}

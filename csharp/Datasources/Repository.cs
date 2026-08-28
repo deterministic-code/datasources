@@ -30,6 +30,10 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     public IConnection Connection => commands.Get.Connection;
     public DatasourceMapper Mapping => mapping;
 
+    public Task<T?> GetSingle(IWhere where) => GetSingle(statements.Query(where));
+
+    public IAsyncEnumerable<T> Get(IWhere where) => Get(statements.Query(where));
+
     public async Task<T?> GetSingle(IQuery? query = null)
     {
         await foreach (var item in Get(query))

@@ -27,7 +27,12 @@ impl TableRepositoryStatements {
     pub fn query(&self, where_clause: Option<&dyn Where>) -> (String, Vec<Parameter>) {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
         let built = StatementBuilder::create_query(&self.table, &refs, where_clause);
-        (built.get_text(), built.parameters())
+        (
+            built.get_text(),
+            where_clause
+                .map(|predicate| predicate.parameters())
+                .unwrap_or_else(|| built.parameters()),
+        )
     }
 
     pub fn insert(&self, fields: &[Parameter]) -> String {

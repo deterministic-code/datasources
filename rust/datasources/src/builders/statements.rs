@@ -1,4 +1,4 @@
-use crate::statement::Statement;
+use super::statement::Statement;
 use crate::where_trait::Where;
 
 pub trait InsertStatement: Statement {}

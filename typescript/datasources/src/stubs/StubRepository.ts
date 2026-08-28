@@ -11,10 +11,10 @@ export class StubRepository<T = unknown> implements IRepository<T> {
     readonly connection: IConnection,
   ) {}
 
-  getSingle = async (_query?: IQuery): Promise<T | undefined> =>
+  getSingle = async (_query?: IQuery | IWhere): Promise<T | undefined> =>
     notImplemented(this.provider);
 
-  async *get(_query?: IQuery): AsyncIterable<T> {
+  async *get(_query?: IQuery | IWhere): AsyncIterable<T> {
     notImplemented(this.provider);
   }
 

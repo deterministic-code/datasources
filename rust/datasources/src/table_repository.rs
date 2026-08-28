@@ -97,12 +97,8 @@ impl TableRepository {
             self.statements.query(None)
         }
     }
-}
 
-#[async_trait]
-impl ReadonlyRepository for TableRepository {
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Record>> {
-        let (text, params) = self.query_parts(query);
+    async fn read_single(&self, text: String, params: Vec<Parameter>) -> Result<Option<Record>> {
         let reader = self
             .commands
             .get
@@ -117,8 +113,7 @@ impl ReadonlyRepository for TableRepository {
             .transpose()
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Record>> {
-        let (text, params) = self.query_parts(query);
+    async fn read_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Record>> {
         let reader = self
             .commands
             .get
@@ -131,6 +126,29 @@ impl ReadonlyRepository for TableRepository {
             }
         }
         Ok(items)
+    }
+}
+
+#[async_trait]
+impl ReadonlyRepository for TableRepository {
+    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Record>> {
+        let (text, params) = self.query_parts(query);
+        self.read_single(text, params).await
+    }
+
+    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Record>> {
+        let (text, params) = self.query_parts(query);
+        self.read_all(text, params).await
+    }
+
+    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Record>> {
+        let (text, params) = self.statements.query(Some(where_clause));
+        self.read_single(text, params).await
+    }
+
+    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Record>> {
+        let (text, params) = self.statements.query(Some(where_clause));
+        self.read_all(text, params).await
     }
 }
 

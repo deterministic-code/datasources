@@ -66,6 +66,14 @@ impl ReadonlyRepository for MockRepository {
         }
         Ok(self.items.lock().expect("mock").clone())
     }
+
+    async fn get_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Record>> {
+        self.get_single(None).await
+    }
+
+    async fn get_where(&self, _where_clause: &dyn Where) -> Result<Vec<Record>> {
+        self.get(None).await
+    }
 }
 
 #[async_trait]

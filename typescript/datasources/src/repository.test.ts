@@ -5,8 +5,10 @@ import {
   TypeConverter,
   Where,
   WhereBuilder,
+  RepositoryBuilder,
   createRepositoryBuilderOptions,
   identityProviderTypes,
+  parts,
   sqlProviderTypes,
 } from "./index.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
@@ -21,6 +23,10 @@ class Item {
 
 class Label {
   name = "";
+}
+
+class PascalId {
+  Id = 0;
 }
 
 const schema = { id: "INTEGER", name: "TEXT" };
@@ -79,6 +85,16 @@ describe("Repository", () => {
     ).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id FROM users WHERE id = $id",
+    );
+    expect(command.executeReaderCalls[0]?.parameters).toEqual([{ name: "id", value: 9 }]);
+  });
+
+  it("attaches where to the default select", async () => {
+    const { repo, command } = create();
+    command.reader = new MockReader([]);
+    expect(await repo.getSingle(WhereBuilder.equals("id", 9))).toBeUndefined();
+    expect(command.executeReaderCalls[0]?.text).toBe(
+      "SELECT id, name FROM users WHERE id = $id",
     );
     expect(command.executeReaderCalls[0]?.parameters).toEqual([{ name: "id", value: 9 }]);
   });
@@ -170,8 +186,12 @@ describe("Repository", () => {
     expect(fromId.ids).toEqual(["id"]);
     expect(fromId.connection).toBe(connection);
     expect(createRepositoryBuilderOptions(Label, connection).ids).toEqual([]);
+    expect(createRepositoryBuilderOptions(PascalId, connection).ids).toEqual(["Id"]);
     const repo = new Repository(fromId);
     expect(repo.connection).toBe(connection);
     expect(new Repository(Item, connection).connection).toBe(connection);
+    expect(new Repository(parts(fromId)).connection).toBe(connection);
+    expect(RepositoryBuilder.from(fromId).parts().commands.get.connection).toBe(connection);
+    expect(RepositoryBuilder.from(Item, connection).parts().ids).toEqual(["id"]);
   });
 });

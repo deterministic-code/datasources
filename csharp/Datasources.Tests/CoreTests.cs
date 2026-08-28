@@ -221,7 +221,9 @@ public class CoreTests
         Assert.Same(provided, ds.CreateCommand(provided).Connection);
         var repo = ds.CreateRepository<object>(provided);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.GetSingle());
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.GetSingle(new Where("1=1")));
         Assert.Throws<ProviderNotImplementedException>(() => repo.Get());
+        Assert.Throws<ProviderNotImplementedException>(() => repo.Get(new Where("1=1")));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Add(new object()));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Update(new object()));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Delete(new object(), new Where("1=1")));
@@ -284,8 +286,10 @@ public class CoreTests
         Assert.Null(await repo.GetSingle());
         repo.Items.Add(new Dictionary<string, object?> { ["id"] = 1 });
         Assert.NotNull(await repo.GetSingle(new MockQuery("id=1")));
+        Assert.NotNull(await repo.GetSingle(new MockWhere("id=1")));
         Assert.Single(await repo.Get().ToListAsync());
         Assert.Single(await repo.Get(new MockQuery("all")).ToListAsync());
+        Assert.Single(await repo.Get(new MockWhere("all")).ToListAsync());
         await repo.Add(new Dictionary<string, object?> { ["id"] = 3 });
         await repo.Update(new Dictionary<string, object?> { ["id"] = 3 }, new MockWhere("id=3"));
         await repo.Delete(new Dictionary<string, object?> { ["id"] = 3 });
