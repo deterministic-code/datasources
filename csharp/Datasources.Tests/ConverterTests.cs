@@ -2,6 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
+[Collection("TypeConverter")]
 public class ConverterTests
 {
     public ConverterTests() => TypeConverter.Reset();

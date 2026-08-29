@@ -3,6 +3,7 @@ using Datasources.Builders;
 
 namespace Datasources.Tests;
 
+[Collection("TypeConverter")]
 public class RepositoryTests
 {
     public RepositoryTests() => TypeConverter.Reset();
