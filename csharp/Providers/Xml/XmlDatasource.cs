@@ -4,7 +4,7 @@ namespace Datasources.Xml;
 
 public sealed class XmlDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly XmlDatasource Factory = new();
+    public static readonly XmlDatasource Instance = new();
     public string Provider => "xml";
     public IDatasource Create(object? options = null) => new XmlDatasource();
     IConnection? _connection;

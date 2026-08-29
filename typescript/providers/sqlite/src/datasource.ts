@@ -19,7 +19,7 @@ export interface SqliteDatasourceOptions extends SqliteConnectionOptions {
 }
 
 export class SqliteDatasource implements IDatasource {
-  static readonly factory = new SqliteDatasource();
+  static readonly instance = new SqliteDatasource();
   static readonly provider = "sqlite";
   readonly provider = "sqlite";
 

@@ -15,7 +15,7 @@ mod tests {
     #[test]
     fn creates() {
         reset();
-        register(TextDatasource::factory());
+        register(TextDatasource::instance());
         assert_eq!(create("text", None).unwrap().provider(), "text");
     }
 

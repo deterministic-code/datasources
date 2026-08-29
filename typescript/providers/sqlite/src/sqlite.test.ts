@@ -81,7 +81,7 @@ function fakeDriver(filename = ":memory:") {
 
 afterEach(() => {
   Datasource.reset();
-  Datasource.use(SqliteDatasource.factory);
+  Datasource.use(SqliteDatasource.instance);
 });
 
 describe("requireDriver and bindParameters", () => {

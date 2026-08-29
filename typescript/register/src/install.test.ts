@@ -72,11 +72,11 @@ describe("install", () => {
 
   it("accepts a matching factory export", async () => {
     await install({ provider: "json" }, async () => ({
-      JsonDatasource: { factory: JsonDatasource.factory },
+      JsonDatasource: { instance: JsonDatasource.instance },
     }));
     expect(Datasource.create("json").provider).toBe("json");
     await install({ provider: "memory" }, async () => ({
-      MemoryDatasource: { factory: MemoryDatasource.factory },
+      MemoryDatasource: { instance: MemoryDatasource.instance },
     }));
     expect(Datasource.create("memory").provider).toBe("memory");
   });

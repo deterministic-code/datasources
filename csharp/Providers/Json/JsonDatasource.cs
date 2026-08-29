@@ -4,7 +4,7 @@ namespace Datasources.Json;
 
 public sealed class JsonDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly JsonDatasource Factory = new();
+    public static readonly JsonDatasource Instance = new();
     private readonly JsonConnectionOptions _options;
     public string Provider => "json";
     public JsonDatasource(JsonConnectionOptions? options = null) => _options = options ?? new JsonConnectionOptions();

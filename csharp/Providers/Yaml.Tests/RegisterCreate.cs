@@ -4,7 +4,7 @@ using Datasources.Yaml;
 public partial class RegisterCreateTests
 {
     const string Provider = "yaml";
-    static readonly IDatasourceFactory Factory = YamlDatasource.Factory;
+    static readonly IDatasourceFactory Instance = YamlDatasource.Instance;
 
     [Fact]
     public async Task CreatesConnection()

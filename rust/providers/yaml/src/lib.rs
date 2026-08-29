@@ -15,7 +15,7 @@ mod tests {
     #[test]
     fn creates() {
         reset();
-        register(YamlDatasource::factory());
+        register(YamlDatasource::instance());
         assert_eq!(create("yaml", None).unwrap().provider(), "yaml");
     }
 

@@ -20,7 +20,7 @@ export interface MysqlDatasourceOptions extends MysqlConnectionOptions {
 }
 
 export class MysqlDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new MysqlDatasource();
+  static readonly instance = new MysqlDatasource();
   static readonly provider = "mysql";
   readonly provider = "mysql";
 

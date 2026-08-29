@@ -12,7 +12,7 @@ import { DynamoDbConnection } from "./connection.ts";
 import { DynamoDbCommand } from "./command.ts";
 
 export class DynamoDbDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new DynamoDbDatasource();
+  static readonly instance = new DynamoDbDatasource();
   readonly provider = "dynamodb";
   private connection?: IConnection;
   create = (_options?: DatasourceOptions): IDatasource => new DynamoDbDatasource();

@@ -15,7 +15,7 @@ pub struct MemoryDatasource {
 }
 
 impl MemoryDatasource {
-    pub fn factory() -> Arc<Self> {
+    pub fn instance() -> Arc<Self> {
         Arc::new(Self::default())
     }
 

@@ -12,7 +12,7 @@ import { MongoDbConnection } from "./connection.ts";
 import { MongoDbCommand } from "./command.ts";
 
 export class MongoDbDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new MongoDbDatasource();
+  static readonly instance = new MongoDbDatasource();
   readonly provider = "mongodb";
   private connection?: IConnection;
   create = (_options?: DatasourceOptions): IDatasource => new MongoDbDatasource();

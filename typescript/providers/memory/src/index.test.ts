@@ -20,7 +20,7 @@ import {
 
 afterEach(() => {
   Datasource.reset();
-  Datasource.use(MemoryDatasource.factory);
+  Datasource.use(MemoryDatasource.instance);
 });
 
 describe("filter helpers", () => {
@@ -227,7 +227,7 @@ describe("MemoryDatasource", () => {
   it("registers and constructs children", async () => {
     const created = MemoryDatasource.create();
     expect(created.provider).toBe("memory");
-    expect(MemoryDatasource.factory.provider).toBe("memory");
+    expect(MemoryDatasource.instance.provider).toBe("memory");
     const ds = new MemoryDatasource({ data: [{ id: 1 }] });
     expect(ds.create({ data: [] }).provider).toBe("memory");
     const connection = (await ds.createConnection()) as MemoryConnection;

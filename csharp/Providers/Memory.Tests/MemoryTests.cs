@@ -8,7 +8,7 @@ public class MemoryTests
     public MemoryTests()
     {
         Datasource.Reset();
-        Datasource.Use(MemoryDatasource.Factory);
+        Datasource.Use(MemoryDatasource.Instance);
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class MemoryTests
 
         var ds = new MemoryDatasource(new MemoryConnectionOptions { Data = new List<Dictionary<string, Value>>() });
         Assert.Equal("memory", ds.Create().Provider);
-        Assert.Equal("memory", MemoryDatasource.Factory.Provider);
+        Assert.Equal("memory", MemoryDatasource.Instance.Provider);
         var created = await ds.CreateConnection();
         await ((MemoryConnection)created).Open();
         var bound = Assert.IsType<MemoryCommand>(ds.CreateCommand(created));

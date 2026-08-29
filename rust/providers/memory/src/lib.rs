@@ -151,7 +151,7 @@ mod tests {
             .unwrap();
 
         reset();
-        register(MemoryDatasource::factory());
+        register(MemoryDatasource::instance());
         let ds = create("memory", None).unwrap();
         assert_eq!(ds.provider(), "memory");
         ds.create_connection().await.unwrap();

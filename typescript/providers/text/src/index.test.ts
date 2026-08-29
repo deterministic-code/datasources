@@ -6,7 +6,7 @@ afterEach(() => Datasource.reset());
 
 describe("text", () => {
   it("creates", () => {
-    Datasource.use(TextDatasource.factory);
+    Datasource.use(TextDatasource.instance);
     expect(Datasource.create("text").provider).toBe("text");
   });
 

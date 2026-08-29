@@ -38,7 +38,7 @@ public static class DatasourceInstall
         {
             var type = Type.GetType($"{package.Type}, {package.Assembly}", throwOnError: false)
                 ?? Assembly.Load(package.Assembly).GetType(package.Type);
-            return type?.GetField("Factory", BindingFlags.Public | BindingFlags.Static)?.GetValue(null)
+            return type?.GetField("Instance", BindingFlags.Public | BindingFlags.Static)?.GetValue(null)
                 is IDatasourceFactory factory
                 ? factory
                 : throw new ProviderNotInstalledException(name);

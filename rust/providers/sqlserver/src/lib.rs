@@ -15,7 +15,7 @@ mod tests {
     #[test]
     fn creates() {
         reset();
-        register(SqlServerDatasource::factory());
+        register(SqlServerDatasource::instance());
         assert_eq!(create("sqlserver", None).unwrap().provider(), "sqlserver");
     }
 

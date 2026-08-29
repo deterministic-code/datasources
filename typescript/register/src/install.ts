@@ -9,11 +9,11 @@ import { providerNames } from "./providerNames.ts";
 
 export type ProviderLoader = (pkg: string) => Promise<object>;
 
-type FactoryHolder = { readonly factory: DatasourceFactory };
+type FactoryHolder = { readonly instance: DatasourceFactory };
 
 const factoryOf = (mod: object, name: string): DatasourceFactory => {
   const exported = (mod as Record<string, FactoryHolder | undefined>)[typeNames[name]];
-  return exported?.factory ?? (() => { throw new ProviderNotInstalledError(name); })();
+  return exported?.instance ?? (() => { throw new ProviderNotInstalledError(name); })();
 };
 
 const defaultLoader: ProviderLoader = (pkg) => import(pkg);

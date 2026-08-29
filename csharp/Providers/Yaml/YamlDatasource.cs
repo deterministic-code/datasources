@@ -4,7 +4,7 @@ namespace Datasources.Yaml;
 
 public sealed class YamlDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly YamlDatasource Factory = new();
+    public static readonly YamlDatasource Instance = new();
     public string Provider => "yaml";
     public IDatasource Create(object? options = null) => new YamlDatasource();
     IConnection? _connection;

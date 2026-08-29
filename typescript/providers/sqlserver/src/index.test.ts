@@ -6,7 +6,7 @@ afterEach(() => Datasource.reset());
 
 describe("sqlserver", () => {
   it("creates", () => {
-    Datasource.use(SqlServerDatasource.factory);
+    Datasource.use(SqlServerDatasource.instance);
     expect(Datasource.create("sqlserver").provider).toBe("sqlserver");
   });
 

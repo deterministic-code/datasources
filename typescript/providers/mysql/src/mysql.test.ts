@@ -66,7 +66,7 @@ function fakeDriver(url = "mysql://localhost/app") {
 
 afterEach(() => {
   Datasource.reset();
-  Datasource.use(MysqlDatasource.factory);
+  Datasource.use(MysqlDatasource.instance);
 });
 
 describe("requireDriver and bindParameters", () => {

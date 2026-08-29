@@ -62,7 +62,7 @@ function fakeDriver(url = "postgres://localhost/app", schema?: string) {
 
 afterEach(() => {
   Datasource.reset();
-  Datasource.use(PostgresDatasource.factory);
+  Datasource.use(PostgresDatasource.instance);
 });
 
 describe("requireDriver and bind", () => {

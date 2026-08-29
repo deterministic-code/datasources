@@ -6,7 +6,7 @@ afterEach(() => Datasource.reset());
 
 describe("dynamodb", () => {
   it("creates", () => {
-    Datasource.use(DynamoDbDatasource.factory);
+    Datasource.use(DynamoDbDatasource.instance);
     expect(Datasource.create("dynamodb").provider).toBe("dynamodb");
   });
 

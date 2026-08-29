@@ -17,7 +17,7 @@ pub struct JsonDatasource {
 }
 
 impl JsonDatasource {
-    pub fn factory() -> Arc<Self> {
+    pub fn instance() -> Arc<Self> {
         Arc::new(Self::new(
             "",
             None,

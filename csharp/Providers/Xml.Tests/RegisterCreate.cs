@@ -4,7 +4,7 @@ using Datasources.Xml;
 public partial class RegisterCreateTests
 {
     const string Provider = "xml";
-    static readonly IDatasourceFactory Factory = XmlDatasource.Factory;
+    static readonly IDatasourceFactory Instance = XmlDatasource.Instance;
 
     [Fact]
     public async Task CreatesConnection()

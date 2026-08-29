@@ -18,7 +18,7 @@
 | dynamodb | `dynamodb` | `DynamoDbConnection` |
 
 ```csharp
-Datasource.Use(JsonDatasource.Factory, MemoryDatasource.Factory, SqliteDatasource.Factory);
+Datasource.Use(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
 
 var json = Datasource.Create("json", new JsonConnectionOptions { Data = new JsonArray() });
 var connection = await json.CreateConnection();

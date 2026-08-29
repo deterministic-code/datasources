@@ -15,7 +15,7 @@ mod tests {
     #[test]
     fn creates() {
         reset();
-        register(MongoDbDatasource::factory());
+        register(MongoDbDatasource::instance());
         assert_eq!(create("mongodb", None).unwrap().provider(), "mongodb");
     }
 

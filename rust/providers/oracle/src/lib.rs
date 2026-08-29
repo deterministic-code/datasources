@@ -15,7 +15,7 @@ mod tests {
     #[test]
     fn creates() {
         reset();
-        register(OracleDatasource::factory());
+        register(OracleDatasource::instance());
         assert_eq!(create("oracle", None).unwrap().provider(), "oracle");
     }
 

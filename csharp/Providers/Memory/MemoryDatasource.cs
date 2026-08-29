@@ -4,7 +4,7 @@ namespace Datasources.Memory;
 
 public sealed class MemoryDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly MemoryDatasource Factory = new();
+    public static readonly MemoryDatasource Instance = new();
     private readonly MemoryConnectionOptions _options;
     public string Provider => "memory";
     public MemoryDatasource(MemoryConnectionOptions? options = null)

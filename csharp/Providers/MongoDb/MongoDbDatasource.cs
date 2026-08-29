@@ -4,7 +4,7 @@ namespace Datasources.MongoDb;
 
 public sealed class MongoDbDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly MongoDbDatasource Factory = new();
+    public static readonly MongoDbDatasource Instance = new();
     public string Provider => "mongodb";
     public IDatasource Create(object? options = null) => new MongoDbDatasource();
     IConnection? _connection;

@@ -4,7 +4,7 @@ using Datasources.Text;
 public partial class RegisterCreateTests
 {
     const string Provider = "text";
-    static readonly IDatasourceFactory Factory = TextDatasource.Factory;
+    static readonly IDatasourceFactory Instance = TextDatasource.Instance;
 
     [Fact]
     public async Task CreatesConnection()

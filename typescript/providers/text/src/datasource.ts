@@ -12,7 +12,7 @@ import { TextConnection } from "./connection.ts";
 import { TextCommand } from "./command.ts";
 
 export class TextDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new TextDatasource();
+  static readonly instance = new TextDatasource();
   readonly provider = "text";
   private connection?: IConnection;
   create = (_options?: DatasourceOptions): IDatasource => new TextDatasource();

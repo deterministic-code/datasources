@@ -19,18 +19,18 @@ Register a factory, then create by provider name. Install only the dialect packa
 
 ```csharp
 Datasource.Use(
-    JsonDatasource.Factory,
-    MemoryDatasource.Factory,
-    SqliteDatasource.Factory,
-    TextDatasource.Factory,
-    XmlDatasource.Factory,
-    YamlDatasource.Factory,
-    MysqlDatasource.Factory,
-    SqlServerDatasource.Factory,
-    PostgresDatasource.Factory,
-    OracleDatasource.Factory,
-    MongoDbDatasource.Factory,
-    DynamoDbDatasource.Factory);
+    JsonDatasource.Instance,
+    MemoryDatasource.Instance,
+    SqliteDatasource.Instance,
+    TextDatasource.Instance,
+    XmlDatasource.Instance,
+    YamlDatasource.Instance,
+    MysqlDatasource.Instance,
+    SqlServerDatasource.Instance,
+    PostgresDatasource.Instance,
+    OracleDatasource.Instance,
+    MongoDbDatasource.Instance,
+    DynamoDbDatasource.Instance);
 
 var json = Datasource.Create("json");
 var memory = Datasource.Create("memory");

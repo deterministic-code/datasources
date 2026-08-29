@@ -15,7 +15,7 @@ mod tests {
     #[test]
     fn creates() {
         reset();
-        register(DynamoDbDatasource::factory());
+        register(DynamoDbDatasource::instance());
         assert_eq!(create("dynamodb", None).unwrap().provider(), "dynamodb");
     }
 

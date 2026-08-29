@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub struct OracleDatasource;
 
 impl OracleDatasource {
-    pub fn factory() -> Arc<Self> {
+    pub fn instance() -> Arc<Self> {
         Arc::new(Self)
     }
 
