@@ -4,6 +4,7 @@ mod connection;
 mod datasource;
 mod driver;
 mod repository;
+mod statement_builder;
 #[cfg(any(test, feature = "rusqlite"))]
 mod rusqlite_driver;
 mod transaction;
@@ -13,6 +14,7 @@ pub use connection::SqliteConnection;
 pub use datasource::SqliteDatasource;
 pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
 pub use repository::SqliteRepository;
+pub use statement_builder::{SqliteColumn, SqliteStatementBuilder};
 #[cfg(any(test, feature = "rusqlite"))]
 pub use rusqlite_driver::RusqliteDriver;
 pub use transaction::SqliteTransaction;
