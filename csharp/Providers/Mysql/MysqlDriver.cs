@@ -21,12 +21,12 @@ public sealed class MysqlDriver : IMysqlDriver
         _db = null;
     }
 
-    public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyDictionary<string, object?> parameters) =>
-        string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new MysqlExecuteResult(0, null)) : Run(sql, parameters);
+    public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+        string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new MysqlExecuteResult(0, Value.Null.Instance)) : Run(sql, parameters);
 
-    public Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Query(string sql, IReadOnlyDictionary<string, object?> parameters) =>
+    public Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Query(string sql, IReadOnlyDictionary<string, Value> parameters) =>
         string.IsNullOrWhiteSpace(sql)
-            ? Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>([])
+            ? Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, Value>>>([])
             : Read(sql, parameters);
 
     public async Task Begin(IsolationLevel isolation = IsolationLevel.Serializable)
@@ -51,36 +51,36 @@ public sealed class MysqlDriver : IMysqlDriver
 
     MySqlConnection RequireDb() => _db ?? throw new DatasourceException("MySQL driver is not open");
 
-    async Task<MysqlExecuteResult> Run(string sql, IReadOnlyDictionary<string, object?> parameters)
+    async Task<MysqlExecuteResult> Run(string sql, IReadOnlyDictionary<string, Value> parameters)
     {
         using var command = Bind(sql, parameters);
         var rows = await command.ExecuteNonQueryAsync();
-        return new MysqlExecuteResult(rows, command.LastInsertedId);
+        return new MysqlExecuteResult(rows, Value.From(command.LastInsertedId));
     }
 
-    async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Read(string sql, IReadOnlyDictionary<string, object?> parameters)
+    async Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Read(string sql, IReadOnlyDictionary<string, Value> parameters)
     {
         using var command = Bind(sql, parameters);
         using var reader = await command.ExecuteReaderAsync();
-        var rows = new List<IReadOnlyDictionary<string, object?>>();
+        var rows = new List<IReadOnlyDictionary<string, Value>>();
         while (await reader.ReadAsync())
         {
-            var row = new Dictionary<string, object?>();
+            var row = new Dictionary<string, Value>();
             for (var i = 0; i < reader.FieldCount; i++)
-                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
             rows.Add(row);
         }
         return rows;
     }
 
-    MySqlCommand Bind(string sql, IReadOnlyDictionary<string, object?> parameters)
+    MySqlCommand Bind(string sql, IReadOnlyDictionary<string, Value> parameters)
     {
         var command = RequireDb().CreateCommand();
         command.CommandText = MysqlBind.ToMysql(sql);
         foreach (var (name, value) in parameters)
         {
             var key = name[0] is '@' or ':' or '$' ? name.TrimStart('$', '@', ':') : name;
-            command.Parameters.AddWithValue($"@{key}", value ?? DBNull.Value);
+            command.Parameters.AddWithValue($"@{key}", value.ToObject() ?? DBNull.Value);
         }
         return command;
     }

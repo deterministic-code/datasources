@@ -1,7 +1,6 @@
-use crate::value::Value;
 use std::collections::HashMap;
 
-pub fn identity_where_text(obj: &HashMap<String, Value>) -> String {
+pub fn identity_where_text<T>(obj: &HashMap<String, T>) -> String {
     if obj.contains_key("id") {
         return "id = $id".to_string();
     }

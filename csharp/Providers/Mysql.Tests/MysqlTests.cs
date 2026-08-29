@@ -62,10 +62,10 @@ public class MysqlTests
         await implicitCommand.Connection.Open();
         await implicitCommand.Execute();
         await implicitCommand.ExecuteReader("SELECT 1");
-        var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created);
+        var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.Equal("people", ((MysqlRepository)(object)repo2).Table);
         Assert.Throws<DatasourceException>(() =>
-            new MysqlDatasource().CreateRepository<Dictionary<string, object?>>());
+            new MysqlDatasource().CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("mysql", Datasource.Create("mysql").Provider);
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlDatasource().CreateConnection());
 
@@ -73,8 +73,8 @@ public class MysqlTests
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).ExecuteReader("x"));
 
-        await driver.Execute("   ", new Dictionary<string, object?>());
-        await driver.Query("   ", new Dictionary<string, object?>());
+        await driver.Execute("   ", new Dictionary<string, Value>());
+        await driver.Query("   ", new Dictionary<string, Value>());
     }
 
     sealed class FakeMysqlDriver : IMysqlDriver
@@ -82,11 +82,11 @@ public class MysqlTests
         public bool Opened { get; private set; }
         public Task Open(string url) { Opened = true; return Task.CompletedTask; }
         public Task Close() { Opened = false; return Task.CompletedTask; }
-        public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyDictionary<string, object?> parameters) =>
-            Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new MysqlExecuteResult(0, null) : new MysqlExecuteResult(2, 5));
-        public Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Query(string sql, IReadOnlyDictionary<string, object?> parameters) =>
-            Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>(
-                string.IsNullOrWhiteSpace(sql) ? [] : [new Dictionary<string, object?> { ["id"] = 1 }]);
+        public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+            Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new MysqlExecuteResult(0, Value.Null.Instance) : new MysqlExecuteResult(2, 5));
+        public Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Query(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+            Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, Value>>>(
+                string.IsNullOrWhiteSpace(sql) ? [] : [new Dictionary<string, Value> { ["id"] = 1 }]);
         public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => Task.CompletedTask;
         public Task Commit() => Task.CompletedTask;
         public Task Rollback() => Task.CompletedTask;

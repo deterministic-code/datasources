@@ -25,12 +25,12 @@ public sealed class PostgresDriver : IPostgresDriver
         _db = null;
     }
 
-    public Task<PostgresExecuteResult> Execute(string sql, IReadOnlyDictionary<string, object?> parameters) =>
-        string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new PostgresExecuteResult(0, null)) : Run(sql, parameters);
+    public Task<PostgresExecuteResult> Execute(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+        string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new PostgresExecuteResult(0, Value.Null.Instance)) : Run(sql, parameters);
 
-    public Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Query(string sql, IReadOnlyDictionary<string, object?> parameters) =>
+    public Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Query(string sql, IReadOnlyDictionary<string, Value> parameters) =>
         string.IsNullOrWhiteSpace(sql)
-            ? Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>([])
+            ? Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, Value>>>([])
             : Read(sql, parameters);
 
     public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) =>
@@ -41,7 +41,7 @@ public sealed class PostgresDriver : IPostgresDriver
 
     NpgsqlConnection RequireDb() => _db ?? throw new DatasourceException("Postgres driver is not open");
 
-    async Task<PostgresExecuteResult> Run(string sql, IReadOnlyDictionary<string, object?> parameters)
+    async Task<PostgresExecuteResult> Run(string sql, IReadOnlyDictionary<string, Value> parameters)
     {
         var rewritten = PostgresBind.WithReturning(sql);
         var (text, values) = PostgresBind.ToPostgres(rewritten, parameters);
@@ -52,13 +52,13 @@ public sealed class PostgresDriver : IPostgresDriver
         if (rewritten.Contains("RETURNING", StringComparison.OrdinalIgnoreCase))
         {
             var result = await command.ExecuteScalarAsync();
-            return new PostgresExecuteResult(result is null ? 0 : 1, result);
+            return new PostgresExecuteResult(result is null ? 0 : 1, Value.From(result));
         }
         var rows = await command.ExecuteNonQueryAsync();
-        return new PostgresExecuteResult(Math.Max(rows, 0), null);
+        return new PostgresExecuteResult(Math.Max(rows, 0), Value.Null.Instance);
     }
 
-    async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Read(string sql, IReadOnlyDictionary<string, object?> parameters)
+    async Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Read(string sql, IReadOnlyDictionary<string, Value> parameters)
     {
         var (text, values) = PostgresBind.ToPostgres(sql, parameters);
         using var command = RequireDb().CreateCommand();
@@ -66,12 +66,12 @@ public sealed class PostgresDriver : IPostgresDriver
         for (var i = 0; i < values.Length; i++)
             command.Parameters.AddWithValue($"p{i}", values[i] ?? DBNull.Value);
         using var reader = await command.ExecuteReaderAsync();
-        var rows = new List<IReadOnlyDictionary<string, object?>>();
+        var rows = new List<IReadOnlyDictionary<string, Value>>();
         while (await reader.ReadAsync())
         {
-            var row = new Dictionary<string, object?>();
+            var row = new Dictionary<string, Value>();
             for (var i = 0; i < reader.FieldCount; i++)
-                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
             rows.Add(row);
         }
         return rows;

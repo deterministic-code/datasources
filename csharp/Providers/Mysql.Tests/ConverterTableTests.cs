@@ -11,18 +11,18 @@ public class ConverterTableTests
     public void RegistersEveryMappedType()
     {
         MysqlConverters.Register();
-        var mapping = TypeConverter.Mapping<Dictionary<string, object?>>("mysql");
+        var mapping = TypeConverter.Mapping<Dictionary<string, Value>>("mysql");
         Assert.Equal("mysql", mapping.Source);
         foreach (var sqlType in MysqlConverters.Types.Types.Keys)
         {
-            var row = new Dictionary<string, object?> { ["col"] = Sample(sqlType) };
+            var row = new Dictionary<string, Value> { ["col"] = Sample(sqlType) };
             var dest = mapping.To(row);
             Assert.NotNull(dest);
             Assert.NotNull(mapping.From(dest));
         }
     }
 
-    static object Sample(string sqlType)
+    static Value Sample(string sqlType)
     {
         var key = sqlType.ToUpperInvariant();
         if (key.Contains("BOOL") || key is "BIT" or "TINYINT(1)") return 1;

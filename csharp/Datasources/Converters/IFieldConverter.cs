@@ -2,6 +2,6 @@ namespace Datasources;
 
 public interface IFieldConverter
 {
-    object? To(object? value);
-    object? From(object? value);
+    Value To(Value? value);
+    Value From(Value? value);
 }

@@ -1,4 +1,4 @@
-export function identityFilter(obj: Record<string, unknown>): Record<string, unknown> {
+export function identityFilter<T>(obj: Record<string, T>): Record<string, T> {
   if (Object.prototype.hasOwnProperty.call(obj, "id")) {
     return { id: obj.id };
   }

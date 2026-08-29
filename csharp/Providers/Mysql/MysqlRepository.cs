@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-public sealed class MysqlRepository : IRepository<Dictionary<string, object?>>
+public sealed class MysqlRepository : IRepository<Dictionary<string, Value>>
 {
     public string Table { get; }
     public IConnection Connection { get; }
@@ -11,22 +11,22 @@ public sealed class MysqlRepository : IRepository<Dictionary<string, object?>>
         Table = table ?? "items";
     }
 
-    public Task<Dictionary<string, object?>?> GetSingle(IQuery? query = null) =>
+    public Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null) =>
         throw new ProviderNotImplementedException("mysql");
 
-    public Task<Dictionary<string, object?>?> GetSingle(IWhere where) => GetSingle((IQuery?)null);
+    public Task<Dictionary<string, Value>?> GetSingle(IWhere where) => GetSingle((IQuery?)null);
 
-    public IAsyncEnumerable<Dictionary<string, object?>> Get(IQuery? query = null) =>
+    public IAsyncEnumerable<Dictionary<string, Value>> Get(IQuery? query = null) =>
         throw new ProviderNotImplementedException("mysql");
 
-    public IAsyncEnumerable<Dictionary<string, object?>> Get(IWhere where) => Get((IQuery?)null);
+    public IAsyncEnumerable<Dictionary<string, Value>> Get(IWhere where) => Get((IQuery?)null);
 
-    public Task<Response> Add(Dictionary<string, object?> obj) =>
+    public Task<Response> Add(Dictionary<string, Value> obj) =>
         throw new ProviderNotImplementedException("mysql");
 
-    public Task<Response> Update(Dictionary<string, object?> obj, IWhere? byWhere = null) =>
+    public Task<Response> Update(Dictionary<string, Value> obj, IWhere? byWhere = null) =>
         throw new ProviderNotImplementedException("mysql");
 
-    public Task<Response> Delete(Dictionary<string, object?> obj, IWhere? byWhere = null) =>
+    public Task<Response> Delete(Dictionary<string, Value> obj, IWhere? byWhere = null) =>
         throw new ProviderNotImplementedException("mysql");
 }

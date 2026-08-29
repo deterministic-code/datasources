@@ -23,12 +23,12 @@ public sealed class SqliteDriver : ISqliteDriver
         _db = null;
     }
 
-    public Task<SqliteExecuteResult> Execute(string sql, IReadOnlyDictionary<string, object?> parameters) =>
-        string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new SqliteExecuteResult(0, null)) : Run(sql, parameters);
+    public Task<SqliteExecuteResult> Execute(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+        string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new SqliteExecuteResult(0, Value.Null.Instance)) : Run(sql, parameters);
 
-    public Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Query(string sql, IReadOnlyDictionary<string, object?> parameters) =>
+    public Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Query(string sql, IReadOnlyDictionary<string, Value> parameters) =>
         string.IsNullOrWhiteSpace(sql)
-            ? Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>([])
+            ? Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, Value>>>([])
             : Read(sql, parameters);
 
     public async Task Begin(IsolationLevel isolation = IsolationLevel.Serializable)
@@ -55,38 +55,38 @@ public sealed class SqliteDriver : ISqliteDriver
 
     SqliteDb RequireDb() => _db ?? throw new DatasourceException("SQLite driver is not open");
 
-    async Task<SqliteExecuteResult> Run(string sql, IReadOnlyDictionary<string, object?> parameters)
+    async Task<SqliteExecuteResult> Run(string sql, IReadOnlyDictionary<string, Value> parameters)
     {
         using var command = Bind(sql, parameters);
         var rows = await command.ExecuteNonQueryAsync();
         using var id = RequireDb().CreateCommand();
         id.CommandText = "SELECT last_insert_rowid()";
-        return new SqliteExecuteResult(rows, await id.ExecuteScalarAsync());
+        return new SqliteExecuteResult(rows, Value.From(await id.ExecuteScalarAsync()));
     }
 
-    async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> Read(string sql, IReadOnlyDictionary<string, object?> parameters)
+    async Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Read(string sql, IReadOnlyDictionary<string, Value> parameters)
     {
         using var command = Bind(sql, parameters);
         using var reader = await command.ExecuteReaderAsync();
-        var rows = new List<IReadOnlyDictionary<string, object?>>();
+        var rows = new List<IReadOnlyDictionary<string, Value>>();
         while (await reader.ReadAsync())
         {
-            var row = new Dictionary<string, object?>();
+            var row = new Dictionary<string, Value>();
             for (var i = 0; i < reader.FieldCount; i++)
-                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
             rows.Add(row);
         }
         return rows;
     }
 
-    SqliteCmd Bind(string sql, IReadOnlyDictionary<string, object?> parameters)
+    SqliteCmd Bind(string sql, IReadOnlyDictionary<string, Value> parameters)
     {
         var command = RequireDb().CreateCommand();
         command.CommandText = sql;
         foreach (var (name, value) in parameters)
         {
             var key = name[0] is '$' or '@' or ':' ? name : $"${name}";
-            command.Parameters.AddWithValue(key, value ?? DBNull.Value);
+            command.Parameters.AddWithValue(key, value.ToObject() ?? DBNull.Value);
         }
         return command;
     }

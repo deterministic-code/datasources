@@ -31,12 +31,12 @@ public sealed class MockRepository<T> : IRepository<T>
     {
         if (AddError is not null) throw AddError;
         Items.Add(obj);
-        return Task.FromResult(new Response(obj, 1));
+        return Task.FromResult(new Response(Value.Null.Instance, 1));
     }
 
     public Task<Response> Update(T obj, IWhere? byWhere = null) =>
-        UpdateError is not null ? throw UpdateError : Task.FromResult(new Response(obj, 1));
+        UpdateError is not null ? throw UpdateError : Task.FromResult(new Response(Value.Null.Instance, 1));
 
     public Task<Response> Delete(T obj, IWhere? byWhere = null) =>
-        DeleteError is not null ? throw DeleteError : Task.FromResult(new Response(null, 1));
+        DeleteError is not null ? throw DeleteError : Task.FromResult(new Response(Value.Null.Instance, 1));
 }

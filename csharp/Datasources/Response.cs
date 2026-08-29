@@ -1,3 +1,3 @@
 namespace Datasources;
 
-public sealed record Response(object? Result, int RowsAffected);
+public sealed record Response(Value Result, int RowsAffected);

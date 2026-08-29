@@ -74,19 +74,19 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         return await commands.Delete.Execute(statements.Delete(where).GetText(), where.Parameters);
     }
 
-    IWhere IdWhere(IReadOnlyDictionary<string, object?> record) =>
+    IWhere IdWhere(IReadOnlyDictionary<string, Value> record) =>
         WhereBuilder.And([.. ids.Select(col =>
             record.TryGetValue(col, out var value)
                 ? WhereBuilder.Equals(col, value)
                 : throw new DatasourceException($"Missing Id value \"{col}\""))]);
 
     static IReadOnlyList<Parameter> Params(
-        IReadOnlyDictionary<string, object?> record, Func<string, bool> include) =>
+        IReadOnlyDictionary<string, Value> record, Func<string, bool> include) =>
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
-    static IReadOnlyDictionary<string, object?> AsRow(object? current) =>
-        current is IReadOnlyDictionary<string, object?> row
+    static IReadOnlyDictionary<string, Value> AsRow(object? current) =>
+        current is IReadOnlyDictionary<string, Value> row
             ? row
             : throw new DatasourceException("Reader current must be a row dictionary");
 }

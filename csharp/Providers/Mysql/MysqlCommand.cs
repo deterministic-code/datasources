@@ -19,6 +19,6 @@ public sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         {
             Typed.EnsureOpen();
             var result = await Typed.Driver.Execute(query, Helpers.ParametersToRecord(paramsList));
-            return (new Response(result.Result, result.RowsAffected), (IReadOnlyList<IReadOnlyDictionary<string, object?>>)[]);
+            return (new Response(result.Result, result.RowsAffected), (IReadOnlyList<IReadOnlyDictionary<string, Value>>)[]);
         });
 }
