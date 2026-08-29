@@ -1,3 +1,5 @@
+using Datasources;
+
 namespace Datasources.Sqlite;
 
-public sealed record SqliteExecuteResult(int RowsAffected, object? Result);
+public sealed record SqliteExecuteResult(int RowsAffected, Value Result);

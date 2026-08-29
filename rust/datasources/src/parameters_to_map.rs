@@ -1,8 +1,7 @@
 use crate::parameter::Parameter;
-use crate::value::Value;
 use std::collections::HashMap;
 
-pub fn parameters_to_map(parameters: Option<&[Parameter]>) -> HashMap<String, Value> {
+pub fn parameters_to_map<T: Clone>(parameters: Option<&[Parameter<T>]>) -> HashMap<String, T> {
     match parameters {
         None => HashMap::new(),
         Some(items) => items

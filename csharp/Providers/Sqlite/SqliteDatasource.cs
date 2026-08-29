@@ -34,10 +34,10 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
         new SqliteCommand(connection as SqliteConnection ?? DefaultConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new Repository<Dictionary<string, object?>>(
-            new RepositoryBuilderOptions<Dictionary<string, object?>>
+        (IRepository<T>)(object)new Repository<Dictionary<string, Value>>(
+            new RepositoryBuilderOptions<Dictionary<string, Value>>
             {
                 Connection = connection as SqliteConnection ?? DefaultConnection(),
-                Mapping = TypeConverter.Mapping<Dictionary<string, object?>>("sqlite", name: _table ?? "items"),
+                Mapping = TypeConverter.Mapping<Dictionary<string, Value>>("sqlite", name: _table ?? "items"),
             });
 }

@@ -15,7 +15,7 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
             Typed.EnsureOpen();
             var filter = Merge(ParseFilter(query), Helpers.ParametersToRecord(paramsList));
             var nodes = Typed.GetCollection().Where(row => Matches(row, filter)).ToList();
-            IReadOnlyList<IReadOnlyDictionary<string, object?>> rows = nodes.Select(ToRow).ToList();
+            IReadOnlyList<IReadOnlyDictionary<string, Value>> rows = nodes.Select(ToRow).ToList();
             return Task.FromResult(((IReader)new ArrayReader(nodes.Cast<object?>().ToList()), rows));
         });
 
@@ -29,12 +29,12 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
             {
                 Typed.GetCollection().Add(ToObject(obj));
                 await Typed.Persist();
-                return (new Response(obj, 1), EmptyRows());
+                return (new Response(Value.Null.Instance, 1), EmptyRows());
             }
 
             if (op == "update")
             {
-                var whereText = obj.TryGetValue("$where", out var where) ? where as string : null;
+                var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
                 var filter = whereText is not null ? ParseFilter(whereText) : Helpers.IdentityFilter(obj);
                 return (await ApplyUpdate(obj, filter), EmptyRows());
@@ -42,14 +42,14 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
 
             if (op == "delete")
             {
-                var filter = obj.Count == 0 ? new Dictionary<string, object?>() : Helpers.IdentityFilter(obj);
+                var filter = obj.Count == 0 ? new Dictionary<string, Value>() : Helpers.IdentityFilter(obj);
                 return (await ApplyDelete(filter), EmptyRows());
             }
 
             throw new DatasourceException($"Unsupported JSON command: {query}");
         });
 
-    private async Task<Response> ApplyUpdate(IReadOnlyDictionary<string, object?> obj, IReadOnlyDictionary<string, object?> filter)
+    private async Task<Response> ApplyUpdate(IReadOnlyDictionary<string, Value> obj, IReadOnlyDictionary<string, Value> filter)
     {
         var collection = Typed.GetCollection();
         var affected = 0;
@@ -58,16 +58,16 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
             if (Matches(collection[i], filter) && collection[i] is JsonObject current)
             {
                 foreach (var pair in obj)
-                    current[pair.Key] = JsonValue.Create(pair.Value);
+                    current[pair.Key] = JsonValue.Create(pair.Value.ToObject());
                 affected++;
             }
         }
 
         await Typed.Persist();
-        return new Response(obj, affected);
+        return new Response(Value.Null.Instance, affected);
     }
 
-    private async Task<Response> ApplyDelete(IReadOnlyDictionary<string, object?> filter)
+    private async Task<Response> ApplyDelete(IReadOnlyDictionary<string, Value> filter)
     {
         var collection = Typed.GetCollection();
         var remaining = collection.Where(row => !Matches(row, filter)).Select(n => n?.DeepClone()).ToList();
@@ -75,35 +75,35 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
         collection.Clear();
         foreach (var row in remaining) collection.Add(row);
         await Typed.Persist();
-        return new Response(null, affected);
+        return new Response(Value.Null.Instance, affected);
     }
 
-    public static Dictionary<string, object?> ParseFilter(string? text) =>
+    public static Dictionary<string, Value> ParseFilter(string? text) =>
         string.IsNullOrWhiteSpace(text)
-            ? new Dictionary<string, object?>()
+            ? new Dictionary<string, Value>()
             : JsonNode.Parse(text) is JsonObject obj
-                ? obj.ToDictionary(k => k.Key, v => JsonValueToObject(v.Value))
+                ? obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value))
                 : throw new DatasourceException("JSON filter must be an object");
 
-    public static bool Matches(JsonNode? row, IReadOnlyDictionary<string, object?> filter) =>
-        row is JsonObject obj && filter.All(pair => Equals(JsonValueToObject(obj[pair.Key]), pair.Value));
+    public static bool Matches(JsonNode? row, IReadOnlyDictionary<string, Value> filter) =>
+        row is JsonObject obj && filter.All(pair => Equals(JsonValueToValue(obj[pair.Key]), pair.Value));
 
-    public static JsonObject ToObject(IReadOnlyDictionary<string, object?> obj)
+    public static JsonObject ToObject(IReadOnlyDictionary<string, Value> obj)
     {
         var json = new JsonObject();
-        foreach (var pair in obj) json[pair.Key] = JsonValue.Create(pair.Value);
+        foreach (var pair in obj) json[pair.Key] = JsonValue.Create(pair.Value.ToObject());
         return json;
     }
 
-    private static Dictionary<string, object?> Merge(Dictionary<string, object?> left, IReadOnlyDictionary<string, object?> right)
+    private static Dictionary<string, Value> Merge(Dictionary<string, Value> left, IReadOnlyDictionary<string, Value> right)
     {
         foreach (var pair in right) left[pair.Key] = pair.Value;
         return left;
     }
 
-    public static object? JsonValueToObject(JsonNode? node)
+    public static Value JsonValueToValue(JsonNode? node)
     {
-        if (node is not JsonValue value) return node;
+        if (node is not JsonValue value) return Value.From(node?.ToString());
         if (value.TryGetValue<int>(out var i)) return i;
         if (value.TryGetValue<long>(out var l)) return l;
         if (value.TryGetValue<bool>(out var b)) return b;
@@ -112,10 +112,10 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
         return value.ToString();
     }
 
-    private static Dictionary<string, object?> ToRow(JsonNode? row) =>
+    private static Dictionary<string, Value> ToRow(JsonNode? row) =>
         row is JsonObject obj
-            ? obj.ToDictionary(k => k.Key, v => JsonValueToObject(v.Value))
-            : new Dictionary<string, object?>();
+            ? obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value))
+            : new Dictionary<string, Value>();
 
-    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> EmptyRows() => [];
+    private static IReadOnlyList<IReadOnlyDictionary<string, Value>> EmptyRows() => [];
 }

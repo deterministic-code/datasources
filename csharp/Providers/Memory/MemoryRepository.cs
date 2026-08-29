@@ -2,52 +2,52 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryRepository : IRepository<Dictionary<string, object?>>
+public sealed class MemoryRepository : IRepository<Dictionary<string, Value>>
 {
     public MemoryRepository(MemoryConnection connection) => Connection = connection;
     public IConnection Connection { get; }
     private MemoryConnection Typed => (MemoryConnection)Connection;
 
-    public Task<Dictionary<string, object?>?> GetSingle(IWhere where) =>
+    public Task<Dictionary<string, Value>?> GetSingle(IWhere where) =>
         GetSingle(new Query(where.GetText(), where));
 
-    public IAsyncEnumerable<Dictionary<string, object?>> Get(IWhere where) =>
+    public IAsyncEnumerable<Dictionary<string, Value>> Get(IWhere where) =>
         Get(new Query(where.GetText(), where));
 
-    public async Task<Dictionary<string, object?>?> GetSingle(IQuery? query = null)
+    public async Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null)
     {
         var reader = await new MemoryCommand(Typed).ExecuteReader(query?.GetText());
-        return await reader.Next() ? reader.Current as Dictionary<string, object?> : null;
+        return await reader.Next() ? reader.Current as Dictionary<string, Value> : null;
     }
 
-    public async IAsyncEnumerable<Dictionary<string, object?>> Get(IQuery? query = null)
+    public async IAsyncEnumerable<Dictionary<string, Value>> Get(IQuery? query = null)
     {
         var reader = await new MemoryCommand(Typed).ExecuteReader(query?.GetText());
         while (await reader.Next())
-            if (reader.Current is Dictionary<string, object?> record)
+            if (reader.Current is Dictionary<string, Value> record)
                 yield return record;
     }
 
-    public Task<Response> Add(Dictionary<string, object?> obj)
+    public Task<Response> Add(Dictionary<string, Value> obj)
     {
         Typed.EnsureOpen();
-        Typed.GetCollection().Add(new Dictionary<string, object?>(obj));
-        return Task.FromResult(new Response(obj, 1));
+        Typed.GetCollection().Add(new Dictionary<string, Value>(obj));
+        return Task.FromResult(new Response(Value.Null.Instance, 1));
     }
 
-    public Task<Response> Update(Dictionary<string, object?> obj, IWhere? byWhere = null)
+    public Task<Response> Update(Dictionary<string, Value> obj, IWhere? byWhere = null)
     {
         Typed.EnsureOpen();
         return new MemoryCommand(Typed).Execute("update", ToParams(obj, byWhere));
     }
 
-    public Task<Response> Delete(Dictionary<string, object?> obj, IWhere? byWhere = null)
+    public Task<Response> Delete(Dictionary<string, Value> obj, IWhere? byWhere = null)
     {
         Typed.EnsureOpen();
         return new MemoryCommand(Typed).Execute("delete", ToParams(obj, byWhere));
     }
 
-    private static IReadOnlyList<Parameter> ToParams(Dictionary<string, object?> obj, IWhere? byWhere) =>
+    private static IReadOnlyList<Parameter> ToParams(Dictionary<string, Value> obj, IWhere? byWhere) =>
         obj.Select(p => new Parameter(p.Key, p.Value))
             .Concat(byWhere is not null ? [new Parameter("$where", byWhere.GetText())] : [])
             .ToList();

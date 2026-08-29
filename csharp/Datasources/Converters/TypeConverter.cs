@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Globalization;
 using System.Reflection;
 
 namespace Datasources;
@@ -56,7 +57,7 @@ public static class TypeConverter
             To = row =>
             {
                 var target = new T();
-                if (target is IDictionary<string, object?> dict)
+                if (target is IDictionary<string, Value> dict)
                 {
                     foreach (var (sqlName, value) in row)
                         dict[DestName(mapped, sqlName, table.Rename)] = ConverterFor(sqlName).To(value);
@@ -66,14 +67,14 @@ public static class TypeConverter
                 {
                     var prop = typeof(T).GetProperty(DestName(mapped, sqlName, table.Rename));
                     if (prop is null || !prop.CanWrite) continue;
-                    prop.SetValue(target, ConverterFor(sqlName).To(value));
+                    prop.SetValue(target, Assign(ConverterFor(sqlName).To(value), prop.PropertyType));
                 }
                 return target;
             },
             From = obj =>
             {
-                var result = new Dictionary<string, object?>();
-                if (obj is IDictionary<string, object?> dict)
+                var result = new Dictionary<string, Value>();
+                if (obj is IDictionary<string, Value> dict)
                 {
                     foreach (var (destName, value) in dict)
                     {
@@ -85,7 +86,7 @@ public static class TypeConverter
                 foreach (var prop in DataProperties(typeof(T)))
                 {
                     var sqlName = SqlName(mapped, prop.Name, table.Rename);
-                    result[sqlName] = ConverterFor(sqlName).From(prop.GetValue(obj));
+                    result[sqlName] = ConverterFor(sqlName).From(Value.From(prop.GetValue(obj)));
                 }
                 return result;
             }
@@ -192,6 +193,30 @@ public static class TypeConverter
         if (parts.Length == 0) return name;
         return parts[0] + string.Concat(parts.Skip(1).Select(part =>
             char.ToUpperInvariant(part[0]) + part[1..]));
+    }
+
+    static object? Assign(Value value, Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        var raw = value.ToObject();
+        if (raw is null) return null;
+        if (type.IsInstanceOfType(raw)) return raw;
+        if (type == typeof(DateTime) && raw is string text)
+            return DateTime.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        if (type == typeof(Guid) && raw is string guid) return Guid.Parse(guid);
+        if (type == typeof(byte[]) && raw is string bytes) return Convert.FromBase64String(bytes);
+        if (type == typeof(decimal) && raw is string number)
+            return decimal.Parse(number, CultureInfo.InvariantCulture);
+        if (type == typeof(bool) && raw is long flag) return flag != 0;
+        if (raw is long integer)
+        {
+            if (type == typeof(int)) return (int)integer;
+            if (type == typeof(byte)) return (byte)integer;
+            if (type == typeof(short)) return (short)integer;
+            if (type == typeof(float)) return (float)integer;
+            if (type == typeof(double)) return (double)integer;
+        }
+        return Convert.ChangeType(raw, type, CultureInfo.InvariantCulture);
     }
 
     static string Pascal(string name)

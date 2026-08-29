@@ -23,19 +23,19 @@ public class CoreTests
     public void HelpersAndQuery()
     {
         Assert.Empty(Helpers.ParametersToRecord(null));
-        Assert.Equal(1, Helpers.ParametersToRecord(new[] { new Parameter("id", 1) })["id"]);
+        Assert.Equal(new Value.Int(1), Helpers.ParametersToRecord(new[] { new Parameter("id", 1) })["id"]);
         Assert.Equal("SELECT 1", new Query("SELECT 1").GetText());
         Assert.Null(new Query("SELECT 1").Where);
         var byId = new Where("id = 1");
         Assert.Same(byId, new Query("SELECT 1", byId).Where);
         Assert.Equal("id = 1", byId.GetText());
-        var withId = new Dictionary<string, object?> { ["id"] = 9, ["name"] = "a" };
+        var withId = new Dictionary<string, Value> { ["id"] = 9, ["name"] = "a" };
         Assert.Single(Helpers.IdentityFilter(withId));
         Assert.Equal("id = $id", Helpers.IdentityWhereText(withId));
-        var noId = new Dictionary<string, object?> { ["name"] = "a", ["city"] = "x" };
+        var noId = new Dictionary<string, Value> { ["name"] = "a", ["city"] = "x" };
         Assert.Equal(2, Helpers.IdentityFilter(noId).Count);
         Assert.Contains("name = $name", Helpers.IdentityWhereText(noId));
-        Assert.Equal("1 = 1", Helpers.IdentityWhereText(new Dictionary<string, object?>()));
+        Assert.Equal("1 = 1", Helpers.IdentityWhereText(new Dictionary<string, Value>()));
     }
 
     [Fact]
@@ -44,8 +44,8 @@ public class CoreTests
         var where = WhereBuilder.And(WhereBuilder.Equals("id", 1), WhereBuilder.GreaterThan("age", 18));
         Assert.Equal("id = $id AND age > $age", where.GetText());
         Assert.Equal(2, where.Parameters.Count);
-        Assert.Equal(1, where.Parameters[0].Value);
-        Assert.Equal(18, where.Parameters[1].Value);
+        Assert.Equal(new Value.Int(1), where.Parameters[0].Value);
+        Assert.Equal(new Value.Int(18), where.Parameters[1].Value);
         Assert.Equal("id <> $id", WhereBuilder.Ne("id", 2).GetText());
         Assert.Equal("n < $n", WhereBuilder.Lt("n", 0).GetText());
         Assert.Equal("n >= $n", WhereBuilder.Gte("n", 0).GetText());
@@ -130,7 +130,7 @@ public class CoreTests
         {
             used = query;
             seen.Add("op");
-            return Task.FromResult((7, Rows(new Dictionary<string, object?> { ["id"] = 1 })));
+            return Task.FromResult((7, Rows(new Dictionary<string, Value> { ["id"] = 1 })));
         });
         Assert.Equal("SELECT 2", used);
         Assert.Equal(new[] { "before:SELECT 1", "op", "after:SELECT 2:1" }, seen);
@@ -303,28 +303,28 @@ public class CoreTests
         reader.NextError = new InvalidOperationException("next");
         await Assert.ThrowsAsync<InvalidOperationException>(() => reader.Next());
 
-        var repo = new MockRepository<Dictionary<string, object?>>(connection);
+        var repo = new MockRepository<Dictionary<string, Value>>(connection);
         Assert.Same(connection, repo.Connection);
         Assert.Null(await repo.GetSingle());
-        repo.Items.Add(new Dictionary<string, object?> { ["id"] = 1 });
+        repo.Items.Add(new Dictionary<string, Value> { ["id"] = 1 });
         Assert.NotNull(await repo.GetSingle(new MockQuery("id=1")));
         Assert.NotNull(await repo.GetSingle(new MockWhere("id=1")));
         Assert.Single(await repo.Get().ToListAsync());
         Assert.Single(await repo.Get(new MockQuery("all")).ToListAsync());
         Assert.Single(await repo.Get(new MockWhere("all")).ToListAsync());
-        await repo.Add(new Dictionary<string, object?> { ["id"] = 3 });
-        await repo.Update(new Dictionary<string, object?> { ["id"] = 3 }, new MockWhere("id=3"));
-        await repo.Delete(new Dictionary<string, object?> { ["id"] = 3 });
+        await repo.Add(new Dictionary<string, Value> { ["id"] = 3 });
+        await repo.Update(new Dictionary<string, Value> { ["id"] = 3 }, new MockWhere("id=3"));
+        await repo.Delete(new Dictionary<string, Value> { ["id"] = 3 });
         repo.GetSingleError = new InvalidOperationException("gs");
         await Assert.ThrowsAsync<InvalidOperationException>(() => repo.GetSingle());
         repo.GetError = new InvalidOperationException("g");
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await repo.Get().ToListAsync());
         repo.AddError = new InvalidOperationException("ad");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Add(new Dictionary<string, object?>()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Add(new Dictionary<string, Value>()));
         repo.UpdateError = new InvalidOperationException("up");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Update(new Dictionary<string, object?>()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Update(new Dictionary<string, Value>()));
         repo.DeleteError = new InvalidOperationException("del");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Delete(new Dictionary<string, object?>()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Delete(new Dictionary<string, Value>()));
 
         var ds = new MockDatasource();
         Assert.Equal("mock", ds.Create().Provider);
@@ -359,9 +359,9 @@ public class CoreTests
         Assert.Equal(new[] { "before:insert", "after:insert" }, seen);
     }
 
-    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> EmptyRows() => [];
+    private static IReadOnlyList<IReadOnlyDictionary<string, Value>> EmptyRows() => [];
 
-    private static IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows(params IReadOnlyDictionary<string, object?>[] rows) => rows;
+    private static IReadOnlyList<IReadOnlyDictionary<string, Value>> Rows(params IReadOnlyDictionary<string, Value>[] rows) => rows;
 
     private sealed class RecordingCommand : CommandMiddlewareHost, ICommand
     {
@@ -375,11 +375,11 @@ public class CoreTests
     private sealed class DelegateMiddleware : ICommandMiddleware
     {
         private readonly Func<string, IReadOnlyList<Parameter>?, Task<(string Query, IReadOnlyList<Parameter>? Parameters)?>> _before;
-        private readonly Func<string, IReadOnlyList<Parameter>?, IReadOnlyList<IReadOnlyDictionary<string, object?>>, double, Exception?, Task> _after;
+        private readonly Func<string, IReadOnlyList<Parameter>?, IReadOnlyList<IReadOnlyDictionary<string, Value>>, double, Exception?, Task> _after;
 
         public DelegateMiddleware(
             Func<string, IReadOnlyList<Parameter>?, Task<(string Query, IReadOnlyList<Parameter>? Parameters)?>> before,
-            Func<string, IReadOnlyList<Parameter>?, IReadOnlyList<IReadOnlyDictionary<string, object?>>, double, Exception?, Task> after)
+            Func<string, IReadOnlyList<Parameter>?, IReadOnlyList<IReadOnlyDictionary<string, Value>>, double, Exception?, Task> after)
         {
             _before = before;
             _after = after;
@@ -391,7 +391,7 @@ public class CoreTests
         public Task AfterQuery(
             string query,
             IReadOnlyList<Parameter>? parameters,
-            IReadOnlyList<IReadOnlyDictionary<string, object?>> results,
+            IReadOnlyList<IReadOnlyDictionary<string, Value>> results,
             double elapsedMs,
             Exception? error = null) =>
             _after(query, parameters, results, elapsedMs, error);

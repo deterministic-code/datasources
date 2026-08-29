@@ -2,20 +2,23 @@ namespace Datasources;
 
 public static class Helpers
 {
-    public static IReadOnlyDictionary<string, object?> ParametersToRecord(IReadOnlyList<Parameter>? parameters)
+    public static IReadOnlyDictionary<string, Value> ParametersToRecord(IReadOnlyList<Parameter>? parameters) =>
+        ParametersToRecord<Value>(parameters);
+
+    public static IReadOnlyDictionary<string, T> ParametersToRecord<T>(IReadOnlyList<Parameter<T>>? parameters)
     {
-        var record = new Dictionary<string, object?>();
+        var record = new Dictionary<string, T>();
         if (parameters is null) return record;
         foreach (var parameter in parameters) record[parameter.Name] = parameter.Value;
         return record;
     }
 
-    public static IReadOnlyDictionary<string, object?> IdentityFilter(IReadOnlyDictionary<string, object?> obj) =>
+    public static IReadOnlyDictionary<string, T> IdentityFilter<T>(IReadOnlyDictionary<string, T> obj) =>
         obj.ContainsKey("id")
-            ? new Dictionary<string, object?> { ["id"] = obj["id"] }
-            : new Dictionary<string, object?>(obj);
+            ? new Dictionary<string, T> { ["id"] = obj["id"] }
+            : new Dictionary<string, T>(obj);
 
-    public static string IdentityWhereText(IReadOnlyDictionary<string, object?> obj) =>
+    public static string IdentityWhereText<T>(IReadOnlyDictionary<string, T> obj) =>
         obj.ContainsKey("id") ? "id = $id"
         : obj.Count == 0 ? "1 = 1"
         : string.Join(" AND ", obj.Keys.Select(key => $"{key} = ${key}"));

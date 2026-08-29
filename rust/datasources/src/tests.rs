@@ -58,7 +58,7 @@ fn values_and_parameters() {
     assert_eq!(Value::from(String::from("y")), Value::Text("y".into()));
     let p = Parameter::new("id", 1_i64);
     assert_eq!(p.name, "id");
-    assert_eq!(parameters_to_map(None).len(), 0);
+    assert_eq!(parameters_to_map::<Value>(None).len(), 0);
     assert_eq!(parameters_to_map(Some(&[p])).len(), 1);
     let response = Response::new(Value::Null, 2);
     assert_eq!(response.rows_affected, 2);
@@ -72,7 +72,7 @@ fn identity_helpers() {
     let no_id = record(&[("name", Value::from("a")), ("city", Value::from("x"))]);
     assert_eq!(identity_filter(&no_id).len(), 2);
     assert_eq!(identity_where_text(&no_id), "city = $city AND name = $name");
-    assert_eq!(identity_where_text(&HashMap::new()), "1 = 1");
+    assert_eq!(identity_where_text(&HashMap::<String, Value>::new()), "1 = 1");
 }
 
 #[tokio::test]

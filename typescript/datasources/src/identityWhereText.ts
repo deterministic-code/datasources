@@ -1,4 +1,4 @@
-export function identityWhereText(obj: Record<string, unknown>): string {
+export function identityWhereText<T>(obj: Record<string, T>): string {
   if (Object.prototype.hasOwnProperty.call(obj, "id")) {
     return "id = $id";
   }

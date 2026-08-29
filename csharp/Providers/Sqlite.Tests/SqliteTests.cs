@@ -66,10 +66,10 @@ public class SqliteTests
         await implicitCommand.Connection.Open();
         await implicitCommand.Execute();
         await implicitCommand.ExecuteReader("SELECT 1");
-        var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created);
-        Assert.Equal("people", ((Repository<Dictionary<string, object?>>)(object)repo2).Mapping.Name);
+        var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
+        Assert.Equal("people", ((Repository<Dictionary<string, Value>>)(object)repo2).Mapping.Name);
         Assert.Throws<DatasourceException>(() =>
-            new SqliteDatasource().CreateRepository<Dictionary<string, object?>>());
+            new SqliteDatasource().CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("sqlite", Datasource.Create("sqlite").Provider);
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteDatasource().CreateConnection());
 
