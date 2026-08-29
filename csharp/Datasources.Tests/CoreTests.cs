@@ -205,12 +205,34 @@ public class CoreTests
     }
 
     [Fact]
+    public async Task Defaults()
+    {
+        Assert.Throws<DatasourceException>(() => Datasource.Create());
+        Datasource.Use(new MockDatasource("sqlite"));
+        Datasource.Defaults(new Dictionary<string, string?>
+        {
+            ["provider"] = "sqlite",
+            ["filename"] = ":memory:"
+        });
+        var ds = Datasource.Create();
+        Assert.Equal("sqlite", ds.Provider);
+        var connection = await ds.CreateConnection();
+        Assert.False(connection.Opened);
+        Assert.Same(connection, ds.CreateCommand().Connection);
+        Assert.Same(connection, ds.CreateRepository<object>().Connection);
+        Datasource.Reset();
+        var error = Assert.Throws<DatasourceException>(() => Datasource.Create());
+        Assert.Equal("Datasource defaults are not specified", error.Message);
+    }
+
+    [Fact]
     public async Task Stubs()
     {
         var ds = StubFactory.Create("text");
         Assert.Equal("text", ds.Provider);
         Assert.Equal("text", ds.Create().Provider);
         var connection = await ds.CreateConnection();
+        Assert.False(connection.Opened);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.Open());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.Close());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.StartTransaction());

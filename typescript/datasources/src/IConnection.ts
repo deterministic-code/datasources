@@ -4,6 +4,7 @@ import type { IsolationLevel } from "./IsolationLevel.ts";
 
 export interface IConnection {
   readonly provider: string;
+  readonly opened: boolean;
   createCommand(): ICommand;
   open(): Promise<void>;
   close(): Promise<void>;

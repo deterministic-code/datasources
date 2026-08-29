@@ -7,10 +7,11 @@ public sealed class SqlServerDatasource : IDatasource, IDatasourceFactory
     public static readonly SqlServerDatasource Factory = new();
     public string Provider => "sqlserver";
     public IDatasource Create(object? options = null) => new SqlServerDatasource();
-    IConnection NewConnection() => new SqlServerConnection();
-    public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
+    IConnection? _connection;
+    IConnection DefaultConnection() => _connection ??= new SqlServerConnection();
+    public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new SqlServerCommand(connection ?? NewConnection());
+        new SqlServerCommand(connection ?? DefaultConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        new StubRepository<T>(Provider, connection ?? NewConnection());
+        new StubRepository<T>(Provider, connection ?? DefaultConnection());
 }

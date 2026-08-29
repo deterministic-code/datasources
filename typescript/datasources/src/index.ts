@@ -2,6 +2,10 @@ export type { ICommand } from "./ICommand.ts";
 export type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
+export type {
+  DatasourceOptions,
+  DatasourceOptionValue,
+} from "./DatasourceOptions.ts";
 export type { ICreateTableStatement } from "./builders/ICreateTableStatement.ts";
 export type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
 export type { IInsertStatement } from "./builders/IInsertStatement.ts";

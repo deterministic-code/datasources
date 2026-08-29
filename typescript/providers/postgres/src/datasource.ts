@@ -1,5 +1,6 @@
 import type {
   DatasourceFactory,
+  DatasourceOptions,
   ICommand,
   IConnection,
   IDatasource,
@@ -25,27 +26,33 @@ export class PostgresDatasource implements IDatasource, DatasourceFactory {
 
   constructor(private readonly options: PostgresDatasourceOptions = {}) {}
 
-  static create = (options?: unknown): IDatasource =>
+  private connection?: PostgresConnection;
+
+  static create = (options?: DatasourceOptions): IDatasource =>
     new PostgresDatasource((options ?? {}) as PostgresDatasourceOptions);
 
-  create = (options?: unknown): IDatasource => PostgresDatasource.create(options);
+  create = (options?: DatasourceOptions): IDatasource =>
+    PostgresDatasource.create(options);
 
   private newConnection = (): PostgresConnection => {
     requireDriver(this.options.driver);
     return new PostgresConnection(this.options);
   };
 
+  private defaultConnection = (): PostgresConnection =>
+    (this.connection ??= this.newConnection());
+
   createConnection = (): Promise<IConnection> =>
-    Promise.resolve(this.newConnection());
+    Promise.resolve(this.defaultConnection());
 
   createCommand = (connection?: IConnection): ICommand =>
     new PostgresCommand(
-      (connection as PostgresConnection | undefined) ?? this.newConnection(),
+      (connection as PostgresConnection | undefined) ?? this.defaultConnection(),
     );
 
   createRepository = <T>(connection?: IConnection): IRepository<T> =>
     new PostgresRepository<T>(
-      (connection as PostgresConnection | undefined) ?? this.newConnection(),
+      (connection as PostgresConnection | undefined) ?? this.defaultConnection(),
       { table: this.options.table },
     );
 

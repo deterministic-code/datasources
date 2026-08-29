@@ -87,6 +87,10 @@ impl Connection for MockConnection {
         &self.provider
     }
 
+    fn opened(&self) -> bool {
+        self.state.lock().expect("mock").opened
+    }
+
     fn create_command(&self) -> Arc<dyn Command> {
         self.command.clone()
     }

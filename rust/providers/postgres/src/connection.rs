@@ -40,6 +40,10 @@ impl Connection for PostgresConnection {
         "postgres"
     }
 
+    fn opened(&self) -> bool {
+        *self.opened.lock().unwrap()
+    }
+
     fn create_command(&self) -> Arc<dyn Command> {
         Arc::new(PostgresCommand::new(Arc::new(PostgresConnection {
             url: self.url.clone(),

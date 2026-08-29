@@ -70,11 +70,17 @@ impl DatasourceFactory for SqliteDatasource {
         "sqlite"
     }
 
-    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+    fn create(&self, options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
         Arc::new(SqliteDatasource::new(
-            self.filename.clone(),
+            options
+                .and_then(|o| o.get("filename"))
+                .cloned()
+                .or_else(|| self.filename.clone()),
             self.driver.clone(),
-            self.table.clone(),
+            options
+                .and_then(|o| o.get("table"))
+                .cloned()
+                .or_else(|| self.table.clone()),
         ))
     }
 }

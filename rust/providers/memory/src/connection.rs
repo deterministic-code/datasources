@@ -81,6 +81,10 @@ impl Connection for MemoryConnection {
         "memory"
     }
 
+    fn opened(&self) -> bool {
+        *self.state.opened.lock().unwrap()
+    }
+
     fn create_command(&self) -> Arc<dyn Command> {
         Arc::new(MemoryCommand::new(Arc::new(MemoryConnection {
             state: self.state.clone(),

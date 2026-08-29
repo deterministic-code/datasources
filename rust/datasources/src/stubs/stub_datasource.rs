@@ -53,7 +53,7 @@ impl DatasourceFactory for StubDatasource {
         &self.provider
     }
 
-    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+    fn create(&self, _options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
         Arc::new(StubDatasource::new(self.provider.clone()))
     }
 }

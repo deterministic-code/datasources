@@ -1,4 +1,5 @@
 import {
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
@@ -19,28 +20,34 @@ export class JsonDatasource implements IDatasource {
 
   constructor(private readonly options: JsonConnectionOptions = {}) {}
 
-  static create = (options?: unknown): IDatasource =>
+  private connection?: JsonConnection;
+
+  static create = (options?: DatasourceOptions): IDatasource =>
     new JsonDatasource((options ?? {}) as JsonConnectionOptions);
 
-  create = (options?: unknown): IDatasource => JsonDatasource.create(options);
+  create = (options?: DatasourceOptions): IDatasource =>
+    JsonDatasource.create(options);
 
   private newConnection = (): JsonConnection =>
     new JsonConnection(this.options);
 
+  private defaultConnection = (): JsonConnection =>
+    (this.connection ??= this.newConnection());
+
   createConnection = (): Promise<IConnection> =>
-    Promise.resolve(this.newConnection());
+    Promise.resolve(this.defaultConnection());
 
   createCommand = (connection?: IConnection): ICommand =>
     new JsonCommand(
-      (connection as JsonConnection | undefined) ?? this.newConnection(),
+      (connection as JsonConnection | undefined) ?? this.defaultConnection(),
     );
 
-  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): IRepository<T> =>
     new JsonRepository<T>(
-      (connection as JsonConnection | undefined) ?? this.newConnection(),
+      (connection as JsonConnection | undefined) ?? this.defaultConnection(),
     );
 
-  createReadonlyRepository = <T = unknown>(
+  createReadonlyRepository = <T>(
     connection?: IConnection,
   ): IReadonlyRepository<T> => this.createRepository(connection);
 }

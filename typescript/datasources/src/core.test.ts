@@ -311,6 +311,20 @@ describe("Datasource registry", () => {
     expect(Datasource.registered()).toEqual([]);
     expect(() => Datasource.create("json")).toThrow(ProviderNotInstalledError);
   });
+
+  it("requires consumer defaults when provider is omitted", async () => {
+    expect(() => Datasource.create()).toThrow(DatasourceError);
+    Datasource.use(new MockDatasource("sqlite"));
+    Datasource.defaults({ provider: "sqlite", filename: ":memory:" });
+    const ds = Datasource.create();
+    expect(ds.provider).toBe("sqlite");
+    const connection = await ds.createConnection();
+    expect(connection.opened).toBe(false);
+    expect(ds.createCommand().connection).toBe(connection);
+    expect(ds.createRepository().connection).toBe(connection);
+    Datasource.reset();
+    expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
+  });
 });
 
 describe("stubs", () => {
@@ -320,6 +334,8 @@ describe("stubs", () => {
     expect(ds.create().provider).toBe("text");
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(StubConnection);
+    expect(connection.opened).toBe(false);
+    expect(connection.createCommand()).toBeInstanceOf(StubCommand);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
     await expect(connection.close()).rejects.toThrow(ProviderNotImplementedError);
     await expect(connection.startTransaction()).rejects.toThrow(

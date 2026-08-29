@@ -73,7 +73,7 @@ impl DatasourceFactory for MemoryDatasource {
         "memory"
     }
 
-    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+    fn create(&self, _options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
         Arc::new(MemoryDatasource::new(
             self.store.clone(),
             self.collection.clone(),

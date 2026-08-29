@@ -47,3 +47,22 @@ var dynamodb = Datasource.Create("dynamodb");
 ```
 
 Working dialects (json, memory, sqlite) accept options on `Create`. Stub dialects return a stub datasource.
+
+## Default provider in apps
+
+The library does not load config. The consumer must call `Datasource.Defaults` with a dictionary. `Create()`, `CreateConnection`, `CreateCommand`, and `CreateRepository` then use those defaults.
+
+```csharp
+Datasource.Defaults(new Dictionary<string, string?>
+{
+    ["provider"] = Environment.GetEnvironmentVariable("DATASOURCE_PROVIDER") ?? "sqlite",
+    ["filename"] = Environment.GetEnvironmentVariable("SQLITE_FILENAME") ?? ":memory:",
+    ["url"] = Environment.GetEnvironmentVariable("DATABASE_URL"),
+    ["schema"] = Environment.GetEnvironmentVariable("DATABASE_SCHEMA")
+});
+
+var datasource = Datasource.Create();
+var connection = await datasource.CreateConnection();
+var command = datasource.CreateCommand();
+```
+

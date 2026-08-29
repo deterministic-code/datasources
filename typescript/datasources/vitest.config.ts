@@ -30,6 +30,7 @@ export default defineConfig({
         "src/builders/Field.ts",
         "src/builders/Scalar.ts",
         "src/DatasourceFactory.ts",
+        "src/DatasourceOptions.ts",
         "src/Parameter.ts",
         "src/Row.ts",
         "src/converters/Cell.ts",

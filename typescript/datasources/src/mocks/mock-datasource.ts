@@ -1,3 +1,4 @@
+import type { DatasourceOptions } from "../DatasourceOptions.ts";
 import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
@@ -19,9 +20,8 @@ export class MockDatasource implements IDatasource {
     this.connection = new MockConnection();
   }
 
-  create(_options?: unknown): IDatasource {
-    return new MockDatasource(this.provider);
-  }
+  create = (_options?: DatasourceOptions): IDatasource =>
+    new MockDatasource(this.provider);
 
   createConnection(): Promise<IConnection> {
     this.createConnectionCalls += 1;
@@ -30,21 +30,16 @@ export class MockDatasource implements IDatasource {
 
   createCommand(connection?: IConnection): ICommand {
     this.createCommandCalls.push(connection);
-    if (this.command) {
-      return this.command;
-    }
-    return new MockCommand(connection ?? this.connection);
+    return this.command ?? new MockCommand(connection ?? this.connection);
   }
 
-  createRepository<T = unknown>(connection?: IConnection): IRepository<T> {
+  createRepository<T>(connection?: IConnection): IRepository<T> {
     this.createRepositoryCalls.push(connection);
-    if (this.repository) {
-      return this.repository as IRepository<T>;
-    }
-    return new MockRepository<T>(connection ?? this.connection);
+    return (this.repository as IRepository<T> | undefined) ??
+      new MockRepository<T>(connection ?? this.connection);
   }
 
-  createReadonlyRepository<T = unknown>(
+  createReadonlyRepository<T>(
     connection?: IConnection,
   ): IReadonlyRepository<T> {
     return this.createRepository(connection);

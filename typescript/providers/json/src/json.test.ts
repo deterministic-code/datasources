@@ -322,6 +322,7 @@ describe("JsonDatasource", () => {
     expect(ds.create({ data: [] }).provider).toBe("json");
     const connection = (await ds.createConnection()) as JsonConnection;
     await connection.open();
+    expect(connection.createCommand()).toBeInstanceOf(JsonCommand);
     const command = ds.createCommand(connection);
     expect(command).toBeInstanceOf(JsonCommand);
     expect(command.connection).toBe(connection);

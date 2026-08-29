@@ -26,6 +26,10 @@ impl Connection for StubConnection {
         &self.provider
     }
 
+    fn opened(&self) -> bool {
+        false
+    }
+
     fn create_command(&self) -> Arc<dyn Command> {
         Arc::new(StubCommand::new(&self.provider))
     }
@@ -65,6 +69,9 @@ macro_rules! named_stub_connection {
         impl $crate::Connection for $name {
             fn provider(&self) -> &str {
                 self.inner.provider()
+            }
+            fn opened(&self) -> bool {
+                self.inner.opened()
             }
             fn create_command(&self) -> std::sync::Arc<dyn $crate::Command> {
                 self.inner.create_command()

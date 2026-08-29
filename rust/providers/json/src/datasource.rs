@@ -77,9 +77,12 @@ impl DatasourceFactory for JsonDatasource {
         "json"
     }
 
-    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+    fn create(&self, options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
         Arc::new(JsonDatasource::new(
-            self.path.clone(),
+            options
+                .and_then(|o| o.get("path"))
+                .cloned()
+                .unwrap_or_else(|| self.path.clone()),
             self.collection.clone(),
             self.store.clone(),
             self.initial.clone(),

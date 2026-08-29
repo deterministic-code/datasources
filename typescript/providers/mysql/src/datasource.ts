@@ -1,5 +1,6 @@
 import type {
   DatasourceFactory,
+  DatasourceOptions,
   ICommand,
   IConnection,
   IDatasource,
@@ -25,27 +26,33 @@ export class MysqlDatasource implements IDatasource, DatasourceFactory {
 
   constructor(private readonly options: MysqlDatasourceOptions = {}) {}
 
-  static create = (options?: unknown): IDatasource =>
+  private connection?: MysqlConnection;
+
+  static create = (options?: DatasourceOptions): IDatasource =>
     new MysqlDatasource((options ?? {}) as MysqlDatasourceOptions);
 
-  create = (options?: unknown): IDatasource => MysqlDatasource.create(options);
+  create = (options?: DatasourceOptions): IDatasource =>
+    MysqlDatasource.create(options);
 
   private newConnection = (): MysqlConnection => {
     requireDriver(this.options.driver);
     return new MysqlConnection(this.options);
   };
 
+  private defaultConnection = (): MysqlConnection =>
+    (this.connection ??= this.newConnection());
+
   createConnection = (): Promise<IConnection> =>
-    Promise.resolve(this.newConnection());
+    Promise.resolve(this.defaultConnection());
 
   createCommand = (connection?: IConnection): ICommand =>
     new MysqlCommand(
-      (connection as MysqlConnection | undefined) ?? this.newConnection(),
+      (connection as MysqlConnection | undefined) ?? this.defaultConnection(),
     );
 
   createRepository = <T>(connection?: IConnection): IRepository<T> =>
     new MysqlRepository<T>(
-      (connection as MysqlConnection | undefined) ?? this.newConnection(),
+      (connection as MysqlConnection | undefined) ?? this.defaultConnection(),
       { table: this.options.table },
     );
 

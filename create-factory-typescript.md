@@ -62,3 +62,21 @@ const dynamodb = Datasource.create("dynamodb");
 ```
 
 Working dialects (json, memory, sqlite) accept options on `create`. Stub dialects return a stub datasource.
+
+## Default provider in apps
+
+The library does not load config. The consumer must call `Datasource.defaults` with a dictionary. `create()`, `createConnection`, `createCommand`, and `createRepository` then use those defaults. The default connection stays closed until the consumer opens it.
+
+```ts
+Datasource.defaults({
+  provider: process.env.DATASOURCE_PROVIDER ?? config.provider,
+  filename: config.sqliteFilename ?? ":memory:",
+  url: process.env.DATABASE_URL,
+  schema: config.schema,
+});
+
+const datasource = Datasource.create();
+const connection = await datasource.createConnection();
+const command = datasource.createCommand();
+```
+

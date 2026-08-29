@@ -269,6 +269,7 @@ describe("SqliteDatasource", () => {
     expect(ds.create({ driver }).provider).toBe("sqlite");
     const connection = await ds.createConnection();
     await (connection as SqliteConnection).open();
+    expect(connection.createCommand()).toBeInstanceOf(SqliteCommand);
     const command = ds.createCommand(connection);
     expect(command).toBeInstanceOf(SqliteCommand);
     expect(command.connection).toBe(connection);

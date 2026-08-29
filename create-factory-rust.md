@@ -62,3 +62,22 @@ let dynamodb = create("dynamodb", None)?;
 ```
 
 Working dialects (json, memory, sqlite) accept options on `create`. Stub dialects return a stub datasource.
+
+## Default provider in apps
+
+The library does not load config. The consumer must call `defaults` with a `HashMap`. `create_default`, `create_connection`, `create_command`, and `create_repository` then use those values.
+
+```rust
+use std::collections::HashMap;
+use datasources::{create_default, defaults};
+
+defaults(HashMap::from([
+    ("provider".into(), std::env::var("DATASOURCE_PROVIDER").unwrap_or_else(|_| "sqlite".into())),
+    ("filename".into(), std::env::var("SQLITE_FILENAME").unwrap_or_else(|_| ":memory:".into())),
+]));
+
+let datasource = create_default()?;
+let connection = datasource.create_connection().await?;
+let command = datasource.create_command(None);
+```
+
