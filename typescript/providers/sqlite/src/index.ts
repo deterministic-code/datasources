@@ -21,10 +21,6 @@ export type {
   SqliteExecuteResult,
   SqliteStatement,
 } from "./i-sqlite-driver.ts";
-export {
-  SqliteRepository,
-  type SqliteRepositoryOptions,
-} from "./repository.ts";
 export { SqliteTransaction } from "./transaction.ts";
 export {
   SqliteStatementBuilder,

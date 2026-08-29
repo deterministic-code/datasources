@@ -76,6 +76,16 @@ export const repoRoot = (from = fileURLToPath(import.meta.url)): string => {
   }
 };
 
+export const specVerbose = (): boolean =>
+  process.env.VERBOSE === "1"
+  || process.env.VERBOSE === "true"
+  || process.argv.includes("--verbose");
+
+const capture = (logs: string[]) => (line: string) => {
+  logs.push(line);
+  if (specVerbose()) console.log(line);
+};
+
 export const specFiles = (root = repoRoot()): string[] =>
   readdirSync(join(root, "specs"))
     .filter((name) => name.endsWith(".yaml"))
@@ -154,8 +164,9 @@ export const runSpec = async (
   const names = spec.connections?.length ? spec.connections : ["default"];
   const target = dialectTarget(dialect, names.length);
   const logs: string[] = [];
+  if (specVerbose()) console.log(`\n--- ${spec.name} (${dialect.connection.kind}) ---`);
   const attach = (command: ICommand) =>
-    command.use(new ConsoleCommandMiddleware((line) => logs.push(line)));
+    command.use(new ConsoleCommandMiddleware(capture(logs)));
   const sessions = new Map<string, Session>();
   for (const name of names) {
     const session = await host.openSession(target);

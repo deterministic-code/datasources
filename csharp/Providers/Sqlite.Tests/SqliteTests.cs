@@ -26,12 +26,6 @@ public class SqliteTests
         await command.ExecuteReader("SELECT 1");
         await command.ExecuteReader();
 
-        var repo = new SqliteRepository(conn);
-        Assert.Equal("items", repo.Table);
-        Assert.Same(conn, repo.Connection);
-        var named = new SqliteRepository(conn, "users");
-        Assert.Equal("users", named.Table);
-
         var txn = await conn.StartTransaction();
         Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
         await txn.Commit();
@@ -73,7 +67,7 @@ public class SqliteTests
         await implicitCommand.Execute();
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, object?>>(created);
-        Assert.Equal("people", ((SqliteRepository)(object)repo2).Table);
+        Assert.Equal("people", ((Repository<Dictionary<string, object?>>)(object)repo2).Mapping.Name);
         Assert.Throws<DatasourceException>(() =>
             new SqliteDatasource().CreateRepository<Dictionary<string, object?>>());
         Assert.Equal("sqlite", Datasource.Create("sqlite").Provider);

@@ -1,0 +1,12 @@
+---
+description: Unit vs integration vs e2e IO rules
+alwaysApply: true
+---
+
+# Test layers
+
+- **Unit** (`npm test` / default `cargo test` / `dotnet test` unit projects): no I/O. Mocks, fakes, in-memory ports. No filesystem, network, Docker, or real database engines.
+- **Integration**: limited I/O only. In-process engines (e.g. SQLite command YAML specs), no Docker, no remote servers.
+- **E2E** (`test:e2e`, `test:e2e:ci`, `test:e2e:rust`, `test:e2e:csharp`): real functional tests and/or Docker. Repository specs, MySQL/Postgres, Compose-backed dialects.
+
+Do not put repository CRUD or other real functional suites in unit tests. Do not call Docker or `MYSQL_URL`/`POSTGRES_URL` from unit tests.

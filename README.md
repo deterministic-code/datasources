@@ -59,12 +59,15 @@ Shared SQL scenarios live in `specs/*.yaml`. Engine-specific DDL and isolation e
 
 ## Tests
 
-`npm test` is offline: mocks, injectable ports, and in-process SQLite specs. MySQL/Postgres Docker specs are `npm run test:e2e`, which starts the matching Compose services.
+`npm test` is offline: mocks, injectable ports, and in-process SQLite command specs. `npm run test:e2e` runs repository specs against in-process SQLite plus MySQL/Postgres Docker command specs (starts the matching Compose services).
 
 ```
 npm test
 npm run test:e2e
+npm run test:e2e:verbose
 ```
+
+`test:e2e:verbose` (or `npm run test:e2e -- --verbose` / `VERBOSE=1`) prints each `ConsoleCommandMiddleware` Start/Finish line while specs run.
 
 `test:e2e` defaults to `MYSQL_URL=mysql://ds:ds@127.0.0.1:3306/datasources` and `POSTGRES_URL=postgres://ds:ds@127.0.0.1:5432/datasources`. Override those env vars if the servers are elsewhere.
 

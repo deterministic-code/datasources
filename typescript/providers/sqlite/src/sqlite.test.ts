@@ -14,7 +14,7 @@ vi.mock("better-sqlite3", () => {
   }
   return { default: Database };
 });
-import { Datasource, DatasourceError, IsolationLevel } from "@datasources/core";
+import { Datasource, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
 import {
   BetterSqliteDriver,
   bindParameters,
@@ -23,7 +23,6 @@ import {
   SqliteCommand,
   SqliteConnection,
   SqliteDatasource,
-  SqliteRepository,
   type SqliteDatabase,
 } from "./index.ts";
 
@@ -222,7 +221,7 @@ describe("SqliteConnection", () => {
   });
 });
 
-describe("SqliteCommand and SqliteRepository", () => {
+describe("SqliteCommand and Repository", () => {
   async function setup() {
     const { driver, db } = fakeDriver();
     const connection = new SqliteConnection({ driver });
@@ -232,7 +231,6 @@ describe("SqliteCommand and SqliteRepository", () => {
       db,
       connection,
       command: new SqliteCommand(connection),
-      repo: new SqliteRepository<{ id?: number; name?: string }>(connection),
     };
   }
 
@@ -247,14 +245,6 @@ describe("SqliteCommand and SqliteRepository", () => {
     expect(reader.current).toEqual({ id: 1, name: "a" });
     const empty = await command.executeReader();
     expect(await empty.next()).toBe(false);
-  });
-
-  it("holds connection and table as a placeholder", async () => {
-    const { repo, connection } = await setup();
-    expect(repo.connection).toBe(connection);
-    expect(repo.table).toBe("items");
-    const named = new SqliteRepository(connection, { table: "users" });
-    expect(named.table).toBe("users");
   });
 });
 
@@ -282,11 +272,11 @@ describe("SqliteDatasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(SqliteRepository);
-    expect((repo as SqliteRepository).table).toBe("people");
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
+    expect((repo as Repository).mapping.name).toBe("people");
     expect(
-      (new SqliteDatasource({ driver }).createRepository() as SqliteRepository)
-        .table,
+      (new SqliteDatasource({ driver }).createRepository() as Repository).mapping
+        .name,
     ).toBe("items");
     expect(Datasource.create("sqlite", { driver }).provider).toBe("sqlite");
   });
