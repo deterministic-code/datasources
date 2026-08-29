@@ -1,0 +1,70 @@
+name: repository-user-crud
+type:
+  name: user
+  table: user
+  ids: [id]
+  assignIdentityOnAdd: false
+  fields:
+    id: int
+    uuid: uuid
+    username: string
+    is_enabled: bool
+    balance: decimal
+    location: float
+    created: datetime
+    version: binary
+steps:
+  - CREATE:
+      row:
+        id: 1
+        uuid: 550e8400-e29b-41d4-a716-446655440000
+        username: alice
+        is_enabled: true
+        balance: "10.50"
+        location: 1.5
+        created: "2024-01-15T10:00:00Z"
+        version: AQIDBA==
+  - CREATE:
+      row:
+        id: 2
+        uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        username: bob
+        is_enabled: false
+        balance: "0.00"
+        location: 2.25
+        created: "2024-02-20T15:30:00Z"
+        version: BQUFBQ==
+  - READ:
+      id: 1
+  - QUERY: {}
+  - READY:
+      where:
+        username: alice
+  - UPDATE:
+      row:
+        id: 1
+        uuid: 550e8400-e29b-41d4-a716-446655440000
+        username: alice2
+        is_enabled: false
+        balance: "11.00"
+        location: 1.5
+        created: "2024-01-15T10:00:00Z"
+        version: AQIDBA==
+  - UPDATEBY:
+      row:
+        id: 2
+        uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        username: bob
+        is_enabled: true
+        balance: "0.00"
+        location: 2.25
+        created: "2024-02-20T15:30:00Z"
+        version: BQUFBQ==
+      where:
+        username: bob
+  - DELETEBY:
+      where:
+        username: bob
+  - DELETE:
+      id: 1
+  - QUERY: {}

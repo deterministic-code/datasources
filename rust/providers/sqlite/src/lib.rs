@@ -3,7 +3,6 @@ mod command;
 mod connection;
 mod datasource;
 mod driver;
-mod repository;
 mod statement_builder;
 #[cfg(any(test, feature = "rusqlite"))]
 mod rusqlite_driver;
@@ -13,7 +12,6 @@ pub use command::SqliteCommand;
 pub use connection::SqliteConnection;
 pub use datasource::SqliteDatasource;
 pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
-pub use repository::SqliteRepository;
 pub use statement_builder::{SqliteColumn, SqliteStatementBuilder};
 #[cfg(any(test, feature = "rusqlite"))]
 pub use rusqlite_driver::RusqliteDriver;
@@ -21,6 +19,8 @@ pub use transaction::SqliteTransaction;
 
 #[cfg(test)]
 mod integration;
+#[cfg(test)]
+mod repository_spec;
 
 #[cfg(test)]
 mod tests {
@@ -42,11 +42,6 @@ mod tests {
         command.execute(None, None).await.unwrap();
         command.execute_reader(Some("SELECT 1"), None).await.unwrap();
         command.execute_reader(None, None).await.unwrap();
-        let repo = SqliteRepository::new(conn.clone(), None);
-        assert_eq!(repo.table, "items");
-        let named = SqliteRepository::new(conn.clone(), Some("users".into()));
-        assert_eq!(named.table, "users");
-
         let txn = conn.start_transaction(None).await.unwrap();
         assert_eq!(
             datasources::Transaction::isolation(&*txn),

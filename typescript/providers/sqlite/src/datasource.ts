@@ -6,12 +6,12 @@ import type {
   IReadonlyRepository,
   IRepository,
 } from "@datasources/core";
+import { Repository, TypeConverter, type Cells } from "@datasources/core";
 import {
   SqliteConnection,
   type SqliteConnectionOptions,
 } from "./connection.ts";
 import { SqliteCommand } from "./command.ts";
-import { SqliteRepository } from "./repository.ts";
 import { requireDriver } from "./driver.ts";
 
 export interface SqliteDatasourceOptions extends SqliteConnectionOptions {
@@ -50,10 +50,14 @@ export class SqliteDatasource implements IDatasource {
     );
 
   createRepository = <T>(connection?: IConnection): IRepository<T> =>
-    new SqliteRepository<T>(
-      (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
-      { table: this.options.table },
-    );
+    new Repository({
+      connection: (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
+      mapping: TypeConverter.mapping<Cells>({
+        source: "sqlite",
+        destination: "typescript",
+        name: this.options.table ?? "items",
+      }),
+    }) as IRepository<T>;
 
   createReadonlyRepository = <T>(
     connection?: IConnection,

@@ -1,11 +1,14 @@
 use crate::command::SqliteCommand;
 use crate::connection::SqliteConnection;
+use crate::converters::register;
 use crate::driver::{require_driver, SqliteDriver};
-use crate::repository::SqliteRepository;
 use async_trait::async_trait;
+use datasources::converters::{mapping_with, Cells};
 use datasources::{
-    Command, Connection, Datasource, DatasourceFactory, Repository, Result,
+    Command, Connection, Datasource, DatasourceFactory, Repository, Result, TableRepository,
+    TableRepositoryBuilderOptions,
 };
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct SqliteDatasource {
@@ -61,7 +64,19 @@ impl Datasource for SqliteDatasource {
         &self,
         _connection: Option<Arc<dyn Connection>>,
     ) -> Arc<dyn Repository> {
-        Arc::new(SqliteRepository::new(self.connection(), self.table.clone()))
+        register();
+        let mut mapping = mapping_with::<Cells>(
+            "sqlite",
+            "rust",
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        )
+        .expect("sqlite converters");
+        mapping.name = self.table.clone().unwrap_or_else(|| "items".into());
+        let mut options = TableRepositoryBuilderOptions::with_factory(self.connection());
+        options.mapping = Some(mapping);
+        Arc::new(TableRepository::new(options).expect("repository"))
     }
 }
 
