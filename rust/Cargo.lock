@@ -539,6 +539,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "datasources-register"
+version = "0.1.0"
+dependencies = [
+ "datasources",
+ "datasources-dynamodb",
+ "datasources-json",
+ "datasources-memory",
+ "datasources-mongodb",
+ "datasources-mysql",
+ "datasources-oracle",
+ "datasources-postgres",
+ "datasources-sqlite",
+ "datasources-sqlserver",
+ "datasources-text",
+ "datasources-xml",
+ "datasources-yaml",
+]
+
+[[package]]
 name = "datasources-sqlite"
 version = "0.1.0"
 dependencies = [

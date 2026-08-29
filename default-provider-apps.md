@@ -17,6 +17,8 @@ Do not commit URLs with credentials. Do not parse `.env` or `appsettings` inside
 
 Call `Datasource.defaults` / `Datasource.Defaults` / `defaults` with one dictionary. The library does not set this itself. `create()`, `createConnection`, `createCommand`, and `createRepository` use those values and reuse one closed connection.
 
+To register several providers without listing factories, pass the same dictionary to `DatasourceInstall.From` / `register_from` / `install` (`Datasources.Hosting`, `datasources-register`, `@datasources/register`). It calls `Use` once per name in `providers` / `DATASOURCE_PROVIDERS`, always includes `provider` / `DATASOURCE_PROVIDER`, then sets defaults.
+
 See:
 
 - [TypeScript](create-factory-typescript.md#default-provider-in-apps)

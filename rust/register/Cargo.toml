@@ -1,0 +1,36 @@
+[package]
+name = "datasources-register"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Register datasource providers from a name list and defaults dictionary"
+
+[features]
+default = ["json", "memory"]
+json = ["dep:datasources-json"]
+memory = ["dep:datasources-memory"]
+sqlite = ["dep:datasources-sqlite"]
+text = ["dep:datasources-text"]
+xml = ["dep:datasources-xml"]
+yaml = ["dep:datasources-yaml"]
+mysql = ["dep:datasources-mysql"]
+sqlserver = ["dep:datasources-sqlserver"]
+postgres = ["dep:datasources-postgres"]
+oracle = ["dep:datasources-oracle"]
+mongodb = ["dep:datasources-mongodb"]
+dynamodb = ["dep:datasources-dynamodb"]
+
+[dependencies]
+datasources = { workspace = true }
+datasources-json = { path = "../providers/json", optional = true }
+datasources-memory = { path = "../providers/memory", optional = true }
+datasources-sqlite = { path = "../providers/sqlite", optional = true }
+datasources-text = { path = "../providers/text", optional = true }
+datasources-xml = { path = "../providers/xml", optional = true }
+datasources-yaml = { path = "../providers/yaml", optional = true }
+datasources-mysql = { path = "../providers/mysql", optional = true }
+datasources-sqlserver = { path = "../providers/sqlserver", optional = true }
+datasources-postgres = { path = "../providers/postgres", optional = true }
+datasources-oracle = { path = "../providers/oracle", optional = true }
+datasources-mongodb = { path = "../providers/mongodb", optional = true }
+datasources-dynamodb = { path = "../providers/dynamodb", optional = true }

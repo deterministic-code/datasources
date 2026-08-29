@@ -67,13 +67,19 @@ Working dialects (json, memory, sqlite) accept options on `create`. Stub dialect
 
 The library does not load config. The consumer must call `Datasource.defaults` with a dictionary. `create()`, `createConnection`, `createCommand`, and `createRepository` then use those defaults. The default connection stays closed until the consumer opens it.
 
+`@datasources/register` can register several factories from the same options: `providers` / `DATASOURCE_PROVIDERS` (comma list) plus `provider` / `DATASOURCE_PROVIDER`, then sets defaults.
+
 ```ts
-Datasource.defaults({
+import { install } from "@datasources/register";
+
+const options = {
   provider: process.env.DATASOURCE_PROVIDER ?? config.provider,
+  providers: process.env.DATASOURCE_PROVIDERS,
   filename: config.sqliteFilename ?? ":memory:",
   url: process.env.DATABASE_URL,
   schema: config.schema,
-});
+};
+await install(options);
 
 const datasource = Datasource.create();
 const connection = await datasource.createConnection();

@@ -67,14 +67,19 @@ Working dialects (json, memory, sqlite) accept options on `create`. Stub dialect
 
 The library does not load config. The consumer must call `defaults` with a `HashMap`. `create_default`, `create_connection`, `create_command`, and `create_repository` then use those values.
 
+`datasources-register` can register several factories from the same map (enable Cargo features per dialect): `providers` / `DATASOURCE_PROVIDERS` plus `provider` / `DATASOURCE_PROVIDER`, then sets defaults.
+
 ```rust
 use std::collections::HashMap;
-use datasources::{create_default, defaults};
+use datasources::create_default;
+use datasources_register::register_from;
 
-defaults(HashMap::from([
+let options = HashMap::from([
     ("provider".into(), std::env::var("DATASOURCE_PROVIDER").unwrap_or_else(|_| "sqlite".into())),
+    ("providers".into(), std::env::var("DATASOURCE_PROVIDERS").unwrap_or_default()),
     ("filename".into(), std::env::var("SQLITE_FILENAME").unwrap_or_else(|_| ":memory:".into())),
-]));
+]);
+register_from(options)?;
 
 let datasource = create_default()?;
 let connection = datasource.create_connection().await?;
