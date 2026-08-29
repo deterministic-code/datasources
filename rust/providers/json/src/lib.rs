@@ -136,7 +136,7 @@ mod tests {
         txn.commit().await.unwrap();
 
         reset();
-        register(JsonDatasource::factory());
+        register(JsonDatasource::instance());
         let ds = create("json", None).unwrap();
         assert_eq!(ds.provider(), "json");
         ds.create_connection().await.unwrap();

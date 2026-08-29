@@ -15,7 +15,7 @@ mod tests {
     #[test]
     fn creates() {
         reset();
-        register(XmlDatasource::factory());
+        register(XmlDatasource::instance());
         assert_eq!(create("xml", None).unwrap().provider(), "xml");
     }
 

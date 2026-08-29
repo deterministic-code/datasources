@@ -12,7 +12,7 @@ import { SqlServerConnection } from "./connection.ts";
 import { SqlServerCommand } from "./command.ts";
 
 export class SqlServerDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new SqlServerDatasource();
+  static readonly instance = new SqlServerDatasource();
   readonly provider = "sqlserver";
   private connection?: IConnection;
   create = (_options?: DatasourceOptions): IDatasource => new SqlServerDatasource();

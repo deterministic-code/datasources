@@ -12,7 +12,7 @@ import { YamlConnection } from "./connection.ts";
 import { YamlCommand } from "./command.ts";
 
 export class YamlDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new YamlDatasource();
+  static readonly instance = new YamlDatasource();
   readonly provider = "yaml";
   private connection?: IConnection;
   create = (_options?: DatasourceOptions): IDatasource => new YamlDatasource();

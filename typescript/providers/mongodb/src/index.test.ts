@@ -6,7 +6,7 @@ afterEach(() => Datasource.reset());
 
 describe("mongodb", () => {
   it("creates", () => {
-    Datasource.use(MongoDbDatasource.factory);
+    Datasource.use(MongoDbDatasource.instance);
     expect(Datasource.create("mongodb").provider).toBe("mongodb");
   });
 

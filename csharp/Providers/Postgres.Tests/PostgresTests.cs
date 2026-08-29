@@ -8,7 +8,7 @@ public class PostgresTests
     public PostgresTests()
     {
         Datasource.Reset();
-        Datasource.Use(PostgresDatasource.Factory);
+        Datasource.Use(PostgresDatasource.Instance);
     }
 
     [Fact]

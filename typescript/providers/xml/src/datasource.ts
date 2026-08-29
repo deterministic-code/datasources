@@ -12,7 +12,7 @@ import { XmlConnection } from "./connection.ts";
 import { XmlCommand } from "./command.ts";
 
 export class XmlDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new XmlDatasource();
+  static readonly instance = new XmlDatasource();
   readonly provider = "xml";
   private connection?: IConnection;
   create = (_options?: DatasourceOptions): IDatasource => new XmlDatasource();

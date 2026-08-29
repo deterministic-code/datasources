@@ -33,18 +33,18 @@ import { MongoDbDatasource } from "@datasources/mongodb";
 import { DynamoDbDatasource } from "@datasources/dynamodb";
 
 Datasource.use(
-  JsonDatasource.factory,
-  MemoryDatasource.factory,
-  SqliteDatasource.factory,
-  TextDatasource.factory,
-  XmlDatasource.factory,
-  YamlDatasource.factory,
-  MysqlDatasource.factory,
-  SqlServerDatasource.factory,
-  PostgresDatasource.factory,
-  OracleDatasource.factory,
-  MongoDbDatasource.factory,
-  DynamoDbDatasource.factory,
+  JsonDatasource.instance,
+  MemoryDatasource.instance,
+  SqliteDatasource.instance,
+  TextDatasource.instance,
+  XmlDatasource.instance,
+  YamlDatasource.instance,
+  MysqlDatasource.instance,
+  SqlServerDatasource.instance,
+  PostgresDatasource.instance,
+  OracleDatasource.instance,
+  MongoDbDatasource.instance,
+  DynamoDbDatasource.instance,
 );
 
 const json = Datasource.create("json");

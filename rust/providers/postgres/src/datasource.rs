@@ -14,7 +14,7 @@ pub struct PostgresDatasource {
 }
 
 impl PostgresDatasource {
-    pub fn factory() -> Arc<Self> {
+    pub fn instance() -> Arc<Self> {
         Arc::new(Self::new(None, None, None, None))
     }
 

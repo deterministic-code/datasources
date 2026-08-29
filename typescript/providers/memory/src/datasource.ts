@@ -15,7 +15,7 @@ import { MemoryRepository } from "./repository.ts";
 import { MemoryStore } from "./store.ts";
 
 export class MemoryDatasource implements IDatasource {
-  static readonly factory = new MemoryDatasource();
+  static readonly instance = new MemoryDatasource();
   static readonly provider = "memory";
   readonly provider = "memory";
   private readonly options: MemoryConnectionOptions;

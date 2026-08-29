@@ -52,18 +52,18 @@ macro_rules! resolve {
 fn factory_for(name: &str) -> Result<Arc<dyn DatasourceFactory>> {
     resolve!(
         name,
-        "json" => datasources_json::JsonDatasource::factory(),
-        "memory" => datasources_memory::MemoryDatasource::factory(),
-        "sqlite" => datasources_sqlite::SqliteDatasource::factory(),
-        "text" => datasources_text::TextDatasource::factory(),
-        "xml" => datasources_xml::XmlDatasource::factory(),
-        "yaml" => datasources_yaml::YamlDatasource::factory(),
-        "mysql" => datasources_mysql::MysqlDatasource::factory(),
-        "sqlserver" => datasources_sqlserver::SqlServerDatasource::factory(),
-        "postgres" => datasources_postgres::PostgresDatasource::factory(),
-        "oracle" => datasources_oracle::OracleDatasource::factory(),
-        "mongodb" => datasources_mongodb::MongoDbDatasource::factory(),
-        "dynamodb" => datasources_dynamodb::DynamoDbDatasource::factory(),
+        "json" => datasources_json::JsonDatasource::instance(),
+        "memory" => datasources_memory::MemoryDatasource::instance(),
+        "sqlite" => datasources_sqlite::SqliteDatasource::instance(),
+        "text" => datasources_text::TextDatasource::instance(),
+        "xml" => datasources_xml::XmlDatasource::instance(),
+        "yaml" => datasources_yaml::YamlDatasource::instance(),
+        "mysql" => datasources_mysql::MysqlDatasource::instance(),
+        "sqlserver" => datasources_sqlserver::SqlServerDatasource::instance(),
+        "postgres" => datasources_postgres::PostgresDatasource::instance(),
+        "oracle" => datasources_oracle::OracleDatasource::instance(),
+        "mongodb" => datasources_mongodb::MongoDbDatasource::instance(),
+        "dynamodb" => datasources_dynamodb::DynamoDbDatasource::instance(),
     )
 }
 

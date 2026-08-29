@@ -12,7 +12,7 @@ import { OracleConnection } from "./connection.ts";
 import { OracleCommand } from "./command.ts";
 
 export class OracleDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new OracleDatasource();
+  static readonly instance = new OracleDatasource();
   readonly provider = "oracle";
   private connection?: IConnection;
   create = (_options?: DatasourceOptions): IDatasource => new OracleDatasource();

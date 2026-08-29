@@ -7,7 +7,7 @@ public partial class RegisterCreateTests
     [Fact]
     public void Creates()
     {
-        Datasource.Use(Factory);
+        Datasource.Use(Instance);
         Assert.Equal(Provider, Datasource.Create(Provider).Provider);
     }
 }

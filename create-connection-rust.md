@@ -21,7 +21,7 @@
 use datasources::{create, register};
 use datasources_json::JsonDatasource;
 
-register(JsonDatasource::factory());
+register(JsonDatasource::instance());
 
 let json = create("json", None)?;
 let connection = json.create_connection().await?;

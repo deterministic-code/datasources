@@ -81,7 +81,7 @@ mod tests {
         assert_eq!(defaulted.filename, ":memory:");
         reset();
         assert_eq!(
-            Datasource::provider(&*SqliteDatasource::factory()),
+            Datasource::provider(&*SqliteDatasource::instance()),
             "sqlite"
         );
         register(Arc::new(SqliteDatasource::new(

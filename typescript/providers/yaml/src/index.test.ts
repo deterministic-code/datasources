@@ -6,7 +6,7 @@ afterEach(() => Datasource.reset());
 
 describe("yaml", () => {
   it("creates", () => {
-    Datasource.use(YamlDatasource.factory);
+    Datasource.use(YamlDatasource.instance);
     expect(Datasource.create("yaml").provider).toBe("yaml");
   });
 

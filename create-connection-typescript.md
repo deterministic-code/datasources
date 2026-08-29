@@ -21,7 +21,7 @@
 import { Datasource } from "@datasources/core";
 import { JsonDatasource } from "@datasources/json";
 
-Datasource.use(JsonDatasource.factory);
+Datasource.use(JsonDatasource.instance);
 
 const json = Datasource.create("json", { data: [] });
 const connection = await json.createConnection();

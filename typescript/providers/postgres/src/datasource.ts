@@ -20,7 +20,7 @@ export interface PostgresDatasourceOptions extends PostgresConnectionOptions {
 }
 
 export class PostgresDatasource implements IDatasource, DatasourceFactory {
-  static readonly factory = new PostgresDatasource();
+  static readonly instance = new PostgresDatasource();
   static readonly provider = "postgres";
   readonly provider = "postgres";
 

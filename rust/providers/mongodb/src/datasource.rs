@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub struct MongoDbDatasource;
 
 impl MongoDbDatasource {
-    pub fn factory() -> Arc<Self> {
+    pub fn instance() -> Arc<Self> {
         Arc::new(Self)
     }
 

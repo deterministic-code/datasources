@@ -4,7 +4,7 @@ namespace Datasources.Text;
 
 public sealed class TextDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly TextDatasource Factory = new();
+    public static readonly TextDatasource Instance = new();
     public string Provider => "text";
     public IDatasource Create(object? options = null) => new TextDatasource();
     IConnection? _connection;

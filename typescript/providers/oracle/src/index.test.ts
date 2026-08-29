@@ -6,7 +6,7 @@ afterEach(() => Datasource.reset());
 
 describe("oracle", () => {
   it("creates", () => {
-    Datasource.use(OracleDatasource.factory);
+    Datasource.use(OracleDatasource.instance);
     expect(Datasource.create("oracle").provider).toBe("oracle");
   });
 

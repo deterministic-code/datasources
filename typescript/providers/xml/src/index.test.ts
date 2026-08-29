@@ -6,7 +6,7 @@ afterEach(() => Datasource.reset());
 
 describe("xml", () => {
   it("creates", () => {
-    Datasource.use(XmlDatasource.factory);
+    Datasource.use(XmlDatasource.instance);
     expect(Datasource.create("xml").provider).toBe("xml");
   });
 

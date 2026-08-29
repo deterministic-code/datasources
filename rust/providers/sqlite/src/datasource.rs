@@ -18,7 +18,7 @@ pub struct SqliteDatasource {
 }
 
 impl SqliteDatasource {
-    pub fn factory() -> Arc<Self> {
+    pub fn instance() -> Arc<Self> {
         Arc::new(Self::new(Some(":memory:".into()), None, None))
     }
 

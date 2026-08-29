@@ -4,7 +4,7 @@ namespace Datasources.DynamoDb;
 
 public sealed class DynamoDbDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly DynamoDbDatasource Factory = new();
+    public static readonly DynamoDbDatasource Instance = new();
     public string Provider => "dynamodb";
     public IDatasource Create(object? options = null) => new DynamoDbDatasource();
     IConnection? _connection;

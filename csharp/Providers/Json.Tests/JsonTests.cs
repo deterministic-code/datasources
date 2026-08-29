@@ -9,7 +9,7 @@ public class JsonTests
     public JsonTests()
     {
         Datasource.Reset();
-        Datasource.Use(JsonDatasource.Factory);
+        Datasource.Use(JsonDatasource.Instance);
     }
 
     [Fact]

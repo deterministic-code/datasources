@@ -4,7 +4,7 @@ namespace Datasources.SqlServer;
 
 public sealed class SqlServerDatasource : IDatasource, IDatasourceFactory
 {
-    public static readonly SqlServerDatasource Factory = new();
+    public static readonly SqlServerDatasource Instance = new();
     public string Provider => "sqlserver";
     public IDatasource Create(object? options = null) => new SqlServerDatasource();
     IConnection? _connection;
