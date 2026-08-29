@@ -28,6 +28,19 @@ const connection = await json.createConnection();
 await connection.open();
 ```
 
+## Startup
+
+Apps create the default datasource and connection at process start, then hold the closed connection. Call `open` on first use (`open` is a no-op if already open). Do not open during bootstrap.
+
+```ts
+const datasource = createDefaultDatasource(options);
+const connection = await datasource.createConnection();
+
+async function ensureOpen() {
+  if (!connection.opened) await connection.open();
+}
+```
+
 Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFileStore`, `MemoryStore`, `ISqliteDriver`). Stub dialects return a named connection; `open` / `close` / `startTransaction` throw `ProviderNotImplementedError`.
 
 ## Mock

@@ -46,7 +46,7 @@ impl DatasourceFactory for TextDatasource {
     fn provider(&self) -> &str {
         "text"
     }
-    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+    fn create(&self, _options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
         Arc::new(TextDatasource)
     }
 }

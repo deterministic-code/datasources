@@ -8,6 +8,7 @@ use std::sync::Arc;
 #[async_trait]
 pub trait Connection: Send + Sync {
     fn provider(&self) -> &str;
+    fn opened(&self) -> bool;
     fn create_command(&self) -> Arc<dyn Command>;
     async fn open(&self) -> Result<()>;
     async fn close(&self) -> Result<()>;

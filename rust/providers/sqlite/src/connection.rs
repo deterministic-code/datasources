@@ -36,6 +36,10 @@ impl Connection for SqliteConnection {
         "sqlite"
     }
 
+    fn opened(&self) -> bool {
+        *self.opened.lock().unwrap()
+    }
+
     fn create_command(&self) -> Arc<dyn Command> {
         Arc::new(SqliteCommand::new(Arc::new(SqliteConnection {
             filename: self.filename.clone(),

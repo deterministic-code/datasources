@@ -335,10 +335,14 @@ fn registry() {
     let factory = Arc::new(MockDatasource::new("json"));
     register(factory);
     assert_eq!(registered(), vec!["json".to_string()]);
-    let created = create("json", Some("{}")).unwrap();
+    let created = create("json", None).unwrap();
     assert_eq!(created.provider(), "json");
+    assert!(create_default().is_err());
+    defaults(HashMap::from([("provider".into(), "json".into())]));
+    assert_eq!(create_default().unwrap().provider(), "json");
     reset();
     assert!(create("json", None).is_err());
+    assert!(create_default().is_err());
 }
 
 #[tokio::test]
@@ -347,7 +351,9 @@ async fn stubs_throw() {
     assert_eq!(Datasource::provider(&*ds), "text");
     let created = DatasourceFactory::create(&*ds, None);
     assert_eq!(created.provider(), "text");
-    assert!(ds.create_connection().await.unwrap().open().await.is_err());
+    let closed = ds.create_connection().await.unwrap();
+    assert!(!closed.opened());
+    assert!(closed.open().await.is_err());
     assert!(ds.create_connection().await.unwrap().close().await.is_err());
     assert!(ds
         .create_connection()
@@ -499,7 +505,7 @@ async fn published_mocks() {
     command.execute_reader(None, None).await.unwrap();
     ds.create_repository(None);
     ds.create_readonly_repository(None);
-    DatasourceFactory::create(&ds, Some("{}"));
+    DatasourceFactory::create(&ds, None);
 
     let q = MockQuery::new("q");
     let w = MockWhere::new("w");

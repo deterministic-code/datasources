@@ -34,6 +34,10 @@ impl Connection for MysqlConnection {
         "mysql"
     }
 
+    fn opened(&self) -> bool {
+        *self.opened.lock().unwrap()
+    }
+
     fn create_command(&self) -> Arc<dyn Command> {
         Arc::new(MysqlCommand::new(Arc::new(MysqlConnection {
             url: self.url.clone(),

@@ -7,8 +7,8 @@ export interface IDatasource {
   readonly provider: string;
   createConnection(): Promise<IConnection>;
   createCommand(connection?: IConnection): ICommand;
-  createRepository<T = unknown>(connection?: IConnection): IRepository<T>;
-  createReadonlyRepository<T = unknown>(
+  createRepository<T>(connection?: IConnection): IRepository<T>;
+  createReadonlyRepository<T>(
     connection?: IConnection,
   ): IReadonlyRepository<T>;
 }

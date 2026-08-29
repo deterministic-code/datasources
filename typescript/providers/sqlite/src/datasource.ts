@@ -1,4 +1,5 @@
 import type {
+  DatasourceOptions,
   ICommand,
   IConnection,
   IDatasource,
@@ -24,31 +25,37 @@ export class SqliteDatasource implements IDatasource {
 
   constructor(private readonly options: SqliteDatasourceOptions = {}) {}
 
-  static create = (options?: unknown): IDatasource =>
+  private connection?: SqliteConnection;
+
+  static create = (options?: DatasourceOptions): IDatasource =>
     new SqliteDatasource((options ?? {}) as SqliteDatasourceOptions);
 
-  create = (options?: unknown): IDatasource => SqliteDatasource.create(options);
+  create = (options?: DatasourceOptions): IDatasource =>
+    SqliteDatasource.create(options);
 
   private newConnection = (): SqliteConnection => {
     requireDriver(this.options.driver);
     return new SqliteConnection(this.options);
   };
 
+  private defaultConnection = (): SqliteConnection =>
+    (this.connection ??= this.newConnection());
+
   createConnection = (): Promise<IConnection> =>
-    Promise.resolve(this.newConnection());
+    Promise.resolve(this.defaultConnection());
 
   createCommand = (connection?: IConnection): ICommand =>
     new SqliteCommand(
-      (connection as SqliteConnection | undefined) ?? this.newConnection(),
+      (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
     );
 
-  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): IRepository<T> =>
     new SqliteRepository<T>(
-      (connection as SqliteConnection | undefined) ?? this.newConnection(),
+      (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
       { table: this.options.table },
     );
 
-  createReadonlyRepository = <T = unknown>(
+  createReadonlyRepository = <T>(
     connection?: IConnection,
   ): IReadonlyRepository<T> => this.createRepository(connection);
 }

@@ -15,15 +15,23 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
         _table = table;
     }
 
+    SqliteConnection? _connection;
+
     public IDatasource Create(object? options = null) =>
-        new SqliteDatasource(options as SqliteConnectionOptions ?? new SqliteConnectionOptions());
+        options is SqliteConnectionOptions typed
+            ? new SqliteDatasource(typed)
+            : new SqliteDatasource(new SqliteConnectionOptions
+            {
+                Filename = DatasourceOptions.Value(options, "filename")
+            });
 
     SqliteConnection NewConnection() => new(_options);
-    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(NewConnection());
+    SqliteConnection DefaultConnection() => _connection ??= NewConnection();
+    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(DefaultConnection());
 
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new SqliteCommand(connection as SqliteConnection ?? NewConnection());
+        new SqliteCommand(connection as SqliteConnection ?? DefaultConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new SqliteRepository(connection as SqliteConnection ?? NewConnection(), _table);
+        (IRepository<T>)(object)new SqliteRepository(connection as SqliteConnection ?? DefaultConnection(), _table);
 }

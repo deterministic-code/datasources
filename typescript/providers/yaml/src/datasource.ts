@@ -1,5 +1,6 @@
 import {
   type DatasourceFactory,
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
@@ -13,16 +14,17 @@ import { YamlCommand } from "./command.ts";
 export class YamlDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new YamlDatasource();
   readonly provider = "yaml";
-  create = (_options?: unknown): IDatasource => new YamlDatasource();
-  private newConnection = (): IConnection => new YamlConnection();
+  private connection?: IConnection;
+  create = (_options?: DatasourceOptions): IDatasource => new YamlDatasource();
+  private defaultConnection = (): IConnection =>
+    (this.connection ??= new YamlConnection());
   createConnection = (): Promise<IConnection> =>
-    Promise.resolve(this.newConnection());
+    Promise.resolve(this.defaultConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new YamlCommand(connection ?? this.newConnection());
-  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
-    new StubRepository<T>(this.provider, connection ?? this.newConnection());
-
-  createReadonlyRepository = <T = unknown>(
+    new YamlCommand(connection ?? this.defaultConnection());
+  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+    new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
+  createReadonlyRepository = <T>(
     connection?: IConnection,
   ): IReadonlyRepository<T> => this.createRepository(connection);
 }

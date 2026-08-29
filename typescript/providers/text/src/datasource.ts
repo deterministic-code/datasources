@@ -1,5 +1,6 @@
 import {
   type DatasourceFactory,
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
@@ -13,16 +14,17 @@ import { TextCommand } from "./command.ts";
 export class TextDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new TextDatasource();
   readonly provider = "text";
-  create = (_options?: unknown): IDatasource => new TextDatasource();
-  private newConnection = (): IConnection => new TextConnection();
+  private connection?: IConnection;
+  create = (_options?: DatasourceOptions): IDatasource => new TextDatasource();
+  private defaultConnection = (): IConnection =>
+    (this.connection ??= new TextConnection());
   createConnection = (): Promise<IConnection> =>
-    Promise.resolve(this.newConnection());
+    Promise.resolve(this.defaultConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new TextCommand(connection ?? this.newConnection());
-  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
-    new StubRepository<T>(this.provider, connection ?? this.newConnection());
-
-  createReadonlyRepository = <T = unknown>(
+    new TextCommand(connection ?? this.defaultConnection());
+  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+    new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
+  createReadonlyRepository = <T>(
     connection?: IConnection,
   ): IReadonlyRepository<T> => this.createRepository(connection);
 }

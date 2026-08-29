@@ -1,5 +1,6 @@
 import {
   type DatasourceFactory,
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
@@ -13,16 +14,17 @@ import { MongoDbCommand } from "./command.ts";
 export class MongoDbDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new MongoDbDatasource();
   readonly provider = "mongodb";
-  create = (_options?: unknown): IDatasource => new MongoDbDatasource();
-  private newConnection = (): IConnection => new MongoDbConnection();
+  private connection?: IConnection;
+  create = (_options?: DatasourceOptions): IDatasource => new MongoDbDatasource();
+  private defaultConnection = (): IConnection =>
+    (this.connection ??= new MongoDbConnection());
   createConnection = (): Promise<IConnection> =>
-    Promise.resolve(this.newConnection());
+    Promise.resolve(this.defaultConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new MongoDbCommand(connection ?? this.newConnection());
-  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
-    new StubRepository<T>(this.provider, connection ?? this.newConnection());
-
-  createReadonlyRepository = <T = unknown>(
+    new MongoDbCommand(connection ?? this.defaultConnection());
+  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+    new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
+  createReadonlyRepository = <T>(
     connection?: IConnection,
   ): IReadonlyRepository<T> => this.createRepository(connection);
 }

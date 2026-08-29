@@ -8,6 +8,7 @@ pub mod converters;
 mod connection;
 mod console_command_middleware;
 mod create;
+mod defaults;
 mod datasource;
 mod datasource_error;
 mod datasource_factory;
@@ -59,7 +60,8 @@ pub use converters::{
 pub use console_command_middleware::{
     format_elapsed, utc_iso_millis, ConsoleCommandMiddleware,
 };
-pub use create::create;
+pub use create::{create, create_default};
+pub use defaults::defaults;
 pub use datasource::Datasource;
 pub use datasource_error::DatasourceError;
 pub use datasource_factory::DatasourceFactory;

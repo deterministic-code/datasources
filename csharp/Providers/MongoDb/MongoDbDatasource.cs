@@ -7,10 +7,11 @@ public sealed class MongoDbDatasource : IDatasource, IDatasourceFactory
     public static readonly MongoDbDatasource Factory = new();
     public string Provider => "mongodb";
     public IDatasource Create(object? options = null) => new MongoDbDatasource();
-    IConnection NewConnection() => new MongoDbConnection();
-    public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
+    IConnection? _connection;
+    IConnection DefaultConnection() => _connection ??= new MongoDbConnection();
+    public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new MongoDbCommand(connection ?? NewConnection());
+        new MongoDbCommand(connection ?? DefaultConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        new StubRepository<T>(Provider, connection ?? NewConnection());
+        new StubRepository<T>(Provider, connection ?? DefaultConnection());
 }

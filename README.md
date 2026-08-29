@@ -18,6 +18,8 @@ Register a factory, then create by provider name. See:
 - [TypeScript](create-factory-typescript.md)
 - [Rust](create-factory-rust.md)
 
+Apps choose a default provider and options (committed config plus env / `.env` for URLs), create a **closed** connection at startup, and open it on first use. See [Default provider in apps](default-provider-apps.md).
+
 Create a closed connection, then open it. See:
 
 - [C#](create-connection-csharp.md)

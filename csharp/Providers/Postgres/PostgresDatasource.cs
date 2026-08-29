@@ -13,15 +13,24 @@ public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
         _table = table;
     }
 
+    PostgresConnection? _connection;
+
     public IDatasource Create(object? options = null) =>
-        new PostgresDatasource(options as PostgresConnectionOptions ?? new PostgresConnectionOptions());
+        options is PostgresConnectionOptions typed
+            ? new PostgresDatasource(typed)
+            : new PostgresDatasource(new PostgresConnectionOptions
+            {
+                Url = DatasourceOptions.Value(options, "url"),
+                Schema = DatasourceOptions.Value(options, "schema")
+            });
 
     PostgresConnection NewConnection() => new(_options);
-    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(NewConnection());
+    PostgresConnection DefaultConnection() => _connection ??= NewConnection();
+    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(DefaultConnection());
 
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new PostgresCommand(connection as PostgresConnection ?? NewConnection());
+        new PostgresCommand(connection as PostgresConnection ?? DefaultConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new PostgresRepository(connection as PostgresConnection ?? NewConnection(), _table);
+        (IRepository<T>)(object)new PostgresRepository(connection as PostgresConnection ?? DefaultConnection(), _table);
 }

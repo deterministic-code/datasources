@@ -1,5 +1,6 @@
 import {
   type DatasourceFactory,
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
@@ -13,16 +14,17 @@ import { OracleCommand } from "./command.ts";
 export class OracleDatasource implements IDatasource, DatasourceFactory {
   static readonly factory = new OracleDatasource();
   readonly provider = "oracle";
-  create = (_options?: unknown): IDatasource => new OracleDatasource();
-  private newConnection = (): IConnection => new OracleConnection();
+  private connection?: IConnection;
+  create = (_options?: DatasourceOptions): IDatasource => new OracleDatasource();
+  private defaultConnection = (): IConnection =>
+    (this.connection ??= new OracleConnection());
   createConnection = (): Promise<IConnection> =>
-    Promise.resolve(this.newConnection());
+    Promise.resolve(this.defaultConnection());
   createCommand = (connection?: IConnection): ICommand =>
-    new OracleCommand(connection ?? this.newConnection());
-  createRepository = <T = unknown>(connection?: IConnection): IRepository<T> =>
-    new StubRepository<T>(this.provider, connection ?? this.newConnection());
-
-  createReadonlyRepository = <T = unknown>(
+    new OracleCommand(connection ?? this.defaultConnection());
+  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+    new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
+  createReadonlyRepository = <T>(
     connection?: IConnection,
   ): IReadonlyRepository<T> => this.createRepository(connection);
 }

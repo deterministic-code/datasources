@@ -13,15 +13,23 @@ public sealed class MysqlDatasource : IDatasource, IDatasourceFactory
         _table = table;
     }
 
+    MysqlConnection? _connection;
+
     public IDatasource Create(object? options = null) =>
-        new MysqlDatasource(options as MysqlConnectionOptions ?? new MysqlConnectionOptions());
+        options is MysqlConnectionOptions typed
+            ? new MysqlDatasource(typed)
+            : new MysqlDatasource(new MysqlConnectionOptions
+            {
+                Url = DatasourceOptions.Value(options, "url")
+            });
 
     MysqlConnection NewConnection() => new(_options);
-    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(NewConnection());
+    MysqlConnection DefaultConnection() => _connection ??= NewConnection();
+    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(DefaultConnection());
 
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new MysqlCommand(connection as MysqlConnection ?? NewConnection());
+        new MysqlCommand(connection as MysqlConnection ?? DefaultConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new MysqlRepository(connection as MysqlConnection ?? NewConnection(), _table);
+        (IRepository<T>)(object)new MysqlRepository(connection as MysqlConnection ?? DefaultConnection(), _table);
 }

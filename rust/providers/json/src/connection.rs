@@ -102,6 +102,10 @@ impl Connection for JsonConnection {
         "json"
     }
 
+    fn opened(&self) -> bool {
+        *self.state.opened.lock().unwrap()
+    }
+
     fn create_command(&self) -> Arc<dyn Command> {
         Arc::new(JsonCommand::new(Arc::new(JsonConnection {
             state: self.state.clone(),

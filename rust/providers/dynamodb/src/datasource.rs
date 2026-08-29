@@ -46,7 +46,7 @@ impl DatasourceFactory for DynamoDbDatasource {
     fn provider(&self) -> &str {
         "dynamodb"
     }
-    fn create(&self, _options: Option<&str>) -> Arc<dyn Datasource> {
+    fn create(&self, _options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
         Arc::new(DynamoDbDatasource)
     }
 }

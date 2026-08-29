@@ -14,15 +14,18 @@ public sealed class MemoryDatasource : IDatasource, IDatasourceFactory
         _options = options;
     }
 
+    MemoryConnection? _connection;
+
     public IDatasource Create(object? options = null) =>
         new MemoryDatasource(options as MemoryConnectionOptions ?? new MemoryConnectionOptions());
 
     MemoryConnection NewConnection() => new(_options);
-    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(NewConnection());
+    MemoryConnection DefaultConnection() => _connection ??= NewConnection();
+    public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(DefaultConnection());
 
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new MemoryCommand(connection as MemoryConnection ?? NewConnection());
+        new MemoryCommand(connection as MemoryConnection ?? DefaultConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new MemoryRepository(connection as MemoryConnection ?? NewConnection());
+        (IRepository<T>)(object)new MemoryRepository(connection as MemoryConnection ?? DefaultConnection());
 }

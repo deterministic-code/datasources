@@ -7,10 +7,11 @@ public sealed class YamlDatasource : IDatasource, IDatasourceFactory
     public static readonly YamlDatasource Factory = new();
     public string Provider => "yaml";
     public IDatasource Create(object? options = null) => new YamlDatasource();
-    IConnection NewConnection() => new YamlConnection();
-    public Task<IConnection> CreateConnection() => Task.FromResult(NewConnection());
+    IConnection? _connection;
+    IConnection DefaultConnection() => _connection ??= new YamlConnection();
+    public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        new YamlCommand(connection ?? NewConnection());
+        new YamlCommand(connection ?? DefaultConnection());
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        new StubRepository<T>(Provider, connection ?? NewConnection());
+        new StubRepository<T>(Provider, connection ?? DefaultConnection());
 }

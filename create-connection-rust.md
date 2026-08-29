@@ -28,6 +28,25 @@ let connection = json.create_connection().await?;
 connection.open().await?;
 ```
 
+## Startup
+
+Apps create the default datasource and connection at process start, then hold the closed connection. Call `open` on first use (`open` is a no-op if already open). Do not open during bootstrap.
+
+```rust
+use std::sync::Arc;
+use datasources::{Connection, Result};
+
+let datasource = create_default_datasource(&options)?;
+let connection = datasource.create_connection().await?;
+
+async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
+    if connection.opened() {
+        return Ok(());
+    }
+    connection.open().await
+}
+```
+
 Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`FileStore`, `MemoryStore`, `SqliteDriver`). Stub dialects return a named connection; `open` / `close` / `start_transaction` return not-implemented.
 
 ## Mock
