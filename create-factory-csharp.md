@@ -52,14 +52,18 @@ Working dialects (json, memory, sqlite) accept options on `Create`. Stub dialect
 
 The library does not load config. The consumer must call `Datasource.Defaults` with a dictionary. `Create()`, `CreateConnection`, `CreateCommand`, and `CreateRepository` then use those defaults.
 
+`Datasources.Hosting` can register several factories from the same dictionary: `providers` / `DATASOURCE_PROVIDERS` (comma list) plus `provider` / `DATASOURCE_PROVIDER`, then sets defaults.
+
 ```csharp
-Datasource.Defaults(new Dictionary<string, string?>
+var options = new Dictionary<string, string?>
 {
     ["provider"] = Environment.GetEnvironmentVariable("DATASOURCE_PROVIDER") ?? "sqlite",
+    ["providers"] = Environment.GetEnvironmentVariable("DATASOURCE_PROVIDERS"),
     ["filename"] = Environment.GetEnvironmentVariable("SQLITE_FILENAME") ?? ":memory:",
     ["url"] = Environment.GetEnvironmentVariable("DATABASE_URL"),
     ["schema"] = Environment.GetEnvironmentVariable("DATABASE_SCHEMA")
-});
+};
+DatasourceInstall.From(options);
 
 var datasource = Datasource.Create();
 var connection = await datasource.CreateConnection();
