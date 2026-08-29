@@ -33,7 +33,8 @@ await connection.open();
 Apps create the default datasource and connection at process start, then hold the closed connection. Call `open` on first use (`open` is a no-op if already open). Do not open during bootstrap.
 
 ```ts
-const datasource = createDefaultDatasource(options);
+Datasource.defaults(options);
+const datasource = Datasource.create();
 const connection = await datasource.createConnection();
 
 async function ensureOpen() {

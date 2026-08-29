@@ -34,9 +34,10 @@ Apps create the default datasource and connection at process start, then hold th
 
 ```rust
 use std::sync::Arc;
-use datasources::{Connection, Result};
+use datasources::{create_default, defaults, Connection, Result};
 
-let datasource = create_default_datasource(&options)?;
+defaults(options);
+let datasource = create_default()?;
 let connection = datasource.create_connection().await?;
 
 async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
