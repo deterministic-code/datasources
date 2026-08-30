@@ -68,7 +68,7 @@ pub use datasource_factory::DatasourceFactory;
 pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
-pub use mappers::DatasourceMapper;
+pub use mappers::Mapper;
 pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockQuery, MockReader, MockRepository,
     MockTransaction, MockWhere,

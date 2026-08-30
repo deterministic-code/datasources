@@ -21,12 +21,8 @@ public static class RepositorySpec
         var session = open();
         await session.Connection.Open();
         await session.Command.Execute(SqliteStatementBuilder.CreateTable(spec.Type.Table, Columns(spec.Type)).GetText());
-        var mapping = TypeConverter.Mapping<Dictionary<string, Value>>(
-            "sqlite",
-            schema: Schema(spec.Type),
-            names: spec.Type.Fields.Keys.ToDictionary(name => name, name => name),
-            name: spec.Type.Table);
-        var built = RepositoryBuilder<Dictionary<string, Value>>.Parts(new()
+        var mapping = TypeConverter.Mapping<SpecUser>("sqlite", name: spec.Type.Table);
+        var built = RepositoryBuilder<SpecUser>.Parts(new()
         {
             Connection = session.Connection,
             Mapping = mapping,
@@ -37,18 +33,18 @@ public static class RepositorySpec
         var middleware = new ConsoleCommandMiddleware(logs.Add);
         foreach (var command in new[] { built.Commands.Get, built.Commands.Add, built.Commands.Update, built.Commands.Delete })
             command.Use(middleware);
-        var repo = new Repository<Dictionary<string, Value>>(built);
+        var repo = new Repository<SpecUser>(built);
         foreach (var step in spec.Steps)
             await (step switch
             {
-                { Create: { } create } => repo.Add(Row(create.Row)),
+                { Create: { } create } => repo.Add(mapping.To(Row(create.Row))),
                 { Read: { } read } => repo.GetSingle(WhereBuilder.Equals("id", Value.From(read.Id))),
                 { Query: { } query } => Drain(query.Where is { } where ? repo.Get(Where(where)) : repo.Get()),
                 { Ready: { } ready } => repo.GetSingle(Where(ready.Where)),
-                { Update: { } update } => repo.Update(Row(update.Row)),
-                { UpdateBy: { } updateBy } => repo.Update(Row(updateBy.Row), Where(updateBy.Where)),
-                { Delete: { } delete } => repo.Delete(new Dictionary<string, Value> { ["id"] = Value.From(delete.Id) }),
-                { DeleteBy: { } deleteBy } => repo.Delete(new Dictionary<string, Value>(), Where(deleteBy.Where)),
+                { Update: { } update } => repo.Update(mapping.To(Row(update.Row))),
+                { UpdateBy: { } updateBy } => repo.Update(mapping.To(Row(updateBy.Row)), Where(updateBy.Where)),
+                { Delete: { } delete } => repo.Delete(mapping.To(new Dictionary<string, Value> { ["id"] = Value.From(delete.Id) })),
+                { DeleteBy: { } deleteBy } => repo.Delete(new SpecUser(), Where(deleteBy.Where)),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             });
         SqlSpec.AssertConsoleLogs(spec.Name, Queries(spec), logs);
@@ -92,24 +88,22 @@ public static class RepositorySpec
         _ => value
     };
 
-    static Dictionary<string, string> Schema(TypeSpec type) =>
-        type.Fields.ToDictionary(pair => pair.Key, pair => pair.Value switch
-        {
-            "int" => "INTEGER",
-            "uuid" => "UUID",
-            "string" => "TEXT",
-            "bool" => "BOOLEAN",
-            "decimal" => "NUMERIC",
-            "float" => "REAL",
-            "datetime" => "DATETIME",
-            "binary" => "BLOB",
-            _ => throw new DatasourceException($"Unknown field type \"{pair.Value}\"")
-        });
-
     static SqliteColumn[] Columns(TypeSpec type) =>
         [.. type.Fields.Select(pair => new SqliteColumn(pair.Key, pair.Value, type.Ids.Contains(pair.Key)))];
 
     public sealed record Session(IConnection Connection, ICommand Command);
+
+    sealed class SpecUser
+    {
+        public int id { get; set; }
+        public Guid uuid { get; set; }
+        public string username { get; set; } = "";
+        public bool is_enabled { get; set; }
+        public decimal balance { get; set; }
+        public double location { get; set; }
+        public DateTime created { get; set; }
+        public byte[] version { get; set; } = [];
+    }
 
     sealed class Spec
     {

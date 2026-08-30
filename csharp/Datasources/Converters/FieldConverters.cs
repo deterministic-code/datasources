@@ -25,6 +25,27 @@ public static class FieldConverters
 
     public static readonly IFieldConverter Uuid = new FieldConverter(ParseUuid, ParseUuid);
 
+    public static ProviderTypes Sql(
+        string booleanStorage = "integer",
+        IReadOnlyDictionary<string, string>? aliases = null)
+    {
+        var types = new Dictionary<string, IFieldConverter>
+        {
+            ["TEXT"] = Identity,
+            ["INTEGER"] = Identity,
+            ["REAL"] = Identity,
+            ["NUMERIC"] = Decimal(),
+            ["BOOLEAN"] = Boolean(booleanStorage),
+            ["DATETIME"] = DateTime,
+            ["BLOB"] = Binary,
+            ["UUID"] = Uuid,
+        };
+        if (aliases is not null)
+            foreach (var (alias, target) in aliases)
+                types[alias] = types.TryGetValue(target, out var converter) ? converter : Identity;
+        return new ProviderTypes { Types = types };
+    }
+
     static bool AsBool(object value)
     {
         if (value is bool flag) return flag;
@@ -77,4 +98,36 @@ public static class FieldConverters
         new($"Cannot convert {value} to {target}");
 
     static Regex DecimalPattern() => new(@"^(-?)(\d+)(?:\.(\d+))?$");
+
+    public static string SqlType(Type type) => (Nullable.GetUnderlyingType(type) ?? type) switch
+    {
+        var t when t == typeof(string) => "TEXT",
+        var t when t == typeof(bool) => "BOOLEAN",
+        var t when t == typeof(System.DateTime) => "DATETIME",
+        var t when t == typeof(Guid) => "UUID",
+        var t when t == typeof(byte[]) => "BLOB",
+        var t when t == typeof(float) || t == typeof(double) => "REAL",
+        var t when t == typeof(decimal) => "NUMERIC",
+        var t when t == typeof(byte) || t == typeof(sbyte) || t == typeof(short) || t == typeof(ushort)
+            || t == typeof(int) || t == typeof(uint) || t == typeof(long) || t == typeof(ulong) => "INTEGER",
+        _ => "TEXT"
+    };
+
+    public static object? Assign(Value value, Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        var raw = value.ToObject();
+        return raw switch
+        {
+            null => null,
+            _ when type.IsInstanceOfType(raw) => raw,
+            string text when type == typeof(System.DateTime) =>
+                System.DateTime.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+            string text when type == typeof(Guid) => Guid.Parse(text),
+            string text when type == typeof(byte[]) => Convert.FromBase64String(text),
+            string text when type == typeof(decimal) => decimal.Parse(text, CultureInfo.InvariantCulture),
+            long n when type == typeof(bool) => n != 0,
+            _ => Convert.ChangeType(raw, type, CultureInfo.InvariantCulture)
+        };
+    }
 }

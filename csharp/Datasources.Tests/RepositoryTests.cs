@@ -18,31 +18,48 @@ public class RepositoryTests
         public string Name { get; set; } = "";
     }
 
-    static (Repository<Dictionary<string, Value>> Repo, MockCommand Command) Create(
+    sealed class IdOnly
+    {
+        public int id { get; set; }
+    }
+
+    sealed class Row
+    {
+        public int id { get; set; }
+        public string name { get; set; } = "";
+    }
+
+    sealed class Composite
+    {
+        public int org_id { get; set; }
+        public int user_id { get; set; }
+        public int name { get; set; }
+    }
+
+    static (Repository<T> Repo, MockCommand Command) Create<T>(
         IReadOnlyList<string>? id = null,
         bool assignIdentityOnAdd = true,
-        IReadOnlyDictionary<string, string>? schema = null,
-        IReadOnlyDictionary<string, IFieldConverter>? converters = null,
-        IReadOnlyDictionary<string, string>? names = null)
+        IReadOnlyDictionary<string, IFieldConverter>? converters = null)
+        where T : new()
     {
-        TypeConverter.Use("memory", TypeConverter.IdentityProviderTypes());
+        TypeConverter.Use("memory", new ProviderTypes { Rename = false });
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var options = new RepositoryBuilderOptions<Dictionary<string, Value>>
+        return (new Repository<T>(new RepositoryBuilderOptions<T>
         {
             Connection = connection,
             Ids = id ?? ["id"],
             AssignIdentityOnAdd = assignIdentityOnAdd,
-            Mapping = TypeConverter.Mapping<Dictionary<string, Value>>(
-                "memory",
-                schema: schema ?? new Dictionary<string, string> { ["id"] = "INTEGER", ["name"] = "TEXT" },
-                converters: converters,
-                names: names,
-                name: "users")
-        };
-        return (new Repository<Dictionary<string, Value>>(options), command);
+            Mapping = TypeConverter.Mapping<T>("memory", converters: converters, name: "users")
+        }), command);
     }
+
+    static (Repository<Row> Repo, MockCommand Command) Create(
+        IReadOnlyList<string>? id = null,
+        bool assignIdentityOnAdd = true,
+        IReadOnlyDictionary<string, IFieldConverter>? converters = null) =>
+        Create<Row>(id, assignIdentityOnAdd, converters);
 
     [Fact]
     public async Task GetBuildsSelectAndMapsRows()
@@ -52,18 +69,18 @@ public class RepositoryTests
         {
             new Dictionary<string, Value> { ["id"] = 1, ["name"] = "a" }
         });
-        var rows = new List<Dictionary<string, Value>>();
+        var rows = new List<Row>();
         await foreach (var row in repo.Get())
             rows.Add(row);
         Assert.Single(rows);
-        Assert.Equal(new Value.Int(1), rows[0]["id"]);
+        Assert.Equal(1, rows[0].id);
         Assert.Equal("SELECT id, name FROM users", command.ExecuteReaderCalls[0].Text);
         Assert.Same(command.Connection, repo.Connection);
         command.Reader = new MockReader(new object?[]
         {
             new Dictionary<string, Value> { ["id"] = 1, ["name"] = "a" }
         });
-        Assert.Equal(new Value.Int(1), (await repo.GetSingle())!["id"]);
+        Assert.Equal(1, (await repo.GetSingle())!.id);
     }
 
     [Fact]
@@ -94,7 +111,7 @@ public class RepositoryTests
     public async Task AddUpdateDeleteUseBuilders()
     {
         var (repo, command) = Create(assignIdentityOnAdd: false);
-        var obj = new Dictionary<string, Value> { ["id"] = 1, ["name"] = "a" };
+        var obj = new Row { id = 1, name = "a" };
         await repo.Add(obj);
         Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
         await repo.Update(obj);
@@ -109,27 +126,14 @@ public class RepositoryTests
     public async Task CompositeIdAndAssignIdentityOnAddAndOverrides()
     {
         var twice = new FieldConverter(v => v, v => v is int n ? n * 2 : v is long l ? l * 2 : v);
-        var (repo, command) = Create(
+        var (repo, command) = Create<Composite>(
             id: ["org_id", "user_id"],
             assignIdentityOnAdd: true,
-            schema: new Dictionary<string, string>
-            {
-                ["org_id"] = "INTEGER",
-                ["user_id"] = "INTEGER",
-                ["name"] = "TEXT"
-            },
-            converters: new Dictionary<string, IFieldConverter> { ["name"] = twice },
-            names: new Dictionary<string, string> { ["name"] = "label" });
-        await repo.Add(new Dictionary<string, Value>
-        {
-            ["org_id"] = 1, ["user_id"] = 2, ["label"] = 3
-        });
+            converters: new Dictionary<string, IFieldConverter> { ["name"] = twice });
+        await repo.Add(new Composite { org_id = 1, user_id = 2, name = 3 });
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
         Assert.Equal(new Value.Int(6), command.ExecuteCalls[0].Parameters![0].Value);
-        await repo.Update(new Dictionary<string, Value>
-        {
-            ["org_id"] = 1, ["user_id"] = 2, ["label"] = 4
-        });
+        await repo.Update(new Composite { org_id = 1, user_id = 2, name = 4 });
         Assert.Contains("org_id = $org_id AND user_id = $user_id", command.ExecuteCalls[1].Text);
     }
 
@@ -147,15 +151,16 @@ public class RepositoryTests
         {
             await foreach (var _ in repo.Get()) { }
         });
+        var (cells, _) = Create<Dictionary<string, Value>>();
         await Assert.ThrowsAsync<DatasourceException>(() =>
-            repo.Update(new Dictionary<string, Value> { ["name"] = "a" }));
+            cells.Update(new Dictionary<string, Value> { ["name"] = "a" }));
         await Assert.ThrowsAsync<DatasourceException>(() =>
-            repo.Delete(new Dictionary<string, Value> { ["name"] = "a" }));
+            cells.Delete(new Dictionary<string, Value> { ["name"] = "a" }));
         await Assert.ThrowsAsync<DatasourceException>(() =>
-            repo.Update(new Dictionary<string, Value> { ["id"] = 1 }));
-        TypeConverter.Use("memory", TypeConverter.SqlProviderTypes());
+            Create<IdOnly>().Repo.Update(new IdOnly { id = 1 }));
+        TypeConverter.Use("memory", FieldConverters.Sql());
         var mapping = TypeConverter.Mapping<Item>("memory", name: "users");
-        var connection2 = new MockConnection();
+        var connection2 = new MockConnection { Provider = "memory" };
         var command2 = new MockCommand(connection2);
         connection2.Command = command2;
         var typed = new Repository<Item>(new RepositoryBuilderOptions<Item>
@@ -173,13 +178,15 @@ public class RepositoryTests
     [Fact]
     public void FromTypeBuildsOptionsFromConnection()
     {
-        TypeConverter.Use("mock", TypeConverter.IdentityProviderTypes());
+        TypeConverter.Use("mock", new ProviderTypes { Rename = false });
         var connection = new MockConnection();
         var fromId = CreateRepositoryBuilderOptions.FromType<Item>(typeof(Item), connection);
         Assert.Equal(new[] { "Id" }, fromId.Ids);
         Assert.Same(connection, fromId.Connection);
         Assert.Empty(CreateRepositoryBuilderOptions.FromType<Label>(connection).Ids);
+        TypeConverter.Use("mock", new ProviderTypes { Rename = false });
         Assert.Same(connection, new Repository<Item>(fromId).Connection);
+        TypeConverter.Use("mock", new ProviderTypes { Rename = false });
         Assert.Same(connection, new Repository<Item>(connection).Connection);
     }
 }

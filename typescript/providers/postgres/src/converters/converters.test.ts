@@ -10,7 +10,6 @@ describe("postgres converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "postgres",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("postgres");
     for (const sqlType of Object.keys(postgresTypes.types)) {

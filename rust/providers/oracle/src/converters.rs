@@ -36,7 +36,7 @@ mod tests {
     fn registers_every_mapped_type() {
         reset();
         register();
-        let mapping = mapping::<Cells>("oracle", "rust").unwrap();
+        let mapping = mapping::<Cells>("oracle").unwrap();
         assert_eq!(mapping.source, "oracle");
         for sql_type in types().types.keys() {
             let mut row = Record::new();

@@ -10,7 +10,6 @@ describe("xml converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "xml",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("xml");
     for (const sqlType of Object.keys(xmlTypes.types)) {

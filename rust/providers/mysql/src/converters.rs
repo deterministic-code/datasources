@@ -44,7 +44,7 @@ mod tests {
     fn registers_every_mapped_type() {
         reset();
         register();
-        let mapping = mapping::<Cells>("mysql", "rust").unwrap();
+        let mapping = mapping::<Cells>("mysql").unwrap();
         assert_eq!(mapping.source, "mysql");
         for sql_type in types().types.keys() {
             let mut row = Record::new();

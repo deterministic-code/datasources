@@ -10,7 +10,9 @@
     "test:e2e:csharp": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} dotnet test csharp/Providers/Mysql.Tests/Datasources.Mysql.Tests.csproj && MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} dotnet test csharp/Providers/Postgres.Tests/Datasources.Postgres.Tests.csproj",
     "docs": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:readme": "node scripts/generate-readme.mjs"
+    "docs:readme": "node scripts/generate-readme.mjs",
+    "setup": "node --experimental-strip-types typescript/cli/src/main.ts setup",
+    "cli": "node --experimental-strip-types typescript/cli/src/main.ts"
   },
   "devDependencies": {
     "vitepress": "^1.6.4"

@@ -1,14 +1,13 @@
 use crate::builders::StatementBuilder;
 use crate::command::Command;
-use crate::converters::{mapping_with, Cells};
-use crate::mappers::DatasourceMapper;
+use crate::converters::{mapping_with, table, Cells};
+use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::statement::Statement;
 use crate::table_repository::TableRepository;
 use crate::table_repository_builder_options::TableRepositoryBuilderOptions;
 use crate::where_trait::Where;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct TableRepositoryCommands {
@@ -54,41 +53,26 @@ impl TableRepositoryBuilder {
     pub fn parts(options: TableRepositoryBuilderOptions) -> Result<(
         TableRepositoryCommands,
         crate::converters::TypeMapping,
-        DatasourceMapper,
+        Mapper,
         TableRepositoryStatements,
         Vec<String>,
         bool,
     )> {
         let converters = match options.mapping {
             Some(mapping) => mapping,
-            None => mapping_with::<Cells>(
-                options.connection.provider(),
-                "rust",
-                HashMap::new(),
-                options.converters,
-                HashMap::new(),
-            )?,
+            None => mapping_with::<Cells>(options.connection.provider(), options.converters)?,
         };
-        let columns: Vec<(String, String)> = converters
-            .schema
-            .keys()
-            .map(|column| (column.clone(), column.clone()))
-            .collect();
-        let column_refs: Vec<(&str, &str)> = columns
-            .iter()
-            .map(|(column, dest)| (column.as_str(), dest.as_str()))
-            .collect();
-        let mapping = DatasourceMapper::mapping_named(
+        table(options.connection.provider())?;
+        let mut columns = converters.field_names();
+        columns.sort();
+        let mapping = Mapper::new(
             converters.name.clone(),
             options.connection.provider(),
             "rust",
-            &column_refs,
         );
-        let mut field_names: Vec<String> = converters.schema.keys().cloned().collect();
-        field_names.sort();
         let statements = TableRepositoryStatements {
             table: mapping.name.clone(),
-            columns: field_names,
+            columns,
         };
         let commands = TableRepositoryCommands {
             get: options.connection.create_command(),

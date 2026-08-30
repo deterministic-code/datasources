@@ -3,7 +3,7 @@ use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::converters::{mapping, ConvertSchema, TypeMapping};
 use crate::datasource_error::DatasourceError;
-use crate::mappers::DatasourceMapper;
+use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
 use crate::record::Record;
@@ -22,7 +22,7 @@ use std::sync::Arc;
 pub struct TableRepository {
     commands: TableRepositoryCommands,
     converters: TypeMapping,
-    pub mapping: DatasourceMapper,
+    pub mapping: Mapper,
     statements: TableRepositoryStatements,
     id: Vec<String>,
     ids: HashSet<String>,
@@ -32,7 +32,7 @@ pub struct TableRepository {
 impl TableRepository {
     pub fn from_type<T: ConvertSchema>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_builder_options::<T>(connection.clone());
-        options.mapping = Some(mapping::<T>(connection.provider(), "rust")?);
+        options.mapping = Some(mapping::<T>(connection.provider())?);
         Self::new(options)
     }
 
@@ -43,7 +43,7 @@ impl TableRepository {
     pub fn from_parts(
         commands: TableRepositoryCommands,
         converters: TypeMapping,
-        mapping: DatasourceMapper,
+        mapping: Mapper,
         statements: TableRepositoryStatements,
         ids: Vec<String>,
         assign_identity_on_add: bool,
@@ -109,7 +109,7 @@ impl TableRepository {
         }
         reader
             .current()
-            .map(|row| self.converters.to(&row))
+            .map(|row| self.converters.to(&map_keys(&row, |key| self.mapping.to(key))))
             .transpose()
     }
 
@@ -122,11 +122,24 @@ impl TableRepository {
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                items.push(self.converters.to(&row)?);
+                items.push(self.converters.to(&map_keys(&row, |key| self.mapping.to(key)))?);
             }
         }
         Ok(items)
     }
+
+    fn sql(&self, obj: &Record) -> Result<Record> {
+        Ok(map_keys(
+            &self.converters.from(obj)?,
+            |key| self.mapping.from(key),
+        ))
+    }
+}
+
+fn map_keys(row: &Record, name: impl Fn(&str) -> String) -> Record {
+    row.iter()
+        .map(|(key, value)| (name(key), value.clone()))
+        .collect()
 }
 
 #[async_trait]
@@ -155,7 +168,7 @@ impl ReadonlyRepository for TableRepository {
 #[async_trait]
 impl Repository for TableRepository {
     async fn add(&self, obj: &Record) -> Result<Response> {
-        let record = self.converters.from(obj)?;
+        let record = self.sql(obj)?;
         let fields = self.params(&record, !self.assign_identity_on_add);
         let text = self.statements.insert(&fields);
         self.commands
@@ -165,7 +178,7 @@ impl Repository for TableRepository {
     }
 
     async fn update(&self, obj: &Record, by_where: Option<&dyn Where>) -> Result<Response> {
-        let record = self.converters.from(obj)?;
+        let record = self.sql(obj)?;
         let owned = if by_where.is_none() {
             Some(self.id_where(&record)?)
         } else {
@@ -192,7 +205,7 @@ impl Repository for TableRepository {
     }
 
     async fn delete(&self, obj: &Record, by_where: Option<&dyn Where>) -> Result<Response> {
-        let record = self.converters.from(obj)?;
+        let record = self.sql(obj)?;
         let owned = if by_where.is_none() {
             Some(self.id_where(&record)?)
         } else {

@@ -11,7 +11,7 @@ import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import type { TypeMapping } from "./converters/TypeMapping.ts";
-import { DatasourceMapper, type Mapping } from "./mappers/DatasourceMapper.ts";
+import { Mapper } from "./mappers/Mapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 
@@ -32,7 +32,7 @@ export type RepositoryStatements = {
 export type BuiltRepository<T extends Cells> = {
   commands: RepositoryCommands;
   converters: TypeMapping<T>;
-  mapping: Mapping;
+  mapping: Mapper;
   statements: RepositoryStatements;
   ids: string[];
   assignIdentityOnAdd: boolean;
@@ -44,14 +44,6 @@ const commandsOf = (connection: IConnection): RepositoryCommands => ({
   update: connection.createCommand(),
   delete: connection.createCommand(),
 });
-
-const mappingOf = <T extends Cells>(converters: TypeMapping<T>, source: string): Mapping =>
-  DatasourceMapper.mapping({
-    name: converters.name,
-    source,
-    destination: "typescript",
-    names: Object.fromEntries(Object.keys(converters.schema).map((column) => [column, column])),
-  });
 
 const statementsOf = (table: string, columns: string[]): RepositoryStatements => ({
   query: (where) => StatementBuilder.createQuery(table, columns, where),
@@ -67,16 +59,16 @@ export const parts = <T extends Cells>(
     options.mapping ??
     TypeConverter.mapping<T>({
       source: options.connection.provider,
-      destination: "typescript",
       type: options.type,
       converters: options.converters,
     });
-  const mapping = mappingOf(converters, options.connection.provider);
+  TypeConverter.table(options.connection.provider);
+  const mapping = new Mapper(converters.name, options.connection.provider, "typescript");
   return {
     commands: commandsOf(options.connection),
     converters,
     mapping,
-    statements: statementsOf(mapping.name, Object.keys(converters.schema).sort()),
+    statements: statementsOf(mapping.name, TypeConverter.keys(options.type).sort()),
     ids: options.ids ?? ["id"],
     assignIdentityOnAdd: options.assignIdentityOnAdd !== false,
   };

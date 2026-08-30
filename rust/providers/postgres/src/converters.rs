@@ -38,7 +38,7 @@ mod tests {
     fn registers_every_mapped_type() {
         reset();
         register();
-        let mapping = mapping::<Cells>("postgres", "rust").unwrap();
+        let mapping = mapping::<Cells>("postgres").unwrap();
         assert_eq!(mapping.source, "postgres");
         for sql_type in types().types.keys() {
             let mut row = Record::new();

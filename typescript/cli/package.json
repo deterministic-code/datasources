@@ -1,0 +1,20 @@
+{
+  "name": "@datasources/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "datasources": "./bin/datasources.mjs"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "cli": "node --experimental-strip-types src/main.ts",
+    "setup": "node --experimental-strip-types src/main.ts setup",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.8.0"
+  }
+}

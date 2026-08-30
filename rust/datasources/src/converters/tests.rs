@@ -34,10 +34,8 @@ fn rec(pairs: &[(&str, Value)]) -> Record {
 #[test]
 fn infers_user_schema_and_round_trips() {
     register_sqlite();
-    let mapping = mapping::<User>("sqlite", "rust").unwrap();
+    let mapping = mapping::<User>("sqlite").unwrap();
     assert_eq!(mapping.source, "sqlite");
-    assert_eq!(mapping.destination, "rust");
-    assert_eq!(mapping.schema.get("is_enabled").unwrap(), "BOOLEAN");
     let user = mapping
         .to(&rec(&[
             ("id", Value::Int(7)),
@@ -66,13 +64,9 @@ fn merges_schema_and_converters() {
     );
     let mapping = mapping_with::<User>(
         "sqlite",
-        "rust",
-        HashMap::from([("username".into(), "VARCHAR(32)".into())]),
         HashMap::from([("id".into(), twice)]),
-        HashMap::new(),
     )
     .unwrap();
-    assert_eq!(mapping.schema.get("username").unwrap(), "VARCHAR(32)");
     let user = mapping.to(&rec(&[("id", Value::Int(3))])).unwrap();
     assert_eq!(user.get("id"), Some(&Value::Int(6)));
     assert_eq!(
@@ -84,8 +78,7 @@ fn merges_schema_and_converters() {
 #[test]
 fn maps_without_schema() {
     register_sqlite();
-    let mapping = mapping::<Cells>("sqlite", "rust").unwrap();
-    assert!(mapping.schema.is_empty());
+    let mapping = mapping::<Cells>("sqlite").unwrap();
     let dest = mapping.to(&rec(&[("display_name", Value::from("a"))])).unwrap();
     assert_eq!(dest.get("display_name"), Some(&Value::from("a")));
 }
@@ -94,17 +87,14 @@ fn maps_without_schema() {
 fn identity_provider_keeps_keys() {
     reset();
     use_provider("json", identity_provider_types());
-    let mapping = mapping::<User>("json", "rust").unwrap();
+    let mapping = mapping::<User>("json").unwrap();
     let dest = mapping.to(&rec(&[("is_enabled", Value::Bool(true))])).unwrap();
     assert_eq!(dest.get("is_enabled"), Some(&Value::Bool(true)));
 }
 
 #[test]
-fn rejects_wrong_destination_and_missing_provider() {
-    register_sqlite();
-    assert!(mapping::<User>("sqlite", "csharp").is_err());
-    reset();
-    assert!(mapping::<User>("sqlite", "rust").is_err());
+fn rejects_missing_provider() {
+    assert!(mapping::<User>("not-registered").is_err());
 }
 
 #[test]
@@ -195,14 +185,7 @@ fn field_converters_cover_branches() {
 #[test]
 fn unknown_sql_type_uses_identity() {
     register_sqlite();
-    let mapping = mapping_with::<Cells>(
-        "sqlite",
-        "rust",
-        HashMap::from([("label".into(), "FOO".into())]),
-        HashMap::new(),
-        HashMap::new(),
-    )
-    .unwrap();
+    let mapping = mapping::<Cells>("sqlite").unwrap();
     assert_eq!(
         mapping.to(&rec(&[("label", Value::from("x"))])).unwrap().get("label"),
         Some(&Value::from("x"))

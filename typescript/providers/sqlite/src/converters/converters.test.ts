@@ -10,7 +10,6 @@ describe("sqlite converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "sqlite",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("sqlite");
     for (const sqlType of Object.keys(sqliteTypes.types)) {

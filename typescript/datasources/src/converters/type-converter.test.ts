@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatasourceError } from "../DatasourceError.ts";
+import { TypeConverter } from "./TypeConverter.ts";
+import type { Constructable } from "./Constructable.ts";
 import {
-  TypeConverter,
   canonicalConverters,
   identityProviderTypes,
   inferSqlType,
   normalizeSqlType,
   sqlProviderTypes,
-} from "./TypeConverter.ts";
-import type { Constructable } from "./Constructable.ts";
+} from "./fieldConverters.ts";
 import { identityFieldConverter } from "./identityFieldConverter.ts";
 import { booleanFieldConverter } from "./booleanFieldConverter.ts";
 import { dateTimeFieldConverter } from "./dateTimeFieldConverter.ts";
@@ -57,26 +57,18 @@ const registerSqlite = () =>
   TypeConverter.use("sqlite", sqlProviderTypes());
 
 describe("TypeConverter", () => {
-  it("infers the User schema and round-trips a row", () => {
+  it("round-trips a row with the same keys", () => {
     registerSqlite();
     const mapping = TypeConverter.mapping<User>({
       source: "sqlite",
-      destination: "typescript",
       type: User,
-      names: { is_enabled: "isEnabled" },
     });
     expect(mapping.source).toBe("sqlite");
-    expect(mapping.destination).toBe("typescript");
-    expect(mapping.schema).toEqual({
-      id: "INTEGER",
-      username: "TEXT",
-      is_enabled: "BOOLEAN",
-      created: "DATETIME",
-    });
+    expect(mapping.name).toBe("User");
     const user = mapping.to({
       id: 7,
       username: "ada",
-      is_enabled: 1,
+      isEnabled: 1,
       created: "2020-01-02T03:04:05.000Z",
     });
     expect(user).toBeInstanceOf(User);
@@ -87,12 +79,12 @@ describe("TypeConverter", () => {
     expect(mapping.from(user)).toEqual({
       id: 7,
       username: "ada",
-      is_enabled: 1,
+      isEnabled: 1,
       created: "2020-01-02T03:04:05.000Z",
     });
   });
 
-  it("merges an explicit schema and field converters", () => {
+  it("merges field converters", () => {
     registerSqlite();
     const twice = {
       to: (value: number | string | boolean | bigint | Date | Uint8Array | null) =>
@@ -102,70 +94,31 @@ describe("TypeConverter", () => {
     };
     const mapping = TypeConverter.mapping<User>({
       source: "sqlite",
-      destination: "typescript",
       type: User,
-      schema: { username: "VARCHAR(32)" },
       converters: { id: twice },
     });
-    expect(mapping.schema.username).toBe("VARCHAR(32)");
     expect(mapping.to({ id: 3, username: "x" }).id).toBe(6);
     expect(mapping.from({ ...new User(), id: 6, username: "x" }).id).toBe(3);
   });
 
   it("maps without a type using identity when the column is unknown", () => {
     registerSqlite();
-    const mapping = TypeConverter.mapping({
-      source: "sqlite",
-      destination: "typescript",
-    });
-    expect(mapping.schema).toEqual({});
-    expect(mapping.to({ display_name: "a" })).toEqual({ displayName: "a" });
-    expect(mapping.from({ displayName: "a" })).toEqual({ display_name: "a" });
-  });
-
-  it("fills dest names from schema keys", () => {
-    registerSqlite();
-    const mapping = TypeConverter.mapping({
-      source: "sqlite",
-      destination: "typescript",
-      type: Empty,
-      schema: { display_name: "TEXT" },
-    });
-    expect(mapping.to({ display_name: "a" })).toEqual({ displayName: "a" });
-    TypeConverter.use("json", identityProviderTypes());
-    const json = TypeConverter.mapping({
-      source: "json",
-      destination: "typescript",
-      schema: { displayName: "TEXT" },
-    });
-    expect(json.to({ displayName: "a" })).toEqual({ displayName: "a" });
+    const mapping = TypeConverter.mapping({ source: "sqlite" });
+    expect(mapping.to({ display_name: "a" })).toEqual({ display_name: "a" });
+    expect(mapping.from({ displayName: "a" })).toEqual({ displayName: "a" });
   });
 
   it("leaves keys unchanged for identity providers", () => {
     TypeConverter.use("json", identityProviderTypes());
     const mapping = TypeConverter.mapping<User>({
       source: "json",
-      destination: "typescript",
       type: User,
-    });
-    expect(mapping.schema).toEqual({
-      id: "INTEGER",
-      username: "TEXT",
-      isEnabled: "BOOLEAN",
-      created: "DATETIME",
     });
     expect(mapping.to({ isEnabled: true }).isEnabled).toBe(true);
   });
 
-  it("rejects a wrong destination or missing provider", () => {
-    registerSqlite();
-    expect(() =>
-      TypeConverter.mapping({ source: "sqlite", destination: "csharp" }),
-    ).toThrow(/destination must be "typescript"/);
-    TypeConverter.reset();
-    expect(() =>
-      TypeConverter.mapping({ source: "sqlite", destination: "typescript" }),
-    ).toThrow(DatasourceError);
+  it("rejects a missing provider", () => {
+    expect(() => TypeConverter.mapping({ source: "sqlite" })).toThrow(DatasourceError);
   });
 
   it("rejects a type that cannot be constructed", () => {
@@ -173,7 +126,6 @@ describe("TypeConverter", () => {
     expect(() =>
       TypeConverter.mapping({
         source: "sqlite",
-        destination: "typescript",
         type: NeedsArg as Constructable<Cells>,
       }),
     ).toThrow(/must be constructable/);
@@ -181,40 +133,29 @@ describe("TypeConverter", () => {
 
   it("skips undefined fields and accepts an empty class", () => {
     registerSqlite();
-    expect(
-      TypeConverter.mapping({
-        source: "sqlite",
-        destination: "typescript",
-        type: Empty,
-      }).schema,
-    ).toEqual({});
-    expect(
-      TypeConverter.mapping({
-        source: "sqlite",
-        destination: "typescript",
-        type: SkipsUndefined,
-      }).schema,
-    ).toEqual({ id: "INTEGER" });
+    expect(TypeConverter.keys()).toEqual([]);
+    expect(TypeConverter.keys(Empty)).toEqual([]);
+    expect(TypeConverter.keys(SkipsUndefined)).toEqual(["id"]);
   });
 
   it("infers REAL, INTEGER bigint, BLOB, and fallback TEXT", () => {
     registerSqlite();
     const mapping = TypeConverter.mapping({
       source: "sqlite",
-      destination: "typescript",
       type: Mixed,
     });
-    expect(mapping.schema).toEqual({
-      label: "TEXT",
-      count: "INTEGER",
-      ratio: "REAL",
-      data: "BLOB",
-      extra: "TEXT",
-      empty: "TEXT",
-      xml_parser: "TEXT",
+    expect(mapping.to({ count: 1n, ratio: 1.5, label: "x" })).toMatchObject({
+      count: 1n,
+      ratio: 1.5,
+      label: "x",
     });
     expect(inferSqlType("x")).toBe("TEXT");
     expect(inferSqlType(true)).toBe("BOOLEAN");
+    expect(inferSqlType(1)).toBe("INTEGER");
+    expect(inferSqlType(1.5)).toBe("REAL");
+    expect(inferSqlType(1n)).toBe("INTEGER");
+    expect(inferSqlType(new Date())).toBe("DATETIME");
+    expect(inferSqlType(new Uint8Array())).toBe("BLOB");
   });
 
   it("builds sql alias tables and falls back for unknown aliases", () => {

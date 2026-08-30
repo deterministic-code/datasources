@@ -5,6 +5,7 @@
   "workspaces": [
     "datasources",
     "register",
+    "cli",
     "providers/*"
   ],
   "scripts": {

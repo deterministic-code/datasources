@@ -10,7 +10,6 @@ describe("sqlserver converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "sqlserver",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("sqlserver");
     for (const sqlType of Object.keys(sqlserverTypes.types)) {

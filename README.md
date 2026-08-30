@@ -700,20 +700,16 @@ TODO: query / insert / where samples as the builder API is documented.
 
 ## Mappers
 
-Name translation between provider columns and host-language properties. Repository builders and `TypeConverter.mapping` use `DatasourceMapper`.
+Holds the table name and source/destination labels. Column names pass through as-is.
 
-### DatasourceMapper
+### Mapper
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `DatasourceMapper` | `DatasourceMapper` | `DatasourceMapper` |
-| `Mapping` | `mapping` / `mapping_named` | `mapping` |
+| `Mapper` | `Mapper` | `Mapper` |
+| constructor | `new` | constructor |
 | `To` | `to` | `to` |
 | `From` | `from` | `from` |
-
-### Examples
-
-TODO: column rename samples as mapping docs are written.
 
 ## TypeConverters
 
