@@ -100,4 +100,91 @@ public class ConverterTests
         Assert.Equal(new Value.Text("a"), dest["name"]);
         Assert.Equal(new Value.Bool(true), converter.ReverseConvert(dest)["flag"]);
     }
+
+    [Fact]
+    public void ToLowerAndToUpperCase()
+    {
+        Assert.Equal("ada", new ToLowerCaseConverter().Convert("ADA"));
+        Assert.Equal("ADA", new ToLowerCaseConverter().ReverseConvert("ADA"));
+        Assert.Equal("ADA", new ToUpperCaseConverter().Convert("ada"));
+        Assert.Equal("ada", new ToUpperCaseConverter().ReverseConvert("ada"));
+    }
+
+    static readonly (Casing Casing, string Text)[] Forms =
+    [
+        (Casing.Camel, "twoWords"),
+        (Casing.Capital, "Two Words"),
+        (Casing.Constant, "TWO_WORDS"),
+        (Casing.Dot, "two.words"),
+        (Casing.Kebab, "two-words"),
+        (Casing.No, "two words"),
+        (Casing.Pascal, "TwoWords"),
+        (Casing.PascalSnake, "Two_Words"),
+        (Casing.Path, "two/words"),
+        (Casing.Sentence, "Two words"),
+        (Casing.Snake, "two_words"),
+        (Casing.Train, "Two-Words"),
+    ];
+
+    [Fact]
+    public void ChangeCasing()
+    {
+        foreach (var (_, from) in Forms)
+        {
+            foreach (var (casing, expected) in Forms)
+                Assert.Equal(expected, new ChangeCasingConverter(casing).Convert(from));
+            Assert.Equal(from, new ChangeCasingConverter(Casing.Snake).ReverseConvert(from));
+        }
+        Assert.Equal("xmlParser", new ChangeCasingConverter(Casing.Camel).Convert("XMLParser"));
+        Assert.Equal("html5", new ChangeCasingConverter(Casing.Camel).Convert("html5"));
+        Assert.Equal("v2Name", new ChangeCasingConverter(Casing.Camel).Convert("v2Name"));
+        Assert.Equal("", new ChangeCasingConverter(Casing.Snake).Convert(""));
+        Assert.Equal("", new ChangeCasingConverter(Casing.Snake).Convert("___"));
+        Assert.Equal("two_words", new ChangeCasingConverter(Casing.Snake).Convert(" two  words\t"));
+        Assert.Equal("", new ChangeCasingConverter(Casing.Camel).Convert(""));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ChangeCasingConverter((Casing)99).Convert("a"));
+    }
+
+    [Fact]
+    public void PluralizesAndSingularizes()
+    {
+        var pairs = new (string Singular, string Plural)[]
+        {
+            ("person", "people"),
+            ("child", "children"),
+            ("man", "men"),
+            ("woman", "women"),
+            ("mouse", "mice"),
+            ("goose", "geese"),
+            ("tooth", "teeth"),
+            ("foot", "feet"),
+            ("ox", "oxen"),
+            ("sheep", "sheep"),
+            ("fish", "fish"),
+            ("series", "series"),
+            ("species", "species"),
+            ("deer", "deer"),
+            ("news", "news"),
+            ("box", "boxes"),
+            ("dish", "dishes"),
+            ("church", "churches"),
+            ("quiz", "quizes"),
+            ("kiss", "kisses"),
+            ("bus", "buses"),
+            ("city", "cities"),
+            ("cat", "cats"),
+            ("toy", "toys"),
+            ("2y", "2ys"),
+            ("Person", "People"),
+            ("", ""),
+        };
+        var converter = new PluralizerConverter();
+        foreach (var (singular, plural) in pairs)
+        {
+            Assert.Equal(plural, converter.Convert(singular));
+            Assert.Equal(plural, converter.Convert(plural));
+            Assert.Equal(singular, converter.ReverseConvert(plural));
+            Assert.Equal(singular, converter.ReverseConvert(singular));
+        }
+    }
 }

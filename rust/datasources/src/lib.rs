@@ -53,7 +53,10 @@ pub use command::Command;
 pub use command_middleware::CommandMiddleware;
 pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
-pub use converters::{core_types, ConvertSchema, RowConverter, TypeConverter, ValueConverter};
+pub use converters::{
+    core_types, Casing, ChangeCasingConverter, ConvertSchema, PluralizerConverter, RowConverter,
+    ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter, ValueConverter,
+};
 pub use console_command_middleware::{
     format_elapsed, utc_iso_millis, ConsoleCommandMiddleware,
 };
