@@ -3,7 +3,7 @@ use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::converters::{mapping, ConvertSchema, TypeMapping};
 use crate::datasource_error::DatasourceError;
-use crate::mappers::Mapper;
+use crate::mappers::StringSourceDestinationMapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
 use crate::record::Record;
@@ -22,7 +22,7 @@ use std::sync::Arc;
 pub struct TableRepository {
     commands: TableRepositoryCommands,
     converters: TypeMapping,
-    pub mapping: Mapper,
+    pub mapping: StringSourceDestinationMapper,
     statements: TableRepositoryStatements,
     id: Vec<String>,
     ids: HashSet<String>,
@@ -43,7 +43,7 @@ impl TableRepository {
     pub fn from_parts(
         commands: TableRepositoryCommands,
         converters: TypeMapping,
-        mapping: Mapper,
+        mapping: StringSourceDestinationMapper,
         statements: TableRepositoryStatements,
         ids: Vec<String>,
         assign_identity_on_add: bool,

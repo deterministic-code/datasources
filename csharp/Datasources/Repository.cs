@@ -6,7 +6,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
 {
     readonly RepositoryCommands commands;
     readonly TypeMapping<T> converters;
-    readonly Mapper mapping;
+    readonly StringSourceDestinationMapper mapping;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
     readonly bool assignIdentityOnAdd;
@@ -28,7 +28,8 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     }
 
     public IConnection Connection => commands.Get.Connection;
-    public Mapper Mapping => mapping;
+    public TypeMapping<T> Converters => converters;
+    public StringSourceDestinationMapper Mapping => mapping;
 
     public Task<T?> GetSingle(IWhere where) => GetSingle(statements.Query(where));
 

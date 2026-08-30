@@ -10,7 +10,7 @@ import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeMapping } from "./converters/TypeMapping.ts";
-import type { Mapper } from "./mappers/Mapper.ts";
+import type { StringSourceDestinationMapper } from "./mappers/StringSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 import {
@@ -44,7 +44,7 @@ const isBuilt = <T extends Cells>(
 export class Repository<T extends Cells> implements IRepository<T> {
   readonly commands: RepositoryCommands;
   readonly converters: TypeMapping<T>;
-  readonly mapping: Mapper;
+  readonly mapping: StringSourceDestinationMapper;
   readonly statements: RepositoryStatements;
   private readonly ids: Set<string>;
   private readonly assignIdentityOnAdd: boolean;

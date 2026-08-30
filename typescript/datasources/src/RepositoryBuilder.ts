@@ -11,7 +11,7 @@ import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import type { TypeMapping } from "./converters/TypeMapping.ts";
-import { Mapper } from "./mappers/Mapper.ts";
+import { StringSourceDestinationMapper } from "./mappers/StringSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 
@@ -32,7 +32,7 @@ export type RepositoryStatements = {
 export type BuiltRepository<T extends Cells> = {
   commands: RepositoryCommands;
   converters: TypeMapping<T>;
-  mapping: Mapper;
+  mapping: StringSourceDestinationMapper;
   statements: RepositoryStatements;
   ids: string[];
   assignIdentityOnAdd: boolean;
@@ -63,12 +63,12 @@ export const parts = <T extends Cells>(
       converters: options.converters,
     });
   TypeConverter.table(options.connection.provider);
-  const mapping = new Mapper(converters.name, options.connection.provider, "typescript");
+  const mapping = new StringSourceDestinationMapper(options.connection.provider, "typescript");
   return {
     commands: commandsOf(options.connection),
     converters,
     mapping,
-    statements: statementsOf(mapping.name, TypeConverter.keys(options.type).sort()),
+    statements: statementsOf(converters.name, TypeConverter.keys(options.type).sort()),
     ids: options.ids ?? ["id"],
     assignIdentityOnAdd: options.assignIdentityOnAdd !== false,
   };

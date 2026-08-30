@@ -38,6 +38,8 @@ export default defineConfig({
         "src/converters/ProviderTypes.ts",
         "src/converters/Constructable.ts",
         "src/converters/TypeMapping.ts",
+        "src/mappers/IMapper.ts",
+        "src/mappers/ISourceDestinationMapper.ts",
       ],
       thresholds: {
         lines: 100,
