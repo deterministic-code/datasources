@@ -1,7 +1,7 @@
 namespace Datasources;
 
-public interface IMapper<T>
+public interface IMapper<TFrom, TTo>
 {
-    T To(T value);
-    T From(T value);
+    TTo Map(TFrom value);
+    TFrom ReverseMap(TTo value);
 }

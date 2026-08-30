@@ -1,8 +1,8 @@
 import type { ISourceDestinationMapper } from "./ISourceDestinationMapper.ts";
-import { StringMapper } from "./StringMapper.ts";
+import { NameMapper } from "./NameMapper.ts";
 
-export class StringSourceDestinationMapper
-  extends StringMapper
+export class NameSourceDestinationMapper
+  extends NameMapper
   implements ISourceDestinationMapper
 {
   constructor(
