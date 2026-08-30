@@ -32,10 +32,12 @@ pub struct TableRepository {
 impl TableRepository {
     pub fn from_type<T: ConvertSchema>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_builder_options::<T>(connection.clone());
-        options.mapping = Some(TypeConverter::of::<T>(std::any::type_name::<T>()
+        options.table = std::any::type_name::<T>()
             .rsplit("::")
             .next()
-            .unwrap_or_default()));
+            .unwrap_or_default()
+            .into();
+        options.mapping = Some(TypeConverter::of::<T>());
         Self::new(options)
     }
 
@@ -131,9 +133,9 @@ impl TableRepository {
         Ok(items)
     }
 
-    fn sql(&self, obj: &Row) -> Result<Row> {
+    fn sql(&self, row: &Row) -> Result<Row> {
         Ok(map_keys(
-            &self.converters.reverse_convert(obj)?,
+            &self.converters.reverse_convert(row)?,
             |key| self.mapping.reverse_map(key),
         ))
     }

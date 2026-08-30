@@ -22,6 +22,7 @@ export type {
   SqliteStatement,
 } from "./i-sqlite-driver.ts";
 export { SqliteTransaction } from "./transaction.ts";
+export { SqliteTypes } from "./types.ts";
 export {
   SqliteStatementBuilder,
   type SqliteColumn,

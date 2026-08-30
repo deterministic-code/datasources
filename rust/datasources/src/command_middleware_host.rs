@@ -34,34 +34,23 @@ impl CommandMiddlewareHost {
         let mut params = params.map(ToOwned::to_owned);
         let middlewares = self.middlewares.lock().expect("middleware").clone();
         for middleware in &middlewares {
-            if let Some((next_query, next_params)) =
-                middleware.before_query(&query, params.as_deref()).await?
-            {
-                query = next_query;
-                params = next_params;
+            if let Some(next) = middleware.before_query(&query, params.as_deref()).await? {
+                (query, params) = next;
             }
         }
 
         let start = Instant::now();
-        match fn_op(query.clone(), params.clone()).await {
-            Ok((value, rows)) => {
-                let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
-                for middleware in &middlewares {
-                    middleware
-                        .after_query(&query, params.as_deref(), &rows, elapsed_ms, None)
-                        .await?;
-                }
-                Ok(value)
-            }
-            Err(error) => {
-                let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
-                for middleware in &middlewares {
-                    middleware
-                        .after_query(&query, params.as_deref(), &[], elapsed_ms, Some(&error))
-                        .await?;
-                }
-                Err(error)
-            }
+        let outcome = fn_op(query.clone(), params.clone()).await;
+        let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
+        let (rows, error) = match &outcome {
+            Ok((_, rows)) => (rows.as_slice(), None),
+            Err(error) => (&[] as &[Row], Some(error)),
+        };
+        for middleware in &middlewares {
+            middleware
+                .after_query(&query, params.as_deref(), rows, elapsed_ms, error)
+                .await?;
         }
+        outcome.map(|(value, _)| value)
     }
 }

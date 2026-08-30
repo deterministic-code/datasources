@@ -20,10 +20,11 @@ public static class RepositorySpec
         var session = open();
         await session.Connection.Open();
         await session.Command.Execute(SqliteStatementBuilder.CreateTable(spec.Type.Table, Columns(spec.Type)).GetText());
-        var mapping = new TypeConverter<SpecUser>(spec.Type.Table);
+        var mapping = new RowConverter<SpecUser>();
         var built = RepositoryBuilder<SpecUser>.Parts(new()
         {
             Connection = session.Connection,
+            Table = spec.Type.Table,
             Mapping = mapping,
             Ids = spec.Type.Ids,
             AssignIdentityOnAdd = spec.Type.AssignIdentityOnAdd,

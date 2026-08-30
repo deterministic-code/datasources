@@ -25,18 +25,10 @@ public class ConverterTests
         public int Secret { set { } }
     }
 
-    public class Extra
-    {
-        public Guid Id { get; set; }
-        public byte[] Blob { get; set; } = [];
-        public decimal Amount { get; set; }
-        public int? Count { get; set; }
-    }
-
     [Fact]
     public void ConvertAndReverseConvertRoundTrip()
     {
-        var converter = new TypeConverter<User>();
+        var converter = new RowConverter<User>();
         var user = converter.Convert(new Row
         {
             ["Id"] = 7,
@@ -56,7 +48,7 @@ public class ConverterTests
     [Fact]
     public void MapsDictionaryRows()
     {
-        var converter = new TypeConverter<Dictionary<string, Value>>("items");
+        var converter = new RowConverter<Dictionary<string, Value>>();
         var dest = converter.Convert(new Row { ["display_name"] = "a" });
         Assert.Equal(new Value.Text("a"), dest["display_name"]);
         Assert.Equal(new Value.Text("a"), converter.ReverseConvert(dest)["display_name"]);
@@ -65,21 +57,47 @@ public class ConverterTests
     [Fact]
     public void SkipsIndexersAndWriteOnlyProperties()
     {
-        var mixed = new TypeConverter<Mixed>().Convert(new Row { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });
+        var mixed = new RowConverter<Mixed>().Convert(new Row { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });
         Assert.Equal("x", mixed.Label);
         Assert.Equal(1, mixed.Count);
-        var obj = new TypeConverter<WriteOnly>().Convert(new Row { ["Id"] = 1, ["missing"] = 2, ["Secret"] = 3 });
+        var obj = new RowConverter<WriteOnly>().Convert(new Row { ["Id"] = 1, ["missing"] = 2, ["Secret"] = 3 });
         Assert.Equal(1, obj.Id);
-        var extra = new TypeConverter<Extra>().Convert(new Row
+    }
+
+    sealed class OnlyOne : TypeConverter<object?, Value>
+    {
+        public override object? Convert(Value from) => from.ToObject() is long n && n == 1;
+        public override Value ReverseConvert(object? to) => Value.From(to);
+    }
+
+    [Fact]
+    public void FieldOverrideBeatsTypeDefault()
+    {
+        var row = new Row
         {
-            ["Id"] = "550e8400-e29b-41d4-a716-446655440000",
-            ["Blob"] = "aGk=",
-            ["Amount"] = "1.25",
-            ["Count"] = Value.Null.Instance
+            ["Id"] = 1,
+            ["Username"] = "a",
+            ["IsEnabled"] = 2,
+            ["Created"] = "2020-01-02T00:00:00.000Z"
+        };
+        Assert.True(new RowConverter<User>().Convert(row).IsEnabled);
+        var converter = new RowConverter<User>(null, new Dictionary<string, TypeConverter<object?, Value>>
+        {
+            ["IsEnabled"] = new OnlyOne()
         });
-        Assert.Equal(Guid.Parse("550e8400-e29b-41d4-a716-446655440000"), extra.Id);
-        Assert.Equal("hi"u8.ToArray(), extra.Blob);
-        Assert.Equal(1.25m, extra.Amount);
-        Assert.Null(extra.Count);
+        Assert.False(converter.Convert(row).IsEnabled);
+    }
+
+    [Fact]
+    public void AppliesFieldOverrideOnDictionaryRows()
+    {
+        var converter = new RowConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<object?, Value>>
+        {
+            ["flag"] = new OnlyOne()
+        });
+        var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
+        Assert.Equal(new Value.Bool(true), dest["flag"]);
+        Assert.Equal(new Value.Text("a"), dest["name"]);
+        Assert.Equal(new Value.Bool(true), converter.ReverseConvert(dest)["flag"]);
     }
 }

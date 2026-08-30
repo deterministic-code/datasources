@@ -45,6 +45,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
   readonly commands: RepositoryCommands;
   readonly converters: TypeConverter<T>;
   readonly mapping: NameSourceDestinationMapper;
+  readonly table: string;
   readonly statements: RepositoryStatements;
   private readonly ids: Set<string>;
   private readonly assignIdentityOnAdd: boolean;
@@ -66,6 +67,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
     this.commands = built.commands;
     this.converters = built.converters;
     this.mapping = built.mapping;
+    this.table = built.table;
     this.statements = built.statements;
     this.ids = new Set(built.ids);
     this.assignIdentityOnAdd = built.assignIdentityOnAdd;
@@ -118,7 +120,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
     );
   };
 
-  private sql = (obj: T): Cells => mapKeys(this.converters.reverseConvert(obj), this.mapping.reverseMap);
+  private sql = (row: T): Cells => mapKeys(this.converters.reverseConvert(row), this.mapping.reverseMap);
 
   private readQuery = (query?: IQuery | IWhere): IQuery =>
     !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);

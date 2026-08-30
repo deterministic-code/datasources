@@ -9,7 +9,10 @@ pub fn create_repository_builder_options<T: ConvertSchema>(
     TableRepositoryBuilderOptions {
         ids: default_id::<T>(),
         assign_identity_on_add: true,
+        table: "items".into(),
         mapping: None,
+        types: Default::default(),
+        fields: Default::default(),
         connection,
     }
 }
