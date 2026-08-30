@@ -1,6 +1,6 @@
 use crate::datasource_error::DatasourceError;
 use crate::query::Query;
-use crate::record::Record;
+use crate::row::Row;
 use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use std::sync::Mutex;
 
 pub struct MockRepository {
-    pub items: Mutex<Vec<Record>>,
+    pub items: Mutex<Vec<Row>>,
     get_single_error: Mutex<Option<String>>,
     get_error: Mutex<Option<String>>,
     add_error: Mutex<Option<String>>,
@@ -53,32 +53,32 @@ impl MockRepository {
 
 #[async_trait]
 impl ReadonlyRepository for MockRepository {
-    async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Record>> {
+    async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Row>> {
         if let Some(error) = &*self.get_single_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(self.items.lock().expect("mock").first().cloned())
     }
 
-    async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Record>> {
+    async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Row>> {
         if let Some(error) = &*self.get_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(self.items.lock().expect("mock").clone())
     }
 
-    async fn get_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Record>> {
+    async fn get_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Row>> {
         self.get_single(None).await
     }
 
-    async fn get_where(&self, _where_clause: &dyn Where) -> Result<Vec<Record>> {
+    async fn get_where(&self, _where_clause: &dyn Where) -> Result<Vec<Row>> {
         self.get(None).await
     }
 }
 
 #[async_trait]
 impl Repository for MockRepository {
-    async fn add(&self, obj: &Record) -> Result<Response> {
+    async fn add(&self, obj: &Row) -> Result<Response> {
         if let Some(error) = &*self.add_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
@@ -86,14 +86,14 @@ impl Repository for MockRepository {
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn update(&self, _obj: &Record, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, _obj: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
         if let Some(error) = &*self.update_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn delete(&self, _obj: &Record, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, _obj: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
         if let Some(error) = &*self.delete_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }

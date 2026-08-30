@@ -3,7 +3,7 @@ use crate::connection::JsonConnection;
 use crate::filter::{json_from_record, matches, parse_filter, value_to_json};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, Command, Query, Record, ReadonlyRepository, Repository, Response, Result,
+    identity_filter, Command, Query, Row, ReadonlyRepository, Repository, Response, Result,
     TextQuery, Value, Where,
 };
 use serde_json::Value as JsonValue;
@@ -21,7 +21,7 @@ impl JsonRepository {
 
 #[async_trait]
 impl ReadonlyRepository for JsonRepository {
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Record>> {
+    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         let text = query.map(|q| q.get_text());
         let reader = JsonCommand::new(self.connection.clone())
             .execute_reader(text.as_deref(), None)
@@ -33,7 +33,7 @@ impl ReadonlyRepository for JsonRepository {
         }
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Record>> {
+    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
         let text = query.map(|q| q.get_text());
         let reader = JsonCommand::new(self.connection.clone())
             .execute_reader(text.as_deref(), None)
@@ -41,19 +41,19 @@ impl ReadonlyRepository for JsonRepository {
         datasources::collect_reader(&*reader).await
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Record>> {
+    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
         self.get_single(Some(&TextQuery::new(where_clause.get_text())))
             .await
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Record>> {
+    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
         self.get(Some(&TextQuery::new(where_clause.get_text()))).await
     }
 }
 
 #[async_trait]
 impl Repository for JsonRepository {
-    async fn add(&self, obj: &Record) -> Result<Response> {
+    async fn add(&self, obj: &Row) -> Result<Response> {
         self.connection.ensure_open()?;
         self.connection
             .collection_mut(|items| items.push(json_from_record(obj)));
@@ -61,7 +61,7 @@ impl Repository for JsonRepository {
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn update(&self, obj: &Record, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         self.connection.ensure_open()?;
         let filter = if let Some(w) = by_where {
             parse_filter(Some(&w.get_text()))?
@@ -90,7 +90,7 @@ impl Repository for JsonRepository {
         Ok(Response::new(Value::Null, affected))
     }
 
-    async fn delete(&self, obj: &Record, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         self.connection.ensure_open()?;
         let filter = if let Some(w) = by_where {
             parse_filter(Some(&w.get_text()))?

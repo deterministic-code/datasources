@@ -15,8 +15,8 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
             Typed.EnsureOpen();
             var filter = Merge(ParseFilter(query), Helpers.ParametersToRecord(paramsList));
             var nodes = Typed.GetCollection().Where(row => Matches(row, filter)).ToList();
-            IReadOnlyList<IReadOnlyDictionary<string, Value>> rows = nodes.Select(ToRow).ToList();
-            return Task.FromResult(((IReader)new ArrayReader(nodes.Cast<object?>().ToList()), rows));
+            IReadOnlyList<Row> rows = [.. nodes.Select(ToRow)];
+            return Task.FromResult(((IReader)new ArrayReader(rows.Cast<object?>().ToList()), rows));
         });
 
     public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
@@ -27,7 +27,7 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
             var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
-                Typed.GetCollection().Add(ToObject(obj));
+                Typed.GetCollection().Add(ToObject(new Row(obj)));
                 await Typed.Persist();
                 return (new Response(Value.Null.Instance, 1), EmptyRows());
             }
@@ -36,20 +36,20 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
             {
                 var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
-                var filter = whereText is not null ? ParseFilter(whereText) : Helpers.IdentityFilter(obj);
-                return (await ApplyUpdate(obj, filter), EmptyRows());
+                var filter = whereText is not null ? ParseFilter(whereText) : new Row(Helpers.IdentityFilter(obj));
+                return (await ApplyUpdate(new Row(obj), filter), EmptyRows());
             }
 
             if (op == "delete")
             {
-                var filter = obj.Count == 0 ? new Dictionary<string, Value>() : Helpers.IdentityFilter(obj);
+                var filter = obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj));
                 return (await ApplyDelete(filter), EmptyRows());
             }
 
             throw new DatasourceException($"Unsupported JSON command: {query}");
         });
 
-    private async Task<Response> ApplyUpdate(IReadOnlyDictionary<string, Value> obj, IReadOnlyDictionary<string, Value> filter)
+    private async Task<Response> ApplyUpdate(Row obj, Row filter)
     {
         var collection = Typed.GetCollection();
         var affected = 0;
@@ -67,7 +67,7 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
         return new Response(Value.Null.Instance, affected);
     }
 
-    private async Task<Response> ApplyDelete(IReadOnlyDictionary<string, Value> filter)
+    private async Task<Response> ApplyDelete(Row filter)
     {
         var collection = Typed.GetCollection();
         var remaining = collection.Where(row => !Matches(row, filter)).Select(n => n?.DeepClone()).ToList();
@@ -78,24 +78,24 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
         return new Response(Value.Null.Instance, affected);
     }
 
-    public static Dictionary<string, Value> ParseFilter(string? text) =>
+    public static Row ParseFilter(string? text) =>
         string.IsNullOrWhiteSpace(text)
-            ? new Dictionary<string, Value>()
+            ? new Row()
             : JsonNode.Parse(text) is JsonObject obj
-                ? obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value))
+                ? new Row(obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value)))
                 : throw new DatasourceException("JSON filter must be an object");
 
-    public static bool Matches(JsonNode? row, IReadOnlyDictionary<string, Value> filter) =>
+    public static bool Matches(JsonNode? row, Row filter) =>
         row is JsonObject obj && filter.All(pair => Equals(JsonValueToValue(obj[pair.Key]), pair.Value));
 
-    public static JsonObject ToObject(IReadOnlyDictionary<string, Value> obj)
+    public static JsonObject ToObject(Row obj)
     {
         var json = new JsonObject();
         foreach (var pair in obj) json[pair.Key] = JsonValue.Create(pair.Value.ToObject());
         return json;
     }
 
-    private static Dictionary<string, Value> Merge(Dictionary<string, Value> left, IReadOnlyDictionary<string, Value> right)
+    private static Row Merge(Row left, Row right)
     {
         foreach (var pair in right) left[pair.Key] = pair.Value;
         return left;
@@ -112,10 +112,10 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
         return value.ToString();
     }
 
-    private static Dictionary<string, Value> ToRow(JsonNode? row) =>
+    private static Row ToRow(JsonNode? row) =>
         row is JsonObject obj
-            ? obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value))
-            : new Dictionary<string, Value>();
+            ? new Row(obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value)))
+            : new Row();
 
-    private static IReadOnlyList<IReadOnlyDictionary<string, Value>> EmptyRows() => [];
+    private static IReadOnlyList<Row> EmptyRows() => [];
 }

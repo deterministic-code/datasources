@@ -1,6 +1,6 @@
 use super::not_implemented::fail;
 use crate::query::Query;
-use crate::record::Record;
+use crate::row::Row;
 use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
@@ -21,34 +21,34 @@ impl StubRepository {
 
 #[async_trait]
 impl ReadonlyRepository for StubRepository {
-    async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Record>> {
+    async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Row>> {
         Err(fail(&self.provider))
     }
 
-    async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Record>> {
+    async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Row>> {
         Err(fail(&self.provider))
     }
 
-    async fn get_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Record>> {
+    async fn get_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Row>> {
         self.get_single(None).await
     }
 
-    async fn get_where(&self, _where_clause: &dyn Where) -> Result<Vec<Record>> {
+    async fn get_where(&self, _where_clause: &dyn Where) -> Result<Vec<Row>> {
         self.get(None).await
     }
 }
 
 #[async_trait]
 impl Repository for StubRepository {
-    async fn add(&self, _obj: &Record) -> Result<Response> {
+    async fn add(&self, _obj: &Row) -> Result<Response> {
         Err(fail(&self.provider))
     }
 
-    async fn update(&self, _obj: &Record, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, _obj: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 
-    async fn delete(&self, _obj: &Record, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, _obj: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 }

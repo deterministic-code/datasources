@@ -1,4 +1,4 @@
-use datasources::{DatasourceError, Record, Result, Value};
+use datasources::{DatasourceError, Row, Result, Value};
 use serde_json::{Map, Value as JsonValue};
 
 pub(crate) fn parse_filter(text: Option<&str>) -> Result<Map<String, JsonValue>> {
@@ -23,7 +23,7 @@ pub(crate) fn matches(obj: &JsonValue, filter: &Map<String, JsonValue>) -> bool 
     filter.iter().all(|(k, v)| map.get(k) == Some(v))
 }
 
-pub(crate) fn json_from_record(record: &Record) -> JsonValue {
+pub(crate) fn json_from_record(record: &Row) -> JsonValue {
     let mut map = Map::new();
     for (k, v) in record {
         map.insert(k.clone(), value_to_json(v));
@@ -31,8 +31,8 @@ pub(crate) fn json_from_record(record: &Record) -> JsonValue {
     JsonValue::Object(map)
 }
 
-pub(crate) fn record_from_json(value: &JsonValue) -> Record {
-    let mut record = Record::new();
+pub(crate) fn record_from_json(value: &JsonValue) -> Row {
+    let mut record = Row::new();
     if let JsonValue::Object(map) = value {
         for (k, v) in map {
             record.insert(k.clone(), json_to_value(v));

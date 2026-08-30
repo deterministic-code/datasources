@@ -1,7 +1,6 @@
 use crate::connection::Connection;
 use crate::converters::ConvertSchema;
 use crate::table_repository_builder_options::TableRepositoryBuilderOptions;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub fn create_repository_builder_options<T: ConvertSchema>(
@@ -10,7 +9,6 @@ pub fn create_repository_builder_options<T: ConvertSchema>(
     TableRepositoryBuilderOptions {
         ids: default_id::<T>(),
         assign_identity_on_add: true,
-        converters: HashMap::new(),
         mapping: None,
         connection,
     }

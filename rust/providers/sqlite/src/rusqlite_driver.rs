@@ -1,6 +1,6 @@
 use crate::driver::{SqliteDriver, SqliteExecuteResult};
 use async_trait::async_trait;
-use datasources::{DatasourceError, IsolationLevel, Record, Result, Value};
+use datasources::{DatasourceError, IsolationLevel, Row, Result, Value};
 use rusqlite::types::{ToSql, ValueRef};
 use rusqlite::{Connection, OpenFlags};
 use std::collections::HashMap;
@@ -124,7 +124,7 @@ impl SqliteDriver for RusqliteDriver {
         })
     }
 
-    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<Record>> {
+    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<Row>> {
         if sql.trim().is_empty() {
             return Ok(Vec::new());
         }
@@ -143,7 +143,7 @@ impl SqliteDriver for RusqliteDriver {
         let mut rows = statement.query(bound.as_slice()).map_err(map_err)?;
         let mut records = Vec::new();
         while let Some(row) = rows.next().map_err(map_err)? {
-            let mut record = Record::new();
+            let mut record = Row::new();
             for (index, name) in column_names.iter().enumerate() {
                 record.insert(name.clone(), from_sql(row.get_ref(index).map_err(map_err)?));
             }

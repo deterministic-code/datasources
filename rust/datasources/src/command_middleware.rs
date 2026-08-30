@@ -1,6 +1,6 @@
 use crate::datasource_error::DatasourceError;
 use crate::parameter::Parameter;
-use crate::record::Record;
+use crate::row::Row;
 use crate::result::Result;
 use async_trait::async_trait;
 
@@ -16,7 +16,7 @@ pub trait CommandMiddleware: Send + Sync {
         &self,
         query: &str,
         params: Option<&[Parameter]>,
-        results: &[Record],
+        results: &[Row],
         elapsed_ms: f64,
         error: Option<&DatasourceError>,
     ) -> Result<()>;

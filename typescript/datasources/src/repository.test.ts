@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   Repository,
   StatementBuilder,
@@ -7,14 +7,14 @@ import {
   WhereBuilder,
   RepositoryBuilder,
   createRepositoryBuilderOptions,
-  identityProviderTypes,
   parts,
-  sqlProviderTypes,
 } from "./index.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
-import type { Cell, Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Cell.ts";
+import type { Constructable } from "./converters/Constructable.ts";
+import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 
 class Item {
   id = 0;
@@ -35,33 +35,21 @@ class Composite {
   name = "";
 }
 
-const create = (
-  overrides: Partial<ConstructorParameters<typeof Repository<Cells>>[0]> & {
-    type?: new () => Cells;
-  } = {},
-) => {
-  TypeConverter.use("memory", identityProviderTypes());
+const asType = <T>(type: new () => T) => type as Constructable<Cells>;
+
+const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
   const connection = new MockConnection(undefined, "memory");
   const command = new MockCommand(connection);
   connection.command = command;
-  const { converters, mapping, type, ...rest } = overrides;
+  const type = overrides.type ?? asType(Item);
   const repo = new Repository<Cells>({
+    ...overrides,
     connection,
-    type: (type ?? Item) as new () => Cells,
-    mapping:
-      mapping ??
-      TypeConverter.mapping({
-        source: "memory",
-        name: "users",
-        type: (type ?? Item) as new () => Cells,
-        converters,
-      }),
-    ...rest,
+    type,
+    mapping: overrides.mapping ?? new TypeConverter("users", type),
   });
   return { repo, command };
 };
-
-afterEach(() => TypeConverter.reset());
 
 describe("Repository", () => {
   it("builds select and maps rows", async () => {
@@ -117,35 +105,24 @@ describe("Repository", () => {
   });
 
   it("supports composite id, assignIdentityOnAdd, and overrides", async () => {
-    const twice = {
-      to: (value: Cell) => value,
-      from: (value: Cell) => (typeof value === "number" ? value * 2 : value),
-    };
     const { repo, command } = create({
       ids: ["org_id", "user_id"],
       assignIdentityOnAdd: true,
-      type: Composite,
-      converters: { name: twice },
+      type: asType(Composite),
     });
     await repo.add({ org_id: 1, user_id: 2, name: 3 });
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (name) VALUES ($name)");
-    expect(command.executeCalls[0]?.parameters?.[0]?.value).toBe(6);
+    expect(command.executeCalls[0]?.parameters?.[0]?.value).toBe(3);
     await repo.update({ org_id: 1, user_id: 2, name: 4 });
     expect(command.executeCalls[1]?.text).toContain(
       "org_id = $org_id AND user_id = $user_id",
     );
   });
 
-  it("throws on missing provider, id, bad rows, and empty update", async () => {
+  it("throws on missing id, bad rows, and empty update", async () => {
     const connection = new MockConnection();
     const command = new MockCommand(connection);
     connection.command = command;
-    expect(
-      () =>
-        new Repository({
-          connection,
-        }),
-    ).toThrow("Provider \"mock\" is not registered");
     const { repo, command: query } = create();
     query.reader = new MockReader(["nope" as never]);
     await expect(async () => {
@@ -163,16 +140,10 @@ describe("Repository", () => {
       }
     }).rejects.toThrow("Reader current must be a row dictionary");
     await repo.update({ id: 1, name: "a" }, new Where("id = 1"));
-    TypeConverter.use("mock", sqlProviderTypes());
-    const mapping = TypeConverter.mapping<Item>({
-      source: "mock",
-      type: Item,
-      name: "users",
-    });
-    const typed = new Repository<Item>({
+    const typed = new Repository({
       connection,
-      type: Item,
-      mapping,
+      type: asType(Item),
+      mapping: new TypeConverter("users", asType(Item)),
     });
     await typed.add(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
@@ -181,18 +152,18 @@ describe("Repository", () => {
   });
 
   it("builds repository options from a type and connection", () => {
-    TypeConverter.use("mock", identityProviderTypes());
     const connection = new MockConnection();
-    const fromId = createRepositoryBuilderOptions(Item, connection);
+    const fromId = createRepositoryBuilderOptions(asType(Item), connection);
     expect(fromId.ids).toEqual(["id"]);
     expect(fromId.connection).toBe(connection);
-    expect(createRepositoryBuilderOptions(Label, connection).ids).toEqual([]);
-    expect(createRepositoryBuilderOptions(PascalId, connection).ids).toEqual(["Id"]);
+    expect(createRepositoryBuilderOptions(asType(Label), connection).ids).toEqual([]);
+    expect(createRepositoryBuilderOptions(asType(PascalId), connection).ids).toEqual(["Id"]);
     const repo = new Repository(fromId);
     expect(repo.connection).toBe(connection);
-    expect(new Repository(Item, connection).connection).toBe(connection);
+    expect(new Repository(asType(Item), connection).connection).toBe(connection);
     expect(new Repository(parts(fromId)).connection).toBe(connection);
     expect(RepositoryBuilder.from(fromId).parts().commands.get.connection).toBe(connection);
-    expect(RepositoryBuilder.from(Item, connection).parts().ids).toEqual(["id"]);
+    expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
+    expect(parts({ connection }).converters.name).toBe("");
   });
 });

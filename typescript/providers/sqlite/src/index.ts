@@ -26,4 +26,3 @@ export {
   SqliteStatementBuilder,
   type SqliteColumn,
 } from "./sqliteStatementBuilder.ts";
-export { sqliteTypes, registerConverters } from "./converters/index.ts";

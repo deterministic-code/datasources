@@ -24,7 +24,7 @@ mod tests {
     use async_trait::async_trait;
     use datasources::{
         create, register, reset, Command, Connection, Datasource, DatasourceFactory, IsolationLevel,
-        Record, Result, Value,
+        Row, Result, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -56,11 +56,11 @@ mod tests {
                 }
             })
         }
-        async fn query(&self, sql: &str, _params: &HashMap<String, Value>) -> Result<Vec<Record>> {
+        async fn query(&self, sql: &str, _params: &HashMap<String, Value>) -> Result<Vec<Row>> {
             Ok(if sql.trim().is_empty() {
                 vec![]
             } else {
-                let mut row = Record::new();
+                let mut row = Row::new();
                 row.insert("id".into(), Value::Int(1));
                 vec![row]
             })

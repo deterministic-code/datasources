@@ -1,10 +1,10 @@
-use datasources::{DatasourceError, Record, Result, Value};
+use datasources::{DatasourceError, Row, Result, Value};
 use serde_json::Value as JsonValue;
 
-pub(crate) fn parse_filter(text: Option<&str>) -> Result<Record> {
+pub(crate) fn parse_filter(text: Option<&str>) -> Result<Row> {
     match text {
-        None => Ok(Record::new()),
-        Some(value) if value.trim().is_empty() => Ok(Record::new()),
+        None => Ok(Row::new()),
+        Some(value) if value.trim().is_empty() => Ok(Row::new()),
         Some(value) => {
             let parsed: JsonValue = serde_json::from_str(value)
                 .map_err(|e| DatasourceError::message(e.to_string()))?;
@@ -19,7 +19,7 @@ pub(crate) fn parse_filter(text: Option<&str>) -> Result<Record> {
     }
 }
 
-pub(crate) fn matches(row: &Record, filter: &Record) -> bool {
+pub(crate) fn matches(row: &Row, filter: &Row) -> bool {
     filter.iter().all(|(k, v)| row.get(k) == Some(v))
 }
 

@@ -3,7 +3,7 @@ use crate::store::{MemoryData, MemoryStore};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Record, Result, Transaction,
+    Command, Connection, DatasourceError, IsolationLevel, Row, Result, Transaction,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -13,7 +13,7 @@ pub(crate) struct MemoryState {
     pub(crate) collection: Mutex<String>,
     pub(crate) opened: Mutex<bool>,
     pub(crate) in_transaction: Mutex<bool>,
-    pub(crate) snapshot: Mutex<Option<HashMap<String, Vec<Record>>>>,
+    pub(crate) snapshot: Mutex<Option<HashMap<String, Vec<Row>>>>,
     pub(crate) data: Option<MemoryData>,
 }
 
@@ -54,7 +54,7 @@ impl MemoryConnection {
         Ok(())
     }
 
-    pub fn collection<R>(&self, f: impl FnOnce(&mut Vec<Record>) -> R) -> R {
+    pub fn collection<R>(&self, f: impl FnOnce(&mut Vec<Row>) -> R) -> R {
         self.state.store.collection(&self.collection_name(), f)
     }
 

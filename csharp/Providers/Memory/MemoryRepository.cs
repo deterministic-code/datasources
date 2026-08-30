@@ -31,7 +31,7 @@ public sealed class MemoryRepository : IRepository<Dictionary<string, Value>>
     public Task<Response> Add(Dictionary<string, Value> obj)
     {
         Typed.EnsureOpen();
-        Typed.GetCollection().Add(new Dictionary<string, Value>(obj));
+        Typed.GetCollection().Add(new Row(obj));
         return Task.FromResult(new Response(Value.Null.Instance, 1));
     }
 

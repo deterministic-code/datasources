@@ -13,7 +13,6 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
     {
         _options = options ?? new SqliteConnectionOptions();
         _table = table;
-        SqliteConverters.Register();
     }
 
     SqliteConnection? _connection;
@@ -38,6 +37,6 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
             new RepositoryBuilderOptions<Dictionary<string, Value>>
             {
                 Connection = connection as SqliteConnection ?? DefaultConnection(),
-                Mapping = TypeConverter.Mapping<Dictionary<string, Value>>("sqlite", name: _table ?? "items"),
+                Mapping = new TypeConverter<Dictionary<string, Value>>(_table ?? "items"),
             });
 }

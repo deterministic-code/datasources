@@ -29,4 +29,3 @@ export {
 export { MysqlTransaction } from "./transaction.ts";
 export type { Cells, Scalar } from "./scalar.ts";
 export { MysqlDatasource as default } from "./datasource.ts";
-export { mysqlTypes, registerConverters } from "./converters/index.ts";

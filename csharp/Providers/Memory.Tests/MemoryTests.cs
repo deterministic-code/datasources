@@ -19,8 +19,8 @@ public class MemoryTests
         Assert.Equal(new Value.Int(1), MemoryCommand.ParseFilter("{\"id\":1}")["id"]);
         Assert.Throws<DatasourceException>(() => MemoryCommand.ParseFilter("[]"));
         Assert.Throws<DatasourceException>(() => MemoryCommand.ParseFilter("1"));
-        Assert.True(MemoryCommand.Matches(new Dictionary<string, Value> { ["id"] = 1 }, new Dictionary<string, Value>()));
-        Assert.False(MemoryCommand.Matches(new Dictionary<string, Value>(), new Dictionary<string, Value> { ["id"] = 1 }));
+        Assert.True(MemoryCommand.Matches(new Row { ["id"] = 1 }, new Row()));
+        Assert.False(MemoryCommand.Matches(new Row(), new Row { ["id"] = 1 }));
         Assert.IsType<Value.Text>(MemoryCommand.JsonValueToValue(new System.Text.Json.Nodes.JsonArray()));
         Assert.Equal(new Value.Bool(true), MemoryCommand.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create(true)));
         Assert.Equal(new Value.Int(1), MemoryCommand.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create(1L)));
@@ -84,12 +84,12 @@ public class MemoryTests
         });
         await conn.Open();
         var txn = await conn.StartTransaction();
-        conn.GetCollection().Add(new Dictionary<string, Value> { ["id"] = 2 });
+        conn.GetCollection().Add(new Row { ["id"] = 2 });
         await txn.Abort();
         Assert.Single(conn.GetCollection());
 
         var committed = await conn.StartTransaction();
-        conn.GetCollection().Add(new Dictionary<string, Value> { ["id"] = 2 });
+        conn.GetCollection().Add(new Row { ["id"] = 2 });
         await committed.Commit();
         Assert.Equal(2, conn.GetCollection().Count);
 
@@ -100,10 +100,10 @@ public class MemoryTests
         Assert.NotEmpty(await repo.Get(new Query("{\"id\":1}")).ToListAsync());
         Assert.NotNull(await repo.GetSingle(new Where("{\"id\":1}")));
         Assert.NotEmpty(await repo.Get(new Where("{\"id\":1}")).ToListAsync());
-        await repo.Add(new Dictionary<string, Value> { ["id"] = 4, ["name"] = "d" });
-        await repo.Update(new Dictionary<string, Value> { ["id"] = 4, ["name"] = "D" });
-        await repo.Update(new Dictionary<string, Value> { ["name"] = "Z" }, new Where("{\"id\":4}"));
-        await repo.Delete(new Dictionary<string, Value> { ["id"] = 4 });
+        await repo.Add(new Row { ["id"] = 4, ["name"] = "d" });
+        await repo.Update(new Row { ["id"] = 4, ["name"] = "D" });
+        await repo.Update(new Row { ["name"] = "Z" }, new Where("{\"id\":4}"));
+        await repo.Delete(new Row { ["id"] = 4 });
         await command.Execute("insert", [new Parameter("id", 5)]);
         await command.Execute("update", [new Parameter("id", 5), new Parameter("$where", "{\"id\":5}")]);
         await command.Execute("delete", [new Parameter("id", 5)]);
@@ -115,9 +115,9 @@ public class MemoryTests
         var closed = new MemoryConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).ExecuteReader());
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).Execute("insert"));
-        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Add(new Dictionary<string, Value>()));
-        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Update(new Dictionary<string, Value> { ["id"] = 1 }));
-        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Delete(new Dictionary<string, Value> { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Add(new Row()));
+        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Update(new Row { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Delete(new Row { ["id"] = 1 }));
 
         var ds = new MemoryDatasource(new MemoryConnectionOptions { Data = new List<Dictionary<string, Value>>() });
         Assert.Equal("memory", ds.Create().Provider);

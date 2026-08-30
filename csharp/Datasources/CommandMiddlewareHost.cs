@@ -15,7 +15,7 @@ public class CommandMiddlewareHost
     public async Task<T> Run<T>(
         string? query,
         IReadOnlyList<Parameter>? parameters,
-        Func<string, IReadOnlyList<Parameter>?, Task<(T Value, IReadOnlyList<IReadOnlyDictionary<string, Value>> Rows)>> action)
+        Func<string, IReadOnlyList<Parameter>?, Task<(T Value, IReadOnlyList<Row> Rows)>> action)
     {
         var q = (query ?? "").Trim();
         var p = parameters;

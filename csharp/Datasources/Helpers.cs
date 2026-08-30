@@ -2,8 +2,8 @@ namespace Datasources;
 
 public static class Helpers
 {
-    public static IReadOnlyDictionary<string, Value> ParametersToRecord(IReadOnlyList<Parameter>? parameters) =>
-        ParametersToRecord<Value>(parameters);
+    public static Row ParametersToRecord(IReadOnlyList<Parameter>? parameters) =>
+        new(ParametersToRecord<Value>(parameters));
 
     public static IReadOnlyDictionary<string, T> ParametersToRecord<T>(IReadOnlyList<Parameter<T>>? parameters)
     {

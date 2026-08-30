@@ -1,6 +1,6 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::parameter::Parameter;
-use crate::record::Record;
+use crate::row::Row;
 use crate::result::Result;
 use std::future::Future;
 use std::sync::{Arc, Mutex};
@@ -28,7 +28,7 @@ impl CommandMiddlewareHost {
     ) -> Result<T>
     where
         F: FnOnce(String, Option<Vec<Parameter>>) -> Fut,
-        Fut: Future<Output = Result<(T, Vec<Record>)>>,
+        Fut: Future<Output = Result<(T, Vec<Row>)>>,
     {
         let mut query = query.unwrap_or("").trim().to_string();
         let mut params = params.map(ToOwned::to_owned);

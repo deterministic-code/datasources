@@ -73,8 +73,8 @@ public class MysqlTests
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).ExecuteReader("x"));
 
-        await driver.Execute("   ", new Dictionary<string, Value>());
-        await driver.Query("   ", new Dictionary<string, Value>());
+        await driver.Execute("   ", new Row());
+        await driver.Query("   ", new Row());
     }
 
     sealed class FakeMysqlDriver : IMysqlDriver
@@ -82,11 +82,11 @@ public class MysqlTests
         public bool Opened { get; private set; }
         public Task Open(string url) { Opened = true; return Task.CompletedTask; }
         public Task Close() { Opened = false; return Task.CompletedTask; }
-        public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+        public Task<MysqlExecuteResult> Execute(string sql, Row parameters) =>
             Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new MysqlExecuteResult(0, Value.Null.Instance) : new MysqlExecuteResult(2, 5));
-        public Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Query(string sql, IReadOnlyDictionary<string, Value> parameters) =>
-            Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, Value>>>(
-                string.IsNullOrWhiteSpace(sql) ? [] : [new Dictionary<string, Value> { ["id"] = 1 }]);
+        public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
+            Task.FromResult<IReadOnlyList<Row>>(
+                string.IsNullOrWhiteSpace(sql) ? [] : [new Row { ["id"] = 1 }]);
         public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => Task.CompletedTask;
         public Task Commit() => Task.CompletedTask;
         public Task Rollback() => Task.CompletedTask;

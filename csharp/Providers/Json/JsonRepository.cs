@@ -34,7 +34,7 @@ public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
     public async Task<Response> Add(Dictionary<string, Value> obj)
     {
         Typed.EnsureOpen();
-        Typed.GetCollection().Add(JsonCommand.ToObject(obj));
+        Typed.GetCollection().Add(JsonCommand.ToObject(new Row(obj)));
         await Typed.Persist();
         return new Response(Value.Null.Instance, 1);
     }
@@ -56,8 +56,11 @@ public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
             .Concat(byWhere is not null ? [new Parameter("$where", byWhere.GetText())] : [])
             .ToList();
 
-    private static Dictionary<string, Value>? ToRecord(object? current) =>
-        current is JsonObject obj
-            ? obj.ToDictionary(k => k.Key, v => JsonCommand.JsonValueToValue(v.Value))
-            : null;
+    private static Dictionary<string, Value>? ToRecord(object? current) => current switch
+    {
+        Row row => row,
+        Dictionary<string, Value> row => row,
+        JsonObject obj => obj.ToDictionary(k => k.Key, v => JsonCommand.JsonValueToValue(v.Value)),
+        _ => null
+    };
 }

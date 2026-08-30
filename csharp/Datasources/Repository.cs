@@ -5,7 +5,7 @@ namespace Datasources;
 public sealed class Repository<T> : IRepository<T> where T : new()
 {
     readonly RepositoryCommands commands;
-    readonly TypeMapping<T> converters;
+    readonly TypeConverter<T> converters;
     readonly NameSourceDestinationMapper mapping;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
@@ -28,7 +28,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     }
 
     public IConnection Connection => commands.Get.Connection;
-    public TypeMapping<T> Converters => converters;
+    public TypeConverter<T> Converters => converters;
     public NameSourceDestinationMapper Mapping => mapping;
 
     public Task<T?> GetSingle(IWhere where) => GetSingle(statements.Query(where));
@@ -48,7 +48,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         var reader = await commands.Get.ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
-            yield return converters.To(Map(AsRow(reader.Current), mapping.Map));
+            yield return converters.Convert(Map(AsRow(reader.Current), mapping.Map));
     }
 
     public async Task<Response> Add(T obj)
@@ -75,25 +75,26 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         return await commands.Delete.Execute(statements.Delete(where).GetText(), where.Parameters);
     }
 
-    IWhere IdWhere(IReadOnlyDictionary<string, Value> record) =>
+    IWhere IdWhere(Row record) =>
         WhereBuilder.And([.. ids.Select(col =>
             record.TryGetValue(col, out var value)
                 ? WhereBuilder.Equals(col, value)
                 : throw new DatasourceException($"Missing Id value \"{col}\""))]);
 
     static IReadOnlyList<Parameter> Params(
-        IReadOnlyDictionary<string, Value> record, Func<string, bool> include) =>
+        Row record, Func<string, bool> include) =>
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
-    IReadOnlyDictionary<string, Value> Sql(T obj) => Map(converters.From(obj), mapping.ReverseMap);
+    Row Sql(T obj) => Map(converters.ReverseConvert(obj), mapping.ReverseMap);
 
-    static IReadOnlyDictionary<string, Value> Map(
-        IReadOnlyDictionary<string, Value> row, Func<string, string> name) =>
-        row.ToDictionary(pair => name(pair.Key), pair => pair.Value);
+    static Row Map(Row row, Func<string, string> name) =>
+        new(row.Select(pair => KeyValuePair.Create(name(pair.Key), pair.Value)));
 
-    static IReadOnlyDictionary<string, Value> AsRow(object? current) =>
-        current is IReadOnlyDictionary<string, Value> row
-            ? row
-            : throw new DatasourceException("Reader current must be a row dictionary");
+    static Row AsRow(object? current) => current switch
+    {
+        Row row => row,
+        IReadOnlyDictionary<string, Value> row => new Row(row),
+        _ => throw new DatasourceException("Reader current must be a row")
+    };
 }

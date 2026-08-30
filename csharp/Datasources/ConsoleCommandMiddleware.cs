@@ -22,7 +22,7 @@ public sealed class ConsoleCommandMiddleware : ICommandMiddleware
     public Task AfterQuery(
         string query,
         IReadOnlyList<Parameter>? parameters,
-        IReadOnlyList<IReadOnlyDictionary<string, Value>> results,
+        IReadOnlyList<Row> results,
         double elapsedMs,
         Exception? error = null)
     {

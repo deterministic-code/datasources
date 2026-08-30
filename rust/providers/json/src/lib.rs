@@ -24,13 +24,13 @@ mod tests {
     use super::*;
     use datasources::{
         create, register, reset, Command, Connection, DatasourceFactory, Parameter,
-        Record, ReadonlyRepository, Repository, TextQuery, TextWhere, Value,
+        Row, ReadonlyRepository, Repository, TextQuery, TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
     use std::sync::Arc;
 
-    fn rec(id: i64, name: &str) -> Record {
-        let mut r = Record::new();
+    fn rec(id: i64, name: &str) -> Row {
+        let mut r = Row::new();
         r.insert("id".into(), Value::Int(id));
         r.insert("name".into(), Value::from(name));
         r
@@ -172,7 +172,7 @@ mod tests {
             "o": {"a": 1}
         }));
         let _ = json_from_record(&{
-            let mut r = Record::new();
+            let mut r = Row::new();
             r.insert("a".into(), Value::Null);
             r.insert("b".into(), Value::Bool(true));
             r.insert("c".into(), Value::Float(1.2));

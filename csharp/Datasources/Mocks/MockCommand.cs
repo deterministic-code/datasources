@@ -17,7 +17,7 @@ public sealed class MockCommand : CommandMiddlewareHost, ICommand
         {
             ExecuteReaderCalls.Add((query, paramsList));
             if (ExecuteReaderError is not null) throw ExecuteReaderError;
-            return Task.FromResult((Reader, (IReadOnlyList<IReadOnlyDictionary<string, Value>>)[]));
+            return Task.FromResult((Reader, (IReadOnlyList<Row>)[]));
         });
 
     public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
@@ -25,6 +25,6 @@ public sealed class MockCommand : CommandMiddlewareHost, ICommand
         {
             ExecuteCalls.Add((query, paramsList));
             if (ExecuteError is not null) throw ExecuteError;
-            return Task.FromResult((Response, (IReadOnlyList<IReadOnlyDictionary<string, Value>>)[]));
+            return Task.FromResult((Response, (IReadOnlyList<Row>)[]));
         });
 }

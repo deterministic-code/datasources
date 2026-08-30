@@ -1,6 +1,6 @@
 use crate::driver::{isolation_sql, to_mysql, MysqlDriver, MysqlExecuteResult};
 use async_trait::async_trait;
-use datasources::{DatasourceError, IsolationLevel, Record, Result, Value};
+use datasources::{DatasourceError, IsolationLevel, Result, Value};
 use mysql_async::prelude::Queryable;
 use mysql_async::{Conn, Params, Row, Value as MysqlValue};
 use std::collections::HashMap;
@@ -62,9 +62,9 @@ fn named_params(params: &HashMap<String, Value>) -> Params {
     )
 }
 
-fn row_record(row: Row) -> Record {
+fn row_record(row: Row) -> datasources::Row {
     let columns = row.columns_ref().to_vec();
-    let mut record = Record::new();
+    let mut record = datasources::Row::new();
     for (index, column) in columns.iter().enumerate() {
         let value = row.as_ref(index).cloned().unwrap_or(MysqlValue::NULL);
         record.insert(column.name_str().into_owned(), from_mysql_value(value));
@@ -119,7 +119,7 @@ impl MysqlDriver for MysqlAsyncDriver {
         })
     }
 
-    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<Record>> {
+    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<datasources::Row>> {
         if sql.trim().is_empty() {
             return Ok(Vec::new());
         }
