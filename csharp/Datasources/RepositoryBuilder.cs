@@ -25,7 +25,7 @@ public sealed class RepositoryStatements
 public sealed record BuiltRepository<T>(
     RepositoryCommands Commands,
     TypeMapping<T> Converters,
-    Mapper Mapping,
+    StringSourceDestinationMapper Mapping,
     RepositoryStatements Statements,
     IReadOnlyList<string> Ids,
     bool AssignIdentityOnAdd) where T : new();
@@ -39,7 +39,7 @@ public static class RepositoryBuilder<T> where T : new()
             converters: options.Converters);
         TypeConverter.Table(options.Connection.Provider);
         var columns = TypeConverter.Props(typeof(T)).Select(prop => prop.Name).OrderBy(name => name).ToArray();
-        var mapping = new Mapper(converters.Name, options.Connection.Provider, "csharp");
+        var mapping = new StringSourceDestinationMapper(options.Connection.Provider, "csharp");
         return new(
             new RepositoryCommands(
                 options.Connection.CreateCommand(),
@@ -48,7 +48,7 @@ public static class RepositoryBuilder<T> where T : new()
                 options.Connection.CreateCommand()),
             converters,
             mapping,
-            new RepositoryStatements(mapping.Name, columns),
+            new RepositoryStatements(converters.Name, columns),
             options.Ids,
             options.AssignIdentityOnAdd);
     }

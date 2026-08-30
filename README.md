@@ -700,16 +700,32 @@ TODO: query / insert / where samples as the builder API is documented.
 
 ## Mappers
 
-Holds the table name and source/destination labels. Column names pass through as-is.
+Holds source/destination labels. Column names pass through as-is.
 
-### Mapper
+### ISourceDestinationMapper
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `Mapper` | `Mapper` | `Mapper` |
-| constructor | `new` | constructor |
+| `ISourceDestinationMapper` | `ISourceDestinationMapper` | `ISourceDestinationMapper` |
+| `Source` | `source` | `source` |
+| `Destination` | `destination` | `destination` |
+
+### StringMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `StringMapper` | `StringMapper` | `StringMapper` |
 | `To` | `to` | `to` |
 | `From` | `from` | `from` |
+
+### StringSourceDestinationMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `StringSourceDestinationMapper` | `StringSourceDestinationMapper` | `StringSourceDestinationMapper` |
+| constructor | `new` | constructor |
+| `Source` | `source` | `source` |
+| `Destination` | `destination` | `destination` |
 
 ## TypeConverters
 
