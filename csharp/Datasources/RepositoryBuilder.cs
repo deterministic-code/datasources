@@ -24,19 +24,21 @@ public sealed class RepositoryStatements
 
 public sealed record BuiltRepository<T>(
     RepositoryCommands Commands,
-    TypeConverter<T> Converters,
+    TypeConverter<T, Row> Converters,
     NameSourceDestinationMapper Mapping,
     RepositoryStatements Statements,
     IReadOnlyList<string> Ids,
-    bool AssignIdentityOnAdd) where T : new();
+    bool AssignIdentityOnAdd,
+    string Table) where T : new();
 
 public static class RepositoryBuilder<T> where T : new()
 {
     public static BuiltRepository<T> Parts(RepositoryBuilderOptions<T> options)
     {
-        var converters = options.Mapping ?? new TypeConverter<T>();
-        var columns = RowConverter.Props(typeof(T)).Select(prop => prop.Name).OrderBy(name => name).ToArray();
+        var converters = options.Mapping ?? new RowConverter<T>(options.Converters, options.Fields);
+        var columns = RowConverter<T>.Columns.OrderBy(name => name).ToArray();
         var mapping = new NameSourceDestinationMapper(options.Connection.Provider, "csharp");
+        var table = options.Table ?? typeof(T).Name;
         return new(
             new RepositoryCommands(
                 options.Connection.CreateCommand(),
@@ -45,9 +47,10 @@ public static class RepositoryBuilder<T> where T : new()
                 options.Connection.CreateCommand()),
             converters,
             mapping,
-            new RepositoryStatements(converters.Name, columns),
+            new RepositoryStatements(table, columns),
             options.Ids,
-            options.AssignIdentityOnAdd);
+            options.AssignIdentityOnAdd,
+            table);
     }
 
     public static Repository<T> Build(RepositoryBuilderOptions<T> options) => new(Parts(options));

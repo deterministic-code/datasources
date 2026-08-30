@@ -653,7 +653,7 @@ fn statements_and_builders() {
 }
 
 fn users_mapping() -> TypeConverter {
-    TypeConverter::of::<Item>("users")
+    TypeConverter::of::<Item>()
 }
 
 #[tokio::test]
@@ -726,7 +726,8 @@ async fn table_repository() {
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(generated.clone(), "memory"));
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.assign_identity_on_add = true;
-    options.mapping = Some(TypeConverter::of::<Composite>("users"));
+    options.table = "users".into();
+    options.mapping = Some(TypeConverter::of::<Composite>());
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[
         ("org_id", Value::Int(1)),
@@ -776,7 +777,8 @@ async fn table_repository() {
         .await
         .is_err());
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
-    options.mapping = Some(TypeConverter::of::<Cells>("users"));
+    options.table = "users".into();
+    options.mapping = Some(TypeConverter::of::<Cells>());
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[("id", Value::Int(1))])).await.unwrap();
     repo.delete(&record(&[("name", Value::from("z"))]), Some(&WhereBuilder::equals("name", "z")))

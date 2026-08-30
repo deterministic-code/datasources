@@ -247,7 +247,10 @@ async fn run(path: &Path) {
         connection: conn.clone(),
         ids: spec.type_spec.ids.clone(),
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
-        mapping: Some(TypeConverter::of::<SpecUser>(spec.type_spec.table.clone())),
+        table: spec.type_spec.table.clone(),
+        mapping: Some(TypeConverter::of::<SpecUser>()),
+        types: Default::default(),
+        fields: Default::default(),
     };
     let (commands, converters, mapping, statements, ids, assign) =
         TableRepositoryBuilder::parts(options).unwrap();

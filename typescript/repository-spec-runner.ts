@@ -90,7 +90,8 @@ export const runRepositorySpec = async (
     ids: spec.type.ids,
     assignIdentityOnAdd: spec.type.assignIdentityOnAdd,
     type: typeOf(spec.type),
-    mapping: new TypeConverter(spec.type.table, typeOf(spec.type)),
+    table: spec.type.table,
+    mapping: new TypeConverter(typeOf(spec.type)),
   });
   const logs: string[] = [];
   attach(repo, logs);

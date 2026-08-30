@@ -37,6 +37,7 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
             new RepositoryBuilderOptions<Dictionary<string, Value>>
             {
                 Connection = connection as SqliteConnection ?? DefaultConnection(),
-                Mapping = new TypeConverter<Dictionary<string, Value>>(_table ?? "items"),
+                Table = _table ?? "items",
+                Mapping = new RowConverter<Dictionary<string, Value>>(),
             });
 }

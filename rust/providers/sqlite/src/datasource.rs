@@ -63,10 +63,8 @@ impl Datasource for SqliteDatasource {
         _connection: Option<Arc<dyn Connection>>,
     ) -> Arc<dyn Repository> {
         let mut options = TableRepositoryBuilderOptions::with_factory(self.connection());
-        options.mapping = Some(TypeConverter::new(
-            self.table.clone().unwrap_or_else(|| "items".into()),
-            vec![],
-        ));
+        options.table = self.table.clone().unwrap_or_else(|| "items".into());
+        options.mapping = Some(TypeConverter::new(vec![]).with_types(crate::converters::types()));
         Arc::new(TableRepository::new(options).expect("repository"))
     }
 }

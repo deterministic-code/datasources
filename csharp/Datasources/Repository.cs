@@ -5,7 +5,7 @@ namespace Datasources;
 public sealed class Repository<T> : IRepository<T> where T : new()
 {
     readonly RepositoryCommands commands;
-    readonly TypeConverter<T> converters;
+    readonly TypeConverter<T, Row> converters;
     readonly NameSourceDestinationMapper mapping;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
@@ -25,11 +25,13 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         statements = built.Statements;
         ids = new(built.Ids);
         assignIdentityOnAdd = built.AssignIdentityOnAdd;
+        Table = built.Table;
     }
 
     public IConnection Connection => commands.Get.Connection;
-    public TypeConverter<T> Converters => converters;
+    public TypeConverter<T, Row> Converters => converters;
     public NameSourceDestinationMapper Mapping => mapping;
+    public string Table { get; }
 
     public Task<T?> GetSingle(IWhere where) => GetSingle(statements.Query(where));
 
@@ -86,7 +88,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
-    Row Sql(T obj) => Map(converters.ReverseConvert(obj), mapping.ReverseMap);
+    Row Sql(T row) => Map(converters.ReverseConvert(row), mapping.ReverseMap);
 
     static Row Map(Row row, Func<string, string> name) =>
         new(row.Select(pair => KeyValuePair.Create(name(pair.Key), pair.Value)));

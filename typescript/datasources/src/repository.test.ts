@@ -46,7 +46,8 @@ const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
     ...overrides,
     connection,
     type,
-    mapping: overrides.mapping ?? new TypeConverter("users", type),
+    table: overrides.table ?? "users",
+    mapping: overrides.mapping ?? new TypeConverter(type),
   });
   return { repo, command };
 };
@@ -143,7 +144,8 @@ describe("Repository", () => {
     const typed = new Repository({
       connection,
       type: asType(Item),
-      mapping: new TypeConverter("users", asType(Item)),
+      table: "users",
+      mapping: new TypeConverter(asType(Item)),
     });
     await typed.add(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
@@ -164,6 +166,6 @@ describe("Repository", () => {
     expect(new Repository(parts(fromId)).connection).toBe(connection);
     expect(RepositoryBuilder.from(fromId).parts().commands.get.connection).toBe(connection);
     expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
-    expect(parts({ connection }).converters.name).toBe("");
+    expect(parts({ connection }).table).toBe("");
   });
 });

@@ -47,7 +47,7 @@ public class RepositoryTests
             Connection = connection,
             Ids = id ?? ["id"],
             AssignIdentityOnAdd = assignIdentityOnAdd,
-            Mapping = new TypeConverter<T>("users")
+            Table = "users"
         }), command);
     }
 
@@ -150,7 +150,7 @@ public class RepositoryTests
         var typed = new Repository<Item>(new RepositoryBuilderOptions<Item>
         {
             Connection = connection2,
-            Mapping = new TypeConverter<Item>("users")
+            Table = "users"
         });
         await typed.Add(new Item { Id = 1, Name = "a" });
         Assert.Contains("INSERT INTO users", command2.ExecuteCalls[0].Text);

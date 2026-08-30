@@ -60,13 +60,15 @@ impl TableRepositoryBuilder {
     )> {
         let converters = match options.mapping {
             Some(mapping) => mapping,
-            None => TypeConverter::of::<Cells>("items"),
-        };
-        let mut columns = converters.field_names();
+            None => TypeConverter::of::<Cells>(),
+        }
+        .with_types(options.types)
+        .with_fields(options.fields);
+        let mut columns = converters.fields.clone();
         columns.sort();
         let mapping = NameSourceDestinationMapper::new(options.connection.provider(), "rust");
         let statements = TableRepositoryStatements {
-            table: converters.name.clone(),
+            table: options.table,
             columns,
         };
         let commands = TableRepositoryCommands {

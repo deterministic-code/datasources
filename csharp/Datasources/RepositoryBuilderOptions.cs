@@ -5,5 +5,8 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
     public required IConnection Connection { get; init; }
     public IReadOnlyList<string> Ids { get; init; } = ["id"];
     public bool AssignIdentityOnAdd { get; init; } = true;
-    public TypeConverter<T>? Mapping { get; init; }
+    public string? Table { get; init; }
+    public TypeConverter<T, Row>? Mapping { get; init; }
+    public IReadOnlyDictionary<Type, TypeConverter<object?, Value>>? Converters { get; init; }
+    public IReadOnlyDictionary<string, TypeConverter<object?, Value>>? Fields { get; init; }
 }
