@@ -8,26 +8,13 @@ pub trait ISourceDestinationMapper {
     fn destination(&self) -> &str;
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct NameMapper;
-
-impl NameMapper {
-    pub fn map(&self, name: &str) -> String {
+pub trait NameMapper {
+    fn map(&self, name: &str) -> String {
         name.to_string()
     }
 
-    pub fn reverse_map(&self, name: &str) -> String {
+    fn reverse_map(&self, name: &str) -> String {
         name.to_string()
-    }
-}
-
-impl IMapper<String, String> for NameMapper {
-    fn map(&self, name: String) -> String {
-        name
-    }
-
-    fn reverse_map(&self, name: String) -> String {
-        name
     }
 }
 
@@ -53,6 +40,8 @@ impl NameSourceDestinationMapper {
         name.to_string()
     }
 }
+
+impl NameMapper for NameSourceDestinationMapper {}
 
 impl IMapper<String, String> for NameSourceDestinationMapper {
     fn map(&self, name: String) -> String {
@@ -80,7 +69,7 @@ mod tests {
 
     #[test]
     fn map_and_reverse_map_are_the_name() {
-        let mapper = NameMapper;
+        let mapper = NameSourceDestinationMapper::new("sql", "rust");
         assert_eq!(mapper.map("user_accounts"), "user_accounts");
         assert_eq!(mapper.reverse_map("UserAccounts"), "UserAccounts");
         assert_eq!(IMapper::map(&mapper, "user_accounts".into()), "user_accounts");

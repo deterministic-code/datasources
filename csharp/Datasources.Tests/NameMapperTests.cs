@@ -7,7 +7,7 @@ public class NameMapperTests
     [Fact]
     public void MapAndReverseMapAreTheName()
     {
-        IMapper<string, string> mapping = new NameMapper();
+        IMapper<string, string> mapping = new NameSourceDestinationMapper("sql", "csharp");
         Assert.Equal("user_accounts", mapping.Map("user_accounts"));
         Assert.Equal("UserAccounts", mapping.ReverseMap("UserAccounts"));
     }
