@@ -79,8 +79,8 @@ public static class SqlSpec
                 var reader = await cmd.ExecuteReader(op.Sql, Params(op.Parameters));
                 if (op.Expect?.Error is { } err) throw new InvalidOperationException($"{label}: expected {err}");
                 if (expectedRows is not { } expected) return;
-                var actual = new List<IReadOnlyDictionary<string, Value>>();
-                while (await reader.Next()) actual.Add((IReadOnlyDictionary<string, Value>)reader.Current!);
+                var actual = new List<Row>();
+                while (await reader.Next()) actual.Add((Row)reader.Current!);
                 Assert.Equal(expected.Count, actual.Count);
                 for (var i = 0; i < expected.Count; i++)
                     foreach (var (key, value) in expected[i]) Eq(value, actual[i][key]);
@@ -202,20 +202,23 @@ public static class SqlSpec
             _ => sql
         };
 
-        public List<Dictionary<string, Value>>? ResolveRows(object? rows) => rows switch
+        public List<Row>? ResolveRows(object? rows) => rows switch
         {
-            "dirtyReadRows" => DirtyReadRows,
-            List<Dictionary<string, Value>> list => list,
+            "dirtyReadRows" => [.. DirtyReadRows.Select(row => row as Row ?? new Row(row))],
+            List<Row> list => list,
+            List<Dictionary<string, Value>> list => [.. list.Select(row => row as Row ?? new Row(row))],
             System.Collections.IEnumerable items when rows is not string =>
-                [.. items.Cast<object>().Select(ItemRow).OfType<Dictionary<string, Value>>()],
+                [.. items.Cast<object>().Select(ItemRow).OfType<Row>()],
             _ => null
         };
 
-        static Dictionary<string, Value>? ItemRow(object item) => item switch
+        static Row? ItemRow(object item) => item switch
         {
-            Dictionary<string, Value> typed => typed,
-            System.Collections.IDictionary map => map.Cast<System.Collections.DictionaryEntry>()
-                .ToDictionary(entry => entry.Key!.ToString()!, entry => Value.From(entry.Value)),
+            Row row => row,
+            Dictionary<string, Value> typed => new Row(typed),
+            System.Collections.IDictionary map => new Row(map.Keys.Cast<object>().ToDictionary(
+                key => key.ToString()!,
+                key => Value.From(map[key]))),
             _ => null
         };
     }

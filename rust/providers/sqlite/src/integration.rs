@@ -182,7 +182,7 @@ fn norm(value: &Value) -> serde_yaml::Value {
     }
 }
 
-async fn collect(reader: &dyn Reader) -> Vec<datasources::Record> {
+async fn collect(reader: &dyn Reader) -> Vec<datasources::Row> {
     let mut rows = Vec::new();
     while reader.next().await.unwrap() {
         rows.push(reader.current().unwrap());

@@ -20,8 +20,8 @@ public class JsonTests
         Assert.Equal(new Value.Int(1), JsonCommand.ParseFilter("{\"id\":1}")["id"]);
         Assert.Throws<DatasourceException>(() => JsonCommand.ParseFilter("[]"));
         Assert.Throws<DatasourceException>(() => JsonCommand.ParseFilter("1"));
-        Assert.False(JsonCommand.Matches(new JsonArray(), new Dictionary<string, Value>()));
-        Assert.True(JsonCommand.Matches(new JsonObject { ["id"] = 1 }, new Dictionary<string, Value>()));
+        Assert.False(JsonCommand.Matches(new JsonArray(), new Row()));
+        Assert.True(JsonCommand.Matches(new JsonObject { ["id"] = 1 }, new Row()));
     }
 
     [Fact]
@@ -96,10 +96,10 @@ public class JsonTests
         Assert.NotEmpty(await repo.Get(new Query("{\"id\":1}")).ToListAsync());
         Assert.NotNull(await repo.GetSingle(new Where("{\"id\":1}")));
         Assert.NotEmpty(await repo.Get(new Where("{\"id\":1}")).ToListAsync());
-        await repo.Add(new Dictionary<string, Value> { ["id"] = 4, ["name"] = "d" });
-        await repo.Update(new Dictionary<string, Value> { ["id"] = 4, ["name"] = "D" });
-        await repo.Update(new Dictionary<string, Value> { ["name"] = "Z" }, new Where("{\"id\":4}"));
-        await repo.Delete(new Dictionary<string, Value> { ["id"] = 4 });
+        await repo.Add(new Row { ["id"] = 4, ["name"] = "d" });
+        await repo.Update(new Row { ["id"] = 4, ["name"] = "D" });
+        await repo.Update(new Row { ["name"] = "Z" }, new Where("{\"id\":4}"));
+        await repo.Delete(new Row { ["id"] = 4 });
         await command.Execute("insert", new[] { new Parameter("id", 5) });
         await command.Execute("update", new[] { new Parameter("id", 5), new Parameter("$where", "{\"id\":5}") });
         await command.Execute("delete", new[] { new Parameter("id", 5) });
@@ -110,9 +110,9 @@ public class JsonTests
 
         var closed = new JsonConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonCommand(closed).ExecuteReader());
-        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Add(new Dictionary<string, Value>()));
-        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Update(new Dictionary<string, Value> { ["id"] = 1 }));
-        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Delete(new Dictionary<string, Value> { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Add(new Row()));
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Update(new Row { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Delete(new Row { ["id"] = 1 }));
 
         var ds = new JsonDatasource(new JsonConnectionOptions { Data = new JsonArray() });
         Assert.Equal("json", ds.Create().Provider);

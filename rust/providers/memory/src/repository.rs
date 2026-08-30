@@ -3,7 +3,7 @@ use crate::connection::MemoryConnection;
 use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, Command, Query, Record, ReadonlyRepository, Repository, Response, Result,
+    identity_filter, Command, Query, Row, ReadonlyRepository, Repository, Response, Result,
     TextQuery, Value, Where,
 };
 use std::sync::Arc;
@@ -20,7 +20,7 @@ impl MemoryRepository {
 
 #[async_trait]
 impl ReadonlyRepository for MemoryRepository {
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Record>> {
+    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         let text = query.map(|q| q.get_text());
         let reader = MemoryCommand::new(self.connection.clone())
             .execute_reader(text.as_deref(), None)
@@ -32,7 +32,7 @@ impl ReadonlyRepository for MemoryRepository {
         }
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Record>> {
+    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
         let text = query.map(|q| q.get_text());
         let reader = MemoryCommand::new(self.connection.clone())
             .execute_reader(text.as_deref(), None)
@@ -40,25 +40,25 @@ impl ReadonlyRepository for MemoryRepository {
         datasources::collect_reader(&*reader).await
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Record>> {
+    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
         self.get_single(Some(&TextQuery::new(where_clause.get_text())))
             .await
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Record>> {
+    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
         self.get(Some(&TextQuery::new(where_clause.get_text()))).await
     }
 }
 
 #[async_trait]
 impl Repository for MemoryRepository {
-    async fn add(&self, obj: &Record) -> Result<Response> {
+    async fn add(&self, obj: &Row) -> Result<Response> {
         self.connection.ensure_open()?;
         self.connection.collection(|items| items.push(obj.clone()));
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn update(&self, obj: &Record, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         self.connection.ensure_open()?;
         let filter = if let Some(w) = by_where {
             parse_filter(Some(&w.get_text()))?
@@ -78,7 +78,7 @@ impl Repository for MemoryRepository {
         Ok(Response::new(Value::Null, affected))
     }
 
-    async fn delete(&self, obj: &Record, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         self.connection.ensure_open()?;
         let filter = if let Some(w) = by_where {
             parse_filter(Some(&w.get_text()))?

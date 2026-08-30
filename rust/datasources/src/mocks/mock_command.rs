@@ -5,7 +5,7 @@ use crate::command_middleware_host::CommandMiddlewareHost;
 use crate::datasource_error::DatasourceError;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
-use crate::record::Record;
+use crate::row::Row;
 use crate::response::Response;
 use crate::result::Result;
 use crate::value::Value;
@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 pub struct MockCommand {
     host: CommandMiddlewareHost,
     pub response: Mutex<Response>,
-    pub reader_rows: Mutex<Vec<Record>>,
+    pub reader_rows: Mutex<Vec<Row>>,
     execute_error: Mutex<Option<String>>,
     reader_error: Mutex<Option<String>>,
     pub execute_calls: Mutex<usize>,

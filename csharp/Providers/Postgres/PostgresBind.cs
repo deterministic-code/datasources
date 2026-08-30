@@ -6,7 +6,7 @@ public static class PostgresBind
 {
     static readonly Regex Name = new(@"\$([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled);
 
-    public static (string Sql, object?[] Values) ToPostgres(string sql, IReadOnlyDictionary<string, Value> parameters)
+    public static (string Sql, object?[] Values) ToPostgres(string sql, Row parameters)
     {
         var names = new List<string>();
         var text = Name.Replace(sql, match =>

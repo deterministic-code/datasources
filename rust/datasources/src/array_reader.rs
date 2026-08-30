@@ -1,9 +1,9 @@
 use crate::reader::Reader;
-use crate::record::Record;
+use crate::row::Row;
 use crate::result::Result;
 use async_trait::async_trait;
 
-pub struct ArrayReader<T = Record> {
+pub struct ArrayReader<T = Row> {
     rows: Vec<T>,
     index: std::sync::Mutex<isize>,
     current: std::sync::Mutex<Option<T>>,

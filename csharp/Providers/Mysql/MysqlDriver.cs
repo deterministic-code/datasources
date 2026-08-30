@@ -21,12 +21,12 @@ public sealed class MysqlDriver : IMysqlDriver
         _db = null;
     }
 
-    public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+    public Task<MysqlExecuteResult> Execute(string sql, Row parameters) =>
         string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new MysqlExecuteResult(0, Value.Null.Instance)) : Run(sql, parameters);
 
-    public Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Query(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+    public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
         string.IsNullOrWhiteSpace(sql)
-            ? Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, Value>>>([])
+            ? Task.FromResult<IReadOnlyList<Row>>([])
             : Read(sql, parameters);
 
     public async Task Begin(IsolationLevel isolation = IsolationLevel.Serializable)
@@ -51,21 +51,21 @@ public sealed class MysqlDriver : IMysqlDriver
 
     MySqlConnection RequireDb() => _db ?? throw new DatasourceException("MySQL driver is not open");
 
-    async Task<MysqlExecuteResult> Run(string sql, IReadOnlyDictionary<string, Value> parameters)
+    async Task<MysqlExecuteResult> Run(string sql, Row parameters)
     {
         using var command = Bind(sql, parameters);
         var rows = await command.ExecuteNonQueryAsync();
         return new MysqlExecuteResult(rows, Value.From(command.LastInsertedId));
     }
 
-    async Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Read(string sql, IReadOnlyDictionary<string, Value> parameters)
+    async Task<IReadOnlyList<Row>> Read(string sql, Row parameters)
     {
         using var command = Bind(sql, parameters);
         using var reader = await command.ExecuteReaderAsync();
-        var rows = new List<IReadOnlyDictionary<string, Value>>();
+        var rows = new List<Row>();
         while (await reader.ReadAsync())
         {
-            var row = new Dictionary<string, Value>();
+            var row = new Row();
             for (var i = 0; i < reader.FieldCount; i++)
                 row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
             rows.Add(row);
@@ -73,7 +73,7 @@ public sealed class MysqlDriver : IMysqlDriver
         return rows;
     }
 
-    MySqlCommand Bind(string sql, IReadOnlyDictionary<string, Value> parameters)
+    MySqlCommand Bind(string sql, Row parameters)
     {
         var command = RequireDb().CreateCommand();
         command.CommandText = MysqlBind.ToMysql(sql);

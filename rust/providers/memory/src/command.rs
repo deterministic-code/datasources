@@ -3,7 +3,7 @@ use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
     identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Record, Response, Result, Value,
+    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Row, Response, Result, Value,
 };
 use std::sync::Arc;
 
@@ -99,7 +99,7 @@ impl Command for MemoryCommand {
                         }
                         "delete" => {
                             let filter = if params.is_empty() {
-                                Record::new()
+                                Row::new()
                             } else {
                                 identity_filter(&params)
                             };

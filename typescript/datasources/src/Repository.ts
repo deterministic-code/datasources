@@ -9,7 +9,7 @@ import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import type { TypeMapping } from "./converters/TypeMapping.ts";
+import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
@@ -43,7 +43,7 @@ const isBuilt = <T extends Cells>(
 
 export class Repository<T extends Cells> implements IRepository<T> {
   readonly commands: RepositoryCommands;
-  readonly converters: TypeMapping<T>;
+  readonly converters: TypeConverter<T>;
   readonly mapping: NameSourceDestinationMapper;
   readonly statements: RepositoryStatements;
   private readonly ids: Set<string>;
@@ -87,7 +87,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
       statement.where?.parameters ?? statement.parameters,
     );
     while (await reader.next())
-      yield this.converters.to(mapKeys(asRow(reader.current as object), this.mapping.map));
+      yield this.converters.convert(mapKeys(asRow(reader.current as object), this.mapping.map));
   }
 
   add = async (obj: T): Promise<IResponse> => {
@@ -118,7 +118,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
     );
   };
 
-  private sql = (obj: T): Cells => mapKeys(this.converters.from(obj), this.mapping.reverseMap);
+  private sql = (obj: T): Cells => mapKeys(this.converters.reverseConvert(obj), this.mapping.reverseMap);
 
   private readQuery = (query?: IQuery | IWhere): IQuery =>
     !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);

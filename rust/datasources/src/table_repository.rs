@@ -1,12 +1,12 @@
 use crate::builders::WhereBuilder;
 use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
-use crate::converters::{mapping, ConvertSchema, TypeMapping};
+use crate::converters::{ConvertSchema, TypeConverter};
 use crate::datasource_error::DatasourceError;
 use crate::mappers::NameSourceDestinationMapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
-use crate::record::Record;
+use crate::row::Row;
 use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 pub struct TableRepository {
     commands: TableRepositoryCommands,
-    converters: TypeMapping,
+    converters: TypeConverter,
     pub mapping: NameSourceDestinationMapper,
     statements: TableRepositoryStatements,
     id: Vec<String>,
@@ -32,7 +32,10 @@ pub struct TableRepository {
 impl TableRepository {
     pub fn from_type<T: ConvertSchema>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_builder_options::<T>(connection.clone());
-        options.mapping = Some(mapping::<T>(connection.provider())?);
+        options.mapping = Some(TypeConverter::of::<T>(std::any::type_name::<T>()
+            .rsplit("::")
+            .next()
+            .unwrap_or_default()));
         Self::new(options)
     }
 
@@ -42,7 +45,7 @@ impl TableRepository {
 
     pub fn from_parts(
         commands: TableRepositoryCommands,
-        converters: TypeMapping,
+        converters: TypeConverter,
         mapping: NameSourceDestinationMapper,
         statements: TableRepositoryStatements,
         ids: Vec<String>,
@@ -59,7 +62,7 @@ impl TableRepository {
         }
     }
 
-    fn params(&self, record: &Record, include_id: bool) -> Vec<Parameter> {
+    fn params(&self, record: &Row, include_id: bool) -> Vec<Parameter> {
         let mut pairs: Vec<_> = record
             .iter()
             .filter(|(key, _)| include_id || !self.ids.contains(*key))
@@ -72,7 +75,7 @@ impl TableRepository {
             .collect()
     }
 
-    fn id_where(&self, record: &Record) -> Result<WhereBuilder> {
+    fn id_where(&self, record: &Row) -> Result<WhereBuilder> {
         let children = self
             .id
             .iter()
@@ -98,7 +101,7 @@ impl TableRepository {
         }
     }
 
-    async fn read_single(&self, text: String, params: Vec<Parameter>) -> Result<Option<Record>> {
+    async fn read_single(&self, text: String, params: Vec<Parameter>) -> Result<Option<Row>> {
         let reader = self
             .commands
             .get
@@ -109,11 +112,11 @@ impl TableRepository {
         }
         reader
             .current()
-            .map(|row| self.converters.to(&map_keys(&row, |key| self.mapping.map(key))))
+            .map(|row| self.converters.convert(&map_keys(&row, |key| self.mapping.map(key))))
             .transpose()
     }
 
-    async fn read_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Record>> {
+    async fn read_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Row>> {
         let reader = self
             .commands
             .get
@@ -122,21 +125,21 @@ impl TableRepository {
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                items.push(self.converters.to(&map_keys(&row, |key| self.mapping.map(key)))?);
+                items.push(self.converters.convert(&map_keys(&row, |key| self.mapping.map(key)))?);
             }
         }
         Ok(items)
     }
 
-    fn sql(&self, obj: &Record) -> Result<Record> {
+    fn sql(&self, obj: &Row) -> Result<Row> {
         Ok(map_keys(
-            &self.converters.from(obj)?,
+            &self.converters.reverse_convert(obj)?,
             |key| self.mapping.reverse_map(key),
         ))
     }
 }
 
-fn map_keys(row: &Record, name: impl Fn(&str) -> String) -> Record {
+fn map_keys(row: &Row, name: impl Fn(&str) -> String) -> Row {
     row.iter()
         .map(|(key, value)| (name(key), value.clone()))
         .collect()
@@ -144,22 +147,22 @@ fn map_keys(row: &Record, name: impl Fn(&str) -> String) -> Record {
 
 #[async_trait]
 impl ReadonlyRepository for TableRepository {
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Record>> {
+    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         let (text, params) = self.query_parts(query);
         self.read_single(text, params).await
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Record>> {
+    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
         let (text, params) = self.query_parts(query);
         self.read_all(text, params).await
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Record>> {
+    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
         let (text, params) = self.statements.query(Some(where_clause));
         self.read_single(text, params).await
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Record>> {
+    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
         let (text, params) = self.statements.query(Some(where_clause));
         self.read_all(text, params).await
     }
@@ -167,7 +170,7 @@ impl ReadonlyRepository for TableRepository {
 
 #[async_trait]
 impl Repository for TableRepository {
-    async fn add(&self, obj: &Record) -> Result<Response> {
+    async fn add(&self, obj: &Row) -> Result<Response> {
         let record = self.sql(obj)?;
         let fields = self.params(&record, !self.assign_identity_on_add);
         let text = self.statements.insert(&fields);
@@ -177,7 +180,7 @@ impl Repository for TableRepository {
             .await
     }
 
-    async fn update(&self, obj: &Record, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         let record = self.sql(obj)?;
         let owned = if by_where.is_none() {
             Some(self.id_where(&record)?)
@@ -204,7 +207,7 @@ impl Repository for TableRepository {
             .await
     }
 
-    async fn delete(&self, obj: &Record, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         let record = self.sql(obj)?;
         let owned = if by_where.is_none() {
             Some(self.id_where(&record)?)

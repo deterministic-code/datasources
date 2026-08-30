@@ -23,12 +23,12 @@ public sealed class SqliteDriver : ISqliteDriver
         _db = null;
     }
 
-    public Task<SqliteExecuteResult> Execute(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+    public Task<SqliteExecuteResult> Execute(string sql, Row parameters) =>
         string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new SqliteExecuteResult(0, Value.Null.Instance)) : Run(sql, parameters);
 
-    public Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Query(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+    public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
         string.IsNullOrWhiteSpace(sql)
-            ? Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, Value>>>([])
+            ? Task.FromResult<IReadOnlyList<Row>>([])
             : Read(sql, parameters);
 
     public async Task Begin(IsolationLevel isolation = IsolationLevel.Serializable)
@@ -55,7 +55,7 @@ public sealed class SqliteDriver : ISqliteDriver
 
     SqliteDb RequireDb() => _db ?? throw new DatasourceException("SQLite driver is not open");
 
-    async Task<SqliteExecuteResult> Run(string sql, IReadOnlyDictionary<string, Value> parameters)
+    async Task<SqliteExecuteResult> Run(string sql, Row parameters)
     {
         using var command = Bind(sql, parameters);
         var rows = await command.ExecuteNonQueryAsync();
@@ -64,14 +64,14 @@ public sealed class SqliteDriver : ISqliteDriver
         return new SqliteExecuteResult(rows, Value.From(await id.ExecuteScalarAsync()));
     }
 
-    async Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Read(string sql, IReadOnlyDictionary<string, Value> parameters)
+    async Task<IReadOnlyList<Row>> Read(string sql, Row parameters)
     {
         using var command = Bind(sql, parameters);
         using var reader = await command.ExecuteReaderAsync();
-        var rows = new List<IReadOnlyDictionary<string, Value>>();
+        var rows = new List<Row>();
         while (await reader.ReadAsync())
         {
-            var row = new Dictionary<string, Value>();
+            var row = new Row();
             for (var i = 0; i < reader.FieldCount; i++)
                 row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
             rows.Add(row);
@@ -79,7 +79,7 @@ public sealed class SqliteDriver : ISqliteDriver
         return rows;
     }
 
-    SqliteCmd Bind(string sql, IReadOnlyDictionary<string, Value> parameters)
+    SqliteCmd Bind(string sql, Row parameters)
     {
         var command = RequireDb().CreateCommand();
         command.CommandText = sql;

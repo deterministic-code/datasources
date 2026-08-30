@@ -19,6 +19,6 @@ public sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         {
             Typed.EnsureOpen();
             var result = await Typed.Driver.Execute(query, Helpers.ParametersToRecord(paramsList));
-            return (new Response(result.Result, result.RowsAffected), (IReadOnlyList<IReadOnlyDictionary<string, Value>>)[]);
+            return (new Response(result.Result, result.RowsAffected), (IReadOnlyList<Row>)[]);
         });
 }

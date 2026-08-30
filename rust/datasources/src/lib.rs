@@ -21,7 +21,7 @@ mod parameter;
 mod parameters_to_map;
 mod query;
 mod reader;
-mod record;
+mod row;
 mod register;
 mod registered;
 mod registry_state;
@@ -53,10 +53,7 @@ pub use command::Command;
 pub use command_middleware::CommandMiddleware;
 pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
-pub use converters::{
-    mapping as type_mapping, mapping_with as type_mapping_with, reset as reset_type_converter,
-    use_provider as use_type_converter, ConvertSchema, FieldConverter, ProviderTypes, TypeMapping,
-};
+pub use converters::{ConvertSchema, RowConverter, TypeConverter};
 pub use console_command_middleware::{
     format_elapsed, utc_iso_millis, ConsoleCommandMiddleware,
 };
@@ -77,7 +74,7 @@ pub use parameter::Parameter;
 pub use parameters_to_map::parameters_to_map;
 pub use query::Query;
 pub use reader::Reader;
-pub use record::Record;
+pub use row::Row;
 pub use register::register;
 pub use registered::registered;
 pub use repository::{ReadonlyRepository, Repository};

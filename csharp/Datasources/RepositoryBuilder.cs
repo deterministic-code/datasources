@@ -24,7 +24,7 @@ public sealed class RepositoryStatements
 
 public sealed record BuiltRepository<T>(
     RepositoryCommands Commands,
-    TypeMapping<T> Converters,
+    TypeConverter<T> Converters,
     NameSourceDestinationMapper Mapping,
     RepositoryStatements Statements,
     IReadOnlyList<string> Ids,
@@ -34,11 +34,8 @@ public static class RepositoryBuilder<T> where T : new()
 {
     public static BuiltRepository<T> Parts(RepositoryBuilderOptions<T> options)
     {
-        var converters = options.Mapping ?? TypeConverter.Mapping<T>(
-            options.Connection.Provider,
-            converters: options.Converters);
-        TypeConverter.Table(options.Connection.Provider);
-        var columns = TypeConverter.Props(typeof(T)).Select(prop => prop.Name).OrderBy(name => name).ToArray();
+        var converters = options.Mapping ?? new TypeConverter<T>();
+        var columns = RowConverter.Props(typeof(T)).Select(prop => prop.Name).OrderBy(name => name).ToArray();
         var mapping = new NameSourceDestinationMapper(options.Connection.Provider, "csharp");
         return new(
             new RepositoryCommands(

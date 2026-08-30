@@ -52,10 +52,7 @@ export class SqliteDatasource implements IDatasource {
   createRepository = <T>(connection?: IConnection): IRepository<T> =>
     new Repository({
       connection: (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
-      mapping: TypeConverter.mapping<Cells>({
-        source: "sqlite",
-        name: this.options.table ?? "items",
-      }),
+      mapping: new TypeConverter(this.options.table ?? "items"),
     }) as IRepository<T>;
 
   createReadonlyRepository = <T>(

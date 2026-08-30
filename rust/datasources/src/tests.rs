@@ -1,10 +1,10 @@
-use crate::converters::{identity_provider_types, Cells};
+use crate::converters::{Cells, TypeConverter};
 use crate::*;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-fn record(pairs: &[(&str, Value)]) -> Record {
+fn record(pairs: &[(&str, Value)]) -> Row {
     pairs
         .iter()
         .map(|(k, v)| ((*k).to_string(), v.clone()))
@@ -77,7 +77,7 @@ fn identity_helpers() {
 
 #[tokio::test]
 async fn readers() {
-    let empty = ArrayReader::<Record>::new(vec![]);
+    let empty = ArrayReader::<Row>::new(vec![]);
     assert!(empty.current().is_none());
     assert!(!empty.next().await.unwrap());
     let reader = ArrayReader::new(vec![record(&[("id", Value::Int(1))])]);
@@ -92,7 +92,7 @@ async fn readers() {
     struct SkipReader;
     #[async_trait]
     impl Reader for SkipReader {
-        fn current(&self) -> Option<Record> {
+        fn current(&self) -> Option<Row> {
             None
         }
         async fn next(&self) -> Result<bool> {
@@ -104,7 +104,7 @@ async fn readers() {
     }
     #[async_trait]
     impl Reader for OnceSkip {
-        fn current(&self) -> Option<Record> {
+        fn current(&self) -> Option<Row> {
             None
         }
         async fn next(&self) -> Result<bool> {
@@ -154,7 +154,7 @@ impl CommandMiddleware for RecordingMiddleware {
         &self,
         query: &str,
         _params: Option<&[Parameter]>,
-        _results: &[Record],
+        _results: &[Row],
         _elapsed_ms: f64,
         error: Option<&DatasourceError>,
     ) -> Result<()> {
@@ -197,7 +197,7 @@ async fn middleware_paths() {
         let used_clone = used_clone.clone();
         async move {
             *used_clone.lock().unwrap() = query;
-            Ok(((), vec![Record::new()]))
+            Ok(((), vec![Row::new()]))
         }
     })
     .await
@@ -249,7 +249,7 @@ async fn middleware_paths() {
     }));
     assert!(failed
         .run(Some("select"), None, |_q, _p| async {
-            Err::<((), Vec<Record>), _>(DatasourceError::message("fail-op"))
+            Err::<((), Vec<Row>), _>(DatasourceError::message("fail-op"))
         })
         .await
         .is_err());
@@ -369,7 +369,7 @@ async fn stubs_throw() {
         .await
         .is_err());
     let repo = ds.create_repository(None);
-    let empty = Record::new();
+    let empty = Row::new();
     assert!(repo.get_single(None).await.is_err());
     assert!(repo.get(None).await.is_err());
     assert!(repo
@@ -391,7 +391,7 @@ async fn stubs_throw() {
     let txn = StubTransaction::new("text");
     assert!(txn.commit().await.is_err());
     assert!(txn.abort().await.is_err());
-    let reader = StubReader::<Record>::new("text");
+    let reader = StubReader::<Row>::new("text");
     assert!(reader.current().is_none());
     assert!(reader.next().await.is_err());
     let conn = StubConnection::new("text");
@@ -490,11 +490,11 @@ async fn published_mocks() {
     repo.set_get_error("g");
     assert!(repo.get(None).await.is_err());
     repo.set_add_error("ad");
-    assert!(repo.add(&Record::new()).await.is_err());
+    assert!(repo.add(&Row::new()).await.is_err());
     repo.set_update_error("up");
-    assert!(repo.update(&Record::new(), None).await.is_err());
+    assert!(repo.update(&Row::new(), None).await.is_err());
     repo.set_delete_error("del");
-    assert!(repo.delete(&Record::new(), None).await.is_err());
+    assert!(repo.delete(&Row::new(), None).await.is_err());
 
     let ds = MockDatasource::new("mock");
     assert_eq!(Datasource::provider(&ds), "mock");
@@ -652,23 +652,19 @@ fn statements_and_builders() {
     assert_eq!(TextStoredProcedureStatement::new("x").get_text(), "x");
 }
 
-fn users_mapping(converters: HashMap<String, FieldConverter>) -> TypeMapping {
-    let mut mapping = type_mapping_with::<Item>("memory", converters).unwrap();
-    mapping.name = "users".into();
-    mapping
+fn users_mapping() -> TypeConverter {
+    TypeConverter::of::<Item>("users")
 }
 
 #[tokio::test]
 async fn table_repository() {
-    reset_type_converter();
-    use_type_converter("memory", identity_provider_types());
     let command = Arc::new(MockCommand::new());
     command.reader_rows.lock().unwrap().push(record(&[
         ("id", Value::Int(1)),
         ("name", Value::from("a")),
     ]));
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
-    options.mapping = Some(users_mapping(HashMap::new()));
+    options.mapping = Some(users_mapping());
     let repo = TableRepository::new(options).unwrap();
     let rows = repo.get(None).await.unwrap();
     assert_eq!(rows.len(), 1);
@@ -708,7 +704,7 @@ async fn table_repository() {
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     include_id.assign_identity_on_add = false;
-    include_id.mapping = Some(users_mapping(HashMap::new()));
+    include_id.mapping = Some(users_mapping());
     let repo = TableRepository::new(include_id).unwrap();
     repo.add(&obj).await.unwrap();
     assert_eq!(
@@ -726,26 +722,11 @@ async fn table_repository() {
         "DELETE FROM users WHERE id = $id"
     );
 
-    let twice = FieldConverter::new(
-        |value| Ok(value.clone()),
-        |value| match value {
-            Value::Int(n) => Ok(Value::Int(n * 2)),
-            other => Ok(other.clone()),
-        },
-    );
     let generated = Arc::new(MockCommand::new());
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(generated.clone(), "memory"));
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.assign_identity_on_add = true;
-    options.mapping = Some({
-        let mut mapping = type_mapping_with::<Composite>(
-            "memory",
-            HashMap::from([("name".into(), twice)]),
-        )
-        .unwrap();
-        mapping.name = "users".into();
-        mapping
-    });
+    options.mapping = Some(TypeConverter::of::<Composite>("users"));
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[
         ("org_id", Value::Int(1)),
@@ -760,7 +741,7 @@ async fn table_repository() {
     );
     assert_eq!(
         generated.execute_logs.lock().unwrap()[0].1[0].value,
-        Value::Int(6)
+        Value::Int(3)
     );
     repo.update(
         &record(&[
@@ -777,10 +758,10 @@ async fn table_repository() {
         .contains("org_id = $org_id AND user_id = $user_id"));
 
     let command = Arc::new(MockCommand::new());
-    assert!(TableRepository::new(TableRepositoryBuilderOptions::with_factory(MockConnection::with_command(command.clone())))
-        .is_err());
+    TableRepository::new(TableRepositoryBuilderOptions::with_factory(MockConnection::with_command(command.clone())))
+        .unwrap();
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
-    options.mapping = Some(users_mapping(HashMap::new()));
+    options.mapping = Some(users_mapping());
     let repo = TableRepository::new(options).unwrap();
     assert!(repo
         .update(&record(&[("name", Value::from("a"))]), None)
@@ -794,17 +775,14 @@ async fn table_repository() {
         .update(&record(&[("id", Value::Int(1))]), None)
         .await
         .is_err());
-    let mut mapping = type_mapping::<Cells>("memory").unwrap();
-    mapping.name = "users".into();
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
-    options.mapping = Some(mapping);
+    options.mapping = Some(TypeConverter::of::<Cells>("users"));
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[("id", Value::Int(1))])).await.unwrap();
     repo.delete(&record(&[("name", Value::from("z"))]), Some(&WhereBuilder::equals("name", "z")))
         .await
         .unwrap();
 
-    use_type_converter("mock", identity_provider_types());
     let from_id = create_repository_builder_options::<Item>(MockConnection::new());
     assert_eq!(from_id.ids, vec!["id".to_string()]);
     assert!(create_repository_builder_options::<Label>(MockConnection::new())
@@ -812,7 +790,6 @@ async fn table_repository() {
         .is_empty());
     TableRepository::new(from_id).unwrap();
     TableRepository::from_type::<Item>(MockConnection::new()).unwrap();
-    reset_type_converter();
 }
 
 struct Item;

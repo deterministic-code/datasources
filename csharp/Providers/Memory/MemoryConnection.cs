@@ -11,7 +11,7 @@ public sealed class MemoryConnection : IConnection
     public bool Opened { get; private set; }
     public bool InTransaction { get; private set; }
     private readonly object? _data;
-    private Dictionary<string, List<Dictionary<string, Value>>>? _snapshot;
+    private Dictionary<string, List<Row>>? _snapshot;
 
     public MemoryConnection(MemoryConnectionOptions? options = null)
     {
@@ -44,7 +44,7 @@ public sealed class MemoryConnection : IConnection
         return Task.FromResult<ITransaction>(new MemoryTransaction(this, isolation));
     }
 
-    public List<Dictionary<string, Value>> GetCollection() => Store.GetCollection(Collection);
+    public List<Row> GetCollection() => Store.GetCollection(Collection);
 
     public void FinishCommit()
     {

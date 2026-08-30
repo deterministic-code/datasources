@@ -1,7 +1,7 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::datasource_error::DatasourceError;
 use crate::parameter::Parameter;
-use crate::record::Record;
+use crate::row::Row;
 use crate::result::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -90,7 +90,7 @@ impl CommandMiddleware for ConsoleCommandMiddleware {
         &self,
         query: &str,
         _params: Option<&[Parameter]>,
-        _results: &[Record],
+        _results: &[Row],
         elapsed_ms: f64,
         _error: Option<&DatasourceError>,
     ) -> Result<()> {

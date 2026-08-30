@@ -9,8 +9,8 @@ import { StatementBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
+import { RowConverter } from "./converters/RowConverter.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
-import type { TypeMapping } from "./converters/TypeMapping.ts";
 import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
@@ -31,7 +31,7 @@ export type RepositoryStatements = {
 
 export type BuiltRepository<T extends Cells> = {
   commands: RepositoryCommands;
-  converters: TypeMapping<T>;
+  converters: TypeConverter<T>;
   mapping: NameSourceDestinationMapper;
   statements: RepositoryStatements;
   ids: string[];
@@ -57,18 +57,13 @@ export const parts = <T extends Cells>(
 ): BuiltRepository<T> => {
   const converters =
     options.mapping ??
-    TypeConverter.mapping<T>({
-      source: options.connection.provider,
-      type: options.type,
-      converters: options.converters,
-    });
-  TypeConverter.table(options.connection.provider);
+    new TypeConverter(options.type?.name ?? "", options.type);
   const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
   return {
     commands: commandsOf(options.connection),
     converters,
     mapping,
-    statements: statementsOf(converters.name, TypeConverter.keys(options.type).sort()),
+    statements: statementsOf(converters.name, RowConverter.keys(options.type).sort()),
     ids: options.ids ?? ["id"],
     assignIdentityOnAdd: options.assignIdentityOnAdd !== false,
   };

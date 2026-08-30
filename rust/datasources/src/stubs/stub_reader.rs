@@ -1,11 +1,11 @@
 use super::not_implemented::fail;
 use crate::reader::Reader;
-use crate::record::Record;
+use crate::row::Row;
 use crate::result::Result;
 use async_trait::async_trait;
 use std::marker::PhantomData;
 
-pub struct StubReader<T = Record> {
+pub struct StubReader<T = Row> {
     provider: String,
     _item: PhantomData<T>,
 }

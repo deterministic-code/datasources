@@ -13,7 +13,6 @@ public static class RepositorySpec
 
     public static async Task Run(string path, Func<Session> open)
     {
-        SqliteConverters.Register();
         var spec = new DeserializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
             .Build()
@@ -21,7 +20,7 @@ public static class RepositorySpec
         var session = open();
         await session.Connection.Open();
         await session.Command.Execute(SqliteStatementBuilder.CreateTable(spec.Type.Table, Columns(spec.Type)).GetText());
-        var mapping = TypeConverter.Mapping<SpecUser>("sqlite", name: spec.Type.Table);
+        var mapping = new TypeConverter<SpecUser>(spec.Type.Table);
         var built = RepositoryBuilder<SpecUser>.Parts(new()
         {
             Connection = session.Connection,
@@ -37,13 +36,13 @@ public static class RepositorySpec
         foreach (var step in spec.Steps)
             await (step switch
             {
-                { Create: { } create } => repo.Add(mapping.To(Row(create.Row))),
+                { Create: { } create } => repo.Add(mapping.Convert(ToRow(create.Row))),
                 { Read: { } read } => repo.GetSingle(WhereBuilder.Equals("id", Value.From(read.Id))),
                 { Query: { } query } => Drain(query.Where is { } where ? repo.Get(Where(where)) : repo.Get()),
                 { Ready: { } ready } => repo.GetSingle(Where(ready.Where)),
-                { Update: { } update } => repo.Update(mapping.To(Row(update.Row))),
-                { UpdateBy: { } updateBy } => repo.Update(mapping.To(Row(updateBy.Row)), Where(updateBy.Where)),
-                { Delete: { } delete } => repo.Delete(mapping.To(new Dictionary<string, Value> { ["id"] = Value.From(delete.Id) })),
+                { Update: { } update } => repo.Update(mapping.Convert(ToRow(update.Row))),
+                { UpdateBy: { } updateBy } => repo.Update(mapping.Convert(ToRow(updateBy.Row)), Where(updateBy.Where)),
+                { Delete: { } delete } => repo.Delete(mapping.Convert(new Row { ["id"] = Value.From(delete.Id) })),
                 { DeleteBy: { } deleteBy } => repo.Delete(new SpecUser(), Where(deleteBy.Where)),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             });
@@ -78,8 +77,8 @@ public static class RepositorySpec
     static IWhere Where(Dictionary<string, object?> row) =>
         WhereBuilder.And([.. row.Select(pair => WhereBuilder.Equals(pair.Key, Value.From(Coerce(pair.Value))))]);
 
-    static Dictionary<string, Value> Row(Dictionary<string, object?> row) =>
-        row.ToDictionary(pair => pair.Key, pair => Value.From(Coerce(pair.Value)));
+    static Row ToRow(Dictionary<string, object?> row) =>
+        new(row.ToDictionary(pair => pair.Key, pair => Value.From(Coerce(pair.Value))));
 
     static object? Coerce(object? value) => value switch
     {

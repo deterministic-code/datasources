@@ -1,12 +1,12 @@
 use crate::array_reader::ArrayReader;
 use crate::datasource_error::DatasourceError;
 use crate::reader::Reader;
-use crate::record::Record;
+use crate::row::Row;
 use crate::result::Result;
 use async_trait::async_trait;
 use std::sync::Mutex;
 
-pub struct MockReader<T = Record> {
+pub struct MockReader<T = Row> {
     inner: ArrayReader<T>,
     error: Mutex<Option<String>>,
 }

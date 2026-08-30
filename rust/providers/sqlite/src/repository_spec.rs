@@ -1,16 +1,15 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
-use super::converters::register;
 use super::rusqlite_driver::RusqliteDriver;
 use super::statement_builder::{SqliteColumn, SqliteStatementBuilder};
-use datasources::converters::{mapping, ConvertSchema};
+use datasources::converters::{ConvertSchema, TypeConverter};
 use datasources::{
     Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Parameter,
     ReadonlyRepository, Repository, Statement, StatementBuilder, TableRepository,
     TableRepositoryBuilder, TableRepositoryBuilderOptions, Value, WhereBuilder,
 };
 use serde::Deserialize;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -119,7 +118,7 @@ fn yaml_value(value: &serde_yaml::Value) -> Value {
     }
 }
 
-fn record(map: &BTreeMap<String, serde_yaml::Value>) -> datasources::Record {
+fn record(map: &BTreeMap<String, serde_yaml::Value>) -> datasources::Row {
     map.iter()
         .map(|(name, value)| (name.clone(), yaml_value(value)))
         .collect()
@@ -220,7 +219,6 @@ fn signature(line: &str) -> String {
 }
 
 async fn run(path: &Path) {
-    register();
     let spec: Spec = serde_yaml::from_str(&fs::read_to_string(path).unwrap()).unwrap();
     let conn = Arc::new(SqliteConnection::new(
         Some(":memory:".into()),
@@ -247,14 +245,11 @@ async fn run(path: &Path) {
         )
         .await
         .unwrap();
-    let mut mapping = mapping::<SpecUser>("sqlite").unwrap();
-    mapping.name = spec.type_spec.table.clone();
     let options = TableRepositoryBuilderOptions {
         connection: conn.clone(),
         ids: spec.type_spec.ids.clone(),
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
-        converters: HashMap::new(),
-        mapping: Some(mapping),
+        mapping: Some(TypeConverter::of::<SpecUser>(spec.type_spec.table.clone())),
     };
     let (commands, converters, mapping, statements, ids, assign) =
         TableRepositoryBuilder::parts(options).unwrap();
@@ -295,12 +290,12 @@ async fn run(path: &Path) {
                 .await
                 .unwrap();
         } else if let Some(delete) = &step.delete {
-            let mut row = datasources::Record::new();
+            let mut row = datasources::Row::new();
             row.insert("id".into(), yaml_value(&delete.id));
             repo.delete(&row, None).await.unwrap();
         } else if let Some(delete_by) = &step.delete_by {
             let where_clause = where_of(&delete_by.where_clause);
-            repo.delete(&datasources::Record::new(), Some(&where_clause))
+            repo.delete(&datasources::Row::new(), Some(&where_clause))
                 .await
                 .unwrap();
         }

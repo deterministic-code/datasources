@@ -14,9 +14,8 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         {
             Typed.EnsureOpen();
             var filter = Merge(ParseFilter(query), Helpers.ParametersToRecord(paramsList));
-            var rows = Typed.GetCollection().Where(row => Matches(row, filter)).ToList();
-            IReadOnlyList<IReadOnlyDictionary<string, Value>> resultRows = rows;
-            return Task.FromResult(((IReader)new ArrayReader(rows.Cast<object?>().ToList()), resultRows));
+            IReadOnlyList<Row> rows = [.. Typed.GetCollection().Where(row => Matches(row, filter))];
+            return Task.FromResult(((IReader)new ArrayReader(rows.Cast<object?>().ToList()), rows));
         });
 
     public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
@@ -27,7 +26,7 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
-                Typed.GetCollection().Add(new Dictionary<string, Value>(obj));
+                Typed.GetCollection().Add(new Row(obj));
                 return Task.FromResult((new Response(Value.Null.Instance, 1), EmptyRows()));
             }
 
@@ -35,17 +34,17 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             {
                 var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
-                var filter = whereText is not null ? ParseFilter(whereText) : Helpers.IdentityFilter(obj);
-                return Task.FromResult((ApplyUpdate(obj, filter), EmptyRows()));
+                var filter = whereText is not null ? ParseFilter(whereText) : new Row(Helpers.IdentityFilter(obj));
+                return Task.FromResult((ApplyUpdate(new Row(obj), filter), EmptyRows()));
             }
 
             if (op == "delete")
-                return Task.FromResult((ApplyDelete(obj.Count == 0 ? new Dictionary<string, Value>() : Helpers.IdentityFilter(obj)), EmptyRows()));
+                return Task.FromResult((ApplyDelete(obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj))), EmptyRows()));
 
             throw new DatasourceException($"Unsupported Memory command: {query}");
         });
 
-    private Response ApplyUpdate(IReadOnlyDictionary<string, Value> obj, IReadOnlyDictionary<string, Value> filter)
+    private Response ApplyUpdate(Row obj, Row filter)
     {
         var collection = Typed.GetCollection();
         var affected = 0;
@@ -58,24 +57,24 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         return new Response(Value.Null.Instance, affected);
     }
 
-    private Response ApplyDelete(IReadOnlyDictionary<string, Value> filter)
+    private Response ApplyDelete(Row filter)
     {
         var collection = Typed.GetCollection();
         var affected = collection.RemoveAll(row => Matches(row, filter));
         return new Response(Value.Null.Instance, affected);
     }
 
-    public static Dictionary<string, Value> ParseFilter(string? text) =>
+    public static Row ParseFilter(string? text) =>
         string.IsNullOrWhiteSpace(text)
-            ? new Dictionary<string, Value>()
+            ? new Row()
             : JsonNode.Parse(text) is JsonObject obj
-                ? obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value))
+                ? new Row(obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value)))
                 : throw new DatasourceException("Memory filter must be an object");
 
-    public static bool Matches(IReadOnlyDictionary<string, Value> row, IReadOnlyDictionary<string, Value> filter) =>
+    public static bool Matches(Row row, Row filter) =>
         filter.All(pair => Equals(row.TryGetValue(pair.Key, out var value) ? value : Value.Null.Instance, pair.Value));
 
-    private static Dictionary<string, Value> Merge(Dictionary<string, Value> left, IReadOnlyDictionary<string, Value> right)
+    private static Row Merge(Row left, Row right)
     {
         foreach (var pair in right) left[pair.Key] = pair.Value;
         return left;
@@ -92,5 +91,5 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         return value.ToString();
     }
 
-    private static IReadOnlyList<IReadOnlyDictionary<string, Value>> EmptyRows() => [];
+    private static IReadOnlyList<Row> EmptyRows() => [];
 }

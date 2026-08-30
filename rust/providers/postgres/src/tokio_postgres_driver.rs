@@ -2,7 +2,7 @@ use crate::driver::{
     isolation_sql, to_postgres, with_returning, PostgresDriver, PostgresExecuteResult,
 };
 use async_trait::async_trait;
-use datasources::{DatasourceError, IsolationLevel, Record, Result, Value};
+use datasources::{DatasourceError, IsolationLevel, Result, Value};
 use std::collections::HashMap;
 use tokio::sync::Mutex;
 use tokio_postgres::{NoTls, Row};
@@ -58,8 +58,8 @@ fn from_cell(row: &Row, index: usize) -> Value {
     Value::Null
 }
 
-fn row_record(row: &Row) -> Record {
-    let mut record = Record::new();
+fn row_record(row: &Row) -> datasources::Row {
+    let mut record = datasources::Row::new();
     for (index, column) in row.columns().iter().enumerate() {
         record.insert(column.name().to_string(), from_cell(row, index));
     }
@@ -129,7 +129,7 @@ impl PostgresDriver for TokioPostgresDriver {
         })
     }
 
-    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<Record>> {
+    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<datasources::Row>> {
         if sql.trim().is_empty() {
             return Ok(Vec::new());
         }

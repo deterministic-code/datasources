@@ -17,7 +17,7 @@ public class PostgresTests
         Assert.Throws<DatasourceException>(() => PostgresGuard.Require(null));
         var driver = new FakePostgresDriver();
         Assert.Same(driver, PostgresGuard.Require(driver));
-        var (sql, values) = PostgresBind.ToPostgres("SELECT * FROM t WHERE id = $id AND n = $id", new Dictionary<string, Value> { ["id"] = 1 });
+        var (sql, values) = PostgresBind.ToPostgres("SELECT * FROM t WHERE id = $id AND n = $id", new Row { ["id"] = 1 });
         Assert.Equal("SELECT * FROM t WHERE id = $1 AND n = $1", sql);
         Assert.Equal(new object?[] { 1 }, values);
         Assert.Equal("INSERT INTO t (id) VALUES (1) RETURNING id", PostgresBind.WithReturning("INSERT INTO t (id) VALUES (1)"));
@@ -79,19 +79,19 @@ public class PostgresTests
         await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).ExecuteReader("x"));
 
-        await driver.Execute("   ", new Dictionary<string, Value>());
-        await driver.Query("   ", new Dictionary<string, Value>());
+        await driver.Execute("   ", new Row());
+        await driver.Query("   ", new Row());
     }
 
     sealed class FakePostgresDriver : IPostgresDriver
     {
         public Task Open(string url) => Task.CompletedTask;
         public Task Close() => Task.CompletedTask;
-        public Task<PostgresExecuteResult> Execute(string sql, IReadOnlyDictionary<string, Value> parameters) =>
+        public Task<PostgresExecuteResult> Execute(string sql, Row parameters) =>
             Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new PostgresExecuteResult(0, Value.Null.Instance) : new PostgresExecuteResult(2, 5));
-        public Task<IReadOnlyList<IReadOnlyDictionary<string, Value>>> Query(string sql, IReadOnlyDictionary<string, Value> parameters) =>
-            Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, Value>>>(
-                string.IsNullOrWhiteSpace(sql) ? [] : [new Dictionary<string, Value> { ["id"] = 1 }]);
+        public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
+            Task.FromResult<IReadOnlyList<Row>>(
+                string.IsNullOrWhiteSpace(sql) ? [] : [new Row { ["id"] = 1 }]);
         public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => Task.CompletedTask;
         public Task Commit() => Task.CompletedTask;
         public Task Rollback() => Task.CompletedTask;

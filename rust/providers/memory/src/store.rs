@@ -1,16 +1,16 @@
-use datasources::Record;
+use datasources::Row;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
 #[derive(Clone)]
 pub enum MemoryData {
-    Rows(Vec<Record>),
-    Collections(HashMap<String, Vec<Record>>),
+    Rows(Vec<Row>),
+    Collections(HashMap<String, Vec<Row>>),
 }
 
 #[derive(Default)]
 pub struct MemoryStore {
-    collections: Mutex<HashMap<String, Vec<Record>>>,
+    collections: Mutex<HashMap<String, Vec<Row>>>,
 }
 
 impl MemoryStore {
@@ -22,16 +22,16 @@ impl MemoryStore {
         self.collections.lock().unwrap().contains_key(name)
     }
 
-    pub fn collection<R>(&self, name: &str, f: impl FnOnce(&mut Vec<Record>) -> R) -> R {
+    pub fn collection<R>(&self, name: &str, f: impl FnOnce(&mut Vec<Row>) -> R) -> R {
         let mut map = self.collections.lock().unwrap();
         f(map.entry(name.to_string()).or_default())
     }
 
-    pub fn snapshot(&self) -> HashMap<String, Vec<Record>> {
+    pub fn snapshot(&self) -> HashMap<String, Vec<Row>> {
         self.collections.lock().unwrap().clone()
     }
 
-    pub fn restore(&self, snapshot: HashMap<String, Vec<Record>>) {
+    pub fn restore(&self, snapshot: HashMap<String, Vec<Row>>) {
         *self.collections.lock().unwrap() = snapshot;
     }
 

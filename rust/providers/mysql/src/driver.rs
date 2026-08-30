@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use datasources::{DatasourceError, IsolationLevel, Record, Result, Value};
+use datasources::{DatasourceError, IsolationLevel, Row, Result, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -18,7 +18,7 @@ pub trait MysqlDriver: Send + Sync {
         sql: &str,
         params: &HashMap<String, Value>,
     ) -> Result<MysqlExecuteResult>;
-    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<Record>>;
+    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<Row>>;
     async fn begin(&self, isolation: IsolationLevel) -> Result<()>;
     async fn commit(&self) -> Result<()>;
     async fn rollback(&self) -> Result<()>;

@@ -30,4 +30,3 @@ export {
 export { PostgresTransaction } from "./transaction.ts";
 export type { Cells, Scalar } from "./scalar.ts";
 export { PostgresDatasource as default } from "./datasource.ts";
-export { postgresTypes, registerConverters } from "./converters/index.ts";

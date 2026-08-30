@@ -1,61 +1,40 @@
 use crate::converters::convert_schema::ConvertSchema;
-use crate::converters::field_converter::FieldConverter;
-use crate::converters::provider_types::ProviderTypes;
-use crate::converters::type_mapping::TypeMapping;
-use crate::datasource_error::DatasourceError;
+use crate::converters::row_converter::RowConverter;
+use crate::row::Row;
 use crate::result::Result;
-use std::collections::HashMap;
-use std::sync::Mutex;
 
-static REGISTRY: Mutex<Option<HashMap<String, ProviderTypes>>> = Mutex::new(None);
-
-fn registry() -> std::sync::MutexGuard<'static, Option<HashMap<String, ProviderTypes>>> {
-    REGISTRY.lock().expect("type converter registry")
+#[derive(Clone, Debug)]
+pub struct TypeConverter {
+    pub name: String,
+    pub fields: Vec<String>,
+    pub rows: RowConverter,
 }
 
-pub fn use_provider(source: impl Into<String>, types: ProviderTypes) {
-    let mut guard = registry();
-    guard.get_or_insert_with(HashMap::new).insert(source.into(), types);
-}
+impl TypeConverter {
+    pub fn of<T: ConvertSchema>(name: impl Into<String>) -> Self {
+        Self::new(
+            name,
+            T::schema().into_iter().map(|(field, _)| field.to_string()).collect(),
+        )
+    }
 
-pub fn reset() {
-    *registry() = None;
-}
+    pub fn new(name: impl Into<String>, fields: Vec<String>) -> Self {
+        Self {
+            name: name.into(),
+            fields,
+            rows: RowConverter,
+        }
+    }
 
-pub fn table(source: &str) -> Result<ProviderTypes> {
-    registry()
-        .as_ref()
-        .and_then(|map| map.get(source))
-        .cloned()
-        .ok_or_else(|| DatasourceError::message(format!("Provider \"{source}\" is not registered")))
-}
+    pub fn field_names(&self) -> Vec<String> {
+        self.fields.clone()
+    }
 
-pub fn mapping<T: ConvertSchema>(source: &str) -> Result<TypeMapping> {
-    mapping_with::<T>(source, HashMap::new())
-}
+    pub fn convert(&self, row: &Row) -> Result<Row> {
+        self.rows.convert(row)
+    }
 
-pub fn mapping_with<T: ConvertSchema>(
-    source: &str,
-    converters: HashMap<String, FieldConverter>,
-) -> Result<TypeMapping> {
-    let types = table(source)?;
-    let fields: HashMap<String, String> = T::schema()
-        .into_iter()
-        .map(|(name, sql)| (name.to_string(), sql.to_string()))
-        .collect();
-    Ok(TypeMapping::new(
-        type_name::<T>(),
-        source.to_string(),
-        fields,
-        types,
-        converters,
-    ))
-}
-
-fn type_name<T>() -> String {
-    std::any::type_name::<T>()
-        .rsplit("::")
-        .next()
-        .unwrap_or_default()
-        .into()
+    pub fn reverse_convert(&self, obj: &Row) -> Result<Row> {
+        self.rows.reverse_convert(obj)
+    }
 }

@@ -5,8 +5,6 @@ namespace Datasources.Tests;
 
 public class RepositoryTests
 {
-    public RepositoryTests() => TypeConverter.Reset();
-
     sealed class Item
     {
         public int Id { get; set; }
@@ -23,7 +21,7 @@ public class RepositoryTests
         public int id { get; set; }
     }
 
-    sealed class Row
+    sealed class UserRow
     {
         public int id { get; set; }
         public string name { get; set; } = "";
@@ -38,11 +36,9 @@ public class RepositoryTests
 
     static (Repository<T> Repo, MockCommand Command) Create<T>(
         IReadOnlyList<string>? id = null,
-        bool assignIdentityOnAdd = true,
-        IReadOnlyDictionary<string, IFieldConverter>? converters = null)
+        bool assignIdentityOnAdd = true)
         where T : new()
     {
-        TypeConverter.Use("memory", new ProviderTypes { Rename = false });
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
@@ -51,15 +47,14 @@ public class RepositoryTests
             Connection = connection,
             Ids = id ?? ["id"],
             AssignIdentityOnAdd = assignIdentityOnAdd,
-            Mapping = TypeConverter.Mapping<T>("memory", converters: converters, name: "users")
+            Mapping = new TypeConverter<T>("users")
         }), command);
     }
 
-    static (Repository<Row> Repo, MockCommand Command) Create(
+    static (Repository<UserRow> Repo, MockCommand Command) Create(
         IReadOnlyList<string>? id = null,
-        bool assignIdentityOnAdd = true,
-        IReadOnlyDictionary<string, IFieldConverter>? converters = null) =>
-        Create<Row>(id, assignIdentityOnAdd, converters);
+        bool assignIdentityOnAdd = true) =>
+        Create<UserRow>(id, assignIdentityOnAdd);
 
     [Fact]
     public async Task GetBuildsSelectAndMapsRows()
@@ -67,9 +62,9 @@ public class RepositoryTests
         var (repo, command) = Create();
         command.Reader = new MockReader(new object?[]
         {
-            new Dictionary<string, Value> { ["id"] = 1, ["name"] = "a" }
+            new Row { ["id"] = 1, ["name"] = "a" }
         });
-        var rows = new List<Row>();
+        var rows = new List<UserRow>();
         await foreach (var row in repo.Get())
             rows.Add(row);
         Assert.Single(rows);
@@ -78,7 +73,7 @@ public class RepositoryTests
         Assert.Same(command.Connection, repo.Connection);
         command.Reader = new MockReader(new object?[]
         {
-            new Dictionary<string, Value> { ["id"] = 1, ["name"] = "a" }
+            new Row { ["id"] = 1, ["name"] = "a" }
         });
         Assert.Equal(1, (await repo.GetSingle())!.id);
     }
@@ -111,7 +106,7 @@ public class RepositoryTests
     public async Task AddUpdateDeleteUseBuilders()
     {
         var (repo, command) = Create(assignIdentityOnAdd: false);
-        var obj = new Row { id = 1, name = "a" };
+        var obj = new UserRow { id = 1, name = "a" };
         await repo.Add(obj);
         Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
         await repo.Update(obj);
@@ -125,14 +120,10 @@ public class RepositoryTests
     [Fact]
     public async Task CompositeIdAndAssignIdentityOnAddAndOverrides()
     {
-        var twice = new FieldConverter(v => v, v => v is int n ? n * 2 : v is long l ? l * 2 : v);
-        var (repo, command) = Create<Composite>(
-            id: ["org_id", "user_id"],
-            assignIdentityOnAdd: true,
-            converters: new Dictionary<string, IFieldConverter> { ["name"] = twice });
+        var (repo, command) = Create<Composite>(id: ["org_id", "user_id"], assignIdentityOnAdd: true);
         await repo.Add(new Composite { org_id = 1, user_id = 2, name = 3 });
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
-        Assert.Equal(new Value.Int(6), command.ExecuteCalls[0].Parameters![0].Value);
+        Assert.Equal(new Value.Int(3), command.ExecuteCalls[0].Parameters![0].Value);
         await repo.Update(new Composite { org_id = 1, user_id = 2, name = 4 });
         Assert.Contains("org_id = $org_id AND user_id = $user_id", command.ExecuteCalls[1].Text);
     }
@@ -140,11 +131,6 @@ public class RepositoryTests
     [Fact]
     public async Task MissingIdAndBadRowAndCtor()
     {
-        Assert.Throws<DatasourceException>(() =>
-            new Repository<Dictionary<string, Value>>(new RepositoryBuilderOptions<Dictionary<string, Value>>
-            {
-                Connection = new MockConnection()
-            }));
         var (repo, command) = Create();
         command.Reader = new MockReader(new object?[] { "nope" });
         await Assert.ThrowsAsync<DatasourceException>(async () =>
@@ -153,20 +139,18 @@ public class RepositoryTests
         });
         var (cells, _) = Create<Dictionary<string, Value>>();
         await Assert.ThrowsAsync<DatasourceException>(() =>
-            cells.Update(new Dictionary<string, Value> { ["name"] = "a" }));
+            cells.Update(new Row { ["name"] = "a" }));
         await Assert.ThrowsAsync<DatasourceException>(() =>
-            cells.Delete(new Dictionary<string, Value> { ["name"] = "a" }));
+            cells.Delete(new Row { ["name"] = "a" }));
         await Assert.ThrowsAsync<DatasourceException>(() =>
             Create<IdOnly>().Repo.Update(new IdOnly { id = 1 }));
-        TypeConverter.Use("memory", FieldConverters.Sql());
-        var mapping = TypeConverter.Mapping<Item>("memory", name: "users");
         var connection2 = new MockConnection { Provider = "memory" };
         var command2 = new MockCommand(connection2);
         connection2.Command = command2;
         var typed = new Repository<Item>(new RepositoryBuilderOptions<Item>
         {
             Connection = connection2,
-            Mapping = mapping
+            Mapping = new TypeConverter<Item>("users")
         });
         await typed.Add(new Item { Id = 1, Name = "a" });
         Assert.Contains("INSERT INTO users", command2.ExecuteCalls[0].Text);
@@ -178,15 +162,12 @@ public class RepositoryTests
     [Fact]
     public void FromTypeBuildsOptionsFromConnection()
     {
-        TypeConverter.Use("mock", new ProviderTypes { Rename = false });
         var connection = new MockConnection();
         var fromId = CreateRepositoryBuilderOptions.FromType<Item>(typeof(Item), connection);
         Assert.Equal(new[] { "Id" }, fromId.Ids);
         Assert.Same(connection, fromId.Connection);
         Assert.Empty(CreateRepositoryBuilderOptions.FromType<Label>(connection).Ids);
-        TypeConverter.Use("mock", new ProviderTypes { Rename = false });
         Assert.Same(connection, new Repository<Item>(fromId).Connection);
-        TypeConverter.Use("mock", new ProviderTypes { Rename = false });
         Assert.Same(connection, new Repository<Item>(connection).Connection);
     }
 }
