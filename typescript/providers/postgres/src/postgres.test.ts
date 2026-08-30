@@ -213,11 +213,11 @@ describe("PostgresCommand and PostgresRepository", () => {
     const { command } = await setup();
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
       .toEqual({ result: 5, rowsAffected: 2 });
-    expect(await command.execute()).toEqual({ rowsAffected: 0 });
+    expect(await command.execute("")).toEqual({ rowsAffected: 0 });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 5 });
-    const empty = await command.executeReader();
+    const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
   });
 

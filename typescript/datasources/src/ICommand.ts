@@ -7,9 +7,6 @@ import type { Parameter } from "./Parameter.ts";
 export interface ICommand {
   readonly connection: IConnection;
   use(middleware: ICommandMiddleware): this;
-  executeReader(
-    text?: string | null,
-    parameters?: Parameter[],
-  ): Promise<IReader>;
-  execute(text?: string | null, parameters?: Parameter[]): Promise<IResponse>;
+  executeReader(text: string, parameters?: Parameter[]): Promise<IReader>;
+  execute(text: string, parameters?: Parameter[]): Promise<IResponse>;
 }

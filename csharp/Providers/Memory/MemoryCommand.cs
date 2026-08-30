@@ -9,7 +9,7 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
     public IConnection Connection { get; }
     private MemoryConnection Typed => (MemoryConnection)Connection;
 
-    public Task<IReader> ExecuteReader(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();
@@ -18,7 +18,7 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             return Task.FromResult(((IReader)new ArrayReader(rows.Cast<object?>().ToList()), rows));
         });
 
-    public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();

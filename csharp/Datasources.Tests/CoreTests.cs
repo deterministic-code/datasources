@@ -111,7 +111,7 @@ public class CoreTests
     public async Task Middleware()
     {
         var host = new RecordingCommand();
-        Assert.Equal("ok", await host.Run(null, null, (_, _) => Task.FromResult(("ok", EmptyRows()))));
+        Assert.Equal("ok", await host.Run("", null, (_, _) => Task.FromResult(("ok", EmptyRows()))));
 
         var seen = new List<string>();
         string? used = null;
@@ -237,7 +237,7 @@ public class CoreTests
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.Close());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.StartTransaction());
         var command = ds.CreateCommand();
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute());
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute(""));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.ExecuteReader("select", Array.Empty<Parameter>()));
         var provided = new StubConnection("text");
         Assert.Same(provided, ds.CreateCommand(provided).Connection);
@@ -291,9 +291,9 @@ public class CoreTests
 
         var command = new MockCommand(connection) { Response = new Response(1, 2), Reader = new MockReader(new object?[] { 1 }) };
         Assert.Equal(2, (await command.Execute("insert", new[] { new Parameter("id", 1) })).RowsAffected);
-        await command.ExecuteReader();
+        await command.ExecuteReader("");
         command.ExecuteError = new InvalidOperationException("exec");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => command.Execute());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => command.Execute(""));
         command.ExecuteReaderError = new InvalidOperationException("read");
         await Assert.ThrowsAsync<InvalidOperationException>(() => command.ExecuteReader("x"));
 
@@ -330,8 +330,8 @@ public class CoreTests
         Assert.Equal("mock", ds.Create().Provider);
         await ds.CreateConnection();
         var mockCommand = Assert.IsType<MockCommand>(ds.CreateCommand());
-        await mockCommand.Execute();
-        await mockCommand.ExecuteReader();
+        await mockCommand.Execute("");
+        await mockCommand.ExecuteReader("");
         var provided = new MockConnection();
         Assert.Same(provided, ds.CreateCommand(provided).Connection);
         Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>());
@@ -366,9 +366,9 @@ public class CoreTests
     private sealed class RecordingCommand : CommandMiddlewareHost, ICommand
     {
         public IConnection Connection { get; } = new MockConnection();
-        public Task<IReader> ExecuteReader(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+        public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
             throw new NotSupportedException();
-        public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+        public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
             throw new NotSupportedException();
     }
 

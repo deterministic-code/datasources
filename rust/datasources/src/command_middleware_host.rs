@@ -22,7 +22,7 @@ impl CommandMiddlewareHost {
 
     pub async fn run<T, F, Fut>(
         &self,
-        query: Option<&str>,
+        query: &str,
         params: Option<&[Parameter]>,
         fn_op: F,
     ) -> Result<T>
@@ -30,7 +30,7 @@ impl CommandMiddlewareHost {
         F: FnOnce(String, Option<Vec<Parameter>>) -> Fut,
         Fut: Future<Output = Result<(T, Vec<Row>)>>,
     {
-        let mut query = query.unwrap_or("").trim().to_string();
+        let mut query = query.trim().to_string();
         let mut params = params.map(ToOwned::to_owned);
         let middlewares = self.middlewares.lock().expect("middleware").clone();
         for middleware in &middlewares {

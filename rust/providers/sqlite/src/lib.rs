@@ -39,9 +39,9 @@ mod tests {
         conn.open().await.unwrap();
         conn.open().await.unwrap();
         let command = SqliteCommand::new(conn.clone());
-        command.execute(None, None).await.unwrap();
-        command.execute_reader(Some("SELECT 1"), None).await.unwrap();
-        command.execute_reader(None, None).await.unwrap();
+        command.execute("", None).await.unwrap();
+        command.execute_reader("SELECT 1", None).await.unwrap();
+        command.execute_reader("", None).await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
         assert_eq!(
             datasources::Transaction::isolation(&*txn),
@@ -93,8 +93,8 @@ mod tests {
         assert_eq!(ds.provider(), "sqlite");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
-        assert!(command.execute(Some("DELETE FROM items"), None).await.is_err());
-        assert!(command.execute_reader(Some("SELECT 1"), None).await.is_err());
+        assert!(command.execute("DELETE FROM items", None).await.is_err());
+        assert!(command.execute_reader("SELECT 1", None).await.is_err());
         ds.create_repository(None);
         let missing = SqliteDatasource::new(None, None, None);
         assert_eq!(Datasource::provider(&missing), "sqlite");
@@ -110,15 +110,15 @@ mod tests {
         let factory = SqliteDatasource::new(None, Some(driver.clone()), None);
         factory.create_connection().await.unwrap();
         let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
-        assert!(bound.execute(Some("DELETE FROM items"), None).await.is_err());
-        assert!(bound.execute_reader(Some("SELECT 1"), None).await.is_err());
+        assert!(bound.execute("DELETE FROM items", None).await.is_err());
+        assert!(bound.execute_reader("SELECT 1", None).await.is_err());
         factory.create_repository(Some(factory.create_connection().await.unwrap()));
         DatasourceFactory::create(&factory, None);
         assert_eq!(DatasourceFactory::provider(&factory), "sqlite");
 
         let closed = Arc::new(SqliteConnection::new(None, driver));
         assert!(SqliteCommand::new(closed)
-            .execute(Some("x"), None)
+            .execute("x", None)
             .await
             .is_err());
     }

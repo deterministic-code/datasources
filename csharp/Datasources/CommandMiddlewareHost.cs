@@ -13,11 +13,11 @@ public class CommandMiddlewareHost
     }
 
     public async Task<T> Run<T>(
-        string? query,
+        string query,
         IReadOnlyList<Parameter>? parameters,
         Func<string, IReadOnlyList<Parameter>?, Task<(T Value, IReadOnlyList<Row> Rows)>> action)
     {
-        var q = (query ?? "").Trim();
+        var q = query.Trim();
         var p = parameters;
         foreach (var middleware in _middlewares)
         {

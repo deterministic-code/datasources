@@ -109,11 +109,11 @@ public class MemoryTests
         await command.Execute("delete", [new Parameter("id", 5)]);
         await command.Execute("delete");
         await Assert.ThrowsAsync<DatasourceException>(() => command.Execute("nope"));
-        await Assert.ThrowsAsync<DatasourceException>(() => command.Execute());
-        await command.ExecuteReader(null, [new Parameter("name", "a")]);
+        await Assert.ThrowsAsync<DatasourceException>(() => command.Execute(""));
+        await command.ExecuteReader("", [new Parameter("name", "a")]);
 
         var closed = new MemoryConnection();
-        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).ExecuteReader());
+        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).ExecuteReader(""));
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).Execute("insert"));
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Add(new Row()));
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Update(new Row { ["id"] = 1 }));
@@ -127,11 +127,11 @@ public class MemoryTests
         var bound = Assert.IsType<MemoryCommand>(ds.CreateCommand(created));
         Assert.Same(created, bound.Connection);
         await bound.Execute("insert", [new Parameter("id", 99)]);
-        await bound.ExecuteReader();
+        await bound.ExecuteReader("");
         var implicitCommand = Assert.IsType<MemoryCommand>(ds.CreateCommand());
         await implicitCommand.Connection.Open();
         await implicitCommand.Execute("insert", [new Parameter("id", 1)]);
-        await implicitCommand.ExecuteReader();
+        await implicitCommand.ExecuteReader("");
         ds.CreateRepository<Dictionary<string, Value>>(created);
         ds.CreateRepository<Dictionary<string, Value>>();
         Assert.Equal("memory", Datasource.Create("memory").Provider);

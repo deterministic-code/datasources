@@ -14,14 +14,14 @@ export class CommandMiddlewareHost {
   }
 
   async run<T>(
-    query: string | null | undefined,
+    query: string,
     params: Parameter[] | undefined,
     fn: (
       query: string,
       params?: Parameter[],
     ) => Promise<{ value: T; rows: readonly Row[] }>,
   ): Promise<T> {
-    let q = (query ?? "").trim();
+    let q = query.trim();
     let p = params;
     for (const middleware of this.middlewares) {
       const rewritten = await middleware.beforeQuery(q, p);

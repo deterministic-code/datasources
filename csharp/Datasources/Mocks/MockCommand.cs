@@ -2,8 +2,8 @@ namespace Datasources;
 
 public sealed class MockCommand : CommandMiddlewareHost, ICommand
 {
-    public List<(string? Text, IReadOnlyList<Parameter>? Parameters)> ExecuteCalls { get; } = new();
-    public List<(string? Text, IReadOnlyList<Parameter>? Parameters)> ExecuteReaderCalls { get; } = new();
+    public List<(string Text, IReadOnlyList<Parameter>? Parameters)> ExecuteCalls { get; } = new();
+    public List<(string Text, IReadOnlyList<Parameter>? Parameters)> ExecuteReaderCalls { get; } = new();
     public Exception? ExecuteError { get; set; }
     public Exception? ExecuteReaderError { get; set; }
     public Response Response { get; set; } = new(Value.Null.Instance, 0);
@@ -12,7 +12,7 @@ public sealed class MockCommand : CommandMiddlewareHost, ICommand
 
     public MockCommand(IConnection connection) => Connection = connection;
 
-    public Task<IReader> ExecuteReader(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             ExecuteReaderCalls.Add((query, paramsList));
@@ -20,7 +20,7 @@ public sealed class MockCommand : CommandMiddlewareHost, ICommand
             return Task.FromResult((Reader, (IReadOnlyList<Row>)[]));
         });
 
-    public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             ExecuteCalls.Add((query, paramsList));

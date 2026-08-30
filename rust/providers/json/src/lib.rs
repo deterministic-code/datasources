@@ -79,12 +79,12 @@ mod tests {
             .unwrap();
         let command = JsonCommand::new(conn.clone());
         command
-            .execute(Some("insert"), Some(&[Parameter::new("id", 3_i64)]))
+            .execute("insert", Some(&[Parameter::new("id", 3_i64)]))
             .await
             .unwrap();
         command
             .execute(
-                Some("update"),
+                "update",
                 Some(&[
                     Parameter::new("id", 3_i64),
                     Parameter::new("name", "z"),
@@ -94,18 +94,18 @@ mod tests {
             .await
             .unwrap();
         command
-            .execute(Some("update"), Some(&[Parameter::new("id", 3_i64)]))
+            .execute("update", Some(&[Parameter::new("id", 3_i64)]))
             .await
             .unwrap();
         command
-            .execute(Some("delete"), Some(&[Parameter::new("id", 3_i64)]))
+            .execute("delete", Some(&[Parameter::new("id", 3_i64)]))
             .await
             .unwrap();
-        command.execute(Some("delete"), None).await.unwrap();
-        assert!(command.execute(Some("nope"), None).await.is_err());
-        assert!(command.execute(None, None).await.is_err());
+        command.execute("delete", None).await.unwrap();
+        assert!(command.execute("nope", None).await.is_err());
+        assert!(command.execute("", None).await.is_err());
         command
-            .execute_reader(Some("{\"id\":1}"), Some(&[Parameter::new("name", "a")]))
+            .execute_reader("{\"id\":1}", Some(&[Parameter::new("name", "a")]))
             .await
             .unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
@@ -141,11 +141,11 @@ mod tests {
         assert_eq!(ds.provider(), "json");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
-        assert!(command.execute(Some("insert"), None).await.is_err());
-        assert!(command.execute_reader(None, None).await.is_err());
+        assert!(command.execute("insert", None).await.is_err());
+        assert!(command.execute_reader("", None).await.is_err());
         let bound = ds.create_command(Some(ds.create_connection().await.unwrap()));
-        assert!(bound.execute(Some("insert"), None).await.is_err());
-        assert!(bound.execute_reader(None, None).await.is_err());
+        assert!(bound.execute("insert", None).await.is_err());
+        assert!(bound.execute_reader("", None).await.is_err());
         ds.create_repository(None);
         ds.create_repository(Some(ds.create_connection().await.unwrap()));
         let factory = JsonDatasource::new("", None, Arc::new(MemoryFileStore::new()), None);
@@ -186,11 +186,11 @@ mod tests {
             None,
         ));
         assert!(JsonCommand::new(closed.clone())
-            .execute_reader(None, None)
+            .execute_reader("", None)
             .await
             .is_err());
         assert!(JsonCommand::new(closed.clone())
-            .execute(Some("insert"), None)
+            .execute("insert", None)
             .await
             .is_err());
         assert!(JsonRepository::new(closed.clone())
@@ -218,7 +218,7 @@ mod tests {
         ));
         with_col.open().await.unwrap();
         JsonCommand::new(with_col)
-            .execute(Some("update"), None)
+            .execute("update", None)
             .await
             .unwrap();
 

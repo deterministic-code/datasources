@@ -15,7 +15,7 @@ export class JsonRepository<T = unknown> implements IRepository<T> {
 
   async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     const reader = await new JsonCommand(this.connection).executeReader(
-      query?.getText() ?? null,
+      query?.getText() ?? "",
     );
     if (await reader.next()) {
       return reader.current as T | undefined;
@@ -25,7 +25,7 @@ export class JsonRepository<T = unknown> implements IRepository<T> {
 
   get(query?: IQuery | IWhere): AsyncIterable<T> {
     const command = new JsonCommand(this.connection);
-    const text = query?.getText() ?? null;
+    const text = query?.getText() ?? "";
     return {
       [Symbol.asyncIterator]: async function* () {
         const reader = await command.executeReader(text);

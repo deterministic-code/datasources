@@ -22,9 +22,9 @@ public class SqliteTests
         await conn.Open();
         await conn.Open();
         var command = new SqliteCommand(conn);
-        await command.Execute();
+        await command.Execute("");
         await command.ExecuteReader("SELECT 1");
-        await command.ExecuteReader();
+        await command.ExecuteReader("");
 
         var txn = await conn.StartTransaction();
         Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
@@ -60,11 +60,11 @@ public class SqliteTests
         await ((SqliteConnection)created).Open();
         var bound = Assert.IsType<SqliteCommand>(ds.CreateCommand(created));
         Assert.Same(created, bound.Connection);
-        await bound.Execute();
+        await bound.Execute("");
         await bound.ExecuteReader("SELECT 1");
         var implicitCommand = Assert.IsType<SqliteCommand>(ds.CreateCommand());
         await implicitCommand.Connection.Open();
-        await implicitCommand.Execute();
+        await implicitCommand.Execute("");
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.Equal("people", ((Repository<Dictionary<string, Value>>)(object)repo2).Converters.Name);

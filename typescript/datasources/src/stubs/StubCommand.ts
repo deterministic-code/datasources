@@ -15,13 +15,13 @@ export class StubCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   executeReader = (
-    text?: string | null,
+    text: string,
     parameters?: Parameter[],
   ): Promise<IReader> =>
     this.run(text, parameters, async () => notImplemented(this.provider));
 
   execute = (
-    text?: string | null,
+    text: string,
     parameters?: Parameter[],
   ): Promise<IResponse> =>
     this.run(text, parameters, async () => notImplemented(this.provider));

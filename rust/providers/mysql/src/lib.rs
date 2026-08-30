@@ -102,9 +102,9 @@ mod tests {
         conn.open().await.unwrap();
         conn.open().await.unwrap();
         let command = MysqlCommand::new(conn.clone());
-        command.execute(None, None).await.unwrap();
-        command.execute_reader(Some("SELECT 1"), None).await.unwrap();
-        command.execute_reader(None, None).await.unwrap();
+        command.execute("", None).await.unwrap();
+        command.execute_reader("SELECT 1", None).await.unwrap();
+        command.execute_reader("", None).await.unwrap();
         let repo = MysqlRepository::new(conn.clone(), None);
         assert_eq!(repo.table, "items");
         assert_eq!(
@@ -137,8 +137,8 @@ mod tests {
         assert_eq!(ds.provider(), "mysql");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
-        assert!(command.execute(Some("DELETE FROM items"), None).await.is_err());
-        assert!(command.execute_reader(Some("SELECT 1"), None).await.is_err());
+        assert!(command.execute("DELETE FROM items", None).await.is_err());
+        assert!(command.execute_reader("SELECT 1", None).await.is_err());
         ds.create_repository(None);
         let missing = MysqlDatasource::new(None, None, None);
         assert_eq!(Datasource::provider(&missing), "mysql");
@@ -157,7 +157,7 @@ mod tests {
         assert_eq!(DatasourceFactory::provider(&factory), "mysql");
         let closed = Arc::new(MysqlConnection::new(None, driver));
         assert!(MysqlCommand::new(closed)
-            .execute(Some("x"), None)
+            .execute("x", None)
             .await
             .is_err());
     }

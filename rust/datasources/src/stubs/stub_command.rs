@@ -31,7 +31,7 @@ impl Command for StubCommand {
 
     async fn execute_reader(
         &self,
-        text: Option<&str>,
+        text: &str,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         self.host
@@ -43,7 +43,7 @@ impl Command for StubCommand {
 
     async fn execute(
         &self,
-        text: Option<&str>,
+        text: &str,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
         self.host
@@ -83,7 +83,7 @@ macro_rules! named_stub_command {
 
             async fn execute_reader(
                 &self,
-                text: Option<&str>,
+                text: &str,
                 parameters: Option<&[$crate::Parameter]>,
             ) -> $crate::Result<Box<dyn $crate::Reader>> {
                 self.inner.execute_reader(text, parameters).await
@@ -91,7 +91,7 @@ macro_rules! named_stub_command {
 
             async fn execute(
                 &self,
-                text: Option<&str>,
+                text: &str,
                 parameters: Option<&[$crate::Parameter]>,
             ) -> $crate::Result<$crate::Response> {
                 self.inner.execute(text, parameters).await

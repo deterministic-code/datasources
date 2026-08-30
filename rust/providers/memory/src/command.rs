@@ -29,7 +29,7 @@ impl Command for MemoryCommand {
 
     async fn execute_reader(
         &self,
-        text: Option<&str>,
+        text: &str,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         let connection = self.connection.clone();
@@ -58,7 +58,7 @@ impl Command for MemoryCommand {
 
     async fn execute(
         &self,
-        text: Option<&str>,
+        text: &str,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
         let connection = self.connection.clone();
