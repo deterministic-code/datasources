@@ -11,7 +11,7 @@ import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import type { TypeMapping } from "./converters/TypeMapping.ts";
-import { StringSourceDestinationMapper } from "./mappers/StringSourceDestinationMapper.ts";
+import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 
@@ -32,7 +32,7 @@ export type RepositoryStatements = {
 export type BuiltRepository<T extends Cells> = {
   commands: RepositoryCommands;
   converters: TypeMapping<T>;
-  mapping: StringSourceDestinationMapper;
+  mapping: NameSourceDestinationMapper;
   statements: RepositoryStatements;
   ids: string[];
   assignIdentityOnAdd: boolean;
@@ -63,7 +63,7 @@ export const parts = <T extends Cells>(
       converters: options.converters,
     });
   TypeConverter.table(options.connection.provider);
-  const mapping = new StringSourceDestinationMapper(options.connection.provider, "typescript");
+  const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
   return {
     commands: commandsOf(options.connection),
     converters,

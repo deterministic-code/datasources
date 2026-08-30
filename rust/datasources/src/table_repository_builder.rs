@@ -1,7 +1,7 @@
 use crate::builders::StatementBuilder;
 use crate::command::Command;
 use crate::converters::{mapping_with, table, Cells};
-use crate::mappers::StringSourceDestinationMapper;
+use crate::mappers::NameSourceDestinationMapper;
 use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::statement::Statement;
@@ -53,7 +53,7 @@ impl TableRepositoryBuilder {
     pub fn parts(options: TableRepositoryBuilderOptions) -> Result<(
         TableRepositoryCommands,
         crate::converters::TypeMapping,
-        StringSourceDestinationMapper,
+        NameSourceDestinationMapper,
         TableRepositoryStatements,
         Vec<String>,
         bool,
@@ -65,7 +65,7 @@ impl TableRepositoryBuilder {
         table(options.connection.provider())?;
         let mut columns = converters.field_names();
         columns.sort();
-        let mapping = StringSourceDestinationMapper::new(options.connection.provider(), "rust");
+        let mapping = NameSourceDestinationMapper::new(options.connection.provider(), "rust");
         let statements = TableRepositoryStatements {
             table: converters.name.clone(),
             columns,

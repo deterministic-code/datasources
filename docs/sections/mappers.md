@@ -6,9 +6,9 @@ Holds source/destination labels. Column names pass through as-is.
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `IMapper<T>` | `IMapper<T>` | `IMapper<T>` |
-| `To` | `to` | `to` |
-| `From` | `from` | `from` |
+| `IMapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
 
 ## ISourceDestinationMapper
 
@@ -18,19 +18,19 @@ Holds source/destination labels. Column names pass through as-is.
 | `Source` | `source` | `source` |
 | `Destination` | `destination` | `destination` |
 
-## StringMapper
+## NameMapper
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `StringMapper` | `StringMapper` | `StringMapper` |
-| `To` | `to` | `to` |
-| `From` | `from` | `from` |
+| `NameMapper` | `NameMapper` | `NameMapper` |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
 
-## StringSourceDestinationMapper
+## NameSourceDestinationMapper
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `StringSourceDestinationMapper` | `StringSourceDestinationMapper` | `StringSourceDestinationMapper` |
+| `NameSourceDestinationMapper` | `NameSourceDestinationMapper` | `NameSourceDestinationMapper` |
 | constructor | `new` | constructor |
 | `Source` | `source` | `source` |
 | `Destination` | `destination` | `destination` |

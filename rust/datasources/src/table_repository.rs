@@ -3,7 +3,7 @@ use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::converters::{mapping, ConvertSchema, TypeMapping};
 use crate::datasource_error::DatasourceError;
-use crate::mappers::StringSourceDestinationMapper;
+use crate::mappers::NameSourceDestinationMapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
 use crate::record::Record;
@@ -22,7 +22,7 @@ use std::sync::Arc;
 pub struct TableRepository {
     commands: TableRepositoryCommands,
     converters: TypeMapping,
-    pub mapping: StringSourceDestinationMapper,
+    pub mapping: NameSourceDestinationMapper,
     statements: TableRepositoryStatements,
     id: Vec<String>,
     ids: HashSet<String>,
@@ -43,7 +43,7 @@ impl TableRepository {
     pub fn from_parts(
         commands: TableRepositoryCommands,
         converters: TypeMapping,
-        mapping: StringSourceDestinationMapper,
+        mapping: NameSourceDestinationMapper,
         statements: TableRepositoryStatements,
         ids: Vec<String>,
         assign_identity_on_add: bool,
@@ -109,7 +109,7 @@ impl TableRepository {
         }
         reader
             .current()
-            .map(|row| self.converters.to(&map_keys(&row, |key| self.mapping.to(key))))
+            .map(|row| self.converters.to(&map_keys(&row, |key| self.mapping.map(key))))
             .transpose()
     }
 
@@ -122,7 +122,7 @@ impl TableRepository {
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                items.push(self.converters.to(&map_keys(&row, |key| self.mapping.to(key)))?);
+                items.push(self.converters.to(&map_keys(&row, |key| self.mapping.map(key)))?);
             }
         }
         Ok(items)
@@ -131,7 +131,7 @@ impl TableRepository {
     fn sql(&self, obj: &Record) -> Result<Record> {
         Ok(map_keys(
             &self.converters.from(obj)?,
-            |key| self.mapping.from(key),
+            |key| self.mapping.reverse_map(key),
         ))
     }
 }

@@ -6,7 +6,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
 {
     readonly RepositoryCommands commands;
     readonly TypeMapping<T> converters;
-    readonly StringSourceDestinationMapper mapping;
+    readonly NameSourceDestinationMapper mapping;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
     readonly bool assignIdentityOnAdd;
@@ -29,7 +29,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
 
     public IConnection Connection => commands.Get.Connection;
     public TypeMapping<T> Converters => converters;
-    public StringSourceDestinationMapper Mapping => mapping;
+    public NameSourceDestinationMapper Mapping => mapping;
 
     public Task<T?> GetSingle(IWhere where) => GetSingle(statements.Query(where));
 
@@ -48,7 +48,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         var reader = await commands.Get.ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
-            yield return converters.To(Map(AsRow(reader.Current), mapping.To));
+            yield return converters.To(Map(AsRow(reader.Current), mapping.Map));
     }
 
     public async Task<Response> Add(T obj)
@@ -86,7 +86,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
-    IReadOnlyDictionary<string, Value> Sql(T obj) => Map(converters.From(obj), mapping.From);
+    IReadOnlyDictionary<string, Value> Sql(T obj) => Map(converters.From(obj), mapping.ReverseMap);
 
     static IReadOnlyDictionary<string, Value> Map(
         IReadOnlyDictionary<string, Value> row, Func<string, string> name) =>

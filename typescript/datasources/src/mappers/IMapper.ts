@@ -1,4 +1,4 @@
-export interface IMapper<T> {
-  to(value: T): T;
-  from(value: T): T;
+export interface IMapper<TFrom, TTo> {
+  map(value: TFrom): TTo;
+  reverseMap(value: TTo): TFrom;
 }

@@ -1,6 +1,6 @@
-pub trait IMapper<T> {
-    fn to(&self, value: T) -> T;
-    fn from(&self, value: T) -> T;
+pub trait IMapper<TFrom, TTo> {
+    fn map(&self, value: TFrom) -> TTo;
+    fn reverse_map(&self, value: TTo) -> TFrom;
 }
 
 pub trait ISourceDestinationMapper {
@@ -9,35 +9,35 @@ pub trait ISourceDestinationMapper {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct StringMapper;
+pub struct NameMapper;
 
-impl StringMapper {
-    pub fn to(&self, name: &str) -> String {
+impl NameMapper {
+    pub fn map(&self, name: &str) -> String {
         name.to_string()
     }
 
-    pub fn from(&self, name: &str) -> String {
+    pub fn reverse_map(&self, name: &str) -> String {
         name.to_string()
     }
 }
 
-impl IMapper<String> for StringMapper {
-    fn to(&self, name: String) -> String {
+impl IMapper<String, String> for NameMapper {
+    fn map(&self, name: String) -> String {
         name
     }
 
-    fn from(&self, name: String) -> String {
+    fn reverse_map(&self, name: String) -> String {
         name
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StringSourceDestinationMapper {
+pub struct NameSourceDestinationMapper {
     pub source: String,
     pub destination: String,
 }
 
-impl StringSourceDestinationMapper {
+impl NameSourceDestinationMapper {
     pub fn new(source: impl Into<String>, destination: impl Into<String>) -> Self {
         Self {
             source: source.into(),
@@ -45,26 +45,26 @@ impl StringSourceDestinationMapper {
         }
     }
 
-    pub fn to(&self, name: &str) -> String {
+    pub fn map(&self, name: &str) -> String {
         name.to_string()
     }
 
-    pub fn from(&self, name: &str) -> String {
+    pub fn reverse_map(&self, name: &str) -> String {
         name.to_string()
     }
 }
 
-impl IMapper<String> for StringSourceDestinationMapper {
-    fn to(&self, name: String) -> String {
+impl IMapper<String, String> for NameSourceDestinationMapper {
+    fn map(&self, name: String) -> String {
         name
     }
 
-    fn from(&self, name: String) -> String {
+    fn reverse_map(&self, name: String) -> String {
         name
     }
 }
 
-impl ISourceDestinationMapper for StringSourceDestinationMapper {
+impl ISourceDestinationMapper for NameSourceDestinationMapper {
     fn source(&self) -> &str {
         &self.source
     }
@@ -79,21 +79,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn to_and_from_are_the_name() {
-        let mapper = StringMapper;
-        assert_eq!(mapper.to("user_accounts"), "user_accounts");
-        assert_eq!(mapper.from("UserAccounts"), "UserAccounts");
-        assert_eq!(IMapper::to(&mapper, "user_accounts".into()), "user_accounts");
-        assert_eq!(IMapper::from(&mapper, "UserAccounts".into()), "UserAccounts");
+    fn map_and_reverse_map_are_the_name() {
+        let mapper = NameMapper;
+        assert_eq!(mapper.map("user_accounts"), "user_accounts");
+        assert_eq!(mapper.reverse_map("UserAccounts"), "UserAccounts");
+        assert_eq!(IMapper::map(&mapper, "user_accounts".into()), "user_accounts");
+        assert_eq!(
+            IMapper::reverse_map(&mapper, "UserAccounts".into()),
+            "UserAccounts"
+        );
     }
 
     #[test]
     fn source_and_destination() {
-        let mapper = StringSourceDestinationMapper::new("sql", "rust");
+        let mapper = NameSourceDestinationMapper::new("sql", "rust");
         assert_eq!(mapper.source(), "sql");
         assert_eq!(mapper.destination(), "rust");
-        assert_eq!(mapper.to("user_accounts"), "user_accounts");
-        assert_eq!(mapper.from("UserAccounts"), "UserAccounts");
+        assert_eq!(mapper.map("user_accounts"), "user_accounts");
+        assert_eq!(mapper.reverse_map("UserAccounts"), "UserAccounts");
         assert_eq!(mapper, mapper);
         assert!(format!("{:?}", mapper).contains("sql"));
     }

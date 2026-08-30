@@ -58,8 +58,8 @@ export {
 } from "./converters/fieldConverters.ts";
 export type { IMapper } from "./mappers/IMapper.ts";
 export type { ISourceDestinationMapper } from "./mappers/ISourceDestinationMapper.ts";
-export { StringMapper } from "./mappers/StringMapper.ts";
-export { StringSourceDestinationMapper } from "./mappers/StringSourceDestinationMapper.ts";
+export { NameMapper } from "./mappers/NameMapper.ts";
+export { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 export { identityFilter } from "./identityFilter.ts";
 export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";
