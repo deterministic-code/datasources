@@ -18,7 +18,7 @@ mod tests {
     fn registers_identity_table() {
         reset();
         register();
-        let mapping = mapping::<Cells>("yaml", "rust").unwrap();
+        let mapping = mapping::<Cells>("yaml").unwrap();
         assert_eq!(mapping.source, "yaml");
         let mut row = Record::new();
         row.insert("col".into(), Value::from("x"));

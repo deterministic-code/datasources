@@ -54,7 +54,6 @@ export class SqliteDatasource implements IDatasource {
       connection: (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
       mapping: TypeConverter.mapping<Cells>({
         source: "sqlite",
-        destination: "typescript",
         name: this.options.table ?? "items",
       }),
     }) as IRepository<T>;

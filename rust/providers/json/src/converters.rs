@@ -18,7 +18,7 @@ mod tests {
     fn registers_identity_table() {
         reset();
         register();
-        let mapping = mapping::<Cells>("json", "rust").unwrap();
+        let mapping = mapping::<Cells>("json").unwrap();
         assert_eq!(mapping.source, "json");
         let mut row = Record::new();
         row.insert("col".into(), Value::from("x"));

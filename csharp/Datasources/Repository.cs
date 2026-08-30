@@ -6,7 +6,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
 {
     readonly RepositoryCommands commands;
     readonly TypeMapping<T> converters;
-    readonly DatasourceMapper mapping;
+    readonly Mapper mapping;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
     readonly bool assignIdentityOnAdd;
@@ -28,7 +28,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     }
 
     public IConnection Connection => commands.Get.Connection;
-    public DatasourceMapper Mapping => mapping;
+    public Mapper Mapping => mapping;
 
     public Task<T?> GetSingle(IWhere where) => GetSingle(statements.Query(where));
 
@@ -47,18 +47,18 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         var reader = await commands.Get.ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
-            yield return converters.To(AsRow(reader.Current));
+            yield return converters.To(Map(AsRow(reader.Current), mapping.To));
     }
 
     public async Task<Response> Add(T obj)
     {
-        var fields = Params(converters.From(obj), col => !assignIdentityOnAdd || !ids.Contains(col));
+        var fields = Params(Sql(obj), col => !assignIdentityOnAdd || !ids.Contains(col));
         return await commands.Add.Execute(statements.Insert(fields).GetText(), fields);
     }
 
     public async Task<Response> Update(T obj, IWhere? byWhere = null)
     {
-        var record = converters.From(obj);
+        var record = Sql(obj);
         var where = byWhere ?? IdWhere(record);
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
@@ -70,7 +70,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
 
     public async Task<Response> Delete(T obj, IWhere? byWhere = null)
     {
-        var where = byWhere ?? IdWhere(converters.From(obj));
+        var where = byWhere ?? IdWhere(Sql(obj));
         return await commands.Delete.Execute(statements.Delete(where).GetText(), where.Parameters);
     }
 
@@ -84,6 +84,12 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         IReadOnlyDictionary<string, Value> record, Func<string, bool> include) =>
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
+
+    IReadOnlyDictionary<string, Value> Sql(T obj) => Map(converters.From(obj), mapping.From);
+
+    static IReadOnlyDictionary<string, Value> Map(
+        IReadOnlyDictionary<string, Value> row, Func<string, string> name) =>
+        row.ToDictionary(pair => name(pair.Key), pair => pair.Value);
 
     static IReadOnlyDictionary<string, Value> AsRow(object? current) =>
         current is IReadOnlyDictionary<string, Value> row

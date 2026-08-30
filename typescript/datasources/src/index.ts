@@ -48,18 +48,15 @@ export { dateTimeFieldConverter } from "./converters/dateTimeFieldConverter.ts";
 export { decimalFieldConverter } from "./converters/decimalFieldConverter.ts";
 export { identityFieldConverter } from "./converters/identityFieldConverter.ts";
 export { uuidFieldConverter } from "./converters/uuidFieldConverter.ts";
+export { TypeConverter } from "./converters/TypeConverter.ts";
 export {
-  TypeConverter,
   canonicalConverters,
   identityProviderTypes,
   inferSqlType,
   normalizeSqlType,
   sqlProviderTypes,
-} from "./converters/TypeConverter.ts";
-export {
-  DatasourceMapper,
-  type Mapping,
-} from "./mappers/DatasourceMapper.ts";
+} from "./converters/fieldConverters.ts";
+export { Mapper } from "./mappers/Mapper.ts";
 export { identityFilter } from "./identityFilter.ts";
 export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";

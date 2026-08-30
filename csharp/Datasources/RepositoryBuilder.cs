@@ -25,7 +25,7 @@ public sealed class RepositoryStatements
 public sealed record BuiltRepository<T>(
     RepositoryCommands Commands,
     TypeMapping<T> Converters,
-    DatasourceMapper Mapping,
+    Mapper Mapping,
     RepositoryStatements Statements,
     IReadOnlyList<string> Ids,
     bool AssignIdentityOnAdd) where T : new();
@@ -37,9 +37,9 @@ public static class RepositoryBuilder<T> where T : new()
         var converters = options.Mapping ?? TypeConverter.Mapping<T>(
             options.Connection.Provider,
             converters: options.Converters);
-        var names = converters.Schema.Keys.ToDictionary(column => column, column => column);
-        var mapping = DatasourceMapper.Mapping(options.Connection.Provider, "csharp", names, converters.Name);
-        var columns = converters.Schema.Keys.OrderBy(key => key).ToArray();
+        TypeConverter.Table(options.Connection.Provider);
+        var columns = TypeConverter.Props(typeof(T)).Select(prop => prop.Name).OrderBy(name => name).ToArray();
+        var mapping = new Mapper(converters.Name, options.Connection.Provider, "csharp");
         return new(
             new RepositoryCommands(
                 options.Connection.CreateCommand(),

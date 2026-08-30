@@ -10,7 +10,6 @@ describe("json converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "json",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("json");
     for (const sqlType of Object.keys(jsonTypes.types)) {

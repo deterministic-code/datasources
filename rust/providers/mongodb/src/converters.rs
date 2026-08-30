@@ -18,7 +18,7 @@ mod tests {
     fn registers_identity_table() {
         reset();
         register();
-        let mapping = mapping::<Cells>("mongodb", "rust").unwrap();
+        let mapping = mapping::<Cells>("mongodb").unwrap();
         assert_eq!(mapping.source, "mongodb");
         let mut row = Record::new();
         row.insert("col".into(), Value::from("x"));

@@ -29,30 +29,32 @@ class PascalId {
   Id = 0;
 }
 
-const schema = { id: "INTEGER", name: "TEXT" };
+class Composite {
+  org_id = 0;
+  user_id = 0;
+  name = "";
+}
 
 const create = (
   overrides: Partial<ConstructorParameters<typeof Repository<Cells>>[0]> & {
-    schema?: Record<string, string>;
-    names?: Record<string, string>;
+    type?: new () => Cells;
   } = {},
 ) => {
   TypeConverter.use("memory", identityProviderTypes());
   const connection = new MockConnection(undefined, "memory");
   const command = new MockCommand(connection);
   connection.command = command;
-  const { schema: schemaOverride, converters, names, mapping, ...rest } = overrides;
+  const { converters, mapping, type, ...rest } = overrides;
   const repo = new Repository<Cells>({
     connection,
+    type: (type ?? Item) as new () => Cells,
     mapping:
       mapping ??
       TypeConverter.mapping({
         source: "memory",
-        destination: "typescript",
         name: "users",
-        schema: schemaOverride ?? schema,
+        type: (type ?? Item) as new () => Cells,
         converters,
-        names,
       }),
     ...rest,
   });
@@ -122,14 +124,13 @@ describe("Repository", () => {
     const { repo, command } = create({
       ids: ["org_id", "user_id"],
       assignIdentityOnAdd: true,
-      schema: { org_id: "INTEGER", user_id: "INTEGER", name: "TEXT" },
+      type: Composite,
       converters: { name: twice },
-      names: { name: "label" },
     });
-    await repo.add({ org_id: 1, user_id: 2, label: 3 });
+    await repo.add({ org_id: 1, user_id: 2, name: 3 });
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (name) VALUES ($name)");
     expect(command.executeCalls[0]?.parameters?.[0]?.value).toBe(6);
-    await repo.update({ org_id: 1, user_id: 2, label: 4 });
+    await repo.update({ org_id: 1, user_id: 2, name: 4 });
     expect(command.executeCalls[1]?.text).toContain(
       "org_id = $org_id AND user_id = $user_id",
     );
@@ -162,15 +163,15 @@ describe("Repository", () => {
       }
     }).rejects.toThrow("Reader current must be a row dictionary");
     await repo.update({ id: 1, name: "a" }, new Where("id = 1"));
-    TypeConverter.use("memory", sqlProviderTypes());
+    TypeConverter.use("mock", sqlProviderTypes());
     const mapping = TypeConverter.mapping<Item>({
-      source: "memory",
-      destination: "typescript",
+      source: "mock",
       type: Item,
       name: "users",
     });
     const typed = new Repository<Item>({
       connection,
+      type: Item,
       mapping,
     });
     await typed.add(Object.assign(new Item(), { id: 1, name: "a" }));

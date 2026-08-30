@@ -6,7 +6,9 @@ import {
   Repository,
   TypeConverter,
   WhereBuilder,
+  type Cell,
   type Cells,
+  type Constructable,
   type IConnection,
   type Scalar,
 } from "@datasources/core";
@@ -24,29 +26,33 @@ import {
   type SqliteColumn,
 } from "./providers/sqlite/src/sqliteStatementBuilder.ts";
 
-const sqlTypes: Record<CanonicalType, string> = {
-  int: "INTEGER",
-  uuid: "UUID",
-  string: "TEXT",
-  bool: "BOOLEAN",
-  decimal: "NUMERIC",
-  float: "REAL",
-  datetime: "DATETIME",
-  binary: "BLOB",
-};
-
 export const repositorySpecFiles = (root = repoRoot()): string[] =>
   readdirSync(join(root, "specs", "repositories"))
     .filter((name) => name.endsWith(".yaml"))
     .map((name) => join(root, "specs", "repositories", name));
 
-const schemaOf = (type: RepositoryTypeSpec): Record<string, string> =>
-  Object.fromEntries(
-    Object.entries(type.fields).map(([name, canonical]) => [name, sqlTypes[canonical]]),
-  );
+const defaultOf = (canonical: CanonicalType): Cell =>
+  ({
+    int: 0,
+    uuid: "00000000-0000-0000-0000-000000000000",
+    string: "",
+    bool: false,
+    decimal: "0",
+    float: 0.5,
+    datetime: new Date(0),
+    binary: new Uint8Array(),
+  })[canonical];
 
-const namesOf = (type: RepositoryTypeSpec): Record<string, string> =>
-  Object.fromEntries(Object.keys(type.fields).map((name) => [name, name]));
+const typeOf = (type: RepositoryTypeSpec): Constructable<Cells> => {
+  const defaults: Cells = Object.fromEntries(
+    Object.entries(type.fields).map(([name, canonical]) => [name, defaultOf(canonical)]),
+  );
+  return class {
+    constructor() {
+      Object.assign(this, defaults);
+    }
+  };
+};
 
 const columnsOf = (type: RepositoryTypeSpec): SqliteColumn[] =>
   Object.entries(type.fields).map(([name, canonical]) => ({
@@ -83,12 +89,11 @@ export const runRepositorySpec = async (
     connection,
     ids: spec.type.ids,
     assignIdentityOnAdd: spec.type.assignIdentityOnAdd,
+    type: typeOf(spec.type),
     mapping: TypeConverter.mapping<Cells>({
       source: connection.provider,
-      destination: "typescript",
       name: spec.type.table,
-      schema: schemaOf(spec.type),
-      names: namesOf(spec.type),
+      type: typeOf(spec.type),
     }),
   });
   const logs: string[] = [];

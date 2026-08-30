@@ -35,7 +35,7 @@ mod tests {
     fn registers_every_mapped_type() {
         reset();
         register();
-        let mapping = mapping::<Cells>("sqlite", "rust").unwrap();
+        let mapping = mapping::<Cells>("sqlite").unwrap();
         assert_eq!(mapping.source, "sqlite");
         for sql_type in types().types.keys() {
             let mut row = Record::new();

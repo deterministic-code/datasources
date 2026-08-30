@@ -10,7 +10,6 @@ describe("oracle converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "oracle",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("oracle");
     for (const sqlType of Object.keys(oracleTypes.types)) {

@@ -3,7 +3,7 @@ use super::connection::SqliteConnection;
 use super::converters::register;
 use super::rusqlite_driver::RusqliteDriver;
 use super::statement_builder::{SqliteColumn, SqliteStatementBuilder};
-use datasources::converters::{mapping_with, Cells};
+use datasources::converters::{mapping, ConvertSchema};
 use datasources::{
     Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Parameter,
     ReadonlyRepository, Repository, Statement, StatementBuilder, TableRepository,
@@ -247,19 +247,7 @@ async fn run(path: &Path) {
         )
         .await
         .unwrap();
-    let schema: HashMap<String, String> = spec
-        .type_spec
-        .fields
-        .iter()
-        .map(|(name, canonical)| (name.clone(), sql_type(canonical).to_string()))
-        .collect();
-    let names: HashMap<String, String> = spec
-        .type_spec
-        .fields
-        .keys()
-        .map(|name| (name.clone(), name.clone()))
-        .collect();
-    let mut mapping = mapping_with::<Cells>("sqlite", "rust", schema, HashMap::new(), names).unwrap();
+    let mut mapping = mapping::<SpecUser>("sqlite").unwrap();
     mapping.name = spec.type_spec.table.clone();
     let options = TableRepositoryBuilderOptions {
         connection: conn.clone(),
@@ -334,6 +322,23 @@ async fn run(path: &Path) {
             expected.join("\n"),
             actual.join("\n")
         );
+    }
+}
+
+struct SpecUser;
+
+impl ConvertSchema for SpecUser {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("id", "INTEGER"),
+            ("uuid", "UUID"),
+            ("username", "TEXT"),
+            ("is_enabled", "BOOLEAN"),
+            ("balance", "NUMERIC"),
+            ("location", "REAL"),
+            ("created", "DATETIME"),
+            ("version", "BLOB"),
+        ]
     }
 }
 

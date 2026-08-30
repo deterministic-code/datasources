@@ -10,7 +10,6 @@ describe("memory converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "memory",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("memory");
     for (const sqlType of Object.keys(memoryTypes.types)) {

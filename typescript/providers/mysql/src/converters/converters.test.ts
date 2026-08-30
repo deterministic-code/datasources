@@ -10,7 +10,6 @@ describe("mysql converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "mysql",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("mysql");
     for (const sqlType of Object.keys(mysqlTypes.types)) {

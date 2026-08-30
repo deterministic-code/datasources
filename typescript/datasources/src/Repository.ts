@@ -10,7 +10,7 @@ import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeMapping } from "./converters/TypeMapping.ts";
-import type { Mapping } from "./mappers/DatasourceMapper.ts";
+import type { Mapper } from "./mappers/Mapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 import {
@@ -19,6 +19,9 @@ import {
   type RepositoryCommands,
   type RepositoryStatements,
 } from "./RepositoryBuilder.ts";
+
+const mapKeys = (row: Cells, name: (key: string) => string): Cells =>
+  Object.fromEntries(Object.entries(row).map(([key, value]) => [name(key), value]));
 
 const asRow = (current: object | null | undefined): Cells =>
   current && typeof current === "object" && !Array.isArray(current)
@@ -41,7 +44,7 @@ const isBuilt = <T extends Cells>(
 export class Repository<T extends Cells> implements IRepository<T> {
   readonly commands: RepositoryCommands;
   readonly converters: TypeMapping<T>;
-  readonly mapping: Mapping;
+  readonly mapping: Mapper;
   readonly statements: RepositoryStatements;
   private readonly ids: Set<string>;
   private readonly assignIdentityOnAdd: boolean;
@@ -83,19 +86,20 @@ export class Repository<T extends Cells> implements IRepository<T> {
       statement.getText(),
       statement.where?.parameters ?? statement.parameters,
     );
-    while (await reader.next()) yield this.converters.to(asRow(reader.current as object));
+    while (await reader.next())
+      yield this.converters.to(mapKeys(asRow(reader.current as object), this.mapping.to));
   }
 
   add = async (obj: T): Promise<IResponse> => {
     const fields = fieldsOf(
-      this.converters.from(obj),
+      this.sql(obj),
       (col) => !this.assignIdentityOnAdd || !this.ids.has(col),
     );
     return this.commands.add.execute(this.statements.insert(fields).getText(), fields);
   };
 
   update = async (obj: T, byWhere?: IWhere): Promise<IResponse> => {
-    const record = this.converters.from(obj);
+    const record = this.sql(obj);
     const where = byWhere ?? this.idWhere(record);
     const fields = fieldsOf(record, (col) => !this.ids.has(col));
     if (fields.length === 0)
@@ -107,12 +111,14 @@ export class Repository<T extends Cells> implements IRepository<T> {
   };
 
   delete = async (obj: T, byWhere?: IWhere): Promise<IResponse> => {
-    const where = byWhere ?? this.idWhere(this.converters.from(obj));
+    const where = byWhere ?? this.idWhere(this.sql(obj));
     return this.commands.delete.execute(
       this.statements.delete(where).getText(),
       where.parameters,
     );
   };
+
+  private sql = (obj: T): Cells => mapKeys(this.converters.from(obj), this.mapping.from);
 
   private readQuery = (query?: IQuery | IWhere): IQuery =>
     !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);

@@ -10,7 +10,6 @@ describe("text converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "text",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("text");
     for (const sqlType of Object.keys(textTypes.types)) {

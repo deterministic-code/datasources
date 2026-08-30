@@ -10,7 +10,6 @@ describe("dynamodb converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "dynamodb",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("dynamodb");
     for (const sqlType of Object.keys(dynamodbTypes.types)) {

@@ -41,132 +41,91 @@ public class ConverterTests
     [Fact]
     public void InfersUserSchemaAndRoundTrips()
     {
-        TypeConverter.Use("sqlite", TypeConverter.SqlProviderTypes());
+        TypeConverter.Use("sqlite", FieldConverters.Sql());
         var mapping = TypeConverter.Mapping<User>("sqlite");
         Assert.Equal("sqlite", mapping.Source);
-        Assert.Equal("csharp", mapping.Destination);
-        Assert.Equal("INTEGER", mapping.Schema["id"]);
-        Assert.Equal("TEXT", mapping.Schema["username"]);
-        Assert.Equal("BOOLEAN", mapping.Schema["is_enabled"]);
-        Assert.Equal("DATETIME", mapping.Schema["created"]);
         var user = mapping.To(new Dictionary<string, Value>
         {
-            ["id"] = 7,
-            ["username"] = "ada",
-            ["is_enabled"] = 1,
-            ["created"] = "2020-01-02T03:04:05.000Z"
+            ["Id"] = 7,
+            ["Username"] = "ada",
+            ["IsEnabled"] = 1,
+            ["Created"] = "2020-01-02T03:04:05.000Z"
         });
         Assert.Equal(7, user.Id);
         Assert.Equal("ada", user.Username);
         Assert.True(user.IsEnabled);
         Assert.Equal(2020, user.Created.Year);
         var row = mapping.From(user);
-        Assert.Equal(new Value.Int(7), row["id"]);
-        Assert.Equal(new Value.Text("ada"), row["username"]);
-        Assert.Equal(new Value.Int(1), row["is_enabled"]);
-        Assert.Contains("2020-01-02", (string)row["created"].ToObject()!);
+        Assert.Equal(new Value.Int(7), row["Id"]);
+        Assert.Equal(new Value.Text("ada"), row["Username"]);
+        Assert.Equal(new Value.Int(1), row["IsEnabled"]);
+        Assert.Contains("2020-01-02", (string)row["Created"].ToObject()!);
     }
 
     [Fact]
     public void MergesSchemaAndConverters()
     {
-        TypeConverter.Use("sqlite", TypeConverter.SqlProviderTypes());
+        TypeConverter.Use("sqlite", FieldConverters.Sql());
         var twice = new FieldConverter(
             v => v is int n ? n * 2 : v is long l ? l * 2 : v,
             v => v is int n ? n / 2 : v is long l ? l / 2 : v);
-        var mapping = TypeConverter.Mapping<User>("sqlite", schema: new Dictionary<string, string> { ["username"] = "VARCHAR(32)" }, converters: new Dictionary<string, IFieldConverter> { ["id"] = twice }, names: new Dictionary<string, string> { ["id"] = "Id", ["username"] = "Username" });
-        Assert.Equal("VARCHAR(32)", mapping.Schema["username"]);
-        Assert.Equal(6, mapping.To(new Dictionary<string, Value> { ["id"] = 3, ["username"] = "x" }).Id);
-        Assert.Equal(new Value.Int(3), mapping.From(new User { Id = 6, Username = "x" })["id"]);
+        var mapping = TypeConverter.Mapping<User>("sqlite", converters: new Dictionary<string, IFieldConverter> { ["Id"] = twice });
+        Assert.Equal(6, mapping.To(new Dictionary<string, Value> { ["Id"] = 3, ["Username"] = "x" }).Id);
+        Assert.Equal(new Value.Int(3), mapping.From(new User { Id = 6, Username = "x" })["Id"]);
     }
 
     [Fact]
     public void MapsDictionaryWithoutInferredSchema()
     {
-        TypeConverter.Use("sqlite", TypeConverter.SqlProviderTypes());
+        TypeConverter.Use("sqlite", FieldConverters.Sql());
         var mapping = TypeConverter.Mapping<Dictionary<string, Value>>("sqlite");
-        Assert.Empty(mapping.Schema);
         var dest = mapping.To(new Dictionary<string, Value> { ["display_name"] = "a" });
-        Assert.Equal(new Value.Text("a"), dest["DisplayName"]);
-        Assert.Equal(new Value.Text("a"), mapping.From(new Dictionary<string, Value> { ["DisplayName"] = "a" })["display_name"]);
-        var schemaOnly = TypeConverter.Mapping<Dictionary<string, Value>>(
-            "sqlite",
-            schema: new Dictionary<string, string> { ["display_name"] = "TEXT", ["___"] = "TEXT", [""] = "TEXT" });
-        var converted = schemaOnly.To(new Dictionary<string, Value> { ["display_name"] = "a", ["___"] = "x", [""] = "z" });
-        Assert.Equal(new Value.Text("a"), converted["displayName"]);
-        TypeConverter.Use("json", TypeConverter.IdentityProviderTypes());
-        var json = TypeConverter.Mapping<Dictionary<string, Value>>(
-            "json",
-            schema: new Dictionary<string, string> { ["keep"] = "TEXT" });
-        Assert.Equal(new Value.Text("a"), json.To(new Dictionary<string, Value> { ["keep"] = "a" })["keep"]);
+        Assert.Equal(new Value.Text("a"), dest["display_name"]);
+        Assert.Equal(new Value.Text("a"), mapping.From(new Dictionary<string, Value> { ["display_name"] = "a" })["display_name"]);
     }
 
     [Fact]
     public void IdentityProviderKeepsKeys()
     {
-        TypeConverter.Use("json", TypeConverter.IdentityProviderTypes());
+        TypeConverter.Use("json", new ProviderTypes { Rename = false });
         var mapping = TypeConverter.Mapping<User>("json");
-        Assert.Equal("BOOLEAN", mapping.Schema["IsEnabled"]);
         Assert.True(mapping.To(new Dictionary<string, Value> { ["IsEnabled"] = true }).IsEnabled);
     }
 
     [Fact]
-    public void RejectsWrongDestinationAndMissingProvider()
+    public void RejectsMissingProvider()
     {
-        TypeConverter.Use("sqlite", TypeConverter.SqlProviderTypes());
-        Assert.Throws<DatasourceException>(() => TypeConverter.Mapping<User>("sqlite", "typescript"));
-        TypeConverter.Reset();
         Assert.Throws<DatasourceException>(() => TypeConverter.Mapping<User>("sqlite"));
     }
 
     [Fact]
     public void InfersAllClrTypesAndSkipsIndexers()
     {
-        TypeConverter.Use("sqlite", TypeConverter.SqlProviderTypes());
+        TypeConverter.Use("sqlite", FieldConverters.Sql());
         var mapping = TypeConverter.Mapping<Mixed>("sqlite");
-        Assert.Equal("TEXT", mapping.Schema["label"]);
-        Assert.Equal("INTEGER", mapping.Schema["count"]);
-        Assert.Equal("REAL", mapping.Schema["ratio"]);
-        Assert.Equal("NUMERIC", mapping.Schema["amount"]);
-        Assert.Equal("BLOB", mapping.Schema["data"]);
-        Assert.Equal("UUID", mapping.Schema["key"]);
-        Assert.Equal("INTEGER", mapping.Schema["optional"]);
-        Assert.Equal("TEXT", mapping.Schema["extra"]);
-        Assert.Equal("INTEGER", mapping.Schema["tiny"]);
-        Assert.Equal("REAL", mapping.Schema["real"]);
-        Assert.Equal("TEXT", mapping.Schema["xml_parser"]);
-        Assert.Equal("INTEGER", mapping.Schema["user2_name"]);
-        Assert.Equal("TEXT", mapping.Schema["http"]);
-        Assert.False(mapping.Schema.ContainsKey("item"));
-        Assert.Equal("INTEGER", TypeConverter.InferSqlType(typeof(sbyte)));
-        Assert.Equal("INTEGER", TypeConverter.InferSqlType(typeof(ushort)));
-        Assert.Equal("INTEGER", TypeConverter.InferSqlType(typeof(uint)));
-        Assert.Equal("INTEGER", TypeConverter.InferSqlType(typeof(ulong)));
-        Assert.Equal("TEXT", TypeConverter.InferSqlType(typeof(Uri)));
+        var dest = mapping.To(new Dictionary<string, Value> { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });
+        Assert.Equal("x", dest.Label);
+        Assert.Equal(1, dest.Count);
     }
 
     [Fact]
     public void SkipsMissingAndWriteOnlyProperties()
     {
-        TypeConverter.Use("sqlite", TypeConverter.SqlProviderTypes());
-        var mapping = TypeConverter.Mapping<WriteOnly>("sqlite", names: new Dictionary<string, string> { ["id"] = "Id" });
-        var obj = mapping.To(new Dictionary<string, Value> { ["id"] = 1, ["missing"] = 2, ["secret"] = 3 });
+        TypeConverter.Use("sqlite", FieldConverters.Sql());
+        var mapping = TypeConverter.Mapping<WriteOnly>("sqlite");
+        var obj = mapping.To(new Dictionary<string, Value> { ["Id"] = 1, ["missing"] = 2, ["Secret"] = 3 });
         Assert.Equal(1, obj.Id);
     }
 
     [Fact]
     public void BuildsAliasTables()
     {
-        var table = TypeConverter.SqlProviderTypes(new Dictionary<string, string> { ["VARCHAR"] = "TEXT", ["NOPE"] = "MISSING" });
+        var table = FieldConverters.Sql("integer", new Dictionary<string, string> { ["VARCHAR"] = "TEXT", ["NOPE"] = "MISSING" });
         Assert.True(table.Rename);
         Assert.Same(table.Types["TEXT"], table.Types["VARCHAR"]);
         Assert.Same(FieldConverters.Identity, table.Types["NOPE"]);
-        Assert.False(TypeConverter.SqlProviderTypes(rename: false).Rename);
-        Assert.True((bool)TypeConverter.CanonicalConverters("native")["BOOLEAN"].From(true).ToObject()!);
-        Assert.Equal("VARCHAR", TypeConverter.Normalize(" varchar(32) "));
-        Assert.Equal("TINYINT(1)", TypeConverter.Normalize("TINYINT(1)"));
-        Assert.Equal("CHAR(36)", TypeConverter.Normalize("CHAR(36)"));
-        Assert.Equal("TEXT", TypeConverter.Normalize("TEXT"));
+        Assert.False(new ProviderTypes { Rename = false }.Rename);
+        Assert.True((bool)FieldConverters.Sql("native").Types["BOOLEAN"].From(true).ToObject()!);
     }
 
     [Fact]

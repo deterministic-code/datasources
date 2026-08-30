@@ -10,7 +10,6 @@ describe("mongodb converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "mongodb",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("mongodb");
     for (const sqlType of Object.keys(mongodbTypes.types)) {

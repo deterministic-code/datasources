@@ -652,13 +652,8 @@ fn statements_and_builders() {
     assert_eq!(TextStoredProcedureStatement::new("x").get_text(), "x");
 }
 
-fn users_mapping(
-    schema: HashMap<String, String>,
-    converters: HashMap<String, FieldConverter>,
-    names: HashMap<String, String>,
-) -> TypeMapping {
-    let mut mapping =
-        type_mapping_with::<Cells>("memory", "rust", schema, converters, names).unwrap();
+fn users_mapping(converters: HashMap<String, FieldConverter>) -> TypeMapping {
+    let mut mapping = type_mapping_with::<Item>("memory", converters).unwrap();
     mapping.name = "users".into();
     mapping
 }
@@ -672,12 +667,8 @@ async fn table_repository() {
         ("id", Value::Int(1)),
         ("name", Value::from("a")),
     ]));
-    let schema = HashMap::from([
-        ("id".into(), "INTEGER".into()),
-        ("name".into(), "TEXT".into()),
-    ]);
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
-    options.mapping = Some(users_mapping(schema, HashMap::new(), HashMap::new()));
+    options.mapping = Some(users_mapping(HashMap::new()));
     let repo = TableRepository::new(options).unwrap();
     let rows = repo.get(None).await.unwrap();
     assert_eq!(rows.len(), 1);
@@ -717,14 +708,7 @@ async fn table_repository() {
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     include_id.assign_identity_on_add = false;
-    include_id.mapping = Some(users_mapping(
-        HashMap::from([
-            ("id".into(), "INTEGER".into()),
-            ("name".into(), "TEXT".into()),
-        ]),
-        HashMap::new(),
-        HashMap::new(),
-    ));
+    include_id.mapping = Some(users_mapping(HashMap::new()));
     let repo = TableRepository::new(include_id).unwrap();
     repo.add(&obj).await.unwrap();
     assert_eq!(
@@ -753,20 +737,20 @@ async fn table_repository() {
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(generated.clone(), "memory"));
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.assign_identity_on_add = true;
-    options.mapping = Some(users_mapping(
-        HashMap::from([
-            ("org_id".into(), "INTEGER".into()),
-            ("user_id".into(), "INTEGER".into()),
-            ("name".into(), "TEXT".into()),
-        ]),
-        HashMap::from([("name".into(), twice)]),
-        HashMap::from([("name".into(), "label".into())]),
-    ));
+    options.mapping = Some({
+        let mut mapping = type_mapping_with::<Composite>(
+            "memory",
+            HashMap::from([("name".into(), twice)]),
+        )
+        .unwrap();
+        mapping.name = "users".into();
+        mapping
+    });
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[
         ("org_id", Value::Int(1)),
         ("user_id", Value::Int(2)),
-        ("label", Value::Int(3)),
+        ("name", Value::Int(3)),
     ]))
     .await
     .unwrap();
@@ -782,7 +766,7 @@ async fn table_repository() {
         &record(&[
             ("org_id", Value::Int(1)),
             ("user_id", Value::Int(2)),
-            ("label", Value::Int(4)),
+            ("name", Value::Int(4)),
         ]),
         None,
     )
@@ -796,14 +780,7 @@ async fn table_repository() {
     assert!(TableRepository::new(TableRepositoryBuilderOptions::with_factory(MockConnection::with_command(command.clone())))
         .is_err());
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
-    options.mapping = Some(users_mapping(
-        HashMap::from([
-            ("id".into(), "INTEGER".into()),
-            ("name".into(), "TEXT".into()),
-        ]),
-        HashMap::new(),
-        HashMap::new(),
-    ));
+    options.mapping = Some(users_mapping(HashMap::new()));
     let repo = TableRepository::new(options).unwrap();
     assert!(repo
         .update(&record(&[("name", Value::from("a"))]), None)
@@ -817,9 +794,9 @@ async fn table_repository() {
         .update(&record(&[("id", Value::Int(1))]), None)
         .await
         .is_err());
-    let mut mapping = type_mapping::<Cells>("memory", "rust").unwrap();
+    let mut mapping = type_mapping::<Cells>("memory").unwrap();
     mapping.name = "users".into();
-    let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command(command.clone()));
+    let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
     options.mapping = Some(mapping);
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[("id", Value::Int(1))])).await.unwrap();
@@ -843,6 +820,18 @@ struct Item;
 impl ConvertSchema for Item {
     fn schema() -> Vec<(&'static str, &'static str)> {
         vec![("id", "INTEGER"), ("name", "TEXT")]
+    }
+}
+
+struct Composite;
+
+impl ConvertSchema for Composite {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("org_id", "INTEGER"),
+            ("user_id", "INTEGER"),
+            ("name", "TEXT"),
+        ]
     }
 }
 

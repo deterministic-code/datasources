@@ -10,7 +10,6 @@ describe("yaml converters", () => {
     registerConverters();
     const mapping = TypeConverter.mapping({
       source: "yaml",
-      destination: "typescript",
     });
     expect(mapping.source).toBe("yaml");
     for (const sqlType of Object.keys(yamlTypes.types)) {
