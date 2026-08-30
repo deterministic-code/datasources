@@ -166,7 +166,7 @@ impl CommandMiddleware for RecordingMiddleware {
 async fn middleware_paths() {
     let host = CommandMiddlewareHost::new();
     assert_eq!(
-        host.run(None, None, |_q, _p| async { Ok((1, vec![])) })
+        host.run("", None, |_q, _p| async { Ok((1, vec![])) })
             .await
             .unwrap(),
         1
@@ -193,7 +193,7 @@ async fn middleware_paths() {
     }));
     let used = Arc::new(Mutex::new(String::new()));
     let used_clone = used.clone();
-    host.run(Some("SELECT 1"), None, move |query, _p| {
+    host.run("SELECT 1", None, move |query, _p| {
         let used_clone = used_clone.clone();
         async move {
             *used_clone.lock().unwrap() = query;
@@ -221,7 +221,7 @@ async fn middleware_paths() {
         },
     }));
     assert!(blocked
-        .run(Some("select"), None, {
+        .run("select", None, {
             let ran = ran.clone();
             move |_q, _p| {
                 let ran = ran.clone();
@@ -248,7 +248,7 @@ async fn middleware_paths() {
         },
     }));
     assert!(failed
-        .run(Some("select"), None, |_q, _p| async {
+        .run("select", None, |_q, _p| async {
             Err::<((), Vec<Row>), _>(DatasourceError::message("fail-op"))
         })
         .await
@@ -294,7 +294,7 @@ async fn console_lines() {
     let host = CommandMiddlewareHost::new();
     host.use_middleware(Arc::new(middleware));
     host.run(
-        Some(r#"SELECT * FROM "widget" ORDER BY "id""#),
+        r#"SELECT * FROM "widget" ORDER BY "id""#,
         None,
         |_q, _p| async { Ok(((), vec![])) },
     )
@@ -320,7 +320,7 @@ async fn console_trims_query() {
     );
     let host = CommandMiddlewareHost::new();
     host.use_middleware(Arc::new(middleware));
-    host.run(Some("SELECT 1\n"), None, |_q, _p| async { Ok(((), vec![])) })
+    host.run("SELECT 1\n", None, |_q, _p| async { Ok(((), vec![])) })
         .await
         .unwrap();
     let logged = lines.lock().unwrap()[0].clone();
@@ -363,9 +363,9 @@ async fn stubs_throw() {
         .await
         .is_err());
     let command = ds.create_command(None);
-    assert!(command.execute(None, None).await.is_err());
+    assert!(command.execute("", None).await.is_err());
     assert!(command
-        .execute_reader(Some("select"), Some(&[Parameter::new("id", 1_i64)]))
+        .execute_reader("select", Some(&[Parameter::new("id", 1_i64)]))
         .await
         .is_err());
     let repo = ds.create_repository(None);
@@ -442,15 +442,15 @@ async fn published_mocks() {
     assert!(txn.abort().await.is_err());
 
     let command = MockCommand::new();
-    command.execute(Some("insert"), None).await.unwrap();
+    command.execute("insert", None).await.unwrap();
     command
-        .execute_reader(None, Some(&[Parameter::new("id", 1_i64)]))
+        .execute_reader("", Some(&[Parameter::new("id", 1_i64)]))
         .await
         .unwrap();
     command.set_execute_error("exec");
-    assert!(command.execute(None, None).await.is_err());
+    assert!(command.execute("", None).await.is_err());
     command.set_reader_error("read");
-    assert!(command.execute_reader(None, None).await.is_err());
+    assert!(command.execute_reader("", None).await.is_err());
 
     let reader = MockReader::new(vec![record(&[("id", Value::Int(1))])]);
     assert!(reader.next().await.unwrap());
@@ -501,8 +501,8 @@ async fn published_mocks() {
     assert_eq!(DatasourceFactory::provider(&ds), "mock");
     ds.create_connection().await.unwrap();
     let command = ds.create_command(None);
-    command.execute(None, None).await.unwrap();
-    command.execute_reader(None, None).await.unwrap();
+    command.execute("", None).await.unwrap();
+    command.execute_reader("", None).await.unwrap();
     ds.create_repository(None);
     ds.create_readonly_repository(None);
     DatasourceFactory::create(&ds, None);
@@ -533,7 +533,7 @@ async fn published_mocks() {
             })
         },
     }));
-    command.execute(Some("insert"), None).await.unwrap();
+    command.execute("insert", None).await.unwrap();
     assert_eq!(
         *seen.lock().unwrap(),
         vec!["b:insert".to_string(), "a:insert".to_string()]

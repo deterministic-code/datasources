@@ -44,7 +44,7 @@ await connection.Open();
 
 var command = json.CreateCommand(connection);
 await command.Execute("insert", new[] { new Parameter("id", 1) });
-await command.ExecuteReader();
+await command.ExecuteReader("");
 ```
 ```rust
 use datasources::{create, register};
@@ -57,8 +57,8 @@ let connection = json.create_connection().await?;
 connection.open().await?;
 
 let command = json.create_command(Some(connection));
-command.execute(Some("insert"), None).await?;
-command.execute_reader(None, None).await?;
+command.execute("insert", None).await?;
+command.execute_reader("", None).await?;
 ```
 ```typescript
 import { Datasource } from "@datasources/core";
@@ -72,7 +72,7 @@ await connection.open();
 
 const command = json.createCommand(connection);
 await command.execute("insert", [{ name: "id", value: 1 }]);
-await command.executeReader();
+await command.executeReader("");
 ```
 :::
 
@@ -89,19 +89,19 @@ Assert.Single(((MockCommand)command).ExecuteCalls);
 
 var failing = new MockCommand(ds.Connection) { ExecuteError = new InvalidOperationException("exec-fail") };
 ds.Command = failing;
-await Assert.ThrowsAsync<InvalidOperationException>(() => failing.Execute());
+await Assert.ThrowsAsync<InvalidOperationException>(() => failing.Execute(""));
 ```
 ```rust
 use datasources::{Datasource, MockCommand, MockDatasource};
 
 let ds = MockDatasource::new("mock");
 let command = ds.create_command(None);
-command.execute(None, None).await?;
-command.execute_reader(None, None).await?;
+command.execute("", None).await?;
+command.execute_reader("", None).await?;
 
 let failing = MockCommand::new();
 failing.set_execute_error("exec-fail");
-assert!(failing.execute(None, None).await.is_err());
+assert!(failing.execute("", None).await.is_err());
 ```
 ```typescript
 const ds = new MockDatasource();
@@ -111,7 +111,7 @@ expect((command as MockCommand).executeCalls).toHaveLength(1);
 
 const failing = new MockCommand(ds.connection);
 failing.executeError = new Error("exec-fail");
-await expect(failing.execute()).rejects.toThrow("exec-fail");
+await expect(failing.execute("")).rejects.toThrow("exec-fail");
 ```
 :::
 

@@ -22,9 +22,9 @@ impl JsonRepository {
 #[async_trait]
 impl ReadonlyRepository for JsonRepository {
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
-        let text = query.map(|q| q.get_text());
+        let text = query.map(|q| q.get_text()).unwrap_or_default();
         let reader = JsonCommand::new(self.connection.clone())
-            .execute_reader(text.as_deref(), None)
+            .execute_reader(&text, None)
             .await?;
         if reader.next().await? {
             Ok(reader.current())
@@ -34,9 +34,9 @@ impl ReadonlyRepository for JsonRepository {
     }
 
     async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
-        let text = query.map(|q| q.get_text());
+        let text = query.map(|q| q.get_text()).unwrap_or_default();
         let reader = JsonCommand::new(self.connection.clone())
-            .execute_reader(text.as_deref(), None)
+            .execute_reader(&text, None)
             .await?;
         datasources::collect_reader(&*reader).await
     }

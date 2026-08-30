@@ -236,11 +236,9 @@ async fn run(path: &Path) {
         .collect();
     setup
         .execute(
-            Some(
-                &SqliteStatementBuilder::create_table(&spec.type_spec.table, &columns)
-                    .unwrap()
-                    .get_text(),
-            ),
+            &SqliteStatementBuilder::create_table(&spec.type_spec.table, &columns)
+                .unwrap()
+                .get_text(),
             None,
         )
         .await

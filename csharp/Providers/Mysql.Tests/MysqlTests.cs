@@ -27,9 +27,9 @@ public class MysqlTests
         await conn.Open();
         await conn.Open();
         var command = new MysqlCommand(conn);
-        await command.Execute();
+        await command.Execute("");
         await command.ExecuteReader("SELECT 1");
-        await command.ExecuteReader();
+        await command.ExecuteReader("");
 
         var repo = new MysqlRepository(conn);
         Assert.Equal("items", repo.Table);
@@ -56,11 +56,11 @@ public class MysqlTests
         await ((MysqlConnection)created).Open();
         var bound = Assert.IsType<MysqlCommand>(ds.CreateCommand(created));
         Assert.Same(created, bound.Connection);
-        await bound.Execute();
+        await bound.Execute("");
         await bound.ExecuteReader("SELECT 1");
         var implicitCommand = Assert.IsType<MysqlCommand>(ds.CreateCommand());
         await implicitCommand.Connection.Open();
-        await implicitCommand.Execute();
+        await implicitCommand.Execute("");
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.Equal("people", ((MysqlRepository)(object)repo2).Table);

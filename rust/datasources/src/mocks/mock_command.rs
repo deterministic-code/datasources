@@ -54,7 +54,7 @@ impl Command for MockCommand {
 
     async fn execute_reader(
         &self,
-        text: Option<&str>,
+        text: &str,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         self.host
@@ -77,7 +77,7 @@ impl Command for MockCommand {
 
     async fn execute(
         &self,
-        text: Option<&str>,
+        text: &str,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
         self.host

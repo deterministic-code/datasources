@@ -22,11 +22,11 @@ public partial class RegisterCreateTests
         var command = ds.CreateCommand(connection);
         Assert.IsType<XmlCommand>(command);
         Assert.Same(connection, command.Connection);
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute());
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.ExecuteReader());
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute(""));
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.ExecuteReader(""));
         var implicitCommand = ds.CreateCommand();
         Assert.IsType<XmlCommand>(implicitCommand);
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => implicitCommand.Execute());
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => implicitCommand.ExecuteReader());
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => implicitCommand.Execute(""));
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => implicitCommand.ExecuteReader(""));
     }
 }

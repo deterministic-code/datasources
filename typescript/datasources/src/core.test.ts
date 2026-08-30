@@ -183,7 +183,7 @@ describe("middleware", () => {
 
   it("runs with no middleware", async () => {
     const host = new CommandMiddlewareHost();
-    expect(await host.run(null, undefined, async () => ({ value: "ok", rows: [] }))).toBe(
+    expect(await host.run("", undefined, async () => ({ value: "ok", rows: [] }))).toBe(
       "ok",
     );
   });
@@ -344,7 +344,7 @@ describe("stubs", () => {
 
     const command = ds.createCommand();
     expect(command).toBeInstanceOf(StubCommand);
-    await expect(command.execute()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(command.executeReader("select", [])).rejects.toThrow(
       ProviderNotImplementedError,
     );
@@ -435,14 +435,14 @@ describe("published mocks", () => {
       rowsAffected: 2,
     });
     expect(command.executeCalls).toHaveLength(1);
-    const reader = await command.executeReader();
+    const reader = await command.executeReader("");
     expect(reader).toBe(command.reader);
 
     command.reader = { current: undefined, next: async () => false };
     expect(await command.executeReader("plain")).toBe(command.reader);
 
     command.executeError = new Error("exec");
-    await expect(command.execute()).rejects.toThrow("exec");
+    await expect(command.execute("")).rejects.toThrow("exec");
     command.executeReaderError = new Error("read");
     await expect(command.executeReader("x")).rejects.toThrow("read");
   });
@@ -489,8 +489,8 @@ describe("published mocks", () => {
     expect(await ds.createConnection()).toBe(ds.connection);
     const mockCommand = ds.createCommand();
     expect(mockCommand).toBeInstanceOf(MockCommand);
-    await mockCommand.execute();
-    await mockCommand.executeReader();
+    await mockCommand.execute("");
+    await mockCommand.executeReader("");
     const provided = new MockConnection();
     expect(ds.createCommand(provided).connection).toBe(provided);
     expect(ds.createRepository(provided)).toBeInstanceOf(

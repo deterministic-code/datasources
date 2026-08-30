@@ -33,9 +33,9 @@ public class PostgresTests
         await conn.Open();
         Assert.Equal("s", conn.Schema);
         var command = new PostgresCommand(conn);
-        await command.Execute();
+        await command.Execute("");
         await command.ExecuteReader("SELECT 1");
-        await command.ExecuteReader();
+        await command.ExecuteReader("");
 
         var repo = new PostgresRepository(conn);
         Assert.Equal("items", repo.Table);
@@ -62,11 +62,11 @@ public class PostgresTests
         await ((PostgresConnection)created).Open();
         var bound = Assert.IsType<PostgresCommand>(ds.CreateCommand(created));
         Assert.Same(created, bound.Connection);
-        await bound.Execute();
+        await bound.Execute("");
         await bound.ExecuteReader("SELECT 1");
         var implicitCommand = Assert.IsType<PostgresCommand>(ds.CreateCommand());
         await implicitCommand.Connection.Open();
-        await implicitCommand.Execute();
+        await implicitCommand.Execute("");
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.Equal("people", ((PostgresRepository)(object)repo2).Table);

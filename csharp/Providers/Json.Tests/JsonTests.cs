@@ -105,11 +105,11 @@ public class JsonTests
         await command.Execute("delete", new[] { new Parameter("id", 5) });
         await command.Execute("delete");
         await Assert.ThrowsAsync<DatasourceException>(() => command.Execute("nope"));
-        await Assert.ThrowsAsync<DatasourceException>(() => command.Execute());
-        await command.ExecuteReader(null, new[] { new Parameter("name", "a") });
+        await Assert.ThrowsAsync<DatasourceException>(() => command.Execute(""));
+        await command.ExecuteReader("", new[] { new Parameter("name", "a") });
 
         var closed = new JsonConnection();
-        await Assert.ThrowsAsync<DatasourceException>(() => new JsonCommand(closed).ExecuteReader());
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonCommand(closed).ExecuteReader(""));
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Add(new Row()));
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Update(new Row { ["id"] = 1 }));
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Delete(new Row { ["id"] = 1 }));
@@ -121,11 +121,11 @@ public class JsonTests
         var bound = Assert.IsType<JsonCommand>(ds.CreateCommand(created));
         Assert.Same(created, bound.Connection);
         await bound.Execute("insert", [new Parameter("id", 99)]);
-        await bound.ExecuteReader();
+        await bound.ExecuteReader("");
         var implicitCommand = Assert.IsType<JsonCommand>(ds.CreateCommand());
         await implicitCommand.Connection.Open();
         await implicitCommand.Execute("insert", [new Parameter("id", 1)]);
-        await implicitCommand.ExecuteReader();
+        await implicitCommand.ExecuteReader("");
         ds.CreateRepository<Dictionary<string, Value>>(created);
         ds.CreateRepository<Dictionary<string, Value>>();
         Assert.Equal("json", Datasource.Create("json").Provider);

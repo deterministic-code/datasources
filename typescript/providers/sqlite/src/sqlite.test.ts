@@ -239,11 +239,11 @@ describe("SqliteCommand and Repository", () => {
     db()!.rows = [{ id: 1, name: "a" }];
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
       .toEqual({ result: 5, rowsAffected: 2 });
-    expect(await command.execute()).toEqual({ rowsAffected: 0 });
+    expect(await command.execute("")).toEqual({ rowsAffected: 0 });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1, name: "a" });
-    const empty = await command.executeReader();
+    const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
   });
 });

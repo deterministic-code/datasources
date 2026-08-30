@@ -136,12 +136,12 @@ describe("MemoryCommand and MemoryRepository", () => {
       { id: 1, name: "a" },
       { id: 2, name: "b" },
     ]);
-    const all = await command.executeReader();
+    const all = await command.executeReader("");
     expect(await all.next()).toBe(true);
     const filtered = await command.executeReader('{"id":2}');
     expect(await filtered.next()).toBe(true);
     expect(filtered.current).toEqual({ id: 2, name: "b" });
-    const byParam = await command.executeReader(null, [
+    const byParam = await command.executeReader("", [
       { name: "name", value: "a" },
     ]);
     expect(await byParam.next()).toBe(true);
@@ -184,7 +184,7 @@ describe("MemoryCommand and MemoryRepository", () => {
       rowsAffected: 1,
     });
     await expect(command.execute("nope")).rejects.toThrow("Unsupported Memory");
-    await expect(command.execute()).rejects.toThrow("Unsupported Memory");
+    await expect(command.execute("")).rejects.toThrow("Unsupported Memory");
     expect(await collectAsync(repo.get())).toEqual([]);
   });
 
@@ -215,7 +215,7 @@ describe("MemoryCommand and MemoryRepository", () => {
     const connection = new MemoryConnection({ data: [{ id: 1 }] });
     const command = new MemoryCommand(connection);
     const repo = new MemoryRepository(connection);
-    await expect(command.executeReader()).rejects.toThrow(DatasourceError);
+    await expect(command.executeReader("")).rejects.toThrow(DatasourceError);
     await expect(command.execute("insert")).rejects.toThrow(DatasourceError);
     await expect(repo.add({ id: 2 })).rejects.toThrow(DatasourceError);
     await expect(repo.update({ id: 1 })).rejects.toThrow(DatasourceError);
@@ -237,13 +237,13 @@ describe("MemoryDatasource", () => {
     expect(command).toBeInstanceOf(MemoryCommand);
     expect(command.connection).toBe(connection);
     await command.execute("insert", [{ name: "id", value: 99 }]);
-    await command.executeReader();
+    await command.executeReader("");
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(MemoryCommand);
     expect(implicit.connection).toBeInstanceOf(MemoryConnection);
     await implicit.connection.open();
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
-    await implicit.executeReader();
+    await implicit.executeReader("");
     const repo = ds.createRepository(connection);
     expect(repo.connection).toBe(connection);
     expect(ds.createRepository()).toBeInstanceOf(MemoryRepository);

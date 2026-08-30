@@ -193,11 +193,11 @@ describe("MysqlCommand and MysqlRepository", () => {
     client.arrayResult = true;
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
       .toEqual({ result: undefined, rowsAffected: 1 });
-    expect(await command.execute()).toEqual({ rowsAffected: 0 });
+    expect(await command.execute("")).toEqual({ rowsAffected: 0 });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1 });
-    const empty = await command.executeReader();
+    const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
   });
 

@@ -116,9 +116,9 @@ mod tests {
         conn.open().await.unwrap();
         assert_eq!(conn.schema.as_deref(), Some("s"));
         let command = PostgresCommand::new(conn.clone());
-        command.execute(None, None).await.unwrap();
-        command.execute_reader(Some("SELECT 1"), None).await.unwrap();
-        command.execute_reader(None, None).await.unwrap();
+        command.execute("", None).await.unwrap();
+        command.execute_reader("SELECT 1", None).await.unwrap();
+        command.execute_reader("", None).await.unwrap();
         assert_eq!(PostgresRepository::new(conn.clone(), None).table, "items");
         let txn = conn.start_transaction(None).await.unwrap();
         txn.commit().await.unwrap();
@@ -143,7 +143,7 @@ mod tests {
         assert_eq!(ds.provider(), "postgres");
         assert!(ds
             .create_command(None)
-            .execute(Some("DELETE FROM items"), None)
+            .execute("DELETE FROM items", None)
             .await
             .is_err());
         ds.create_repository(None);
@@ -159,7 +159,7 @@ mod tests {
         assert_eq!(DatasourceFactory::provider(&factory), "postgres");
         let closed = Arc::new(PostgresConnection::new(None, None, driver));
         assert!(PostgresCommand::new(closed)
-            .execute(Some("x"), None)
+            .execute("x", None)
             .await
             .is_err());
     }

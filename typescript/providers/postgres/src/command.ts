@@ -15,7 +15,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeReader(
-    text?: string | null,
+    text: string,
     parameters?: Parameter[],
   ): Promise<IReader> {
     return this.run(text, parameters, async (query, params) => {
@@ -29,7 +29,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async execute(
-    text?: string | null,
+    text: string,
     parameters?: Parameter[],
   ): Promise<IResponse> {
     return this.run(text, parameters, async (query, params) => {

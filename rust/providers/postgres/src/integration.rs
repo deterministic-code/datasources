@@ -241,7 +241,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
         let args = params(&op.parameters);
         let expected_error = op.expect.as_ref().and_then(|e| e.error.as_deref());
         if step.execute.is_some() {
-            match target.execute(Some(&sql), Some(&args)).await {
+            match target.execute(&sql, Some(&args)).await {
                 Ok(response) => {
                     assert!(expected_error.is_none(), "{}", spec.name);
                     if let Some(rows) = op.expect.as_ref().and_then(|e| e.rows_affected) {
@@ -257,7 +257,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
                 }
             }
         } else {
-            match target.execute_reader(Some(&sql), Some(&args)).await {
+            match target.execute_reader(&sql, Some(&args)).await {
                 Ok(reader) => {
                     assert!(expected_error.is_none(), "{}", spec.name);
                     if let Some(expected) = expected_rows {

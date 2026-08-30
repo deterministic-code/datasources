@@ -105,7 +105,7 @@ impl TableRepository {
         let reader = self
             .commands
             .get
-            .execute_reader(Some(&text), Some(&params))
+            .execute_reader(&text, Some(&params))
             .await?;
         if !reader.next().await? {
             return Ok(None);
@@ -120,7 +120,7 @@ impl TableRepository {
         let reader = self
             .commands
             .get
-            .execute_reader(Some(&text), Some(&params))
+            .execute_reader(&text, Some(&params))
             .await?;
         let mut items = Vec::new();
         while reader.next().await? {
@@ -176,7 +176,7 @@ impl Repository for TableRepository {
         let text = self.statements.insert(&fields);
         self.commands
             .add
-            .execute(Some(&text), Some(&fields))
+            .execute(&text, Some(&fields))
             .await
     }
 
@@ -203,7 +203,7 @@ impl Repository for TableRepository {
         parameters.extend(predicate.parameters());
         self.commands
             .update
-            .execute(Some(&text), Some(&parameters))
+            .execute(&text, Some(&parameters))
             .await
     }
 
@@ -223,7 +223,7 @@ impl Repository for TableRepository {
         let parameters = predicate.parameters();
         self.commands
             .delete
-            .execute(Some(&text), Some(&parameters))
+            .execute(&text, Some(&parameters))
             .await
     }
 }

@@ -18,12 +18,12 @@ describe("yaml", () => {
     const command = ds.createCommand(connection);
     expect(command).toBeInstanceOf(YamlCommand);
     expect(command.connection).toBe(connection);
-    await expect(command.execute()).rejects.toThrow(ProviderNotImplementedError);
-    await expect(command.executeReader()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
+    await expect(command.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(YamlCommand);
-    await expect(implicit.execute()).rejects.toThrow(ProviderNotImplementedError);
-    await expect(implicit.executeReader()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(implicit.execute("")).rejects.toThrow(ProviderNotImplementedError);
+    await expect(implicit.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
     ds.createRepository();
     ds.createRepository(connection);
     ds.createReadonlyRepository();

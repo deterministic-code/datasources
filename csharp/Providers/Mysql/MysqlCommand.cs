@@ -6,7 +6,7 @@ public sealed class MysqlCommand : CommandMiddlewareHost, ICommand
     public IConnection Connection { get; }
     private MysqlConnection Typed => (MysqlConnection)Connection;
 
-    public Task<IReader> ExecuteReader(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, async (query, paramsList) =>
         {
             Typed.EnsureOpen();
@@ -14,7 +14,7 @@ public sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             return ((IReader)new ArrayReader(rows.Cast<object?>().ToList()), rows);
         });
 
-    public Task<Response> Execute(string? text = null, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, async (query, paramsList) =>
         {
             Typed.EnsureOpen();

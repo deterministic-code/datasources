@@ -17,13 +17,13 @@ public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
 
     public async Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null)
     {
-        var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText());
+        var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText() ?? "");
         return await reader.Next() ? ToRecord(reader.Current) : null;
     }
 
     public async IAsyncEnumerable<Dictionary<string, Value>> Get(IQuery? query = null)
     {
-        var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText());
+        var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText() ?? "");
         while (await reader.Next())
         {
             var record = ToRecord(reader.Current);

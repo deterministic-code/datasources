@@ -8,8 +8,8 @@ import type { Row } from "../Row.ts";
 import { MockReader } from "./mock-reader.ts";
 
 export class MockCommand extends CommandMiddlewareHost implements ICommand {
-  executeCalls: { text?: string | null; parameters?: Parameter[] }[] = [];
-  executeReaderCalls: { text?: string | null; parameters?: Parameter[] }[] = [];
+  executeCalls: { text: string; parameters?: Parameter[] }[] = [];
+  executeReaderCalls: { text: string; parameters?: Parameter[] }[] = [];
   executeError?: unknown;
   executeReaderError?: unknown;
   response: IResponse = { result: undefined, rowsAffected: 0 };
@@ -20,7 +20,7 @@ export class MockCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeReader(
-    text?: string | null,
+    text: string,
     parameters?: Parameter[],
   ): Promise<IReader> {
     return this.run(text, parameters, async (query, params) => {
@@ -37,7 +37,7 @@ export class MockCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async execute(
-    text?: string | null,
+    text: string,
     parameters?: Parameter[],
   ): Promise<IResponse> {
     return this.run(text, parameters, async (query, params) => {
