@@ -4,7 +4,8 @@ use super::rusqlite_driver::RusqliteDriver;
 use super::statement_builder::{SqliteColumn, SqliteStatementBuilder};
 use datasources::converters::{ConvertSchema, RowTypeConverter};
 use datasources::{
-    Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Parameter,
+    Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, DefaultTypeConverters,
+    Parameter,
     ReadonlyRepository, Repository, Statement, StatementBuilder, TableRepository,
     TableRepositoryBuilder, TableRepositoryBuilderOptions, Value, WhereBuilder,
 };
@@ -243,12 +244,25 @@ async fn run(path: &Path) {
         )
         .await
         .unwrap();
+    crate::converters::register();
+    let fields = spec
+        .type_spec
+        .fields
+        .iter()
+        .filter_map(|(name, canonical)| {
+            crate::converters::field(canonical).map(|converter| (name.clone(), converter))
+        })
+        .collect();
     let options = TableRepositoryBuilderOptions {
         connection: conn.clone(),
         ids: spec.type_spec.ids.clone(),
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
         table: spec.type_spec.table.clone(),
-        mapping: Some(RowTypeConverter::of::<SpecUser>()),
+        mapping: Some(
+            RowTypeConverter::of::<SpecUser>()
+                .with_types(DefaultTypeConverters::for_provider("sqlite"))
+                .with_fields(fields),
+        ),
         types: Default::default(),
         fields: Default::default(),
     };

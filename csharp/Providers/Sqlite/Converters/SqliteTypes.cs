@@ -1,0 +1,18 @@
+using Datasources;
+
+namespace Datasources.Sqlite;
+
+public static class SqliteTypes
+{
+    public static readonly IReadOnlyDictionary<string, TypeConverter<Value, Value>> All =
+        new Dictionary<string, TypeConverter<Value, Value>>
+        {
+            ["bool"] = new BoolConverter(),
+            ["datetime"] = new DateTimeConverter(),
+            ["uuid"] = new UuidConverter(),
+            ["decimal"] = new DecimalConverter(),
+            ["binary"] = new BinaryConverter(),
+        };
+
+    static SqliteTypes() => DefaultTypeConverters.Use("sqlite", All);
+}

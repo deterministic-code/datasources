@@ -1,6 +1,6 @@
 use crate::builders::StatementBuilder;
 use crate::connection::Connection;
-use crate::converters::{Cells, RowTypeConverter};
+use crate::converters::{Cells, DefaultTypeConverters, RowTypeConverter};
 use crate::mappers::NameSourceDestinationMapper;
 use crate::parameter::Parameter;
 use crate::result::Result;
@@ -55,6 +55,9 @@ impl TableRepositoryBuilder {
             Some(mapping) => mapping,
             None => RowTypeConverter::of::<Cells>(),
         }
+        .with_types(DefaultTypeConverters::for_provider(
+            options.connection.provider(),
+        ))
         .with_types(options.types)
         .with_fields(options.fields);
         let mut columns = converters.column_names().to_vec();

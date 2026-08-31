@@ -8,6 +8,7 @@ import { StatementBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
+import { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
@@ -41,9 +42,14 @@ const statementsOf = (table: string, columns: string[]): RepositoryStatements =>
 export const parts = <T extends Cells>(
   options: RepositoryBuilderOptions<T>,
 ): BuiltRepository<T> => {
+  const types = {
+    ...DefaultTypeConverters.for(options.connection.provider),
+    ...options.converters,
+  };
   const converters =
-    options.mapping ??
-    new RowTypeConverter(options.converters, options.fields);
+    options.mapping ?? new RowTypeConverter(types, options.fields);
+  if (converters instanceof RowTypeConverter && Object.keys(converters.types).length === 0)
+    Object.assign(converters.types, types);
   const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
   const table = options.table ?? options.type?.name ?? "";
   return {

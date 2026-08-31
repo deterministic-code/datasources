@@ -7,6 +7,7 @@ import type {
   IRepository,
 } from "@datasources/core";
 import { Repository, RowTypeConverter } from "@datasources/core";
+import "./converters/SqliteTypes.ts";
 import {
   SqliteConnection,
   type SqliteConnectionOptions,

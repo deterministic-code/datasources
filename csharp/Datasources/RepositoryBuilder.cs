@@ -35,7 +35,11 @@ public static class RepositoryBuilder<T> where T : new()
 {
     public static BuiltRepository<T> Parts(RepositoryBuilderOptions<T> options)
     {
-        var converters = options.Mapping ?? new RowTypeConverter<T>(null, options.Fields);
+        var types = DefaultTypeConverters.For(options.Connection.Provider);
+        var converters = options.Mapping ?? new RowTypeConverter<T>(types, options.Fields);
+        if (converters is RowTypeConverter<T> row && row.Types.Count == 0)
+            foreach (var (key, converter) in types)
+                row.Types[key] = converter;
         var mapping = new NameSourceDestinationMapper(options.Connection.Provider, "csharp");
         var table = options.Table ?? typeof(T).Name;
         return new(
