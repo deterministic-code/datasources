@@ -7,6 +7,7 @@ description = "Async datasource interfaces, middleware, registry, and test doubl
 
 [dependencies]
 async-trait = { workspace = true }
+regex = "1"
 
 [dev-dependencies]
 tokio = { workspace = true }
