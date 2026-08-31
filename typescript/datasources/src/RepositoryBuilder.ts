@@ -8,7 +8,7 @@ import { StatementBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import { RowConverter } from "./converters/RowConverter.ts";
+import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
@@ -43,7 +43,7 @@ export const parts = <T extends Cells>(
 ): BuiltRepository<T> => {
   const converters =
     options.mapping ??
-    new RowConverter(options.converters, options.fields);
+    new RowTypeConverter(options.converters, options.fields);
   const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
   const table = options.table ?? options.type?.name ?? "";
   return {

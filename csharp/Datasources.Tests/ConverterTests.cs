@@ -28,7 +28,7 @@ public class ConverterTests
     [Fact]
     public void ConvertAndReverseConvertRoundTrip()
     {
-        var converter = new RowConverter<User>();
+        var converter = new RowTypeConverter<User>();
         var user = converter.Convert(new Row
         {
             ["Id"] = 7,
@@ -48,7 +48,7 @@ public class ConverterTests
     [Fact]
     public void MapsDictionaryRows()
     {
-        var converter = new RowConverter<Dictionary<string, Value>>();
+        var converter = new RowTypeConverter<Dictionary<string, Value>>();
         var dest = converter.Convert(new Row { ["display_name"] = "a" });
         Assert.Equal(new Value.Text("a"), dest["display_name"]);
         Assert.Equal(new Value.Text("a"), converter.ReverseConvert(dest)["display_name"]);
@@ -57,17 +57,17 @@ public class ConverterTests
     [Fact]
     public void SkipsIndexersAndWriteOnlyProperties()
     {
-        var mixed = new RowConverter<Mixed>().Convert(new Row { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });
+        var mixed = new RowTypeConverter<Mixed>().Convert(new Row { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });
         Assert.Equal("x", mixed.Label);
         Assert.Equal(1, mixed.Count);
-        var obj = new RowConverter<WriteOnly>().Convert(new Row { ["Id"] = 1, ["missing"] = 2, ["Secret"] = 3 });
+        var obj = new RowTypeConverter<WriteOnly>().Convert(new Row { ["Id"] = 1, ["missing"] = 2, ["Secret"] = 3 });
         Assert.Equal(1, obj.Id);
     }
 
-    sealed class OnlyOne : TypeConverter<object?, Value>
+    sealed class OnlyOne : TypeConverter<Value, Value>
     {
-        public override object? Convert(Value from) => from.ToObject() is long n && n == 1;
-        public override Value ReverseConvert(object? to) => Value.From(to);
+        public override Value Convert(Value from) => from.ToObject() is long n && n == 1;
+        public override Value ReverseConvert(Value to) => to;
     }
 
     [Fact]
@@ -80,8 +80,8 @@ public class ConverterTests
             ["IsEnabled"] = 2,
             ["Created"] = "2020-01-02T00:00:00.000Z"
         };
-        Assert.True(new RowConverter<User>().Convert(row).IsEnabled);
-        var converter = new RowConverter<User>(null, new Dictionary<string, TypeConverter<object?, Value>>
+        Assert.True(new RowTypeConverter<User>().Convert(row).IsEnabled);
+        var converter = new RowTypeConverter<User>(null, new Dictionary<string, TypeConverter<Value, Value>>
         {
             ["IsEnabled"] = new OnlyOne()
         });
@@ -91,7 +91,7 @@ public class ConverterTests
     [Fact]
     public void AppliesFieldOverrideOnDictionaryRows()
     {
-        var converter = new RowConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<object?, Value>>
+        var converter = new RowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
         {
             ["flag"] = new OnlyOne()
         });

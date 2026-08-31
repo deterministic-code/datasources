@@ -4,7 +4,7 @@ import { parse } from "yaml";
 import {
   ConsoleCommandMiddleware,
   Repository,
-  TypeConverter,
+  RowTypeConverter,
   WhereBuilder,
   type Cell,
   type Cells,
@@ -88,7 +88,7 @@ export const runRepositorySpec = async (
     assignIdentityOnAdd: spec.type.assignIdentityOnAdd,
     type: typeOf(spec.type),
     table: spec.type.table,
-    mapping: new TypeConverter(typeOf(spec.type)),
+    mapping: new RowTypeConverter(),
   });
   const logs: string[] = [];
   attach(repo, logs);

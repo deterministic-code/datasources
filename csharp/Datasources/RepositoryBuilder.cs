@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Reflection;
 using Datasources.Builders;
 
 namespace Datasources;
@@ -33,19 +35,26 @@ public static class RepositoryBuilder<T> where T : new()
 {
     public static BuiltRepository<T> Parts(RepositoryBuilderOptions<T> options)
     {
-        var converters = options.Mapping ?? new RowConverter<T>(options.Converters, options.Fields);
-        var columns = RowConverter<T>.Columns.OrderBy(name => name).ToArray();
+        var converters = options.Mapping ?? new RowTypeConverter<T>(null, options.Fields);
         var mapping = new NameSourceDestinationMapper(options.Connection.Provider, "csharp");
         var table = options.Table ?? typeof(T).Name;
         return new(
             options.Connection,
             converters,
             mapping,
-            new RepositoryStatements(table, columns),
+            new RepositoryStatements(table, Columns()),
             options.Ids,
             options.AssignIdentityOnAdd,
             table);
     }
 
     public static Repository<T> Build(RepositoryBuilderOptions<T> options) => new(Parts(options));
+
+    static string[] Columns() =>
+        typeof(IDictionary).IsAssignableFrom(typeof(T))
+            ? []
+            : [.. typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)
+                .Select(prop => prop.Name)
+                .OrderBy(name => name)];
 }

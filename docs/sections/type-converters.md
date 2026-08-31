@@ -1,32 +1,21 @@
 # TypeConverters
 
-`TypeConverter` is a named wrapper. `RowConverter` applies dialect default type converters, then field-name overrides.
+`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`.
 
-Lookup per field: field override, then default type, then identity. The same order is used on reverse conversion.
+A dialect adds a `TypeConverter` only when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
 ## TypeConverter
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `TypeConverter<T>` | `TypeConverter` | `TypeConverter<T>` |
+| `TypeConverter<To, From>` | `TypeConverter<To, From>` | `TypeConverter` |
 | `Convert` | `convert` | `convert` |
 | `ReverseConvert` | `reverse_convert` | `reverseConvert` |
 
-## RowConverter
+## RowTypeConverter
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `RowConverter` | `RowConverter` | `RowConverter` |
+| `RowTypeConverter<T>` | `RowTypeConverter` | `RowTypeConverter` |
+| `Convert` / `ReverseConvert` | `convert` / `reverse_convert` | `convert` / `reverseConvert` |
 | `Types` / `Fields` | `types` / `fields` | `types` / `fields` |
-| `Convert` | `convert` | `convert` |
-| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
-
-## ValueConverter
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IValueConverter` | `ValueConverter` | `ValueConverter` |
-| `Convert` | `convert` | `convert` |
-| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
-
-Default type maps live on `CoreTypes` / `core_types`. Dialects pass theirs when building a repository (`SqliteTypes`, `converters::types()`).

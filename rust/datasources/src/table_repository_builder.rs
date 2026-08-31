@@ -1,6 +1,6 @@
 use crate::builders::StatementBuilder;
 use crate::connection::Connection;
-use crate::converters::{Cells, TypeConverter};
+use crate::converters::{Cells, RowTypeConverter};
 use crate::mappers::NameSourceDestinationMapper;
 use crate::parameter::Parameter;
 use crate::result::Result;
@@ -45,7 +45,7 @@ pub struct TableRepositoryBuilder;
 impl TableRepositoryBuilder {
     pub fn parts(options: TableRepositoryBuilderOptions) -> Result<(
         Arc<dyn Connection>,
-        crate::converters::TypeConverter,
+        crate::converters::RowTypeConverter,
         NameSourceDestinationMapper,
         TableRepositoryStatements,
         Vec<String>,
@@ -53,11 +53,11 @@ impl TableRepositoryBuilder {
     )> {
         let converters = match options.mapping {
             Some(mapping) => mapping,
-            None => TypeConverter::of::<Cells>(),
+            None => RowTypeConverter::of::<Cells>(),
         }
         .with_types(options.types)
         .with_fields(options.fields);
-        let mut columns = converters.fields.clone();
+        let mut columns = converters.column_names().to_vec();
         columns.sort();
         let mapping = NameSourceDestinationMapper::new(options.connection.provider(), "rust");
         let statements = TableRepositoryStatements {

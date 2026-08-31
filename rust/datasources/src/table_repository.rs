@@ -3,7 +3,7 @@ use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
-use crate::converters::{ConvertSchema, TypeConverter};
+use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::datasource_error::DatasourceError;
 use crate::mappers::NameSourceDestinationMapper;
 use crate::parameter::Parameter;
@@ -24,7 +24,7 @@ use std::sync::Arc;
 pub struct TableRepository {
     connection: Arc<dyn Connection>,
     middlewares: Vec<Arc<dyn CommandMiddleware>>,
-    converters: TypeConverter,
+    converters: RowTypeConverter,
     pub mapping: NameSourceDestinationMapper,
     statements: TableRepositoryStatements,
     id: Vec<String>,
@@ -40,7 +40,7 @@ impl TableRepository {
             .next()
             .unwrap_or_default()
             .into();
-        options.mapping = Some(TypeConverter::of::<T>());
+        options.mapping = Some(RowTypeConverter::of::<T>());
         Self::new(options)
     }
 
@@ -50,7 +50,7 @@ impl TableRepository {
 
     pub fn from_parts(
         connection: Arc<dyn Connection>,
-        converters: TypeConverter,
+        converters: RowTypeConverter,
         mapping: NameSourceDestinationMapper,
         statements: TableRepositoryStatements,
         ids: Vec<String>,

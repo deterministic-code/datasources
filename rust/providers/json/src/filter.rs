@@ -60,5 +60,6 @@ pub(crate) fn value_to_json(value: &Value) -> JsonValue {
         Value::Int(i) => JsonValue::from(*i),
         Value::Float(f) => JsonValue::from(*f),
         Value::Text(t) => JsonValue::String(t.clone()),
+        other => JsonValue::String(other.wire_text()),
     }
 }

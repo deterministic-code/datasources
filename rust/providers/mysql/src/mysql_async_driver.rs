@@ -35,6 +35,10 @@ fn to_mysql_value(value: &Value) -> MysqlValue {
         Value::Int(value) => MysqlValue::Int(*value),
         Value::Float(value) => MysqlValue::Double(*value),
         Value::Text(value) => MysqlValue::Bytes(value.as_bytes().to_vec()),
+        Value::DateTime(value) => MysqlValue::Bytes(Value::iso_datetime(*value).into_bytes()),
+        Value::Uuid(value) => MysqlValue::Bytes(value.to_string().into_bytes()),
+        Value::Decimal(value) => MysqlValue::Bytes(value.to_string().into_bytes()),
+        Value::Binary(value) => MysqlValue::Bytes(value.clone()),
     }
 }
 

@@ -8,5 +8,5 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
     public string? Table { get; init; }
     public TypeConverter<T, Row>? Mapping { get; init; }
     public IReadOnlyDictionary<Type, TypeConverter<object?, Value>>? Converters { get; init; }
-    public IReadOnlyDictionary<string, TypeConverter<object?, Value>>? Fields { get; init; }
+    public IReadOnlyDictionary<string, TypeConverter<Value, Value>>? Fields { get; init; }
 }

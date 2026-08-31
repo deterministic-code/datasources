@@ -2,7 +2,7 @@ use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use super::rusqlite_driver::RusqliteDriver;
 use super::statement_builder::{SqliteColumn, SqliteStatementBuilder};
-use datasources::converters::{ConvertSchema, TypeConverter};
+use datasources::converters::{ConvertSchema, RowTypeConverter};
 use datasources::{
     Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Parameter,
     ReadonlyRepository, Repository, Statement, StatementBuilder, TableRepository,
@@ -248,7 +248,7 @@ async fn run(path: &Path) {
         ids: spec.type_spec.ids.clone(),
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
         table: spec.type_spec.table.clone(),
-        mapping: Some(TypeConverter::of::<SpecUser>()),
+        mapping: Some(RowTypeConverter::of::<SpecUser>()),
         types: Default::default(),
         fields: Default::default(),
     };

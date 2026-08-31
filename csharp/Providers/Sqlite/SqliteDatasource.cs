@@ -38,6 +38,6 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
             {
                 Connection = connection as SqliteConnection ?? DefaultConnection(),
                 Table = _table ?? "items",
-                Mapping = new RowConverter<Dictionary<string, Value>>(),
+                Mapping = new RowTypeConverter<Dictionary<string, Value>>(),
             });
 }

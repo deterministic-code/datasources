@@ -7,7 +7,11 @@ description = "Async datasource interfaces, middleware, registry, and test doubl
 
 [dependencies]
 async-trait = { workspace = true }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 regex = "1"
+rust_decimal = "1"
+uuid = "1"
 
 [dev-dependencies]
 tokio = { workspace = true }

@@ -1,4 +1,4 @@
-use crate::converters::{Cells, TypeConverter};
+use crate::converters::{Cells, RowTypeConverter};
 use crate::*;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -652,8 +652,8 @@ fn statements_and_builders() {
     assert_eq!(TextStoredProcedureStatement::new("x").get_text(), "x");
 }
 
-fn users_mapping() -> TypeConverter {
-    TypeConverter::of::<Item>()
+fn users_mapping() -> RowTypeConverter {
+    RowTypeConverter::of::<Item>()
 }
 
 #[tokio::test]
@@ -664,6 +664,7 @@ async fn table_repository() {
         ("name", Value::from("a")),
     ]));
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
+    options.table = "users".into();
     options.mapping = Some(users_mapping());
     let mut repo = TableRepository::new(options).unwrap();
     repo.use_middleware(Arc::new(RecordingMiddleware {
@@ -708,6 +709,7 @@ async fn table_repository() {
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     include_id.assign_identity_on_add = false;
+    include_id.table = "users".into();
     include_id.mapping = Some(users_mapping());
     let repo = TableRepository::new(include_id).unwrap();
     repo.add(&obj).await.unwrap();
@@ -731,7 +733,7 @@ async fn table_repository() {
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.assign_identity_on_add = true;
     options.table = "users".into();
-    options.mapping = Some(TypeConverter::of::<Composite>());
+    options.mapping = Some(RowTypeConverter::of::<Composite>());
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[
         ("org_id", Value::Int(1)),
@@ -782,7 +784,7 @@ async fn table_repository() {
         .is_err());
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
     options.table = "users".into();
-    options.mapping = Some(TypeConverter::of::<Cells>());
+    options.mapping = Some(RowTypeConverter::of::<Cells>());
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[("id", Value::Int(1))])).await.unwrap();
     repo.delete(&record(&[("name", Value::from("z"))]), Some(&WhereBuilder::equals("name", "z")))

@@ -1,5 +1,6 @@
 use crate::connection::Connection;
-use crate::converters::{TypeConverter, ValueConverter};
+use crate::converters::{RowTypeConverter, TypeConverter};
+use crate::value::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -8,9 +9,9 @@ pub struct TableRepositoryBuilderOptions {
     pub ids: Vec<String>,
     pub assign_identity_on_add: bool,
     pub table: String,
-    pub mapping: Option<TypeConverter>,
-    pub types: HashMap<String, ValueConverter>,
-    pub fields: HashMap<String, ValueConverter>,
+    pub mapping: Option<RowTypeConverter>,
+    pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
+    pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
 
 impl TableRepositoryBuilderOptions {
