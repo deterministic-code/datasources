@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   Repository,
   StatementBuilder,
-  TypeConverter,
+  RowTypeConverter,
   Where,
   WhereBuilder,
   RepositoryBuilder,
@@ -47,7 +47,7 @@ const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
     connection,
     type,
     table: overrides.table ?? "users",
-    mapping: overrides.mapping ?? new TypeConverter(type),
+    mapping: overrides.mapping ?? new RowTypeConverter(),
   });
   return { repo, command };
 };
@@ -146,7 +146,7 @@ describe("Repository", () => {
       connection,
       type: asType(Item),
       table: "users",
-      mapping: new TypeConverter(asType(Item)),
+      mapping: new RowTypeConverter(),
     });
     await typed.add(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");

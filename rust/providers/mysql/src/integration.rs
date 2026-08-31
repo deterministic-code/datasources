@@ -141,6 +141,7 @@ fn norm(value: &Value) -> serde_yaml::Value {
         Value::Int(number) => serde_yaml::Value::Number((*number).into()),
         Value::Float(number) => serde_yaml::Value::Number(serde_yaml::Number::from(*number)),
         Value::Text(text) => serde_yaml::Value::String(text.clone()),
+        other => serde_yaml::Value::String(other.wire_text()),
     }
 }
 

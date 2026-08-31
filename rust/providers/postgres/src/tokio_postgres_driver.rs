@@ -33,6 +33,10 @@ fn box_value(value: &Value) -> Box<dyn ToSql + Sync + Send> {
         Value::Int(value) => Box::new(*value),
         Value::Float(value) => Box::new(*value),
         Value::Text(value) => Box::new(value.clone()),
+        Value::DateTime(value) => Box::new(Value::iso_datetime(*value)),
+        Value::Uuid(value) => Box::new(value.to_string()),
+        Value::Decimal(value) => Box::new(value.to_string()),
+        Value::Binary(value) => Box::new(value.clone()),
     }
 }
 

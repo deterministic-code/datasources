@@ -42,6 +42,10 @@ fn to_sql(value: &Value) -> rusqlite::types::Value {
         Value::Int(value) => rusqlite::types::Value::Integer(*value),
         Value::Float(value) => rusqlite::types::Value::Real(*value),
         Value::Text(value) => rusqlite::types::Value::Text(value.clone()),
+        Value::DateTime(value) => rusqlite::types::Value::Text(Value::iso_datetime(*value)),
+        Value::Uuid(value) => rusqlite::types::Value::Text(value.to_string()),
+        Value::Decimal(value) => rusqlite::types::Value::Text(value.to_string()),
+        Value::Binary(value) => rusqlite::types::Value::Blob(value.clone()),
     }
 }
 
@@ -50,9 +54,8 @@ fn from_sql(value: ValueRef<'_>) -> Value {
         ValueRef::Null => Value::Null,
         ValueRef::Integer(value) => Value::Int(value),
         ValueRef::Real(value) => Value::Float(value),
-        ValueRef::Text(bytes) | ValueRef::Blob(bytes) => {
-            Value::Text(String::from_utf8_lossy(bytes).into_owned())
-        }
+        ValueRef::Text(bytes) => Value::Text(String::from_utf8_lossy(bytes).into_owned()),
+        ValueRef::Blob(bytes) => Value::Binary(bytes.to_vec()),
     }
 }
 

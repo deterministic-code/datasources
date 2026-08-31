@@ -1,3 +1,4 @@
-import { CoreTypes, type ValueConverter } from "@datasources/core";
+import type { Cell } from "@datasources/core";
+import { TypeConverter } from "@datasources/core";
 
-export const SqliteTypes: Record<string, ValueConverter> = { ...CoreTypes };
+export const SqliteTypes: Record<string, TypeConverter<Cell, Cell>> = {};

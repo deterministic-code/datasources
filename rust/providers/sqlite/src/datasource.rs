@@ -2,7 +2,7 @@ use crate::command::SqliteCommand;
 use crate::connection::SqliteConnection;
 use crate::driver::{require_driver, SqliteDriver};
 use async_trait::async_trait;
-use datasources::converters::TypeConverter;
+use datasources::converters::RowTypeConverter;
 use datasources::{
     Command, Connection, Datasource, DatasourceFactory, Repository, Result, TableRepository,
     TableRepositoryBuilderOptions,
@@ -64,7 +64,7 @@ impl Datasource for SqliteDatasource {
     ) -> Arc<dyn Repository> {
         let mut options = TableRepositoryBuilderOptions::with_factory(self.connection());
         options.table = self.table.clone().unwrap_or_else(|| "items".into());
-        options.mapping = Some(TypeConverter::new(vec![]).with_types(crate::converters::types()));
+        options.mapping = Some(RowTypeConverter::new(vec![]));
         Arc::new(TableRepository::new(options).expect("repository"))
     }
 }
