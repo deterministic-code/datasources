@@ -33,7 +33,6 @@ public class MysqlTests
 
         var repo = new MysqlRepository(conn);
         Assert.Equal("items", repo.Table);
-        Assert.Same(conn, repo.Connection);
         Assert.Equal("users", new MysqlRepository(conn, "users").Table);
 
         var txn = await conn.StartTransaction();

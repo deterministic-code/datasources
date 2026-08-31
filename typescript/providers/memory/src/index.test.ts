@@ -245,7 +245,7 @@ describe("MemoryDatasource", () => {
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader("");
     const repo = ds.createRepository(connection);
-    expect(repo.connection).toBe(connection);
+    expect(repo).toBeInstanceOf(MemoryRepository);
     expect(ds.createRepository()).toBeInstanceOf(MemoryRepository);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(MemoryRepository);
 

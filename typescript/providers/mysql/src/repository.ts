@@ -15,7 +15,7 @@ export class MysqlRepository<T> implements IRepository<T> {
   readonly table: string;
 
   constructor(
-    readonly connection: MysqlConnection,
+    _connection: MysqlConnection,
     options: MysqlRepositoryOptions = {},
   ) {
     this.table = options.table ?? "items";

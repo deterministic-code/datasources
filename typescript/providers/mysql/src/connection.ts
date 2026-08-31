@@ -7,13 +7,9 @@ import {
   type ITransaction,
 } from "@datasources/core";
 import { MysqlCommand } from "./command.ts";
+import type { MysqlConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type IMysqlDriver } from "./driver.ts";
 import { MysqlTransaction } from "./transaction.ts";
-
-export interface MysqlConnectionOptions {
-  url?: string;
-  driver?: IMysqlDriver;
-}
 
 export class MysqlConnection implements IConnection {
   readonly provider = "mysql";

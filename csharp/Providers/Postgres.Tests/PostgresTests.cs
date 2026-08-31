@@ -39,7 +39,6 @@ public class PostgresTests
 
         var repo = new PostgresRepository(conn);
         Assert.Equal("items", repo.Table);
-        Assert.Same(conn, repo.Connection);
         Assert.Equal("users", new PostgresRepository(conn, "users").Table);
 
         var txn = await conn.StartTransaction();

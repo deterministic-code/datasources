@@ -7,14 +7,9 @@ import {
   type ITransaction,
 } from "@datasources/core";
 import { PostgresCommand } from "./command.ts";
+import type { PostgresConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type IPostgresDriver } from "./driver.ts";
 import { PostgresTransaction } from "./transaction.ts";
-
-export interface PostgresConnectionOptions {
-  url?: string;
-  schema?: string;
-  driver?: IPostgresDriver;
-}
 
 export class PostgresConnection implements IConnection {
   readonly provider = "postgres";

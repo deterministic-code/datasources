@@ -203,7 +203,7 @@ describe("MysqlCommand and MysqlRepository", () => {
 
   it("holds connection and table as a placeholder", async () => {
     const { repo, connection } = await setup();
-    expect(repo.connection).toBe(connection);
+    expect(repo).toBeInstanceOf(MysqlRepository);
     expect(repo.table).toBe("items");
     const named = new MysqlRepository(connection, { table: "users" });
     expect(named.table).toBe("users");

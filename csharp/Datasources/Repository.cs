@@ -26,13 +26,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         statements = built.Statements;
         ids = new(built.Ids);
         assignIdentityOnAdd = built.AssignIdentityOnAdd;
-        Table = built.Table;
     }
-
-    public IConnection Connection => connection;
-    public TypeConverter<T, Row> Converters => converters;
-    public NameSourceDestinationMapper Mapping => mapping;
-    public string Table { get; }
 
     public Repository<T> Use(ICommandMiddleware middleware)
     {

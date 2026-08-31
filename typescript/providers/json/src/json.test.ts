@@ -335,7 +335,7 @@ describe("JsonDatasource", () => {
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader("");
     const repo = ds.createRepository(connection);
-    expect(repo.connection).toBe(connection);
+    expect(repo).toBeInstanceOf(JsonRepository);
     expect(ds.createRepository()).toBeInstanceOf(JsonRepository);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(JsonRepository);
 

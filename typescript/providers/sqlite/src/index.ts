@@ -1,8 +1,6 @@
 export { SqliteCommand } from "./command.ts";
-export {
-  SqliteConnection,
-  type SqliteConnectionOptions,
-} from "./connection.ts";
+export { SqliteConnection } from "./connection.ts";
+export type { SqliteConnectionOptions } from "./connection-options.ts";
 export {
   SqliteDatasource,
   type SqliteDatasourceOptions,

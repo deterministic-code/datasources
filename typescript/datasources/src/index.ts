@@ -18,6 +18,8 @@ export type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 export type { IRepository } from "./IRepository.ts";
 export { Repository } from "./Repository.ts";
 export { RepositoryBuilder, parts } from "./RepositoryBuilder.ts";
+export type { BuiltRepository } from "./BuiltRepository.ts";
+export type { RepositoryStatements } from "./RepositoryStatements.ts";
 export { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 export type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 export type { IResponse } from "./IResponse.ts";

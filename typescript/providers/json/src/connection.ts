@@ -7,15 +7,9 @@ import {
   type ITransaction,
 } from "@datasources/core";
 import { JsonCommand } from "./command.ts";
+import type { JsonConnectionOptions } from "./connection-options.ts";
 import { MemoryFileStore, type IFileStore } from "./file-store.ts";
 import { JsonTransaction } from "./transaction.ts";
-
-export interface JsonConnectionOptions {
-  path?: string;
-  collection?: string;
-  fileStore?: IFileStore;
-  data?: unknown;
-}
 
 export class JsonConnection implements IConnection {
   readonly provider = "json";

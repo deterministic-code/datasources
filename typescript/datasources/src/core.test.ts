@@ -321,7 +321,7 @@ describe("Datasource registry", () => {
     const connection = await ds.createConnection();
     expect(connection.opened).toBe(false);
     expect(ds.createCommand().connection).toBe(connection);
-    expect(ds.createRepository().connection).toBe(connection);
+    expect(ds.createRepository()).toBeInstanceOf(MockRepository);
     Datasource.reset();
     expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
   });
@@ -371,8 +371,7 @@ describe("stubs", () => {
       ProviderNotImplementedError,
     );
 
-    const unbound = ds.createRepository();
-    expect(unbound.connection).toBeInstanceOf(StubConnection);
+    expect(ds.createRepository()).toBeInstanceOf(StubRepository);
     expect(ds.createReadonlyRepository(provided)).toBeInstanceOf(StubRepository);
 
     const txn = new StubTransaction("text", provided);

@@ -25,6 +25,7 @@ export default defineConfig({
         "src/IResponse.ts",
         "src/ITransaction.ts",
         "src/IWhere.ts",
+        "src/BuiltRepository.ts",
         "src/RepositoryBuilderOptions.ts",
         "src/builders/Column.ts",
         "src/builders/Field.ts",

@@ -3,13 +3,9 @@ namespace Datasources.Postgres;
 public sealed class PostgresRepository : IRepository<Dictionary<string, Value>>
 {
     public string Table { get; }
-    public IConnection Connection { get; }
 
-    public PostgresRepository(PostgresConnection connection, string? table = null)
-    {
-        Connection = connection;
+    public PostgresRepository(PostgresConnection _, string? table = null) =>
         Table = table ?? "items";
-    }
 
     public Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null) =>
         throw new ProviderNotImplementedException("postgres");

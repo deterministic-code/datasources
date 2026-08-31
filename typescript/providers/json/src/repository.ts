@@ -11,7 +11,7 @@ import { JsonCommand } from "./command.ts";
 import { asRecord, matches, parseFilter } from "./filter.ts";
 
 export class JsonRepository<T = unknown> implements IRepository<T> {
-  constructor(readonly connection: JsonConnection) {}
+  constructor(private readonly connection: JsonConnection) {}
 
   async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     const reader = await new JsonCommand(this.connection).executeReader(

@@ -63,7 +63,6 @@ describe("Repository", () => {
     for await (const row of repo.get()) rows.push(row);
     expect(rows).toEqual([{ id: 1, name: "a" }]);
     expect(command.executeReaderCalls[0]?.text).toBe("SELECT id, name FROM users");
-    expect(repo.connection).toBe(command.connection);
     command.reader = new MockReader([{ id: 1, name: "a" }]);
     expect(await repo.getSingle()).toEqual({ id: 1, name: "a" });
   });
@@ -161,12 +160,11 @@ describe("Repository", () => {
     expect(fromId.connection).toBe(connection);
     expect(createRepositoryBuilderOptions(asType(Label), connection).ids).toEqual([]);
     expect(createRepositoryBuilderOptions(asType(PascalId), connection).ids).toEqual(["Id"]);
-    const repo = new Repository(fromId);
-    expect(repo.connection).toBe(connection);
-    expect(new Repository(asType(Item), connection).connection).toBe(connection);
-    expect(new Repository(parts(fromId)).connection).toBe(connection);
+    expect(new Repository(fromId)).toBeInstanceOf(Repository);
+    expect(new Repository(asType(Item), connection)).toBeInstanceOf(Repository);
+    expect(new Repository(parts(fromId))).toBeInstanceOf(Repository);
     expect(RepositoryBuilder.from(fromId).parts().connection).toBe(connection);
     expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
-    expect(parts({ connection }).table).toBe("");
+    expect(parts({ connection }).statements.query().getText()).toBe("SELECT * FROM ");
   });
 });

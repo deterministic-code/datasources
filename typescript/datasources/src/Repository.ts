@@ -15,11 +15,9 @@ import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
-import {
-  parts,
-  type BuiltRepository,
-  type RepositoryStatements,
-} from "./RepositoryBuilder.ts";
+import type { BuiltRepository } from "./BuiltRepository.ts";
+import { parts } from "./RepositoryBuilder.ts";
+import type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 const mapKeys = (row: Cells, name: (key: string) => string): Cells =>
   Object.fromEntries(Object.entries(row).map(([key, value]) => [name(key), value]));
@@ -43,10 +41,9 @@ const isBuilt = <T extends Cells>(
   "statements" in value && "converters" in value && "mapping" in value;
 
 export class Repository<T extends Cells> implements IRepository<T> {
-  readonly connection: IConnection;
+  private readonly connection: IConnection;
   readonly converters: TypeConverter<T>;
   readonly mapping: NameSourceDestinationMapper;
-  readonly table: string;
   readonly statements: RepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
   private readonly ids: Set<string>;
@@ -69,7 +66,6 @@ export class Repository<T extends Cells> implements IRepository<T> {
     this.connection = built.connection;
     this.converters = built.converters;
     this.mapping = built.mapping;
-    this.table = built.table;
     this.statements = built.statements;
     this.ids = new Set(built.ids);
     this.assignIdentityOnAdd = built.assignIdentityOnAdd;

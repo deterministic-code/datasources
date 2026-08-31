@@ -7,13 +7,9 @@ import {
   type ITransaction,
 } from "@datasources/core";
 import { SqliteCommand } from "./command.ts";
+import type { SqliteConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type ISqliteDriver } from "./driver.ts";
 import { SqliteTransaction } from "./transaction.ts";
-
-export interface SqliteConnectionOptions {
-  filename?: string;
-  driver?: ISqliteDriver;
-}
 
 export class SqliteConnection implements IConnection {
   readonly provider = "sqlite";

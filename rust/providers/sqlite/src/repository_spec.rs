@@ -266,8 +266,7 @@ async fn run(path: &Path) {
         types: Default::default(),
         fields: Default::default(),
     };
-    let (connection, converters, mapping, statements, ids, assign) =
-        TableRepositoryBuilder::parts(options).unwrap();
+    let built = TableRepositoryBuilder::parts(options).unwrap();
     let logs = Arc::new(Mutex::new(Vec::<String>::new()));
     let middleware: Arc<dyn CommandMiddleware> = Arc::new(ConsoleCommandMiddleware::with_sink(
         {
@@ -276,7 +275,7 @@ async fn run(path: &Path) {
         },
         || datasources::utc_iso_millis(SystemTime::now()),
     ));
-    let mut repo = TableRepository::from_parts(connection, converters, mapping, statements, ids, assign);
+    let mut repo = TableRepository::from_built(built);
     repo.use_middleware(middleware);
     for step in &spec.steps {
         if let Some(create) = &step.create {

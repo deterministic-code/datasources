@@ -6,10 +6,8 @@ import {
   type IReadonlyRepository,
   type IRepository,
 } from "@datasources/core";
-import {
-  JsonConnection,
-  type JsonConnectionOptions,
-} from "./connection.ts";
+import type { JsonConnectionOptions } from "./connection-options.ts";
+import { JsonConnection } from "./connection.ts";
 import { JsonCommand } from "./command.ts";
 import { JsonRepository } from "./repository.ts";
 

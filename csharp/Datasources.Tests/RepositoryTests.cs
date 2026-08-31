@@ -71,7 +71,6 @@ public class RepositoryTests
         Assert.Single(rows);
         Assert.Equal(1, rows[0].id);
         Assert.Equal("SELECT id, name FROM users", command.ExecuteReaderCalls[0].Text);
-        Assert.Same(command.Connection, repo.Connection);
         command.Reader = new MockReader(new object?[]
         {
             new Row { ["id"] = 1, ["name"] = "a" }
@@ -168,8 +167,8 @@ public class RepositoryTests
         Assert.Equal(new[] { "Id" }, fromId.Ids);
         Assert.Same(connection, fromId.Connection);
         Assert.Empty(CreateRepositoryBuilderOptions.FromType<Label>(connection).Ids);
-        Assert.Same(connection, new Repository<Item>(fromId).Connection);
-        Assert.Same(connection, new Repository<Item>(connection).Connection);
+        Assert.NotNull(new Repository<Item>(fromId));
+        Assert.NotNull(new Repository<Item>(connection));
         Assert.Same(connection, RepositoryBuilder<Item>.Parts(fromId).Connection);
     }
 
