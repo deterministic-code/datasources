@@ -55,6 +55,7 @@ const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
 describe("Repository", () => {
   it("builds select and maps rows", async () => {
     const { repo, command } = create();
+    repo.use({ beforeQuery() {}, afterQuery() {} });
     command.reader = new MockReader([
       { id: 1, name: "a" },
     ]);
@@ -164,7 +165,7 @@ describe("Repository", () => {
     expect(repo.connection).toBe(connection);
     expect(new Repository(asType(Item), connection).connection).toBe(connection);
     expect(new Repository(parts(fromId)).connection).toBe(connection);
-    expect(RepositoryBuilder.from(fromId).parts().commands.get.connection).toBe(connection);
+    expect(RepositoryBuilder.from(fromId).parts().connection).toBe(connection);
     expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
     expect(parts({ connection }).table).toBe("");
   });

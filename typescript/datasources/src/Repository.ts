@@ -1,4 +1,6 @@
 import { DatasourceError } from "./DatasourceError.ts";
+import type { ICommand } from "./ICommand.ts";
+import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { IQuery } from "./IQuery.ts";
 import type { IRepository } from "./IRepository.ts";
@@ -16,7 +18,6 @@ import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 import {
   parts,
   type BuiltRepository,
-  type RepositoryCommands,
   type RepositoryStatements,
 } from "./RepositoryBuilder.ts";
 
@@ -39,14 +40,15 @@ const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
 const isBuilt = <T extends Cells>(
   value: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
 ): value is BuiltRepository<T> =>
-  "commands" in value && "converters" in value && "statements" in value;
+  "statements" in value && "converters" in value && "mapping" in value;
 
 export class Repository<T extends Cells> implements IRepository<T> {
-  readonly commands: RepositoryCommands;
+  readonly connection: IConnection;
   readonly converters: TypeConverter<T>;
   readonly mapping: NameSourceDestinationMapper;
   readonly table: string;
   readonly statements: RepositoryStatements;
+  private readonly middlewares: ICommandMiddleware[] = [];
   private readonly ids: Set<string>;
   private readonly assignIdentityOnAdd: boolean;
 
@@ -64,7 +66,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
             ? (typeOrOptions as RepositoryBuilderOptions<T>)
             : createRepositoryBuilderOptions(typeOrOptions as Constructable<T>, connection),
         );
-    this.commands = built.commands;
+    this.connection = built.connection;
     this.converters = built.converters;
     this.mapping = built.mapping;
     this.table = built.table;
@@ -73,9 +75,10 @@ export class Repository<T extends Cells> implements IRepository<T> {
     this.assignIdentityOnAdd = built.assignIdentityOnAdd;
   }
 
-  get connection(): IConnection {
-    return this.commands.get.connection;
-  }
+  use = (middleware: ICommandMiddleware): this => {
+    this.middlewares.push(middleware);
+    return this;
+  };
 
   getSingle = async (query?: IQuery | IWhere): Promise<T | undefined> => {
     for await (const item of this.get(query)) return item;
@@ -84,7 +87,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
 
   async *get(query?: IQuery | IWhere): AsyncIterable<T> {
     const statement = this.readQuery(query);
-    const reader = await this.commands.get.executeReader(
+    const reader = await this.command().executeReader(
       statement.getText(),
       statement.where?.parameters ?? statement.parameters,
     );
@@ -97,7 +100,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
       this.sql(obj),
       (col) => !this.assignIdentityOnAdd || !this.ids.has(col),
     );
-    return this.commands.add.execute(this.statements.insert(fields).getText(), fields);
+    return this.command().execute(this.statements.insert(fields).getText(), fields);
   };
 
   update = async (obj: T, byWhere?: IWhere): Promise<IResponse> => {
@@ -106,7 +109,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
     const fields = fieldsOf(record, (col) => !this.ids.has(col));
     if (fields.length === 0)
       throw new DatasourceError("Update requires at least one non-Id field");
-    return this.commands.update.execute(this.statements.update(fields, where).getText(), [
+    return this.command().execute(this.statements.update(fields, where).getText(), [
       ...fields,
       ...(where.parameters ?? []),
     ]);
@@ -114,11 +117,17 @@ export class Repository<T extends Cells> implements IRepository<T> {
 
   delete = async (obj: T, byWhere?: IWhere): Promise<IResponse> => {
     const where = byWhere ?? this.idWhere(this.sql(obj));
-    return this.commands.delete.execute(
+    return this.command().execute(
       this.statements.delete(where).getText(),
       where.parameters,
     );
   };
+
+  private command = (): ICommand =>
+    this.middlewares.reduce(
+      (command, middleware) => command.use(middleware),
+      this.connection.createCommand(),
+    );
 
   private sql = (row: T): Cells => mapKeys(this.converters.reverseConvert(row), this.mapping.reverseMap);
 

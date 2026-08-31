@@ -2,8 +2,6 @@ using Datasources.Builders;
 
 namespace Datasources;
 
-public sealed record RepositoryCommands(ICommand Get, ICommand Add, ICommand Update, ICommand Delete);
-
 public sealed class RepositoryStatements
 {
     readonly string table;
@@ -23,7 +21,7 @@ public sealed class RepositoryStatements
 }
 
 public sealed record BuiltRepository<T>(
-    RepositoryCommands Commands,
+    IConnection Connection,
     TypeConverter<T, Row> Converters,
     NameSourceDestinationMapper Mapping,
     RepositoryStatements Statements,
@@ -40,11 +38,7 @@ public static class RepositoryBuilder<T> where T : new()
         var mapping = new NameSourceDestinationMapper(options.Connection.Provider, "csharp");
         var table = options.Table ?? typeof(T).Name;
         return new(
-            new RepositoryCommands(
-                options.Connection.CreateCommand(),
-                options.Connection.CreateCommand(),
-                options.Connection.CreateCommand(),
-                options.Connection.CreateCommand()),
+            options.Connection,
             converters,
             mapping,
             new RepositoryStatements(table, columns),

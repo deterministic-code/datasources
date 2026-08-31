@@ -60,6 +60,7 @@ public class RepositoryTests
     public async Task GetBuildsSelectAndMapsRows()
     {
         var (repo, command) = Create();
+        repo.Use(new PassMiddleware());
         command.Reader = new MockReader(new object?[]
         {
             new Row { ["id"] = 1, ["name"] = "a" }
@@ -169,5 +170,18 @@ public class RepositoryTests
         Assert.Empty(CreateRepositoryBuilderOptions.FromType<Label>(connection).Ids);
         Assert.Same(connection, new Repository<Item>(fromId).Connection);
         Assert.Same(connection, new Repository<Item>(connection).Connection);
+        Assert.Same(connection, RepositoryBuilder<Item>.Parts(fromId).Connection);
+    }
+
+    sealed class PassMiddleware : ICommandMiddleware
+    {
+        public Task<(string Query, IReadOnlyList<Parameter>? Parameters)?> BeforeQuery(
+            string query, IReadOnlyList<Parameter>? parameters) =>
+            Task.FromResult<(string Query, IReadOnlyList<Parameter>? Parameters)?>((query, parameters));
+
+        public Task AfterQuery(
+            string query, IReadOnlyList<Parameter>? parameters, IReadOnlyList<Row> results,
+            double elapsedMs, Exception? error = null) =>
+            Task.CompletedTask;
     }
 }

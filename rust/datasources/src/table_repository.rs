@@ -1,4 +1,6 @@
 use crate::builders::WhereBuilder;
+use crate::command::Command;
+use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::converters::{ConvertSchema, TypeConverter};
@@ -11,7 +13,7 @@ use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::table_repository_builder::{
-    TableRepositoryBuilder, TableRepositoryCommands, TableRepositoryStatements,
+    TableRepositoryBuilder, TableRepositoryStatements,
 };
 use crate::table_repository_builder_options::TableRepositoryBuilderOptions;
 use crate::where_trait::Where;
@@ -20,7 +22,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 pub struct TableRepository {
-    commands: TableRepositoryCommands,
+    connection: Arc<dyn Connection>,
+    middlewares: Vec<Arc<dyn CommandMiddleware>>,
     converters: TypeConverter,
     pub mapping: NameSourceDestinationMapper,
     statements: TableRepositoryStatements,
@@ -46,7 +49,7 @@ impl TableRepository {
     }
 
     pub fn from_parts(
-        commands: TableRepositoryCommands,
+        connection: Arc<dyn Connection>,
         converters: TypeConverter,
         mapping: NameSourceDestinationMapper,
         statements: TableRepositoryStatements,
@@ -54,7 +57,8 @@ impl TableRepository {
         assign_identity_on_add: bool,
     ) -> Self {
         Self {
-            commands,
+            connection,
+            middlewares: Vec::new(),
             converters,
             mapping,
             statements,
@@ -62,6 +66,18 @@ impl TableRepository {
             id: ids,
             assign_identity_on_add,
         }
+    }
+
+    pub fn use_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
+        self.middlewares.push(middleware);
+    }
+
+    fn command(&self) -> Arc<dyn Command> {
+        let command = self.connection.create_command();
+        for middleware in &self.middlewares {
+            command.use_middleware(middleware.clone());
+        }
+        command
     }
 
     fn params(&self, record: &Row, include_id: bool) -> Vec<Parameter> {
@@ -105,8 +121,7 @@ impl TableRepository {
 
     async fn read_single(&self, text: String, params: Vec<Parameter>) -> Result<Option<Row>> {
         let reader = self
-            .commands
-            .get
+            .command()
             .execute_reader(&text, Some(&params))
             .await?;
         if !reader.next().await? {
@@ -120,8 +135,7 @@ impl TableRepository {
 
     async fn read_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Row>> {
         let reader = self
-            .commands
-            .get
+            .command()
             .execute_reader(&text, Some(&params))
             .await?;
         let mut items = Vec::new();
@@ -176,8 +190,7 @@ impl Repository for TableRepository {
         let record = self.sql(obj)?;
         let fields = self.params(&record, !self.assign_identity_on_add);
         let text = self.statements.insert(&fields);
-        self.commands
-            .add
+        self.command()
             .execute(&text, Some(&fields))
             .await
     }
@@ -203,8 +216,7 @@ impl Repository for TableRepository {
         let text = self.statements.update(&fields, predicate);
         let mut parameters = fields;
         parameters.extend(predicate.parameters());
-        self.commands
-            .update
+        self.command()
             .execute(&text, Some(&parameters))
             .await
     }
@@ -223,8 +235,7 @@ impl Repository for TableRepository {
         };
         let text = self.statements.delete(predicate);
         let parameters = predicate.parameters();
-        self.commands
-            .delete
+        self.command()
             .execute(&text, Some(&parameters))
             .await
     }
