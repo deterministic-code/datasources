@@ -51,6 +51,7 @@ export type { IMapper } from "./mappers/IMapper.ts";
 export type { ISourceDestinationMapper } from "./mappers/ISourceDestinationMapper.ts";
 export { NameMapper } from "./mappers/NameMapper.ts";
 export { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
+export { TransformMapper } from "./mappers/TransformMapper.ts";
 export { identityFilter } from "./identityFilter.ts";
 export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";

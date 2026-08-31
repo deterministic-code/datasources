@@ -34,3 +34,12 @@ Holds source/destination labels. Column names pass through as-is.
 | constructor | `new` | constructor |
 | `Source` | `source` | `source` |
 | `Destination` | `destination` | `destination` |
+
+## TransformMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` |
+| constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
