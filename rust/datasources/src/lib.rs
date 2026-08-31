@@ -70,7 +70,8 @@ pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
-    IMapper, ISourceDestinationMapper, NameMapper, NameSourceDestinationMapper, TransformMapper,
+    IMapper, ISourceDestinationMapper, NameMapper, NameSourceDestinationMapper,
+    TransformConverterMapper, TransformMapper,
 };
 pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockQuery, MockReader, MockRepository,

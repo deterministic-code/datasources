@@ -1,5 +1,7 @@
+mod transform_converter_mapper;
 mod transform_mapper;
 
+pub use transform_converter_mapper::TransformConverterMapper;
 pub use transform_mapper::TransformMapper;
 
 pub trait IMapper<TFrom, TTo> {
