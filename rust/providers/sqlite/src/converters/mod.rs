@@ -59,30 +59,128 @@ mod tests {
     use datasources::Value;
 
     #[test]
-    fn registers_and_converts_sqlite_wire() {
+    fn registers_catalog() {
         register();
-        assert!(DefaultTypeConverters::for_provider("sqlite").contains_key("bool"));
-        let bools = BoolConverter;
-        assert_eq!(bools.convert(&Value::Int(1)).unwrap(), Value::Bool(true));
+        let types = DefaultTypeConverters::for_provider("sqlite");
+        for key in ["bool", "datetime", "uuid", "decimal", "binary"] {
+            assert!(types.contains_key(key));
+            assert!(field(key).is_some());
+        }
+        assert!(field("int").is_none());
+        assert!(DefaultTypeConverters::for_provider("postgres").is_empty());
+    }
+
+    #[test]
+    fn bool_converter() {
+        let converter = BoolConverter;
+        assert_eq!(converter.convert(&Value::Int(1)).unwrap(), Value::Bool(true));
+        assert_eq!(converter.convert(&Value::Int(0)).unwrap(), Value::Bool(false));
         assert_eq!(
-            bools.reverse_convert(&Value::Bool(false)).unwrap(),
+            converter.convert(&Value::from("x")).unwrap(),
+            Value::from("x")
+        );
+        assert_eq!(
+            converter.reverse_convert(&Value::Bool(true)).unwrap(),
+            Value::Int(1)
+        );
+        assert_eq!(
+            converter.reverse_convert(&Value::Bool(false)).unwrap(),
             Value::Int(0)
         );
-        assert!(matches!(
-            DateTimeConverter
-                .convert(&Value::from("2020-01-02T03:04:05.000Z"))
-                .unwrap(),
-            Value::DateTime(_)
-        ));
-        assert!(matches!(
-            UuidConverter
-                .convert(&Value::from("550e8400-e29b-41d4-a716-446655440000"))
-                .unwrap(),
-            Value::Uuid(_)
-        ));
         assert_eq!(
-            DecimalConverter.convert(&Value::from("10.5")).unwrap(),
+            converter.reverse_convert(&Value::from("x")).unwrap(),
+            Value::from("x")
+        );
+    }
+
+    #[test]
+    fn datetime_converter() {
+        let converter = DateTimeConverter;
+        let native = converter
+            .convert(&Value::from("2020-01-02T03:04:05.000Z"))
+            .unwrap();
+        assert!(matches!(native, Value::DateTime(_)));
+        assert_eq!(
+            converter.reverse_convert(&native).unwrap(),
+            Value::from("2020-01-02T03:04:05.000Z")
+        );
+        assert_eq!(
+            converter.convert(&Value::from("nope")).unwrap(),
+            Value::from("nope")
+        );
+        assert_eq!(converter.convert(&Value::Int(1)).unwrap(), Value::Int(1));
+        assert_eq!(
+            converter.reverse_convert(&Value::Int(1)).unwrap(),
+            Value::Int(1)
+        );
+    }
+
+    #[test]
+    fn uuid_converter() {
+        let converter = UuidConverter;
+        let native = converter
+            .convert(&Value::from("550e8400-e29b-41d4-a716-446655440000"))
+            .unwrap();
+        assert!(matches!(native, Value::Uuid(_)));
+        assert_eq!(
+            converter.reverse_convert(&native).unwrap(),
+            Value::from("550e8400-e29b-41d4-a716-446655440000")
+        );
+        assert_eq!(
+            converter.convert(&Value::from("nope")).unwrap(),
+            Value::from("nope")
+        );
+        assert_eq!(converter.convert(&Value::Int(1)).unwrap(), Value::Int(1));
+        assert_eq!(
+            converter.reverse_convert(&Value::Int(1)).unwrap(),
+            Value::Int(1)
+        );
+    }
+
+    #[test]
+    fn decimal_converter() {
+        let converter = DecimalConverter;
+        assert_eq!(
+            converter.convert(&Value::Int(7)).unwrap(),
+            Value::Decimal(7.into())
+        );
+        assert_eq!(
+            converter.convert(&Value::from("10.5")).unwrap(),
             Value::Decimal("10.5".parse().unwrap())
+        );
+        assert_eq!(
+            converter
+                .reverse_convert(&Value::Decimal("10.5".parse().unwrap()))
+                .unwrap(),
+            Value::from("10.5")
+        );
+        assert_eq!(
+            converter.convert(&Value::from("nope")).unwrap(),
+            Value::from("nope")
+        );
+        assert_eq!(
+            converter.convert(&Value::Bool(true)).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            converter.reverse_convert(&Value::Bool(true)).unwrap(),
+            Value::Bool(true)
+        );
+    }
+
+    #[test]
+    fn binary_converter() {
+        let converter = BinaryConverter;
+        let bytes = Value::Binary(vec![1, 2]);
+        assert_eq!(converter.convert(&bytes).unwrap(), bytes);
+        assert_eq!(converter.reverse_convert(&bytes).unwrap(), bytes);
+        assert_eq!(
+            converter.convert(&Value::from("x")).unwrap(),
+            Value::from("x")
+        );
+        assert_eq!(
+            converter.reverse_convert(&Value::from("x")).unwrap(),
+            Value::from("x")
         );
     }
 }
