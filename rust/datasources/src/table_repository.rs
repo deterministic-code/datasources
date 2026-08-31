@@ -12,10 +12,10 @@ use crate::row::Row;
 use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
-use crate::table_repository_builder::{
-    TableRepositoryBuilder, TableRepositoryStatements,
-};
+use crate::built_repository::BuiltRepository;
+use crate::table_repository_builder::TableRepositoryBuilder;
 use crate::table_repository_builder_options::TableRepositoryBuilderOptions;
+use crate::table_repository_statements::TableRepositoryStatements;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::collections::HashSet;
@@ -46,6 +46,17 @@ impl TableRepository {
 
     pub fn new(options: TableRepositoryBuilderOptions) -> Result<Self> {
         TableRepositoryBuilder::build(options)
+    }
+
+    pub fn from_built(built: BuiltRepository) -> Self {
+        Self::from_parts(
+            built.connection,
+            built.converters,
+            built.mapping,
+            built.statements,
+            built.ids,
+            built.assign_identity_on_add,
+        )
     }
 
     pub fn from_parts(

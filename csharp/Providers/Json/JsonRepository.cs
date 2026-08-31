@@ -5,9 +5,8 @@ namespace Datasources.Json;
 
 public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
 {
-    public JsonRepository(JsonConnection connection) => Connection = connection;
-    public IConnection Connection { get; }
-    private JsonConnection Typed => (JsonConnection)Connection;
+    readonly JsonConnection connection;
+    public JsonRepository(JsonConnection connection) => this.connection = connection;
 
     public Task<Dictionary<string, Value>?> GetSingle(IWhere where) =>
         GetSingle(new Query(where.GetText(), where));
@@ -17,13 +16,13 @@ public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
 
     public async Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null)
     {
-        var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText() ?? "");
+        var reader = await new JsonCommand(connection).ExecuteReader(query?.GetText() ?? "");
         return await reader.Next() ? ToRecord(reader.Current) : null;
     }
 
     public async IAsyncEnumerable<Dictionary<string, Value>> Get(IQuery? query = null)
     {
-        var reader = await new JsonCommand(Typed).ExecuteReader(query?.GetText() ?? "");
+        var reader = await new JsonCommand(connection).ExecuteReader(query?.GetText() ?? "");
         while (await reader.Next())
         {
             var record = ToRecord(reader.Current);
@@ -33,22 +32,22 @@ public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
 
     public async Task<Response> Add(Dictionary<string, Value> obj)
     {
-        Typed.EnsureOpen();
-        Typed.GetCollection().Add(JsonCommand.ToObject(new Row(obj)));
-        await Typed.Persist();
+        connection.EnsureOpen();
+        connection.GetCollection().Add(JsonCommand.ToObject(new Row(obj)));
+        await connection.Persist();
         return new Response(Value.Null.Instance, 1);
     }
 
     public async Task<Response> Update(Dictionary<string, Value> obj, IWhere? byWhere = null)
     {
-        Typed.EnsureOpen();
-        return await new JsonCommand(Typed).Execute("update", ToParams(obj, byWhere));
+        connection.EnsureOpen();
+        return await new JsonCommand(connection).Execute("update", ToParams(obj, byWhere));
     }
 
     public async Task<Response> Delete(Dictionary<string, Value> obj, IWhere? byWhere = null)
     {
-        Typed.EnsureOpen();
-        return await new JsonCommand(Typed).Execute("delete", ToParams(obj, byWhere));
+        connection.EnsureOpen();
+        return await new JsonCommand(connection).Execute("delete", ToParams(obj, byWhere));
     }
 
     private static IReadOnlyList<Parameter> ToParams(Dictionary<string, Value> obj, IWhere? byWhere) =>

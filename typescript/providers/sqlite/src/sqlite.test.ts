@@ -273,10 +273,8 @@ describe("SqliteDatasource", () => {
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
-    expect((repo as Repository).table).toBe("people");
-    expect((new SqliteDatasource({ driver }).createRepository() as Repository).table).toBe(
-      "items",
-    );
+    expect(repo).toBeInstanceOf(Repository);
+    expect(new SqliteDatasource({ driver }).createRepository()).toBeInstanceOf(Repository);
     expect(Datasource.create("sqlite", { driver }).provider).toBe("sqlite");
   });
 });

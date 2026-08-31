@@ -15,7 +15,7 @@ export class PostgresRepository<T> implements IRepository<T> {
   readonly table: string;
 
   constructor(
-    readonly connection: PostgresConnection,
+    _connection: PostgresConnection,
     options: PostgresRepositoryOptions = {},
   ) {
     this.table = options.table ?? "items";

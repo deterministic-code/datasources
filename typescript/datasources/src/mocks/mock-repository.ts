@@ -20,7 +20,7 @@ export class MockRepository<T = unknown> implements IRepository<T> {
   updateResponse: IResponse = { result: undefined, rowsAffected: 1 };
   deleteResponse: IResponse = { result: undefined, rowsAffected: 1 };
 
-  constructor(readonly connection: IConnection) {}
+  constructor(_connection: IConnection) {}
 
   async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     this.getSingleCalls.push(query);

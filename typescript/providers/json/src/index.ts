@@ -1,10 +1,8 @@
 export {
   JsonCommand,
 } from "./command.ts";
-export {
-  JsonConnection,
-  type JsonConnectionOptions,
-} from "./connection.ts";
+export { JsonConnection } from "./connection.ts";
+export type { JsonConnectionOptions } from "./connection-options.ts";
 export { JsonDatasource } from "./datasource.ts";
 export type { FileSystemApi, IFileStore } from "./i-file-store.ts";
 export { MemoryFileStore } from "./memory-file-store.ts";

@@ -6,10 +6,8 @@ import {
   type IReadonlyRepository,
   type IRepository,
 } from "@datasources/core";
-import {
-  MemoryConnection,
-  type MemoryConnectionOptions,
-} from "./connection.ts";
+import type { MemoryConnectionOptions } from "./connection-options.ts";
+import { MemoryConnection } from "./connection.ts";
 import { MemoryCommand } from "./command.ts";
 import { MemoryRepository } from "./repository.ts";
 import { MemoryStore } from "./store.ts";

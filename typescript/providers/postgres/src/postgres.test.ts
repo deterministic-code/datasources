@@ -223,7 +223,7 @@ describe("PostgresCommand and PostgresRepository", () => {
 
   it("holds connection and table as a placeholder", async () => {
     const { repo, connection } = await setup();
-    expect(repo.connection).toBe(connection);
+    expect(repo).toBeInstanceOf(PostgresRepository);
     expect(repo.table).toBe("items");
     expect(new PostgresRepository(connection, { table: "users" }).table).toBe(
       "users",

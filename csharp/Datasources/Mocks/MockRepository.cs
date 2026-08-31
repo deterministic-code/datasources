@@ -8,8 +8,7 @@ public sealed class MockRepository<T> : IRepository<T>
     public Exception? AddError { get; set; }
     public Exception? UpdateError { get; set; }
     public Exception? DeleteError { get; set; }
-    public IConnection Connection { get; }
-    public MockRepository(IConnection connection) => Connection = connection;
+    public MockRepository(IConnection _) { }
 
     public Task<T?> GetSingle(IWhere where) => GetSingle((IQuery?)null);
 

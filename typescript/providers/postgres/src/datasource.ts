@@ -7,10 +7,8 @@ import type {
   IReadonlyRepository,
   IRepository,
 } from "@datasources/core";
-import {
-  PostgresConnection,
-  type PostgresConnectionOptions,
-} from "./connection.ts";
+import type { PostgresConnectionOptions } from "./connection-options.ts";
+import { PostgresConnection } from "./connection.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresRepository } from "./repository.ts";
 import { requireDriver } from "./driver.ts";

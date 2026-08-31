@@ -3,13 +3,9 @@ namespace Datasources.Mysql;
 public sealed class MysqlRepository : IRepository<Dictionary<string, Value>>
 {
     public string Table { get; }
-    public IConnection Connection { get; }
 
-    public MysqlRepository(MysqlConnection connection, string? table = null)
-    {
-        Connection = connection;
+    public MysqlRepository(MysqlConnection _, string? table = null) =>
         Table = table ?? "items";
-    }
 
     public Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null) =>
         throw new ProviderNotImplementedException("mysql");

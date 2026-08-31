@@ -1,8 +1,6 @@
 export { PostgresCommand } from "./command.ts";
-export {
-  PostgresConnection,
-  type PostgresConnectionOptions,
-} from "./connection.ts";
+export { PostgresConnection } from "./connection.ts";
+export type { PostgresConnectionOptions } from "./connection-options.ts";
 export {
   PostgresDatasource,
   type PostgresDatasourceOptions,

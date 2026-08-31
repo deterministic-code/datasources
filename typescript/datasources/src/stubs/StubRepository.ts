@@ -8,7 +8,7 @@ import { notImplemented } from "./notImplemented.ts";
 export class StubRepository<T = unknown> implements IRepository<T> {
   constructor(
     readonly provider: string,
-    readonly connection: IConnection,
+    _connection: IConnection,
   ) {}
 
   getSingle = async (_query?: IQuery | IWhere): Promise<T | undefined> =>

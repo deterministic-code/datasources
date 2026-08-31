@@ -11,7 +11,7 @@ import { MemoryCommand } from "./command.ts";
 import { asRecord, matches, parseFilter } from "./filter.ts";
 
 export class MemoryRepository<T = unknown> implements IRepository<T> {
-  constructor(readonly connection: MemoryConnection) {}
+  constructor(private readonly connection: MemoryConnection) {}
 
   async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     const reader = await new MemoryCommand(this.connection).executeReader(

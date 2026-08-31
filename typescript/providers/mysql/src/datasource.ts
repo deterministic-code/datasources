@@ -7,10 +7,8 @@ import type {
   IReadonlyRepository,
   IRepository,
 } from "@datasources/core";
-import {
-  MysqlConnection,
-  type MysqlConnectionOptions,
-} from "./connection.ts";
+import type { MysqlConnectionOptions } from "./connection-options.ts";
+import { MysqlConnection } from "./connection.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlRepository } from "./repository.ts";
 import { requireDriver } from "./driver.ts";

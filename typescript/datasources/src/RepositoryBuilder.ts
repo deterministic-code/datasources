@@ -1,43 +1,16 @@
 import type { IConnection } from "./IConnection.ts";
-import type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
-import type { IInsertStatement } from "./builders/IInsertStatement.ts";
-import type { IQuery } from "./IQuery.ts";
-import type { IUpdateStatement } from "./builders/IUpdateStatement.ts";
-import type { IWhere } from "./IWhere.ts";
-import { StatementBuilder } from "./builders/index.ts";
-import type { Field } from "./builders/Field.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { TypeConverter } from "./converters/TypeConverter.ts";
 import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
+import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
+import { statementsOf } from "./RepositoryStatements.ts";
 
-export type RepositoryStatements = {
-  query: (where?: IWhere) => IQuery;
-  insert: (fields: Field[]) => IInsertStatement;
-  update: (fields: Field[], where?: IWhere) => IUpdateStatement;
-  delete: (where?: IWhere) => IDeleteStatement;
-};
-
-export type BuiltRepository<T extends Cells> = {
-  connection: IConnection;
-  converters: TypeConverter<T>;
-  mapping: NameSourceDestinationMapper;
-  statements: RepositoryStatements;
-  ids: string[];
-  assignIdentityOnAdd: boolean;
-  table: string;
-};
-
-const statementsOf = (table: string, columns: string[]): RepositoryStatements => ({
-  query: (where) => StatementBuilder.createQuery(table, columns, where),
-  insert: (fields) => StatementBuilder.createInsert(table, fields),
-  update: (fields, where) => StatementBuilder.createUpdate(table, fields, where),
-  delete: (where) => StatementBuilder.createDelete(table, where),
-});
+export type { BuiltRepository } from "./BuiltRepository.ts";
+export type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 export const parts = <T extends Cells>(
   options: RepositoryBuilderOptions<T>,
@@ -59,7 +32,6 @@ export const parts = <T extends Cells>(
     statements: statementsOf(table, options.type ? fieldNamesOf(options.type).sort() : []),
     ids: options.ids ?? ["id"],
     assignIdentityOnAdd: options.assignIdentityOnAdd !== false,
-    table,
   };
 };
 

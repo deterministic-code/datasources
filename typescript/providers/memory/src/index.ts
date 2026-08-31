@@ -1,8 +1,6 @@
 export { MemoryCommand } from "./command.ts";
-export {
-  MemoryConnection,
-  type MemoryConnectionOptions,
-} from "./connection.ts";
+export { MemoryConnection } from "./connection.ts";
+export type { MemoryConnectionOptions } from "./connection-options.ts";
 export { MemoryDatasource } from "./datasource.ts";
 export {
   asRecord,

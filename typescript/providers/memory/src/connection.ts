@@ -7,14 +7,9 @@ import {
   type ITransaction,
 } from "@datasources/core";
 import { MemoryCommand } from "./command.ts";
+import type { MemoryConnectionOptions } from "./connection-options.ts";
 import { MemoryStore, type MemoryRecord } from "./store.ts";
 import { MemoryTransaction } from "./transaction.ts";
-
-export interface MemoryConnectionOptions {
-  collection?: string;
-  store?: MemoryStore;
-  data?: MemoryRecord[] | Record<string, MemoryRecord[]>;
-}
 
 export class MemoryConnection implements IConnection {
   readonly provider = "memory";

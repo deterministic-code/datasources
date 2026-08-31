@@ -219,7 +219,7 @@ public class CoreTests
         var connection = await ds.CreateConnection();
         Assert.False(connection.Opened);
         Assert.Same(connection, ds.CreateCommand().Connection);
-        Assert.Same(connection, ds.CreateRepository<object>().Connection);
+        Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>());
         Datasource.Reset();
         var error = Assert.Throws<DatasourceException>(() => Datasource.Create());
         Assert.Equal("Datasource defaults are not specified", error.Message);
@@ -249,7 +249,7 @@ public class CoreTests
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Add(new object()));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Update(new object()));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Delete(new object(), new Where("1=1")));
-        Assert.IsType<StubConnection>(ds.CreateRepository<object>().Connection);
+        Assert.IsType<StubRepository<object>>(ds.CreateRepository<object>());
         Assert.IsType<StubRepository<object>>(((IDatasource)ds).CreateReadonlyRepository<object>(provided));
         var txn = new StubTransaction("text", provided);
         Assert.Same(provided, txn.Connection);
@@ -304,7 +304,6 @@ public class CoreTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => reader.Next());
 
         var repo = new MockRepository<Dictionary<string, Value>>(connection);
-        Assert.Same(connection, repo.Connection);
         Assert.Null(await repo.GetSingle());
         repo.Items.Add(new Row { ["id"] = 1 });
         Assert.NotNull(await repo.GetSingle(new MockQuery("id=1")));

@@ -8,10 +8,8 @@ import type {
 } from "@datasources/core";
 import { Repository, RowTypeConverter } from "@datasources/core";
 import "./converters/SqliteTypes.ts";
-import {
-  SqliteConnection,
-  type SqliteConnectionOptions,
-} from "./connection.ts";
+import type { SqliteConnectionOptions } from "./connection-options.ts";
+import { SqliteConnection } from "./connection.ts";
 import { SqliteCommand } from "./command.ts";
 import { requireDriver } from "./driver.ts";
 

@@ -1,8 +1,6 @@
 export { MysqlCommand } from "./command.ts";
-export {
-  MysqlConnection,
-  type MysqlConnectionOptions,
-} from "./connection.ts";
+export { MysqlConnection } from "./connection.ts";
+export type { MysqlConnectionOptions } from "./connection-options.ts";
 export {
   MysqlDatasource,
   type MysqlDatasourceOptions,
