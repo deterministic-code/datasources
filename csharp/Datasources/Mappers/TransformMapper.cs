@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class TransformMapper<TFrom, TTo>(
+public class TransformMapper<TFrom, TTo>(
     Func<TFrom, TTo> map,
     Func<TTo, TFrom> reverseMap) : IMapper<TFrom, TTo>
 {
