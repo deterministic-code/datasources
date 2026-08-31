@@ -1,6 +1,6 @@
 use crate::converters::{
-    Casing, ChangeCasingConverter, PluralizerConverter, RowConverter, ToLowerCaseConverter,
-    ToUpperCaseConverter, TypeConverter, ValueConverter,
+    Casing, ChangeCasingConverter, PluralizerConverter, RegexConverter, ReplaceConverter,
+    RowConverter, ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter, ValueConverter,
 };
 use crate::row::Row;
 use crate::value::Value;
@@ -65,6 +65,27 @@ fn field_override_beats_type_default() {
     assert_eq!(
         typed.convert(&record(&[("is_enabled", Value::Float(1.5))])).unwrap()["is_enabled"],
         Value::Float(1.5)
+    );
+}
+
+#[test]
+fn regex_and_replace() {
+    assert_eq!(
+        RegexConverter::new(r"\d+", "").convert("Ada 1 Lovelace"),
+        "Ada  Lovelace"
+    );
+    assert_eq!(RegexConverter::new(r"id_(\d+)", "id-$1").convert("id_7"), "id-7");
+    assert_eq!(
+        RegexConverter::new(r"id_(\d+)", "id-$1").reverse_convert("id_7".into()),
+        "id_7"
+    );
+    assert_eq!(
+        ReplaceConverter::new("_", " ").convert("Ada_Lovelace"),
+        "Ada Lovelace"
+    );
+    assert_eq!(
+        ReplaceConverter::new("_", " ").reverse_convert("Ada Lovelace".into()),
+        "Ada_Lovelace"
     );
 }
 

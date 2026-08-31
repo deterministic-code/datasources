@@ -45,6 +45,8 @@ export { ToLowerCaseConverter } from "./converters/ToLowerCaseConverter.ts";
 export { ToUpperCaseConverter } from "./converters/ToUpperCaseConverter.ts";
 export { ChangeCasingConverter, type Casing } from "./converters/ChangeCasingConverter.ts";
 export { PluralizerConverter } from "./converters/PluralizerConverter.ts";
+export { RegexConverter } from "./converters/RegexConverter.ts";
+export { ReplaceConverter } from "./converters/ReplaceConverter.ts";
 export { CoreTypes, typeNameOf } from "./converters/CoreTypes.ts";
 export type { ValueConverter } from "./converters/ValueConverter.ts";
 export type { IMapper } from "./mappers/IMapper.ts";
