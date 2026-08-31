@@ -6,7 +6,7 @@ import type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 export type BuiltRepository<T extends Cells> = {
   connection: IConnection;
-  converters: TypeConverter<T>;
+  rowConverter: TypeConverter<T>;
   mapping: NameSourceDestinationMapper;
   statements: RepositoryStatements;
   ids: string[];

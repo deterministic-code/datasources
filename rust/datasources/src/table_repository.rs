@@ -24,7 +24,7 @@ use std::sync::Arc;
 pub struct TableRepository {
     connection: Arc<dyn Connection>,
     middlewares: Vec<Arc<dyn CommandMiddleware>>,
-    converters: RowTypeConverter,
+    row_converter: RowTypeConverter,
     pub mapping: NameSourceDestinationMapper,
     statements: TableRepositoryStatements,
     id: Vec<String>,
@@ -51,7 +51,7 @@ impl TableRepository {
     pub fn from_built(built: BuiltRepository) -> Self {
         Self::from_parts(
             built.connection,
-            built.converters,
+            built.row_converter,
             built.mapping,
             built.statements,
             built.ids,
@@ -61,7 +61,7 @@ impl TableRepository {
 
     pub fn from_parts(
         connection: Arc<dyn Connection>,
-        converters: RowTypeConverter,
+        row_converter: RowTypeConverter,
         mapping: NameSourceDestinationMapper,
         statements: TableRepositoryStatements,
         ids: Vec<String>,
@@ -70,7 +70,7 @@ impl TableRepository {
         Self {
             connection,
             middlewares: Vec::new(),
-            converters,
+            row_converter,
             mapping,
             statements,
             ids: ids.iter().cloned().collect(),
@@ -140,7 +140,7 @@ impl TableRepository {
         }
         reader
             .current()
-            .map(|row| self.converters.convert(&map_keys(&row, |key| self.mapping.map(key))))
+            .map(|row| self.row_converter.convert(&map_keys(&row, |key| self.mapping.map(key))))
             .transpose()
     }
 
@@ -152,7 +152,7 @@ impl TableRepository {
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                items.push(self.converters.convert(&map_keys(&row, |key| self.mapping.map(key)))?);
+                items.push(self.row_converter.convert(&map_keys(&row, |key| self.mapping.map(key)))?);
             }
         }
         Ok(items)
@@ -160,7 +160,7 @@ impl TableRepository {
 
     fn sql(&self, row: &Row) -> Result<Row> {
         Ok(map_keys(
-            &self.converters.reverse_convert(row)?,
+            &self.row_converter.reverse_convert(row)?,
             |key| self.mapping.reverse_map(key),
         ))
     }

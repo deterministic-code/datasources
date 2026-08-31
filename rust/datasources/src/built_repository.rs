@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 pub struct BuiltRepository {
     pub connection: Arc<dyn Connection>,
-    pub converters: RowTypeConverter,
+    pub row_converter: RowTypeConverter,
     pub mapping: NameSourceDestinationMapper,
     pub statements: TableRepositoryStatements,
     pub ids: Vec<String>,

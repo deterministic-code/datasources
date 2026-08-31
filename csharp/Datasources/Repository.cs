@@ -6,7 +6,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
 {
     readonly IConnection connection;
     readonly List<ICommandMiddleware> middlewares = [];
-    readonly TypeConverter<T, Row> converters;
+    readonly TypeConverter<T, Row> rowConverter;
     readonly NameSourceDestinationMapper mapping;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
@@ -21,7 +21,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     public Repository(BuiltRepository<T> built)
     {
         connection = built.Connection;
-        converters = built.Converters;
+        rowConverter = built.RowConverter;
         mapping = built.Mapping;
         statements = built.Statements;
         ids = new(built.Ids);
@@ -51,7 +51,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         var reader = await Command().ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
-            yield return converters.Convert(Map(AsRow(reader.Current), mapping.Map));
+            yield return rowConverter.Convert(Map(AsRow(reader.Current), mapping.Map));
     }
 
     public async Task<Response> Add(T obj)
@@ -92,7 +92,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
-    Row Sql(T row) => Map(converters.ReverseConvert(row), mapping.ReverseMap);
+    Row Sql(T row) => Map(rowConverter.ReverseConvert(row), mapping.ReverseMap);
 
     static Row Map(Row row, Func<string, string> name) =>
         new(row.Select(pair => KeyValuePair.Create(name(pair.Key), pair.Value)));

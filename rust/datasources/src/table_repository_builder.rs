@@ -10,7 +10,7 @@ pub struct TableRepositoryBuilder;
 
 impl TableRepositoryBuilder {
     pub fn parts(options: TableRepositoryBuilderOptions) -> Result<BuiltRepository> {
-        let converters = match options.mapping {
+        let row_converter = match options.mapping {
             Some(mapping) => mapping,
             None => RowTypeConverter::of::<Cells>(),
         }
@@ -19,12 +19,12 @@ impl TableRepositoryBuilder {
         ))
         .with_types(options.types)
         .with_fields(options.fields);
-        let mut columns = converters.column_names().to_vec();
+        let mut columns = row_converter.column_names().to_vec();
         columns.sort();
         let mapping = NameSourceDestinationMapper::new(options.connection.provider(), "rust");
         Ok(BuiltRepository {
             connection: options.connection,
-            converters,
+            row_converter,
             mapping,
             statements: TableRepositoryStatements::new(options.table, columns),
             ids: options.ids,

@@ -19,15 +19,15 @@ export const parts = <T extends Cells>(
     ...DefaultTypeConverters.for(options.connection.provider),
     ...options.converters,
   };
-  const converters =
+  const rowConverter =
     options.mapping ?? new RowTypeConverter(types, options.fields);
-  if (converters instanceof RowTypeConverter && Object.keys(converters.types).length === 0)
-    Object.assign(converters.types, types);
+  if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
+    Object.assign(rowConverter.types, types);
   const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
   const table = options.table ?? options.type?.name ?? "";
   return {
     connection: options.connection,
-    converters,
+    rowConverter,
     mapping,
     statements: statementsOf(table, options.type ? fieldNamesOf(options.type).sort() : []),
     ids: options.ids ?? ["id"],
