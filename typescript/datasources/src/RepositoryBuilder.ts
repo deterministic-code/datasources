@@ -1,4 +1,3 @@
-import type { ICommand } from "./ICommand.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
 import type { IInsertStatement } from "./builders/IInsertStatement.ts";
@@ -15,13 +14,6 @@ import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapp
 import { createRepositoryBuilderOptions, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 
-export type RepositoryCommands = {
-  get: ICommand;
-  add: ICommand;
-  update: ICommand;
-  delete: ICommand;
-};
-
 export type RepositoryStatements = {
   query: (where?: IWhere) => IQuery;
   insert: (fields: Field[]) => IInsertStatement;
@@ -30,7 +22,7 @@ export type RepositoryStatements = {
 };
 
 export type BuiltRepository<T extends Cells> = {
-  commands: RepositoryCommands;
+  connection: IConnection;
   converters: TypeConverter<T>;
   mapping: NameSourceDestinationMapper;
   statements: RepositoryStatements;
@@ -38,13 +30,6 @@ export type BuiltRepository<T extends Cells> = {
   assignIdentityOnAdd: boolean;
   table: string;
 };
-
-const commandsOf = (connection: IConnection): RepositoryCommands => ({
-  get: connection.createCommand(),
-  add: connection.createCommand(),
-  update: connection.createCommand(),
-  delete: connection.createCommand(),
-});
 
 const statementsOf = (table: string, columns: string[]): RepositoryStatements => ({
   query: (where) => StatementBuilder.createQuery(table, columns, where),
@@ -62,7 +47,7 @@ export const parts = <T extends Cells>(
   const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
   const table = options.table ?? options.type?.name ?? "";
   return {
-    commands: commandsOf(options.connection),
+    connection: options.connection,
     converters,
     mapping,
     statements: statementsOf(table, options.type ? fieldNamesOf(options.type).sort() : []),

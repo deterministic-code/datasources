@@ -665,7 +665,11 @@ async fn table_repository() {
     ]));
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
     options.mapping = Some(users_mapping());
-    let repo = TableRepository::new(options).unwrap();
+    let mut repo = TableRepository::new(options).unwrap();
+    repo.use_middleware(Arc::new(RecordingMiddleware {
+        before: Arc::new(|_| Ok(None)),
+        after: Arc::new(|_, _| Ok(())),
+    }));
     let rows = repo.get(None).await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(

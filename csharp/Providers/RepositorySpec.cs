@@ -30,10 +30,7 @@ public static class RepositorySpec
             AssignIdentityOnAdd = spec.Type.AssignIdentityOnAdd,
         });
         var logs = new List<string>();
-        var middleware = new ConsoleCommandMiddleware(logs.Add);
-        foreach (var command in new[] { built.Commands.Get, built.Commands.Add, built.Commands.Update, built.Commands.Delete })
-            command.Use(middleware);
-        var repo = new Repository<SpecUser>(built);
+        var repo = new Repository<SpecUser>(built).Use(new ConsoleCommandMiddleware(logs.Add));
         foreach (var step in spec.Steps)
             await (step switch
             {

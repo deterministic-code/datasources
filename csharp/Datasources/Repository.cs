@@ -4,7 +4,8 @@ namespace Datasources;
 
 public sealed class Repository<T> : IRepository<T> where T : new()
 {
-    readonly RepositoryCommands commands;
+    readonly IConnection connection;
+    readonly List<ICommandMiddleware> middlewares = [];
     readonly TypeConverter<T, Row> converters;
     readonly NameSourceDestinationMapper mapping;
     readonly RepositoryStatements statements;
@@ -19,7 +20,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
 
     public Repository(BuiltRepository<T> built)
     {
-        commands = built.Commands;
+        connection = built.Connection;
         converters = built.Converters;
         mapping = built.Mapping;
         statements = built.Statements;
@@ -28,10 +29,16 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         Table = built.Table;
     }
 
-    public IConnection Connection => commands.Get.Connection;
+    public IConnection Connection => connection;
     public TypeConverter<T, Row> Converters => converters;
     public NameSourceDestinationMapper Mapping => mapping;
     public string Table { get; }
+
+    public Repository<T> Use(ICommandMiddleware middleware)
+    {
+        middlewares.Add(middleware);
+        return this;
+    }
 
     public Task<T?> GetSingle(IWhere where) => GetSingle(statements.Query(where));
 
@@ -47,7 +54,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     public async IAsyncEnumerable<T> Get(IQuery? query = null)
     {
         var statement = query ?? statements.Query();
-        var reader = await commands.Get.ExecuteReader(
+        var reader = await Command().ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
             yield return converters.Convert(Map(AsRow(reader.Current), mapping.Map));
@@ -56,7 +63,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     public async Task<Response> Add(T obj)
     {
         var fields = Params(Sql(obj), col => !assignIdentityOnAdd || !ids.Contains(col));
-        return await commands.Add.Execute(statements.Insert(fields).GetText(), fields);
+        return await Command().Execute(statements.Insert(fields).GetText(), fields);
     }
 
     public async Task<Response> Update(T obj, IWhere? byWhere = null)
@@ -66,7 +73,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
-        return await commands.Update.Execute(
+        return await Command().Execute(
             statements.Update(fields, where).GetText(),
             [.. fields, .. where.Parameters]);
     }
@@ -74,8 +81,11 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     public async Task<Response> Delete(T obj, IWhere? byWhere = null)
     {
         var where = byWhere ?? IdWhere(Sql(obj));
-        return await commands.Delete.Execute(statements.Delete(where).GetText(), where.Parameters);
+        return await Command().Execute(statements.Delete(where).GetText(), where.Parameters);
     }
+
+    ICommand Command() =>
+        middlewares.Aggregate(connection.CreateCommand(), (command, middleware) => command.Use(middleware));
 
     IWhere IdWhere(Row record) =>
         WhereBuilder.And([.. ids.Select(col =>

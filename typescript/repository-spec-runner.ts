@@ -71,10 +71,7 @@ const attach = (repo: Repository<Cells>, logs: string[]) => {
     logs.push(line);
     if (specVerbose()) console.log(line);
   };
-  repo.commands.get.use(new ConsoleCommandMiddleware(write));
-  repo.commands.add.use(new ConsoleCommandMiddleware(write));
-  repo.commands.update.use(new ConsoleCommandMiddleware(write));
-  repo.commands.delete.use(new ConsoleCommandMiddleware(write));
+  repo.use(new ConsoleCommandMiddleware(write));
 };
 
 export const runRepositorySpec = async (
