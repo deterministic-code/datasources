@@ -25,6 +25,7 @@ impl SqliteDatasource {
         driver: Option<Arc<dyn SqliteDriver>>,
         table: Option<String>,
     ) -> Self {
+        crate::converters::register();
         Self {
             filename,
             driver,

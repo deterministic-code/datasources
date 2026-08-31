@@ -587,11 +587,14 @@ name = "datasources-sqlite"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "datasources",
  "rusqlite",
+ "rust_decimal",
  "serde",
  "serde_yaml",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

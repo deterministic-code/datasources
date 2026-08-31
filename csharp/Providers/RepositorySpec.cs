@@ -20,7 +20,12 @@ public static class RepositorySpec
         var session = open();
         await session.Connection.Open();
         await session.Command.Execute(SqliteStatementBuilder.CreateTable(spec.Type.Table, Columns(spec.Type)).GetText());
-        var mapping = new RowTypeConverter<SpecUser>();
+        _ = SqliteTypes.All;
+        var types = DefaultTypeConverters.For(session.Connection.Provider);
+        var fields = spec.Type.Fields
+            .Where(pair => types.ContainsKey(pair.Value))
+            .ToDictionary(pair => pair.Key, pair => types[pair.Value]);
+        var mapping = new RowTypeConverter<SpecUser>(types, fields);
         var built = RepositoryBuilder<SpecUser>.Parts(new()
         {
             Connection = session.Connection,

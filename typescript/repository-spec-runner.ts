@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import {
   ConsoleCommandMiddleware,
+  DefaultTypeConverters,
   Repository,
   RowTypeConverter,
   WhereBuilder,
@@ -25,6 +26,7 @@ import {
   SqliteStatementBuilder,
   type SqliteColumn,
 } from "./providers/sqlite/src/sqliteStatementBuilder.ts";
+import "./providers/sqlite/src/converters/SqliteTypes.ts";
 
 export const repositorySpecFiles = (root = repoRoot()): string[] =>
   readdirSync(join(root, "specs", "repositories"))
@@ -88,7 +90,15 @@ export const runRepositorySpec = async (
     assignIdentityOnAdd: spec.type.assignIdentityOnAdd,
     type: typeOf(spec.type),
     table: spec.type.table,
-    mapping: new RowTypeConverter(),
+    mapping: new RowTypeConverter(
+      DefaultTypeConverters.for(connection.provider),
+      Object.fromEntries(
+        Object.entries(spec.type.fields).flatMap(([name, canonical]) => {
+          const converter = DefaultTypeConverters.for(connection.provider)[canonical];
+          return converter ? [[name, converter]] : [];
+        }),
+      ),
+    ),
   });
   const logs: string[] = [];
   attach(repo, logs);

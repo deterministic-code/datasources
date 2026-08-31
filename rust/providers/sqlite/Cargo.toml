@@ -11,8 +11,11 @@ rusqlite = ["dep:rusqlite"]
 
 [dependencies]
 async-trait = { workspace = true }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { workspace = true }
 rusqlite = { workspace = true, optional = true }
+rust_decimal = "1"
+uuid = "1"
 
 [dev-dependencies]
 rusqlite = { workspace = true }

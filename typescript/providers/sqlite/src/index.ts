@@ -22,7 +22,12 @@ export type {
   SqliteStatement,
 } from "./i-sqlite-driver.ts";
 export { SqliteTransaction } from "./transaction.ts";
-export { SqliteTypes } from "./types.ts";
+export { SqliteTypes } from "./converters/SqliteTypes.ts";
+export { BoolConverter } from "./converters/BoolConverter.ts";
+export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
+export { UuidConverter } from "./converters/UuidConverter.ts";
+export { DecimalConverter } from "./converters/DecimalConverter.ts";
+export { BinaryConverter } from "./converters/BinaryConverter.ts";
 export {
   SqliteStatementBuilder,
   type SqliteColumn,

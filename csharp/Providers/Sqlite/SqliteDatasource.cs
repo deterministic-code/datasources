@@ -4,6 +4,8 @@ namespace Datasources.Sqlite;
 
 public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
 {
+    static SqliteDatasource() => _ = SqliteTypes.All;
+
     public static readonly SqliteDatasource Instance = new();
     private readonly SqliteConnectionOptions _options;
     private readonly string? _table;
