@@ -38,11 +38,11 @@ const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
 const isBuilt = <T extends Cells>(
   value: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
 ): value is BuiltRepository<T> =>
-  "statements" in value && "converters" in value && "mapping" in value;
+  "statements" in value && "rowConverter" in value && "mapping" in value;
 
 export class Repository<T extends Cells> implements IRepository<T> {
   private readonly connection: IConnection;
-  readonly converters: TypeConverter<T>;
+  readonly rowConverter: TypeConverter<T>;
   readonly mapping: NameSourceDestinationMapper;
   readonly statements: RepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
@@ -64,7 +64,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
             : createRepositoryBuilderOptions(typeOrOptions as Constructable<T>, connection),
         );
     this.connection = built.connection;
-    this.converters = built.converters;
+    this.rowConverter = built.rowConverter;
     this.mapping = built.mapping;
     this.statements = built.statements;
     this.ids = new Set(built.ids);
@@ -88,7 +88,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
       statement.where?.parameters ?? statement.parameters,
     );
     while (await reader.next())
-      yield this.converters.convert(mapKeys(asRow(reader.current as object), this.mapping.map));
+      yield this.rowConverter.convert(mapKeys(asRow(reader.current as object), this.mapping.map));
   }
 
   add = async (obj: T): Promise<IResponse> => {
@@ -125,7 +125,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
       this.connection.createCommand(),
     );
 
-  private sql = (row: T): Cells => mapKeys(this.converters.reverseConvert(row), this.mapping.reverseMap);
+  private sql = (row: T): Cells => mapKeys(this.rowConverter.reverseConvert(row), this.mapping.reverseMap);
 
   private readQuery = (query?: IQuery | IWhere): IQuery =>
     !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);
