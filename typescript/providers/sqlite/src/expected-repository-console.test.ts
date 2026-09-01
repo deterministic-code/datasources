@@ -34,6 +34,29 @@ describe("expected repository console", () => {
     ]);
   });
 
+  it("expands complex-crud-mappings into flattened StatementBuilder SQL", () => {
+    const mapped = parse(
+      readFileSync(join(repoRoot(), "specs", "repositories", "complex-crud-mappings.yaml"), "utf8"),
+    ) as RepositorySpec;
+    expect(repositoryQueries(mapped)).toEqual([
+      "INSERT INTO users (create_string, decimal_text, id, username, usertypename, uuid, version) VALUES ($create_string, $decimal_text, $id, $username, $usertypename, $uuid, $version)",
+      "INSERT INTO users (create_string, decimal_text, id, username, usertypename, uuid, version) VALUES ($create_string, $decimal_text, $id, $username, $usertypename, $uuid, $version)",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE id = $id",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE username = $username",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE uuid = $uuid",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE usertypename = $usertypename",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE create_string = $create_string",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users",
+      "UPDATE users SET create_string = $create_string, decimal_text = $decimal_text, username = $username, usertypename = $usertypename, uuid = $uuid, version = $version WHERE uuid = $uuid",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE uuid = $uuid",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE create_string = $create_string",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE usertypename = $usertypename",
+      "DELETE FROM users WHERE create_string = $create_string",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE id = $id",
+      "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users",
+    ]);
+  });
+
   it("pairs Start and Finish signatures", () => {
     const signatures = expectedRepositoryConsoleSignatures(spec);
     expect(signatures).toHaveLength(30);

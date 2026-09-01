@@ -1,0 +1,106 @@
+name: complex-crud-mappings
+type:
+  name: user
+  table: users
+  ids: [id]
+  assignIdentityOnAdd: false
+  fields:
+    id: int
+    uuid: uuid
+    username: string
+    usertypename: string
+    decimal_text: string
+    create_string: string
+    version: binary
+  converters:
+    decimal_text: decimal
+    create_string: datetime
+  mappings:
+    usertype:
+      name: usertypename
+steps:
+  - CREATE:
+      row: &alice
+        id: 1
+        uuid: 550e8400-e29b-41d4-a716-446655440000
+        username: alice
+        usertype:
+          name: admin
+        decimal_text: "10.50"
+        create_string: "2024-01-15T10:00:00Z"
+        version: AQIDBA==
+  - CREATE:
+      row: &bob
+        id: 2
+        uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        username: bob
+        usertype:
+          name: user
+        decimal_text: "0.00"
+        create_string: "2024-02-20T15:30:00Z"
+        version: BQUFBQ==
+
+  - GET:
+      id: 1
+      expect: *alice
+  - GETBY:
+      where:
+        username: alice
+      expect: *alice
+  - GETBY:
+      where:
+        uuid: 550e8400-e29b-41d4-a716-446655440000
+      expect: *alice
+  - GETBY:
+      where:
+        usertypename: admin
+      expect: *alice
+  - GETBY:
+      where:
+        create_string: "2024-01-15T10:00:00Z"
+      expect: *alice
+  - QUERY:
+      expect:
+        - *alice
+        - *bob
+
+  - UPDATEBY:
+      where:
+        uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+      row: &bobAdmin
+        id: 2
+        uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        username: bob
+        usertype:
+          name: admin
+        decimal_text: "0.00"
+        create_string: "2024-02-20T15:30:00Z"
+        version: BQUFBQ==
+      expect:
+        rowsAffected: 1
+  - GETBY:
+      where:
+        uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+      expect: *bobAdmin
+  - GETBY:
+      where:
+        create_string: "2024-02-20T15:30:00Z"
+      expect: *bobAdmin
+  - QUERY:
+      where:
+        usertypename: admin
+      expect:
+        - *alice
+        - *bobAdmin
+
+  - DELETEBY:
+      where:
+        create_string: "2024-02-20T15:30:00Z"
+      expect:
+        rowsAffected: 1
+  - GET:
+      id: 2
+      expect: null
+  - QUERY:
+      expect:
+        - *alice

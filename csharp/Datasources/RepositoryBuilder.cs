@@ -19,7 +19,9 @@ public static class RepositoryBuilder<T> where T : new()
             rowConverter,
             options.Mapper ?? new TransformMapper<T, T>(static value => value, static value => value),
             mapping,
-            new RepositoryStatements(table, Columns()),
+            new RepositoryStatements(table, options.Columns is { Count: > 0 } columns
+                ? [.. columns.OrderBy(name => name, StringComparer.Ordinal)]
+                : Columns()),
             options.Ids,
             options.AssignIdentityOnAdd);
     }

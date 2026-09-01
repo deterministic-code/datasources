@@ -11,15 +11,19 @@ export type CanonicalType =
   | "datetime"
   | "binary";
 
+export type RepositoryMappings = Record<string, Record<string, string>>;
+
 export type RepositoryTypeSpec = {
   name: string;
   table: string;
   ids: string[];
   assignIdentityOnAdd: boolean;
   fields: Record<string, CanonicalType>;
+  converters?: Record<string, CanonicalType>;
+  mappings?: RepositoryMappings;
 };
 
-export type RepositoryRow = Record<string, Scalar>;
+export type RepositoryRow = { [key: string]: Scalar | RepositoryRow };
 
 export type AffectedExpect = { rowsAffected: number };
 
@@ -45,11 +49,26 @@ const idsOf = (spec: RepositoryTypeSpec): Set<string> => new Set(spec.ids);
 const columnsOf = (spec: RepositoryTypeSpec): string[] =>
   Object.keys(spec.fields).sort((left, right) => left.localeCompare(right));
 
+export const flattenRepositoryRow = (
+  row: RepositoryRow,
+  mappings: RepositoryMappings = {},
+): RepositoryRow => {
+  const dest: RepositoryRow = { ...row };
+  for (const [nested, cols] of Object.entries(mappings)) {
+    const value = dest[nested];
+    if (value && typeof value === "object") {
+      for (const [field, col] of Object.entries(cols)) dest[col] = value[field];
+    }
+    delete dest[nested];
+  }
+  return dest;
+};
+
 const fieldsOf = (row: RepositoryRow, include: (col: string) => boolean): Field[] =>
   Object.entries(row)
     .filter(([key]) => include(key))
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([name, value]) => ({ name, value }));
+    .map(([name, value]) => ({ name, value: value as Scalar }));
 
 const whereOf = (row: RepositoryRow) =>
   WhereBuilder.and(
@@ -67,7 +86,7 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
   return spec.steps.map((step) => {
     if (step.CREATE) {
       const fields = fieldsOf(
-        step.CREATE.row,
+        flattenRepositoryRow(step.CREATE.row, type.mappings),
         (col) => !type.assignIdentityOnAdd || !ids.has(col),
       );
       return StatementBuilder.createInsert(table, fields).getText();
@@ -82,11 +101,15 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
     if (step.GETBY)
       return StatementBuilder.createQuery(table, columns, whereOf(step.GETBY.where)).getText();
     if (step.UPDATE) {
-      const fields = fieldsOf(step.UPDATE.row, (col) => !ids.has(col));
-      return StatementBuilder.createUpdate(table, fields, idWhere(type, step.UPDATE.row.id as Scalar)).getText();
+      const flat = flattenRepositoryRow(step.UPDATE.row, type.mappings);
+      const fields = fieldsOf(flat, (col) => !ids.has(col));
+      return StatementBuilder.createUpdate(table, fields, idWhere(type, flat.id as Scalar)).getText();
     }
     if (step.UPDATEBY) {
-      const fields = fieldsOf(step.UPDATEBY.row, (col) => !ids.has(col));
+      const fields = fieldsOf(
+        flattenRepositoryRow(step.UPDATEBY.row, type.mappings),
+        (col) => !ids.has(col),
+      );
       return StatementBuilder.createUpdate(table, fields, whereOf(step.UPDATEBY.where)).getText();
     }
     if (step.DELETE)

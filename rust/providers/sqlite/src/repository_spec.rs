@@ -5,11 +5,11 @@ use super::statement_builder::{SqliteColumn, SqliteStatementBuilder};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use datasources::converters::{ConvertSchema, RowTypeConverter};
+use datasources::converters::RowTypeConverter;
 use datasources::{
     Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, DefaultTypeConverters,
     Parameter, ReadonlyRepository, Repository, Row, Statement, StatementBuilder, TableRepository,
-    TableRepositoryBuilder, TableRepositoryBuilderOptions, Value, WhereBuilder,
+    TableRepositoryBuilder, TableRepositoryBuilderOptions, TransformMapper, Value, WhereBuilder,
 };
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -33,6 +33,10 @@ struct TypeSpec {
     #[serde(rename = "assignIdentityOnAdd")]
     assign_identity_on_add: bool,
     fields: BTreeMap<String, String>,
+    #[serde(default)]
+    converters: BTreeMap<String, String>,
+    #[serde(default)]
+    mappings: BTreeMap<String, BTreeMap<String, String>>,
 }
 
 #[derive(Deserialize, Default)]
@@ -124,12 +128,6 @@ fn yaml_value(value: &serde_yaml::Value) -> Value {
     }
 }
 
-fn record(map: &BTreeMap<String, serde_yaml::Value>) -> datasources::Row {
-    map.iter()
-        .map(|(name, value)| (name.clone(), yaml_value(value)))
-        .collect()
-}
-
 fn where_sql(map: &BTreeMap<String, serde_yaml::Value>) -> WhereBuilder {
     let children: Vec<WhereBuilder> = map
         .iter()
@@ -157,19 +155,105 @@ fn where_of(
     WhereBuilder::and(children)
 }
 
-fn mapping_of(spec: &Spec) -> RowTypeConverter {
-    crate::converters::register();
-    let fields = spec
-        .type_spec
+fn fields_overlay(type_spec: &TypeSpec) -> HashMap<String, Box<dyn datasources::TypeConverter<Value, Value> + Send + Sync>> {
+    let mut fields: HashMap<_, _> = type_spec
         .fields
         .iter()
         .filter_map(|(name, canonical)| {
             crate::converters::field(canonical).map(|converter| (name.clone(), converter))
         })
         .collect();
-    RowTypeConverter::of::<SpecUser>()
+    for (name, canonical) in &type_spec.converters {
+        if let Some(converter) = crate::converters::field(canonical) {
+            fields.insert(name.clone(), converter);
+        }
+    }
+    fields
+}
+
+fn mapping_of(spec: &Spec) -> RowTypeConverter {
+    crate::converters::register();
+    let columns: Vec<String> = spec.type_spec.fields.keys().cloned().collect();
+    RowTypeConverter::new(columns)
         .with_types(DefaultTypeConverters::for_provider("sqlite"))
-        .with_fields(fields)
+        .with_fields(fields_overlay(&spec.type_spec))
+}
+
+fn mappings_mapper(
+    mappings: &BTreeMap<String, BTreeMap<String, String>>,
+) -> TransformMapper<Row, Row> {
+    let nest = mappings.clone();
+    let flat = mappings.clone();
+    TransformMapper::new(
+        move |mut row: Row| {
+            for (nested, cols) in &nest {
+                if cols.len() != 1 {
+                    continue;
+                }
+                let col = cols.values().next().expect("mapping column");
+                if let Some(value) = row.remove(col) {
+                    row.insert(nested.clone(), value);
+                }
+            }
+            row
+        },
+        move |mut row: Row| {
+            for (nested, cols) in &flat {
+                if cols.len() != 1 {
+                    continue;
+                }
+                let col = cols.values().next().expect("mapping column");
+                if let Some(value) = row.remove(nested) {
+                    row.insert(col.clone(), value);
+                }
+            }
+            row
+        },
+    )
+}
+
+fn flatten_yaml(
+    row: &BTreeMap<String, serde_yaml::Value>,
+    mappings: &BTreeMap<String, BTreeMap<String, String>>,
+) -> BTreeMap<String, serde_yaml::Value> {
+    let mut dest = row.clone();
+    for (nested, cols) in mappings {
+        let Some(serde_yaml::Value::Mapping(nest)) = dest.get(nested).cloned() else {
+            continue;
+        };
+        for (field, col) in cols {
+            if let Some(value) = nest.get(&serde_yaml::Value::String(field.clone())) {
+                dest.insert(col.clone(), value.clone());
+            }
+        }
+        dest.remove(nested);
+    }
+    dest
+}
+
+fn domain_record(
+    map: &BTreeMap<String, serde_yaml::Value>,
+    mappings: &BTreeMap<String, BTreeMap<String, String>>,
+) -> Row {
+    let mut row = Row::new();
+    for (name, value) in map {
+        match value {
+            serde_yaml::Value::Mapping(nest) => {
+                if let Some(cols) = mappings.get(name) {
+                    if cols.len() == 1 {
+                        let field = cols.keys().next().expect("mapping field");
+                        if let Some(inner) = nest.get(&serde_yaml::Value::String(field.clone())) {
+                            row.insert(name.clone(), yaml_value(inner));
+                        }
+                    }
+                }
+            }
+            _ => {
+                row.insert(name.clone(), yaml_value(value));
+            }
+        }
+    }
+    row
 }
 
 fn decimal_text(text: &str) -> Option<String> {
@@ -202,6 +286,9 @@ fn expect_cell(value: &serde_yaml::Value) -> String {
             .ok()
             .or_else(|| decimal_text(text))
             .unwrap_or_else(|| text.clone()),
+        serde_yaml::Value::Mapping(map) if map.len() == 1 => {
+            expect_cell(map.values().next().expect("nested expect"))
+        }
         other => format!("{other:?}"),
     }
 }
@@ -286,9 +373,10 @@ fn queries(spec: &Spec) -> Vec<String> {
             if let Some(create) = &step.create {
                 StatementBuilder::create_insert(
                     table,
-                    &fields_of(&create.row, |col| {
-                        !spec.type_spec.assign_identity_on_add || !ids.contains(col)
-                    }),
+                    &fields_of(
+                        &flatten_yaml(&create.row, &spec.type_spec.mappings),
+                        |col| !spec.type_spec.assign_identity_on_add || !ids.contains(col),
+                    ),
                 )
                 .get_text()
             } else if let Some(get) = &step.get {
@@ -306,11 +394,15 @@ fn queries(spec: &Spec) -> Vec<String> {
                 let where_clause = where_sql(&get_by.where_clause);
                 StatementBuilder::create_query(table, &refs, Some(&where_clause)).get_text()
             } else if let Some(update) = &step.update {
-                let fields = fields_of(&update.row, |col| !ids.contains(col));
-                let where_clause = WhereBuilder::equals("id", yaml_value(&update.row["id"]));
+                let flat = flatten_yaml(&update.row, &spec.type_spec.mappings);
+                let fields = fields_of(&flat, |col| !ids.contains(col));
+                let where_clause = WhereBuilder::equals("id", yaml_value(&flat["id"]));
                 StatementBuilder::create_update(table, &fields, Some(&where_clause)).get_text()
             } else if let Some(update_by) = &step.update_by {
-                let fields = fields_of(&update_by.row, |col| !ids.contains(col));
+                let fields = fields_of(
+                    &flatten_yaml(&update_by.row, &spec.type_spec.mappings),
+                    |col| !ids.contains(col),
+                );
                 let where_clause = where_sql(&update_by.where_clause);
                 StatementBuilder::create_update(table, &fields, Some(&where_clause)).get_text()
             } else if let Some(delete) = &step.delete {
@@ -374,7 +466,7 @@ async fn run(path: &Path) {
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
         table: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec)),
-        mapper: None,
+        mapper: Some(mappings_mapper(&spec.type_spec.mappings)),
         types: Default::default(),
         fields: Default::default(),
     };
@@ -406,7 +498,9 @@ async fn run(path: &Path) {
                 create: Some(create),
                 ..
             } => {
-                repo.add(&record(&create.row)).await.unwrap();
+                repo.add(&domain_record(&create.row, &spec.type_spec.mappings))
+                    .await
+                    .unwrap();
             }
             Step { get: Some(get), .. } => {
                 let where_clause = WhereBuilder::equals("id", yaml_value(&get.id));
@@ -446,7 +540,10 @@ async fn run(path: &Path) {
                 update: Some(update),
                 ..
             } => {
-                let response = repo.update(&record(&update.row), None).await.unwrap();
+                let response = repo
+                    .update(&domain_record(&update.row, &spec.type_spec.mappings), None)
+                    .await
+                    .unwrap();
                 assert_affected(
                     &format!("{} UPDATE", spec.name),
                     response.rows_affected,
@@ -459,7 +556,10 @@ async fn run(path: &Path) {
             } => {
                 let where_clause = where_of(&mapping, &update_by.where_clause);
                 let response = repo
-                    .update(&record(&update_by.row), Some(&where_clause))
+                    .update(
+                        &domain_record(&update_by.row, &spec.type_spec.mappings),
+                        Some(&where_clause),
+                    )
                     .await
                     .unwrap();
                 assert_affected(
@@ -522,23 +622,6 @@ async fn run(path: &Path) {
             expected.join("\n"),
             actual.join("\n")
         );
-    }
-}
-
-struct SpecUser;
-
-impl ConvertSchema for SpecUser {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("id", "INTEGER"),
-            ("uuid", "UUID"),
-            ("username", "TEXT"),
-            ("is_enabled", "BOOLEAN"),
-            ("balance", "NUMERIC"),
-            ("location", "REAL"),
-            ("created", "DATETIME"),
-            ("version", "BLOB"),
-        ]
     }
 }
 

@@ -6,17 +6,20 @@ import {
   DefaultTypeConverters,
   Repository,
   RowTypeConverter,
+  TransformMapper,
   WhereBuilder,
   type Cell,
   type Cells,
   type Constructable,
   type IConnection,
   type Scalar,
+  type TypeConverter,
 } from "@datasources/core";
 import {
   expectedRepositoryConsoleSignatures,
   type AffectedExpect,
   type CanonicalType,
+  type RepositoryMappings,
   type RepositoryRow,
   type RepositorySpec,
   type RepositoryTypeSpec,
@@ -64,14 +67,17 @@ const columnsOf = (type: RepositoryTypeSpec): SqliteColumn[] =>
     id: type.ids.includes(name),
   }));
 
-const whereOf = (mapping: RowTypeConverter<Cells>, row: RepositoryRow) =>
+type SpecValue = Cell | SpecRow;
+type SpecRow = { [key: string]: SpecValue };
+
+const whereOf = (mapping: RowTypeConverter<SpecRow>, row: RepositoryRow) =>
   WhereBuilder.and(
     ...Object.entries(mapping.reverseConvert(row)).map(([name, value]) =>
       WhereBuilder.equals(name, value as Scalar),
     ),
   );
 
-const attach = (repo: Repository<Cells>, logs: string[]) => {
+const attach = (repo: Repository<SpecRow>, logs: string[]) => {
   const write = (line: string) => {
     logs.push(line);
     if (specVerbose()) console.log(line);
@@ -82,6 +88,14 @@ const attach = (repo: Repository<Cells>, logs: string[]) => {
     }),
   );
 };
+
+const isRow = (value: SpecValue | RepositoryRow | Scalar | undefined): value is SpecRow =>
+  value !== null &&
+  value !== undefined &&
+  typeof value === "object" &&
+  !(value instanceof Date) &&
+  !(value instanceof Uint8Array) &&
+  !Array.isArray(value);
 
 const cellOf = (value: Cell): Scalar =>
   value instanceof Date
@@ -94,8 +108,51 @@ const cellOf = (value: Cell): Scalar =>
           ? new Date(value).toISOString()
           : value;
 
-const rowOf = (row: Cells): RepositoryRow =>
-  Object.fromEntries(Object.entries(row).map(([key, value]) => [key, cellOf(value)]));
+const rowOf = (row: SpecRow): RepositoryRow =>
+  Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [
+      key,
+      isRow(value) ? rowOf(value) : cellOf(value),
+    ]),
+  );
+
+const fieldsOf = (
+  spec: RepositoryTypeSpec,
+  catalog: Record<string, TypeConverter<Cell, Cell>>,
+): Record<string, TypeConverter<Cell, Cell>> =>
+  Object.fromEntries(
+    [
+      ...Object.entries(spec.fields),
+      ...Object.entries(spec.converters ?? {}),
+    ].flatMap(([name, canonical]) => {
+      const converter = catalog[canonical];
+      return converter ? [[name, converter]] : [];
+    }),
+  );
+
+const mappingsMapper = (mappings: RepositoryMappings = {}) =>
+  new TransformMapper<SpecRow, SpecRow>(
+    (row) => {
+      const dest: SpecRow = { ...row };
+      for (const [nested, cols] of Object.entries(mappings)) {
+        dest[nested] = Object.fromEntries(
+          Object.entries(cols).map(([field, col]) => [field, dest[col]]),
+        );
+        for (const col of Object.values(cols)) delete dest[col];
+      }
+      return dest;
+    },
+    (row) => {
+      const dest: SpecRow = { ...row };
+      for (const [nested, cols] of Object.entries(mappings)) {
+        const value = dest[nested];
+        if (isRow(value))
+          for (const [field, col] of Object.entries(cols)) dest[col] = value[field];
+        delete dest[nested];
+      }
+      return dest;
+    },
+  );
 
 const numeric = (value: Scalar) =>
   typeof value === "number" || (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value));
@@ -104,7 +161,7 @@ const same = (got: Scalar, wanted: Scalar) =>
   got === wanted ||
   (numeric(got) && numeric(wanted) && Number(got) === Number(wanted));
 
-const assertRow = (name: string, actual: Cells | undefined, expect: RepositoryRow | null) => {
+const assertRow = (name: string, actual: SpecRow | undefined, expect: RepositoryRow | null) => {
   if (expect === null) {
     if (actual !== undefined) throw new Error(`${name}: expected null`);
     return;
@@ -112,12 +169,19 @@ const assertRow = (name: string, actual: Cells | undefined, expect: RepositoryRo
   if (actual === undefined) throw new Error(`${name}: expected a row`);
   const got = rowOf(actual);
   const wanted = rowOf(expect);
-  for (const key of Object.keys(wanted))
-    if (!same(got[key] as Scalar, wanted[key] as Scalar))
-      throw new Error(`${name}: ${key}: expected ${JSON.stringify(wanted[key])} got ${JSON.stringify(got[key])}`);
+  for (const key of Object.keys(wanted)) {
+    const gotValue = got[key];
+    const wantedValue = wanted[key];
+    if (isRow(gotValue) && isRow(wantedValue)) {
+      assertRow(`${name}.${key}`, gotValue, wantedValue);
+      continue;
+    }
+    if (!same(gotValue as Scalar, wantedValue as Scalar))
+      throw new Error(`${name}: ${key}: expected ${JSON.stringify(wantedValue)} got ${JSON.stringify(gotValue)}`);
+  }
 };
 
-const assertRows = (name: string, actual: Cells[], expect: RepositoryRow[]) => {
+const assertRows = (name: string, actual: SpecRow[], expect: RepositoryRow[]) => {
   if (actual.length !== expect.length)
     throw new Error(`${name}: expected ${expect.length} rows got ${actual.length}`);
   actual.forEach((row, index) => assertRow(`${name}[${index}]`, row, expect[index] ?? null));
@@ -137,22 +201,17 @@ export const runRepositorySpec = async (
   const spec = parse(readFileSync(path, "utf8")) as RepositorySpec;
   if (specVerbose()) console.log(`\n--- ${spec.name} (${connection.provider}) ---`);
   await execute(SqliteStatementBuilder.createTable(spec.type.table, columnsOf(spec.type)).getText());
-  const mapping = new RowTypeConverter(
-    DefaultTypeConverters.for(connection.provider),
-    Object.fromEntries(
-      Object.entries(spec.type.fields).flatMap(([name, canonical]) => {
-        const converter = DefaultTypeConverters.for(connection.provider)[canonical];
-        return converter ? [[name, converter]] : [];
-      }),
-    ),
-  );
-  const repo = new Repository<Cells>({
+  const catalog = DefaultTypeConverters.for(connection.provider);
+  const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
+  const repo = new Repository<SpecRow>({
     connection,
     ids: spec.type.ids,
     assignIdentityOnAdd: spec.type.assignIdentityOnAdd,
     type: typeOf(spec.type),
     table: spec.type.table,
     mapping,
+    mapper: mappingsMapper(spec.type.mappings),
+    columns: Object.keys(spec.type.fields),
   });
   const logs: string[] = [];
   attach(repo, logs);
@@ -169,7 +228,7 @@ export const runRepositorySpec = async (
       QUERY: async () => {
         if (!step.QUERY) return;
         const query = step.QUERY.where ? whereOf(mapping, step.QUERY.where) : undefined;
-        const rows: Cells[] = [];
+        const rows: SpecRow[] = [];
         for await (const row of repo.get(query)) rows.push(row);
         if (step.QUERY.expect) assertRows(`${spec.name} QUERY`, rows, step.QUERY.expect);
       },
@@ -194,7 +253,7 @@ export const runRepositorySpec = async (
         if (!step.DELETE) return;
         assertAffected(
           `${spec.name} DELETE`,
-          await repo.delete({ id: step.DELETE.id } as Cells),
+          await repo.delete({ id: step.DELETE.id }),
           step.DELETE.expect,
         );
       },
@@ -202,7 +261,7 @@ export const runRepositorySpec = async (
         if (!step.DELETEBY) return;
         assertAffected(
           `${spec.name} DELETEBY`,
-          await repo.delete({} as Cells, whereOf(mapping, step.DELETEBY.where)),
+          await repo.delete({}, whereOf(mapping, step.DELETEBY.where)),
           step.DELETEBY.expect,
         );
       },

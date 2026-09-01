@@ -14,4 +14,5 @@ export type RepositoryBuilderOptions<T = Cells> = {
   type?: Constructable<T>;
   converters?: Record<string, TypeConverter<Cell, Cell>>;
   fields?: Record<string, TypeConverter<Cell, Cell>>;
+  columns?: string[];
 };
