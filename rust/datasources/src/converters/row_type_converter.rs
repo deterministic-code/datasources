@@ -85,3 +85,61 @@ impl TypeConverter<Row, Row> for RowTypeConverter {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::value::Value;
+
+    fn record(pairs: &[(&str, Value)]) -> Row {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_string(), v.clone()))
+            .collect()
+    }
+
+    #[test]
+    fn type_converter_round_trips_rows() {
+        let converter = RowTypeConverter::new(vec!["id".into(), "name".into()]);
+        let row = record(&[("id", Value::Int(7)), ("name", Value::from("ada"))]);
+        let dest = converter.convert(&row).unwrap();
+        assert_eq!(dest, row);
+        assert_eq!(converter.reverse_convert(&dest).unwrap(), row);
+    }
+
+    struct OnlyOne;
+
+    impl TypeConverter<Value, Value> for OnlyOne {
+        fn convert(&self, from: &Value) -> Result<Value> {
+            Ok(match from {
+                Value::Int(number) => Value::Bool(*number == 1),
+                other => other.clone(),
+            })
+        }
+
+        fn reverse_convert(&self, to: &Value) -> Result<Value> {
+            Ok(to.clone())
+        }
+    }
+
+    #[test]
+    fn field_override_beats_type_default() {
+        let converter = RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([
+            (
+                "is_enabled".into(),
+                Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+            ),
+        ]));
+        let row = record(&[("is_enabled", Value::Int(2))]);
+        assert_eq!(
+            converter.convert(&row).unwrap()["is_enabled"],
+            Value::Bool(false)
+        );
+        assert_eq!(
+            converter
+                .convert(&record(&[("is_enabled", Value::Int(1))]))
+                .unwrap()["is_enabled"],
+            Value::Bool(true)
+        );
+    }
+}

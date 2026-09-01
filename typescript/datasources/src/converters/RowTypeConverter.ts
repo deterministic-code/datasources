@@ -2,7 +2,7 @@ import type { Cell, Cells } from "./Cell.ts";
 import { TypeConverter } from "./TypeConverter.ts";
 import type { Constructable } from "./Constructable.ts";
 
-export class RowTypeConverter<T extends Cells = Cells> extends TypeConverter<T, Cells> {
+export class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells> {
   types: Record<string, TypeConverter<Cell, Cell>>;
   fields: Record<string, TypeConverter<Cell, Cell>>;
 
@@ -26,9 +26,11 @@ export class RowTypeConverter<T extends Cells = Cells> extends TypeConverter<T, 
 
   reverseConvert = (row: T): Cells =>
     Object.fromEntries(
-      Object.entries(row).map(([key, value]) => {
-        const converter = this.fields[key];
-        return [key, converter ? converter.reverseConvert(value) : value];
-      }),
+      Object.entries(row as Cells)
+        .filter(([, value]) => !Array.isArray(value))
+        .map(([key, value]) => {
+          const converter = this.fields[key];
+          return [key, converter ? converter.reverseConvert(value) : value];
+        }),
     );
 }

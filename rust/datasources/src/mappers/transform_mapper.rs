@@ -1,14 +1,14 @@
 use super::IMapper;
 
 pub struct TransformMapper<TFrom, TTo> {
-    map: Box<dyn Fn(TFrom) -> TTo>,
-    reverse_map: Box<dyn Fn(TTo) -> TFrom>,
+    map: Box<dyn Fn(TFrom) -> TTo + Send + Sync>,
+    reverse_map: Box<dyn Fn(TTo) -> TFrom + Send + Sync>,
 }
 
 impl<TFrom, TTo> TransformMapper<TFrom, TTo> {
     pub fn new(
-        map: impl Fn(TFrom) -> TTo + 'static,
-        reverse_map: impl Fn(TTo) -> TFrom + 'static,
+        map: impl Fn(TFrom) -> TTo + Send + Sync + 'static,
+        reverse_map: impl Fn(TTo) -> TFrom + Send + Sync + 'static,
     ) -> Self {
         Self {
             map: Box::new(map),

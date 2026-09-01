@@ -17,3 +17,32 @@ impl TypeConverter<Value, Value> for BoolConverter {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datasources::Value;
+
+    #[test]
+    fn maps_bool() {
+        let converter = BoolConverter;
+        assert_eq!(converter.convert(&Value::Int(1)).unwrap(), Value::Bool(true));
+        assert_eq!(converter.convert(&Value::Int(0)).unwrap(), Value::Bool(false));
+        assert_eq!(
+            converter.convert(&Value::from("x")).unwrap(),
+            Value::from("x")
+        );
+        assert_eq!(
+            converter.reverse_convert(&Value::Bool(true)).unwrap(),
+            Value::Int(1)
+        );
+        assert_eq!(
+            converter.reverse_convert(&Value::Bool(false)).unwrap(),
+            Value::Int(0)
+        );
+        assert_eq!(
+            converter.reverse_convert(&Value::from("x")).unwrap(),
+            Value::from("x")
+        );
+    }
+}

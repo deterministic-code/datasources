@@ -4,6 +4,7 @@ import type { Constructable } from "./converters/Constructable.ts";
 import { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
+import { TransformMapper } from "./mappers/TransformMapper.ts";
 import { createRepositoryBuilderOptions, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
@@ -12,7 +13,7 @@ import { statementsOf } from "./RepositoryStatements.ts";
 export type { BuiltRepository } from "./BuiltRepository.ts";
 export type { RepositoryStatements } from "./RepositoryStatements.ts";
 
-export const parts = <T extends Cells>(
+export const parts = <T>(
   options: RepositoryBuilderOptions<T>,
 ): BuiltRepository<T> => {
   const types = {
@@ -20,7 +21,7 @@ export const parts = <T extends Cells>(
     ...options.converters,
   };
   const rowConverter =
-    options.mapping ?? new RowTypeConverter(types, options.fields);
+    options.mapping ?? new RowTypeConverter<T>(types, options.fields);
   if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
     Object.assign(rowConverter.types, types);
   const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
@@ -28,6 +29,7 @@ export const parts = <T extends Cells>(
   return {
     connection: options.connection,
     rowConverter,
+    mapper: options.mapper ?? new TransformMapper<T, T>((value) => value, (value) => value),
     mapping,
     statements: statementsOf(table, options.type ? fieldNamesOf(options.type).sort() : []),
     ids: options.ids ?? ["id"],
@@ -35,12 +37,12 @@ export const parts = <T extends Cells>(
   };
 };
 
-export class RepositoryBuilder<T extends Cells> {
+export class RepositoryBuilder<T = Cells> {
   constructor(private readonly options: RepositoryBuilderOptions<T>) {}
 
-  static from<T extends Cells>(type: Constructable<T>, connection: IConnection): RepositoryBuilder<T>;
-  static from<T extends Cells>(options: RepositoryBuilderOptions<T>): RepositoryBuilder<T>;
-  static from<T extends Cells>(
+  static from<T>(type: Constructable<T>, connection: IConnection): RepositoryBuilder<T>;
+  static from<T>(options: RepositoryBuilderOptions<T>): RepositoryBuilder<T>;
+  static from<T>(
     typeOrOptions: Constructable<T> | RepositoryBuilderOptions<T>,
     connection?: IConnection,
   ): RepositoryBuilder<T> {

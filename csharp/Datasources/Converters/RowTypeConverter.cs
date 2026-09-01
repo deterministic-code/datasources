@@ -32,7 +32,8 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
         foreach (var (key, value) in native)
         {
             var prop = typeof(T).GetProperty(key);
-            if (prop is null || !prop.CanWrite || prop.GetIndexParameters().Length > 0) continue;
+            if (prop is null || !prop.CanWrite || prop.GetIndexParameters().Length > 0
+                || !IsColumn(prop.PropertyType)) continue;
             prop.SetValue(target, Assign(value, prop.PropertyType));
         }
         return target;
@@ -41,7 +42,7 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
     public override Row ReverseConvert(T to) => to switch
     {
         IDictionary<string, Value> dict => Apply(new Row(dict), reverse: true),
-        _ => Apply(new Row(Props(typeof(T)).Select(prop =>
+        _ => Apply(new Row(Props(typeof(T)).Where(prop => IsColumn(prop.PropertyType)).Select(prop =>
             KeyValuePair.Create(prop.Name, Value.From(prop.GetValue(to))))), reverse: true)
     };
 
@@ -53,6 +54,13 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
         var converter = Fields.TryGetValue(key, out var field) ? field : null;
         return converter is null ? value
             : reverse ? converter.ReverseConvert(value) : converter.Convert(value);
+    }
+
+    static bool IsColumn(Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        return type == typeof(string) || type == typeof(byte[])
+            || type.IsValueType && !typeof(IEnumerable).IsAssignableFrom(type);
     }
 
     static PropertyInfo[] Props(Type type) =>

@@ -860,6 +860,135 @@ async fn table_repository() {
     TableRepository::from_type::<Item>(MockConnection::new()).unwrap();
 }
 
+fn user_contacts_mapper() -> TransformMapper<Row, Row> {
+    TransformMapper::new(
+        |mut row: Row| {
+            let first = row
+                .get("contact_name1")
+                .cloned()
+                .unwrap_or(Value::Null);
+            let second = row
+                .get("contact_name2")
+                .cloned()
+                .unwrap_or(Value::Null);
+            row.insert(
+                "contacts".into(),
+                Value::from(format!(
+                    "{},{}",
+                    match first {
+                        Value::Text(text) => text,
+                        _ => String::new(),
+                    },
+                    match second {
+                        Value::Text(text) => text,
+                        _ => String::new(),
+                    }
+                )),
+            );
+            row
+        },
+        |mut row: Row| {
+            if let Some(Value::Text(contacts)) = row.remove("contacts") {
+                let mut parts = contacts.splitn(2, ',');
+                if let Some(first) = parts.next() {
+                    row.insert("contact_name1".into(), Value::from(first));
+                }
+                if let Some(second) = parts.next() {
+                    row.insert("contact_name2".into(), Value::from(second));
+                }
+            }
+            row
+        },
+    )
+}
+
+#[tokio::test]
+async fn table_repository_maps_after_row_converter() {
+    let command = Arc::new(MockCommand::new());
+    command.reader_rows.lock().unwrap().push(record(&[
+        ("id", Value::Int(1)),
+        ("name", Value::from("a")),
+    ]));
+    let mut options = TableRepositoryBuilderOptions::with_factory(
+        MockConnection::with_command_provider(command.clone(), "memory"),
+    );
+    options.table = "users".into();
+    options.mapping = Some(users_mapping());
+    options.mapper = Some(TransformMapper::new(
+        |mut row: Row| {
+            if let Some(Value::Text(name)) = row.get("name").cloned() {
+                row.insert("name".into(), Value::from(name.to_uppercase()));
+            }
+            row
+        },
+        |mut row: Row| {
+            if let Some(Value::Text(name)) = row.get("name").cloned() {
+                row.insert("name".into(), Value::from(name.to_lowercase()));
+            }
+            row
+        },
+    ));
+    let repo = TableRepository::new(options).unwrap();
+    let rows = repo.get(None).await.unwrap();
+    assert_eq!(rows[0]["name"], Value::from("A"));
+}
+
+#[tokio::test]
+async fn table_repository_maps_flat_row_into_contacts() {
+    let command = Arc::new(MockCommand::new());
+    command.reader_rows.lock().unwrap().push(record(&[
+        ("id", Value::Int(1)),
+        ("username", Value::from("bobby")),
+        ("email", Value::from("bob@asdf.com")),
+        ("contact_name1", Value::from("bob")),
+        ("contact_name2", Value::from("roberta")),
+    ]));
+    let mut options = TableRepositoryBuilderOptions::with_factory(
+        MockConnection::with_command_provider(command.clone(), "memory"),
+    );
+    options.table = "users".into();
+    options.assign_identity_on_add = false;
+    options.mapping = Some(RowTypeConverter::of::<UserRow>());
+    options.mapper = Some(user_contacts_mapper());
+    let repo = TableRepository::new(options).unwrap();
+    let user = repo.get_single(None).await.unwrap().unwrap();
+    assert_eq!(user["username"], Value::from("bobby"));
+    assert_eq!(user["email"], Value::from("bob@asdf.com"));
+    assert_eq!(user["contacts"], Value::from("bob,roberta"));
+    assert_eq!(
+        command.reader_logs.lock().unwrap()[0].0,
+        "SELECT contact_name1, contact_name2, email, id, username FROM users"
+    );
+    repo.add(&user).await.unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO users (contact_name1, contact_name2, email, id, username) VALUES ($contact_name1, $contact_name2, $email, $id, $username)"
+    );
+    repo.update(&user, None).await.unwrap();
+    assert!(!command.execute_logs.lock().unwrap()[1]
+        .0
+        .contains("contacts"));
+    repo.delete(&user, None).await.unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[2].0,
+        "DELETE FROM users WHERE id = $id"
+    );
+}
+
+struct UserRow;
+
+impl ConvertSchema for UserRow {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("id", "INTEGER"),
+            ("username", "TEXT"),
+            ("email", "TEXT"),
+            ("contact_name1", "TEXT"),
+            ("contact_name2", "TEXT"),
+        ]
+    }
+}
+
 struct Item;
 
 impl ConvertSchema for Item {

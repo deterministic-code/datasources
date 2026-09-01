@@ -1,6 +1,8 @@
+mod row_type_mapper;
 mod transform_converter_mapper;
 mod transform_mapper;
 
+pub use row_type_mapper::RowTypeMapper;
 pub use transform_converter_mapper::TransformConverterMapper;
 pub use transform_mapper::TransformMapper;
 

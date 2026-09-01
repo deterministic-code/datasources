@@ -14,3 +14,20 @@ impl ReplaceConverter {
         to.replace(&self.replacement, &self.search)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn replaces_literals() {
+        assert_eq!(
+            ReplaceConverter::new("_", " ").convert("Ada_Lovelace"),
+            "Ada Lovelace"
+        );
+        assert_eq!(
+            ReplaceConverter::new("_", " ").reverse_convert("Ada Lovelace".into()),
+            "Ada_Lovelace"
+        );
+    }
+}
