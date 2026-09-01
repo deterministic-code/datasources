@@ -153,6 +153,131 @@ public class RepositoryTests
         Assert.Equal("DELETE FROM users WHERE name = $name", command2.ExecuteCalls[1].Text);
     }
 
+    sealed class Contact
+    {
+        public string Name { get; set; } = "";
+    }
+
+    sealed class User
+    {
+        public int id { get; set; }
+        public string username { get; set; } = "";
+        public string email { get; set; } = "";
+        public string contact_name1 { get; set; } = "";
+        public string contact_name2 { get; set; } = "";
+        public List<Contact> Contacts { get; set; } = [];
+    }
+
+    static TransformMapper<User, User> UserContactsMapper() =>
+        new(
+            row =>
+            {
+                row.Contacts =
+                [
+                    new Contact { Name = row.contact_name1 },
+                    new Contact { Name = row.contact_name2 }
+                ];
+                return row;
+            },
+            user =>
+            {
+                user.contact_name1 = user.Contacts.ElementAtOrDefault(0)?.Name ?? "";
+                user.contact_name2 = user.Contacts.ElementAtOrDefault(1)?.Name ?? "";
+                return user;
+            });
+
+    [Fact]
+    public async Task GetAppliesMapperAfterRowConverter()
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        var repo = new Repository<UserRow>(new RepositoryBuilderOptions<UserRow>
+        {
+            Connection = connection,
+            Table = "users",
+            Mapper = new TransformMapper<UserRow, UserRow>(
+                row => { row.name = row.name.ToUpperInvariant(); return row; },
+                row => { row.name = row.name.ToLowerInvariant(); return row; })
+        });
+        command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
+        Assert.Equal("A", (await repo.GetSingle())!.name);
+    }
+
+    [Fact]
+    public async Task GetMapsFlatRowIntoNestedUserContacts()
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        var repo = new Repository<User>(new RepositoryBuilderOptions<User>
+        {
+            Connection = connection,
+            Table = "users",
+            Mapper = UserContactsMapper()
+        });
+        command.Reader = new MockReader<Row>([new Row
+        {
+            ["id"] = 1,
+            ["username"] = "bobby",
+            ["email"] = "bob@asdf.com",
+            ["contact_name1"] = "bob",
+            ["contact_name2"] = "roberta"
+        }]);
+        var user = await repo.GetSingle();
+        Assert.Equal("bobby", user!.username);
+        Assert.Equal("bob@asdf.com", user.email);
+        Assert.Equal(["bob", "roberta"], user.Contacts.Select(contact => contact.Name));
+        Assert.Equal(
+            "SELECT contact_name1, contact_name2, email, id, username FROM users",
+            command.ExecuteReaderCalls[0].Text);
+        command.Reader = new MockReader<Row>([new Row
+        {
+            ["id"] = 1,
+            ["username"] = "bobby",
+            ["email"] = "bob@asdf.com",
+            ["contact_name1"] = "bob",
+            ["contact_name2"] = "roberta"
+        }]);
+        var rows = new List<User>();
+        await foreach (var row in repo.Get())
+            rows.Add(row);
+        Assert.Equal(2, rows[0].Contacts.Count);
+    }
+
+    [Fact]
+    public async Task AddUpdateDeleteReverseMapThenReverseConvert()
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        var repo = new Repository<User>(new RepositoryBuilderOptions<User>
+        {
+            Connection = connection,
+            Table = "users",
+            AssignIdentityOnAdd = false,
+            Mapper = UserContactsMapper()
+        });
+        var user = new User
+        {
+            id = 1,
+            username = "bobby",
+            email = "bob@asdf.com",
+            Contacts = [new Contact { Name = "bob" }, new Contact { Name = "roberta" }]
+        };
+        await repo.Add(user);
+        Assert.Equal(
+            "INSERT INTO users (contact_name1, contact_name2, email, id, username) VALUES ($contact_name1, $contact_name2, $email, $id, $username)",
+            command.ExecuteCalls[0].Text);
+        var names = command.ExecuteCalls[0].Parameters!.ToDictionary(p => p.Name, p => p.Value);
+        Assert.Equal(new Value.Text("bob"), names["contact_name1"]);
+        Assert.Equal(new Value.Text("roberta"), names["contact_name2"]);
+        await repo.Update(user);
+        Assert.DoesNotContain("Contacts", command.ExecuteCalls[1].Text);
+        await repo.Delete(user);
+        Assert.Equal("DELETE FROM users WHERE id = $id", command.ExecuteCalls[2].Text);
+    }
+
     [Fact]
     public void FromTypeBuildsOptionsFromConnection()
     {

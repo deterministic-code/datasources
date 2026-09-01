@@ -17,6 +17,7 @@ public static class RepositoryBuilder<T> where T : new()
         return new(
             options.Connection,
             rowConverter,
+            options.Mapper ?? new TransformMapper<T, T>(static value => value, static value => value),
             mapping,
             new RepositoryStatements(table, Columns()),
             options.Ids,
@@ -29,7 +30,14 @@ public static class RepositoryBuilder<T> where T : new()
         typeof(IDictionary).IsAssignableFrom(typeof(T))
             ? []
             : [.. typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)
+                .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0 && IsColumn(prop.PropertyType))
                 .Select(prop => prop.Name)
                 .OrderBy(name => name)];
+
+    static bool IsColumn(Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        return type == typeof(string) || type == typeof(byte[])
+            || type.IsValueType && !typeof(IEnumerable).IsAssignableFrom(type);
+    }
 }

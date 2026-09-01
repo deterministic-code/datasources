@@ -4,6 +4,7 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::converters::{ConvertSchema, RowTypeConverter};
+use crate::mappers::{IMapper, TransformMapper};
 use crate::datasource_error::DatasourceError;
 use crate::parameter::Parameter;
 use crate::query::Query;
@@ -24,6 +25,7 @@ pub struct TableRepository {
     connection: Arc<dyn Connection>,
     middlewares: Vec<Arc<dyn CommandMiddleware>>,
     row_converter: RowTypeConverter,
+    mapper: TransformMapper<Row, Row>,
     statements: TableRepositoryStatements,
     id: Vec<String>,
     ids: HashSet<String>,
@@ -50,6 +52,7 @@ impl TableRepository {
         Self::from_parts(
             built.connection,
             built.row_converter,
+            built.mapper,
             built.statements,
             built.ids,
             built.assign_identity_on_add,
@@ -59,6 +62,7 @@ impl TableRepository {
     pub fn from_parts(
         connection: Arc<dyn Connection>,
         row_converter: RowTypeConverter,
+        mapper: TransformMapper<Row, Row>,
         statements: TableRepositoryStatements,
         ids: Vec<String>,
         assign_identity_on_add: bool,
@@ -67,6 +71,7 @@ impl TableRepository {
             connection,
             middlewares: Vec::new(),
             row_converter,
+            mapper,
             statements,
             ids: ids.iter().cloned().collect(),
             id: ids,
@@ -135,7 +140,11 @@ impl TableRepository {
         }
         reader
             .current()
-            .map(|row| self.row_converter.convert(&row))
+            .map(|row| {
+                self.row_converter
+                    .convert(&row)
+                    .map(|converted| IMapper::map(&self.mapper, converted))
+            })
             .transpose()
     }
 
@@ -147,14 +156,18 @@ impl TableRepository {
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                items.push(self.row_converter.convert(&row)?);
+                items.push(IMapper::map(
+                    &self.mapper,
+                    self.row_converter.convert(&row)?,
+                ));
             }
         }
         Ok(items)
     }
 
     fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        self.row_converter.reverse_convert(item)
+        self.row_converter
+            .reverse_convert(&IMapper::reverse_map(&self.mapper, item.clone()))
     }
 }
 

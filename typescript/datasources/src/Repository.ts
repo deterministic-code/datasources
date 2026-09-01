@@ -11,11 +11,12 @@ import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import type { TypeConverter } from "./converters/TypeConverter.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { parts } from "./RepositoryBuilder.ts";
+import type { TypeConverter } from "./converters/TypeConverter.ts";
+import type { IMapper } from "./mappers/IMapper.ts";
 import type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
@@ -24,14 +25,15 @@ const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name, value: value as Scalar }));
 
-const isBuilt = <T extends Cells>(
+const isBuilt = <T>(
   value: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
 ): value is BuiltRepository<T> =>
   "statements" in value && "rowConverter" in value && "mapping" in value;
 
-export class Repository<T extends Cells> implements IRepository<T> {
+export class Repository<T = Cells> implements IRepository<T> {
   private readonly connection: IConnection;
-  readonly rowConverter: TypeConverter<T>;
+  readonly rowConverter: TypeConverter<T, Cells>;
+  readonly mapper: IMapper<T, T>;
   readonly statements: RepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
   private readonly ids: Set<string>;
@@ -53,6 +55,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
         );
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
+    this.mapper = built.mapper;
     this.statements = built.statements;
     this.ids = new Set(built.ids);
     this.assignIdentityOnAdd = built.assignIdentityOnAdd;
@@ -75,11 +78,13 @@ export class Repository<T extends Cells> implements IRepository<T> {
       statement.where?.parameters ?? statement.parameters,
     );
     while (await reader.next())
-      yield this.rowConverter.convert(
-        reader.current ??
-          (() => {
-            throw new DatasourceError("Reader current must be a row");
-          })(),
+      yield this.mapper.map(
+        this.rowConverter.convert(
+          reader.current ??
+            (() => {
+              throw new DatasourceError("Reader current must be a row");
+            })(),
+        ),
       );
   }
 
@@ -117,7 +122,8 @@ export class Repository<T extends Cells> implements IRepository<T> {
       this.connection.createCommand(),
     );
 
-  private reverseConvert = (item: T): Cells => this.rowConverter.reverseConvert(item);
+  private reverseConvert = (item: T): Cells =>
+    this.rowConverter.reverseConvert(this.mapper.reverseMap(item));
 
   private readQuery = (query?: IQuery | IWhere): IQuery =>
     !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);

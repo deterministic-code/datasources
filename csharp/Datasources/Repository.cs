@@ -7,6 +7,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     readonly IConnection connection;
     readonly List<ICommandMiddleware> middlewares = [];
     readonly TypeConverter<T, Row> rowConverter;
+    public IMapper<T, T> Mapper { get; }
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
     readonly bool assignIdentityOnAdd;
@@ -21,6 +22,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     {
         connection = built.Connection;
         rowConverter = built.RowConverter;
+        Mapper = built.Mapper;
         statements = built.Statements;
         ids = new(built.Ids);
         assignIdentityOnAdd = built.AssignIdentityOnAdd;
@@ -49,8 +51,8 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         var reader = await Command().ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
-            yield return rowConverter.Convert(reader.Current
-                ?? throw new DatasourceException("Reader current must be a row"));
+            yield return Mapper.Map(rowConverter.Convert(reader.Current
+                ?? throw new DatasourceException("Reader current must be a row")));
     }
 
     public async Task<Response> Add(T item)
@@ -91,5 +93,5 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
-    Row ReverseConvert(T item) => rowConverter.ReverseConvert(item);
+    Row ReverseConvert(T item) => rowConverter.ReverseConvert(Mapper.ReverseMap(item));
 }

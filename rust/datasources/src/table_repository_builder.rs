@@ -1,6 +1,6 @@
 use crate::built_repository::BuiltRepository;
 use crate::converters::{Cells, DefaultTypeConverters, RowTypeConverter};
-use crate::mappers::NameSourceDestinationMapper;
+use crate::mappers::{NameSourceDestinationMapper, TransformMapper};
 use crate::result::Result;
 use crate::table_repository::TableRepository;
 use crate::table_repository_builder_options::TableRepositoryBuilderOptions;
@@ -22,9 +22,13 @@ impl TableRepositoryBuilder {
         let mut columns = row_converter.column_names().to_vec();
         columns.sort();
         let mapping = NameSourceDestinationMapper::new(options.connection.provider(), "rust");
+        let mapper = options
+            .mapper
+            .unwrap_or_else(|| TransformMapper::new(|row| row, |row| row));
         Ok(BuiltRepository {
             connection: options.connection,
             row_converter,
+            mapper,
             mapping,
             statements: TableRepositoryStatements::new(options.table, columns),
             ids: options.ids,

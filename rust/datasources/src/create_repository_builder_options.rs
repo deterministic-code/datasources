@@ -11,6 +11,7 @@ pub fn create_repository_builder_options<T: ConvertSchema>(
         assign_identity_on_add: true,
         table: "items".into(),
         mapping: None,
+        mapper: None,
         types: Default::default(),
         fields: Default::default(),
         connection,

@@ -374,6 +374,7 @@ async fn run(path: &Path) {
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
         table: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec)),
+        mapper: None,
         types: Default::default(),
         fields: Default::default(),
     };
