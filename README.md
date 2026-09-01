@@ -51,7 +51,7 @@ npm run test:e2e
 npm run test:e2e:verbose
 ```
 
-`test:e2e:verbose` (or `npm run test:e2e -- --verbose` / `VERBOSE=1`) prints each `ConsoleCommandMiddleware` Start/Finish line while specs run.
+`test:e2e:verbose` (or `npm run test:e2e -- --verbose` / `VERBOSE=1`) prints each `ConsoleCommandMiddleware` Start/Finish line while specs run, plus Request parameters and Response rows when `isVerbose` is set.
 
 `test:e2e` defaults to `MYSQL_URL=mysql://ds:ds@127.0.0.1:3306/datasources` and `POSTGRES_URL=postgres://ds:ds@127.0.0.1:5432/datasources`. Override those env vars if the servers are elsewhere.
 

@@ -23,9 +23,9 @@ export type RepositoryRow = Record<string, Scalar>;
 
 export type RepositoryStep = {
   CREATE?: { row: RepositoryRow };
-  READ?: { id: Scalar };
-  QUERY?: { where?: RepositoryRow };
-  READY?: { where: RepositoryRow };
+  GET?: { id: Scalar; expect?: RepositoryRow | null };
+  QUERY?: { where?: RepositoryRow; expect?: RepositoryRow[] };
+  GETBY?: { where: RepositoryRow; expect?: RepositoryRow | null };
   UPDATE?: { row: RepositoryRow };
   UPDATEBY?: { row: RepositoryRow; where: RepositoryRow };
   DELETE?: { id: Scalar };
@@ -70,15 +70,15 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
       );
       return StatementBuilder.createInsert(table, fields).getText();
     }
-    if (step.READ) return StatementBuilder.createQuery(table, columns, idWhere(type, step.READ.id)).getText();
+    if (step.GET) return StatementBuilder.createQuery(table, columns, idWhere(type, step.GET.id)).getText();
     if (step.QUERY)
       return StatementBuilder.createQuery(
         table,
         columns,
         step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
       ).getText();
-    if (step.READY)
-      return StatementBuilder.createQuery(table, columns, whereOf(step.READY.where)).getText();
+    if (step.GETBY)
+      return StatementBuilder.createQuery(table, columns, whereOf(step.GETBY.where)).getText();
     if (step.UPDATE) {
       const fields = fieldsOf(step.UPDATE.row, (col) => !ids.has(col));
       return StatementBuilder.createUpdate(table, fields, idWhere(type, step.UPDATE.row.id as Scalar)).getText();

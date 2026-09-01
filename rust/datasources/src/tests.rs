@@ -328,6 +328,66 @@ async fn console_trims_query() {
     assert_eq!(signature, "[datasource][Start]-[SELECT 1]");
 }
 
+#[tokio::test]
+async fn console_verbose_bodies() {
+    let lines = Arc::new(Mutex::new(Vec::new()));
+    let stamps = Arc::new(Mutex::new(vec![
+        "2026-08-28T01:54:12.101Z".to_string(),
+        "2026-08-28T01:54:12.102Z".to_string(),
+        "2026-08-28T01:54:12.103Z".to_string(),
+        "2026-08-28T01:54:12.104Z".to_string(),
+    ]));
+    let write_lines = lines.clone();
+    let write_stamps = stamps.clone();
+    let middleware = ConsoleCommandMiddleware::with_sink(
+        move |line| write_lines.lock().unwrap().push(line.to_string()),
+        move || write_stamps.lock().unwrap().remove(0),
+    )
+    .options(HashMap::from([("isVerbose".into(), "true".into())]));
+    let host = CommandMiddlewareHost::new();
+    host.use_middleware(Arc::new(middleware));
+    host.run(
+        "SELECT 1",
+        Some(&[Parameter::new("id", 1i64)]),
+        |_q, _p| async { Ok(((), vec![record(&[("id", Value::Int(1))])])) },
+    )
+    .await
+    .unwrap();
+    let logged = lines.lock().unwrap().clone();
+    assert_eq!(logged.len(), 4);
+    assert_eq!(
+        logged[0],
+        "[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT 1]"
+    );
+    assert_eq!(
+        logged[1],
+        "[2026-08-28T01:54:12.102Z]-[datasource][Request]-[{id: 1}]"
+    );
+    assert!(logged[2].starts_with("[2026-08-28T01:54:12.103Z]-[datasource][Finish]-[SELECT 1] "));
+    assert_eq!(
+        logged[3],
+        "[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{id: 1}]"
+    );
+    lines.lock().unwrap().clear();
+    stamps.lock().unwrap().extend([
+        "2026-08-28T01:54:12.101Z".to_string(),
+        "2026-08-28T01:54:12.102Z".to_string(),
+        "2026-08-28T01:54:12.103Z".to_string(),
+        "2026-08-28T01:54:12.104Z".to_string(),
+    ]);
+    host.run(
+        "DELETE FROM user",
+        Some(&[Parameter::new("id", 2i64)]),
+        |_q, _p| async { Ok((Response::new(Value::Null, 1), vec![])) },
+    )
+    .await
+    .unwrap();
+    let deleted = lines.lock().unwrap()[3].clone();
+    assert!(deleted.contains("[Response]-[{"));
+    assert!(deleted.contains("rowsAffected: 1"));
+    assert!(deleted.contains("result: null"));
+}
+
 #[test]
 fn registry() {
     reset();

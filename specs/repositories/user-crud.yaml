@@ -15,7 +15,7 @@ type:
     version: binary
 steps:
   - CREATE:
-      row:
+      row: &alice
         id: 1
         uuid: 550e8400-e29b-41d4-a716-446655440000
         username: alice
@@ -25,7 +25,7 @@ steps:
         created: "2024-01-15T10:00:00Z"
         version: AQIDBA==
   - CREATE:
-      row:
+      row: &bob
         id: 2
         uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
         username: bob
@@ -34,24 +34,35 @@ steps:
         location: 2.25
         created: "2024-02-20T15:30:00Z"
         version: BQUFBQ==
-  - READ:
+
+  - GET:
       id: 1
-  - QUERY: {}
-  - READY:
+      expect: *alice
+  - GETBY:
       where:
         username: alice
-  - UPDATE:
-      row:
-        id: 1
+      expect: *alice
+  - GETBY:
+      where:
         uuid: 550e8400-e29b-41d4-a716-446655440000
-        username: alice2
-        is_enabled: false
-        balance: "11.00"
-        location: 1.5
+      expect: *alice
+  - GETBY:
+      where:
+        is_enabled: true
+      expect: *alice
+  - GETBY:
+      where:
         created: "2024-01-15T10:00:00Z"
-        version: AQIDBA==
+      expect: *alice
+  - QUERY:
+      expect:
+        - *alice
+        - *bob
+
   - UPDATEBY:
-      row:
+      where:
+        uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+      row: &bobEnabled
         id: 2
         uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
         username: bob
@@ -60,11 +71,27 @@ steps:
         location: 2.25
         created: "2024-02-20T15:30:00Z"
         version: BQUFBQ==
+  - GETBY:
       where:
-        username: bob
+        uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+      expect: *bobEnabled
+  - GETBY:
+      where:
+        created: "2024-02-20T15:30:00Z"
+      expect: *bobEnabled
+  - QUERY:
+      where:
+        is_enabled: true
+      expect:
+        - *alice
+        - *bobEnabled
+
   - DELETEBY:
       where:
-        username: bob
-  - DELETE:
-      id: 1
-  - QUERY: {}
+        created: "2024-02-20T15:30:00Z"
+  - GET:
+      id: 2
+      expect: null
+  - QUERY:
+      expect:
+        - *alice

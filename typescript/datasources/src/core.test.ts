@@ -297,6 +297,78 @@ describe("console middleware", () => {
     await host.run("SELECT 1\n", undefined, async () => ({ value: 1, rows: [] }));
     expect(lines[0].replace(/^\[[^\]]+\]-/, "")).toBe("[datasource][Start]-[SELECT 1]");
   });
+
+  it("logs Request and Response when isVerbose", async () => {
+    const lines: string[] = [];
+    const stamps = [
+      new Date("2026-08-28T01:54:12.101Z"),
+      new Date("2026-08-28T01:54:12.102Z"),
+      new Date("2026-08-28T01:54:12.103Z"),
+      new Date("2026-08-28T01:54:12.104Z"),
+    ];
+    const host = new CommandMiddlewareHost();
+    host.use(
+      new ConsoleCommandMiddleware(
+        (line) => lines.push(line),
+        () => stamps.shift() ?? new Date("2026-08-28T01:54:12.104Z"),
+        { isVerbose: "true" },
+      ),
+    );
+    await host.run("SELECT 1", [{ name: "id", value: 1 }], async () => ({
+      value: 1,
+      rows: [{ id: 1 }],
+    }));
+    expect(lines).toHaveLength(4);
+    expect(lines[0]).toBe("[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT 1]");
+    expect(lines[1]).toBe("[2026-08-28T01:54:12.102Z]-[datasource][Request]-[{id: 1}]");
+    expect(lines[2]).toMatch(
+      /^\[2026-08-28T01:54:12.103Z\]-\[datasource\]\[Finish\]-\[SELECT 1\] \d+(ms|μs)$/,
+    );
+    expect(lines[3]).toBe("[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{id: 1}]");
+    lines.length = 0;
+    await host.run("DELETE FROM user", [{ name: "id", value: 2 }], async () => ({
+      value: { result: null, rowsAffected: 1 },
+      rows: [],
+    }));
+    expect(lines[3]).toBe(
+      "[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{result: null, rowsAffected: 1}]",
+    );
+  });
+
+  it("serializes Date, binary, and bigint in verbose bodies", () => {
+    const lines: string[] = [];
+    const middleware = new ConsoleCommandMiddleware(
+      (line) => lines.push(line),
+      () => new Date("2026-08-28T01:54:12.101Z"),
+      { isVerbose: "1" },
+    );
+    middleware.beforeQuery("SELECT 1");
+    expect(lines[1]).toBe("[2026-08-28T01:54:12.101Z]-[datasource][Request]-[{}]");
+    lines.length = 0;
+    middleware.beforeQuery("SELECT 1", [
+      { name: "when", value: new Date("2026-08-28T01:54:12.000Z") },
+      { name: "blob", value: new Uint8Array([1, 2, 3]) },
+      { name: "n", value: 1n },
+    ]);
+    middleware.afterQuery(
+      "SELECT 1",
+      undefined,
+      [
+        {
+          when: new Date("2026-08-28T01:54:12.000Z"),
+          blob: new Uint8Array([1, 2, 3]),
+          n: 1n,
+        },
+      ],
+      2,
+    );
+    expect(lines[1]).toBe(
+      "[2026-08-28T01:54:12.101Z]-[datasource][Request]-[{when: 2026-08-28T01:54:12.000Z, blob: AQID, n: 1}]",
+    );
+    expect(lines[3]).toBe(
+      "[2026-08-28T01:54:12.101Z]-[datasource][Response]-[{when: 2026-08-28T01:54:12.000Z, blob: AQID, n: 1}]",
+    );
+  });
 });
 
 describe("Datasource registry", () => {

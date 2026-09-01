@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Globalization;
 using Datasources;
 using Datasources.Builders;
 using Datasources.Sqlite;
@@ -34,25 +36,124 @@ public static class RepositorySpec
             Ids = spec.Type.Ids,
             AssignIdentityOnAdd = spec.Type.AssignIdentityOnAdd,
         });
+        if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");
         var logs = new List<string>();
-        var repo = new Repository<SpecUser>(built).Use(new ConsoleCommandMiddleware(logs.Add));
+        var repo = new Repository<SpecUser>(built).Use(new ConsoleCommandMiddleware(line =>
+        {
+            logs.Add(line);
+            if (Verbose()) Console.WriteLine(line);
+        }, null, new Dictionary<string, string> { ["isVerbose"] = Verbose() ? "true" : "false" }));
         foreach (var step in spec.Steps)
             await (step switch
             {
-                { Create: { } create } => repo.Add(mapping.Convert(ToRow(create.Row))),
-                { Read: { } read } => repo.GetSingle(WhereBuilder.Equals("id", Value.From(read.Id))),
-                { Query: { } query } => Drain(query.Where is { } where ? repo.Get(Where(where)) : repo.Get()),
-                { Ready: { } ready } => repo.GetSingle(Where(ready.Where)),
-                { Update: { } update } => repo.Update(mapping.Convert(ToRow(update.Row))),
-                { UpdateBy: { } updateBy } => repo.Update(mapping.Convert(ToRow(updateBy.Row)), Where(updateBy.Where)),
-                { Delete: { } delete } => repo.Delete(mapping.Convert(new Row { ["id"] = Value.From(delete.Id) })),
-                { DeleteBy: { } deleteBy } => repo.Delete(new SpecUser(), Where(deleteBy.Where)),
+                { Create: { } create } => repo.Add(mapping.Convert(ToRow(create.Row, spec.Type))),
+                { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(WhereBuilder.Equals("id", Value.From(get.Id)))),
+                { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Get(Where(mapping, where, spec.Type)) : repo.Get()),
+                { GetBy: { } getBy } => AssertGet(spec.Name, getBy, repo.GetSingle(Where(mapping, getBy.Where, spec.Type))),
+                { Update: { } update } => repo.Update(mapping.Convert(ToRow(update.Row, spec.Type))),
+                { UpdateBy: { } updateBy } => repo.Update(mapping.Convert(ToRow(updateBy.Row, spec.Type)), Where(mapping, updateBy.Where, spec.Type)),
+                { Delete: { } delete } => repo.Delete(mapping.Convert(ToRow(new() { ["id"] = delete.Id }, spec.Type))),
+                { DeleteBy: { } deleteBy } => repo.Delete(new SpecUser(), Where(mapping, deleteBy.Where, spec.Type)),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             });
-        SqlSpec.AssertConsoleLogs(spec.Name, Queries(spec), logs);
+        SqlSpec.AssertConsoleLogs(
+            spec.Name,
+            Queries(spec),
+            [.. logs.Where(line => line.Contains("[Start]") || line.Contains("[Finish]"))]);
     }
 
-    static async Task Drain<T>(IAsyncEnumerable<T> items) { await foreach (var _ in items) { } }
+    static async Task AssertGet(string name, IdOp get, Task<SpecUser?> task)
+    {
+        var actual = await task;
+        if (get.HasExpect) AssertRow($"{name} GET", actual, get.Expect);
+    }
+
+    static async Task AssertGet(string name, WhereOp getBy, Task<SpecUser?> task)
+    {
+        var actual = await task;
+        if (getBy.HasExpect) AssertRow($"{name} GETBY", actual, getBy.Expect);
+    }
+
+    static async Task AssertQuery(string name, QueryOp query, IAsyncEnumerable<SpecUser> items)
+    {
+        var actual = new List<SpecUser>();
+        await foreach (var item in items) actual.Add(item);
+        if (!query.HasExpect) return;
+        var expect = Rows(query.Expect);
+        if (actual.Count != expect.Count)
+            throw new InvalidOperationException($"{name} QUERY: expected {expect.Count} rows got {actual.Count}");
+        for (var index = 0; index < actual.Count; index++)
+            AssertRow($"{name} QUERY[{index}]", actual[index], expect[index]);
+    }
+
+    static void AssertRow(string name, SpecUser? actual, object? expect)
+    {
+        if (expect is null)
+        {
+            if (actual is not null) throw new InvalidOperationException($"{name}: expected null");
+            return;
+        }
+        if (actual is null) throw new InvalidOperationException($"{name}: expected a row");
+        var wanted = AsRow(expect);
+        var got = FromUser(actual);
+        foreach (var (key, value) in wanted)
+            if (!Same(Norm(got.GetValueOrDefault(key)), Norm(value)))
+                throw new InvalidOperationException($"{name}: {key}: expected {Norm(value)} got {Norm(got.GetValueOrDefault(key))}");
+    }
+
+    static Dictionary<string, object?> FromUser(SpecUser user) => new()
+    {
+        ["id"] = user.id,
+        ["uuid"] = user.uuid.ToString(),
+        ["username"] = user.username,
+        ["is_enabled"] = user.is_enabled,
+        ["balance"] = user.balance.ToString(CultureInfo.InvariantCulture),
+        ["location"] = user.location,
+        ["created"] = new Value.DateTime(user.created).IsoDateTime(),
+        ["version"] = Convert.ToBase64String(user.version),
+    };
+
+    static object? Norm(object? value) => value switch
+    {
+        null => null,
+        bool flag => flag,
+        "true" or "True" => true,
+        "false" or "False" => false,
+        byte or sbyte or short or ushort or int or uint or long => Convert.ToInt64(value),
+        float or double => Convert.ToDouble(value),
+        decimal number => number.ToString(CultureInfo.InvariantCulture),
+        Guid guid => guid.ToString(),
+        DateTime date => new Value.DateTime(date).IsoDateTime(),
+        byte[] bytes => Convert.ToBase64String(bytes),
+        string text when text.Contains('T') && DateTime.TryParse(
+            text, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var date) =>
+            new Value.DateTime(DateTime.SpecifyKind(date, DateTimeKind.Utc)).IsoDateTime(),
+        _ => value
+    };
+
+    static bool Same(object? got, object? wanted) =>
+        Equals(got, wanted)
+        || got is IConvertible && wanted is IConvertible
+            && decimal.TryParse($"{got}", NumberStyles.Number, CultureInfo.InvariantCulture, out var left)
+            && decimal.TryParse($"{wanted}", NumberStyles.Number, CultureInfo.InvariantCulture, out var right)
+            && left == right;
+
+    static List<object> Rows(object? expect) => expect switch
+    {
+        IEnumerable<object> items => [.. items],
+        IEnumerable items => [.. items.Cast<object>()],
+        _ => throw new InvalidOperationException("QUERY expect must be a list")
+    };
+
+    static Dictionary<string, object?> AsRow(object expect) => expect switch
+    {
+        Dictionary<string, object?> row => row,
+        IDictionary<string, object?> row => new(row),
+        IDictionary<object, object?> row => row.ToDictionary(pair => $"{pair.Key}", pair => pair.Value),
+        IDictionary row => row.Cast<DictionaryEntry>().ToDictionary(pair => $"{pair.Key}", pair => pair.Value),
+        _ => throw new InvalidOperationException("expect must be a row")
+    };
 
     static IEnumerable<string> Queries(Spec spec)
     {
@@ -62,13 +163,13 @@ public static class RepositorySpec
             yield return step switch
             {
                 { Create: { } create } => StatementBuilder.CreateInsert(spec.Type.Table, Fields(create.Row, col => !spec.Type.AssignIdentityOnAdd || !ids.Contains(col))).GetText(),
-                { Read: { } read } => StatementBuilder.CreateQuery(spec.Type.Table, columns, WhereBuilder.Equals("id", Value.From(read.Id))).GetText(),
-                { Query: { } query } => StatementBuilder.CreateQuery(spec.Type.Table, columns, query.Where is { } where ? Where(where) : null).GetText(),
-                { Ready: { } ready } => StatementBuilder.CreateQuery(spec.Type.Table, columns, Where(ready.Where)).GetText(),
+                { Get: { } get } => StatementBuilder.CreateQuery(spec.Type.Table, columns, WhereBuilder.Equals("id", Value.From(get.Id))).GetText(),
+                { Query: { } query } => StatementBuilder.CreateQuery(spec.Type.Table, columns, query.Where is { } where ? SqlWhere(where) : null).GetText(),
+                { GetBy: { } getBy } => StatementBuilder.CreateQuery(spec.Type.Table, columns, SqlWhere(getBy.Where)).GetText(),
                 { Update: { } update } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(update.Row, col => !ids.Contains(col)), WhereBuilder.Equals("id", Value.From(update.Row["id"]))).GetText(),
-                { UpdateBy: { } updateBy } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(updateBy.Row, col => !ids.Contains(col)), Where(updateBy.Where)).GetText(),
+                { UpdateBy: { } updateBy } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(updateBy.Row, col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(),
                 { Delete: { } delete } => StatementBuilder.CreateDelete(spec.Type.Table, WhereBuilder.Equals("id", Value.From(delete.Id))).GetText(),
-                { DeleteBy: { } deleteBy } => StatementBuilder.CreateDelete(spec.Type.Table, Where(deleteBy.Where)).GetText(),
+                { DeleteBy: { } deleteBy } => StatementBuilder.CreateDelete(spec.Type.Table, SqlWhere(deleteBy.Where)).GetText(),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
     }
@@ -77,21 +178,42 @@ public static class RepositorySpec
         row.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Value.From(Coerce(pair.Value)))).ToArray();
 
-    static IWhere Where(Dictionary<string, object?> row) =>
+    static IWhere Where(RowTypeConverter<SpecUser> mapping, Dictionary<string, object?> row, TypeSpec type) =>
+        WhereBuilder.And([.. row.Select(pair =>
+        {
+            var value = Value.From(Coerce(pair.Value, type.Fields.GetValueOrDefault(pair.Key)));
+            var cell = mapping.Fields.TryGetValue(pair.Key, out var field)
+                ? field.ReverseConvert(value)
+                : value;
+            return WhereBuilder.Equals(pair.Key, cell);
+        })]);
+
+    static IWhere SqlWhere(Dictionary<string, object?> row) =>
         WhereBuilder.And([.. row.Select(pair => WhereBuilder.Equals(pair.Key, Value.From(Coerce(pair.Value))))]);
 
-    static Row ToRow(Dictionary<string, object?> row) =>
-        new(row.ToDictionary(pair => pair.Key, pair => Value.From(Coerce(pair.Value))));
+    static Row ToRow(Dictionary<string, object?> row, TypeSpec type) =>
+        new(row.ToDictionary(pair => pair.Key, pair =>
+            Value.From(Coerce(pair.Value, type.Fields.GetValueOrDefault(pair.Key)))));
 
-    static object? Coerce(object? value) => value switch
+    static object? Coerce(object? value, string? canonical = null) => (canonical, value) switch
     {
-        "true" => true,
-        "false" => false,
+        ("bool", "true") => true,
+        ("bool", "false") => false,
+        ("datetime", string text) when DateTime.TryParse(
+            text, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var date) =>
+            DateTime.SpecifyKind(date, DateTimeKind.Utc),
+        ("binary", string text) => Convert.FromBase64String(text),
+        (_, "true") => true,
+        (_, "false") => false,
         _ => value
     };
 
     static SqliteColumn[] Columns(TypeSpec type) =>
         [.. type.Fields.Select(pair => new SqliteColumn(pair.Key, pair.Value, type.Ids.Contains(pair.Key)))];
+
+    static bool Verbose() =>
+        Environment.GetEnvironmentVariable("VERBOSE") is "1" or "true";
 
     public sealed record Session(IConnection Connection, ICommand Command);
 
@@ -126,9 +248,9 @@ public static class RepositorySpec
     sealed class Step
     {
         [YamlMember(Alias = "CREATE")] public RowOp? Create { get; set; }
-        [YamlMember(Alias = "READ")] public IdOp? Read { get; set; }
+        [YamlMember(Alias = "GET")] public IdOp? Get { get; set; }
         [YamlMember(Alias = "QUERY")] public QueryOp? Query { get; set; }
-        [YamlMember(Alias = "READY")] public WhereOp? Ready { get; set; }
+        [YamlMember(Alias = "GETBY")] public WhereOp? GetBy { get; set; }
         [YamlMember(Alias = "UPDATE")] public RowOp? Update { get; set; }
         [YamlMember(Alias = "UPDATEBY")] public UpdateByOp? UpdateBy { get; set; }
         [YamlMember(Alias = "DELETE")] public IdOp? Delete { get; set; }
@@ -143,16 +265,28 @@ public static class RepositorySpec
     sealed class IdOp
     {
         [YamlMember(Alias = "id")] public object? Id { get; set; }
+        object? expect;
+        [YamlMember(Alias = "expect")]
+        public object? Expect { get => expect; set { expect = value; HasExpect = true; } }
+        public bool HasExpect { get; private set; }
     }
 
     sealed class QueryOp
     {
         [YamlMember(Alias = "where")] public Dictionary<string, object?>? Where { get; set; }
+        object? expect;
+        [YamlMember(Alias = "expect")]
+        public object? Expect { get => expect; set { expect = value; HasExpect = true; } }
+        public bool HasExpect { get; private set; }
     }
 
     sealed class WhereOp
     {
         [YamlMember(Alias = "where")] public Dictionary<string, object?> Where { get; set; } = [];
+        object? expect;
+        [YamlMember(Alias = "expect")]
+        public object? Expect { get => expect; set { expect = value; HasExpect = true; } }
+        public bool HasExpect { get; private set; }
     }
 
     sealed class UpdateByOp
