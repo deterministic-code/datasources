@@ -47,7 +47,7 @@ public class RepositoryTests
             Connection = connection,
             Ids = id ?? ["id"],
             AssignIdentityOnAdd = assignIdentityOnAdd,
-            Table = "users"
+            Entity = "users"
         }), command);
     }
 
@@ -144,7 +144,7 @@ public class RepositoryTests
         var typed = new Repository<Item>(new RepositoryBuilderOptions<Item>
         {
             Connection = connection2,
-            Table = "users"
+            Entity = "users"
         });
         await typed.Add(new Item { Id = 1, Name = "a" });
         Assert.Contains("INSERT INTO users", command2.ExecuteCalls[0].Text);
@@ -195,7 +195,7 @@ public class RepositoryTests
         var repo = new Repository<UserRow>(new RepositoryBuilderOptions<UserRow>
         {
             Connection = connection,
-            Table = "users",
+            Entity = "users",
             Mapper = new TransformMapper<UserRow, UserRow>(
                 row => { row.name = row.name.ToUpperInvariant(); return row; },
                 row => { row.name = row.name.ToLowerInvariant(); return row; })
@@ -213,7 +213,7 @@ public class RepositoryTests
         var repo = new Repository<User>(new RepositoryBuilderOptions<User>
         {
             Connection = connection,
-            Table = "users",
+            Entity = "users",
             Mapper = UserContactsMapper()
         });
         command.Reader = new MockReader<Row>([new Row
@@ -254,7 +254,7 @@ public class RepositoryTests
         var repo = new Repository<User>(new RepositoryBuilderOptions<User>
         {
             Connection = connection,
-            Table = "users",
+            Entity = "users",
             AssignIdentityOnAdd = false,
             Mapper = UserContactsMapper()
         });

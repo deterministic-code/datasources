@@ -51,7 +51,7 @@ export class SqliteDatasource implements IDatasource {
   createRepository = <T>(connection?: IConnection): IRepository<T> =>
     new Repository({
       connection: (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
-      table: this.options.table ?? "items",
+      entity: this.options.table ?? "items",
       mapping: new RowTypeConverter(),
     }) as IRepository<T>;
 

@@ -464,7 +464,7 @@ async fn run(path: &Path) {
         connection: conn.clone(),
         ids: spec.type_spec.ids.clone(),
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
-        table: spec.type_spec.table.clone(),
+        entity: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec)),
         mapper: Some(mappings_mapper(&spec.type_spec.mappings)),
         types: Default::default(),

@@ -9,7 +9,11 @@ pub fn create_repository_builder_options<T: ConvertSchema>(
     TableRepositoryBuilderOptions {
         ids: default_id::<T>(),
         assign_identity_on_add: true,
-        table: "items".into(),
+        entity: std::any::type_name::<T>()
+            .rsplit("::")
+            .next()
+            .unwrap_or_default()
+            .into(),
         mapping: None,
         mapper: None,
         types: Default::default(),

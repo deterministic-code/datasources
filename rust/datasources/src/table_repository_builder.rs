@@ -30,7 +30,7 @@ impl TableRepositoryBuilder {
             row_converter,
             mapper,
             mapping,
-            statements: TableRepositoryStatements::new(options.table, columns),
+            statements: TableRepositoryStatements::new(options.entity, columns),
             ids: options.ids,
             assign_identity_on_add: options.assign_identity_on_add,
         })

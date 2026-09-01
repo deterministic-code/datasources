@@ -47,7 +47,7 @@ const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
     ...overrides,
     connection,
     type,
-    table: overrides.table ?? "users",
+    entity: overrides.entity ?? "users",
     mapping: overrides.mapping ?? new RowTypeConverter(),
   });
   return { repo, command };
@@ -145,7 +145,7 @@ describe("Repository", () => {
     const typed = new Repository({
       connection,
       type: asType(Item),
-      table: "users",
+      entity: "users",
       mapping: new RowTypeConverter(),
     });
     await typed.add(Object.assign(new Item(), { id: 1, name: "a" }));
@@ -201,7 +201,7 @@ describe("Repository", () => {
     const repo = new Repository<User>({
       connection,
       type: User,
-      table: "users",
+      entity: "users",
       mapping: new RowTypeConverter<User>(),
       mapper: userContactsMapper(),
     });
@@ -229,7 +229,7 @@ describe("Repository", () => {
     const repo = new Repository<User>({
       connection,
       type: User,
-      table: "users",
+      entity: "users",
       assignIdentityOnAdd: false,
       mapping: new RowTypeConverter<User>(),
       mapper: userContactsMapper(),
