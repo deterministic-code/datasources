@@ -12,22 +12,11 @@ import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
-import type { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { parts } from "./RepositoryBuilder.ts";
 import type { RepositoryStatements } from "./RepositoryStatements.ts";
-
-const mapKeys = (row: Cells, name: (key: string) => string): Cells =>
-  Object.fromEntries(Object.entries(row).map(([key, value]) => [name(key), value]));
-
-const asRow = (current: object | null | undefined): Cells =>
-  current && typeof current === "object" && !Array.isArray(current)
-    ? (current as Cells)
-    : (() => {
-        throw new DatasourceError("Reader current must be a row dictionary");
-      })();
 
 const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
   Object.entries(record)
@@ -43,7 +32,6 @@ const isBuilt = <T extends Cells>(
 export class Repository<T extends Cells> implements IRepository<T> {
   private readonly connection: IConnection;
   readonly rowConverter: TypeConverter<T>;
-  readonly mapping: NameSourceDestinationMapper;
   readonly statements: RepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
   private readonly ids: Set<string>;
@@ -65,7 +53,6 @@ export class Repository<T extends Cells> implements IRepository<T> {
         );
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
-    this.mapping = built.mapping;
     this.statements = built.statements;
     this.ids = new Set(built.ids);
     this.assignIdentityOnAdd = built.assignIdentityOnAdd;
@@ -88,7 +75,12 @@ export class Repository<T extends Cells> implements IRepository<T> {
       statement.where?.parameters ?? statement.parameters,
     );
     while (await reader.next())
-      yield this.rowConverter.convert(mapKeys(asRow(reader.current as object), this.mapping.map));
+      yield this.rowConverter.convert(
+        reader.current ??
+          (() => {
+            throw new DatasourceError("Reader current must be a row");
+          })(),
+      );
   }
 
   add = async (obj: T): Promise<IResponse> => {
@@ -125,7 +117,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
       this.connection.createCommand(),
     );
 
-  private sql = (row: T): Cells => mapKeys(this.rowConverter.reverseConvert(row), this.mapping.reverseMap);
+  private sql = (row: T): Cells => this.rowConverter.reverseConvert(row);
 
   private readQuery = (query?: IQuery | IWhere): IQuery =>
     !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);

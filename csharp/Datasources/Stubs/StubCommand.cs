@@ -11,8 +11,8 @@ public class StubCommand : CommandMiddlewareHost, ICommand
 
     public IConnection Connection { get; }
 
-    public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run<IReader>(text, parameters, (_, _) => throw new ProviderNotImplementedException(_provider));
+    public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+        Run<IReader<Row>>(text, parameters, (_, _) => throw new ProviderNotImplementedException(_provider));
 
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run<Response>(text, parameters, (_, _) => throw new ProviderNotImplementedException(_provider));

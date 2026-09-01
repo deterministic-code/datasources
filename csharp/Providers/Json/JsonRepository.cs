@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Datasources;
 
 namespace Datasources.Json;
@@ -17,7 +16,7 @@ public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
     public async Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null)
     {
         var reader = await new JsonCommand(connection).ExecuteReader(query?.GetText() ?? "");
-        return await reader.Next() ? ToRecord(reader.Current) : null;
+        return await reader.Next() ? reader.Current : null;
     }
 
     public async IAsyncEnumerable<Dictionary<string, Value>> Get(IQuery? query = null)
@@ -25,8 +24,7 @@ public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
         var reader = await new JsonCommand(connection).ExecuteReader(query?.GetText() ?? "");
         while (await reader.Next())
         {
-            var record = ToRecord(reader.Current);
-            if (record is not null) yield return record;
+            if (reader.Current is { } record) yield return record;
         }
     }
 
@@ -55,11 +53,4 @@ public sealed class JsonRepository : IRepository<Dictionary<string, Value>>
             .Concat(byWhere is not null ? [new Parameter("$where", byWhere.GetText())] : [])
             .ToList();
 
-    private static Dictionary<string, Value>? ToRecord(object? current) => current switch
-    {
-        Row row => row,
-        Dictionary<string, Value> row => row,
-        JsonObject obj => obj.ToDictionary(k => k.Key, v => JsonCommand.JsonValueToValue(v.Value)),
-        _ => null
-    };
 }

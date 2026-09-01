@@ -2,6 +2,7 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   identityFilter,
+  type Cells,
   type ICommand,
   type IReader,
   type IResponse,
@@ -19,7 +20,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
   async executeReader(
     text: string,
     parameters?: Parameter[],
-  ): Promise<IReader> {
+  ): Promise<IReader<Cells>> {
     return this.run(text, parameters, async (query, params) => {
       this.connection.ensureOpen();
       const filter = {
@@ -29,7 +30,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
       const rows = this.connection
         .getCollection()
         .filter((row) => matches(row, filter));
-      return { value: new ArrayReader(rows), rows };
+      return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
     });
   }
 

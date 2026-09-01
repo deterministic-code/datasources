@@ -125,21 +125,21 @@ describe("Repository", () => {
     const command = new MockCommand(connection);
     connection.command = command;
     const { repo, command: query } = create();
-    query.reader = new MockReader(["nope" as never]);
+    query.reader = { current: undefined, next: async () => true };
     await expect(async () => {
       for await (const _ of repo.get()) {
         /* consume */
       }
-    }).rejects.toThrow("Reader current must be a row dictionary");
+    }).rejects.toThrow("Reader current must be a row");
     await expect(repo.update({ name: "a" })).rejects.toThrow("Missing Id value");
     await expect(repo.delete({ name: "a" })).rejects.toThrow("Missing Id value");
     await expect(repo.update({ id: 1 })).rejects.toThrow("non-Id field");
-    query.reader = new MockReader([[] as never]);
+    query.reader = { current: undefined, next: async () => true };
     await expect(async () => {
       for await (const _ of repo.get()) {
         /* consume */
       }
-    }).rejects.toThrow("Reader current must be a row dictionary");
+    }).rejects.toThrow("Reader current must be a row");
     await repo.update({ id: 1, name: "a" }, new Where("id = 1"));
     const typed = new Repository({
       connection,

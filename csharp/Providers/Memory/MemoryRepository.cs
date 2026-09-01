@@ -16,14 +16,14 @@ public sealed class MemoryRepository : IRepository<Dictionary<string, Value>>
     public async Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null)
     {
         var reader = await new MemoryCommand(connection).ExecuteReader(query?.GetText() ?? "");
-        return await reader.Next() ? reader.Current as Dictionary<string, Value> : null;
+        return await reader.Next() ? reader.Current : null;
     }
 
     public async IAsyncEnumerable<Dictionary<string, Value>> Get(IQuery? query = null)
     {
         var reader = await new MemoryCommand(connection).ExecuteReader(query?.GetText() ?? "");
         while (await reader.Next())
-            if (reader.Current is Dictionary<string, Value> record)
+            if (reader.Current is { } record)
                 yield return record;
     }
 

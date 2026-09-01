@@ -61,20 +61,14 @@ public class RepositoryTests
     {
         var (repo, command) = Create();
         repo.Use(new PassMiddleware());
-        command.Reader = new MockReader(new object?[]
-        {
-            new Row { ["id"] = 1, ["name"] = "a" }
-        });
+        command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
         var rows = new List<UserRow>();
         await foreach (var row in repo.Get())
             rows.Add(row);
         Assert.Single(rows);
         Assert.Equal(1, rows[0].id);
         Assert.Equal("SELECT id, name FROM users", command.ExecuteReaderCalls[0].Text);
-        command.Reader = new MockReader(new object?[]
-        {
-            new Row { ["id"] = 1, ["name"] = "a" }
-        });
+        command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
         Assert.Equal(1, (await repo.GetSingle())!.id);
     }
 
@@ -82,7 +76,7 @@ public class RepositoryTests
     public async Task GetUsesCallerQuery()
     {
         var (repo, command) = Create();
-        command.Reader = new MockReader([]);
+        command.Reader = new MockReader<Row>([]);
         var where = WhereBuilder.Equals("id", 9);
         await repo.GetSingle(StatementBuilder.CreateQuery("users", ["id"], where));
         Assert.Equal("SELECT id FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
@@ -94,7 +88,7 @@ public class RepositoryTests
     public async Task GetAttachesWhereToDefaultSelect()
     {
         var (repo, command) = Create();
-        command.Reader = new MockReader([]);
+        command.Reader = new MockReader<Row>([]);
         await repo.GetSingle(WhereBuilder.Equals("id", 9));
         Assert.Equal("SELECT id, name FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
         Assert.Equal(new Value.Int(9), command.ExecuteReaderCalls[0].Parameters![0].Value);
@@ -132,7 +126,7 @@ public class RepositoryTests
     public async Task MissingIdAndBadRowAndCtor()
     {
         var (repo, command) = Create();
-        command.Reader = new MockReader(new object?[] { "nope" });
+        command.Reader = new MockReader<Row>([null]);
         await Assert.ThrowsAsync<DatasourceException>(async () =>
         {
             await foreach (var _ in repo.Get()) { }

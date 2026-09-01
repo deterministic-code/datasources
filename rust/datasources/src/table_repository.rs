@@ -5,7 +5,6 @@ use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::datasource_error::DatasourceError;
-use crate::mappers::NameSourceDestinationMapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
 use crate::row::Row;
@@ -25,7 +24,6 @@ pub struct TableRepository {
     connection: Arc<dyn Connection>,
     middlewares: Vec<Arc<dyn CommandMiddleware>>,
     row_converter: RowTypeConverter,
-    pub mapping: NameSourceDestinationMapper,
     statements: TableRepositoryStatements,
     id: Vec<String>,
     ids: HashSet<String>,
@@ -52,7 +50,6 @@ impl TableRepository {
         Self::from_parts(
             built.connection,
             built.row_converter,
-            built.mapping,
             built.statements,
             built.ids,
             built.assign_identity_on_add,
@@ -62,7 +59,6 @@ impl TableRepository {
     pub fn from_parts(
         connection: Arc<dyn Connection>,
         row_converter: RowTypeConverter,
-        mapping: NameSourceDestinationMapper,
         statements: TableRepositoryStatements,
         ids: Vec<String>,
         assign_identity_on_add: bool,
@@ -71,7 +67,6 @@ impl TableRepository {
             connection,
             middlewares: Vec::new(),
             row_converter,
-            mapping,
             statements,
             ids: ids.iter().cloned().collect(),
             id: ids,
@@ -140,7 +135,7 @@ impl TableRepository {
         }
         reader
             .current()
-            .map(|row| self.row_converter.convert(&map_keys(&row, |key| self.mapping.map(key))))
+            .map(|row| self.row_converter.convert(&row))
             .transpose()
     }
 
@@ -152,24 +147,15 @@ impl TableRepository {
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                items.push(self.row_converter.convert(&map_keys(&row, |key| self.mapping.map(key)))?);
+                items.push(self.row_converter.convert(&row)?);
             }
         }
         Ok(items)
     }
 
     fn sql(&self, row: &Row) -> Result<Row> {
-        Ok(map_keys(
-            &self.row_converter.reverse_convert(row)?,
-            |key| self.mapping.reverse_map(key),
-        ))
+        self.row_converter.reverse_convert(row)
     }
-}
-
-fn map_keys(row: &Row, name: impl Fn(&str) -> String) -> Row {
-    row.iter()
-        .map(|(key, value)| (name(key), value.clone()))
-        .collect()
 }
 
 #[async_trait]
