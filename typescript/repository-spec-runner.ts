@@ -208,7 +208,7 @@ export const runRepositorySpec = async (
     ids: spec.type.ids,
     assignIdentityOnAdd: spec.type.assignIdentityOnAdd,
     type: typeOf(spec.type),
-    table: spec.type.table,
+    entity: spec.type.table,
     mapping,
     mapper: mappingsMapper(spec.type.mappings),
     columns: Object.keys(spec.type.fields),

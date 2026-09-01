@@ -25,14 +25,14 @@ export const parts = <T>(
   if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
     Object.assign(rowConverter.types, types);
   const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
-  const table = options.table ?? options.type?.name ?? "";
+  const entity = options.entity ?? options.type?.name ?? "";
   return {
     connection: options.connection,
     rowConverter,
     mapper: options.mapper ?? new TransformMapper<T, T>((value) => value, (value) => value),
     mapping,
     statements: statementsOf(
-      table,
+      entity,
       [...(options.columns ?? (options.type ? fieldNamesOf(options.type) : []))].sort(
         (left, right) => left.localeCompare(right),
       ),

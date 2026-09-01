@@ -35,11 +35,6 @@ pub struct TableRepository {
 impl TableRepository {
     pub fn from_type<T: ConvertSchema>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_builder_options::<T>(connection.clone());
-        options.table = std::any::type_name::<T>()
-            .rsplit("::")
-            .next()
-            .unwrap_or_default()
-            .into();
         options.mapping = Some(RowTypeConverter::of::<T>());
         Self::new(options)
     }

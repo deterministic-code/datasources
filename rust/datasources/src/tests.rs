@@ -724,7 +724,7 @@ async fn table_repository() {
         ("name", Value::from("a")),
     ]));
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
-    options.table = "users".into();
+    options.entity = "users".into();
     options.mapping = Some(users_mapping());
     let mut repo = TableRepository::new(options).unwrap();
     repo.use_middleware(Arc::new(RecordingMiddleware {
@@ -769,7 +769,7 @@ async fn table_repository() {
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     include_id.assign_identity_on_add = false;
-    include_id.table = "users".into();
+    include_id.entity = "users".into();
     include_id.mapping = Some(users_mapping());
     let repo = TableRepository::new(include_id).unwrap();
     repo.add(&obj).await.unwrap();
@@ -792,7 +792,7 @@ async fn table_repository() {
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(generated.clone(), "memory"));
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.assign_identity_on_add = true;
-    options.table = "users".into();
+    options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Composite>());
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[
@@ -843,7 +843,7 @@ async fn table_repository() {
         .await
         .is_err());
     let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
-    options.table = "users".into();
+    options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Cells>());
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[("id", Value::Int(1))])).await.unwrap();
@@ -912,7 +912,7 @@ async fn table_repository_maps_after_row_converter() {
     let mut options = TableRepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
-    options.table = "users".into();
+    options.entity = "users".into();
     options.mapping = Some(users_mapping());
     options.mapper = Some(TransformMapper::new(
         |mut row: Row| {
@@ -946,7 +946,7 @@ async fn table_repository_maps_flat_row_into_contacts() {
     let mut options = TableRepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
-    options.table = "users".into();
+    options.entity = "users".into();
     options.assign_identity_on_add = false;
     options.mapping = Some(RowTypeConverter::of::<UserRow>());
     options.mapper = Some(user_contacts_mapper());

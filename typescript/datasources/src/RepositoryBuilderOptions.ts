@@ -8,7 +8,7 @@ export type RepositoryBuilderOptions<T = Cells> = {
   connection: IConnection;
   ids?: string[];
   assignIdentityOnAdd?: boolean;
-  table?: string;
+  entity?: string;
   mapping?: TypeConverter<T, Cells>;
   mapper?: IMapper<T, T>;
   type?: Constructable<T>;

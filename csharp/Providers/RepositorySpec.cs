@@ -43,7 +43,7 @@ public static class RepositorySpec
         var built = RepositoryBuilder<T>.Parts(new()
         {
             Connection = session.Connection,
-            Table = spec.Type.Table,
+            Entity = spec.Type.Table,
             Mapping = mapping,
             Mapper = MappingsMapper<T>(spec.Type.Mappings),
             Ids = spec.Type.Ids,

@@ -39,7 +39,7 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
             new RepositoryBuilderOptions<Dictionary<string, Value>>
             {
                 Connection = connection as SqliteConnection ?? DefaultConnection(),
-                Table = _table ?? "items",
+                Entity = _table ?? "items",
                 Mapping = new RowTypeConverter<Dictionary<string, Value>>(),
             });
 }
