@@ -34,3 +34,6 @@ datasources-postgres = { path = "../providers/postgres", optional = true }
 datasources-oracle = { path = "../providers/oracle", optional = true }
 datasources-mongodb = { path = "../providers/mongodb", optional = true }
 datasources-dynamodb = { path = "../providers/dynamodb", optional = true }
+
+[lints]
+workspace = true

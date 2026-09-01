@@ -14,28 +14,10 @@ pub use decimal_converter::DecimalConverter;
 pub use uuid_converter::UuidConverter;
 
 pub fn types() -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
-    HashMap::from([
-        (
-            "bool".into(),
-            Box::new(BoolConverter) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-        ),
-        (
-            "datetime".into(),
-            Box::new(DateTimeConverter) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-        ),
-        (
-            "uuid".into(),
-            Box::new(UuidConverter) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-        ),
-        (
-            "decimal".into(),
-            Box::new(DecimalConverter) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-        ),
-        (
-            "binary".into(),
-            Box::new(BinaryConverter) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-        ),
-    ])
+    ["bool", "datetime", "uuid", "decimal", "binary"]
+        .into_iter()
+        .map(|key| (key.into(), field(key).unwrap_or_else(|| panic!("{key}"))))
+        .collect()
 }
 
 pub fn field(canonical: &str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
