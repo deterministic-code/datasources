@@ -61,9 +61,9 @@ npm run test:e2e:rust
 npm run test:e2e:csharp
 ```
 
-- TypeScript: `npm test` / `npm run test:e2e` (Vitest; unit coverage 100% line/branch/function/statement)
-- Rust: `cd rust && cargo test --workspace` (optional: `./coverage.sh` with cargo-llvm-cov)
-- C#: `cd csharp && dotnet test Datasources.slnx`
+- TypeScript: `npm test` / `npm run test:e2e` (Vitest; unused locals/parameters fail `tsc`; unit coverage 100% line/branch/function/statement)
+- Rust: `cd rust && cargo test --workspace` (workspace rustc warnings are deny; optional: `./coverage.sh` with cargo-llvm-cov)
+- C#: `cd csharp && dotnet test Datasources.slnx` (`TreatWarningsAsErrors`)
 
 CI (`.github/workflows/ci.yml`) runs `npm test` plus Rust/C# unit tests, then a second job that starts Compose and runs `test:e2e:ci` (skips starting Docker) plus Rust/C# e2e.
 

@@ -110,20 +110,6 @@ fn verbose() -> bool {
     )
 }
 
-fn sql_type(canonical: &str) -> &'static str {
-    match canonical {
-        "int" => "INTEGER",
-        "uuid" => "UUID",
-        "string" => "TEXT",
-        "bool" => "BOOLEAN",
-        "decimal" => "NUMERIC",
-        "float" => "REAL",
-        "datetime" => "DATETIME",
-        "binary" => "BLOB",
-        _ => panic!("Unknown field type {canonical}"),
-    }
-}
-
 fn yaml_value(value: &serde_yaml::Value) -> Value {
     match value {
         serde_yaml::Value::Null => Value::Null,

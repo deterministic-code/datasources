@@ -20,6 +20,8 @@ jobs:
       - run: npm ci --prefix typescript
       - run: npm test
       - run: cargo test --workspace --manifest-path rust/Cargo.toml
+        env:
+          RUSTFLAGS: -D warnings
       - run: dotnet test csharp/Datasources.slnx
 
   e2e:

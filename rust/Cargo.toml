@@ -12,6 +12,9 @@ edition = "2021"
 license = "MIT"
 repository = "https://github.com/deterministic-code/datasources"
 
+[workspace.lints.rust]
+warnings = "deny"
+
 [workspace.dependencies]
 async-trait = "0.1"
 datasources = { path = "datasources", version = "0.1.0" }
