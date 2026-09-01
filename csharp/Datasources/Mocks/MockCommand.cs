@@ -7,12 +7,12 @@ public sealed class MockCommand : CommandMiddlewareHost, ICommand
     public Exception? ExecuteError { get; set; }
     public Exception? ExecuteReaderError { get; set; }
     public Response Response { get; set; } = new(Value.Null.Instance, 0);
-    public IReader Reader { get; set; } = new MockReader();
+    public IReader<Row> Reader { get; set; } = new MockReader<Row>();
     public IConnection Connection { get; }
 
     public MockCommand(IConnection connection) => Connection = connection;
 
-    public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             ExecuteReaderCalls.Add((query, paramsList));

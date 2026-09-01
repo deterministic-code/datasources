@@ -9,13 +9,13 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
     public IConnection Connection { get; }
     private MemoryConnection Typed => (MemoryConnection)Connection;
 
-    public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();
             var filter = Merge(ParseFilter(query), Helpers.ParametersToRecord(paramsList));
             IReadOnlyList<Row> rows = [.. Typed.GetCollection().Where(row => Matches(row, filter))];
-            return Task.FromResult(((IReader)new ArrayReader(rows.Cast<object?>().ToList()), rows));
+            return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
         });
 
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>

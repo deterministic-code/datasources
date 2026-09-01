@@ -9,14 +9,14 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
     public IConnection Connection { get; }
     private JsonConnection Typed => (JsonConnection)Connection;
 
-    public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();
             var filter = Merge(ParseFilter(query), Helpers.ParametersToRecord(paramsList));
             var nodes = Typed.GetCollection().Where(row => Matches(row, filter)).ToList();
             IReadOnlyList<Row> rows = [.. nodes.Select(ToRow)];
-            return Task.FromResult(((IReader)new ArrayReader(rows.Cast<object?>().ToList()), rows));
+            return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
         });
 
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>

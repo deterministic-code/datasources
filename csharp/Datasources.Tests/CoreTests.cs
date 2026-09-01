@@ -289,7 +289,7 @@ public class CoreTests
         txn.AbortError = new InvalidOperationException("a");
         await Assert.ThrowsAsync<InvalidOperationException>(() => txn.Abort());
 
-        var command = new MockCommand(connection) { Response = new Response(1, 2), Reader = new MockReader(new object?[] { 1 }) };
+        var command = new MockCommand(connection) { Response = new Response(1, 2), Reader = new MockReader<Row>([new Row { ["id"] = 1 }]) };
         Assert.Equal(2, (await command.Execute("insert", new[] { new Parameter("id", 1) })).RowsAffected);
         await command.ExecuteReader("");
         command.ExecuteError = new InvalidOperationException("exec");
@@ -365,7 +365,7 @@ public class CoreTests
     private sealed class RecordingCommand : CommandMiddlewareHost, ICommand
     {
         public IConnection Connection { get; } = new MockConnection();
-        public Task<IReader> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+        public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
             throw new NotSupportedException();
         public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
             throw new NotSupportedException();

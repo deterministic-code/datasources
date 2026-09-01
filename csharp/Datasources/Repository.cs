@@ -7,7 +7,6 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     readonly IConnection connection;
     readonly List<ICommandMiddleware> middlewares = [];
     readonly TypeConverter<T, Row> rowConverter;
-    readonly NameSourceDestinationMapper mapping;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
     readonly bool assignIdentityOnAdd;
@@ -22,7 +21,6 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     {
         connection = built.Connection;
         rowConverter = built.RowConverter;
-        mapping = built.Mapping;
         statements = built.Statements;
         ids = new(built.Ids);
         assignIdentityOnAdd = built.AssignIdentityOnAdd;
@@ -51,7 +49,8 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         var reader = await Command().ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
-            yield return rowConverter.Convert(Map(AsRow(reader.Current), mapping.Map));
+            yield return rowConverter.Convert(reader.Current
+                ?? throw new DatasourceException("Reader current must be a row"));
     }
 
     public async Task<Response> Add(T obj)
@@ -92,15 +91,5 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
-    Row Sql(T row) => Map(rowConverter.ReverseConvert(row), mapping.ReverseMap);
-
-    static Row Map(Row row, Func<string, string> name) =>
-        new(row.Select(pair => KeyValuePair.Create(name(pair.Key), pair.Value)));
-
-    static Row AsRow(object? current) => current switch
-    {
-        Row row => row,
-        IReadOnlyDictionary<string, Value> row => new Row(row),
-        _ => throw new DatasourceException("Reader current must be a row")
-    };
+    Row Sql(T row) => rowConverter.ReverseConvert(row);
 }

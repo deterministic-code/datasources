@@ -1,6 +1,7 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  type Cells,
   type ICommand,
   type IReader,
   type IResponse,
@@ -17,7 +18,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   async executeReader(
     text: string,
     parameters?: Parameter[],
-  ): Promise<IReader> {
+  ): Promise<IReader<Cells>> {
     return this.run(text, parameters, async (query, params) => {
       this.connection.ensureOpen();
       const rows = await this.connection.driver.query(

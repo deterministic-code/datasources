@@ -1,6 +1,7 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  type Cells,
   type ICommand,
   type IReader,
   type IResponse,
@@ -17,14 +18,14 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
   async executeReader(
     text: string,
     parameters?: Parameter[],
-  ): Promise<IReader> {
+  ): Promise<IReader<Cells>> {
     return this.run(text, parameters, async (query, params) => {
       this.connection.ensureOpen();
       const rows = await this.connection.driver.query(
         query,
         bindParameters(params),
       );
-      return { value: new ArrayReader(rows), rows };
+      return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
     });
   }
 
