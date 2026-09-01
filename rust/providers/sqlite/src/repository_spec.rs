@@ -58,6 +58,8 @@ struct Step {
 #[derive(Deserialize)]
 struct RowOp {
     row: BTreeMap<String, serde_yaml::Value>,
+    #[serde(default)]
+    expect: Option<serde_yaml::Value>,
 }
 
 #[derive(Deserialize)]
@@ -88,6 +90,8 @@ struct UpdateByOp {
     row: BTreeMap<String, serde_yaml::Value>,
     #[serde(rename = "where")]
     where_clause: BTreeMap<String, serde_yaml::Value>,
+    #[serde(default)]
+    expect: Option<serde_yaml::Value>,
 }
 
 fn repo_root() -> std::path::PathBuf {
@@ -232,6 +236,19 @@ fn assert_row(name: &str, actual: Option<&Row>, expect: &serde_yaml::Value) {
         (None, _) => panic!("{name}: expected a row"),
         (Some(_), serde_yaml::Value::Null) => panic!("{name}: expected null"),
         _ => panic!("{name}: expect must be a row or null"),
+    }
+}
+
+fn assert_affected(name: &str, actual: i64, expect: Option<&serde_yaml::Value>) {
+    let Some(expect) = expect else {
+        return;
+    };
+    let wanted = expect
+        .get("rowsAffected")
+        .and_then(serde_yaml::Value::as_i64)
+        .unwrap_or_else(|| panic!("{name}: expect.rowsAffected required"));
+    if actual != wanted {
+        panic!("{name}: expected {wanted} rows affected got {actual}");
     }
 }
 
@@ -442,16 +459,27 @@ async fn run(path: &Path) {
                 update: Some(update),
                 ..
             } => {
-                repo.update(&record(&update.row), None).await.unwrap();
+                let response = repo.update(&record(&update.row), None).await.unwrap();
+                assert_affected(
+                    &format!("{} UPDATE", spec.name),
+                    response.rows_affected,
+                    update.expect.as_ref(),
+                );
             }
             Step {
                 update_by: Some(update_by),
                 ..
             } => {
                 let where_clause = where_of(&mapping, &update_by.where_clause);
-                repo.update(&record(&update_by.row), Some(&where_clause))
+                let response = repo
+                    .update(&record(&update_by.row), Some(&where_clause))
                     .await
                     .unwrap();
+                assert_affected(
+                    &format!("{} UPDATEBY", spec.name),
+                    response.rows_affected,
+                    update_by.expect.as_ref(),
+                );
             }
             Step {
                 delete: Some(delete),
@@ -459,16 +487,27 @@ async fn run(path: &Path) {
             } => {
                 let mut row = Row::new();
                 row.insert("id".into(), yaml_value(&delete.id));
-                repo.delete(&row, None).await.unwrap();
+                let response = repo.delete(&row, None).await.unwrap();
+                assert_affected(
+                    &format!("{} DELETE", spec.name),
+                    response.rows_affected,
+                    delete.expect.as_ref(),
+                );
             }
             Step {
                 delete_by: Some(delete_by),
                 ..
             } => {
                 let where_clause = where_of(&mapping, &delete_by.where_clause);
-                repo.delete(&Row::new(), Some(&where_clause))
+                let response = repo
+                    .delete(&Row::new(), Some(&where_clause))
                     .await
                     .unwrap();
+                assert_affected(
+                    &format!("{} DELETEBY", spec.name),
+                    response.rows_affected,
+                    delete_by.expect.as_ref(),
+                );
             }
             _ => panic!("{}: empty step", spec.name),
         }

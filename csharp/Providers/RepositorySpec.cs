@@ -50,10 +50,14 @@ public static class RepositorySpec
                 { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(WhereBuilder.Equals("id", Value.From(get.Id)))),
                 { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Get(Where(mapping, where, spec.Type)) : repo.Get()),
                 { GetBy: { } getBy } => AssertGet(spec.Name, getBy, repo.GetSingle(Where(mapping, getBy.Where, spec.Type))),
-                { Update: { } update } => repo.Update(mapping.Convert(ToRow(update.Row, spec.Type))),
-                { UpdateBy: { } updateBy } => repo.Update(mapping.Convert(ToRow(updateBy.Row, spec.Type)), Where(mapping, updateBy.Where, spec.Type)),
-                { Delete: { } delete } => repo.Delete(mapping.Convert(ToRow(new() { ["id"] = delete.Id }, spec.Type))),
-                { DeleteBy: { } deleteBy } => repo.Delete(new SpecUser(), Where(mapping, deleteBy.Where, spec.Type)),
+                { Update: { } update } => AssertAffected($"{spec.Name} UPDATE", update.HasExpect, update.Expect,
+                    repo.Update(mapping.Convert(ToRow(update.Row, spec.Type)))),
+                { UpdateBy: { } updateBy } => AssertAffected($"{spec.Name} UPDATEBY", updateBy.HasExpect, updateBy.Expect,
+                    repo.Update(mapping.Convert(ToRow(updateBy.Row, spec.Type)), Where(mapping, updateBy.Where, spec.Type))),
+                { Delete: { } delete } => AssertAffected($"{spec.Name} DELETE", delete.HasExpect, delete.Expect,
+                    repo.Delete(mapping.Convert(ToRow(new() { ["id"] = delete.Id }, spec.Type)))),
+                { DeleteBy: { } deleteBy } => AssertAffected($"{spec.Name} DELETEBY", deleteBy.HasExpect, deleteBy.Expect,
+                    repo.Delete(new SpecUser(), Where(mapping, deleteBy.Where, spec.Type))),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             });
         SqlSpec.AssertConsoleLogs(
@@ -72,6 +76,23 @@ public static class RepositorySpec
     {
         var actual = await task;
         if (getBy.HasExpect) AssertRow($"{name} GETBY", actual, getBy.Expect);
+    }
+
+    static async Task AssertAffected(string name, bool hasExpect, object? expect, Task<Response> task)
+    {
+        var response = await task;
+        if (!hasExpect) return;
+        var wanted = Affected(expect);
+        if (response.RowsAffected != wanted)
+            throw new InvalidOperationException($"{name}: expected {wanted} rows affected got {response.RowsAffected}");
+    }
+
+    static int Affected(object? expect)
+    {
+        var row = AsRow(expect ?? throw new InvalidOperationException("expect.rowsAffected required"));
+        return row.TryGetValue("rowsAffected", out var value) && value is not null
+            ? Convert.ToInt32(value, CultureInfo.InvariantCulture)
+            : throw new InvalidOperationException("expect.rowsAffected required");
     }
 
     static async Task AssertQuery(string name, QueryOp query, IAsyncEnumerable<SpecUser> items)
@@ -260,6 +281,10 @@ public static class RepositorySpec
     sealed class RowOp
     {
         [YamlMember(Alias = "row")] public Dictionary<string, object?> Row { get; set; } = [];
+        object? expect;
+        [YamlMember(Alias = "expect")]
+        public object? Expect { get => expect; set { expect = value; HasExpect = true; } }
+        public bool HasExpect { get; private set; }
     }
 
     sealed class IdOp
@@ -293,5 +318,9 @@ public static class RepositorySpec
     {
         [YamlMember(Alias = "row")] public Dictionary<string, object?> Row { get; set; } = [];
         [YamlMember(Alias = "where")] public Dictionary<string, object?> Where { get; set; } = [];
+        object? expect;
+        [YamlMember(Alias = "expect")]
+        public object? Expect { get => expect; set { expect = value; HasExpect = true; } }
+        public bool HasExpect { get; private set; }
     }
 }

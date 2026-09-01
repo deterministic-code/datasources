@@ -15,6 +15,7 @@ import {
 } from "@datasources/core";
 import {
   expectedRepositoryConsoleSignatures,
+  type AffectedExpect,
   type CanonicalType,
   type RepositoryRow,
   type RepositorySpec,
@@ -122,6 +123,12 @@ const assertRows = (name: string, actual: Cells[], expect: RepositoryRow[]) => {
   actual.forEach((row, index) => assertRow(`${name}[${index}]`, row, expect[index] ?? null));
 };
 
+const assertAffected = (name: string, actual: { rowsAffected: number }, expect?: AffectedExpect) => {
+  if (!expect) return;
+  if (actual.rowsAffected !== expect.rowsAffected)
+    throw new Error(`${name}: expected ${expect.rowsAffected} rows affected got ${actual.rowsAffected}`);
+};
+
 export const runRepositorySpec = async (
   path: string,
   connection: IConnection,
@@ -172,17 +179,32 @@ export const runRepositorySpec = async (
         if ("expect" in step.GETBY) assertRow(`${spec.name} GETBY`, row, step.GETBY.expect ?? null);
       },
       UPDATE: async () => {
-        if (step.UPDATE) await repo.update(step.UPDATE.row);
+        if (!step.UPDATE) return;
+        assertAffected(`${spec.name} UPDATE`, await repo.update(step.UPDATE.row), step.UPDATE.expect);
       },
       UPDATEBY: async () => {
-        if (step.UPDATEBY)
-          await repo.update(step.UPDATEBY.row, whereOf(mapping, step.UPDATEBY.where));
+        if (!step.UPDATEBY) return;
+        assertAffected(
+          `${spec.name} UPDATEBY`,
+          await repo.update(step.UPDATEBY.row, whereOf(mapping, step.UPDATEBY.where)),
+          step.UPDATEBY.expect,
+        );
       },
       DELETE: async () => {
-        if (step.DELETE) await repo.delete({ id: step.DELETE.id } as Cells);
+        if (!step.DELETE) return;
+        assertAffected(
+          `${spec.name} DELETE`,
+          await repo.delete({ id: step.DELETE.id } as Cells),
+          step.DELETE.expect,
+        );
       },
       DELETEBY: async () => {
-        if (step.DELETEBY) await repo.delete({} as Cells, whereOf(mapping, step.DELETEBY.where));
+        if (!step.DELETEBY) return;
+        assertAffected(
+          `${spec.name} DELETEBY`,
+          await repo.delete({} as Cells, whereOf(mapping, step.DELETEBY.where)),
+          step.DELETEBY.expect,
+        );
       },
     }[Object.keys(step)[0] ?? ""] ??
       (() => {
