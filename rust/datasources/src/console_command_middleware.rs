@@ -4,6 +4,7 @@ use crate::parameter::Parameter;
 use crate::row::Row;
 use crate::result::Result;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -44,6 +45,7 @@ fn civil_from_days(days: i64) -> (i64, u64, u64) {
 pub struct ConsoleCommandMiddleware {
     write: Arc<dyn Fn(&str) + Send + Sync>,
     now: Arc<dyn Fn() -> String + Send + Sync>,
+    options: HashMap<String, String>,
 }
 
 impl ConsoleCommandMiddleware {
@@ -51,6 +53,7 @@ impl ConsoleCommandMiddleware {
         Self {
             write: Arc::new(|line| println!("{line}")),
             now: Arc::new(|| utc_iso_millis(SystemTime::now())),
+            options: HashMap::new(),
         }
     }
 
@@ -61,7 +64,20 @@ impl ConsoleCommandMiddleware {
         Self {
             write: Arc::new(write),
             now: Arc::new(now),
+            options: HashMap::new(),
         }
+    }
+
+    pub fn options(mut self, options: HashMap<String, String>) -> Self {
+        self.options = options;
+        self
+    }
+
+    fn verbose(&self) -> bool {
+        matches!(
+            self.options.get("isVerbose").map(String::as_str),
+            Some("true") | Some("1")
+        )
     }
 
     fn line(&self, phase: &str, query: &str) -> String {
@@ -80,9 +96,12 @@ impl CommandMiddleware for ConsoleCommandMiddleware {
     async fn before_query(
         &self,
         query: &str,
-        _params: Option<&[Parameter]>,
+        params: Option<&[Parameter]>,
     ) -> Result<Option<(String, Option<Vec<Parameter>>)>> {
         (self.write)(&self.line("Start", query));
+        if self.verbose() {
+            (self.write)(&self.line("Request", &params_of(params)));
+        }
         Ok(None)
     }
 
@@ -90,15 +109,45 @@ impl CommandMiddleware for ConsoleCommandMiddleware {
         &self,
         query: &str,
         _params: Option<&[Parameter]>,
-        _results: &[Row],
+        results: &[Row],
         elapsed_ms: f64,
         _error: Option<&DatasourceError>,
     ) -> Result<()> {
+        let mut options = self.options.clone();
+        options.insert("elapsedMs".into(), format_elapsed(elapsed_ms));
         (self.write)(&format!(
             "{} {}",
             self.line("Finish", query),
-            format_elapsed(elapsed_ms)
+            options["elapsedMs"]
         ));
+        if self.verbose() {
+            (self.write)(&self.line("Response", &rows_of(results)));
+        }
         Ok(())
     }
+}
+
+fn params_of(params: Option<&[Parameter]>) -> String {
+    let body = params
+        .unwrap_or(&[])
+        .iter()
+        .map(|param| format!("{}: {}", param.name, param.value.wire_text()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("{{{body}}}")
+}
+
+fn rows_of(results: &[Row]) -> String {
+    results
+        .iter()
+        .map(|row| {
+            let cells = row
+                .iter()
+                .map(|(key, value)| format!("{}: {}", key, value.wire_text()))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{{{cells}}}")
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }

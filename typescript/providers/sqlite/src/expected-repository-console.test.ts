@@ -19,19 +19,24 @@ describe("expected repository console", () => {
       "INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)",
       "INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)",
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE id = $id",
-      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user",
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE username = $username",
-      "UPDATE user SET balance = $balance, created = $created, is_enabled = $is_enabled, location = $location, username = $username, uuid = $uuid, version = $version WHERE id = $id",
-      "UPDATE user SET balance = $balance, created = $created, is_enabled = $is_enabled, location = $location, username = $username, uuid = $uuid, version = $version WHERE username = $username",
-      "DELETE FROM user WHERE username = $username",
-      "DELETE FROM user WHERE id = $id",
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE uuid = $uuid",
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE is_enabled = $is_enabled",
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE created = $created",
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user",
+      "UPDATE user SET balance = $balance, created = $created, is_enabled = $is_enabled, location = $location, username = $username, uuid = $uuid, version = $version WHERE uuid = $uuid",
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE uuid = $uuid",
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE created = $created",
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE is_enabled = $is_enabled",
+      "DELETE FROM user WHERE created = $created",
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE id = $id",
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user",
     ]);
   });
 
   it("pairs Start and Finish signatures", () => {
     const signatures = expectedRepositoryConsoleSignatures(spec);
-    expect(signatures).toHaveLength(20);
+    expect(signatures).toHaveLength(30);
     expect(signatures[0]).toBe(
       "[datasource][Start]-[INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)]",
     );

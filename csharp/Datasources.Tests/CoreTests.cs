@@ -194,6 +194,41 @@ public class CoreTests
     }
 
     [Fact]
+    public async Task ConsoleMiddlewareVerboseBodies()
+    {
+        var lines = new List<string>();
+        var stamps = new Queue<DateTimeOffset>(new[]
+        {
+            new DateTimeOffset(2026, 8, 28, 1, 54, 12, 101, TimeSpan.Zero),
+            new DateTimeOffset(2026, 8, 28, 1, 54, 12, 102, TimeSpan.Zero),
+            new DateTimeOffset(2026, 8, 28, 1, 54, 12, 103, TimeSpan.Zero),
+            new DateTimeOffset(2026, 8, 28, 1, 54, 12, 104, TimeSpan.Zero),
+        });
+        var host = new RecordingCommand();
+        host.Use(new ConsoleCommandMiddleware(lines.Add, () => stamps.Count > 0
+            ? stamps.Dequeue()
+            : new DateTimeOffset(2026, 8, 28, 1, 54, 12, 104, TimeSpan.Zero), new Dictionary<string, string>
+        {
+            ["isVerbose"] = "true"
+        }));
+        await host.Run(
+            "SELECT 1",
+            [new Parameter("id", 1L)],
+            (_, _) => Task.FromResult((1, Rows(new Row { ["id"] = 1L }))));
+        Assert.Equal(4, lines.Count);
+        Assert.Equal("[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT 1]", lines[0]);
+        Assert.Equal("[2026-08-28T01:54:12.102Z]-[datasource][Request]-[{id: 1}]", lines[1]);
+        Assert.StartsWith("[2026-08-28T01:54:12.103Z]-[datasource][Finish]-[SELECT 1] ", lines[2]);
+        Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{id: 1}]", lines[3]);
+        lines.Clear();
+        await host.Run(
+            "DELETE FROM user",
+            [new Parameter("id", 2L)],
+            (_, _) => Task.FromResult((new Response(Value.Null.Instance, 1), EmptyRows())));
+        Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{result: null, rowsAffected: 1}]", lines[3]);
+    }
+
+    [Fact]
     public void Registry()
     {
         Assert.Empty(Datasource.Registered());

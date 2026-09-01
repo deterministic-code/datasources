@@ -1,7 +1,10 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::parameter::Parameter;
+use crate::response::Response;
 use crate::row::Row;
 use crate::result::Result;
+use crate::value::Value;
+use std::any::Any;
 use std::future::Future;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -20,7 +23,7 @@ impl CommandMiddlewareHost {
         self.middlewares.lock().expect("middleware").push(middleware);
     }
 
-    pub async fn run<T, F, Fut>(
+    pub async fn run<T: 'static, F, Fut>(
         &self,
         query: &str,
         params: Option<&[Parameter]>,
@@ -42,8 +45,20 @@ impl CommandMiddlewareHost {
         let start = Instant::now();
         let outcome = fn_op(query.clone(), params.clone()).await;
         let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
+        let execute_rows = match &outcome {
+            Ok((value, rows)) if rows.is_empty() => response_row(value),
+            _ => Vec::new(),
+        };
         let (rows, error) = match &outcome {
-            Ok((_, rows)) => (rows.as_slice(), None),
+            Ok((_, rows)) if !rows.is_empty() => (rows.as_slice(), None),
+            Ok((_, rows)) => (
+                if execute_rows.is_empty() {
+                    rows.as_slice()
+                } else {
+                    execute_rows.as_slice()
+                },
+                None,
+            ),
             Err(error) => (&[] as &[Row], Some(error)),
         };
         for middleware in &middlewares {
@@ -53,4 +68,24 @@ impl CommandMiddlewareHost {
         }
         outcome.map(|(value, _)| value)
     }
+}
+
+fn response_row<T: 'static>(value: &T) -> Vec<Row> {
+    (value as &dyn Any)
+        .downcast_ref::<Response>()
+        .map(|response| {
+            vec![[
+                (
+                    "result".into(),
+                    match &response.result {
+                        Value::Null => Value::Text("null".into()),
+                        other => other.clone(),
+                    },
+                ),
+                ("rowsAffected".into(), Value::Int(response.rows_affected)),
+            ]
+            .into_iter()
+            .collect()]
+        })
+        .unwrap_or_default()
 }

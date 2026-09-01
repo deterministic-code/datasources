@@ -35,7 +35,7 @@ public class CommandMiddlewareHost
             var (value, rows) = await action(q, p);
             clock.Stop();
             foreach (var middleware in _middlewares)
-                await middleware.AfterQuery(q, p, rows, clock.Elapsed.TotalMilliseconds);
+                await middleware.AfterQuery(q, p, Logged(value, rows), clock.Elapsed.TotalMilliseconds);
             return value;
         }
         catch (Exception ex)
@@ -46,4 +46,13 @@ public class CommandMiddlewareHost
             throw;
         }
     }
+
+    static IReadOnlyList<Row> Logged<T>(T value, IReadOnlyList<Row> rows) =>
+        rows.Count > 0 || value is not Response response
+            ? rows
+            : [new Row
+            {
+                ["result"] = response.Result,
+                ["rowsAffected"] = response.RowsAffected,
+            }];
 }

@@ -2,15 +2,17 @@ use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use super::rusqlite_driver::RusqliteDriver;
 use super::statement_builder::{SqliteColumn, SqliteStatementBuilder};
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
+use std::str::FromStr;
 use datasources::converters::{ConvertSchema, RowTypeConverter};
 use datasources::{
     Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, DefaultTypeConverters,
-    Parameter,
-    ReadonlyRepository, Repository, Statement, StatementBuilder, TableRepository,
+    Parameter, ReadonlyRepository, Repository, Row, Statement, StatementBuilder, TableRepository,
     TableRepositoryBuilder, TableRepositoryBuilderOptions, Value, WhereBuilder,
 };
 use serde::Deserialize;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -37,12 +39,12 @@ struct TypeSpec {
 struct Step {
     #[serde(rename = "CREATE")]
     create: Option<RowOp>,
-    #[serde(rename = "READ")]
-    read: Option<IdOp>,
+    #[serde(rename = "GET")]
+    get: Option<IdOp>,
     #[serde(rename = "QUERY")]
     query: Option<QueryOp>,
-    #[serde(rename = "READY")]
-    ready: Option<WhereOp>,
+    #[serde(rename = "GETBY")]
+    get_by: Option<WhereOp>,
     #[serde(rename = "UPDATE")]
     update: Option<RowOp>,
     #[serde(rename = "UPDATEBY")]
@@ -61,18 +63,24 @@ struct RowOp {
 #[derive(Deserialize)]
 struct IdOp {
     id: serde_yaml::Value,
+    #[serde(default)]
+    expect: Option<serde_yaml::Value>,
 }
 
 #[derive(Deserialize, Default)]
 struct QueryOp {
     #[serde(rename = "where", default)]
     where_clause: Option<BTreeMap<String, serde_yaml::Value>>,
+    #[serde(default)]
+    expect: Option<Vec<BTreeMap<String, serde_yaml::Value>>>,
 }
 
 #[derive(Deserialize)]
 struct WhereOp {
     #[serde(rename = "where")]
     where_clause: BTreeMap<String, serde_yaml::Value>,
+    #[serde(default)]
+    expect: Option<serde_yaml::Value>,
 }
 
 #[derive(Deserialize)]
@@ -89,6 +97,13 @@ fn repo_root() -> std::path::PathBuf {
         .and_then(|p| p.parent())
         .expect("repo root")
         .to_path_buf()
+}
+
+fn verbose() -> bool {
+    matches!(
+        std::env::var("VERBOSE").as_deref(),
+        Ok("1") | Ok("true")
+    )
 }
 
 fn sql_type(canonical: &str) -> &'static str {
@@ -125,12 +140,114 @@ fn record(map: &BTreeMap<String, serde_yaml::Value>) -> datasources::Row {
         .collect()
 }
 
-fn where_of(map: &BTreeMap<String, serde_yaml::Value>) -> WhereBuilder {
+fn where_sql(map: &BTreeMap<String, serde_yaml::Value>) -> WhereBuilder {
     let children: Vec<WhereBuilder> = map
         .iter()
         .map(|(name, value)| WhereBuilder::equals(name.clone(), yaml_value(value)))
         .collect();
     WhereBuilder::and(children)
+}
+
+fn where_of(
+    mapping: &RowTypeConverter,
+    map: &BTreeMap<String, serde_yaml::Value>,
+) -> WhereBuilder {
+    let children: Vec<WhereBuilder> = map
+        .iter()
+        .map(|(name, value)| {
+            let raw = yaml_value(value);
+            let converted = mapping
+                .fields
+                .get(name)
+                .map(|converter| converter.reverse_convert(&raw).unwrap())
+                .unwrap_or(raw);
+            WhereBuilder::equals(name.clone(), converted)
+        })
+        .collect();
+    WhereBuilder::and(children)
+}
+
+fn mapping_of(spec: &Spec) -> RowTypeConverter {
+    crate::converters::register();
+    let fields = spec
+        .type_spec
+        .fields
+        .iter()
+        .filter_map(|(name, canonical)| {
+            crate::converters::field(canonical).map(|converter| (name.clone(), converter))
+        })
+        .collect();
+    RowTypeConverter::of::<SpecUser>()
+        .with_types(DefaultTypeConverters::for_provider("sqlite"))
+        .with_fields(fields)
+}
+
+fn decimal_text(text: &str) -> Option<String> {
+    Decimal::from_str(text).ok().map(|number| number.normalize().to_string())
+}
+
+fn cell_of(value: &Value) -> String {
+    match value {
+        Value::Decimal(number) => number.normalize().to_string(),
+        Value::Float(number) => Decimal::from_str(&number.to_string())
+            .map(|parsed| parsed.normalize().to_string())
+            .unwrap_or_else(|_| number.to_string()),
+        Value::Text(text) => DateTime::parse_from_rfc3339(text)
+            .map(|parsed| Value::iso_datetime(parsed.with_timezone(&Utc)))
+            .ok()
+            .or_else(|| decimal_text(text))
+            .unwrap_or_else(|| text.clone()),
+        other => other.wire_text(),
+    }
+}
+
+fn expect_cell(value: &serde_yaml::Value) -> String {
+    match value {
+        serde_yaml::Value::Null => String::new(),
+        serde_yaml::Value::Bool(flag) => flag.to_string(),
+        serde_yaml::Value::Number(number) => decimal_text(&number.to_string())
+            .unwrap_or_else(|| number.to_string()),
+        serde_yaml::Value::String(text) => DateTime::parse_from_rfc3339(text)
+            .map(|parsed| Value::iso_datetime(parsed.with_timezone(&Utc)))
+            .ok()
+            .or_else(|| decimal_text(text))
+            .unwrap_or_else(|| text.clone()),
+        other => format!("{other:?}"),
+    }
+}
+
+fn assert_row(name: &str, actual: Option<&Row>, expect: &serde_yaml::Value) {
+    match (actual, expect) {
+        (None, serde_yaml::Value::Null) => {}
+        (Some(row), serde_yaml::Value::Mapping(map)) => {
+            for (key, wanted) in map {
+                let key = key.as_str().expect("expect key");
+                let got = cell_of(row.get(key).unwrap_or(&Value::Null));
+                let expected = expect_cell(wanted);
+                if got != expected {
+                    panic!("{name}: {key}: expected {expected} got {got}");
+                }
+            }
+        }
+        (None, _) => panic!("{name}: expected a row"),
+        (Some(_), serde_yaml::Value::Null) => panic!("{name}: expected null"),
+        _ => panic!("{name}: expect must be a row or null"),
+    }
+}
+
+fn assert_rows(name: &str, actual: &[Row], expect: &[BTreeMap<String, serde_yaml::Value>]) {
+    if actual.len() != expect.len() {
+        panic!("{name}: expected {} rows got {}", expect.len(), actual.len());
+    }
+    for (index, (row, wanted)) in actual.iter().zip(expect).enumerate() {
+        let mapping = serde_yaml::Value::Mapping(
+            wanted
+                .iter()
+                .map(|(key, value)| (serde_yaml::Value::String(key.clone()), value.clone()))
+                .collect(),
+        );
+        assert_row(&format!("{name}[{index}]"), Some(row), &mapping);
+    }
 }
 
 fn fields_of(
@@ -171,19 +288,19 @@ fn queries(spec: &Spec) -> Vec<String> {
                     }),
                 )
                 .get_text()
-            } else if let Some(read) = &step.read {
-                let where_clause = WhereBuilder::equals("id", yaml_value(&read.id));
+            } else if let Some(get) = &step.get {
+                let where_clause = WhereBuilder::equals("id", yaml_value(&get.id));
                 StatementBuilder::create_query(table, &refs, Some(&where_clause)).get_text()
             } else if let Some(query) = &step.query {
-                let where_clause = query.where_clause.as_ref().map(where_of);
+                let where_clause = query.where_clause.as_ref().map(where_sql);
                 StatementBuilder::create_query(
                     table,
                     &refs,
                     where_clause.as_ref().map(|w| w as &dyn datasources::Where),
                 )
                 .get_text()
-            } else if let Some(ready) = &step.ready {
-                let where_clause = where_of(&ready.where_clause);
+            } else if let Some(get_by) = &step.get_by {
+                let where_clause = where_sql(&get_by.where_clause);
                 StatementBuilder::create_query(table, &refs, Some(&where_clause)).get_text()
             } else if let Some(update) = &step.update {
                 let fields = fields_of(&update.row, |col| !ids.contains(col));
@@ -191,13 +308,13 @@ fn queries(spec: &Spec) -> Vec<String> {
                 StatementBuilder::create_update(table, &fields, Some(&where_clause)).get_text()
             } else if let Some(update_by) = &step.update_by {
                 let fields = fields_of(&update_by.row, |col| !ids.contains(col));
-                let where_clause = where_of(&update_by.where_clause);
+                let where_clause = where_sql(&update_by.where_clause);
                 StatementBuilder::create_update(table, &fields, Some(&where_clause)).get_text()
             } else if let Some(delete) = &step.delete {
                 let where_clause = WhereBuilder::equals("id", yaml_value(&delete.id));
                 StatementBuilder::create_delete(table, Some(&where_clause)).get_text()
             } else if let Some(delete_by) = &step.delete_by {
-                let where_clause = where_of(&delete_by.where_clause);
+                let where_clause = where_sql(&delete_by.where_clause);
                 StatementBuilder::create_delete(table, Some(&where_clause)).get_text()
             } else {
                 panic!("{}: empty step", spec.name);
@@ -221,6 +338,9 @@ fn signature(line: &str) -> String {
 
 async fn run(path: &Path) {
     let spec: Spec = serde_yaml::from_str(&fs::read_to_string(path).unwrap()).unwrap();
+    if verbose() {
+        println!("\n--- {} (sqlite) ---", spec.name);
+    }
     let conn = Arc::new(SqliteConnection::new(
         Some(":memory:".into()),
         Arc::new(RusqliteDriver::new()),
@@ -244,71 +364,113 @@ async fn run(path: &Path) {
         )
         .await
         .unwrap();
-    crate::converters::register();
-    let fields = spec
-        .type_spec
-        .fields
-        .iter()
-        .filter_map(|(name, canonical)| {
-            crate::converters::field(canonical).map(|converter| (name.clone(), converter))
-        })
-        .collect();
+    let mapping = mapping_of(&spec);
     let options = TableRepositoryBuilderOptions {
         connection: conn.clone(),
         ids: spec.type_spec.ids.clone(),
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
         table: spec.type_spec.table.clone(),
-        mapping: Some(
-            RowTypeConverter::of::<SpecUser>()
-                .with_types(DefaultTypeConverters::for_provider("sqlite"))
-                .with_fields(fields),
-        ),
+        mapping: Some(mapping_of(&spec)),
         types: Default::default(),
         fields: Default::default(),
     };
     let built = TableRepositoryBuilder::parts(options).unwrap();
     let logs = Arc::new(Mutex::new(Vec::<String>::new()));
-    let middleware: Arc<dyn CommandMiddleware> = Arc::new(ConsoleCommandMiddleware::with_sink(
-        {
-            let logs = logs.clone();
-            move |line| logs.lock().unwrap().push(line.to_string())
-        },
-        || datasources::utc_iso_millis(SystemTime::now()),
-    ));
+    let middleware: Arc<dyn CommandMiddleware> = Arc::new(
+        ConsoleCommandMiddleware::with_sink(
+            {
+                let logs = logs.clone();
+                move |line| {
+                    if verbose() {
+                        println!("{line}");
+                    }
+                    logs.lock().unwrap().push(line.to_string())
+                }
+            },
+            || datasources::utc_iso_millis(SystemTime::now()),
+        )
+        .options(HashMap::from([(
+            "isVerbose".into(),
+            if verbose() { "true" } else { "false" }.into(),
+        )])),
+    );
     let mut repo = TableRepository::from_built(built);
     repo.use_middleware(middleware);
     for step in &spec.steps {
-        if let Some(create) = &step.create {
-            repo.add(&record(&create.row)).await.unwrap();
-        } else if let Some(read) = &step.read {
-            let where_clause = WhereBuilder::equals("id", yaml_value(&read.id));
-            repo.get_single_where(&where_clause).await.unwrap();
-        } else if let Some(query) = &step.query {
-            if let Some(where_clause) = &query.where_clause {
-                repo.get_where(&where_of(where_clause)).await.unwrap();
-            } else {
-                repo.get(None).await.unwrap();
+        match step {
+            Step {
+                create: Some(create),
+                ..
+            } => {
+                repo.add(&record(&create.row)).await.unwrap();
             }
-        } else if let Some(ready) = &step.ready {
-            repo.get_single_where(&where_of(&ready.where_clause))
-                .await
-                .unwrap();
-        } else if let Some(update) = &step.update {
-            repo.update(&record(&update.row), None).await.unwrap();
-        } else if let Some(update_by) = &step.update_by {
-            let where_clause = where_of(&update_by.where_clause);
-            repo.update(&record(&update_by.row), Some(&where_clause))
-                .await
-                .unwrap();
-        } else if let Some(delete) = &step.delete {
-            let mut row = datasources::Row::new();
-            row.insert("id".into(), yaml_value(&delete.id));
-            repo.delete(&row, None).await.unwrap();
-        } else if let Some(delete_by) = &step.delete_by {
-            let where_clause = where_of(&delete_by.where_clause);
-            repo.delete(&datasources::Row::new(), Some(&where_clause))
-                .await
-                .unwrap();
+            Step { get: Some(get), .. } => {
+                let where_clause = WhereBuilder::equals("id", yaml_value(&get.id));
+                let row = repo.get_single_where(&where_clause).await.unwrap();
+                if let Some(expect) = &get.expect {
+                    assert_row(&format!("{} GET", spec.name), row.as_ref(), expect);
+                }
+            }
+            Step {
+                query: Some(query),
+                ..
+            } => {
+                let rows = if let Some(where_clause) = &query.where_clause {
+                    repo.get_where(&where_of(&mapping, where_clause))
+                        .await
+                        .unwrap()
+                } else {
+                    repo.get(None).await.unwrap()
+                };
+                if let Some(expect) = &query.expect {
+                    assert_rows(&format!("{} QUERY", spec.name), &rows, expect);
+                }
+            }
+            Step {
+                get_by: Some(get_by),
+                ..
+            } => {
+                let row = repo
+                    .get_single_where(&where_of(&mapping, &get_by.where_clause))
+                    .await
+                    .unwrap();
+                if let Some(expect) = &get_by.expect {
+                    assert_row(&format!("{} GETBY", spec.name), row.as_ref(), expect);
+                }
+            }
+            Step {
+                update: Some(update),
+                ..
+            } => {
+                repo.update(&record(&update.row), None).await.unwrap();
+            }
+            Step {
+                update_by: Some(update_by),
+                ..
+            } => {
+                let where_clause = where_of(&mapping, &update_by.where_clause);
+                repo.update(&record(&update_by.row), Some(&where_clause))
+                    .await
+                    .unwrap();
+            }
+            Step {
+                delete: Some(delete),
+                ..
+            } => {
+                let mut row = Row::new();
+                row.insert("id".into(), yaml_value(&delete.id));
+                repo.delete(&row, None).await.unwrap();
+            }
+            Step {
+                delete_by: Some(delete_by),
+                ..
+            } => {
+                let where_clause = where_of(&mapping, &delete_by.where_clause);
+                repo.delete(&Row::new(), Some(&where_clause))
+                    .await
+                    .unwrap();
+            }
+            _ => panic!("{}: empty step", spec.name),
         }
     }
     let expected: Vec<String> = queries(&spec)
@@ -320,7 +482,13 @@ async fn run(path: &Path) {
             ]
         })
         .collect();
-    let actual: Vec<String> = logs.lock().unwrap().iter().map(|line| signature(line)).collect();
+    let actual: Vec<String> = logs
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|line| line.contains("[Start]") || line.contains("[Finish]"))
+        .map(|line| signature(line))
+        .collect();
     if expected != actual {
         panic!(
             "{}: logging mismatch\n--- expected ---\n{}\n--- actual ---\n{}",
