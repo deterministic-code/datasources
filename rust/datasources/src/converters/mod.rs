@@ -19,6 +19,3 @@ pub use row_type_converter::RowTypeConverter;
 pub use to_lower_case_converter::ToLowerCaseConverter;
 pub use to_upper_case_converter::ToUpperCaseConverter;
 pub use type_converter::TypeConverter;
-
-#[cfg(test)]
-mod tests;

@@ -103,3 +103,47 @@ fn vowel(c: char) -> bool {
 fn consonant(c: char) -> bool {
     c.is_ascii_alphabetic() && !vowel(c)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pluralizes_and_singularizes() {
+        let pairs = [
+            ("person", "people"),
+            ("child", "children"),
+            ("man", "men"),
+            ("woman", "women"),
+            ("mouse", "mice"),
+            ("goose", "geese"),
+            ("tooth", "teeth"),
+            ("foot", "feet"),
+            ("ox", "oxen"),
+            ("sheep", "sheep"),
+            ("fish", "fish"),
+            ("series", "series"),
+            ("species", "species"),
+            ("deer", "deer"),
+            ("news", "news"),
+            ("box", "boxes"),
+            ("dish", "dishes"),
+            ("church", "churches"),
+            ("quiz", "quizes"),
+            ("kiss", "kisses"),
+            ("bus", "buses"),
+            ("city", "cities"),
+            ("cat", "cats"),
+            ("toy", "toys"),
+            ("2y", "2ys"),
+            ("Person", "People"),
+            ("", ""),
+        ];
+        for (singular, plural) in pairs {
+            assert_eq!(PluralizerConverter.convert(singular), plural);
+            assert_eq!(PluralizerConverter.convert(plural), plural);
+            assert_eq!(PluralizerConverter.reverse_convert(plural), singular);
+            assert_eq!(PluralizerConverter.reverse_convert(singular), singular);
+        }
+    }
+}

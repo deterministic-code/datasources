@@ -20,3 +20,31 @@ impl TypeConverter<Value, Value> for DateTimeConverter {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datasources::Value;
+
+    #[test]
+    fn maps_datetime() {
+        let converter = DateTimeConverter;
+        let native = converter
+            .convert(&Value::from("2020-01-02T03:04:05.000Z"))
+            .unwrap();
+        assert!(matches!(native, Value::DateTime(_)));
+        assert_eq!(
+            converter.reverse_convert(&native).unwrap(),
+            Value::from("2020-01-02T03:04:05.000Z")
+        );
+        assert_eq!(
+            converter.convert(&Value::from("nope")).unwrap(),
+            Value::from("nope")
+        );
+        assert_eq!(converter.convert(&Value::Int(1)).unwrap(), Value::Int(1));
+        assert_eq!(
+            converter.reverse_convert(&Value::Int(1)).unwrap(),
+            Value::Int(1)
+        );
+    }
+}
