@@ -21,15 +21,17 @@ export type RepositoryTypeSpec = {
 
 export type RepositoryRow = Record<string, Scalar>;
 
+export type AffectedExpect = { rowsAffected: number };
+
 export type RepositoryStep = {
   CREATE?: { row: RepositoryRow };
   GET?: { id: Scalar; expect?: RepositoryRow | null };
   QUERY?: { where?: RepositoryRow; expect?: RepositoryRow[] };
   GETBY?: { where: RepositoryRow; expect?: RepositoryRow | null };
-  UPDATE?: { row: RepositoryRow };
-  UPDATEBY?: { row: RepositoryRow; where: RepositoryRow };
-  DELETE?: { id: Scalar };
-  DELETEBY?: { where: RepositoryRow };
+  UPDATE?: { row: RepositoryRow; expect?: AffectedExpect };
+  UPDATEBY?: { row: RepositoryRow; where: RepositoryRow; expect?: AffectedExpect };
+  DELETE?: { id: Scalar; expect?: AffectedExpect };
+  DELETEBY?: { where: RepositoryRow; expect?: AffectedExpect };
 };
 
 export type RepositorySpec = {
