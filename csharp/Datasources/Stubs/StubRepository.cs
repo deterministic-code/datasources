@@ -10,7 +10,7 @@ public sealed class StubRepository<T> : IRepository<T>
     public Task<T?> GetSingle(IWhere where) => GetSingle((IQuery?)null);
     public IAsyncEnumerable<T> Get(IQuery? query = null) => throw new ProviderNotImplementedException(provider);
     public IAsyncEnumerable<T> Get(IWhere where) => Get((IQuery?)null);
-    public Task<Response> Add(T obj) => throw new ProviderNotImplementedException(provider);
-    public Task<Response> Update(T obj, IWhere? byWhere = null) => throw new ProviderNotImplementedException(provider);
-    public Task<Response> Delete(T obj, IWhere? byWhere = null) => throw new ProviderNotImplementedException(provider);
+    public Task<Response> Add(T item) => throw new ProviderNotImplementedException(provider);
+    public Task<Response> Update(T item, IWhere? byWhere = null) => throw new ProviderNotImplementedException(provider);
+    public Task<Response> Delete(T item, IWhere? byWhere = null) => throw new ProviderNotImplementedException(provider);
 }

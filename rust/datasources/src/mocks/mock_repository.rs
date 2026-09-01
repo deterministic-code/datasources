@@ -78,22 +78,22 @@ impl ReadonlyRepository for MockRepository {
 
 #[async_trait]
 impl Repository for MockRepository {
-    async fn add(&self, obj: &Row) -> Result<Response> {
+    async fn add(&self, item: &Row) -> Result<Response> {
         if let Some(error) = &*self.add_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
-        self.items.lock().expect("mock").push(obj.clone());
+        self.items.lock().expect("mock").push(item.clone());
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn update(&self, _obj: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
         if let Some(error) = &*self.update_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn delete(&self, _obj: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
         if let Some(error) = &*self.delete_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }

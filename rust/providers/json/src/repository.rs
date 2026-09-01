@@ -53,25 +53,25 @@ impl ReadonlyRepository for JsonRepository {
 
 #[async_trait]
 impl Repository for JsonRepository {
-    async fn add(&self, obj: &Row) -> Result<Response> {
+    async fn add(&self, item: &Row) -> Result<Response> {
         self.connection.ensure_open()?;
         self.connection
-            .collection_mut(|items| items.push(json_from_record(obj)));
+            .collection_mut(|items| items.push(json_from_record(item)));
         self.connection.persist()?;
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn update(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         self.connection.ensure_open()?;
         let filter = if let Some(w) = by_where {
             parse_filter(Some(&w.get_text()))?
         } else {
-            identity_filter(obj)
+            identity_filter(item)
                 .into_iter()
                 .map(|(k, v)| (k, value_to_json(&v)))
                 .collect()
         };
-        let json = json_from_record(obj);
+        let json = json_from_record(item);
         let affected = self.connection.collection_mut(|items| {
             let mut count = 0i64;
             for item in items.iter_mut() {
@@ -90,12 +90,12 @@ impl Repository for JsonRepository {
         Ok(Response::new(Value::Null, affected))
     }
 
-    async fn delete(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         self.connection.ensure_open()?;
         let filter = if let Some(w) = by_where {
             parse_filter(Some(&w.get_text()))?
         } else {
-            identity_filter(obj)
+            identity_filter(item)
                 .into_iter()
                 .map(|(k, v)| (k, value_to_json(&v)))
                 .collect()

@@ -153,8 +153,8 @@ impl TableRepository {
         Ok(items)
     }
 
-    fn sql(&self, row: &Row) -> Result<Row> {
-        self.row_converter.reverse_convert(row)
+    fn reverse_convert(&self, item: &Row) -> Result<Row> {
+        self.row_converter.reverse_convert(item)
     }
 }
 
@@ -183,8 +183,8 @@ impl ReadonlyRepository for TableRepository {
 
 #[async_trait]
 impl Repository for TableRepository {
-    async fn add(&self, obj: &Row) -> Result<Response> {
-        let record = self.sql(obj)?;
+    async fn add(&self, item: &Row) -> Result<Response> {
+        let record = self.reverse_convert(item)?;
         let fields = self.params(&record, !self.assign_identity_on_add);
         let text = self.statements.insert(&fields);
         self.command()
@@ -192,8 +192,8 @@ impl Repository for TableRepository {
             .await
     }
 
-    async fn update(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
-        let record = self.sql(obj)?;
+    async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+        let record = self.reverse_convert(item)?;
         let owned = if by_where.is_none() {
             Some(self.id_where(&record)?)
         } else {
@@ -218,8 +218,8 @@ impl Repository for TableRepository {
             .await
     }
 
-    async fn delete(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
-        let record = self.sql(obj)?;
+    async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+        let record = self.reverse_convert(item)?;
         let owned = if by_where.is_none() {
             Some(self.id_where(&record)?)
         } else {

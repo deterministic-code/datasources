@@ -27,27 +27,27 @@ public sealed class MemoryRepository : IRepository<Dictionary<string, Value>>
                 yield return record;
     }
 
-    public Task<Response> Add(Dictionary<string, Value> obj)
+    public Task<Response> Add(Dictionary<string, Value> item)
     {
         connection.EnsureOpen();
-        connection.GetCollection().Add(new Row(obj));
+        connection.GetCollection().Add(new Row(item));
         return Task.FromResult(new Response(Value.Null.Instance, 1));
     }
 
-    public Task<Response> Update(Dictionary<string, Value> obj, IWhere? byWhere = null)
+    public Task<Response> Update(Dictionary<string, Value> item, IWhere? byWhere = null)
     {
         connection.EnsureOpen();
-        return new MemoryCommand(connection).Execute("update", ToParams(obj, byWhere));
+        return new MemoryCommand(connection).Execute("update", ToParams(item, byWhere));
     }
 
-    public Task<Response> Delete(Dictionary<string, Value> obj, IWhere? byWhere = null)
+    public Task<Response> Delete(Dictionary<string, Value> item, IWhere? byWhere = null)
     {
         connection.EnsureOpen();
-        return new MemoryCommand(connection).Execute("delete", ToParams(obj, byWhere));
+        return new MemoryCommand(connection).Execute("delete", ToParams(item, byWhere));
     }
 
-    private static IReadOnlyList<Parameter> ToParams(Dictionary<string, Value> obj, IWhere? byWhere) =>
-        obj.Select(p => new Parameter(p.Key, p.Value))
+    private static IReadOnlyList<Parameter> ToParams(Dictionary<string, Value> item, IWhere? byWhere) =>
+        item.Select(p => new Parameter(p.Key, p.Value))
             .Concat(byWhere is not null ? [new Parameter("$where", byWhere.GetText())] : [])
             .ToList();
 }
