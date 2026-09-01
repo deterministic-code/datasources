@@ -83,16 +83,16 @@ export class Repository<T extends Cells> implements IRepository<T> {
       );
   }
 
-  add = async (obj: T): Promise<IResponse> => {
+  add = async (item: T): Promise<IResponse> => {
     const fields = fieldsOf(
-      this.sql(obj),
+      this.reverseConvert(item),
       (col) => !this.assignIdentityOnAdd || !this.ids.has(col),
     );
     return this.command().execute(this.statements.insert(fields).getText(), fields);
   };
 
-  update = async (obj: T, byWhere?: IWhere): Promise<IResponse> => {
-    const record = this.sql(obj);
+  update = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
+    const record = this.reverseConvert(item);
     const where = byWhere ?? this.idWhere(record);
     const fields = fieldsOf(record, (col) => !this.ids.has(col));
     if (fields.length === 0)
@@ -103,8 +103,8 @@ export class Repository<T extends Cells> implements IRepository<T> {
     ]);
   };
 
-  delete = async (obj: T, byWhere?: IWhere): Promise<IResponse> => {
-    const where = byWhere ?? this.idWhere(this.sql(obj));
+  delete = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
+    const where = byWhere ?? this.idWhere(this.reverseConvert(item));
     return this.command().execute(
       this.statements.delete(where).getText(),
       where.parameters,
@@ -117,7 +117,7 @@ export class Repository<T extends Cells> implements IRepository<T> {
       this.connection.createCommand(),
     );
 
-  private sql = (row: T): Cells => this.rowConverter.reverseConvert(row);
+  private reverseConvert = (item: T): Cells => this.rowConverter.reverseConvert(item);
 
   private readQuery = (query?: IQuery | IWhere): IQuery =>
     !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);

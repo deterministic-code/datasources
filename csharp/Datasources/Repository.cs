@@ -53,15 +53,15 @@ public sealed class Repository<T> : IRepository<T> where T : new()
                 ?? throw new DatasourceException("Reader current must be a row"));
     }
 
-    public async Task<Response> Add(T obj)
+    public async Task<Response> Add(T item)
     {
-        var fields = Params(Sql(obj), col => !assignIdentityOnAdd || !ids.Contains(col));
+        var fields = Params(ReverseConvert(item), col => !assignIdentityOnAdd || !ids.Contains(col));
         return await Command().Execute(statements.Insert(fields).GetText(), fields);
     }
 
-    public async Task<Response> Update(T obj, IWhere? byWhere = null)
+    public async Task<Response> Update(T item, IWhere? byWhere = null)
     {
-        var record = Sql(obj);
+        var record = ReverseConvert(item);
         var where = byWhere ?? IdWhere(record);
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
@@ -71,9 +71,9 @@ public sealed class Repository<T> : IRepository<T> where T : new()
             [.. fields, .. where.Parameters]);
     }
 
-    public async Task<Response> Delete(T obj, IWhere? byWhere = null)
+    public async Task<Response> Delete(T item, IWhere? byWhere = null)
     {
-        var where = byWhere ?? IdWhere(Sql(obj));
+        var where = byWhere ?? IdWhere(ReverseConvert(item));
         return await Command().Execute(statements.Delete(where).GetText(), where.Parameters);
     }
 
@@ -91,5 +91,5 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
-    Row Sql(T row) => rowConverter.ReverseConvert(row);
+    Row ReverseConvert(T item) => rowConverter.ReverseConvert(item);
 }

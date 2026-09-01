@@ -26,16 +26,16 @@ public sealed class MockRepository<T> : IRepository<T>
         foreach (var item in Items) yield return item;
     }
 
-    public Task<Response> Add(T obj)
+    public Task<Response> Add(T item)
     {
         if (AddError is not null) throw AddError;
-        Items.Add(obj);
+        Items.Add(item);
         return Task.FromResult(new Response(Value.Null.Instance, 1));
     }
 
-    public Task<Response> Update(T obj, IWhere? byWhere = null) =>
+    public Task<Response> Update(T item, IWhere? byWhere = null) =>
         UpdateError is not null ? throw UpdateError : Task.FromResult(new Response(Value.Null.Instance, 1));
 
-    public Task<Response> Delete(T obj, IWhere? byWhere = null) =>
+    public Task<Response> Delete(T item, IWhere? byWhere = null) =>
         DeleteError is not null ? throw DeleteError : Task.FromResult(new Response(Value.Null.Instance, 1));
 }

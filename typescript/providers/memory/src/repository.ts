@@ -34,16 +34,16 @@ export class MemoryRepository<T = unknown> implements IRepository<T> {
     };
   }
 
-  async add(obj: T): Promise<IResponse> {
+  async add(item: T): Promise<IResponse> {
     this.connection.ensureOpen();
-    const record = asRecord(obj);
+    const record = asRecord(item);
     this.connection.getCollection().push({ ...record });
-    return { result: obj, rowsAffected: 1 };
+    return { result: item, rowsAffected: 1 };
   }
 
-  async update(obj: T, byWhere?: IWhere): Promise<IResponse> {
+  async update(item: T, byWhere?: IWhere): Promise<IResponse> {
     this.connection.ensureOpen();
-    const record = asRecord(obj);
+    const record = asRecord(item);
     const filter = byWhere
       ? parseFilter(byWhere.getText())
       : identityFilter(record);
@@ -55,12 +55,12 @@ export class MemoryRepository<T = unknown> implements IRepository<T> {
         rowsAffected += 1;
       }
     }
-    return { result: obj, rowsAffected };
+    return { result: item, rowsAffected };
   }
 
-  async delete(obj: T, byWhere?: IWhere): Promise<IResponse> {
+  async delete(item: T, byWhere?: IWhere): Promise<IResponse> {
     this.connection.ensureOpen();
-    const record = asRecord(obj);
+    const record = asRecord(item);
     const filter = byWhere
       ? parseFilter(byWhere.getText())
       : identityFilter(record);

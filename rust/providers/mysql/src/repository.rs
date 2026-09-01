@@ -41,15 +41,15 @@ impl ReadonlyRepository for MysqlRepository {
 
 #[async_trait]
 impl Repository for MysqlRepository {
-    async fn add(&self, _obj: &Row) -> Result<Response> {
+    async fn add(&self, _item: &Row) -> Result<Response> {
         Err(DatasourceError::not_implemented("mysql"))
     }
 
-    async fn update(&self, _obj: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
         Err(DatasourceError::not_implemented("mysql"))
     }
 
-    async fn delete(&self, _obj: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
         Err(DatasourceError::not_implemented("mysql"))
     }
 }

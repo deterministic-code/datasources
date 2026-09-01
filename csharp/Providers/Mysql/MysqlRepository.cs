@@ -17,12 +17,12 @@ public sealed class MysqlRepository : IRepository<Dictionary<string, Value>>
 
     public IAsyncEnumerable<Dictionary<string, Value>> Get(IWhere where) => Get((IQuery?)null);
 
-    public Task<Response> Add(Dictionary<string, Value> obj) =>
+    public Task<Response> Add(Dictionary<string, Value> item) =>
         throw new ProviderNotImplementedException("mysql");
 
-    public Task<Response> Update(Dictionary<string, Value> obj, IWhere? byWhere = null) =>
+    public Task<Response> Update(Dictionary<string, Value> item, IWhere? byWhere = null) =>
         throw new ProviderNotImplementedException("mysql");
 
-    public Task<Response> Delete(Dictionary<string, Value> obj, IWhere? byWhere = null) =>
+    public Task<Response> Delete(Dictionary<string, Value> item, IWhere? byWhere = null) =>
         throw new ProviderNotImplementedException("mysql");
 }

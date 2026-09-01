@@ -16,9 +16,9 @@ pub trait ReadonlyRepository: Send + Sync {
 
 #[async_trait]
 pub trait Repository: ReadonlyRepository {
-    async fn add(&self, obj: &Row) -> Result<Response>;
-    async fn update(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
-    async fn delete(&self, obj: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
+    async fn add(&self, item: &Row) -> Result<Response>;
+    async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
+    async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
 }
 
 struct AsReadonly(Arc<dyn Repository>);

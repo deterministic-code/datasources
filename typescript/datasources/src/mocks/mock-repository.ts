@@ -9,8 +9,8 @@ export class MockRepository<T = unknown> implements IRepository<T> {
   getSingleCalls: Array<IQuery | IWhere | undefined> = [];
   getCalls: Array<IQuery | IWhere | undefined> = [];
   addCalls: T[] = [];
-  updateCalls: Array<{ obj: T; byWhere?: IWhere }> = [];
-  deleteCalls: Array<{ obj: T; byWhere?: IWhere }> = [];
+  updateCalls: Array<{ item: T; byWhere?: IWhere }> = [];
+  deleteCalls: Array<{ item: T; byWhere?: IWhere }> = [];
   getSingleError?: unknown;
   getError?: unknown;
   addError?: unknown;
@@ -40,26 +40,26 @@ export class MockRepository<T = unknown> implements IRepository<T> {
     }
   }
 
-  async add(obj: T): Promise<IResponse> {
-    this.addCalls.push(obj);
+  async add(item: T): Promise<IResponse> {
+    this.addCalls.push(item);
     if (this.addError) {
       throw this.addError;
     }
-    this.items.push(obj);
-    this.addResponse = { result: obj, rowsAffected: 1 };
+    this.items.push(item);
+    this.addResponse = { result: item, rowsAffected: 1 };
     return this.addResponse;
   }
 
-  async update(obj: T, byWhere?: IWhere): Promise<IResponse> {
-    this.updateCalls.push({ obj, byWhere });
+  async update(item: T, byWhere?: IWhere): Promise<IResponse> {
+    this.updateCalls.push({ item, byWhere });
     if (this.updateError) {
       throw this.updateError;
     }
     return this.updateResponse;
   }
 
-  async delete(obj: T, byWhere?: IWhere): Promise<IResponse> {
-    this.deleteCalls.push({ obj, byWhere });
+  async delete(item: T, byWhere?: IWhere): Promise<IResponse> {
+    this.deleteCalls.push({ item, byWhere });
     if (this.deleteError) {
       throw this.deleteError;
     }

@@ -18,11 +18,11 @@ export class StubRepository<T = unknown> implements IRepository<T> {
     notImplemented(this.provider);
   }
 
-  add = async (_obj: T): Promise<IResponse> => notImplemented(this.provider);
+  add = async (_item: T): Promise<IResponse> => notImplemented(this.provider);
 
-  update = async (_obj: T, _byWhere?: IWhere): Promise<IResponse> =>
+  update = async (_item: T, _byWhere?: IWhere): Promise<IResponse> =>
     notImplemented(this.provider);
 
-  delete = async (_obj: T, _byWhere?: IWhere): Promise<IResponse> =>
+  delete = async (_item: T, _byWhere?: IWhere): Promise<IResponse> =>
     notImplemented(this.provider);
 }
