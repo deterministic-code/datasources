@@ -24,21 +24,33 @@ public static class RepositorySpec
         await session.Command.Execute(SqliteStatementBuilder.CreateTable(spec.Type.Table, Columns(spec.Type)).GetText());
         _ = SqliteTypes.All;
         var types = DefaultTypeConverters.For(session.Connection.Provider);
-        var fields = spec.Type.Fields
-            .Where(pair => types.ContainsKey(pair.Value))
-            .ToDictionary(pair => pair.Key, pair => types[pair.Value]);
-        var mapping = new RowTypeConverter<SpecUser>(types, fields);
-        var built = RepositoryBuilder<SpecUser>.Parts(new()
+        var fields = FieldsOf(spec.Type, types);
+        if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");
+        var logs = new List<string>();
+        if (spec.Type.Mappings.Count == 0)
+            await Run(spec, session, new RowTypeConverter<SpecUser>(types, fields), logs);
+        else
+            await Run(spec, session, new RowTypeConverter<MappedUser>(types, fields), logs);
+        SqlSpec.AssertConsoleLogs(
+            spec.Name,
+            Queries(spec),
+            [.. logs.Where(line => line.Contains("[Start]") || line.Contains("[Finish]"))]);
+    }
+
+    static async Task Run<T>(Spec spec, Session session, RowTypeConverter<T> mapping, List<string> logs)
+        where T : new()
+    {
+        var built = RepositoryBuilder<T>.Parts(new()
         {
             Connection = session.Connection,
             Table = spec.Type.Table,
             Mapping = mapping,
+            Mapper = MappingsMapper<T>(spec.Type.Mappings),
             Ids = spec.Type.Ids,
             AssignIdentityOnAdd = spec.Type.AssignIdentityOnAdd,
+            Columns = [.. spec.Type.Fields.Keys],
         });
-        if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");
-        var logs = new List<string>();
-        var repo = new Repository<SpecUser>(built).Use(new ConsoleCommandMiddleware(line =>
+        var repo = new Repository<T>(built).Use(new ConsoleCommandMiddleware(line =>
         {
             logs.Add(line);
             if (Verbose()) Console.WriteLine(line);
@@ -46,33 +58,29 @@ public static class RepositorySpec
         foreach (var step in spec.Steps)
             await (step switch
             {
-                { Create: { } create } => repo.Add(mapping.Convert(ToRow(create.Row, spec.Type))),
+                { Create: { } create } => repo.Add(ToEntity(create.Row, spec.Type, mapping)),
                 { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(WhereBuilder.Equals("id", Value.From(get.Id)))),
                 { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Get(Where(mapping, where, spec.Type)) : repo.Get()),
                 { GetBy: { } getBy } => AssertGet(spec.Name, getBy, repo.GetSingle(Where(mapping, getBy.Where, spec.Type))),
                 { Update: { } update } => AssertAffected($"{spec.Name} UPDATE", update.HasExpect, update.Expect,
-                    repo.Update(mapping.Convert(ToRow(update.Row, spec.Type)))),
+                    repo.Update(ToEntity(update.Row, spec.Type, mapping))),
                 { UpdateBy: { } updateBy } => AssertAffected($"{spec.Name} UPDATEBY", updateBy.HasExpect, updateBy.Expect,
-                    repo.Update(mapping.Convert(ToRow(updateBy.Row, spec.Type)), Where(mapping, updateBy.Where, spec.Type))),
+                    repo.Update(ToEntity(updateBy.Row, spec.Type, mapping), Where(mapping, updateBy.Where, spec.Type))),
                 { Delete: { } delete } => AssertAffected($"{spec.Name} DELETE", delete.HasExpect, delete.Expect,
-                    repo.Delete(mapping.Convert(ToRow(new() { ["id"] = delete.Id }, spec.Type)))),
+                    repo.Delete(ToEntity(new() { ["id"] = delete.Id }, spec.Type, mapping))),
                 { DeleteBy: { } deleteBy } => AssertAffected($"{spec.Name} DELETEBY", deleteBy.HasExpect, deleteBy.Expect,
-                    repo.Delete(new SpecUser(), Where(mapping, deleteBy.Where, spec.Type))),
+                    repo.Delete(new T(), Where(mapping, deleteBy.Where, spec.Type))),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             });
-        SqlSpec.AssertConsoleLogs(
-            spec.Name,
-            Queries(spec),
-            [.. logs.Where(line => line.Contains("[Start]") || line.Contains("[Finish]"))]);
     }
 
-    static async Task AssertGet(string name, IdOp get, Task<SpecUser?> task)
+    static async Task AssertGet<T>(string name, IdOp get, Task<T?> task)
     {
         var actual = await task;
         if (get.HasExpect) AssertRow($"{name} GET", actual, get.Expect);
     }
 
-    static async Task AssertGet(string name, WhereOp getBy, Task<SpecUser?> task)
+    static async Task AssertGet<T>(string name, WhereOp getBy, Task<T?> task)
     {
         var actual = await task;
         if (getBy.HasExpect) AssertRow($"{name} GETBY", actual, getBy.Expect);
@@ -95,9 +103,9 @@ public static class RepositorySpec
             : throw new InvalidOperationException("expect.rowsAffected required");
     }
 
-    static async Task AssertQuery(string name, QueryOp query, IAsyncEnumerable<SpecUser> items)
+    static async Task AssertQuery<T>(string name, QueryOp query, IAsyncEnumerable<T> items)
     {
-        var actual = new List<SpecUser>();
+        var actual = new List<T>();
         await foreach (var item in items) actual.Add(item);
         if (!query.HasExpect) return;
         var expect = Rows(query.Expect);
@@ -107,7 +115,7 @@ public static class RepositorySpec
             AssertRow($"{name} QUERY[{index}]", actual[index], expect[index]);
     }
 
-    static void AssertRow(string name, SpecUser? actual, object? expect)
+    static void AssertRow(string name, object? actual, object? expect)
     {
         if (expect is null)
         {
@@ -115,24 +123,18 @@ public static class RepositorySpec
             return;
         }
         if (actual is null) throw new InvalidOperationException($"{name}: expected a row");
-        var wanted = AsRow(expect);
-        var got = FromUser(actual);
-        foreach (var (key, value) in wanted)
-            if (!Same(Norm(got.GetValueOrDefault(key)), Norm(value)))
-                throw new InvalidOperationException($"{name}: {key}: expected {Norm(value)} got {Norm(got.GetValueOrDefault(key))}");
+        foreach (var (key, value) in AsRow(expect))
+        {
+            var got = actual.GetType().GetProperty(key)?.GetValue(actual);
+            if (value is IDictionary)
+            {
+                AssertRow($"{name}.{key}", got, value);
+                continue;
+            }
+            if (!Same(Norm(got), Norm(value)))
+                throw new InvalidOperationException($"{name}: {key}: expected {Norm(value)} got {Norm(got)}");
+        }
     }
-
-    static Dictionary<string, object?> FromUser(SpecUser user) => new()
-    {
-        ["id"] = user.id,
-        ["uuid"] = user.uuid.ToString(),
-        ["username"] = user.username,
-        ["is_enabled"] = user.is_enabled,
-        ["balance"] = user.balance.ToString(CultureInfo.InvariantCulture),
-        ["location"] = user.location,
-        ["created"] = new Value.DateTime(user.created).IsoDateTime(),
-        ["version"] = Convert.ToBase64String(user.version),
-    };
 
     static object? Norm(object? value) => value switch
     {
@@ -183,26 +185,42 @@ public static class RepositorySpec
         foreach (var step in spec.Steps)
             yield return step switch
             {
-                { Create: { } create } => StatementBuilder.CreateInsert(spec.Type.Table, Fields(create.Row, col => !spec.Type.AssignIdentityOnAdd || !ids.Contains(col))).GetText(),
+                { Create: { } create } => StatementBuilder.CreateInsert(spec.Type.Table, Fields(Flatten(create.Row, spec.Type), col => !spec.Type.AssignIdentityOnAdd || !ids.Contains(col))).GetText(),
                 { Get: { } get } => StatementBuilder.CreateQuery(spec.Type.Table, columns, WhereBuilder.Equals("id", Value.From(get.Id))).GetText(),
                 { Query: { } query } => StatementBuilder.CreateQuery(spec.Type.Table, columns, query.Where is { } where ? SqlWhere(where) : null).GetText(),
                 { GetBy: { } getBy } => StatementBuilder.CreateQuery(spec.Type.Table, columns, SqlWhere(getBy.Where)).GetText(),
-                { Update: { } update } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(update.Row, col => !ids.Contains(col)), WhereBuilder.Equals("id", Value.From(update.Row["id"]))).GetText(),
-                { UpdateBy: { } updateBy } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(updateBy.Row, col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(),
+                { Update: { } update } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), WhereBuilder.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"]))).GetText(),
+                { UpdateBy: { } updateBy } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(),
                 { Delete: { } delete } => StatementBuilder.CreateDelete(spec.Type.Table, WhereBuilder.Equals("id", Value.From(delete.Id))).GetText(),
                 { DeleteBy: { } deleteBy } => StatementBuilder.CreateDelete(spec.Type.Table, SqlWhere(deleteBy.Where)).GetText(),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
     }
 
+    static Dictionary<string, object?> Flatten(Dictionary<string, object?> row, TypeSpec type)
+    {
+        var dest = new Dictionary<string, object?>(row);
+        foreach (var (nested, cols) in type.Mappings)
+        {
+            if (!dest.TryGetValue(nested, out var value) || value is not IDictionary)
+                continue;
+            var nest = AsRow(value);
+            foreach (var (field, col) in cols)
+                dest[col] = nest.GetValueOrDefault(field);
+            dest.Remove(nested);
+        }
+        return dest;
+    }
+
     static IReadOnlyList<Parameter> Fields(Dictionary<string, object?> row, Func<string, bool> include) =>
         row.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Value.From(Coerce(pair.Value)))).ToArray();
 
-    static IWhere Where(RowTypeConverter<SpecUser> mapping, Dictionary<string, object?> row, TypeSpec type) =>
+    static IWhere Where<T>(RowTypeConverter<T> mapping, Dictionary<string, object?> row, TypeSpec type)
+        where T : new() =>
         WhereBuilder.And([.. row.Select(pair =>
         {
-            var value = Value.From(Coerce(pair.Value, type.Fields.GetValueOrDefault(pair.Key)));
+            var value = Value.From(Coerce(pair.Value, Canonical(type, pair.Key)));
             var cell = mapping.Fields.TryGetValue(pair.Key, out var field)
                 ? field.ReverseConvert(value)
                 : value;
@@ -212,14 +230,93 @@ public static class RepositorySpec
     static IWhere SqlWhere(Dictionary<string, object?> row) =>
         WhereBuilder.And([.. row.Select(pair => WhereBuilder.Equals(pair.Key, Value.From(Coerce(pair.Value))))]);
 
+    static T ToEntity<T>(Dictionary<string, object?> row, TypeSpec type, RowTypeConverter<T> mapping)
+        where T : new()
+    {
+        var flat = row.Where(pair => pair.Value is not IDictionary)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        var entity = mapping.Convert(ToRow(flat, type));
+        foreach (var (nested, cols) in type.Mappings)
+        {
+            if (!row.TryGetValue(nested, out var value) || value is not IDictionary)
+                continue;
+            var dest = typeof(T).GetProperty(nested);
+            if (dest is null) continue;
+            var child = Activator.CreateInstance(dest.PropertyType)
+                ?? throw new InvalidOperationException($"Cannot create {dest.PropertyType}");
+            var nest = AsRow(value);
+            foreach (var (field, _) in cols)
+            {
+                var prop = dest.PropertyType.GetProperty(field);
+                if (prop is null) continue;
+                var raw = nest.GetValueOrDefault(field);
+                prop.SetValue(child, raw is null ? null : Convert.ChangeType(raw, prop.PropertyType, CultureInfo.InvariantCulture));
+            }
+            dest.SetValue(entity, child);
+        }
+        return entity;
+    }
+
+    static IMapper<T, T> MappingsMapper<T>(Dictionary<string, Dictionary<string, string>> mappings)
+        where T : new() =>
+        mappings.Count == 0
+            ? new TransformMapper<T, T>(static value => value, static value => value)
+            : new TransformMapper<T, T>(
+                row =>
+                {
+                    foreach (var (nested, cols) in mappings)
+                    {
+                        var dest = typeof(T).GetProperty(nested);
+                        if (dest is null) continue;
+                        var child = Activator.CreateInstance(dest.PropertyType)
+                            ?? throw new InvalidOperationException($"Cannot create {dest.PropertyType}");
+                        foreach (var (field, col) in cols)
+                        {
+                            var source = typeof(T).GetProperty(col)?.GetValue(row);
+                            dest.PropertyType.GetProperty(field)?.SetValue(child, source);
+                        }
+                        dest.SetValue(row, child);
+                    }
+                    return row;
+                },
+                user =>
+                {
+                    foreach (var (nested, cols) in mappings)
+                    {
+                        var child = typeof(T).GetProperty(nested)?.GetValue(user);
+                        foreach (var (field, col) in cols)
+                        {
+                            var value = child?.GetType().GetProperty(field)?.GetValue(child);
+                            typeof(T).GetProperty(col)?.SetValue(user, value);
+                        }
+                    }
+                    return user;
+                });
+
+    static Dictionary<string, TypeConverter<Value, Value>> FieldsOf(
+        TypeSpec type, IReadOnlyDictionary<string, TypeConverter<Value, Value>> types)
+    {
+        var fields = type.Fields
+            .Where(pair => types.ContainsKey(pair.Value))
+            .ToDictionary(pair => pair.Key, pair => types[pair.Value]);
+        foreach (var (name, canonical) in type.Converters)
+            if (types.TryGetValue(canonical, out var converter))
+                fields[name] = converter;
+        return fields;
+    }
+
     static Row ToRow(Dictionary<string, object?> row, TypeSpec type) =>
         new(row.ToDictionary(pair => pair.Key, pair =>
-            Value.From(Coerce(pair.Value, type.Fields.GetValueOrDefault(pair.Key)))));
+            Value.From(Coerce(pair.Value, Canonical(type, pair.Key)))));
+
+    static string? Canonical(TypeSpec type, string key) =>
+        type.Converters.GetValueOrDefault(key) ?? type.Fields.GetValueOrDefault(key);
 
     static object? Coerce(object? value, string? canonical = null) => (canonical, value) switch
     {
         ("bool", "true") => true,
         ("bool", "false") => false,
+        ("decimal", string text) => decimal.Parse(text, CultureInfo.InvariantCulture),
         ("datetime", string text) when DateTime.TryParse(
             text, CultureInfo.InvariantCulture,
             DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var date) =>
@@ -250,6 +347,23 @@ public static class RepositorySpec
         public byte[] version { get; set; } = [];
     }
 
+    sealed class UserType
+    {
+        public string name { get; set; } = "";
+    }
+
+    sealed class MappedUser
+    {
+        public int id { get; set; }
+        public Guid uuid { get; set; }
+        public string username { get; set; } = "";
+        public string usertypename { get; set; } = "";
+        public decimal decimal_text { get; set; }
+        public DateTime create_string { get; set; }
+        public byte[] version { get; set; } = [];
+        public UserType usertype { get; set; } = new();
+    }
+
     sealed class Spec
     {
         [YamlMember(Alias = "name")] public string Name { get; set; } = "";
@@ -264,6 +378,8 @@ public static class RepositorySpec
         [YamlMember(Alias = "ids")] public List<string> Ids { get; set; } = [];
         [YamlMember(Alias = "assignIdentityOnAdd")] public bool AssignIdentityOnAdd { get; set; }
         [YamlMember(Alias = "fields")] public Dictionary<string, string> Fields { get; set; } = [];
+        [YamlMember(Alias = "converters")] public Dictionary<string, string> Converters { get; set; } = [];
+        [YamlMember(Alias = "mappings")] public Dictionary<string, Dictionary<string, string>> Mappings { get; set; } = [];
     }
 
     sealed class Step

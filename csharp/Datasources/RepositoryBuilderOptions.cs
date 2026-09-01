@@ -10,4 +10,5 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
     public IMapper<T, T>? Mapper { get; init; }
     public IReadOnlyDictionary<Type, TypeConverter<object?, Value>>? Converters { get; init; }
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>>? Fields { get; init; }
+    public IReadOnlyList<string>? Columns { get; init; }
 }

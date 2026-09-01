@@ -31,7 +31,12 @@ export const parts = <T>(
     rowConverter,
     mapper: options.mapper ?? new TransformMapper<T, T>((value) => value, (value) => value),
     mapping,
-    statements: statementsOf(table, options.type ? fieldNamesOf(options.type).sort() : []),
+    statements: statementsOf(
+      table,
+      [...(options.columns ?? (options.type ? fieldNamesOf(options.type) : []))].sort(
+        (left, right) => left.localeCompare(right),
+      ),
+    ),
     ids: options.ids ?? ["id"],
     assignIdentityOnAdd: options.assignIdentityOnAdd !== false,
   };
