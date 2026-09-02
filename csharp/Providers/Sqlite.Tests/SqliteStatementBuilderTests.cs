@@ -51,5 +51,15 @@ public class SqliteStatementBuilderTests
         Assert.Equal(
             "DELETE FROM \"user\" WHERE id = $id",
             SqliteStatementBuilder.CreateDelete("user", where).GetText());
+        Assert.Equal(
+            "SELECT \"users\".\"id\", \"orders\".\"total\" FROM \"users\" INNER JOIN \"orders\" ON \"users\".\"id\" = \"orders\".\"user_id\" LEFT JOIN \"payments\" ON \"orders\".\"id\" = \"payments\".\"order_id\" WHERE users.id = $users.id",
+            SqliteStatementBuilder.CreateQuery(
+                "users",
+                ["users.id", "orders.total"],
+                WhereBuilder.Equals("users.id", 1),
+                [
+                    Join.Inner("orders", "users.id", "orders.user_id"),
+                    Join.Left("payments", "orders.id", "payments.order_id"),
+                ]).GetText());
     }
 }

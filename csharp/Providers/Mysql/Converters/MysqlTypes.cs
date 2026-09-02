@@ -1,0 +1,16 @@
+namespace Datasources.Mysql;
+
+public static class MysqlTypes
+{
+    public static readonly IReadOnlyDictionary<string, TypeConverter<Value, Value>> All =
+        new Dictionary<string, TypeConverter<Value, Value>>
+        {
+            ["bool"] = new BoolConverter(),
+            ["datetime"] = new DateTimeConverter(),
+            ["uuid"] = new UuidConverter(),
+            ["decimal"] = new DecimalConverter(),
+            ["binary"] = new BinaryConverter(),
+        };
+
+    static MysqlTypes() => DefaultTypeConverters.Use("mysql", All);
+}

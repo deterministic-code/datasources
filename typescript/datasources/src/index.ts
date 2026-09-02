@@ -64,12 +64,15 @@ export { parametersToRecord } from "./parametersToRecord.ts";
 export { ProviderNotImplementedError } from "./ProviderNotImplementedError.ts";
 export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
 export {
+  Join,
   StatementBuilder,
   WhereBuilder,
   type Column,
   type Field,
+  type JoinKind,
   type Scalar,
 } from "./builders/index.ts";
+export type { Join } from "./builders/index.ts";
 export { CreateTableStatement } from "./builders/CreateTableStatement.ts";
 export { DeleteStatement } from "./builders/DeleteStatement.ts";
 export { InsertStatement } from "./builders/InsertStatement.ts";

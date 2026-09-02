@@ -2,6 +2,8 @@ namespace Datasources.Mysql;
 
 public sealed class MysqlDatasource : IDatasource, IDatasourceFactory
 {
+    static MysqlDatasource() => _ = MysqlTypes.All;
+
     public static readonly MysqlDatasource Instance = new();
     private readonly MysqlConnectionOptions _options;
     private readonly string? _table;

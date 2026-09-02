@@ -12,6 +12,7 @@ import { MysqlConnection } from "./connection.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlRepository } from "./repository.ts";
 import { requireDriver } from "./driver.ts";
+import "./converters/MysqlTypes.ts";
 
 export interface MysqlDatasourceOptions extends MysqlConnectionOptions {
   table?: string;

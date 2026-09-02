@@ -5,6 +5,7 @@ mod datasource;
 mod driver;
 mod mysql_async_driver;
 mod repository;
+mod statement_builder;
 mod transaction;
 
 pub use command::MysqlCommand;
@@ -13,10 +14,13 @@ pub use datasource::MysqlDatasource;
 pub use driver::{isolation_sql, require_driver, to_mysql, MysqlDriver, MysqlExecuteResult};
 pub use mysql_async_driver::MysqlAsyncDriver;
 pub use repository::MysqlRepository;
+pub use statement_builder::{MysqlColumn, MysqlStatementBuilder};
 pub use transaction::MysqlTransaction;
 
 #[cfg(test)]
 mod integration;
+#[cfg(test)]
+mod repository_spec;
 
 #[cfg(test)]
 mod tests {
@@ -82,6 +86,10 @@ mod tests {
         assert_eq!(
             to_mysql("SELECT * FROM t WHERE id = $id"),
             "SELECT * FROM t WHERE id = :id"
+        );
+        assert_eq!(
+            to_mysql("INSERT INTO t (id) VALUES ($id) RETURNING id"),
+            "INSERT INTO t (id) VALUES (:id)"
         );
         assert_eq!(
             isolation_sql(IsolationLevel::ReadUncommitted),

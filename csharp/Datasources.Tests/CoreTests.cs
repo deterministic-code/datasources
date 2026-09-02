@@ -66,6 +66,23 @@ public class CoreTests
         Assert.Equal("SELECT * FROM users", StatementBuilder.CreateQuery("users", []).GetText());
         Assert.Null(StatementBuilder.CreateQuery("users", []).Where);
         Assert.Equal("SELECT id, name FROM users", StatementBuilder.CreateQuery("users", ["id", "name"]).GetText());
+        Assert.Equal(
+            "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id",
+            StatementBuilder.CreateQuery("users", ["users.id", "orders.total"], null, [
+                Join.Inner("orders", "users.id", "orders.user_id"),
+            ]).GetText());
+        Assert.Equal(
+            "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
+            StatementBuilder.CreateQuery(
+                "users",
+                ["users.id"],
+                WhereBuilder.Equals("users.id", 1),
+                [
+                    Join.Inner("orders", "users.id", "orders.user_id"),
+                    Join.Left("payments", "orders.id", "payments.order_id"),
+                    Join.Right("profiles", "users.id", "profiles.user_id"),
+                ]).GetText());
+        Assert.Equal("SELECT id FROM users", StatementBuilder.CreateQuery("users", ["id"], null, []).GetText());
         var insert = StatementBuilder.CreateInsert("users", fields);
         Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", insert.GetText());
         var update = StatementBuilder.CreateUpdate("users", fields, where);

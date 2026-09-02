@@ -11,7 +11,7 @@ export type {
   MysqlExecuteResult,
   MysqlQueryHeader,
 } from "./i-mysql-driver.ts";
-export { bindParameters, toMysql } from "./bind.ts";
+export { bindParameters, toMysql, withoutReturning } from "./bind.ts";
 export { Mysql2Driver } from "./mysql2-driver.ts";
 
 export async function loadMysql2Driver(

@@ -176,6 +176,7 @@ describe("PostgresConnection", () => {
     });
     await connection.open();
     await connection.open();
+    expect(connection.createCommand()).toBeInstanceOf(PostgresCommand);
     expect(connection.opened).toBe(true);
     expect(connection.schema).toBe("s");
     const txn = await connection.startTransaction();

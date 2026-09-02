@@ -83,6 +83,9 @@ describe("requireDriver and bindParameters", () => {
     expect(toMysql("SELECT * FROM t WHERE id = $id")).toBe(
       "SELECT * FROM t WHERE id = :id",
     );
+    expect(toMysql("INSERT INTO t (id) VALUES ($id) RETURNING id")).toBe(
+      "INSERT INTO t (id) VALUES (:id)",
+    );
   });
 });
 
@@ -155,6 +158,7 @@ describe("MysqlConnection", () => {
     const connection = new MysqlConnection({ url: "mysql://db/app", driver });
     await connection.open();
     await connection.open();
+    expect(connection.createCommand()).toBeInstanceOf(MysqlCommand);
     expect(connection.opened).toBe(true);
     const txn = await connection.startTransaction();
     await txn.commit();

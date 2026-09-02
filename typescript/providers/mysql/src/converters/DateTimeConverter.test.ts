@@ -1,0 +1,13 @@
+import { describe, expect, it } from "vitest";
+import { DateTimeConverter } from "./DateTimeConverter.ts";
+
+describe("DateTimeConverter", () => {
+  it("maps datetime", () => {
+    const converter = new DateTimeConverter();
+    const date = new Date("2020-01-02T03:04:05.000Z");
+    expect(converter.convert("2020-01-02T03:04:05.000Z")).toEqual(date);
+    expect(converter.convert(date)).toBe(date);
+    expect(converter.reverseConvert(date)).toBe("2020-01-02T03:04:05.000Z");
+    expect(converter.reverseConvert("x")).toBe("x");
+  });
+});

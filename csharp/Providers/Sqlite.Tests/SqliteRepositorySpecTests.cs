@@ -18,7 +18,9 @@ public class SqliteRepositorySpecTests
                     Driver = new SqliteDriver(),
                 });
                 return new RepositorySpec.Session(conn, new SqliteCommand(conn));
-            });
+            }, (table, columns) => SqliteStatementBuilder.CreateTable(table,
+                [.. columns.Select(column => new SqliteColumn(column.Name, column.Type, column.Id))]).GetText(),
+                SqliteStatementBuilder.Quote);
         }
     }
 }

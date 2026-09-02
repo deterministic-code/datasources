@@ -637,24 +637,52 @@ fn statements_and_builders() {
         Parameter::new("id", 1_i64),
         Parameter::new("name", "a"),
     ];
-    let query = StatementBuilder::create_query("users", &["id", "name"], Some(&where_clause));
+    let query = StatementBuilder::create_query("users", &["id", "name"], Some(&where_clause), &[]);
     assert_eq!(
         query.get_text(),
         "SELECT id, name FROM users WHERE id = $id AND age > $age"
     );
     assert!(query.where_clause().is_some());
     assert_eq!(
-        StatementBuilder::create_query("users", &[], None).get_text(),
+        StatementBuilder::create_query("users", &[], None, &[]).get_text(),
         "SELECT * FROM users"
     );
     assert!(
-        StatementBuilder::create_query("users", &[], None)
+        StatementBuilder::create_query("users", &[], None, &[])
             .where_clause()
             .is_none()
     );
     assert_eq!(
-        StatementBuilder::create_query("users", &["id", "name"], None).get_text(),
+        StatementBuilder::create_query("users", &["id", "name"], None, &[]).get_text(),
         "SELECT id, name FROM users"
+    );
+    assert_eq!(
+        StatementBuilder::create_query(
+            "users",
+            &["users.id", "orders.total"],
+            None,
+            &[Join::inner("orders", "users.id", "orders.user_id")],
+        )
+        .get_text(),
+        "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id"
+    );
+    assert_eq!(
+        StatementBuilder::create_query(
+            "users",
+            &["users.id"],
+            Some(&WhereBuilder::equals("users.id", 1_i64)),
+            &[
+                Join::inner("orders", "users.id", "orders.user_id"),
+                Join::left("payments", "orders.id", "payments.order_id"),
+                Join::right("profiles", "users.id", "profiles.user_id"),
+            ],
+        )
+        .get_text(),
+        "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
+    );
+    assert_eq!(
+        StatementBuilder::create_query("users", &["id"], None, &[]).get_text(),
+        "SELECT id FROM users"
     );
     assert_eq!(
         StatementBuilder::create_insert("users", &fields).get_text(),
@@ -740,7 +768,7 @@ async fn table_repository() {
     assert!(repo.get_single(None).await.unwrap().is_some());
 
     let where_clause = WhereBuilder::equals("id", 9_i64);
-    let query = StatementBuilder::create_query("users", &["id"], Some(&where_clause));
+    let query = StatementBuilder::create_query("users", &["id"], Some(&where_clause), &[]);
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.get_single(Some(&query)).await.unwrap().is_none());
     assert_eq!(

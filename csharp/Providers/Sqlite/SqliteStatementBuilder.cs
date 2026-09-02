@@ -8,6 +8,9 @@ public static class SqliteStatementBuilder
 {
     public static string Quote(string id) => $"\"{id.Replace("\"", "\"\"")}\"";
 
+    public static string QuoteQualified(string id) =>
+        string.Join(".", id.Split('.').Select(Quote));
+
     public static string ColumnType(string canonical) => canonical switch
     {
         "int" => "INTEGER",
@@ -25,8 +28,22 @@ public static class SqliteStatementBuilder
         StatementBuilder.CreateTable(Quote(table), [.. columns.Select(column =>
             new Column(Quote(column.Name), column.Id ? $"{ColumnType(column.Type)} PRIMARY KEY" : ColumnType(column.Type)))]);
 
-    public static IQuery CreateQuery(string table, IReadOnlyList<string> fields, IWhere? where = null) =>
-        StatementBuilder.CreateQuery(Quote(table), [.. fields.Select(Quote)], where);
+    public static IQuery CreateQuery(
+        string table,
+        IReadOnlyList<string> fields,
+        IWhere? where = null,
+        IReadOnlyList<Join>? joins = null) =>
+        StatementBuilder.CreateQuery(
+            Quote(table),
+            [.. fields.Select(QuoteQualified)],
+            where,
+            joins is null ? null : [.. joins.Select(join =>
+                join with
+                {
+                    Table = QuoteQualified(join.Table),
+                    LeftColumn = QuoteQualified(join.LeftColumn),
+                    RightColumn = QuoteQualified(join.RightColumn),
+                })]);
 
     public static IInsertStatement CreateInsert(string table, IReadOnlyList<Parameter> fields) =>
         StatementBuilder.CreateInsert(Quote(table), fields);

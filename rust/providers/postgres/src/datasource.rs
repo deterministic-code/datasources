@@ -24,6 +24,7 @@ impl PostgresDatasource {
         driver: Option<Arc<dyn PostgresDriver>>,
         table: Option<String>,
     ) -> Self {
+        crate::converters::register();
         Self {
             url,
             schema,

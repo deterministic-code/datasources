@@ -33,11 +33,13 @@ import {
 } from "../specs/expected-repository-console.ts";
 import { consoleSignature } from "../specs/expected-console-output.ts";
 import { repoRoot, specVerbose } from "./sql-spec-runner.ts";
-import {
-  SqliteStatementBuilder,
-  type SqliteColumn,
-} from "./providers/sqlite/src/sqliteStatementBuilder.ts";
-import "./providers/sqlite/src/converters/SqliteTypes.ts";
+
+export type RepositoryColumn = { name: string; type: string; id?: boolean };
+
+export type RepositoryDialect = {
+  createTable: (table: string, columns: RepositoryColumn[]) => { getText: () => string };
+  quote: (id: string) => string;
+};
 
 export const repositorySpecFiles = (root = repoRoot()): string[] =>
   readdirSync(join(root, "specs", "repositories"))
@@ -67,12 +69,15 @@ const typeOf = (type: RepositoryTypeSpec): Constructable<Cells> => {
   };
 };
 
-const columnsOf = (type: RepositoryTypeSpec): SqliteColumn[] =>
+const columnsOf = (type: RepositoryTypeSpec): RepositoryColumn[] =>
   Object.entries(type.fields).map(([name, canonical]) => ({
     name,
     type: canonical,
     id: type.ids.includes(name),
   }));
+
+const unquoteSql = (text: string): string =>
+  text.replaceAll(/`([^`]+)`/g, "$1").replaceAll(/"([^"]+)"/g, "$1");
 
 type SpecValue = Cell | SpecRow;
 type SpecRow = { [key: string]: SpecValue };
@@ -145,11 +150,15 @@ const suffix = <T extends { getText: () => string }>(
     ? new TransformMapper<T, T>((built) => rewrite(`${built.getText()}${value}`, built), (built) => built)
     : undefined;
 
-const statementMapperOf = (type: RepositoryTypeSpec, rows: TransformMapper<SpecRow, SpecRow>) => {
+const statementMapperOf = (
+  type: RepositoryTypeSpec,
+  rows: TransformMapper<SpecRow, SpecRow>,
+  quote: (id: string) => string,
+) => {
   const mapper: StatementMapperSpec = type.statementMapper ?? {};
   return new StatementMapper<SpecRow>({
     entity: new TransformMapper(
-      (name) => mapper.entity ?? name,
+      (name) => quote(mapper.entity ?? name),
       (name) => name,
     ),
     rows,
@@ -227,10 +236,11 @@ export const runRepositorySpec = async (
   path: string,
   connection: IConnection,
   execute: (sql: string) => Promise<unknown>,
+  dialect: RepositoryDialect,
 ): Promise<void> => {
   const spec = parse(readFileSync(path, "utf8")) as RepositorySpec;
   if (specVerbose()) console.log(`\n--- ${spec.name} (${connection.provider}) ---`);
-  await execute(SqliteStatementBuilder.createTable(physicalTableOf(spec.type), columnsOf(spec.type)).getText());
+  await execute(dialect.createTable(physicalTableOf(spec.type), columnsOf(spec.type)).getText());
   const catalog = DefaultTypeConverters.for(connection.provider);
   const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
   const repo = new Repository<SpecRow>({
@@ -240,7 +250,7 @@ export const runRepositorySpec = async (
     type: typeOf(spec.type),
     entity: spec.type.table,
     mapping,
-    statementMapper: statementMapperOf(spec.type, mappingsMapper(spec.type.mappings)),
+    statementMapper: statementMapperOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
     columns: Object.keys(spec.type.fields),
   });
   const logs: string[] = [];
@@ -303,7 +313,7 @@ export const runRepositorySpec = async (
   const expected = expectedRepositoryConsoleSignatures(spec);
   const actual = logs
     .filter((line) => /\[(Start|Finish)\]/.test(line))
-    .map(consoleSignature);
+    .map((line) => unquoteSql(consoleSignature(line)));
   let mismatch = actual.findIndex((line, i) => line !== expected[i]);
   if (mismatch === -1 && actual.length !== expected.length)
     mismatch = Math.min(actual.length, expected.length);

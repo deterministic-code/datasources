@@ -7,11 +7,16 @@ description = "Postgres datasource provider"
 
 [dependencies]
 async-trait = { workspace = true }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { workspace = true }
+rust_decimal = "1"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "time", "sync"] }
 tokio-postgres = "0.7"
+uuid = "1"
 
 [dev-dependencies]
+datasources-sql-specs = { path = "../../sql-specs" }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "time", "sync"] }

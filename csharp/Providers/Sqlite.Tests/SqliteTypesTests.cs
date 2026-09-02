@@ -11,6 +11,5 @@ public class SqliteTypesTests
         _ = SqliteTypes.All;
         var types = DefaultTypeConverters.For("sqlite");
         Assert.Equal(["bool", "datetime", "uuid", "decimal", "binary"], types.Keys);
-        Assert.Empty(DefaultTypeConverters.For("postgres"));
     }
 }

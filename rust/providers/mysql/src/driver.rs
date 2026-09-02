@@ -28,7 +28,16 @@ pub fn require_driver(driver: Option<Arc<dyn MysqlDriver>>) -> Result<Arc<dyn My
     driver.ok_or_else(|| DatasourceError::message("MySQL driver is required"))
 }
 
+pub fn without_returning(sql: &str) -> String {
+    let upper = sql.to_ascii_uppercase();
+    match upper.rfind(" RETURNING ") {
+        Some(index) => sql[..index].to_string(),
+        None => sql.to_string(),
+    }
+}
+
 pub fn to_mysql(sql: &str) -> String {
+    let sql = without_returning(sql);
     let mut out = String::with_capacity(sql.len());
     let mut chars = sql.chars().peekable();
     while let Some(ch) = chars.next() {

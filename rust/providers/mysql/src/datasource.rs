@@ -22,6 +22,7 @@ impl MysqlDatasource {
         driver: Option<Arc<dyn MysqlDriver>>,
         table: Option<String>,
     ) -> Self {
+        crate::converters::register();
         Self { url, driver, table }
     }
 

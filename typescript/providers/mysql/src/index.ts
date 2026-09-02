@@ -11,6 +11,7 @@ export {
   loadMysql2Driver,
   requireDriver,
   toMysql,
+  withoutReturning,
 } from "./driver.ts";
 export type {
   IMysqlClient,
@@ -25,5 +26,15 @@ export {
   type MysqlRepositoryOptions,
 } from "./repository.ts";
 export { MysqlTransaction } from "./transaction.ts";
+export { MysqlTypes } from "./converters/MysqlTypes.ts";
+export { BoolConverter } from "./converters/BoolConverter.ts";
+export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
+export { UuidConverter } from "./converters/UuidConverter.ts";
+export { DecimalConverter } from "./converters/DecimalConverter.ts";
+export { BinaryConverter } from "./converters/BinaryConverter.ts";
+export {
+  MysqlStatementBuilder,
+  type MysqlColumn,
+} from "./mysqlStatementBuilder.ts";
 export type { Cells, Scalar } from "./scalar.ts";
 export { MysqlDatasource as default } from "./datasource.ts";
