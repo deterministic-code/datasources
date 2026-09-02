@@ -30,12 +30,14 @@ fn box_value(value: &Value) -> Box<dyn ToSql + Sync + Send> {
     match value {
         Value::Null => Box::new(Option::<i64>::None),
         Value::Bool(flag) => Box::new(*flag),
-        Value::Int(value) => Box::new(*value),
+        Value::Int(value) => i32::try_from(*value)
+            .map(|number| Box::new(number) as Box<dyn ToSql + Sync + Send>)
+            .unwrap_or_else(|_| Box::new(*value)),
         Value::Float(value) => Box::new(*value),
         Value::Text(value) => Box::new(value.clone()),
-        Value::DateTime(value) => Box::new(Value::iso_datetime(*value)),
-        Value::Uuid(value) => Box::new(value.to_string()),
-        Value::Decimal(value) => Box::new(value.to_string()),
+        Value::DateTime(value) => Box::new(*value),
+        Value::Uuid(value) => Box::new(*value),
+        Value::Decimal(value) => Box::new(*value),
         Value::Binary(value) => Box::new(value.clone()),
     }
 }
@@ -59,10 +61,8 @@ fn from_cell(row: &Row, index: usize) -> Value {
     if let Ok(value) = row.try_get::<_, Option<String>>(index) {
         return value.map(Value::Text).unwrap_or(Value::Null);
     }
-    if row.columns()[index].type_().name() == "bytea" {
-        if let Ok(value) = row.try_get::<_, Vec<u8>>(index) {
-            return Value::Binary(value);
-        }
+    if let Ok(value) = row.try_get::<_, Vec<u8>>(index) {
+        return Value::Binary(value);
     }
     Value::Null
 }

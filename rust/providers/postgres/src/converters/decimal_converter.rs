@@ -16,10 +16,7 @@ impl TypeConverter<Value, Value> for DecimalConverter {
     }
 
     fn reverse_convert(&self, to: &Value) -> Result<Value> {
-        Ok(match to {
-            Value::Decimal(number) => Value::Text(number.to_string()),
-            other => other.clone(),
-        })
+        self.convert(to)
     }
 }
 
@@ -43,7 +40,11 @@ mod tests {
             converter
                 .reverse_convert(&Value::Decimal("10.5".parse().unwrap()))
                 .unwrap(),
-            Value::from("10.5")
+            Value::Decimal("10.5".parse().unwrap())
+        );
+        assert_eq!(
+            converter.reverse_convert(&Value::from("10.5")).unwrap(),
+            Value::Decimal("10.5".parse().unwrap())
         );
         assert_eq!(
             converter.convert(&Value::from("nope")).unwrap(),

@@ -2,8 +2,6 @@ namespace Datasources;
 
 public interface IReadonlyRepository<T>
 {
-    Task<T?> GetSingle(IQuery? query = null);
-    Task<T?> GetSingle(IWhere where);
-    IAsyncEnumerable<T> Get(IQuery? query = null);
-    IAsyncEnumerable<T> Get(IWhere where);
+    Task<T?> GetSingle(IStatement? query = null);
+    IAsyncEnumerable<T> Get(IStatement? query = null);
 }

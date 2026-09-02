@@ -10,9 +10,9 @@ async-trait = { workspace = true }
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { workspace = true }
-rust_decimal = "1"
+rust_decimal = { version = "1", features = ["db-tokio-postgres"] }
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "time", "sync"] }
-tokio-postgres = "0.7"
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1"] }
 uuid = "1"
 
 [dev-dependencies]

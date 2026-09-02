@@ -14,7 +14,7 @@ impl TypeConverter<Value, Value> for DateTimeConverter {
     }
 
     fn reverse_convert(&self, to: &Value) -> Result<Value> {
-        Ok(to.clone())
+        self.convert(to)
     }
 }
 
