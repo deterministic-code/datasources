@@ -535,6 +535,7 @@ name = "datasources-mysql"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "chrono",
  "datasources",
  "datasources-sql-specs",
@@ -560,6 +561,7 @@ name = "datasources-postgres"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "chrono",
  "datasources",
  "datasources-sql-specs",
