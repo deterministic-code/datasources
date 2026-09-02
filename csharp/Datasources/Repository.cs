@@ -2,7 +2,7 @@ using Datasources.Builders;
 
 namespace Datasources;
 
-public sealed class Repository<T> : IRepository<T> where T : new()
+public sealed class Repository<T> : ReadonlyRepository<T>, IRepository<T> where T : new()
 {
     readonly IConnection connection;
     readonly List<ICommandMiddleware> middlewares = [];
@@ -35,20 +35,15 @@ public sealed class Repository<T> : IRepository<T> where T : new()
         return this;
     }
 
-    public Task<T?> GetSingle(IWhere where) => GetSingle(statements.Query(where));
-
-    public IAsyncEnumerable<T> Get(IWhere where) => Get(statements.Query(where));
-
-    public async Task<T?> GetSingle(IQuery? query = null)
+    public override async IAsyncEnumerable<T> Get(IStatement? query = null)
     {
-        await foreach (var item in Get(query))
-            return item;
-        return default;
-    }
-
-    public async IAsyncEnumerable<T> Get(IQuery? query = null)
-    {
-        var statement = query ?? statements.Query();
+        var statement = query switch
+        {
+            IQuery q => q,
+            IWhere w => statements.Query(w),
+            null => statements.Query(),
+            _ => throw new DatasourceException("Get requires IQuery or IWhere")
+        };
         var reader = await Command().ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())

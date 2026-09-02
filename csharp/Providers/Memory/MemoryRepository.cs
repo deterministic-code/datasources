@@ -2,24 +2,12 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryRepository : IRepository<Dictionary<string, Value>>
+public sealed class MemoryRepository : ReadonlyRepository<Dictionary<string, Value>>, IRepository<Dictionary<string, Value>>
 {
     readonly MemoryConnection connection;
     public MemoryRepository(MemoryConnection connection) => this.connection = connection;
 
-    public Task<Dictionary<string, Value>?> GetSingle(IWhere where) =>
-        GetSingle(new Query(where.GetText(), where));
-
-    public IAsyncEnumerable<Dictionary<string, Value>> Get(IWhere where) =>
-        Get(new Query(where.GetText(), where));
-
-    public async Task<Dictionary<string, Value>?> GetSingle(IQuery? query = null)
-    {
-        var reader = await new MemoryCommand(connection).ExecuteReader(query?.GetText() ?? "");
-        return await reader.Next() ? reader.Current : null;
-    }
-
-    public async IAsyncEnumerable<Dictionary<string, Value>> Get(IQuery? query = null)
+    public override async IAsyncEnumerable<Dictionary<string, Value>> Get(IStatement? query = null)
     {
         var reader = await new MemoryCommand(connection).ExecuteReader(query?.GetText() ?? "");
         while (await reader.Next())

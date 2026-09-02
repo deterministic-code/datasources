@@ -61,8 +61,7 @@ public sealed class PostgresDriver : IPostgresDriver
         var (text, values) = PostgresBind.ToPostgres(rewritten, parameters);
         using var command = RequireDb().CreateCommand();
         command.CommandText = text;
-        for (var i = 0; i < values.Length; i++)
-            command.Parameters.AddWithValue($"p{i}", values[i] ?? DBNull.Value);
+        Bind(command, values);
         if (rewritten.Contains("RETURNING", StringComparison.OrdinalIgnoreCase))
         {
             var result = await command.ExecuteScalarAsync();
@@ -77,8 +76,7 @@ public sealed class PostgresDriver : IPostgresDriver
         var (text, values) = PostgresBind.ToPostgres(sql, parameters);
         using var command = RequireDb().CreateCommand();
         command.CommandText = text;
-        for (var i = 0; i < values.Length; i++)
-            command.Parameters.AddWithValue($"p{i}", values[i] ?? DBNull.Value);
+        Bind(command, values);
         using var reader = await command.ExecuteReaderAsync();
         var rows = new List<Row>();
         while (await reader.ReadAsync())
@@ -89,6 +87,12 @@ public sealed class PostgresDriver : IPostgresDriver
             rows.Add(row);
         }
         return rows;
+    }
+
+    static void Bind(NpgsqlCommand command, object?[] values)
+    {
+        for (var i = 0; i < values.Length; i++)
+            command.Parameters.Add(new NpgsqlParameter($"${i + 1}", values[i] ?? DBNull.Value));
     }
 
     async Task Exec(string sql)

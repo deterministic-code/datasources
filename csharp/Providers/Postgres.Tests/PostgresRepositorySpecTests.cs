@@ -15,7 +15,7 @@ public class PostgresRepositorySpecTests
         foreach (var path in RepositorySpec.Files())
         {
             var schema = $"ds_{Guid.NewGuid():N}"[..18];
-            await using (var admin = new NpgsqlConnection(url))
+            await using (var admin = new NpgsqlConnection(PostgresDriver.ToConnectionString(url)))
             {
                 await admin.OpenAsync();
                 await using var create = admin.CreateCommand();
@@ -39,7 +39,7 @@ public class PostgresRepositorySpecTests
             }
             finally
             {
-                await using var drop = new NpgsqlConnection(url);
+                await using var drop = new NpgsqlConnection(PostgresDriver.ToConnectionString(url));
                 await drop.OpenAsync();
                 await using var cmd = drop.CreateCommand();
                 cmd.CommandText = $"DROP SCHEMA {schema} CASCADE";

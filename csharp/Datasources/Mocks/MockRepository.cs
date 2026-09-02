@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class MockRepository<T> : IRepository<T>
+public sealed class MockRepository<T> : ReadonlyRepository<T>, IRepository<T>
 {
     public List<T> Items { get; } = new();
     public Exception? GetSingleError { get; set; }
@@ -10,16 +10,12 @@ public sealed class MockRepository<T> : IRepository<T>
     public Exception? DeleteError { get; set; }
     public MockRepository(IConnection _) { }
 
-    public Task<T?> GetSingle(IWhere where) => GetSingle((IQuery?)null);
-
-    public IAsyncEnumerable<T> Get(IWhere where) => Get((IQuery?)null);
-
-    public Task<T?> GetSingle(IQuery? query = null) =>
+    public override Task<T?> GetSingle(IStatement? query = null) =>
         GetSingleError is not null
             ? throw GetSingleError
             : Task.FromResult(Items.Count == 0 ? default : Items[0]);
 
-    public async IAsyncEnumerable<T> Get(IQuery? query = null)
+    public override async IAsyncEnumerable<T> Get(IStatement? query = null)
     {
         if (GetError is not null) throw GetError;
         await Task.Yield();
