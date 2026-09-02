@@ -596,6 +596,7 @@ dependencies = [
 name = "datasources-sql-specs"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "datasources",
  "rust_decimal",

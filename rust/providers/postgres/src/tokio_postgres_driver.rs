@@ -59,6 +59,11 @@ fn from_cell(row: &Row, index: usize) -> Value {
     if let Ok(value) = row.try_get::<_, Option<String>>(index) {
         return value.map(Value::Text).unwrap_or(Value::Null);
     }
+    if row.columns()[index].type_().name() == "bytea" {
+        if let Ok(value) = row.try_get::<_, Vec<u8>>(index) {
+            return Value::Binary(value);
+        }
+    }
     Value::Null
 }
 

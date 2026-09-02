@@ -8,7 +8,7 @@ fn bytes(value: &Value) -> Value {
         Value::Text(text) => STANDARD
             .decode(text)
             .map(Value::Binary)
-            .unwrap_or_else(|_| value.clone()),
+            .unwrap_or_else(|_| Value::Binary(text.as_bytes().to_vec())),
         other => other.clone(),
     }
 }
@@ -40,7 +40,7 @@ mod tests {
         );
         assert_eq!(
             converter.convert(&Value::from("x")).unwrap(),
-            Value::from("x")
+            Value::Binary(vec![b'x'])
         );
     }
 }
