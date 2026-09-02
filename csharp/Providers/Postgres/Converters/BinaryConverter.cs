@@ -7,7 +7,7 @@ public sealed class BinaryConverter : TypeConverter<Value, Value>
 
     static Value Bytes(Value value) => value switch
     {
-        Value.Text(var text) => new Value.Binary(Convert.FromBase64String(text)),
+        Value.Text(var text) => new Value.Binary(System.Convert.FromBase64String(text)),
         _ => value
     };
 }

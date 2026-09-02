@@ -1,3 +1,4 @@
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -294,6 +295,7 @@ fn decimal_text(text: &str) -> Option<String> {
 
 fn cell_of(value: &Value) -> String {
     match value {
+        Value::Binary(bytes) => base64::engine::general_purpose::STANDARD.encode(bytes),
         Value::Decimal(number) => number.normalize().to_string(),
         Value::Float(number) => Decimal::from_str(&number.to_string())
             .map(|parsed| parsed.normalize().to_string())

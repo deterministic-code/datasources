@@ -6,6 +6,7 @@ license.workspace = true
 description = "Shared SQL repository spec runner"
 
 [dependencies]
+base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { workspace = true }
 rust_decimal = "1"
