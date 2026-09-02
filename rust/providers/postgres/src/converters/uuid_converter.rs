@@ -14,10 +14,7 @@ impl TypeConverter<Value, Value> for UuidConverter {
     }
 
     fn reverse_convert(&self, to: &Value) -> Result<Value> {
-        Ok(match to {
-            Value::Uuid(id) => Value::Text(id.to_string()),
-            other => other.clone(),
-        })
+        self.convert(to)
     }
 }
 
@@ -33,9 +30,12 @@ mod tests {
             .convert(&Value::from("550e8400-e29b-41d4-a716-446655440000"))
             .unwrap();
         assert!(matches!(native, Value::Uuid(_)));
+        assert_eq!(converter.reverse_convert(&native).unwrap(), native);
         assert_eq!(
-            converter.reverse_convert(&native).unwrap(),
-            Value::from("550e8400-e29b-41d4-a716-446655440000")
+            converter
+                .reverse_convert(&Value::from("550e8400-e29b-41d4-a716-446655440000"))
+                .unwrap(),
+            native
         );
         assert_eq!(
             converter.convert(&Value::from("nope")).unwrap(),
