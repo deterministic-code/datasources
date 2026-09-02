@@ -12,7 +12,7 @@ public sealed class PostgresDriver : IPostgresDriver
     public async Task Open(string url)
     {
         if (_db is not null) return;
-        _db = new NpgsqlConnection(url);
+        _db = new NpgsqlConnection(ToConnectionString(url));
         await _db.OpenAsync();
         if (!string.IsNullOrEmpty(_schema))
             await Exec($"SET search_path TO {_schema}");
@@ -38,6 +38,20 @@ public sealed class PostgresDriver : IPostgresDriver
 
     public Task Commit() => Exec("COMMIT");
     public Task Rollback() => Exec("ROLLBACK");
+
+    public static string ToConnectionString(string url)
+    {
+        if (!url.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+            && !url.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+            return url;
+        var uri = new Uri(url);
+        var user = uri.UserInfo.Split(':');
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.Trim('/');
+        var password = user.Length > 1 ? Uri.UnescapeDataString(user[1]) : "";
+        var username = user.Length > 0 ? Uri.UnescapeDataString(user[0]) : "";
+        return $"Host={uri.Host};Port={port};Username={username};Password={password};Database={database}";
+    }
 
     NpgsqlConnection RequireDb() => _db ?? throw new DatasourceException("Postgres driver is not open");
 
