@@ -48,6 +48,5 @@ mod tests {
             assert!(field(key).is_some());
         }
         assert!(field("int").is_none());
-        assert!(DefaultTypeConverters::for_provider("postgres").is_empty());
     }
 }

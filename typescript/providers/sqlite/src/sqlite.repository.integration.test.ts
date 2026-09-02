@@ -7,6 +7,7 @@ import {
   loadBetterSqlite3Driver,
   SqliteCommand,
   SqliteConnection,
+  SqliteStatementBuilder,
 } from "./index.ts";
 
 describe("repository specs", () => {
@@ -18,7 +19,7 @@ describe("repository specs", () => {
       });
       await connection.open();
       const command = new SqliteCommand(connection);
-      await runRepositorySpec(file, connection, (sql) => command.execute(sql));
+      await runRepositorySpec(file, connection, (sql) => command.execute(sql), SqliteStatementBuilder);
     });
   }
 });

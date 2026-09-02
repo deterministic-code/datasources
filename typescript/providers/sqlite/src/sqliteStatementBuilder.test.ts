@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DatasourceError, WhereBuilder } from "@datasources/core";
+import { DatasourceError, Join, WhereBuilder } from "@datasources/core";
 import { SqliteStatementBuilder } from "./sqliteStatementBuilder.ts";
 
 const userColumns = [
@@ -45,6 +45,19 @@ describe("SqliteStatementBuilder", () => {
     );
     expect(SqliteStatementBuilder.createDelete("user", where).getText()).toBe(
       'DELETE FROM "user" WHERE id = $id',
+    );
+    expect(
+      SqliteStatementBuilder.createQuery(
+        "users",
+        ["users.id", "orders.total"],
+        WhereBuilder.equals("users.id", 1),
+        [
+          Join.inner("orders", "users.id", "orders.user_id"),
+          Join.left("payments", "orders.id", "payments.order_id"),
+        ],
+      ).getText(),
+    ).toBe(
+      'SELECT "users"."id", "orders"."total" FROM "users" INNER JOIN "orders" ON "users"."id" = "orders"."user_id" LEFT JOIN "payments" ON "orders"."id" = "payments"."order_id" WHERE users.id = $users.id',
     );
   });
 });

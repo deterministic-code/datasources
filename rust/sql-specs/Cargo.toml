@@ -1,0 +1,17 @@
+[package]
+name = "datasources-sql-specs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared SQL repository spec runner"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+datasources = { workspace = true }
+rust_decimal = "1"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+tokio = { workspace = true }
+
+[lints]
+workspace = true

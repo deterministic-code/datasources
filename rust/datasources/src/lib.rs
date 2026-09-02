@@ -43,9 +43,10 @@ mod value;
 mod where_trait;
 
 pub use builders::{
-    Column, CreateTableStatement, DeleteStatement, InsertStatement, Statement, StatementBuilder,
-    StoredProcedureStatement, TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
-    TextStoredProcedureStatement, TextUpdateStatement, UpdateStatement, WhereBuilder,
+    Column, CreateTableStatement, DeleteStatement, InsertStatement, Join, JoinKind, Statement,
+    StatementBuilder, StoredProcedureStatement, TextCreateTableStatement, TextDeleteStatement,
+    TextInsertStatement, TextStoredProcedureStatement, TextUpdateStatement, UpdateStatement,
+    WhereBuilder,
 };
 pub use builders::statement;
 pub use builders::statements;

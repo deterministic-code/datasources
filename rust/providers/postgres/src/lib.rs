@@ -4,6 +4,7 @@ mod connection;
 mod datasource;
 mod driver;
 mod repository;
+mod statement_builder;
 mod tokio_postgres_driver;
 mod transaction;
 
@@ -14,11 +15,14 @@ pub use driver::{
     isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver, PostgresExecuteResult,
 };
 pub use repository::PostgresRepository;
+pub use statement_builder::{PostgresColumn, PostgresStatementBuilder};
 pub use tokio_postgres_driver::TokioPostgresDriver;
 pub use transaction::PostgresTransaction;
 
 #[cfg(test)]
 mod integration;
+#[cfg(test)]
+mod repository_spec;
 
 #[cfg(test)]
 mod tests {

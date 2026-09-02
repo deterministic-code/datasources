@@ -2,8 +2,12 @@ namespace Datasources.Builders;
 
 public static class StatementBuilder
 {
-    public static IQuery CreateQuery(string table, IReadOnlyList<string> fields, IWhere? where = null) =>
-        new Query(WithWhere($"SELECT {SelectList(fields)} FROM {table}", where), where);
+    public static IQuery CreateQuery(
+        string table,
+        IReadOnlyList<string> fields,
+        IWhere? where = null,
+        IReadOnlyList<Join>? joins = null) =>
+        new Query(WithWhere($"SELECT {SelectList(fields)} FROM {table}{JoinSql(joins)}", where), where);
 
     public static IInsertStatement CreateInsert(string table, IReadOnlyList<Parameter> fields) =>
         new InsertStatement($"INSERT INTO {table} ({Names(fields)}) VALUES ({Placeholders(fields)})");
@@ -34,4 +38,17 @@ public static class StatementBuilder
 
     private static string WithWhere(string sql, IWhere? where) =>
         where is null ? sql : $"{sql} WHERE {where.GetText()}";
+
+    private static string JoinSql(IReadOnlyList<Join>? joins) =>
+        joins is null or []
+            ? ""
+            : string.Concat(joins.Select(join => $" {Keyword(join.Kind)} {join.Table} ON {join.LeftColumn} = {join.RightColumn}"));
+
+    private static string Keyword(JoinKind kind) => kind switch
+    {
+        JoinKind.Inner => "INNER JOIN",
+        JoinKind.Left => "LEFT JOIN",
+        JoinKind.Right => "RIGHT JOIN",
+        _ => throw new InvalidOperationException("empty join")
+    };
 }

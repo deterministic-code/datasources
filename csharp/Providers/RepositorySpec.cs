@@ -1,19 +1,25 @@
 using System.Collections;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Datasources;
 using Datasources.Builders;
-using Datasources.Sqlite;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace Datasources.SqlSpecs;
+
+public sealed record SpecColumn(string Name, string Type, bool Id = false);
 
 public static class RepositorySpec
 {
     public static IEnumerable<string> Files() =>
         Directory.GetFiles(Path.Combine(SqlSpec.SpecsDir(), "repositories"), "*.yaml");
 
-    public static async Task Run(string path, Func<Session> open)
+    public static async Task Run(
+        string path,
+        Func<Session> open,
+        Func<string, IReadOnlyList<SpecColumn>, string> createTable,
+        Func<string, string> quote)
     {
         var spec = new DeserializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
@@ -21,23 +27,22 @@ public static class RepositorySpec
             .Deserialize<Spec>(File.ReadAllText(path));
         var session = open();
         await session.Connection.Open();
-        await session.Command.Execute(SqliteStatementBuilder.CreateTable(PhysicalTable(spec.Type), Columns(spec.Type)).GetText());
-        _ = SqliteTypes.All;
+        await session.Command.Execute(createTable(PhysicalTable(spec.Type), Columns(spec.Type)));
         var types = DefaultTypeConverters.For(session.Connection.Provider);
         var fields = FieldsOf(spec.Type, types);
         if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");
         var logs = new List<string>();
         if (spec.Type.Mappings.Count == 0)
-            await Run(spec, session, new RowTypeConverter<SpecUser>(types, fields), logs);
+            await Run(spec, session, new RowTypeConverter<SpecUser>(types, fields), logs, quote);
         else
-            await Run(spec, session, new RowTypeConverter<MappedUser>(types, fields), logs);
+            await Run(spec, session, new RowTypeConverter<MappedUser>(types, fields), logs, quote);
         SqlSpec.AssertConsoleLogs(
             spec.Name,
             Queries(spec),
-            [.. logs.Where(line => line.Contains("[Start]") || line.Contains("[Finish]"))]);
+            [.. logs.Where(line => line.Contains("[Start]") || line.Contains("[Finish]")).Select(Unquote)]);
     }
 
-    static async Task Run<T>(Spec spec, Session session, RowTypeConverter<T> mapping, List<string> logs)
+    static async Task Run<T>(Spec spec, Session session, RowTypeConverter<T> mapping, List<string> logs, Func<string, string> quote)
         where T : new()
     {
         var built = RepositoryBuilder<T>.Parts(new()
@@ -45,7 +50,7 @@ public static class RepositorySpec
             Connection = session.Connection,
             Entity = spec.Type.Table,
             Mapping = mapping,
-            StatementMapper = StatementMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings)),
+            StatementMapper = StatementMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings), quote),
             Ids = spec.Type.Ids,
             AssignIdentityOnAdd = spec.Type.AssignIdentityOnAdd,
             Columns = [.. spec.Type.Fields.Keys],
@@ -184,12 +189,15 @@ public static class RepositorySpec
     static string WithStatementSql(string sql, bool write, TypeSpec type) =>
         $"{sql}{(write ? type.StatementMapper?.WriteSuffix : type.StatementMapper?.QuerySuffix) ?? ""}";
 
-    static StatementMapper<T> StatementMapperOf<T>(TypeSpec type, IMapper<T, T> rows)
+    static string Unquote(string text) =>
+        Regex.Replace(Regex.Replace(text, "`([^`]+)`", "$1"), "\"([^\"]+)\"", "$1");
+
+    static StatementMapper<T> StatementMapperOf<T>(TypeSpec type, IMapper<T, T> rows, Func<string, string> quote)
         where T : new() =>
         new()
         {
             Entity = new TransformMapper<string, string>(
-                name => type.StatementMapper?.Entity ?? name,
+                name => quote(type.StatementMapper?.Entity ?? name),
                 name => name),
             Rows = rows,
             Query = Suffix<IQuery>(
@@ -362,8 +370,8 @@ public static class RepositorySpec
         _ => value
     };
 
-    static SqliteColumn[] Columns(TypeSpec type) =>
-        [.. type.Fields.Select(pair => new SqliteColumn(pair.Key, pair.Value, type.Ids.Contains(pair.Key)))];
+    static SpecColumn[] Columns(TypeSpec type) =>
+        [.. type.Fields.Select(pair => new SpecColumn(pair.Key, pair.Value, type.Ids.Contains(pair.Key)))];
 
     static bool Verbose() =>
         Environment.GetEnvironmentVariable("VERBOSE") is "1" or "true";

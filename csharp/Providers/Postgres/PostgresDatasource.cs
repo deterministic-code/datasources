@@ -2,6 +2,8 @@ namespace Datasources.Postgres;
 
 public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
 {
+    static PostgresDatasource() => _ = PostgresTypes.All;
+
     public static readonly PostgresDatasource Instance = new();
     private readonly PostgresConnectionOptions _options;
     private readonly string? _table;

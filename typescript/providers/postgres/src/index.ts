@@ -26,5 +26,15 @@ export {
   type PostgresRepositoryOptions,
 } from "./repository.ts";
 export { PostgresTransaction } from "./transaction.ts";
+export { PostgresTypes } from "./converters/PostgresTypes.ts";
+export { BoolConverter } from "./converters/BoolConverter.ts";
+export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
+export { UuidConverter } from "./converters/UuidConverter.ts";
+export { DecimalConverter } from "./converters/DecimalConverter.ts";
+export { BinaryConverter } from "./converters/BinaryConverter.ts";
+export {
+  PostgresStatementBuilder,
+  type PostgresColumn,
+} from "./postgresStatementBuilder.ts";
 export type { Cells, Scalar } from "./scalar.ts";
 export { PostgresDatasource as default } from "./datasource.ts";

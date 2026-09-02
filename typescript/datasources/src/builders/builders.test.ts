@@ -3,6 +3,7 @@ import {
   CreateTableStatement,
   DeleteStatement,
   InsertStatement,
+  Join,
   Query,
   StatementBuilder,
   StoredProcedureStatement,
@@ -69,6 +70,30 @@ describe("StatementBuilder", () => {
     expect(StatementBuilder.createQuery("users", []).where).toBeUndefined();
     expect(StatementBuilder.createQuery("users", ["id", "name"]).getText()).toBe(
       "SELECT id, name FROM users",
+    );
+    expect(
+      StatementBuilder.createQuery("users", ["users.id", "orders.total"], undefined, [
+        Join.inner("orders", "users.id", "orders.user_id"),
+      ]).getText(),
+    ).toBe(
+      "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id",
+    );
+    expect(
+      StatementBuilder.createQuery(
+        "users",
+        ["users.id"],
+        WhereBuilder.equals("users.id", 1),
+        [
+          Join.inner("orders", "users.id", "orders.user_id"),
+          Join.left("payments", "orders.id", "payments.order_id"),
+          Join.right("profiles", "users.id", "profiles.user_id"),
+        ],
+      ).getText(),
+    ).toBe(
+      "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
+    );
+    expect(StatementBuilder.createQuery("users", ["id"], undefined, []).getText()).toBe(
+      "SELECT id FROM users",
     );
     expect(StatementBuilder.createInsert("users", [...fields]).getText()).toBe(
       "INSERT INTO users (id, name) VALUES ($id, $name)",

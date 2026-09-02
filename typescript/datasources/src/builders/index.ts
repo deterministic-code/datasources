@@ -1,5 +1,6 @@
 export type { Column } from "./Column.ts";
 export type { Field } from "./Field.ts";
+export type { Join, JoinKind } from "./Join.ts";
 export type { Scalar } from "./Scalar.ts";
 export type { ICreateTableStatement } from "./ICreateTableStatement.ts";
 export type { IDeleteStatement } from "./IDeleteStatement.ts";
@@ -10,6 +11,7 @@ export type { IUpdateStatement } from "./IUpdateStatement.ts";
 export { CreateTableStatement } from "./CreateTableStatement.ts";
 export { DeleteStatement } from "./DeleteStatement.ts";
 export { InsertStatement } from "./InsertStatement.ts";
+export { Join } from "./Join.ts";
 export { StatementBuilder } from "./StatementBuilder.ts";
 export { StoredProcedureStatement } from "./StoredProcedureStatement.ts";
 export { UpdateStatement } from "./UpdateStatement.ts";

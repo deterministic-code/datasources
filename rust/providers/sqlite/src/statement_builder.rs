@@ -1,5 +1,5 @@
 use datasources::{
-    Column, Parameter, Result, StatementBuilder, TextCreateTableStatement, TextDeleteStatement,
+    Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement, TextDeleteStatement,
     TextInsertStatement, TextQuery, TextUpdateStatement, Where,
 };
 
@@ -24,6 +24,10 @@ pub struct SqliteStatementBuilder;
 impl SqliteStatementBuilder {
     pub fn quote(id: &str) -> String {
         format!("\"{}\"", id.replace('"', "\"\""))
+    }
+
+    pub fn quote_qualified(id: &str) -> String {
+        id.split('.').map(Self::quote).collect::<Vec<_>>().join(".")
     }
 
     pub fn column_type(canonical: &str) -> Result<String> {
@@ -68,10 +72,23 @@ impl SqliteStatementBuilder {
         table: &str,
         fields: &[&str],
         where_clause: Option<&dyn Where>,
+        joins: &[Join],
     ) -> TextQuery {
-        let quoted: Vec<String> = fields.iter().map(|field| Self::quote(field)).collect();
+        let quoted: Vec<String> = fields
+            .iter()
+            .map(|field| Self::quote_qualified(field))
+            .collect();
         let refs: Vec<&str> = quoted.iter().map(String::as_str).collect();
-        StatementBuilder::create_query(Self::quote(table), &refs, where_clause)
+        let quoted_joins: Vec<Join> = joins
+            .iter()
+            .map(|join| Join {
+                kind: join.kind,
+                table: Self::quote_qualified(&join.table),
+                left: Self::quote_qualified(&join.left),
+                right: Self::quote_qualified(&join.right),
+            })
+            .collect();
+        StatementBuilder::create_query(Self::quote(table), &refs, where_clause, &quoted_joins)
     }
 
     pub fn create_insert(table: &str, fields: &[Parameter]) -> TextInsertStatement {
@@ -94,7 +111,7 @@ impl SqliteStatementBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{Statement, WhereBuilder};
+    use datasources::{Join, Statement, WhereBuilder};
 
     fn user_columns() -> Vec<SqliteColumn> {
         vec![
@@ -136,7 +153,12 @@ mod tests {
             Parameter::new("username", "alice"),
         ];
         assert_eq!(
-            SqliteStatementBuilder::create_query("user", &["id", "username"], Some(&where_clause))
+            SqliteStatementBuilder::create_query(
+                "user",
+                &["id", "username"],
+                Some(&where_clause),
+                &[],
+            )
                 .get_text(),
             "SELECT \"id\", \"username\" FROM \"user\" WHERE id = $id"
         );
@@ -151,6 +173,19 @@ mod tests {
         assert_eq!(
             SqliteStatementBuilder::create_delete("user", Some(&where_clause)).get_text(),
             "DELETE FROM \"user\" WHERE id = $id"
+        );
+        assert_eq!(
+            SqliteStatementBuilder::create_query(
+                "users",
+                &["users.id", "orders.total"],
+                Some(&WhereBuilder::equals("users.id", 1_i64)),
+                &[
+                    Join::inner("orders", "users.id", "orders.user_id"),
+                    Join::left("payments", "orders.id", "payments.order_id"),
+                ],
+            )
+            .get_text(),
+            "SELECT \"users\".\"id\", \"orders\".\"total\" FROM \"users\" INNER JOIN \"orders\" ON \"users\".\"id\" = \"orders\".\"user_id\" LEFT JOIN \"payments\" ON \"orders\".\"id\" = \"payments\".\"order_id\" WHERE users.id = $users.id"
         );
     }
 }

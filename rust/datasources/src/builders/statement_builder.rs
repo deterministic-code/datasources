@@ -1,4 +1,5 @@
 use super::column::Column;
+use super::join::{Join, JoinKind};
 use crate::parameter::Parameter;
 use super::statements::{
     TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
@@ -15,9 +16,15 @@ impl StatementBuilder {
         table: impl AsRef<str>,
         fields: &[&str],
         where_clause: Option<&dyn Where>,
+        joins: &[Join],
     ) -> TextQuery {
         let sql = with_where(
-            format!("SELECT {} FROM {}", select_list(fields), table.as_ref()),
+            format!(
+                "SELECT {} FROM {}{}",
+                select_list(fields),
+                table.as_ref(),
+                join_sql(joins)
+            ),
             where_clause,
         );
         match where_clause {
@@ -115,5 +122,28 @@ fn with_where(sql: String, where_clause: Option<&dyn Where>) -> String {
     match where_clause {
         Some(predicate) => format!("{sql} WHERE {}", predicate.get_text()),
         None => sql,
+    }
+}
+
+fn join_sql(joins: &[Join]) -> String {
+    joins
+        .iter()
+        .map(|join| {
+            format!(
+                " {} {} ON {} = {}",
+                join_keyword(join.kind),
+                join.table,
+                join.left,
+                join.right
+            )
+        })
+        .collect()
+}
+
+fn join_keyword(kind: JoinKind) -> &'static str {
+    match kind {
+        JoinKind::Inner => "INNER JOIN",
+        JoinKind::Left => "LEFT JOIN",
+        JoinKind::Right => "RIGHT JOIN",
     }
 }

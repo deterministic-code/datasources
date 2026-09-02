@@ -13,6 +13,7 @@ import type { IUpdateStatement } from "./IUpdateStatement.ts";
 import type { IWhere } from "../IWhere.ts";
 import type { Column } from "./Column.ts";
 import type { Field } from "./Field.ts";
+import type { Join, JoinKind } from "./Join.ts";
 
 const names = (fields: Field[]): string =>
   fields.map((field) => field.name).join(", ");
@@ -26,13 +27,28 @@ const withWhere = (sql: string, where?: IWhere): string =>
 const selectList = (fields: string[]): string =>
   fields.length === 0 ? "*" : fields.join(", ");
 
+const joinKeyword: Record<JoinKind, string> = {
+  inner: "INNER JOIN",
+  left: "LEFT JOIN",
+  right: "RIGHT JOIN",
+};
+
+const joinSql = (joins: Join[]): string =>
+  joins
+    .map((join) => ` ${joinKeyword[join.kind]} ${join.table} ON ${join.left} = ${join.right}`)
+    .join("");
+
 export const StatementBuilder = {
   createQuery: (
     table: string,
     fields: string[],
     where?: IWhere,
+    joins: Join[] = [],
   ): IQuery =>
-    new Query(withWhere(`SELECT ${selectList(fields)} FROM ${table}`, where), where),
+    new Query(
+      withWhere(`SELECT ${selectList(fields)} FROM ${table}${joinSql(joins)}`, where),
+      where,
+    ),
   createInsert: (table: string, fields: Field[]): IInsertStatement =>
     new InsertStatement(
       `INSERT INTO ${table} (${names(fields)}) VALUES (${placeholders(fields)})`,

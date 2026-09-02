@@ -12,6 +12,7 @@ import { PostgresConnection } from "./connection.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresRepository } from "./repository.ts";
 import { requireDriver } from "./driver.ts";
+import "./converters/PostgresTypes.ts";
 
 export interface PostgresDatasourceOptions extends PostgresConnectionOptions {
   table?: string;

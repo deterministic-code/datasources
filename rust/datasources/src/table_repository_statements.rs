@@ -34,7 +34,7 @@ impl TableRepositoryStatements {
 
     pub fn query(&self, where_clause: Option<&dyn Where>) -> (String, Vec<Parameter>) {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
-        let built = StatementBuilder::create_query(&self.table, &refs, where_clause);
+        let built = StatementBuilder::create_query(&self.table, &refs, where_clause, &[]);
         let text = StatementMapper::map_sql(&self.mapper.query, built.get_text());
         (
             text,

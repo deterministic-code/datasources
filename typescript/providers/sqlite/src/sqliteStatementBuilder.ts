@@ -3,6 +3,7 @@ import {
   StatementBuilder,
   type Field,
   type IWhere,
+  type Join,
 } from "@datasources/core";
 
 export type SqliteColumn = { name: string; type: string; id?: boolean };
@@ -21,6 +22,9 @@ const affinity: Record<string, string> = {
 export const SqliteStatementBuilder = {
   quote: (id: string): string => `"${id.replaceAll('"', '""')}"`,
 
+  quoteQualified: (id: string): string =>
+    id.split(".").map(SqliteStatementBuilder.quote).join("."),
+
   columnType: (canonical: string): string =>
     affinity[canonical] ??
     (() => {
@@ -38,11 +42,22 @@ export const SqliteStatementBuilder = {
       })),
     ),
 
-  createQuery: (table: string, fields: string[], where?: IWhere) =>
+  createQuery: (
+    table: string,
+    fields: string[],
+    where?: IWhere,
+    joins: Join[] = [],
+  ) =>
     StatementBuilder.createQuery(
       SqliteStatementBuilder.quote(table),
-      fields.map(SqliteStatementBuilder.quote),
+      fields.map(SqliteStatementBuilder.quoteQualified),
       where,
+      joins.map((join) => ({
+        kind: join.kind,
+        table: SqliteStatementBuilder.quoteQualified(join.table),
+        left: SqliteStatementBuilder.quoteQualified(join.left),
+        right: SqliteStatementBuilder.quoteQualified(join.right),
+      })),
     ),
 
   createInsert: (table: string, fields: Field[]) =>
