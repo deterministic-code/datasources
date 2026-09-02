@@ -1000,6 +1000,16 @@ async fn table_repository_statement_mapper() {
         |text: String| format!("{text} LIMIT 1"),
         |text| text,
     )));
+    let returning = |text: String| format!("{text} RETURNING id");
+    mapper.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
+    mapper.update = Some(Arc::new(TransformMapper::new(
+        |text: String| format!("{text} RETURNING id"),
+        |text| text,
+    )));
+    mapper.delete = Some(Arc::new(TransformMapper::new(
+        |text: String| format!("{text} RETURNING id"),
+        |text| text,
+    )));
     let mut options = TableRepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
@@ -1014,39 +1024,22 @@ async fn table_repository_statement_mapper() {
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT full_name, user_id FROM people LIMIT 1"
     );
-    repo.add(&record(&[("id", Value::Int(1)), ("name", Value::from("a"))]))
-        .await
-        .unwrap();
+    let row = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
+    repo.add(&row).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO people (id, name) VALUES ($id, $name)"
+        "INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id"
     );
-
-    let suffix = |text: String| format!("{text} RETURNING id");
-    let mut rewrite = StatementMapper::identity("memory", "rust");
-    rewrite.insert = Some(Arc::new(TransformMapper::new(suffix, |text| text)));
-    rewrite.update = Some(Arc::new(TransformMapper::new(
-        |text: String| format!("{text} RETURNING id"),
-        |text| text,
-    )));
-    rewrite.delete = Some(Arc::new(TransformMapper::new(
-        |text: String| format!("{text} RETURNING id"),
-        |text| text,
-    )));
-    let statements = TableRepositoryStatements::with_mapper(
-        "users",
-        vec!["id".into(), "name".into()],
-        Arc::new(rewrite),
+    repo.update(&row, None).await.unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[1].0,
+        "UPDATE people SET name = $name WHERE id = $id RETURNING id"
     );
-    assert!(statements
-        .insert(&[Parameter::new("id", 1_i64)])
-        .ends_with("RETURNING id"));
-    assert!(statements
-        .update(&[Parameter::new("name", "a")], &WhereBuilder::equals("id", 1_i64))
-        .ends_with("RETURNING id"));
-    assert!(statements
-        .delete(&WhereBuilder::equals("id", 1_i64))
-        .ends_with("RETURNING id"));
+    repo.delete(&row, None).await.unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[2].0,
+        "DELETE FROM people WHERE id = $id RETURNING id"
+    );
 }
 
 struct UserRow;

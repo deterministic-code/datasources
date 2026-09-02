@@ -13,6 +13,12 @@ export type CanonicalType =
 
 export type RepositoryMappings = Record<string, Record<string, string>>;
 
+export type StatementMapperSpec = {
+  entity?: string;
+  querySuffix?: string;
+  writeSuffix?: string;
+};
+
 export type RepositoryTypeSpec = {
   name: string;
   table: string;
@@ -21,6 +27,7 @@ export type RepositoryTypeSpec = {
   fields: Record<string, CanonicalType>;
   converters?: Record<string, CanonicalType>;
   mappings?: RepositoryMappings;
+  statementMapper?: StatementMapperSpec;
 };
 
 export type RepositoryRow = { [key: string]: Scalar | RepositoryRow };
@@ -78,43 +85,83 @@ const whereOf = (row: RepositoryRow) =>
 const idWhere = (spec: RepositoryTypeSpec, id: Scalar) =>
   WhereBuilder.and(...spec.ids.map((col) => WhereBuilder.equals(col, id)));
 
+export const physicalTableOf = (type: RepositoryTypeSpec): string =>
+  type.statementMapper?.entity ?? type.table;
+
+const withStatementSql = (sql: string, write: boolean, type: RepositoryTypeSpec): string =>
+  `${sql}${
+    write
+      ? (type.statementMapper?.writeSuffix ?? "")
+      : (type.statementMapper?.querySuffix ?? "")
+  }`;
+
 export const repositoryQueries = (spec: RepositorySpec): string[] => {
   const { type } = spec;
   const ids = idsOf(type);
   const columns = columnsOf(type);
-  const table = type.table;
+  const table = physicalTableOf(type);
   return spec.steps.map((step) => {
     if (step.CREATE) {
       const fields = fieldsOf(
         flattenRepositoryRow(step.CREATE.row, type.mappings),
         (col) => !type.assignIdentityOnAdd || !ids.has(col),
       );
-      return StatementBuilder.createInsert(table, fields).getText();
+      return withStatementSql(StatementBuilder.createInsert(table, fields).getText(), true, type);
     }
-    if (step.GET) return StatementBuilder.createQuery(table, columns, idWhere(type, step.GET.id)).getText();
+    if (step.GET)
+      return withStatementSql(
+        StatementBuilder.createQuery(table, columns, idWhere(type, step.GET.id)).getText(),
+        false,
+        type,
+      );
     if (step.QUERY)
-      return StatementBuilder.createQuery(
-        table,
-        columns,
-        step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
-      ).getText();
+      return withStatementSql(
+        StatementBuilder.createQuery(
+          table,
+          columns,
+          step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
+        ).getText(),
+        false,
+        type,
+      );
     if (step.GETBY)
-      return StatementBuilder.createQuery(table, columns, whereOf(step.GETBY.where)).getText();
+      return withStatementSql(
+        StatementBuilder.createQuery(table, columns, whereOf(step.GETBY.where)).getText(),
+        false,
+        type,
+      );
     if (step.UPDATE) {
       const flat = flattenRepositoryRow(step.UPDATE.row, type.mappings);
       const fields = fieldsOf(flat, (col) => !ids.has(col));
-      return StatementBuilder.createUpdate(table, fields, idWhere(type, flat.id as Scalar)).getText();
+      return withStatementSql(
+        StatementBuilder.createUpdate(table, fields, idWhere(type, flat.id as Scalar)).getText(),
+        true,
+        type,
+      );
     }
     if (step.UPDATEBY) {
       const fields = fieldsOf(
         flattenRepositoryRow(step.UPDATEBY.row, type.mappings),
         (col) => !ids.has(col),
       );
-      return StatementBuilder.createUpdate(table, fields, whereOf(step.UPDATEBY.where)).getText();
+      return withStatementSql(
+        StatementBuilder.createUpdate(table, fields, whereOf(step.UPDATEBY.where)).getText(),
+        true,
+        type,
+      );
     }
     if (step.DELETE)
-      return StatementBuilder.createDelete(table, idWhere(type, step.DELETE.id)).getText();
-    if (step.DELETEBY) return StatementBuilder.createDelete(table, whereOf(step.DELETEBY.where)).getText();
+      return withStatementSql(
+        StatementBuilder.createDelete(table, idWhere(type, step.DELETE.id)).getText(),
+        true,
+        type,
+      );
+    if (step.DELETEBY)
+      return withStatementSql(
+        StatementBuilder.createDelete(table, whereOf(step.DELETEBY.where)).getText(),
+        true,
+        type,
+      );
     throw new Error(`${spec.name}: empty step`);
   });
 };

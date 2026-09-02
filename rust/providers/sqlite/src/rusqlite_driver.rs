@@ -120,7 +120,14 @@ impl SqliteDriver for RusqliteDriver {
             .ok_or_else(|| DatasourceError::message("SQLite driver is not open"))?;
         let pairs = bind_pairs(params);
         let bound = as_params(&pairs);
-        let rows_affected = conn.execute(sql, bound.as_slice()).map_err(map_err)? as i64;
+        let mut statement = conn.prepare(sql).map_err(map_err)?;
+        let rows_affected = if statement.column_count() > 0 {
+            let mut rows = statement.query(bound.as_slice()).map_err(map_err)?;
+            while rows.next().map_err(map_err)?.is_some() {}
+            conn.changes() as i64
+        } else {
+            statement.execute(bound.as_slice()).map_err(map_err)? as i64
+        };
         Ok(SqliteExecuteResult {
             rows_affected,
             result: Value::Int(conn.last_insert_rowid()),

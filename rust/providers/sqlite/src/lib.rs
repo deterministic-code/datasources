@@ -40,6 +40,14 @@ mod tests {
         conn.open().await.unwrap();
         let command = SqliteCommand::new(conn.clone());
         command.execute("", None).await.unwrap();
+        command
+            .execute("CREATE TABLE t (id INTEGER)", None)
+            .await
+            .unwrap();
+        command
+            .execute("INSERT INTO t (id) VALUES (1) RETURNING id", None)
+            .await
+            .unwrap();
         command.execute_reader("SELECT 1", None).await.unwrap();
         command.execute_reader("", None).await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
