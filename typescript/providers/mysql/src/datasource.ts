@@ -7,10 +7,10 @@ import type {
   IReadonlyRepository,
   IRepository,
 } from "@datasources/core";
+import { Repository, RowTypeConverter } from "@datasources/core";
 import type { MysqlConnectionOptions } from "./connection-options.ts";
 import { MysqlConnection } from "./connection.ts";
 import { MysqlCommand } from "./command.ts";
-import { MysqlRepository } from "./repository.ts";
 import { requireDriver } from "./driver.ts";
 import "./converters/MysqlTypes.ts";
 
@@ -50,10 +50,12 @@ export class MysqlDatasource implements IDatasource, DatasourceFactory {
     );
 
   createRepository = <T>(connection?: IConnection): IRepository<T> =>
-    new MysqlRepository<T>(
-      (connection as MysqlConnection | undefined) ?? this.defaultConnection(),
-      { table: this.options.table },
-    );
+    new Repository({
+      connection:
+        (connection as MysqlConnection | undefined) ?? this.defaultConnection(),
+      entity: this.options.table ?? "items",
+      mapping: new RowTypeConverter(),
+    }) as IRepository<T>;
 
   createReadonlyRepository = <T>(
     connection?: IConnection,

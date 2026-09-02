@@ -3,7 +3,6 @@ mod command;
 mod connection;
 mod datasource;
 mod driver;
-mod repository;
 mod statement_builder;
 mod tokio_postgres_driver;
 mod transaction;
@@ -14,7 +13,6 @@ pub use datasource::PostgresDatasource;
 pub use driver::{
     isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver, PostgresExecuteResult,
 };
-pub use repository::PostgresRepository;
 pub use statement_builder::{PostgresColumn, PostgresStatementBuilder};
 pub use tokio_postgres_driver::TokioPostgresDriver;
 pub use transaction::PostgresTransaction;
@@ -123,7 +121,6 @@ mod tests {
         command.execute("", None).await.unwrap();
         command.execute_reader("SELECT 1", None).await.unwrap();
         command.execute_reader("", None).await.unwrap();
-        assert_eq!(PostgresRepository::new(conn.clone(), None).table, "items");
         let txn = conn.start_transaction(None).await.unwrap();
         txn.commit().await.unwrap();
         conn.start_transaction(Some(IsolationLevel::ReadUncommitted))

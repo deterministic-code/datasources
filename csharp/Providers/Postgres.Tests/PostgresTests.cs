@@ -40,10 +40,6 @@ public class PostgresTests
         await command.ExecuteReader("SELECT 1");
         await command.ExecuteReader("");
 
-        var repo = new PostgresRepository(conn);
-        Assert.Equal("items", repo.Table);
-        Assert.Equal("users", new PostgresRepository(conn, "users").Table);
-
         var txn = await conn.StartTransaction();
         Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
         await txn.Commit();
@@ -71,7 +67,7 @@ public class PostgresTests
         await implicitCommand.Execute("");
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
-        Assert.Equal("people", ((PostgresRepository)(object)repo2).Table);
+        Assert.IsType<Repository<Dictionary<string, Value>>>(repo2);
         Assert.Throws<DatasourceException>(() =>
             new PostgresDatasource().CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("postgres", Datasource.Create("postgres").Provider);

@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceError, IsolationLevel } from "@datasources/core";
+import { Datasource, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
 import {
   bindParameters,
   loadMysql2Driver,
@@ -18,7 +18,6 @@ import {
   MysqlCommand,
   MysqlConnection,
   MysqlDatasource,
-  MysqlRepository,
   requireDriver,
   toMysql,
   type IMysqlClient,
@@ -179,7 +178,7 @@ describe("MysqlConnection", () => {
   });
 });
 
-describe("MysqlCommand and MysqlRepository", () => {
+describe("MysqlCommand", () => {
   async function setup() {
     const { driver, client } = fakeDriver();
     const connection = new MysqlConnection({ driver });
@@ -188,7 +187,6 @@ describe("MysqlCommand and MysqlRepository", () => {
       client,
       connection,
       command: new MysqlCommand(connection),
-      repo: new MysqlRepository<{ id?: number; name?: string }>(connection),
     };
   }
 
@@ -203,19 +201,6 @@ describe("MysqlCommand and MysqlRepository", () => {
     expect(reader.current).toEqual({ id: 1 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
-  });
-
-  it("holds connection and table as a placeholder", async () => {
-    const { repo, connection } = await setup();
-    expect(repo).toBeInstanceOf(MysqlRepository);
-    expect(repo.table).toBe("items");
-    const named = new MysqlRepository(connection, { table: "users" });
-    expect(named.table).toBe("users");
-    await expect(repo.getSingle()).rejects.toThrow("mysql");
-    await expect(repo.get().next()).rejects.toThrow("mysql");
-    await expect(repo.add({})).rejects.toThrow("mysql");
-    await expect(repo.update({})).rejects.toThrow("mysql");
-    await expect(repo.delete({})).rejects.toThrow("mysql");
   });
 });
 
@@ -242,12 +227,9 @@ describe("MysqlDatasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(MysqlRepository);
-    expect((repo as MysqlRepository<never>).table).toBe("people");
-    expect(
-      (new MysqlDatasource({ driver }).createRepository() as MysqlRepository<never>)
-        .table,
-    ).toBe("items");
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
+    expect(repo).toBeInstanceOf(Repository);
+    expect(new MysqlDatasource({ driver }).createRepository()).toBeInstanceOf(Repository);
     expect(Datasource.create("mysql", { driver }).provider).toBe("mysql");
   });
 });

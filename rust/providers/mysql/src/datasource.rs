@@ -1,9 +1,12 @@
 use crate::command::MysqlCommand;
 use crate::connection::MysqlConnection;
 use crate::driver::{require_driver, MysqlDriver};
-use crate::repository::MysqlRepository;
 use async_trait::async_trait;
-use datasources::{Command, Connection, Datasource, DatasourceFactory, Repository, Result};
+use datasources::converters::RowTypeConverter;
+use datasources::{
+    Command, Connection, Datasource, DatasourceFactory, Repository, Result, TableRepository,
+    TableRepositoryBuilderOptions,
+};
 use std::sync::Arc;
 
 pub struct MysqlDatasource {
@@ -53,7 +56,10 @@ impl Datasource for MysqlDatasource {
     }
 
     fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
-        Arc::new(MysqlRepository::new(self.connection(), self.table.clone()))
+        let mut options = TableRepositoryBuilderOptions::with_factory(self.connection());
+        options.entity = self.table.clone().unwrap_or_else(|| "items".into());
+        options.mapping = Some(RowTypeConverter::new(vec![]));
+        Arc::new(TableRepository::new(options).expect("repository"))
     }
 }
 

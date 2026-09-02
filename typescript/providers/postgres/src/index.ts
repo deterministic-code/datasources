@@ -21,10 +21,6 @@ export type {
   PgQueryResult,
   PostgresExecuteResult,
 } from "./i-postgres-driver.ts";
-export {
-  PostgresRepository,
-  type PostgresRepositoryOptions,
-} from "./repository.ts";
 export { PostgresTransaction } from "./transaction.ts";
 export { PostgresTypes } from "./converters/PostgresTypes.ts";
 export { BoolConverter } from "./converters/BoolConverter.ts";
