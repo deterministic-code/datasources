@@ -43,3 +43,24 @@ Holds source/destination labels. Column names pass through as-is.
 | constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
 | `Map` | `map` | `map` |
 | `ReverseMap` | `reverse_map` | `reverseMap` |
+
+## StatementMapper
+
+Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.
+
+Apply in either or both places:
+
+1. **Builder** — `RepositoryBuilder` maps `Entity` and `Columns` into `RepositoryStatements`.
+2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` mappers rewrite the finished statement.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `StatementMapper<T>` | `StatementMapper` | `StatementMapper<T>` |
+| `Entity` | `entity` | `entity` |
+| `Columns` | `columns` | `columns` |
+| `Query` | `query` | `query` |
+| `Insert` | `insert` | `insert` |
+| `Update` | `update` | `update` |
+| `Delete` | `delete` | `delete` |
+| `Rows` | `rows` | `rows` |
+| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |

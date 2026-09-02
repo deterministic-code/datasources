@@ -1,6 +1,6 @@
 use crate::connection::Connection;
 use crate::converters::{RowTypeConverter, TypeConverter};
-use crate::mappers::TransformMapper;
+use crate::mappers::{StatementMapper, TransformMapper};
 use crate::row::Row;
 use crate::value::Value;
 use std::collections::HashMap;
@@ -13,6 +13,7 @@ pub struct TableRepositoryBuilderOptions {
     pub entity: String,
     pub mapping: Option<RowTypeConverter>,
     pub mapper: Option<TransformMapper<Row, Row>>,
+    pub statement_mapper: Option<StatementMapper>,
     pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
@@ -26,6 +27,7 @@ impl TableRepositoryBuilderOptions {
             entity: "items".into(),
             mapping: None,
             mapper: None,
+            statement_mapper: None,
             types: HashMap::new(),
             fields: HashMap::new(),
         }

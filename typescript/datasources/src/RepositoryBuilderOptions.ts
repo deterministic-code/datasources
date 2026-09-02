@@ -3,6 +3,7 @@ import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
+import type { StatementMapper } from "./mappers/StatementMapper.ts";
 
 export type RepositoryBuilderOptions<T = Cells> = {
   connection: IConnection;
@@ -11,6 +12,7 @@ export type RepositoryBuilderOptions<T = Cells> = {
   entity?: string;
   mapping?: TypeConverter<T, Cells>;
   mapper?: IMapper<T, T>;
+  statementMapper?: StatementMapper<T>;
   type?: Constructable<T>;
   converters?: Record<string, TypeConverter<Cell, Cell>>;
   fields?: Record<string, TypeConverter<Cell, Cell>>;

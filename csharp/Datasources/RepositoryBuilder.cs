@@ -12,16 +12,29 @@ public static class RepositoryBuilder<T> where T : new()
         if (rowConverter is RowTypeConverter<T> row && row.Types.Count == 0)
             foreach (var (key, converter) in types)
                 row.Types[key] = converter;
-        var mapping = new NameSourceDestinationMapper(options.Connection.Provider, "csharp");
-        var entity = options.Entity ?? typeof(T).Name;
+        var names = new NameSourceDestinationMapper(options.Connection.Provider, "csharp");
+        var statementMapper = options.StatementMapper ?? new StatementMapper<T>
+        {
+            Entity = names,
+            Columns = names,
+            Rows = options.Mapper ?? new TransformMapper<T, T>(static value => value, static value => value)
+        };
+        var entity = statementMapper.Entity.Map(options.Entity ?? typeof(T).Name);
+        var columns = (options.Columns is { Count: > 0 } listed ? listed : Columns())
+            .Select(statementMapper.Columns.Map)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
         return new(
             options.Connection,
             rowConverter,
-            options.Mapper ?? new TransformMapper<T, T>(static value => value, static value => value),
-            mapping,
-            new RepositoryStatements(entity, options.Columns is { Count: > 0 } columns
-                ? [.. columns.OrderBy(name => name, StringComparer.Ordinal)]
-                : Columns()),
+            statementMapper,
+            new RepositoryStatements(
+                entity,
+                columns,
+                statementMapper.Query,
+                statementMapper.Insert,
+                statementMapper.Update,
+                statementMapper.Delete),
             options.Ids,
             options.AssignIdentityOnAdd);
     }

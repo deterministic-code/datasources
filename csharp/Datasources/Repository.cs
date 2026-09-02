@@ -7,7 +7,8 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     readonly IConnection connection;
     readonly List<ICommandMiddleware> middlewares = [];
     readonly TypeConverter<T, Row> rowConverter;
-    public IMapper<T, T> Mapper { get; }
+    public StatementMapper<T> StatementsMapper { get; }
+    public IMapper<T, T> Mapper => StatementsMapper.Rows;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
     readonly bool assignIdentityOnAdd;
@@ -22,7 +23,7 @@ public sealed class Repository<T> : IRepository<T> where T : new()
     {
         connection = built.Connection;
         rowConverter = built.RowConverter;
-        Mapper = built.Mapper;
+        StatementsMapper = built.StatementMapper;
         statements = built.Statements;
         ids = new(built.Ids);
         assignIdentityOnAdd = built.AssignIdentityOnAdd;

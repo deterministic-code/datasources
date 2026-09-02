@@ -3,6 +3,7 @@ import {
   Repository,
   StatementBuilder,
   RowTypeConverter,
+  StatementMapper,
   TransformMapper,
   Where,
   WhereBuilder,
@@ -13,6 +14,7 @@ import {
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
+import { Query } from "./Query.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
@@ -274,5 +276,33 @@ describe("Repository", () => {
     expect(RepositoryBuilder.from(fromId).parts().connection).toBe(connection);
     expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
     expect(parts({ connection }).statements.query().getText()).toBe("SELECT * FROM ");
+  });
+
+  it("builder maps entity and columns; statement mapper rewrites query", async () => {
+    const names = new TransformMapper<string, string>(
+      (name) =>
+        ({ users: "people", id: "user_id", name: "full_name" }[name] ?? name),
+      (name) => name,
+    );
+    const { repo, command } = create({
+      assignIdentityOnAdd: false,
+      statementMapper: new StatementMapper({
+        entity: names,
+        columns: names,
+        query: new TransformMapper(
+          (query) => new Query(`${query.getText()} LIMIT 1`, query.where),
+          (query) => query,
+        ),
+      }),
+    });
+    command.reader = new MockReader([]);
+    await repo.getSingle();
+    expect(command.executeReaderCalls[0]?.text).toBe(
+      "SELECT full_name, user_id FROM people LIMIT 1",
+    );
+    await repo.add({ id: 1, name: "a" });
+    expect(command.executeCalls[0]?.text).toBe(
+      "INSERT INTO people (id, name) VALUES ($id, $name)",
+    );
   });
 });

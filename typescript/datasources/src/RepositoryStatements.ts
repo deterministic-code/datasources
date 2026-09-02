@@ -5,6 +5,8 @@ import type { IUpdateStatement } from "./builders/IUpdateStatement.ts";
 import type { IWhere } from "./IWhere.ts";
 import { StatementBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
+import type { IMapper } from "./mappers/IMapper.ts";
+import type { StatementMapper } from "./mappers/StatementMapper.ts";
 
 export type RepositoryStatements = {
   query: (where?: IWhere) => IQuery;
@@ -13,9 +15,17 @@ export type RepositoryStatements = {
   delete: (where?: IWhere) => IDeleteStatement;
 };
 
-export const statementsOf = (table: string, columns: string[]): RepositoryStatements => ({
-  query: (where) => StatementBuilder.createQuery(table, columns, where),
-  insert: (fields) => StatementBuilder.createInsert(table, fields),
-  update: (fields, where) => StatementBuilder.createUpdate(table, fields, where),
-  delete: (where) => StatementBuilder.createDelete(table, where),
+const mapped = <T>(built: T, mapper?: IMapper<T, T>): T =>
+  mapper?.map(built) ?? built;
+
+export const statementsOf = <T>(
+  table: string,
+  columns: string[],
+  mapper?: StatementMapper<T>,
+): RepositoryStatements => ({
+  query: (where) => mapped(StatementBuilder.createQuery(table, columns, where), mapper?.query),
+  insert: (fields) => mapped(StatementBuilder.createInsert(table, fields), mapper?.insert),
+  update: (fields, where) =>
+    mapped(StatementBuilder.createUpdate(table, fields, where), mapper?.update),
+  delete: (where) => mapped(StatementBuilder.createDelete(table, where), mapper?.delete),
 });

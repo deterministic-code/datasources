@@ -4,7 +4,7 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::converters::{ConvertSchema, RowTypeConverter};
-use crate::mappers::{IMapper, TransformMapper};
+use crate::mappers::{IMapper, StatementMapper};
 use crate::datasource_error::DatasourceError;
 use crate::parameter::Parameter;
 use crate::query::Query;
@@ -25,7 +25,7 @@ pub struct TableRepository {
     connection: Arc<dyn Connection>,
     middlewares: Vec<Arc<dyn CommandMiddleware>>,
     row_converter: RowTypeConverter,
-    mapper: TransformMapper<Row, Row>,
+    statement_mapper: Arc<StatementMapper>,
     statements: TableRepositoryStatements,
     id: Vec<String>,
     ids: HashSet<String>,
@@ -47,7 +47,7 @@ impl TableRepository {
         Self::from_parts(
             built.connection,
             built.row_converter,
-            built.mapper,
+            built.statement_mapper,
             built.statements,
             built.ids,
             built.assign_identity_on_add,
@@ -57,7 +57,7 @@ impl TableRepository {
     pub fn from_parts(
         connection: Arc<dyn Connection>,
         row_converter: RowTypeConverter,
-        mapper: TransformMapper<Row, Row>,
+        statement_mapper: Arc<StatementMapper>,
         statements: TableRepositoryStatements,
         ids: Vec<String>,
         assign_identity_on_add: bool,
@@ -66,7 +66,7 @@ impl TableRepository {
             connection,
             middlewares: Vec::new(),
             row_converter,
-            mapper,
+            statement_mapper,
             statements,
             ids: ids.iter().cloned().collect(),
             id: ids,
@@ -138,7 +138,7 @@ impl TableRepository {
             .map(|row| {
                 self.row_converter
                     .convert(&row)
-                    .map(|converted| IMapper::map(&self.mapper, converted))
+                    .map(|converted| IMapper::map(&self.statement_mapper.rows, converted))
             })
             .transpose()
     }
@@ -152,7 +152,7 @@ impl TableRepository {
         while reader.next().await? {
             if let Some(row) = reader.current() {
                 items.push(IMapper::map(
-                    &self.mapper,
+                    &self.statement_mapper.rows,
                     self.row_converter.convert(&row)?,
                 ));
             }
@@ -162,7 +162,7 @@ impl TableRepository {
 
     fn reverse_convert(&self, item: &Row) -> Result<Row> {
         self.row_converter
-            .reverse_convert(&IMapper::reverse_map(&self.mapper, item.clone()))
+            .reverse_convert(&IMapper::reverse_map(&self.statement_mapper.rows, item.clone()))
     }
 }
 

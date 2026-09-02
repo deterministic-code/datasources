@@ -467,6 +467,7 @@ async fn run(path: &Path) {
         entity: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec)),
         mapper: Some(mappings_mapper(&spec.type_spec.mappings)),
+        statement_mapper: None,
         types: Default::default(),
         fields: Default::default(),
     };

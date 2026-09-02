@@ -17,6 +17,7 @@ import type { BuiltRepository } from "./BuiltRepository.ts";
 import { parts } from "./RepositoryBuilder.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
+import type { StatementMapper } from "./mappers/StatementMapper.ts";
 import type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
@@ -28,11 +29,12 @@ const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
 const isBuilt = <T>(
   value: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
 ): value is BuiltRepository<T> =>
-  "statements" in value && "rowConverter" in value && "mapping" in value;
+  "statements" in value && "rowConverter" in value && "statementMapper" in value;
 
 export class Repository<T = Cells> implements IRepository<T> {
   private readonly connection: IConnection;
   readonly rowConverter: TypeConverter<T, Cells>;
+  readonly statementsMapper: StatementMapper<T>;
   readonly mapper: IMapper<T, T>;
   readonly statements: RepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
@@ -55,7 +57,8 @@ export class Repository<T = Cells> implements IRepository<T> {
         );
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
-    this.mapper = built.mapper;
+    this.statementsMapper = built.statementMapper;
+    this.mapper = built.statementMapper.rows;
     this.statements = built.statements;
     this.ids = new Set(built.ids);
     this.assignIdentityOnAdd = built.assignIdentityOnAdd;
