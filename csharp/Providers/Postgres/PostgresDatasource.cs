@@ -1,3 +1,5 @@
+using Datasources;
+
 namespace Datasources.Postgres;
 
 public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
@@ -34,5 +36,11 @@ public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
         new PostgresCommand(connection as PostgresConnection ?? DefaultConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new PostgresRepository(connection as PostgresConnection ?? DefaultConnection(), _table);
+        (IRepository<T>)(object)new Repository<Dictionary<string, Value>>(
+            new RepositoryBuilderOptions<Dictionary<string, Value>>
+            {
+                Connection = connection as PostgresConnection ?? DefaultConnection(),
+                Entity = _table ?? "items",
+                Mapping = new RowTypeConverter<Dictionary<string, Value>>(),
+            });
 }

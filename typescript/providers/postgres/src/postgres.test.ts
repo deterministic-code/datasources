@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceError, IsolationLevel } from "@datasources/core";
+import { Datasource, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
 import {
   bindParameters,
   loadPgDriver,
@@ -19,7 +19,6 @@ import {
   PostgresCommand,
   PostgresConnection,
   PostgresDatasource,
-  PostgresRepository,
   requireDriver,
   toPostgres,
   withReturning,
@@ -198,7 +197,7 @@ describe("PostgresConnection", () => {
   });
 });
 
-describe("PostgresCommand and PostgresRepository", () => {
+describe("PostgresCommand", () => {
   async function setup() {
     const { driver } = fakeDriver();
     const connection = new PostgresConnection({ driver });
@@ -206,7 +205,6 @@ describe("PostgresCommand and PostgresRepository", () => {
     return {
       connection,
       command: new PostgresCommand(connection),
-      repo: new PostgresRepository<{ id?: number }>(connection),
     };
   }
 
@@ -220,20 +218,6 @@ describe("PostgresCommand and PostgresRepository", () => {
     expect(reader.current).toEqual({ id: 5 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
-  });
-
-  it("holds connection and table as a placeholder", async () => {
-    const { repo, connection } = await setup();
-    expect(repo).toBeInstanceOf(PostgresRepository);
-    expect(repo.table).toBe("items");
-    expect(new PostgresRepository(connection, { table: "users" }).table).toBe(
-      "users",
-    );
-    await expect(repo.getSingle()).rejects.toThrow("postgres");
-    await expect(repo.get().next()).rejects.toThrow("postgres");
-    await expect(repo.add({})).rejects.toThrow("postgres");
-    await expect(repo.update({})).rejects.toThrow("postgres");
-    await expect(repo.delete({})).rejects.toThrow("postgres");
   });
 });
 
@@ -260,12 +244,9 @@ describe("PostgresDatasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(PostgresRepository);
-    expect((repo as PostgresRepository<never>).table).toBe("people");
-    expect(
-      (new PostgresDatasource({ driver }).createRepository() as PostgresRepository<never>)
-        .table,
-    ).toBe("items");
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
+    expect(repo).toBeInstanceOf(Repository);
+    expect(new PostgresDatasource({ driver }).createRepository()).toBeInstanceOf(Repository);
     expect(Datasource.create("postgres", { driver }).provider).toBe("postgres");
   });
 });

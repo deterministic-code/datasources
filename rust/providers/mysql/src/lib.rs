@@ -4,7 +4,6 @@ mod connection;
 mod datasource;
 mod driver;
 mod mysql_async_driver;
-mod repository;
 mod statement_builder;
 mod transaction;
 
@@ -13,7 +12,6 @@ pub use connection::MysqlConnection;
 pub use datasource::MysqlDatasource;
 pub use driver::{isolation_sql, require_driver, to_mysql, MysqlDriver, MysqlExecuteResult};
 pub use mysql_async_driver::MysqlAsyncDriver;
-pub use repository::MysqlRepository;
 pub use statement_builder::{MysqlColumn, MysqlStatementBuilder};
 pub use transaction::MysqlTransaction;
 
@@ -113,12 +111,6 @@ mod tests {
         command.execute("", None).await.unwrap();
         command.execute_reader("SELECT 1", None).await.unwrap();
         command.execute_reader("", None).await.unwrap();
-        let repo = MysqlRepository::new(conn.clone(), None);
-        assert_eq!(repo.table, "items");
-        assert_eq!(
-            MysqlRepository::new(conn.clone(), Some("users".into())).table,
-            "users"
-        );
         let txn = conn.start_transaction(None).await.unwrap();
         assert_eq!(
             datasources::Transaction::isolation(&*txn),

@@ -21,10 +21,6 @@ export type {
   MysqlExecuteResult,
   MysqlQueryHeader,
 } from "./i-mysql-driver.ts";
-export {
-  MysqlRepository,
-  type MysqlRepositoryOptions,
-} from "./repository.ts";
 export { MysqlTransaction } from "./transaction.ts";
 export { MysqlTypes } from "./converters/MysqlTypes.ts";
 export { BoolConverter } from "./converters/BoolConverter.ts";

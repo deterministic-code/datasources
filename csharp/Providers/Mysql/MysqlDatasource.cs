@@ -1,3 +1,5 @@
+using Datasources;
+
 namespace Datasources.Mysql;
 
 public sealed class MysqlDatasource : IDatasource, IDatasourceFactory
@@ -33,5 +35,11 @@ public sealed class MysqlDatasource : IDatasource, IDatasourceFactory
         new MysqlCommand(connection as MysqlConnection ?? DefaultConnection());
 
     public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new MysqlRepository(connection as MysqlConnection ?? DefaultConnection(), _table);
+        (IRepository<T>)(object)new Repository<Dictionary<string, Value>>(
+            new RepositoryBuilderOptions<Dictionary<string, Value>>
+            {
+                Connection = connection as MysqlConnection ?? DefaultConnection(),
+                Entity = _table ?? "items",
+                Mapping = new RowTypeConverter<Dictionary<string, Value>>(),
+            });
 }
