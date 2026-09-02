@@ -1,10 +1,11 @@
 use crate::built_repository::BuiltRepository;
 use crate::converters::{Cells, DefaultTypeConverters, RowTypeConverter};
-use crate::mappers::{NameSourceDestinationMapper, TransformMapper};
+use crate::mappers::{IMapper, StatementMapper, TransformMapper};
 use crate::result::Result;
 use crate::table_repository::TableRepository;
 use crate::table_repository_builder_options::TableRepositoryBuilderOptions;
 use crate::table_repository_statements::TableRepositoryStatements;
+use std::sync::Arc;
 
 pub struct TableRepositoryBuilder;
 
@@ -19,18 +20,28 @@ impl TableRepositoryBuilder {
         ))
         .with_types(options.types)
         .with_fields(options.fields);
-        let mut columns = row_converter.column_names().to_vec();
+        let statement_mapper = match (options.statement_mapper, options.mapper) {
+            (Some(mapper), _) => mapper,
+            (None, rows) => {
+                let mut mapper =
+                    StatementMapper::identity(options.connection.provider(), "rust");
+                mapper.rows = rows.unwrap_or_else(|| TransformMapper::new(|row| row, |row| row));
+                mapper
+            }
+        };
+        let mut columns: Vec<String> = row_converter
+            .column_names()
+            .iter()
+            .map(|name| IMapper::map(&statement_mapper.columns, name.clone()))
+            .collect();
         columns.sort();
-        let mapping = NameSourceDestinationMapper::new(options.connection.provider(), "rust");
-        let mapper = options
-            .mapper
-            .unwrap_or_else(|| TransformMapper::new(|row| row, |row| row));
+        let entity = IMapper::map(&statement_mapper.entity, options.entity);
+        let statement_mapper = Arc::new(statement_mapper);
         Ok(BuiltRepository {
             connection: options.connection,
             row_converter,
-            mapper,
-            mapping,
-            statements: TableRepositoryStatements::new(options.entity, columns),
+            statement_mapper: statement_mapper.clone(),
+            statements: TableRepositoryStatements::with_mapper(entity, columns, statement_mapper),
             ids: options.ids,
             assign_identity_on_add: options.assign_identity_on_add,
         })

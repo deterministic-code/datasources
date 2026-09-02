@@ -975,6 +975,80 @@ async fn table_repository_maps_flat_row_into_contacts() {
     );
 }
 
+#[tokio::test]
+async fn table_repository_statement_mapper() {
+    let command = Arc::new(MockCommand::new());
+    let names = TransformMapper::new(
+        |name: String| match name.as_str() {
+            "users" => "people".into(),
+            "id" => "user_id".into(),
+            "name" => "full_name".into(),
+            _ => name,
+        },
+        |name| name,
+    );
+    let mut mapper = StatementMapper::identity("memory", "rust");
+    mapper.entity = TransformMapper::new(
+        |name: String| match name.as_str() {
+            "users" => "people".into(),
+            _ => name,
+        },
+        |name| name,
+    );
+    mapper.columns = names;
+    mapper.query = Some(Arc::new(TransformMapper::new(
+        |text: String| format!("{text} LIMIT 1"),
+        |text| text,
+    )));
+    let mut options = TableRepositoryBuilderOptions::with_factory(
+        MockConnection::with_command_provider(command.clone(), "memory"),
+    );
+    options.entity = "users".into();
+    options.assign_identity_on_add = false;
+    options.mapping = Some(users_mapping());
+    options.statement_mapper = Some(mapper);
+    let repo = TableRepository::new(options).unwrap();
+    command.reader_rows.lock().unwrap().clear();
+    assert!(repo.get_single(None).await.unwrap().is_none());
+    assert_eq!(
+        command.reader_logs.lock().unwrap()[0].0,
+        "SELECT full_name, user_id FROM people LIMIT 1"
+    );
+    repo.add(&record(&[("id", Value::Int(1)), ("name", Value::from("a"))]))
+        .await
+        .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO people (id, name) VALUES ($id, $name)"
+    );
+
+    let suffix = |text: String| format!("{text} RETURNING id");
+    let mut rewrite = StatementMapper::identity("memory", "rust");
+    rewrite.insert = Some(Arc::new(TransformMapper::new(suffix, |text| text)));
+    rewrite.update = Some(Arc::new(TransformMapper::new(
+        |text: String| format!("{text} RETURNING id"),
+        |text| text,
+    )));
+    rewrite.delete = Some(Arc::new(TransformMapper::new(
+        |text: String| format!("{text} RETURNING id"),
+        |text| text,
+    )));
+    let statements = TableRepositoryStatements::with_mapper(
+        "users",
+        vec!["id".into(), "name".into()],
+        Arc::new(rewrite),
+    );
+    assert!(statements
+        .insert(&[Parameter::new("id", 1_i64)])
+        .ends_with("RETURNING id"));
+    assert!(statements
+        .update(&[Parameter::new("name", "a")], &WhereBuilder::equals("id", 1_i64))
+        .ends_with("RETURNING id"));
+    assert!(statements
+        .delete(&WhereBuilder::equals("id", 1_i64))
+        .ends_with("RETURNING id"));
+}
+
 struct UserRow;
 
 impl ConvertSchema for UserRow {

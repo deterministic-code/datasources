@@ -4,6 +4,7 @@ import type { Constructable } from "./converters/Constructable.ts";
 import { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
+import { StatementMapper } from "./mappers/StatementMapper.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
 import { createRepositoryBuilderOptions, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
@@ -24,19 +25,23 @@ export const parts = <T>(
     options.mapping ?? new RowTypeConverter<T>(types, options.fields);
   if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
     Object.assign(rowConverter.types, types);
-  const mapping = new NameSourceDestinationMapper(options.connection.provider, "typescript");
-  const entity = options.entity ?? options.type?.name ?? "";
+  const names = new NameSourceDestinationMapper(options.connection.provider, "typescript");
+  const statementMapper =
+    options.statementMapper ??
+    new StatementMapper({
+      entity: names,
+      columns: names,
+      rows: options.mapper ?? new TransformMapper<T, T>((value) => value, (value) => value),
+    });
+  const entity = statementMapper.entity.map(options.entity ?? options.type?.name ?? "");
+  const columns = [...(options.columns ?? (options.type ? fieldNamesOf(options.type) : []))]
+    .map((name) => statementMapper.columns.map(name))
+    .sort((left, right) => left.localeCompare(right));
   return {
     connection: options.connection,
     rowConverter,
-    mapper: options.mapper ?? new TransformMapper<T, T>((value) => value, (value) => value),
-    mapping,
-    statements: statementsOf(
-      entity,
-      [...(options.columns ?? (options.type ? fieldNamesOf(options.type) : []))].sort(
-        (left, right) => left.localeCompare(right),
-      ),
-    ),
+    statementMapper,
+    statements: statementsOf(entity, columns, statementMapper),
     ids: options.ids ?? ["id"],
     assignIdentityOnAdd: options.assignIdentityOnAdd !== false,
   };

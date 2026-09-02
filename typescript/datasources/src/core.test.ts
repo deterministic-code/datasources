@@ -527,6 +527,10 @@ describe("published mocks", () => {
     await expect(reader.next()).rejects.toThrow("next");
   });
 
+  it("creates a command when none is assigned", () => {
+    expect(new MockConnection().createCommand()).toBeInstanceOf(MockCommand);
+  });
+
   it("records repository CRUD and errors", async () => {
     const repo = new MockRepository<{ id: number }>(new MockConnection());
     expect(await repo.getSingle()).toBeUndefined();

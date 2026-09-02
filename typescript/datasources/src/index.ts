@@ -54,6 +54,7 @@ export type { IMapper } from "./mappers/IMapper.ts";
 export type { ISourceDestinationMapper } from "./mappers/ISourceDestinationMapper.ts";
 export { NameMapper } from "./mappers/NameMapper.ts";
 export { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
+export { StatementMapper, type StatementMapperOptions } from "./mappers/StatementMapper.ts";
 export { TransformMapper } from "./mappers/TransformMapper.ts";
 export { TransformConverterMapper } from "./mappers/TransformConverterMapper.ts";
 export { RowTypeMapper } from "./mappers/RowTypeMapper.ts";
