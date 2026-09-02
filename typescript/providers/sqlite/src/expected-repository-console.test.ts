@@ -57,6 +57,31 @@ describe("expected repository console", () => {
     ]);
   });
 
+  it("expands statement-mapper-crud into remapped StatementBuilder SQL", () => {
+    const mapped = parse(
+      readFileSync(join(repoRoot(), "specs", "repositories", "statement-mapper-crud.yaml"), "utf8"),
+    ) as RepositorySpec;
+    const select =
+      "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM people";
+    const insert =
+      "INSERT INTO people (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version) RETURNING id";
+    expect(repositoryQueries(mapped)).toEqual([
+      insert,
+      insert,
+      `${select} WHERE id = $id LIMIT 1`,
+      `${select} WHERE username = $username LIMIT 1`,
+      `${select} WHERE username = $username LIMIT 1`,
+      "UPDATE people SET balance = $balance, created = $created, is_enabled = $is_enabled, location = $location, username = $username, uuid = $uuid, version = $version WHERE id = $id RETURNING id",
+      `${select} WHERE id = $id LIMIT 1`,
+      "UPDATE people SET balance = $balance, created = $created, is_enabled = $is_enabled, location = $location, username = $username, uuid = $uuid, version = $version WHERE uuid = $uuid RETURNING id",
+      `${select} WHERE uuid = $uuid LIMIT 1`,
+      "DELETE FROM people WHERE id = $id RETURNING id",
+      `${select} WHERE id = $id LIMIT 1`,
+      "DELETE FROM people WHERE username = $username RETURNING id",
+      `${select} WHERE id = $id LIMIT 1`,
+    ]);
+  });
+
   it("pairs Start and Finish signatures", () => {
     const signatures = expectedRepositoryConsoleSignatures(spec);
     expect(signatures).toHaveLength(30);

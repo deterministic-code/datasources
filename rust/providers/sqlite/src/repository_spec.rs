@@ -9,7 +9,8 @@ use datasources::converters::RowTypeConverter;
 use datasources::{
     Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, DefaultTypeConverters,
     Parameter, ReadonlyRepository, Repository, Row, Statement, StatementBuilder, TableRepository,
-    TableRepositoryBuilder, TableRepositoryBuilderOptions, TransformMapper, Value, WhereBuilder,
+    StatementMapper, TableRepositoryBuilder, TableRepositoryBuilderOptions, TransformMapper, Value,
+    WhereBuilder,
 };
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -37,6 +38,17 @@ struct TypeSpec {
     converters: BTreeMap<String, String>,
     #[serde(default)]
     mappings: BTreeMap<String, BTreeMap<String, String>>,
+    #[serde(default, rename = "statementMapper")]
+    statement_mapper: Option<StatementMapperSpec>,
+}
+
+#[derive(Deserialize, Default)]
+struct StatementMapperSpec {
+    entity: Option<String>,
+    #[serde(default, rename = "querySuffix")]
+    query_suffix: Option<String>,
+    #[serde(default, rename = "writeSuffix")]
+    write_suffix: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -362,55 +374,147 @@ fn columns_of(type_spec: &TypeSpec) -> Vec<String> {
     columns
 }
 
+fn physical_table(type_spec: &TypeSpec) -> String {
+    type_spec
+        .statement_mapper
+        .as_ref()
+        .and_then(|mapper| mapper.entity.clone())
+        .unwrap_or_else(|| type_spec.table.clone())
+}
+
+fn with_statement_sql(sql: String, write: bool, type_spec: &TypeSpec) -> String {
+    let Some(mapper) = &type_spec.statement_mapper else {
+        return sql;
+    };
+    let suffix = if write {
+        mapper.write_suffix.as_deref()
+    } else {
+        mapper.query_suffix.as_deref()
+    };
+    match suffix {
+        Some(suffix) => format!("{sql}{suffix}"),
+        None => sql,
+    }
+}
+
+fn statement_mapper_of(spec: &Spec) -> StatementMapper {
+    let mut mapper = StatementMapper::identity("sqlite", "rust");
+    mapper.rows = mappings_mapper(&spec.type_spec.mappings);
+    let Some(cfg) = &spec.type_spec.statement_mapper else {
+        return mapper;
+    };
+    if let Some(entity) = &cfg.entity {
+        let dest = entity.clone();
+        mapper.entity = TransformMapper::new(move |_| dest.clone(), |name| name);
+    }
+    if let Some(suffix) = &cfg.query_suffix {
+        let suffix = suffix.clone();
+        mapper.query = Some(Arc::new(TransformMapper::new(
+            move |text| format!("{text}{suffix}"),
+            |text| text,
+        )));
+    }
+    if let Some(suffix) = &cfg.write_suffix {
+        let insert = suffix.clone();
+        mapper.insert = Some(Arc::new(TransformMapper::new(
+            move |text| format!("{text}{insert}"),
+            |text| text,
+        )));
+        let update = suffix.clone();
+        mapper.update = Some(Arc::new(TransformMapper::new(
+            move |text| format!("{text}{update}"),
+            |text| text,
+        )));
+        let delete = suffix.clone();
+        mapper.delete = Some(Arc::new(TransformMapper::new(
+            move |text| format!("{text}{delete}"),
+            |text| text,
+        )));
+    }
+    mapper
+}
+
 fn queries(spec: &Spec) -> Vec<String> {
     let columns = columns_of(&spec.type_spec);
     let refs: Vec<&str> = columns.iter().map(String::as_str).collect();
     let ids: HashSet<&str> = spec.type_spec.ids.iter().map(String::as_str).collect();
-    let table = &spec.type_spec.table;
+    let table = physical_table(&spec.type_spec);
     spec.steps
         .iter()
         .map(|step| {
             if let Some(create) = &step.create {
-                StatementBuilder::create_insert(
-                    table,
-                    &fields_of(
-                        &flatten_yaml(&create.row, &spec.type_spec.mappings),
-                        |col| !spec.type_spec.assign_identity_on_add || !ids.contains(col),
-                    ),
+                with_statement_sql(
+                    StatementBuilder::create_insert(
+                        &table,
+                        &fields_of(
+                            &flatten_yaml(&create.row, &spec.type_spec.mappings),
+                            |col| !spec.type_spec.assign_identity_on_add || !ids.contains(col),
+                        ),
+                    )
+                    .get_text(),
+                    true,
+                    &spec.type_spec,
                 )
-                .get_text()
             } else if let Some(get) = &step.get {
                 let where_clause = WhereBuilder::equals("id", yaml_value(&get.id));
-                StatementBuilder::create_query(table, &refs, Some(&where_clause)).get_text()
+                with_statement_sql(
+                    StatementBuilder::create_query(&table, &refs, Some(&where_clause)).get_text(),
+                    false,
+                    &spec.type_spec,
+                )
             } else if let Some(query) = &step.query {
                 let where_clause = query.where_clause.as_ref().map(where_sql);
-                StatementBuilder::create_query(
-                    table,
-                    &refs,
-                    where_clause.as_ref().map(|w| w as &dyn datasources::Where),
+                with_statement_sql(
+                    StatementBuilder::create_query(
+                        &table,
+                        &refs,
+                        where_clause.as_ref().map(|w| w as &dyn datasources::Where),
+                    )
+                    .get_text(),
+                    false,
+                    &spec.type_spec,
                 )
-                .get_text()
             } else if let Some(get_by) = &step.get_by {
                 let where_clause = where_sql(&get_by.where_clause);
-                StatementBuilder::create_query(table, &refs, Some(&where_clause)).get_text()
+                with_statement_sql(
+                    StatementBuilder::create_query(&table, &refs, Some(&where_clause)).get_text(),
+                    false,
+                    &spec.type_spec,
+                )
             } else if let Some(update) = &step.update {
                 let flat = flatten_yaml(&update.row, &spec.type_spec.mappings);
                 let fields = fields_of(&flat, |col| !ids.contains(col));
                 let where_clause = WhereBuilder::equals("id", yaml_value(&flat["id"]));
-                StatementBuilder::create_update(table, &fields, Some(&where_clause)).get_text()
+                with_statement_sql(
+                    StatementBuilder::create_update(&table, &fields, Some(&where_clause)).get_text(),
+                    true,
+                    &spec.type_spec,
+                )
             } else if let Some(update_by) = &step.update_by {
                 let fields = fields_of(
                     &flatten_yaml(&update_by.row, &spec.type_spec.mappings),
                     |col| !ids.contains(col),
                 );
                 let where_clause = where_sql(&update_by.where_clause);
-                StatementBuilder::create_update(table, &fields, Some(&where_clause)).get_text()
+                with_statement_sql(
+                    StatementBuilder::create_update(&table, &fields, Some(&where_clause)).get_text(),
+                    true,
+                    &spec.type_spec,
+                )
             } else if let Some(delete) = &step.delete {
                 let where_clause = WhereBuilder::equals("id", yaml_value(&delete.id));
-                StatementBuilder::create_delete(table, Some(&where_clause)).get_text()
+                with_statement_sql(
+                    StatementBuilder::create_delete(&table, Some(&where_clause)).get_text(),
+                    true,
+                    &spec.type_spec,
+                )
             } else if let Some(delete_by) = &step.delete_by {
                 let where_clause = where_sql(&delete_by.where_clause);
-                StatementBuilder::create_delete(table, Some(&where_clause)).get_text()
+                with_statement_sql(
+                    StatementBuilder::create_delete(&table, Some(&where_clause)).get_text(),
+                    true,
+                    &spec.type_spec,
+                )
             } else {
                 panic!("{}: empty step", spec.name);
             }
@@ -452,7 +556,7 @@ async fn run(path: &Path) {
         .collect();
     setup
         .execute(
-            &SqliteStatementBuilder::create_table(&spec.type_spec.table, &columns)
+            &SqliteStatementBuilder::create_table(&physical_table(&spec.type_spec), &columns)
                 .unwrap()
                 .get_text(),
             None,
@@ -466,8 +570,8 @@ async fn run(path: &Path) {
         assign_identity_on_add: spec.type_spec.assign_identity_on_add,
         entity: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec)),
-        mapper: Some(mappings_mapper(&spec.type_spec.mappings)),
-        statement_mapper: None,
+        mapper: None,
+        statement_mapper: Some(statement_mapper_of(&spec)),
         types: Default::default(),
         fields: Default::default(),
     };

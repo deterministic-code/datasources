@@ -21,7 +21,7 @@ public static class RepositorySpec
             .Deserialize<Spec>(File.ReadAllText(path));
         var session = open();
         await session.Connection.Open();
-        await session.Command.Execute(SqliteStatementBuilder.CreateTable(spec.Type.Table, Columns(spec.Type)).GetText());
+        await session.Command.Execute(SqliteStatementBuilder.CreateTable(PhysicalTable(spec.Type), Columns(spec.Type)).GetText());
         _ = SqliteTypes.All;
         var types = DefaultTypeConverters.For(session.Connection.Provider);
         var fields = FieldsOf(spec.Type, types);
@@ -45,7 +45,7 @@ public static class RepositorySpec
             Connection = session.Connection,
             Entity = spec.Type.Table,
             Mapping = mapping,
-            Mapper = MappingsMapper<T>(spec.Type.Mappings),
+            StatementMapper = StatementMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings)),
             Ids = spec.Type.Ids,
             AssignIdentityOnAdd = spec.Type.AssignIdentityOnAdd,
             Columns = [.. spec.Type.Fields.Keys],
@@ -178,21 +178,56 @@ public static class RepositorySpec
         _ => throw new InvalidOperationException("expect must be a row")
     };
 
+    static string PhysicalTable(TypeSpec type) =>
+        type.StatementMapper?.Entity ?? type.Table;
+
+    static string WithStatementSql(string sql, bool write, TypeSpec type) =>
+        $"{sql}{(write ? type.StatementMapper?.WriteSuffix : type.StatementMapper?.QuerySuffix) ?? ""}";
+
+    static StatementMapper<T> StatementMapperOf<T>(TypeSpec type, IMapper<T, T> rows)
+        where T : new() =>
+        new()
+        {
+            Entity = new TransformMapper<string, string>(
+                name => type.StatementMapper?.Entity ?? name,
+                name => name),
+            Rows = rows,
+            Query = Suffix<IQuery>(
+                (text, query) => new Query(text, query.Where),
+                type.StatementMapper?.QuerySuffix),
+            Insert = Suffix<IInsertStatement>(
+                (text, _) => new InsertStatement(text),
+                type.StatementMapper?.WriteSuffix),
+            Update = Suffix<IUpdateStatement>(
+                (text, update) => new UpdateStatement(text, update.Where),
+                type.StatementMapper?.WriteSuffix),
+            Delete = Suffix<IDeleteStatement>(
+                (text, delete) => new DeleteStatement(text, delete.Where),
+                type.StatementMapper?.WriteSuffix)
+        };
+
+    static IMapper<T, T>? Suffix<T>(Func<string, T, T> rewrite, string? suffix)
+        where T : IStatement =>
+        suffix is null
+            ? null
+            : new TransformMapper<T, T>(built => rewrite($"{built.GetText()}{suffix}", built), built => built);
+
     static IEnumerable<string> Queries(Spec spec)
     {
         var columns = spec.Type.Fields.Keys.OrderBy(key => key).ToArray();
         var ids = spec.Type.Ids.ToHashSet();
+        var table = PhysicalTable(spec.Type);
         foreach (var step in spec.Steps)
             yield return step switch
             {
-                { Create: { } create } => StatementBuilder.CreateInsert(spec.Type.Table, Fields(Flatten(create.Row, spec.Type), col => !spec.Type.AssignIdentityOnAdd || !ids.Contains(col))).GetText(),
-                { Get: { } get } => StatementBuilder.CreateQuery(spec.Type.Table, columns, WhereBuilder.Equals("id", Value.From(get.Id))).GetText(),
-                { Query: { } query } => StatementBuilder.CreateQuery(spec.Type.Table, columns, query.Where is { } where ? SqlWhere(where) : null).GetText(),
-                { GetBy: { } getBy } => StatementBuilder.CreateQuery(spec.Type.Table, columns, SqlWhere(getBy.Where)).GetText(),
-                { Update: { } update } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), WhereBuilder.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"]))).GetText(),
-                { UpdateBy: { } updateBy } => StatementBuilder.CreateUpdate(spec.Type.Table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(),
-                { Delete: { } delete } => StatementBuilder.CreateDelete(spec.Type.Table, WhereBuilder.Equals("id", Value.From(delete.Id))).GetText(),
-                { DeleteBy: { } deleteBy } => StatementBuilder.CreateDelete(spec.Type.Table, SqlWhere(deleteBy.Where)).GetText(),
+                { Create: { } create } => WithStatementSql(StatementBuilder.CreateInsert(table, Fields(Flatten(create.Row, spec.Type), col => !spec.Type.AssignIdentityOnAdd || !ids.Contains(col))).GetText(), true, spec.Type),
+                { Get: { } get } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, WhereBuilder.Equals("id", Value.From(get.Id))).GetText(), false, spec.Type),
+                { Query: { } query } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, query.Where is { } where ? SqlWhere(where) : null).GetText(), false, spec.Type),
+                { GetBy: { } getBy } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, SqlWhere(getBy.Where)).GetText(), false, spec.Type),
+                { Update: { } update } => WithStatementSql(StatementBuilder.CreateUpdate(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), WhereBuilder.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"]))).GetText(), true, spec.Type),
+                { UpdateBy: { } updateBy } => WithStatementSql(StatementBuilder.CreateUpdate(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(), true, spec.Type),
+                { Delete: { } delete } => WithStatementSql(StatementBuilder.CreateDelete(table, WhereBuilder.Equals("id", Value.From(delete.Id))).GetText(), true, spec.Type),
+                { DeleteBy: { } deleteBy } => WithStatementSql(StatementBuilder.CreateDelete(table, SqlWhere(deleteBy.Where)).GetText(), true, spec.Type),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
     }
@@ -380,6 +415,14 @@ public static class RepositorySpec
         [YamlMember(Alias = "fields")] public Dictionary<string, string> Fields { get; set; } = [];
         [YamlMember(Alias = "converters")] public Dictionary<string, string> Converters { get; set; } = [];
         [YamlMember(Alias = "mappings")] public Dictionary<string, Dictionary<string, string>> Mappings { get; set; } = [];
+        [YamlMember(Alias = "statementMapper")] public StatementMapperSpec? StatementMapper { get; set; }
+    }
+
+    sealed class StatementMapperSpec
+    {
+        [YamlMember(Alias = "entity")] public string? Entity { get; set; }
+        [YamlMember(Alias = "querySuffix")] public string? QuerySuffix { get; set; }
+        [YamlMember(Alias = "writeSuffix")] public string? WriteSuffix { get; set; }
     }
 
     sealed class Step

@@ -90,11 +90,27 @@ public class StatementMapperTests
             Columns = names,
             Query = new TransformMapper<IQuery, IQuery>(
                 query => new Query($"{query.GetText()} LIMIT 1", query.Where),
-                query => query)
+                query => query),
+            Insert = new TransformMapper<IInsertStatement, IInsertStatement>(
+                insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
+                insert => insert),
+            Update = new TransformMapper<IUpdateStatement, IUpdateStatement>(
+                update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
+                update => update),
+            Delete = new TransformMapper<IDeleteStatement, IDeleteStatement>(
+                delete => new DeleteStatement($"{delete.GetText()} RETURNING id", delete.Where),
+                delete => delete)
         });
         command.Reader = new MockReader<Row>([]);
         await repo.GetSingle();
         Assert.Equal("SELECT full_name, user_id FROM people LIMIT 1", command.ExecuteReaderCalls[0].Text);
+        var row = new UserRow { id = 1, name = "a" };
+        await repo.Add(row);
+        Assert.Equal("INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id", command.ExecuteCalls[0].Text);
+        await repo.Update(row);
+        Assert.Equal("UPDATE people SET name = $name WHERE id = $id RETURNING id", command.ExecuteCalls[1].Text);
+        await repo.Delete(row);
+        Assert.Equal("DELETE FROM people WHERE id = $id RETURNING id", command.ExecuteCalls[2].Text);
     }
 
     [Fact]

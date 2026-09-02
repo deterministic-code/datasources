@@ -4,9 +4,14 @@ import { parse } from "yaml";
 import {
   ConsoleCommandMiddleware,
   DefaultTypeConverters,
+  DeleteStatement,
+  InsertStatement,
+  Query,
   Repository,
   RowTypeConverter,
+  StatementMapper,
   TransformMapper,
+  UpdateStatement,
   WhereBuilder,
   type Cell,
   type Cells,
@@ -17,12 +22,14 @@ import {
 } from "@datasources/core";
 import {
   expectedRepositoryConsoleSignatures,
+  physicalTableOf,
   type AffectedExpect,
   type CanonicalType,
   type RepositoryMappings,
   type RepositoryRow,
   type RepositorySpec,
   type RepositoryTypeSpec,
+  type StatementMapperSpec,
 } from "../specs/expected-repository-console.ts";
 import { consoleSignature } from "../specs/expected-console-output.ts";
 import { repoRoot, specVerbose } from "./sql-spec-runner.ts";
@@ -130,6 +137,29 @@ const fieldsOf = (
     }),
   );
 
+const suffix = <T extends { getText: () => string }>(
+  rewrite: (text: string, value: T) => T,
+  value: string | undefined,
+) =>
+  value
+    ? new TransformMapper<T, T>((built) => rewrite(`${built.getText()}${value}`, built), (built) => built)
+    : undefined;
+
+const statementMapperOf = (type: RepositoryTypeSpec, rows: TransformMapper<SpecRow, SpecRow>) => {
+  const mapper: StatementMapperSpec = type.statementMapper ?? {};
+  return new StatementMapper<SpecRow>({
+    entity: new TransformMapper(
+      (name) => mapper.entity ?? name,
+      (name) => name,
+    ),
+    rows,
+    query: suffix((text, query) => new Query(text, query.where), mapper.querySuffix),
+    insert: suffix((text) => new InsertStatement(text), mapper.writeSuffix),
+    update: suffix((text, update) => new UpdateStatement(text, update.where), mapper.writeSuffix),
+    delete: suffix((text, remove) => new DeleteStatement(text, remove.where), mapper.writeSuffix),
+  });
+};
+
 const mappingsMapper = (mappings: RepositoryMappings = {}) =>
   new TransformMapper<SpecRow, SpecRow>(
     (row) => {
@@ -200,7 +230,7 @@ export const runRepositorySpec = async (
 ): Promise<void> => {
   const spec = parse(readFileSync(path, "utf8")) as RepositorySpec;
   if (specVerbose()) console.log(`\n--- ${spec.name} (${connection.provider}) ---`);
-  await execute(SqliteStatementBuilder.createTable(spec.type.table, columnsOf(spec.type)).getText());
+  await execute(SqliteStatementBuilder.createTable(physicalTableOf(spec.type), columnsOf(spec.type)).getText());
   const catalog = DefaultTypeConverters.for(connection.provider);
   const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
   const repo = new Repository<SpecRow>({
@@ -210,7 +240,7 @@ export const runRepositorySpec = async (
     type: typeOf(spec.type),
     entity: spec.type.table,
     mapping,
-    mapper: mappingsMapper(spec.type.mappings),
+    statementMapper: statementMapperOf(spec.type, mappingsMapper(spec.type.mappings)),
     columns: Object.keys(spec.type.fields),
   });
   const logs: string[] = [];

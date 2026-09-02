@@ -10,6 +10,9 @@ import {
   RepositoryBuilder,
   createRepositoryBuilderOptions,
   parts,
+  InsertStatement,
+  UpdateStatement,
+  DeleteStatement,
 } from "./index.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
@@ -293,6 +296,20 @@ describe("Repository", () => {
           (query) => new Query(`${query.getText()} LIMIT 1`, query.where),
           (query) => query,
         ),
+        insert: new TransformMapper(
+          (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
+          (insert) => insert,
+        ),
+        update: new TransformMapper(
+          (update) =>
+            new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
+          (update) => update,
+        ),
+        delete: new TransformMapper(
+          (remove) =>
+            new DeleteStatement(`${remove.getText()} RETURNING id`, remove.where),
+          (remove) => remove,
+        ),
       }),
     });
     command.reader = new MockReader([]);
@@ -300,9 +317,18 @@ describe("Repository", () => {
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT full_name, user_id FROM people LIMIT 1",
     );
-    await repo.add({ id: 1, name: "a" });
+    const row = { id: 1, name: "a" };
+    await repo.add(row);
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO people (id, name) VALUES ($id, $name)",
+      "INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id",
+    );
+    await repo.update(row);
+    expect(command.executeCalls[1]?.text).toBe(
+      "UPDATE people SET name = $name WHERE id = $id RETURNING id",
+    );
+    await repo.delete(row);
+    expect(command.executeCalls[2]?.text).toBe(
+      "DELETE FROM people WHERE id = $id RETURNING id",
     );
   });
 });
