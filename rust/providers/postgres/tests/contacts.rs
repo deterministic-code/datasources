@@ -45,7 +45,7 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, r#"'\x'"#));
     apply_sql(&command, &sql).await.unwrap();
 
-    let (eager, enriched) = contacts_parity(conn, verbose()).await.unwrap();
+    let (eager, enriched) = contacts_parity(conn.clone(), verbose()).await.unwrap();
     expect_contacts_view(&eager, SEED_CONTACT_COUNT);
     expect_contacts_view(&enriched, SEED_CONTACT_COUNT);
     let mapped = eager.iter().find(|contact| contact.id == 10).unwrap();

@@ -37,7 +37,7 @@ export class Repository<T = Cells> implements IRepository<T> {
   readonly statementsMapper: StatementMapper<T>;
   readonly mapper: IMapper<T, T>;
   readonly statements: RepositoryStatements;
-  private readonly columns: string[];
+  private readonly writeColumns: string[];
   private readonly middlewares: ICommandMiddleware[] = [];
   private readonly ids: Set<string>;
   private readonly assignIdentityOnAdd: boolean;
@@ -61,7 +61,7 @@ export class Repository<T = Cells> implements IRepository<T> {
     this.statementsMapper = built.statementMapper;
     this.mapper = built.statementMapper.rows;
     this.statements = built.statements;
-    this.columns = built.columns;
+    this.writeColumns = built.writeColumns;
     this.ids = new Set(built.ids);
     this.assignIdentityOnAdd = built.assignIdentityOnAdd;
   }
@@ -128,7 +128,7 @@ export class Repository<T = Cells> implements IRepository<T> {
     );
 
   private inTable = (col: string): boolean =>
-    this.columns.length === 0 || this.columns.includes(col);
+    this.writeColumns.length === 0 || this.writeColumns.includes(col);
 
   private reverseConvert = (item: T): Cells =>
     this.rowConverter.reverseConvert(this.mapper.reverseMap(item));

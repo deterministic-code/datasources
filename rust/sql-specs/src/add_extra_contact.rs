@@ -1,5 +1,6 @@
 use datasources::{
-    encode_rows, DeepCRUDRepository, DatasourceError, Repository, Result, Row, Value, WhereBuilder,
+    encode_rows, DeepCRUDRepository, DatasourceError, ReadonlyRepository, Repository, Result, Row,
+    Value, WhereBuilder,
 };
 
 fn record(pairs: &[(&str, Value)]) -> Row {

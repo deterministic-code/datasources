@@ -5,8 +5,8 @@ import { Contact } from "./Contact.ts";
 import type { ContactsService } from "./ContactsService.ts";
 import { Phone } from "./Phone.ts";
 
-const stamp = new Date("2024-01-01T00:00:00Z");
-const version = new Uint8Array();
+const stamp = "2024-01-01T00:00:00Z";
+const version = Buffer.alloc(0);
 
 const base = <T extends object>(type: { new (): T }, extra: Partial<T>): T =>
   Object.assign(new type(), {

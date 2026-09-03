@@ -12,6 +12,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
     readonly bool assignIdentityOnAdd;
+    readonly HashSet<string> writeColumns;
 
     public Repository(IConnection connection) :
         this(CreateRepositoryBuilderOptions.FromType<T>(connection)) { }
@@ -27,6 +28,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
         statements = built.Statements;
         ids = new(built.Ids);
         assignIdentityOnAdd = built.AssignIdentityOnAdd;
+        writeColumns = [.. built.WriteColumns];
     }
 
     public Repository<T> Use(ICommandMiddleware middleware)
@@ -91,7 +93,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
     bool InTable(string col) =>
-        statements.Columns.Count == 0 || statements.Columns.Contains(col);
+        writeColumns.Count == 0 || writeColumns.Contains(col);
 
     Row ReverseConvert(T item) => rowConverter.ReverseConvert(Mapper.ReverseMap(item));
 }

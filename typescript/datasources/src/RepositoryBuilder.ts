@@ -34,7 +34,8 @@ export const parts = <T>(
       rows: options.mapper ?? new TransformMapper<T, T>((value) => value, (value) => value),
     });
   const entity = statementMapper.entity.map(options.entity ?? options.type?.name ?? "");
-  const columns = [...(options.columns ?? (options.type ? fieldNamesOf(options.type) : []))]
+  const listed = [...(options.columns ?? (options.type ? fieldNamesOf(options.type) : []))];
+  const columns = listed
     .map((name) => statementMapper.columns.map(name))
     .sort((left, right) => left.localeCompare(right));
   return {
@@ -43,6 +44,7 @@ export const parts = <T>(
     statementMapper,
     statements: statementsOf(entity, columns, statementMapper),
     columns,
+    writeColumns: listed,
     ids: options.ids ?? ["id"],
     assignIdentityOnAdd: options.assignIdentityOnAdd !== false,
   };
