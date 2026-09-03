@@ -2,17 +2,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
-import {
-  collectAsync,
-  ConsoleCommandMiddleware,
-  FlatToTypeMapper,
-  Repository,
-  type Cells,
-} from "@datasources/core";
-import { contactsJoinQuery } from "../../../datasources/src/tests/contact/contactsJoinQuery.ts";
-import { contactsView } from "../../../datasources/src/tests/contact/contactsView.ts";
-import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
+import { asContactsView } from "../../../datasources/src/tests/contact/asContactsView.ts";
+import { contactsParity } from "../../../datasources/src/tests/contact/contactsParity.ts";
 import { expectContactsView } from "../../../datasources/src/tests/contact/expectContactsView.ts";
+import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
 import { specVerbose } from "../../../sql-spec-runner.ts";
@@ -59,7 +52,7 @@ const isolate = async (base: string) => {
 };
 
 describe("contacts readonly repository", () => {
-  it("joins contacts and collapses grouped addresses and phones", async () => {
+  it("matches enriched ContactsService to FlatToTypeMapper on the same seed", async () => {
     const isolated = await isolate(url);
     try {
       const connection = new PostgresConnection({
@@ -72,21 +65,16 @@ describe("contacts readonly repository", () => {
       for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql(seedContactCount, "'\\x'")])
         await command.execute(sql);
 
-      const repo = new Repository<Cells>({ connection, entity: "contacts_base" });
-      repo.use(
-        new ConsoleCommandMiddleware(undefined, undefined, {
-          isVerbose: specVerbose() ? "true" : "false",
-        }),
-      );
-      const mapper = new FlatToTypeMapper(contactsView);
-      const contacts = mapper.collapse(await collectAsync(repo.get(contactsJoinQuery())));
-      const mapped = contacts.find((contact) => contact.id === 10);
+      const { eager, enriched } = await contactsParity(connection, specVerbose());
+      const mapped = eager.find((contact) => contact.id === 10);
       if (specVerbose() && mapped) logMapped(mapped);
 
-      expectContactsView(contacts, seedContactCount);
+      expectContactsView(eager, seedContactCount);
+      expectContactsView(enriched, seedContactCount);
       expect(mapped?.contact_source_name).toBeTruthy();
       expect(mapped?.contact_type_name).toBeTruthy();
       expect(new Set(mapped?.addresses.map((address) => address.id)).size).toBe(2);
+      expect(asContactsView(enriched)).toEqual(asContactsView(eager));
     } finally {
       await isolated.cleanup();
     }
