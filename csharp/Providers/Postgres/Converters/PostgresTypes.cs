@@ -6,6 +6,7 @@ public static class PostgresTypes
         new Dictionary<string, TypeConverter<Value, Value>>
         {
             ["bool"] = new BoolConverter(),
+            ["int"] = new IntConverter(),
             ["datetime"] = new DateTimeConverter(),
             ["uuid"] = new UuidConverter(),
             ["decimal"] = new DecimalConverter(),

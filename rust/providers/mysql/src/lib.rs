@@ -16,6 +16,9 @@ pub use statement_builder::{MysqlColumn, MysqlStatementBuilder};
 pub use transaction::MysqlTransaction;
 
 #[cfg(test)]
+#[path = "../tests/contacts.rs"]
+mod contacts;
+#[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]

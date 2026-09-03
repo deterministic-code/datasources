@@ -6,7 +6,7 @@ public static class PostgresBind
 {
     static readonly Regex Name = new(@"\$([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled);
 
-    public static (string Sql, object?[] Values) ToPostgres(string sql, Row parameters)
+    public static (string Sql, Value[] Values) ToPostgres(string sql, Row parameters)
     {
         var names = new List<string>();
         var text = Name.Replace(sql, match =>
@@ -20,7 +20,7 @@ public static class PostgresBind
             }
             return $"${index + 1}";
         });
-        return (text, names.Select(name => parameters.TryGetValue(name, out var value) ? value.ToObject() : null).ToArray());
+        return (text, names.Select(name => parameters.TryGetValue(name, out var value) ? value : Value.Null.Instance).ToArray());
     }
 
     public static string WithReturning(string sql) =>

@@ -16,6 +16,7 @@ fn repo(
     middleware: Option<Arc<dyn CommandMiddleware>>,
 ) -> Arc<dyn Repository> {
     let mut options = TableRepositoryBuilderOptions::with_factory(connection);
+    options.assign_identity_on_add = false;
     options.entity = entity.into();
     options.mapping = Some(RowTypeConverter::new(columns(names)));
     let mut repo = TableRepository::new(options).expect("contacts repo");

@@ -89,11 +89,17 @@ public sealed class PostgresDriver : IPostgresDriver
         return rows;
     }
 
-    static void Bind(NpgsqlCommand command, object?[] values)
+    static void Bind(NpgsqlCommand command, Value[] values)
     {
-        for (var i = 0; i < values.Length; i++)
-            command.Parameters.Add(new NpgsqlParameter($"${i + 1}", values[i] ?? DBNull.Value));
+        foreach (var value in values)
+            command.Parameters.Add(new NpgsqlParameter { Value = Cell(value) });
     }
+
+    static object Cell(Value value) => value switch
+    {
+        Value.Int(var number) when number is >= int.MinValue and <= int.MaxValue => (int)number,
+        _ => value.ToDb()
+    };
 
     async Task Exec(string sql)
     {

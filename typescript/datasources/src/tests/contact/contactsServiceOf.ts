@@ -16,7 +16,13 @@ export const contactsServiceOf = (
   middleware?: ICommandMiddleware,
 ): ContactsService => {
   const of = <T>(type: Constructable<T>, entity: string, columns?: string[]) => {
-    const repo = new Repository({ type, entity, connection, columns });
+    const repo = new Repository({
+      type,
+      entity,
+      connection,
+      columns,
+      assignIdentityOnAdd: false,
+    });
     return middleware ? repo.use(middleware) : repo;
   };
   return new ContactsService(

@@ -12,7 +12,8 @@ internal static class ContactsServiceOf
             {
                 Connection = connection,
                 Entity = entity,
-                Columns = columns
+                Columns = columns,
+                AssignIdentityOnAdd = false
             });
             return middleware is null ? repo : repo.Use(middleware);
         }

@@ -19,12 +19,13 @@ const base = <T extends object>(type: { new (): T }, extra: Partial<T>): T =>
 
 export const extraContact = (): Contact =>
   base(Contact, {
+    id: 251,
     contact_source_id: 1,
     contact_type_id: 1,
     first_name: "Extra",
     last_name: "Contact",
-    addresses: [base(Address, { line1: "9 Extra", city: "Oslo" })],
-    phones: [base(Phone, { number: "555-extra" })],
+    addresses: [base(Address, { id: 10001, line1: "9 Extra", city: "Oslo" })],
+    phones: [base(Phone, { id: 10001, number: "555-extra" })],
   });
 
 export const addExtraContact = async (service: ContactsService): Promise<Contact> => {

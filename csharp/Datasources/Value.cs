@@ -64,6 +64,8 @@ public abstract record Value
         _ => null
     };
 
+    public object ToDb() => ToObject() ?? DBNull.Value;
+
     public string IsoDateTime() => this is DateTime(var date)
         ? (date.Kind == DateTimeKind.Utc ? date : date.ToUniversalTime())
             .ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture)

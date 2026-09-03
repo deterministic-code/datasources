@@ -1,3 +1,6 @@
+using Datasources;
+using Datasources.Builders;
+
 namespace Datasources.Tests.Contact;
 
 internal static class ExtraContact
@@ -7,6 +10,7 @@ internal static class ExtraContact
 
     public static Contact New() => new()
     {
+        id = 251,
         uuid = Id,
         created = Stamp,
         updated = Stamp,
@@ -19,6 +23,7 @@ internal static class ExtraContact
         [
             new Address
             {
+                id = 10001,
                 uuid = Id,
                 created = Stamp,
                 updated = Stamp,
@@ -31,6 +36,7 @@ internal static class ExtraContact
         [
             new Phone
             {
+                id = 10001,
                 uuid = Id,
                 created = Stamp,
                 updated = Stamp,
@@ -39,4 +45,12 @@ internal static class ExtraContact
             }
         ]
     };
+
+    public static async Task<Contact> Add(ContactsService service)
+    {
+        var created = New();
+        await service.Create(created);
+        return await service.GetSingle(WhereBuilder.Equals("id", Value.From(created.id)))
+            ?? throw new InvalidOperationException($"extra contact {created.id} missing");
+    }
 }

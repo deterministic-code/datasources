@@ -2,11 +2,16 @@ use crate::driver::{
     isolation_sql, to_postgres, with_returning, PostgresDriver, PostgresExecuteResult,
 };
 use async_trait::async_trait;
+use base64::Engine;
+use bytes::BytesMut;
+use chrono::{DateTime, Utc};
 use datasources::{DatasourceError, IsolationLevel, Result, Value};
 use std::collections::HashMap;
+use std::error::Error;
 use tokio::sync::Mutex;
-use tokio_postgres::types::ToSql;
+use tokio_postgres::types::{to_sql_checked, IsNull, ToSql, Type};
 use tokio_postgres::{NoTls, Row};
+use uuid::Uuid;
 
 pub struct TokioPostgresDriver {
     schema: Option<String>,
@@ -26,15 +31,73 @@ fn map_err(error: tokio_postgres::Error) -> DatasourceError {
     DatasourceError::message(error.to_string())
 }
 
+#[derive(Debug)]
+struct SqlNull;
+
+impl ToSql for SqlNull {
+    fn to_sql(&self, _: &Type, _: &mut BytesMut) -> std::result::Result<IsNull, Box<dyn Error + Sync + Send>> {
+        Ok(IsNull::Yes)
+    }
+    fn accepts(_: &Type) -> bool {
+        true
+    }
+    to_sql_checked!();
+}
+
+#[derive(Debug)]
+struct FlexText(String);
+
+impl ToSql for FlexText {
+    fn to_sql(
+        &self,
+        ty: &Type,
+        out: &mut BytesMut,
+    ) -> std::result::Result<IsNull, Box<dyn Error + Sync + Send>> {
+        match *ty {
+            Type::BYTEA => {
+                let bytes = if self.0.is_empty() {
+                    Vec::new()
+                } else {
+                    base64::engine::general_purpose::STANDARD
+                        .decode(&self.0)
+                        .unwrap_or_else(|_| self.0.as_bytes().to_vec())
+                };
+                bytes.to_sql(ty, out)
+            }
+            Type::UUID => Uuid::parse_str(&self.0)?.to_sql(ty, out),
+            Type::NUMERIC => self.0.parse::<rust_decimal::Decimal>()?.to_sql(ty, out),
+            Type::INT4 => self.0.parse::<i32>()?.to_sql(ty, out),
+            Type::INT8 => self.0.parse::<i64>()?.to_sql(ty, out),
+            Type::TIMESTAMPTZ | Type::TIMESTAMP => DateTime::parse_from_rfc3339(&self.0)?
+                .with_timezone(&Utc)
+                .to_sql(ty, out),
+            _ => self.0.to_sql(ty, out),
+        }
+    }
+    fn accepts(ty: &Type) -> bool {
+        matches!(
+            *ty,
+            Type::BYTEA
+                | Type::UUID
+                | Type::NUMERIC
+                | Type::INT4
+                | Type::INT8
+                | Type::TIMESTAMPTZ
+                | Type::TIMESTAMP
+        ) || <String as ToSql>::accepts(ty)
+    }
+    to_sql_checked!();
+}
+
 fn box_value(value: &Value) -> Box<dyn ToSql + Sync + Send> {
     match value {
-        Value::Null => Box::new(Option::<i64>::None),
+        Value::Null => Box::new(SqlNull),
         Value::Bool(flag) => Box::new(*flag),
         Value::Int(value) => i32::try_from(*value)
             .map(|number| Box::new(number) as Box<dyn ToSql + Sync + Send>)
             .unwrap_or_else(|_| Box::new(*value)),
         Value::Float(value) => Box::new(*value),
-        Value::Text(value) => Box::new(value.clone()),
+        Value::Text(value) => Box::new(FlexText(value.clone())),
         Value::DateTime(value) => Box::new(*value),
         Value::Uuid(value) => Box::new(*value),
         Value::Decimal(value) => Box::new(*value),
@@ -54,6 +117,15 @@ fn from_cell(row: &Row, index: usize) -> Value {
     }
     if let Ok(value) = row.try_get::<_, f64>(index) {
         return Value::Float(value);
+    }
+    if let Ok(value) = row.try_get::<_, rust_decimal::Decimal>(index) {
+        return Value::Decimal(value);
+    }
+    if let Ok(value) = row.try_get::<_, Uuid>(index) {
+        return Value::Uuid(value);
+    }
+    if let Ok(value) = row.try_get::<_, DateTime<Utc>>(index) {
+        return Value::DateTime(value);
     }
     if let Ok(value) = row.try_get::<_, String>(index) {
         return Value::Text(value);

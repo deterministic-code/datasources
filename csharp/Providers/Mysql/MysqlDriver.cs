@@ -80,7 +80,7 @@ public sealed class MysqlDriver : IMysqlDriver
         foreach (var (name, value) in parameters)
         {
             var key = name[0] is '@' or ':' or '$' ? name.TrimStart('$', '@', ':') : name;
-            command.Parameters.AddWithValue($"@{key}", value.ToObject() ?? DBNull.Value);
+            command.Parameters.AddWithValue($"@{key}", value.ToDb());
         }
         return command;
     }

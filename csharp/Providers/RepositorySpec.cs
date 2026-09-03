@@ -64,7 +64,7 @@ public static class RepositorySpec
             await (step switch
             {
                 { Create: { } create } => repo.Create(ToEntity(create.Row, spec.Type, mapping)),
-                { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(WhereBuilder.Equals("id", Value.From(get.Id)))),
+                { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(Where(mapping, new() { ["id"] = get.Id }, spec.Type))),
                 { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Get(Where(mapping, where, spec.Type)) : repo.Get()),
                 { GetBy: { } getBy } => AssertGet(spec.Name, getBy, repo.GetSingle(Where(mapping, getBy.Where, spec.Type))),
                 { Update: { } update } => AssertAffected($"{spec.Name} UPDATE", update.HasExpect, update.Expect,
@@ -344,7 +344,9 @@ public static class RepositorySpec
             .ToDictionary(pair => pair.Key, pair => types[pair.Value]);
         foreach (var (name, canonical) in type.Converters)
             if (types.TryGetValue(canonical, out var converter))
-                fields[name] = converter;
+                fields[name] = type.Fields.GetValueOrDefault(name) is "string" or "text"
+                    ? new StringColumnConverter(converter)
+                    : converter;
         return fields;
     }
 
@@ -377,6 +379,20 @@ public static class RepositorySpec
         Environment.GetEnvironmentVariable("VERBOSE") is "1" or "true";
 
     public sealed record Session(IConnection Connection, ICommand Command);
+
+    sealed class StringColumnConverter(TypeConverter<Value, Value> inner) : TypeConverter<Value, Value>
+    {
+        public override Value Convert(Value from) => inner.Convert(from);
+
+        public override Value ReverseConvert(Value to) => inner.Convert(to) switch
+        {
+            Value.Guid(var guid) => guid.ToString(),
+            Value.Decimal(var number) => number.ToString(CultureInfo.InvariantCulture),
+            Value.DateTime(var date) => new Value.DateTime(date).IsoDateTime(),
+            Value.Binary(var bytes) => System.Convert.ToBase64String(bytes),
+            var value => value
+        };
+    }
 
     sealed class SpecUser
     {

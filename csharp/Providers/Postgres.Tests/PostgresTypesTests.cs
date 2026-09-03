@@ -10,6 +10,6 @@ public class PostgresTypesTests
     {
         _ = PostgresTypes.All;
         var types = DefaultTypeConverters.For("postgres");
-        Assert.Equal(["bool", "datetime", "uuid", "decimal", "binary"], types.Keys);
+        Assert.Equal(["bool", "int", "datetime", "uuid", "decimal", "binary"], types.Keys);
     }
 }

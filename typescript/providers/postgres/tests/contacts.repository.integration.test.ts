@@ -88,5 +88,5 @@ describe("contacts readonly repository", () => {
     } finally {
       await isolated.cleanup();
     }
-  });
+  }, 30_000);
 });

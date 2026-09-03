@@ -19,7 +19,7 @@ public class PostgresTests
         Assert.Same(driver, PostgresGuard.Require(driver));
         var (sql, values) = PostgresBind.ToPostgres("SELECT * FROM t WHERE id = $id AND n = $id", new Row { ["id"] = 1 });
         Assert.Equal("SELECT * FROM t WHERE id = $1 AND n = $1", sql);
-        Assert.Equal(new object?[] { 1L }, values);
+        Assert.Equal(new Value[] { 1L }, values);
         Assert.Contains("Host=127.0.0.1", PostgresDriver.ToConnectionString("postgres://ds:ds@127.0.0.1:5432/datasources"));
         Assert.Contains("Username=ds", PostgresDriver.ToConnectionString("postgresql://ds@127.0.0.1/datasources"));
         Assert.Equal("Host=db;Port=1", PostgresDriver.ToConnectionString("Host=db;Port=1"));

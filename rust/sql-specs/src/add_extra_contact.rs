@@ -16,6 +16,7 @@ pub async fn add_extra_contact(service: &DeepCRUDRepository) -> Result<Row> {
     let uuid = Value::from("00000000-0000-4000-8000-000000000251");
     let response = service
         .add(&record(&[
+            ("id", Value::Int(251)),
             ("uuid", uuid.clone()),
             ("created", stamp.clone()),
             ("updated", stamp.clone()),
@@ -27,6 +28,7 @@ pub async fn add_extra_contact(service: &DeepCRUDRepository) -> Result<Row> {
             (
                 "addresses",
                 encode_rows(&[record(&[
+                    ("id", Value::Int(10001)),
                     ("uuid", uuid.clone()),
                     ("created", stamp.clone()),
                     ("updated", stamp.clone()),
@@ -38,6 +40,7 @@ pub async fn add_extra_contact(service: &DeepCRUDRepository) -> Result<Row> {
             (
                 "phones",
                 encode_rows(&[record(&[
+                    ("id", Value::Int(10001)),
                     ("uuid", uuid),
                     ("created", stamp.clone()),
                     ("updated", stamp),

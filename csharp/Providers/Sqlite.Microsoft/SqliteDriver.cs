@@ -86,7 +86,7 @@ public sealed class SqliteDriver : ISqliteDriver
         foreach (var (name, value) in parameters)
         {
             var key = name[0] is '$' or '@' or ':' ? name : $"${name}";
-            command.Parameters.AddWithValue(key, value.ToObject() ?? DBNull.Value);
+            command.Parameters.AddWithValue(key, value.ToDb());
         }
         return command;
     }

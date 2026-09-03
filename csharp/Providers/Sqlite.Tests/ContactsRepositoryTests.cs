@@ -1,6 +1,3 @@
-using Datasources;
-using Datasources.Builders;
-using Datasources.SqlSpecs;
 using Datasources.Sqlite;
 using Datasources.Tests.Contact;
 
@@ -9,7 +6,7 @@ namespace Datasources.Sqlite.Tests;
 public class ContactsRepositoryTests
 {
     [Fact]
-    public async Task CreateExtraContactAfterSeed()
+    public async Task MatchesEnrichedContactsServiceToFlatMapper()
     {
         var conn = new SqliteConnection(new SqliteConnectionOptions
         {
@@ -17,31 +14,6 @@ public class ContactsRepositoryTests
             Driver = new SqliteDriver()
         });
         await conn.Open();
-        var command = new SqliteCommand(conn);
-        foreach (var sql in StatementsOf(File.ReadAllText(SchemaPath()))
-            .Concat(SeedContacts.Sql()))
-            await command.Execute(sql);
-
-        var service = ContactsServiceOf.Create(conn);
-        var created = ExtraContact.New();
-        await service.Create(created);
-        var extra = await service.GetSingle(WhereBuilder.Equals("id", Value.From(created.id)));
-        Assert.NotNull(extra);
-        Assert.Equal("Extra", extra.first_name);
-        Assert.Single(extra.addresses);
-        Assert.Equal("9 Extra", extra.addresses[0].line1);
-        Assert.Equal(extra.id, extra.addresses[0].contact_id);
-        Assert.Equal("555-extra", Assert.Single(extra.phones).number);
-        Assert.Equal(extra.id, extra.phones[0].contact_id);
+        await ContactsRepositoryCase.MatchesEnrichedToFlatMapper(conn, new SqliteCommand(conn), "sqlite");
     }
-
-    static string SchemaPath()
-    {
-        var root = Directory.GetParent(SqlSpec.SpecsDir())?.FullName
-            ?? throw new DirectoryNotFoundException("repo root");
-        return Path.Combine(root, "csharp", "Datasources.Tests", "Contact", "sqlite.sql");
-    }
-
-    static IEnumerable<string> StatementsOf(string sql) =>
-        sql.Split(';').Select(part => part.Trim()).Where(part => part.Length > 0);
 }
