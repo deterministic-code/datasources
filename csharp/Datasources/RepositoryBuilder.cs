@@ -20,8 +20,7 @@ public static class RepositoryBuilder<T> where T : new()
             Rows = options.Mapper ?? new TransformMapper<T, T>(static value => value, static value => value)
         };
         var entity = statementMapper.Entity.Map(options.Entity ?? typeof(T).Name);
-        var listed = (options.Columns is { Count: > 0 } given ? given : Columns()).ToArray();
-        var columns = listed
+        var columns = (options.Columns is { Count: > 0 } listed ? listed : Columns())
             .Select(statementMapper.Columns.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
@@ -37,8 +36,7 @@ public static class RepositoryBuilder<T> where T : new()
                 statementMapper.Update,
                 statementMapper.Delete),
             options.Ids,
-            options.AssignIdentityOnAdd,
-            listed);
+            options.AssignIdentityOnAdd);
     }
 
     public static Repository<T> Build(RepositoryBuilderOptions<T> options) => new(Parts(options));

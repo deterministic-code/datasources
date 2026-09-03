@@ -12,7 +12,6 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
     readonly bool assignIdentityOnAdd;
-    readonly HashSet<string> writeColumns;
 
     public Repository(IConnection connection) :
         this(CreateRepositoryBuilderOptions.FromType<T>(connection)) { }
@@ -28,7 +27,6 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
         statements = built.Statements;
         ids = new(built.Ids);
         assignIdentityOnAdd = built.AssignIdentityOnAdd;
-        writeColumns = [.. built.WriteColumns];
     }
 
     public Repository<T> Use(ICommandMiddleware middleware)
@@ -56,7 +54,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
     public async Task<Response> Create(T item)
     {
         var fields = Params(ReverseConvert(item), col =>
-            InTable(col) && (!assignIdentityOnAdd || !ids.Contains(col)));
+            !assignIdentityOnAdd || !ids.Contains(col));
         return await Command().Execute(statements.Insert(fields).GetText(), fields);
     }
 
@@ -64,7 +62,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
     {
         var record = ReverseConvert(item);
         var where = byWhere ?? IdWhere(record);
-        var fields = Params(record, col => InTable(col) && !ids.Contains(col));
+        var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         return await Command().Execute(
@@ -91,9 +89,6 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
         Row record, Func<string, bool> include) =>
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
-
-    bool InTable(string col) =>
-        writeColumns.Count == 0 || writeColumns.Contains(col);
 
     Row ReverseConvert(T item) => rowConverter.ReverseConvert(Mapper.ReverseMap(item));
 }

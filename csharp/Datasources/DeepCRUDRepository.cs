@@ -123,13 +123,30 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
 
     T StripEnriched(T item)
     {
-        if (item is not IDictionary<string, Value> row)
-            return item;
-        var copy = new Row(row);
-        foreach (var child in Tree.Parent.Items)
-            if (child.Enrichment is { } enrichment)
-                copy.Remove(enrichment.Into);
-        return (T)(object)copy;
+        var skip = Tree.Parent.Items
+            .Select(child => child.Enrichment?.Into)
+            .OfType<string>()
+            .ToHashSet();
+        if (item is IDictionary<string, Value> row)
+        {
+            var copy = new Row(row);
+            foreach (var name in skip)
+                copy.Remove(name);
+            return (T)(object)copy;
+        }
+        var dest = (T)Activator.CreateInstance(item!.GetType())!;
+        foreach (var prop in item.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(prop => prop is { CanRead: true, CanWrite: true } && prop.GetIndexParameters().Length == 0))
+        {
+            if (skip.Contains(prop.Name))
+            {
+                if (!prop.PropertyType.IsValueType)
+                    prop.SetValue(dest, null);
+                continue;
+            }
+            prop.SetValue(dest, prop.GetValue(item));
+        }
+        return dest;
     }
 
     static void ApplyIdentity(object item, Response response)
