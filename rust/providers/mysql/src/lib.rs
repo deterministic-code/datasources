@@ -16,8 +16,10 @@ pub use statement_builder::{MysqlColumn, MysqlStatementBuilder};
 pub use transaction::MysqlTransaction;
 
 #[cfg(test)]
+#[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]
+#[path = "../tests/repository_spec.rs"]
 mod repository_spec;
 
 #[cfg(test)]

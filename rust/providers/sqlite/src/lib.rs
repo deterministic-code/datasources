@@ -18,8 +18,10 @@ pub use rusqlite_driver::RusqliteDriver;
 pub use transaction::SqliteTransaction;
 
 #[cfg(test)]
+#[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]
+#[path = "../tests/repository_spec.rs"]
 mod repository_spec;
 
 #[cfg(test)]
