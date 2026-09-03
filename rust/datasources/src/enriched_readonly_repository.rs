@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 pub struct EnrichedReadonlyRepository {
     inner: Arc<dyn ReadonlyRepository>,
-    tree: RepositoryTree,
+    pub tree: RepositoryTree,
 }
 
 impl EnrichedReadonlyRepository {
@@ -46,6 +46,37 @@ impl EnrichedReadonlyRepository {
         nest: impl FnOnce(&mut RepositoryTreeNode),
     ) -> &mut Self {
         nest(self.tree.parent.include(via, into, from, by, select, many));
+        self
+    }
+
+    pub fn add_enriched_repo(
+        &mut self,
+        into: impl Into<String>,
+        from: impl Into<String>,
+        via: Arc<dyn crate::repository::Repository>,
+        by: impl Into<String>,
+        select: Option<String>,
+        many: bool,
+    ) -> &mut Self {
+        self.tree
+            .parent
+            .include_repo(via, into, from, by, select, many);
+        self
+    }
+
+    pub fn add_enriched_repo_with(
+        &mut self,
+        into: impl Into<String>,
+        from: impl Into<String>,
+        via: Arc<dyn crate::repository::Repository>,
+        by: impl Into<String>,
+        select: Option<String>,
+        many: bool,
+        nest: impl FnOnce(&mut RepositoryTreeNode),
+    ) -> &mut Self {
+        nest(self.tree
+            .parent
+            .include_repo(via, into, from, by, select, many));
         self
     }
 }

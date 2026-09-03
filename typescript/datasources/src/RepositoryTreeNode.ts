@@ -15,6 +15,7 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
     readonly propertyName: string,
     readonly parent?: IRepositoryTreeNode,
     private readonly apply: (parents: object[]) => Promise<void> = async () => {},
+    readonly enrichment?: Enrichment,
   ) {}
 
   include<TRelated extends object>(
@@ -26,8 +27,12 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
     many?: boolean,
   ): IRepositoryTreeNode {
     const enrichment: Enrichment = { into, from, by, select, many };
-    const child = new RepositoryTreeNode(via, into, this, (parents) =>
-      apply(via, enrichment, parents),
+    const child = new RepositoryTreeNode(
+      via,
+      into,
+      this,
+      (parents) => apply(via, enrichment, parents),
+      enrichment,
     );
     this.items.push(child);
     return child;
