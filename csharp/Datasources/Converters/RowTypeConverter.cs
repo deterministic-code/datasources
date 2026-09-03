@@ -42,8 +42,11 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
     public override Row ReverseConvert(T to) => to switch
     {
         IDictionary<string, Value> dict => Apply(new Row(dict), reverse: true),
-        _ => Apply(new Row(Props(typeof(T)).Where(prop => IsColumn(prop.PropertyType)).Select(prop =>
-            KeyValuePair.Create(prop.Name, Value.From(prop.GetValue(to))))), reverse: true)
+        _ => Apply(new Row(Props(typeof(T))
+            .Where(prop => IsColumn(prop.PropertyType))
+            .Select(prop => (prop.Name, Value: prop.GetValue(to)))
+            .Where(pair => pair.Value is not null)
+            .Select(pair => KeyValuePair.Create(pair.Name, Value.From(pair.Value)))), reverse: true)
     };
 
     Row Apply(Row row, bool reverse) =>
