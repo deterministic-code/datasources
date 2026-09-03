@@ -1,9 +1,12 @@
 mod command;
+mod command_driver;
 mod connection;
+mod connection_driver;
 mod converters;
 mod datasource;
 mod driver;
 mod mysql_async_driver;
+mod transaction_driver;
 mod statement_builder;
 mod transaction;
 

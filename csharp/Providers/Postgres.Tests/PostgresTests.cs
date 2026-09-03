@@ -20,9 +20,9 @@ public class PostgresTests
         var (sql, values) = PostgresBind.ToPostgres("SELECT * FROM t WHERE id = $id AND n = $id", new Row { ["id"] = 1 });
         Assert.Equal("SELECT * FROM t WHERE id = $1 AND n = $1", sql);
         Assert.Equal(new object?[] { 1L }, values);
-        Assert.Contains("Host=127.0.0.1", PostgresDriver.ToConnectionString("postgres://ds:ds@127.0.0.1:5432/datasources"));
-        Assert.Contains("Username=ds", PostgresDriver.ToConnectionString("postgresql://ds@127.0.0.1/datasources"));
-        Assert.Equal("Host=db;Port=1", PostgresDriver.ToConnectionString("Host=db;Port=1"));
+        Assert.Contains("Host=127.0.0.1", PostgresConnectionString.ToConnectionString("postgres://ds:ds@127.0.0.1:5432/datasources"));
+        Assert.Contains("Username=ds", PostgresConnectionString.ToConnectionString("postgresql://ds@127.0.0.1/datasources"));
+        Assert.Equal("Host=db;Port=1", PostgresConnectionString.ToConnectionString("Host=db;Port=1"));
         Assert.Equal("INSERT INTO t (id) VALUES (1) RETURNING id", PostgresBind.WithReturning("INSERT INTO t (id) VALUES (1)"));
         Assert.Equal("INSERT INTO t VALUES (1) RETURNING id", PostgresBind.WithReturning("INSERT INTO t VALUES (1) RETURNING id"));
         Assert.Equal("UPDATE t SET x = 1", PostgresBind.WithReturning("UPDATE t SET x = 1"));

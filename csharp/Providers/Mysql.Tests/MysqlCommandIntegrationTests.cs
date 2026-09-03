@@ -37,7 +37,7 @@ public class MysqlCommandIntegrationTests
     static async Task<(string Url, Func<Task> Cleanup)> Isolate(string baseUrl)
     {
         var name = $"ds_{Guid.NewGuid():N}"[..18];
-        await using (var admin = new MySqlConnection(MysqlDriver.ToConnectionString(baseUrl)))
+        await using (var admin = new MySqlConnection(MysqlConnectionString.ToConnectionString(baseUrl)))
         {
             await admin.OpenAsync();
             await using var create = admin.CreateCommand();
@@ -47,7 +47,7 @@ public class MysqlCommandIntegrationTests
         var isolated = ReplaceDatabase(baseUrl, name);
         return (isolated, async () =>
         {
-            await using var drop = new MySqlConnection(MysqlDriver.ToConnectionString(baseUrl));
+            await using var drop = new MySqlConnection(MysqlConnectionString.ToConnectionString(baseUrl));
             await drop.OpenAsync();
             await using var cmd = drop.CreateCommand();
             cmd.CommandText = $"DROP DATABASE `{name}`";
