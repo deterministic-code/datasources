@@ -14,9 +14,5 @@ pub trait Command: Send + Sync {
         text: &str,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>>;
-    async fn execute(
-        &self,
-        text: &str,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response>;
+    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response>;
 }

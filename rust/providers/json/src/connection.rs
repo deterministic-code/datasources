@@ -2,9 +2,7 @@ use crate::command::JsonCommand;
 use crate::file_store::FileStore;
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
-};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
 use serde_json::{Map, Value as JsonValue};
 use std::sync::{Arc, Mutex};
 
@@ -121,8 +119,7 @@ impl Connection for JsonConnection {
             initial.clone()
         } else if !self.state.path.is_empty() && self.state.store.exists(&self.state.path) {
             let contents = self.state.store.read(&self.state.path)?;
-            serde_json::from_str(&contents)
-                .map_err(|e| DatasourceError::message(e.to_string()))?
+            serde_json::from_str(&contents).map_err(|e| DatasourceError::message(e.to_string()))?
         } else {
             JsonConnection::empty_data(&collection)
         };

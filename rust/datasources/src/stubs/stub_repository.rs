@@ -1,9 +1,9 @@
 use super::not_implemented::fail;
 use crate::query::Query;
-use crate::row::Row;
 use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
+use crate::row::Row;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 

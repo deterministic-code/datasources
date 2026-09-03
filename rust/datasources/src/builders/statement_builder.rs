@@ -1,10 +1,10 @@
 use super::column::Column;
 use super::join::{Join, JoinKind};
-use crate::parameter::Parameter;
 use super::statements::{
     TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
     TextStoredProcedureStatement, TextUpdateStatement,
 };
+use crate::parameter::Parameter;
 use crate::text_query::TextQuery;
 use crate::text_where::TextWhere;
 use crate::where_trait::Where;

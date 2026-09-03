@@ -34,10 +34,7 @@ impl Datasource for SqlServerDatasource {
         ))
     }
 
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
         Arc::new(StubRepository::new("sqlserver"))
     }
 }
@@ -46,7 +43,10 @@ impl DatasourceFactory for SqlServerDatasource {
     fn provider(&self) -> &str {
         "sqlserver"
     }
-    fn create(&self, _options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
+    fn create(
+        &self,
+        _options: Option<&std::collections::HashMap<String, String>>,
+    ) -> Arc<dyn Datasource> {
         Arc::new(SqlServerDatasource)
     }
 }

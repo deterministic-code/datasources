@@ -138,11 +138,7 @@ fn dialect_target(dialect: &DialectFile, connections: usize) -> String {
         return std::env::var(env).unwrap_or_else(|_| panic!("{env} is not set"));
     }
     shared(
-        dialect
-            .connection
-            .filename
-            .as_deref()
-            .unwrap_or(":memory:"),
+        dialect.connection.filename.as_deref().unwrap_or(":memory:"),
         connections,
     )
 }
@@ -363,9 +359,7 @@ fn assert_logs(spec: &Spec, dialect: &DialectFile, logs: &[String]) {
         .iter()
         .zip(actual.iter())
         .position(|(want, got)| want != got)
-        .or_else(|| {
-            (expected.len() != actual.len()).then_some(expected.len().min(actual.len()))
-        });
+        .or_else(|| (expected.len() != actual.len()).then_some(expected.len().min(actual.len())));
     if let Some(index) = mismatch {
         panic!(
             "{}: first logging mismatch at {index}\nexpected: {}\nactual:   {}\n--- expected ---\n{}\n--- actual ---\n{}",

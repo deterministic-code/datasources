@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use datasources::{DatasourceError, IsolationLevel, Result, Value};
 use std::collections::HashMap;
 use tokio::sync::Mutex;
-use tokio_postgres::{NoTls, Row};
 use tokio_postgres::types::ToSql;
+use tokio_postgres::{NoTls, Row};
 
 pub struct TokioPostgresDriver {
     schema: Option<String>,
@@ -138,7 +138,11 @@ impl PostgresDriver for TokioPostgresDriver {
         })
     }
 
-    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<datasources::Row>> {
+    async fn query(
+        &self,
+        sql: &str,
+        params: &HashMap<String, Value>,
+    ) -> Result<Vec<datasources::Row>> {
         if sql.trim().is_empty() {
             return Ok(Vec::new());
         }

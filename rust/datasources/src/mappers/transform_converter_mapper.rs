@@ -32,8 +32,14 @@ impl<T: 'static> TransformConverterMapper<T, T> {
         let map_filter = filter.clone();
         Self {
             converter: Box::new(converter),
-            on_map: Some((Box::new(move |value| map_filter(value)), Box::new(|value| value))),
-            on_reverse: Some((Box::new(move |value| filter(value)), Box::new(|value| value))),
+            on_map: Some((
+                Box::new(move |value| map_filter(value)),
+                Box::new(|value| value),
+            )),
+            on_reverse: Some((
+                Box::new(move |value| filter(value)),
+                Box::new(|value| value),
+            )),
         }
     }
 }
@@ -234,7 +240,9 @@ mod tests {
                     account.username.clone(),
                     account.display_name.clone(),
                     if account.is_enabled { "1" } else { "0" }.into(),
-                    account.created.to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                    account
+                        .created
+                        .to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
                     account.contact.email.clone(),
                     account.contact.phone.clone(),
                     account.contact.address.street.clone(),

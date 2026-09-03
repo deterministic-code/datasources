@@ -48,11 +48,7 @@ impl Command for MysqlCommand {
             .await
     }
 
-    async fn execute(
-        &self,
-        text: &str,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
+    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
         let connection = self.connection.clone();
         self.host
             .run(text, parameters, move |sql, params| {

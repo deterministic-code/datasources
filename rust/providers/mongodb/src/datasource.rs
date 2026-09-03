@@ -34,10 +34,7 @@ impl Datasource for MongoDbDatasource {
         ))
     }
 
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
         Arc::new(StubRepository::new("mongodb"))
     }
 }
@@ -46,7 +43,10 @@ impl DatasourceFactory for MongoDbDatasource {
     fn provider(&self) -> &str {
         "mongodb"
     }
-    fn create(&self, _options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
+    fn create(
+        &self,
+        _options: Option<&std::collections::HashMap<String, String>>,
+    ) -> Arc<dyn Datasource> {
         Arc::new(MongoDbDatasource)
     }
 }

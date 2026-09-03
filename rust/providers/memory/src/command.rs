@@ -3,7 +3,7 @@ use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
     identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Row, Response, Result, Value,
+    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, Row, Value,
 };
 use std::sync::Arc;
 
@@ -56,11 +56,7 @@ impl Command for MemoryCommand {
             .await
     }
 
-    async fn execute(
-        &self,
-        text: &str,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
+    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
         let connection = self.connection.clone();
         self.host
             .run(text, parameters, move |query, params| {

@@ -1,6 +1,6 @@
 use crate::driver::{SqliteDriver, SqliteExecuteResult};
 use async_trait::async_trait;
-use datasources::{DatasourceError, IsolationLevel, Row, Result, Value};
+use datasources::{DatasourceError, IsolationLevel, Result, Row, Value};
 use rusqlite::types::{ToSql, ValueRef};
 use rusqlite::{Connection, OpenFlags};
 use std::collections::HashMap;

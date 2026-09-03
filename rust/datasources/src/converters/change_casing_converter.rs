@@ -80,7 +80,11 @@ fn join(parts: &[String], casing: Casing) -> String {
             .enumerate()
             .map(|(i, word)| if i == 0 { word.clone() } else { cap(word) })
             .collect(),
-        Casing::Capital => parts.iter().map(|word| cap(word)).collect::<Vec<_>>().join(" "),
+        Casing::Capital => parts
+            .iter()
+            .map(|word| cap(word))
+            .collect::<Vec<_>>()
+            .join(" "),
         Casing::Constant => parts
             .iter()
             .map(|word| word.to_uppercase())
@@ -90,7 +94,11 @@ fn join(parts: &[String], casing: Casing) -> String {
         Casing::Kebab => parts.join("-"),
         Casing::No => parts.join(" "),
         Casing::Pascal => parts.iter().map(|word| cap(word)).collect(),
-        Casing::PascalSnake => parts.iter().map(|word| cap(word)).collect::<Vec<_>>().join("_"),
+        Casing::PascalSnake => parts
+            .iter()
+            .map(|word| cap(word))
+            .collect::<Vec<_>>()
+            .join("_"),
         Casing::Path => parts.join("/"),
         Casing::Sentence => parts
             .iter()
@@ -99,7 +107,11 @@ fn join(parts: &[String], casing: Casing) -> String {
             .collect::<Vec<_>>()
             .join(" "),
         Casing::Snake => parts.join("_"),
-        Casing::Train => parts.iter().map(|word| cap(word)).collect::<Vec<_>>().join("-"),
+        Casing::Train => parts
+            .iter()
+            .map(|word| cap(word))
+            .collect::<Vec<_>>()
+            .join("-"),
     }
 }
 

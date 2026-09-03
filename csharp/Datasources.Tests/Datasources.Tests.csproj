@@ -16,4 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Datasources\Datasources.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Datasources.Sqlite.Tests" />
+  </ItemGroup>
 </Project>

@@ -1,6 +1,6 @@
-mod converters;
 mod command;
 mod connection;
+mod converters;
 mod datasource;
 mod driver;
 mod mysql_async_driver;
@@ -27,8 +27,8 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use datasources::{
-        create, register, reset, Command, Connection, Datasource, DatasourceFactory, IsolationLevel,
-        Row, Result, Value,
+        create, register, reset, Command, Connection, Datasource, DatasourceFactory,
+        IsolationLevel, Result, Row, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -95,12 +95,18 @@ mod tests {
             isolation_sql(IsolationLevel::ReadUncommitted),
             "READ UNCOMMITTED"
         );
-        assert_eq!(isolation_sql(IsolationLevel::ReadCommitted), "READ COMMITTED");
+        assert_eq!(
+            isolation_sql(IsolationLevel::ReadCommitted),
+            "READ COMMITTED"
+        );
         assert_eq!(
             isolation_sql(IsolationLevel::RepeatableRead),
             "REPEATABLE READ"
         );
-        assert_eq!(isolation_sql(IsolationLevel::Serializable), "REPEATABLE READ");
+        assert_eq!(
+            isolation_sql(IsolationLevel::Serializable),
+            "REPEATABLE READ"
+        );
         let driver: Arc<dyn MysqlDriver> = Arc::new(FakeDriver);
         require_driver(Some(driver.clone())).unwrap();
         let conn = Arc::new(MysqlConnection::new(
@@ -158,10 +164,7 @@ mod tests {
         DatasourceFactory::create(&factory, None);
         assert_eq!(DatasourceFactory::provider(&factory), "mysql");
         let closed = Arc::new(MysqlConnection::new(None, driver));
-        assert!(MysqlCommand::new(closed)
-            .execute("x", None)
-            .await
-            .is_err());
+        assert!(MysqlCommand::new(closed).execute("x", None).await.is_err());
     }
 }
 

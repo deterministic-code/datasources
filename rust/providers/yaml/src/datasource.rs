@@ -34,10 +34,7 @@ impl Datasource for YamlDatasource {
         ))
     }
 
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
         Arc::new(StubRepository::new("yaml"))
     }
 }
@@ -46,7 +43,10 @@ impl DatasourceFactory for YamlDatasource {
     fn provider(&self) -> &str {
         "yaml"
     }
-    fn create(&self, _options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
+    fn create(
+        &self,
+        _options: Option<&std::collections::HashMap<String, String>>,
+    ) -> Arc<dyn Datasource> {
         Arc::new(YamlDatasource)
     }
 }

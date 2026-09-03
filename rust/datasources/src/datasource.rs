@@ -10,10 +10,7 @@ pub trait Datasource: Send + Sync {
     fn provider(&self) -> &str;
     async fn create_connection(&self) -> Result<Arc<dyn Connection>>;
     fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command>;
-    fn create_repository(
-        &self,
-        connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository>;
+    fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository>;
     fn create_readonly_repository(
         &self,
         connection: Option<Arc<dyn Connection>>,

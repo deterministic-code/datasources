@@ -5,9 +5,9 @@ use crate::command_middleware_host::CommandMiddlewareHost;
 use crate::datasource_error::DatasourceError;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
-use crate::row::Row;
 use crate::response::Response;
 use crate::result::Result;
+use crate::row::Row;
 use crate::value::Value;
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
@@ -59,10 +59,10 @@ impl Command for MockCommand {
     ) -> Result<Box<dyn Reader>> {
         self.host
             .run(text, parameters, |query, params| async {
-                self.reader_logs.lock().expect("mock").push((
-                    query,
-                    params.unwrap_or_default(),
-                ));
+                self.reader_logs
+                    .lock()
+                    .expect("mock")
+                    .push((query, params.unwrap_or_default()));
                 if let Some(error) = &*self.reader_error.lock().expect("mock") {
                     return Err(DatasourceError::message(error.clone()));
                 }
@@ -75,17 +75,13 @@ impl Command for MockCommand {
             .await
     }
 
-    async fn execute(
-        &self,
-        text: &str,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
+    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
         self.host
             .run(text, parameters, |query, params| async {
-                self.execute_logs.lock().expect("mock").push((
-                    query,
-                    params.unwrap_or_default(),
-                ));
+                self.execute_logs
+                    .lock()
+                    .expect("mock")
+                    .push((query, params.unwrap_or_default()));
                 *self.execute_calls.lock().expect("mock") += 1;
                 if let Some(error) = &*self.execute_error.lock().expect("mock") {
                     return Err(DatasourceError::message(error.clone()));

@@ -3,7 +3,7 @@ use crate::connection::JsonConnection;
 use crate::filter::{json_from_record, matches, parse_filter, value_to_json};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, Command, Query, Row, ReadonlyRepository, Repository, Response, Result,
+    identity_filter, Command, Query, ReadonlyRepository, Repository, Response, Result, Row,
     TextQuery, Value, Where,
 };
 use serde_json::Value as JsonValue;
@@ -47,7 +47,8 @@ impl ReadonlyRepository for JsonRepository {
     }
 
     async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.get(Some(&TextQuery::new(where_clause.get_text()))).await
+        self.get(Some(&TextQuery::new(where_clause.get_text())))
+            .await
     }
 }
 

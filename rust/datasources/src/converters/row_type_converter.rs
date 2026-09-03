@@ -124,12 +124,11 @@ mod tests {
 
     #[test]
     fn field_override_beats_type_default() {
-        let converter = RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([
-            (
+        let converter =
+            RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([(
                 "is_enabled".into(),
                 Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-            ),
-        ]));
+            )]));
         let row = record(&[("is_enabled", Value::Int(2))]);
         assert_eq!(
             converter.convert(&row).unwrap()["is_enabled"],

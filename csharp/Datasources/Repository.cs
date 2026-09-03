@@ -53,7 +53,8 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
 
     public async Task<Response> Create(T item)
     {
-        var fields = Params(ReverseConvert(item), col => !assignIdentityOnAdd || !ids.Contains(col));
+        var fields = Params(ReverseConvert(item), col =>
+            InTable(col) && (!assignIdentityOnAdd || !ids.Contains(col)));
         return await Command().Execute(statements.Insert(fields).GetText(), fields);
     }
 
@@ -61,7 +62,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
     {
         var record = ReverseConvert(item);
         var where = byWhere ?? IdWhere(record);
-        var fields = Params(record, col => !ids.Contains(col));
+        var fields = Params(record, col => InTable(col) && !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         return await Command().Execute(
@@ -88,6 +89,9 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
         Row record, Func<string, bool> include) =>
         record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
+
+    bool InTable(string col) =>
+        statements.Columns.Count == 0 || statements.Columns.Contains(col);
 
     Row ReverseConvert(T item) => rowConverter.ReverseConvert(Mapper.ReverseMap(item));
 }

@@ -41,17 +41,25 @@ fn restore(original: &str, result: &str) -> String {
 }
 
 fn irregular_plural(word: &str) -> Option<&'static str> {
-    IRREGULAR.iter().find(|(singular, _)| *singular == word).map(|(_, plural)| *plural)
+    IRREGULAR
+        .iter()
+        .find(|(singular, _)| *singular == word)
+        .map(|(_, plural)| *plural)
 }
 
 fn irregular_singular(word: &str) -> Option<&'static str> {
-    IRREGULAR.iter().find(|(_, plural)| *plural == word).map(|(singular, _)| *singular)
+    IRREGULAR
+        .iter()
+        .find(|(_, plural)| *plural == word)
+        .map(|(singular, _)| *singular)
 }
 
 fn plural(word: &str) -> String {
     match irregular_plural(word) {
         Some(plural) => plural.to_string(),
-        None if UNCOUNTABLE.contains(&word) || irregular_singular(word).is_some() => word.to_string(),
+        None if UNCOUNTABLE.contains(&word) || irregular_singular(word).is_some() => {
+            word.to_string()
+        }
         None if yies(word) || sibilant_es(word) => word.to_string(),
         None if sibilant(word) => format!("{word}es"),
         None if consonant_y(word) => format!("{}ies", &word[..word.len() - 1]),
@@ -89,7 +97,10 @@ fn sibilant(word: &str) -> bool {
         || word.ends_with('x')
         || word.ends_with('z')
         || word.ends_with("ss")
-        || (word.len() >= 2 && word.ends_with('s') && !word.ends_with("es") && vowel(nth_last(word, 2)))
+        || (word.len() >= 2
+            && word.ends_with('s')
+            && !word.ends_with("es")
+            && vowel(nth_last(word, 2)))
 }
 
 fn nth_last(word: &str, n: usize) -> char {

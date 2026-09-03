@@ -1,6 +1,6 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CommandMiddleware, Connection, EnrichedReadonlyRepository, ReadonlyRepository, TableRepository,
+    as_readonly, CommandMiddleware, Connection, DeepCRUDRepository, Repository, TableRepository,
     TableRepositoryBuilderOptions,
 };
 use std::sync::Arc;
@@ -14,7 +14,7 @@ fn repo(
     entity: &str,
     names: &[&str],
     middleware: Option<Arc<dyn CommandMiddleware>>,
-) -> Arc<dyn ReadonlyRepository> {
+) -> Arc<dyn Repository> {
     let mut options = TableRepositoryBuilderOptions::with_factory(connection);
     options.entity = entity.into();
     options.mapping = Some(RowTypeConverter::new(columns(names)));
@@ -28,7 +28,7 @@ fn repo(
 pub fn contacts_service_of(
     connection: Arc<dyn Connection>,
     middleware: Option<Arc<dyn CommandMiddleware>>,
-) -> EnrichedReadonlyRepository {
+) -> DeepCRUDRepository {
     let base = [
         "id",
         "uuid",
@@ -75,7 +75,7 @@ pub fn contacts_service_of(
         "number",
         "label",
     ];
-    let mut inner = EnrichedReadonlyRepository::new(repo(
+    let mut inner = DeepCRUDRepository::new(repo(
         connection.clone(),
         "contacts_base",
         &base,
@@ -85,12 +85,12 @@ pub fn contacts_service_of(
         .add_enriched(
             "contact_type_name",
             "contact_type_id",
-            repo(
+            as_readonly(repo(
                 connection.clone(),
                 "contact_type",
                 &named,
                 middleware.clone(),
-            ),
+            )),
             "id",
             Some("name".into()),
             false,
@@ -98,17 +98,17 @@ pub fn contacts_service_of(
         .add_enriched(
             "contact_source_name",
             "contact_source_id",
-            repo(
+            as_readonly(repo(
                 connection.clone(),
                 "contact_source",
                 &named,
                 middleware.clone(),
-            ),
+            )),
             "id",
             Some("name".into()),
             false,
         )
-        .add_enriched(
+        .add_enriched_repo(
             "addresses",
             "id",
             repo(connection.clone(), "address", &address, middleware.clone()),
@@ -116,7 +116,7 @@ pub fn contacts_service_of(
             None,
             true,
         )
-        .add_enriched(
+        .add_enriched_repo(
             "phones",
             "id",
             repo(connection, "phone", &phone, middleware),

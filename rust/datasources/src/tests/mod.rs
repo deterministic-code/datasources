@@ -1250,12 +1250,7 @@ async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
 
 #[tokio::test]
 async fn contacts_service_fills_names_and_child_lists() {
-    let contacts = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-        ("id", Value::Int(1)),
-        ("contact_type_id", Value::Int(2)),
-        ("contact_source_id", Value::Int(3)),
-        ("first_name", Value::from("Ada")),
-    ])]));
+    let contacts = Arc::new(list_repository::ListRepository::new(vec![]));
     let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
         ("id", Value::Int(2)),
         ("name", Value::from("person")),
@@ -1264,24 +1259,32 @@ async fn contacts_service_fills_names_and_child_lists() {
         ("id", Value::Int(3)),
         ("name", Value::from("import")),
     ])]));
-    let addresses = Arc::new(items_repository::ItemsRepository::new(vec![
-        record(&[
-            ("id", Value::Int(10)),
-            ("contact_id", Value::Int(1)),
-            ("line1", Value::from("1 Main")),
-        ]),
-        record(&[
-            ("id", Value::Int(11)),
-            ("contact_id", Value::Int(9)),
-            ("line1", Value::from("other")),
-        ]),
-    ]));
-    let phones = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-        ("id", Value::Int(20)),
-        ("contact_id", Value::Int(1)),
-        ("number", Value::from("555")),
+    let addresses = Arc::new(list_repository::ListRepository::new(vec![record(&[
+        ("id", Value::Int(11)),
+        ("contact_id", Value::Int(9)),
+        ("line1", Value::from("other")),
     ])]));
+    let phones = Arc::new(list_repository::ListRepository::new(vec![]));
     let service = contact::ContactsService::new(contacts, types, sources, addresses, phones);
+    service
+        .add(&record(&[
+            ("contact_type_id", Value::Int(2)),
+            ("contact_source_id", Value::Int(3)),
+            ("first_name", Value::from("Ada")),
+            (
+                "addresses",
+                encode_rows(&[record(&[
+                    ("line1", Value::from("1 Main")),
+                    ("city", Value::from("Paris")),
+                ])]),
+            ),
+            (
+                "phones",
+                encode_rows(&[record(&[("number", Value::from("555"))])]),
+            ),
+        ]))
+        .await
+        .unwrap();
     let contact = service.get(None).await.unwrap().into_iter().next().unwrap();
     assert_eq!(contact["contact_type_name"], Value::from("person"));
     assert_eq!(contact["contact_source_name"], Value::from("import"));
@@ -1534,4 +1537,135 @@ async fn deep_get_still_enriches() {
     let item = repo.get_single(None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     assert!(item["children"].wire_text().contains("label=a"));
+}
+
+#[tokio::test]
+async fn bulk_create_writes_parents_and_children() {
+    let parents = Arc::new(list_repository::ListRepository::new(vec![]));
+    let children = Arc::new(list_repository::ListRepository::new(vec![]));
+    let mut repo = BulkCRUDRepository::new(parents.clone());
+    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    let response = repo
+        .add_bulk(&[
+            record(&[(
+                "children",
+                encode_rows(&[record(&[("label", Value::from("a"))])]),
+            )]),
+            record(&[(
+                "children",
+                encode_rows(&[
+                    record(&[("label", Value::from("b"))]),
+                    record(&[("label", Value::from("c"))]),
+                ]),
+            )]),
+        ])
+        .await
+        .unwrap();
+    assert_eq!(parents.snapshot().len(), 2);
+    let stored = children.snapshot();
+    assert_eq!(stored.len(), 3);
+    assert_eq!(stored[0]["parent_id"], Value::Int(1));
+    assert_eq!(stored[1]["parent_id"], Value::Int(2));
+    assert_eq!(stored[2]["parent_id"], Value::Int(2));
+    assert_eq!(response.rows_affected, 2);
+}
+
+#[tokio::test]
+async fn bulk_update_replace_syncs_each_parent() {
+    let parents = Arc::new(list_repository::ListRepository::new(vec![
+        record(&[("id", Value::Int(1))]),
+        record(&[("id", Value::Int(2))]),
+    ]));
+    let children = Arc::new(list_repository::ListRepository::new(vec![
+        record(&[
+            ("id", Value::Int(1)),
+            ("parent_id", Value::Int(1)),
+            ("label", Value::from("a")),
+        ]),
+        record(&[
+            ("id", Value::Int(2)),
+            ("parent_id", Value::Int(2)),
+            ("label", Value::from("b")),
+        ]),
+    ]));
+    let mut repo = BulkCRUDRepository::new(parents);
+    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    repo.update_bulk(
+        &[
+            record(&[
+                ("id", Value::Int(1)),
+                (
+                    "children",
+                    encode_rows(&[record(&[
+                        ("id", Value::Int(1)),
+                        ("label", Value::from("aa")),
+                    ])]),
+                ),
+            ]),
+            record(&[
+                ("id", Value::Int(2)),
+                (
+                    "children",
+                    encode_rows(&[record(&[("label", Value::from("c"))])]),
+                ),
+            ]),
+        ],
+        None,
+    )
+    .await
+    .unwrap();
+    let stored = children.snapshot();
+    assert_eq!(stored.len(), 2);
+    assert_eq!(
+        stored
+            .iter()
+            .find(|row| row["parent_id"] == Value::Int(1))
+            .unwrap()["label"],
+        Value::from("aa")
+    );
+    assert_eq!(
+        stored
+            .iter()
+            .find(|row| row["parent_id"] == Value::Int(2))
+            .unwrap()["label"],
+        Value::from("c")
+    );
+}
+
+#[tokio::test]
+async fn bulk_delete_cascades_each_parent() {
+    let parents = Arc::new(list_repository::ListRepository::new(vec![
+        record(&[("id", Value::Int(1))]),
+        record(&[("id", Value::Int(2))]),
+    ]));
+    let children = Arc::new(list_repository::ListRepository::new(vec![
+        record(&[
+            ("id", Value::Int(1)),
+            ("parent_id", Value::Int(1)),
+            ("label", Value::from("a")),
+        ]),
+        record(&[
+            ("id", Value::Int(2)),
+            ("parent_id", Value::Int(2)),
+            ("label", Value::from("b")),
+        ]),
+        record(&[
+            ("id", Value::Int(3)),
+            ("parent_id", Value::Int(9)),
+            ("label", Value::from("keep")),
+        ]),
+    ]));
+    let mut repo = BulkCRUDRepository::new(parents.clone());
+    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    repo.delete_bulk(
+        &[
+            record(&[("id", Value::Int(1))]),
+            record(&[("id", Value::Int(2))]),
+        ],
+        None,
+    )
+    .await
+    .unwrap();
+    assert!(parents.snapshot().is_empty());
+    assert_eq!(children.snapshot()[0]["label"], Value::from("keep"));
 }

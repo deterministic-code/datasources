@@ -1,6 +1,6 @@
-mod converters;
 mod command;
 mod connection;
+mod converters;
 mod datasource;
 mod filter;
 mod repository;
@@ -22,7 +22,7 @@ mod tests {
     use super::*;
     use datasources::{
         create, register, reset, Command, Connection, DatasourceFactory, Parameter,
-        Row, ReadonlyRepository, Repository, TextQuery, TextWhere, Value,
+        ReadonlyRepository, Repository, Row, TextQuery, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -46,7 +46,10 @@ mod tests {
         store.seed(&MemoryData::Collections(named.clone()), "");
         store.seed(&MemoryData::Collections(named), "");
         assert_eq!(store.collection("", |items| items.len()), 1);
-        assert_eq!(store.collection("users", |items| items[0]["id"].clone()), Value::Int(3));
+        assert_eq!(
+            store.collection("users", |items| items[0]["id"].clone()),
+            Value::Int(3)
+        );
 
         let conn = Arc::new(MemoryConnection::new(
             store.clone(),
@@ -63,7 +66,11 @@ mod tests {
             .await
             .unwrap()
             .is_none());
-        assert!(!repo.get(Some(&TextQuery::new("{\"id\":1}"))).await.unwrap().is_empty());
+        assert!(!repo
+            .get(Some(&TextQuery::new("{\"id\":1}")))
+            .await
+            .unwrap()
+            .is_empty());
         assert!(repo
             .get_single_where(&TextWhere::new("{\"id\":1}"))
             .await
@@ -104,10 +111,7 @@ mod tests {
             .await
             .unwrap();
         command
-            .execute(
-                "update",
-                Some(&[Parameter::new("$where", 1_i64)]),
-            )
+            .execute("update", Some(&[Parameter::new("$where", 1_i64)]))
             .await
             .unwrap();
         command
@@ -180,7 +184,9 @@ mod tests {
         json_to_value(&JsonValue::Null);
         json_to_value(&JsonValue::Bool(true));
         json_to_value(&serde_json::json!(1));
-        json_to_value(&JsonValue::Number(serde_json::Number::from_f64(1.25).unwrap()));
+        json_to_value(&JsonValue::Number(
+            serde_json::Number::from_f64(1.25).unwrap(),
+        ));
         json_to_value(&serde_json::json!("x"));
         json_to_value(&serde_json::json!([1]));
         if let JsonValue::Number(n) = serde_json::json!(1) {
@@ -213,10 +219,12 @@ mod tests {
             .delete(&rec(1, "a"), None)
             .await
             .is_err());
-        assert!(MemoryConnection::new(Arc::new(MemoryStore::new()), "", None)
-            .start_transaction(None)
-            .await
-            .is_err());
+        assert!(
+            MemoryConnection::new(Arc::new(MemoryStore::new()), "", None)
+                .start_transaction(None)
+                .await
+                .is_err()
+        );
 
         let empty = Arc::new(MemoryConnection::new(
             Arc::new(MemoryStore::new()),

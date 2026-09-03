@@ -13,7 +13,7 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
 
     public async Task<Response> Create(T item)
     {
-        var response = await inner.Create(item);
+        var response = await inner.Create(StripEnriched(item));
         ApplyIdentity(item!, response);
         await Persist(Tree.Parent, [item!], Mode.Create);
         return response;
@@ -21,7 +21,7 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
 
     public async Task<Response> Update(T item, IWhere? byWhere = null)
     {
-        var response = await inner.Update(item, byWhere);
+        var response = await inner.Update(StripEnriched(item), byWhere);
         await Persist(Tree.Parent, [item!], Mode.Update);
         return response;
     }
@@ -119,6 +119,17 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
         await foreach (var item in writer.Get(WhereBuilder.Equals(enrichment.By, Value.From(key))))
             items.Add(item);
         return items;
+    }
+
+    T StripEnriched(T item)
+    {
+        if (item is not IDictionary<string, Value> row)
+            return item;
+        var copy = new Row(row);
+        foreach (var child in Tree.Parent.Items)
+            if (child.Enrichment is { } enrichment)
+                copy.Remove(enrichment.Into);
+        return (T)(object)copy;
     }
 
     static void ApplyIdentity(object item, Response response)

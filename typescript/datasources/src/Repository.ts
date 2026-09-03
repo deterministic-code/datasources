@@ -37,6 +37,7 @@ export class Repository<T = Cells> implements IRepository<T> {
   readonly statementsMapper: StatementMapper<T>;
   readonly mapper: IMapper<T, T>;
   readonly statements: RepositoryStatements;
+  private readonly columns: string[];
   private readonly middlewares: ICommandMiddleware[] = [];
   private readonly ids: Set<string>;
   private readonly assignIdentityOnAdd: boolean;
@@ -60,6 +61,7 @@ export class Repository<T = Cells> implements IRepository<T> {
     this.statementsMapper = built.statementMapper;
     this.mapper = built.statementMapper.rows;
     this.statements = built.statements;
+    this.columns = built.columns;
     this.ids = new Set(built.ids);
     this.assignIdentityOnAdd = built.assignIdentityOnAdd;
   }
@@ -94,7 +96,7 @@ export class Repository<T = Cells> implements IRepository<T> {
   add = async (item: T): Promise<IResponse> => {
     const fields = fieldsOf(
       this.reverseConvert(item),
-      (col) => !this.assignIdentityOnAdd || !this.ids.has(col),
+      (col) => this.inTable(col) && (!this.assignIdentityOnAdd || !this.ids.has(col)),
     );
     return this.command().execute(this.statements.insert(fields).getText(), fields);
   };
@@ -102,7 +104,7 @@ export class Repository<T = Cells> implements IRepository<T> {
   update = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
     const record = this.reverseConvert(item);
     const where = byWhere ?? this.idWhere(record);
-    const fields = fieldsOf(record, (col) => !this.ids.has(col));
+    const fields = fieldsOf(record, (col) => this.inTable(col) && !this.ids.has(col));
     if (fields.length === 0)
       throw new DatasourceError("Update requires at least one non-Id field");
     return this.command().execute(this.statements.update(fields, where).getText(), [
@@ -124,6 +126,9 @@ export class Repository<T = Cells> implements IRepository<T> {
       (command, middleware) => command.use(middleware),
       this.connection.createCommand(),
     );
+
+  private inTable = (col: string): boolean =>
+    this.columns.length === 0 || this.columns.includes(col);
 
   private reverseConvert = (item: T): Cells =>
     this.rowConverter.reverseConvert(this.mapper.reverseMap(item));

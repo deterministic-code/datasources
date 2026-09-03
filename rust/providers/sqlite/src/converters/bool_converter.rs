@@ -26,8 +26,14 @@ mod tests {
     #[test]
     fn maps_bool() {
         let converter = BoolConverter;
-        assert_eq!(converter.convert(&Value::Int(1)).unwrap(), Value::Bool(true));
-        assert_eq!(converter.convert(&Value::Int(0)).unwrap(), Value::Bool(false));
+        assert_eq!(
+            converter.convert(&Value::Int(1)).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            converter.convert(&Value::Int(0)).unwrap(),
+            Value::Bool(false)
+        );
         assert_eq!(
             converter.convert(&Value::from("x")).unwrap(),
             Value::from("x")

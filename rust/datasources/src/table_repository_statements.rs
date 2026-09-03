@@ -13,11 +13,7 @@ pub struct TableRepositoryStatements {
 
 impl TableRepositoryStatements {
     pub fn new(table: impl Into<String>, columns: Vec<String>) -> Self {
-        Self::with_mapper(
-            table,
-            columns,
-            Arc::new(StatementMapper::identity("", "")),
-        )
+        Self::with_mapper(table, columns, Arc::new(StatementMapper::identity("", "")))
     }
 
     pub fn with_mapper(
