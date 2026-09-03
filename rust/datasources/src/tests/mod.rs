@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+mod contact;
+
 use crate::converters::{Cells, RowTypeConverter};
 use crate::*;
 use async_trait::async_trait;

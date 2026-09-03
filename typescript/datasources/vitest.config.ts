@@ -8,6 +8,7 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       exclude: [
         "src/**/*.test.ts",
+        "src/tests/**",
         "src/ICommand.ts",
         "src/ICommandMiddleware.ts",
         "src/IConnection.ts",
