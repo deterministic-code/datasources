@@ -1,11 +1,11 @@
 namespace Datasources;
 
-public sealed class MockRepository<T> : ReadonlyRepository<T>, IRepository<T>
+public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>
 {
     public List<T> Items { get; } = new();
     public Exception? GetSingleError { get; set; }
     public Exception? GetError { get; set; }
-    public Exception? AddError { get; set; }
+    public Exception? CreateError { get; set; }
     public Exception? UpdateError { get; set; }
     public Exception? DeleteError { get; set; }
     public MockRepository(IConnection _) { }
@@ -22,9 +22,9 @@ public sealed class MockRepository<T> : ReadonlyRepository<T>, IRepository<T>
         foreach (var item in Items) yield return item;
     }
 
-    public Task<Response> Add(T item)
+    public Task<Response> Create(T item)
     {
-        if (AddError is not null) throw AddError;
+        if (CreateError is not null) throw CreateError;
         Items.Add(item);
         return Task.FromResult(new Response(Value.Null.Instance, 1));
     }

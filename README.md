@@ -26,7 +26,7 @@ Optional helpers register factories from a provider list (`DATASOURCE_PROVIDERS`
 | `IsolationLevel` | `readUncommitted`, `readCommitted`, `repeatableRead`, `serializable` |
 | `ICommand` | `executeReader`, `execute` |
 | `IReadonlyRepository<T>` | `connection`, `getSingle`, `get` |
-| `IRepository<T>` | extends `IReadonlyRepository<T>` with `add`, `update`, `delete` |
+| `IRepository<T>` / `ICRUDRepository<T>` (C#) | extends `IReadonlyRepository<T>` with `add`/`create`, `update`, `delete` |
 | `IReader` | `current`, `next` |
 | `IQuery` / `Where` | `getText()` — provider-specific |
 | `Parameter` / `IResponse` | `{ name, value }` / `{ result, rowsAffected }` |
@@ -363,17 +363,17 @@ See [QuickStart](#quickstart) for full registration and default-provider setup.
 
 ## Repositories
 
-Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `IRepository<T>` adds `add`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
+Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C#) / `IRepository<T>` (TypeScript) / `Repository` (Rust) adds `create`/`add`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
 
-### IReadonlyRepository / IRepository
+### IReadonlyRepository / ICRUDRepository
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` |
-| `IRepository<T>` | `Repository` | `IRepository<T>` |
+| `ICRUDRepository<T>` | `Repository` | `IRepository<T>` |
 | `GetSingle` | `get_single` | `getSingle` |
 | `Get` | `get` | `get` |
-| `Add` | `add` | `add` |
+| `Create` | `add` | `add` |
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
 

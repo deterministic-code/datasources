@@ -21,6 +21,6 @@ public sealed class JsonDatasource : IDatasource, IDatasourceFactory
     public Task<IConnection> CreateConnection() => Task.FromResult<IConnection>(DefaultConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
         new JsonCommand(connection as JsonConnection ?? DefaultConnection());
-    public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new JsonRepository(connection as JsonConnection ?? DefaultConnection());
+    public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) =>
+        (ICRUDRepository<T>)(object)new JsonRepository(connection as JsonConnection ?? DefaultConnection());
 }

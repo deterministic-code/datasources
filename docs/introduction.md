@@ -24,7 +24,7 @@ Optional helpers register factories from a provider list (`DATASOURCE_PROVIDERS`
 | `IsolationLevel` | `readUncommitted`, `readCommitted`, `repeatableRead`, `serializable` |
 | `ICommand` | `executeReader`, `execute` |
 | `IReadonlyRepository<T>` | `connection`, `getSingle`, `get` |
-| `IRepository<T>` | extends `IReadonlyRepository<T>` with `add`, `update`, `delete` |
+| `IRepository<T>` / `ICRUDRepository<T>` (C#) | extends `IReadonlyRepository<T>` with `add`/`create`, `update`, `delete` |
 | `IReader` | `current`, `next` |
 | `IQuery` / `Where` | `getText()` — provider-specific |
 | `Parameter` / `IResponse` | `{ name, value }` / `{ result, rowsAffected }` |

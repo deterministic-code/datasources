@@ -12,6 +12,6 @@ public sealed class XmlDatasource : IDatasource, IDatasourceFactory
     public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
         new XmlCommand(connection ?? DefaultConnection());
-    public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
+    public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) =>
         new StubRepository<T>(Provider, connection ?? DefaultConnection());
 }

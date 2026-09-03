@@ -96,7 +96,7 @@ public class JsonTests
         Assert.NotEmpty(await repo.Get(new Query("{\"id\":1}")).ToListAsync());
         Assert.NotNull(await repo.GetSingle(new Where("{\"id\":1}")));
         Assert.NotEmpty(await repo.Get(new Where("{\"id\":1}")).ToListAsync());
-        await repo.Add(new Row { ["id"] = 4, ["name"] = "d" });
+        await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });
         await repo.Update(new Row { ["id"] = 4, ["name"] = "D" });
         await repo.Update(new Row { ["name"] = "Z" }, new Where("{\"id\":4}"));
         await repo.Delete(new Row { ["id"] = 4 });
@@ -110,7 +110,7 @@ public class JsonTests
 
         var closed = new JsonConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonCommand(closed).ExecuteReader(""));
-        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Add(new Row()));
+        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Create(new Row()));
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Update(new Row { ["id"] = 1 }));
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Delete(new Row { ["id"] = 1 }));
 

@@ -63,7 +63,7 @@ public static class RepositorySpec
         foreach (var step in spec.Steps)
             await (step switch
             {
-                { Create: { } create } => repo.Add(ToEntity(create.Row, spec.Type, mapping)),
+                { Create: { } create } => repo.Create(ToEntity(create.Row, spec.Type, mapping)),
                 { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(WhereBuilder.Equals("id", Value.From(get.Id)))),
                 { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Get(Where(mapping, where, spec.Type)) : repo.Get()),
                 { GetBy: { } getBy } => AssertGet(spec.Name, getBy, repo.GetSingle(Where(mapping, getBy.Where, spec.Type))),

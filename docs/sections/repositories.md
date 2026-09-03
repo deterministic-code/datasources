@@ -1,16 +1,16 @@
 # Repositories
 
-Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `IRepository<T>` adds `add`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
+Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C#) / `IRepository<T>` (TypeScript) / `Repository` (Rust) adds `create`/`add`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
 
-## IReadonlyRepository / IRepository
+## IReadonlyRepository / ICRUDRepository
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` |
-| `IRepository<T>` | `Repository` | `IRepository<T>` |
+| `ICRUDRepository<T>` | `Repository` | `IRepository<T>` |
 | `GetSingle` | `get_single` | `getSingle` |
 | `Get` | `get` | `get` |
-| `Add` | `add` | `add` |
+| `Create` | `add` | `add` |
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
 

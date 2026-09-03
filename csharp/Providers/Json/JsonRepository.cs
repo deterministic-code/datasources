@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Json;
 
-public sealed class JsonRepository : ReadonlyRepository<Dictionary<string, Value>>, IRepository<Dictionary<string, Value>>
+public sealed class JsonRepository : ReadonlyRepository<Dictionary<string, Value>>, ICRUDRepository<Dictionary<string, Value>>
 {
     readonly JsonConnection connection;
     public JsonRepository(JsonConnection connection) => this.connection = connection;
@@ -16,7 +16,7 @@ public sealed class JsonRepository : ReadonlyRepository<Dictionary<string, Value
         }
     }
 
-    public async Task<Response> Add(Dictionary<string, Value> item)
+    public async Task<Response> Create(Dictionary<string, Value> item)
     {
         connection.EnsureOpen();
         connection.GetCollection().Add(JsonCommand.ToObject(new Row(item)));
