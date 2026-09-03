@@ -1,12 +1,24 @@
+mod flat_to_type_mapper;
+mod i_flat_to_type_mapper;
+mod mapped_value;
 mod row_type_mapper;
 mod statement_mapper;
 mod transform_converter_mapper;
 mod transform_mapper;
+mod type_map;
+mod type_map_field;
+mod type_map_group;
 
+pub use flat_to_type_mapper::FlatToTypeMapper;
+pub use i_flat_to_type_mapper::IFlatToTypeMapper;
+pub use mapped_value::{MappedRow, MappedValue};
 pub use row_type_mapper::RowTypeMapper;
 pub use statement_mapper::StatementMapper;
 pub use transform_converter_mapper::TransformConverterMapper;
 pub use transform_mapper::TransformMapper;
+pub use type_map::TypeMap;
+pub use type_map_field::TypeMapField;
+pub use type_map_group::TypeMapGroup;
 
 pub trait IMapper<TFrom, TTo> {
     fn map(&self, value: TFrom) -> TTo;
@@ -82,7 +94,10 @@ mod tests {
         let mapper = NameSourceDestinationMapper::new("sql", "rust");
         assert_eq!(mapper.map("user_accounts"), "user_accounts");
         assert_eq!(mapper.reverse_map("UserAccounts"), "UserAccounts");
-        assert_eq!(IMapper::map(&mapper, "user_accounts".into()), "user_accounts");
+        assert_eq!(
+            IMapper::map(&mapper, "user_accounts".into()),
+            "user_accounts"
+        );
         assert_eq!(
             IMapper::reverse_map(&mapper, "UserAccounts".into()),
             "UserAccounts"
