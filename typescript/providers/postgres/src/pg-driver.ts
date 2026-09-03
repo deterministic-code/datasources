@@ -1,85 +1,35 @@
-import { IsolationLevel, type IsolationLevelName } from "@datasources/core";
-import { toPostgres, withReturning } from "./bind.ts";
+import type { IsolationLevelName } from "@datasources/core";
 import type {
-  IPgClient,
   IPostgresDriver,
   PgClientCtor,
   PostgresExecuteResult,
 } from "./i-postgres-driver.ts";
+import { PostgresCommandDriver } from "./postgres-command-driver.ts";
+import { PostgresConnectionDriver } from "./postgres-connection-driver.ts";
+import { PostgresTransactionDriver } from "./postgres-transaction-driver.ts";
 import type { Cells, Scalar } from "./scalar.ts";
 
-const isoSql = (isolation: IsolationLevelName): string =>
-  isolation === IsolationLevel.ReadUncommitted
-    ? "READ UNCOMMITTED"
-    : isolation === IsolationLevel.ReadCommitted
-      ? "READ COMMITTED"
-      : isolation === IsolationLevel.RepeatableRead
-        ? "REPEATABLE READ"
-        : "SERIALIZABLE";
-
 export class PgDriver implements IPostgresDriver {
-  private client: IPgClient | undefined;
+  private readonly connection: PostgresConnectionDriver;
+  private readonly commands: PostgresCommandDriver;
+  private readonly transactions: PostgresTransactionDriver;
 
-  constructor(
-    private readonly url: string,
-    private readonly Client: PgClientCtor,
-    private readonly schema?: string,
-  ) {}
-
-  async open(_url: string): Promise<void> {
-    if (this.client) return;
-    this.client = new this.Client({ connectionString: this.url });
-    await this.client.connect();
-    if (this.schema)
-      await this.client.query(`SET search_path TO ${this.schema}`);
+  constructor(url: string, Client: PgClientCtor, schema?: string) {
+    this.connection = new PostgresConnectionDriver(url, Client, schema);
+    this.commands = new PostgresCommandDriver(this.connection);
+    this.transactions = new PostgresTransactionDriver(this.commands);
   }
 
-  async close(): Promise<void> {
-    await this.client?.end();
-    this.client = undefined;
-  }
-
-  async execute(
+  open = (url: string): Promise<void> => this.connection.open(url);
+  close = (): Promise<void> => this.connection.close();
+  execute = (
     sql: string,
     params?: Record<string, Scalar>,
-  ): Promise<PostgresExecuteResult> {
-    if (!sql.trim()) return { rowsAffected: 0 };
-    const rewritten = withReturning(sql);
-    const { text, values } = toPostgres(rewritten, params);
-    const result = await this.require().query(text, values);
-    return {
-      rowsAffected: result.rowCount ?? result.rows.length,
-      result: result.rows[0]?.id,
-    };
-  }
-
-  async query(
-    sql: string,
-    params?: Record<string, Scalar>,
-  ): Promise<Cells[]> {
-    if (!sql.trim()) return [];
-    const { text, values } = toPostgres(sql, params);
-    return (await this.require().query(text, values)).rows;
-  }
-
-  async begin(
-    isolation: IsolationLevelName = IsolationLevel.Serializable,
-  ): Promise<void> {
-    await this.require().query(
-      `BEGIN ISOLATION LEVEL ${isoSql(isolation)}`,
-    );
-  }
-
-  async commit(): Promise<void> {
-    await this.require().query("COMMIT");
-  }
-
-  async rollback(): Promise<void> {
-    await this.require().query("ROLLBACK");
-  }
-
-  private require(): IPgClient {
-    if (!this.client) throw new Error("Postgres driver is not open");
-    return this.client;
-  }
+  ): Promise<PostgresExecuteResult> => this.commands.execute(sql, params);
+  query = (sql: string, params?: Record<string, Scalar>): Promise<Cells[]> =>
+    this.commands.query(sql, params);
+  begin = (isolation?: IsolationLevelName): Promise<void> =>
+    this.transactions.begin(isolation);
+  commit = (): Promise<void> => this.transactions.commit();
+  rollback = (): Promise<void> => this.transactions.rollback();
 }

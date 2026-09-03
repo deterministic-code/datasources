@@ -1,10 +1,18 @@
 mod command;
+#[cfg(any(test, feature = "rusqlite"))]
+mod command_driver;
 mod connection;
+#[cfg(any(test, feature = "rusqlite"))]
+mod connection_driver;
+#[cfg(any(test, feature = "rusqlite"))]
+mod connection_string;
 mod converters;
 mod datasource;
 mod driver;
 #[cfg(any(test, feature = "rusqlite"))]
 mod rusqlite_driver;
+#[cfg(any(test, feature = "rusqlite"))]
+mod transaction_driver;
 mod statement_builder;
 mod transaction;
 

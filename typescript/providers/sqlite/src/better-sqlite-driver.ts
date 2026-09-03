@@ -1,65 +1,36 @@
-import { IsolationLevel, type IsolationLevelName } from "@datasources/core";
+import type { IsolationLevelName } from "@datasources/core";
 import type {
   ISqliteDriver,
-  SqliteDatabase,
   SqliteDatabaseCtor,
   SqliteExecuteResult,
 } from "./i-sqlite-driver.ts";
+import { SqliteCommandDriver } from "./sqlite-command-driver.ts";
+import { SqliteConnectionDriver } from "./sqlite-connection-driver.ts";
+import { SqliteTransactionDriver } from "./sqlite-transaction-driver.ts";
 
 export class BetterSqliteDriver implements ISqliteDriver {
-  private db: SqliteDatabase | undefined;
+  private readonly connection: SqliteConnectionDriver;
+  private readonly commands: SqliteCommandDriver;
+  private readonly transactions: SqliteTransactionDriver;
 
-  constructor(
-    private readonly filename: string,
-    private readonly Database: SqliteDatabaseCtor,
-  ) {}
-
-  async open(_filename: string): Promise<void> {
-    if (this.db) return;
-    this.db = new this.Database(this.filename, { timeout: 0 });
+  constructor(filename: string, Database: SqliteDatabaseCtor) {
+    this.connection = new SqliteConnectionDriver(filename, Database);
+    this.commands = new SqliteCommandDriver(this.connection);
+    this.transactions = new SqliteTransactionDriver(this.commands);
   }
 
-  async close(): Promise<void> {
-    this.db?.close();
-    this.db = undefined;
-  }
-
-  async execute(
+  open = (filename: string): Promise<void> => this.connection.open(filename);
+  close = (): Promise<void> => this.connection.close();
+  execute = (
     sql: string,
     params?: Record<string, unknown>,
-  ): Promise<SqliteExecuteResult> {
-    if (!sql.trim()) return { rowsAffected: 0 };
-    const info = this.requireDb().prepare(sql).run(params);
-    return { rowsAffected: info.changes, result: info.lastInsertRowid };
-  }
-
-  async query(
+  ): Promise<SqliteExecuteResult> => this.commands.execute(sql, params);
+  query = (
     sql: string,
     params?: Record<string, unknown>,
-  ): Promise<Record<string, unknown>[]> {
-    if (!sql.trim()) return [];
-    return this.requireDb().prepare(sql).all(params);
-  }
-
-  async begin(isolation: IsolationLevelName = IsolationLevel.Serializable): Promise<void> {
-    this.requireDb().exec(
-      isolation === IsolationLevel.ReadUncommitted
-        ? "PRAGMA read_uncommitted = 1"
-        : "PRAGMA read_uncommitted = 0",
-    );
-    this.requireDb().exec("BEGIN");
-  }
-
-  async commit(): Promise<void> {
-    this.requireDb().exec("COMMIT");
-  }
-
-  async rollback(): Promise<void> {
-    this.requireDb().exec("ROLLBACK");
-  }
-
-  private requireDb(): SqliteDatabase {
-    if (!this.db) throw new Error("SQLite driver is not open");
-    return this.db;
-  }
+  ): Promise<Record<string, unknown>[]> => this.commands.query(sql, params);
+  begin = (isolation?: IsolationLevelName): Promise<void> =>
+    this.transactions.begin(isolation);
+  commit = (): Promise<void> => this.transactions.commit();
+  rollback = (): Promise<void> => this.transactions.rollback();
 }

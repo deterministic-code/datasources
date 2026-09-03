@@ -15,7 +15,7 @@ public class PostgresCommandIntegrationTests
         foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml"))
         {
             var schema = $"ds_{Guid.NewGuid():N}"[..18];
-            await using (var admin = new NpgsqlConnection(PostgresDriver.ToConnectionString(url)))
+            await using (var admin = new NpgsqlConnection(PostgresConnectionString.ToConnectionString(url)))
             {
                 await admin.OpenAsync();
                 await using var create = admin.CreateCommand();
@@ -37,7 +37,7 @@ public class PostgresCommandIntegrationTests
             }
             finally
             {
-                await using var drop = new NpgsqlConnection(PostgresDriver.ToConnectionString(url));
+                await using var drop = new NpgsqlConnection(PostgresConnectionString.ToConnectionString(url));
                 await drop.OpenAsync();
                 await using var cmd = drop.CreateCommand();
                 cmd.CommandText = $"DROP SCHEMA {schema} CASCADE";
