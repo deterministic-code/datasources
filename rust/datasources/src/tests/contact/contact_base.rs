@@ -8,6 +8,7 @@ pub struct ContactBase {
     pub updated: DateTime<Utc>,
     pub version: Vec<u8>,
     pub contact_source_id: i32,
+    pub contact_type_id: i32,
     pub first_name: String,
     pub last_name: String,
     pub email: Option<String>,
