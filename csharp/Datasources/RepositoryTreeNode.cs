@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Reflection;
 using Datasources.Builders;
 
@@ -34,15 +35,17 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         bool many = false)
     {
         var enrichment = new Enrichment(into, from, by, select, many);
-        items.Add(new RepositoryTreeNode(via, into, this, parents => Apply(via, enrichment, parents)));
-        return this;
+        var child = new RepositoryTreeNode(via, into, this, parents => Apply(via, enrichment, parents));
+        items.Add(child);
+        return child;
     }
 
     public async Task EnrichFrom(IReadOnlyList<object> parents)
     {
         await apply(parents);
+        var next = Related(parents, PropertyName);
         foreach (var child in items)
-            await child.EnrichFrom(parents);
+            await child.EnrichFrom(next);
     }
 
     static Task Apply<TRelated>(
@@ -86,6 +89,25 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
                 related.Add(item);
             Set(parent, enrichment.Into, related);
         }
+    }
+
+    static IReadOnlyList<object> Related(IReadOnlyList<object> parents, string propertyName)
+    {
+        if (propertyName.Length == 0) return parents;
+        var next = new List<object>();
+        foreach (var parent in parents)
+            switch (Get(parent, propertyName))
+            {
+                case null or string: break;
+                case IEnumerable rows:
+                    foreach (var item in rows)
+                        if (item is not null and not string) next.Add(item);
+                    break;
+                case { } value when !value.GetType().IsValueType:
+                    next.Add(value);
+                    break;
+            }
+        return next;
     }
 
     static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);

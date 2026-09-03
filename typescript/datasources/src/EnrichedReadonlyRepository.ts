@@ -2,6 +2,7 @@ import type { IEnriched } from "./IEnriched.ts";
 import type { IQuery } from "./IQuery.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
+import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import type { IWhere } from "./IWhere.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
@@ -22,8 +23,10 @@ export class EnrichedReadonlyRepository<T extends object>
     by: keyof TRelated & string,
     select?: keyof TRelated & string,
     many?: boolean,
+    nest?: (node: IRepositoryTreeNode) => void,
   ): this {
-    this.tree.parent.include(via, into, from, by, select, many);
+    const child = this.tree.parent.include(via, into, from, by, select, many);
+    nest?.(child);
     return this;
   }
 

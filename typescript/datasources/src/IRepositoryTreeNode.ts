@@ -12,6 +12,6 @@ export interface IRepositoryTreeNode {
     by: string,
     select?: string,
     many?: boolean,
-  ): this;
+  ): IRepositoryTreeNode;
   enrichFrom(parents: object[]): Promise<void>;
 }

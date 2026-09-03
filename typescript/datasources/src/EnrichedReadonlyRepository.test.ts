@@ -17,7 +17,9 @@ class TypeRow {
 
 class Child {
   parent_id = 0;
+  type_id = 0;
   label = "";
+  type_name = "";
 }
 
 const parent = (id: number, type_id: number): Parent =>
@@ -70,5 +72,45 @@ describe("EnrichedReadonlyRepository", () => {
     const item = await repo.getSingle();
     expect(item?.type_name).toBe("org");
     expect(item?.children.map((child) => child.label)).toEqual(["a", "b"]);
+  });
+
+  it("nests list lookup and keeps root sibling", async () => {
+    const repo = new EnrichedReadonlyRepository(
+      new ListReadonlyRepository([parent(1, 10)]),
+    );
+    repo.addEnriched(
+      "type_name",
+      "type_id",
+      new ListReadonlyRepository([
+        Object.assign(new TypeRow(), { id: 10, name: "org" }),
+      ]),
+      "id",
+      "name",
+    );
+    repo.addEnriched(
+      "children",
+      "id",
+      new ListReadonlyRepository([
+        Object.assign(new Child(), { parent_id: 1, type_id: 3, label: "a" }),
+        Object.assign(new Child(), { parent_id: 1, type_id: 9, label: "b" }),
+      ]),
+      "parent_id",
+      undefined,
+      true,
+      (node) =>
+        node.include(
+          new ListReadonlyRepository([
+            Object.assign(new TypeRow(), { id: 3, name: "home" }),
+          ]),
+          "type_name",
+          "type_id",
+          "id",
+          "name",
+        ),
+    );
+    const item = await repo.getSingle();
+    expect(item?.type_name).toBe("org");
+    expect(item?.children[0]?.type_name).toBe("home");
+    expect(item?.children[1]?.type_name).toBe("");
   });
 });

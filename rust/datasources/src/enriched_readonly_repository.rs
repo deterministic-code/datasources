@@ -34,6 +34,20 @@ impl EnrichedReadonlyRepository {
         self.tree.parent.include(via, into, from, by, select, many);
         self
     }
+
+    pub fn add_enriched_with(
+        &mut self,
+        into: impl Into<String>,
+        from: impl Into<String>,
+        via: Arc<dyn ReadonlyRepository>,
+        by: impl Into<String>,
+        select: Option<String>,
+        many: bool,
+        nest: impl FnOnce(&mut RepositoryTreeNode),
+    ) -> &mut Self {
+        nest(self.tree.parent.include(via, into, from, by, select, many));
+        self
+    }
 }
 
 #[async_trait]

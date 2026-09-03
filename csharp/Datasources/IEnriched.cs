@@ -8,6 +8,7 @@ public interface IEnriched<T>
         IReadonlyRepository<TRelated> via,
         string by,
         string? select = null,
-        bool many = false);
+        bool many = false,
+        Action<IRepositoryTreeNode>? nest = null);
     Task Enrich(IList<T> items);
 }

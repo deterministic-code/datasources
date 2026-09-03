@@ -24,19 +24,19 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
     by: string,
     select?: string,
     many?: boolean,
-  ): this {
+  ): IRepositoryTreeNode {
     const enrichment: Enrichment = { into, from, by, select, many };
-    this.items.push(
-      new RepositoryTreeNode(via, into, this, (parents) =>
-        apply(via, enrichment, parents),
-      ),
+    const child = new RepositoryTreeNode(via, into, this, (parents) =>
+      apply(via, enrichment, parents),
     );
-    return this;
+    this.items.push(child);
+    return child;
   }
 
   enrichFrom = async (parents: object[]): Promise<void> => {
     await this.apply(parents);
-    for (const child of this.items) await child.enrichFrom(parents);
+    const next = related(parents, this.propertyName);
+    for (const child of this.items) await child.enrichFrom(next);
   };
 }
 
@@ -88,6 +88,23 @@ const applyMany = async <TRelated extends object>(
       related.push(item);
     Object.assign(parent, { [enrichment.into]: related });
   }
+};
+
+const related = (parents: object[], propertyName: string): object[] => {
+  if (!propertyName) return parents;
+  const next: object[] = [];
+  for (const parent of parents) {
+    const value = props(parent)[propertyName];
+    if (value === undefined || value === null || typeof value === "string")
+      continue;
+    if (Array.isArray(value)) {
+      for (const item of value)
+        if (item !== null && typeof item === "object") next.push(item);
+      continue;
+    }
+    if (typeof value === "object") next.push(value);
+  }
+  return next;
 };
 
 const props = (item: object): Props => item as Props;
