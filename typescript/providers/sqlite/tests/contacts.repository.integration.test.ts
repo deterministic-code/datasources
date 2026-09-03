@@ -4,14 +4,17 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   collectAsync,
-  Join,
-  Repository,
-  StatementBuilder,
+  ConsoleCommandMiddleware,
   FlatToTypeMapper,
+  Repository,
   type Cells,
 } from "@datasources/core";
+import { contactsJoinQuery } from "../../../datasources/src/tests/contact/contactsJoinQuery.ts";
 import { contactsView } from "../../../datasources/src/tests/contact/contactsView.ts";
+import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
+import { expectContactsView } from "../../../datasources/src/tests/contact/expectContactsView.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
+import { specVerbose } from "../../../sql-spec-runner.ts";
 import {
   loadBetterSqlite3Driver,
   SqliteCommand,
@@ -29,21 +32,6 @@ const statementsOf = (sql: string) =>
     .map((part) => part.trim())
     .filter(Boolean);
 
-const contactColumns = [
-  "contacts_base.id AS id",
-  "contacts_base.first_name AS first_name",
-  "contacts_base.last_name AS last_name",
-  "contacts_base.email AS email",
-  "contact_source.name AS contact_source_name",
-  "contact_type.name AS contact_type_name",
-  "address.id AS address_id",
-  "address.line1 AS address_line1",
-  "address.city AS address_city",
-  "phone.id AS phone_id",
-  "phone.number AS phone_number",
-  "phone.label AS phone_label",
-];
-
 describe("contacts readonly repository", () => {
   it("joins contacts and collapses grouped addresses and phones", async () => {
     const connection = new SqliteConnection({
@@ -55,22 +43,20 @@ describe("contacts readonly repository", () => {
     for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql()])
       await command.execute(sql);
 
-    const query = StatementBuilder.createQuery("contacts_base", contactColumns, undefined, [
-      Join.inner("contact_source", "contacts_base.contact_source_id", "contact_source.id"),
-      Join.inner("contact_type", "contacts_base.contact_type_id", "contact_type.id"),
-      Join.left("address", "contacts_base.id", "address.contact_id"),
-      Join.left("phone", "contacts_base.id", "phone.contact_id"),
-    ]);
     const repo = new Repository<Cells>({ connection, entity: "contacts_base" });
+    repo.use(
+      new ConsoleCommandMiddleware(undefined, undefined, {
+        isVerbose: specVerbose() ? "true" : "false",
+      }),
+    );
     const mapper = new FlatToTypeMapper(contactsView);
-    const contacts = mapper.collapse(await collectAsync(repo.get(query)));
+    const contacts = mapper.collapse(await collectAsync(repo.get(contactsJoinQuery())));
+    const mapped = contacts.find((contact) => contact.id === 10);
+    if (specVerbose() && mapped) logMapped(mapped);
 
-    expect(contacts).toHaveLength(seedContactCount);
-    const ada = contacts.find((contact) => contact.id === 10);
-    expect(ada?.addresses).toHaveLength(2);
-    expect(ada?.phones).toHaveLength(1);
-    expect(ada?.contact_source_name).toBeTruthy();
-    expect(ada?.contact_type_name).toBeTruthy();
-    expect(new Set(ada?.addresses.map((address) => address.id)).size).toBe(2);
+    expectContactsView(contacts, seedContactCount);
+    expect(mapped?.contact_source_name).toBeTruthy();
+    expect(mapped?.contact_type_name).toBeTruthy();
+    expect(new Set(mapped?.addresses.map((address) => address.id)).size).toBe(2);
   });
 });
