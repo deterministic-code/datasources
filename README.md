@@ -377,6 +377,30 @@ Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `I
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
 
+### Enrichment
+
+A read-only service wraps an inner repository, then fills properties already on `T` from related repositories. This is a post-Get step (after convert-then-map). It does not join or collapse rows.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `IEnriched<T>` | `Enriched` | `IEnriched<T>` |
+| `IRepositoryTree` | `RepositoryTree` | `IRepositoryTree` |
+| `IRepositoryTreeNode` | `RepositoryTreeNode` | `IRepositoryTreeNode` |
+| `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` |
+| `AddEnriched` | `add_enriched` | `addEnriched` |
+| `Enrich` | `enrich` | `enrich` |
+
+Lookups use `GetSingle` / `get_single_where` (cached per distinct key). Lists use `Get` / `get_where`. Missing lookups leave the destination default.
+
+Contacts as the model — fill existing fields only (`contact_type_name`, `contact_source_name`, `addresses`, `phones`):
+
+```csharp
+AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
+AddEnriched("contact_source_name", "contact_source_id", sources, "id", "name");
+AddEnriched("addresses", "id", addresses, "contact_id", many: true);
+AddEnriched("phones", "id", phones, "contact_id", many: true);
+```
+
 ### Examples
 
 TODO: fill as the generic `Repository<T>` / `TableRepository` surface settles.
@@ -744,9 +768,32 @@ Holds source/destination labels. Column names pass through as-is.
 | `Map` | `map` | `map` |
 | `ReverseMap` | `reverse_map` | `reverseMap` |
 
+### StatementMapper
+
+Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.
+
+Apply in either or both places:
+
+1. **Builder** — `RepositoryBuilder` maps `Entity` and `Columns` into `RepositoryStatements`.
+2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` mappers rewrite the finished statement.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `StatementMapper<T>` | `StatementMapper` | `StatementMapper<T>` |
+| `Entity` | `entity` | `entity` |
+| `Columns` | `columns` | `columns` |
+| `Query` | `query` | `query` |
+| `Insert` | `insert` | `insert` |
+| `Update` | `update` | `update` |
+| `Delete` | `delete` | `delete` |
+| `Rows` | `rows` | `rows` |
+| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
+
 ## TypeConverters
 
-`TypeConverter` is only convert / reverseConvert. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`. A dialect adds a converter only when the native provider cannot map the type.
+`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`.
+
+A dialect adds a `TypeConverter` only when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
 ### TypeConverter
 
@@ -761,5 +808,5 @@ Holds source/destination labels. Column names pass through as-is.
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `RowTypeConverter<T>` | `RowTypeConverter` | `RowTypeConverter` |
-| `Convert` | `convert` | `convert` |
-| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
+| `Convert` / `ReverseConvert` | `convert` / `reverse_convert` | `convert` / `reverseConvert` |
+| `Types` / `Fields` | `types` / `fields` | `types` / `fields` |
