@@ -44,7 +44,7 @@ public class StatementMapperTests
         command.Reader = new MockReader<Row>([]);
         await repo.GetSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
-        await repo.Add(new UserRow { id = 1, name = "a" });
+        await repo.Create(new UserRow { id = 1, name = "a" });
         Assert.Equal("INSERT INTO people (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
         await repo.Update(new UserRow { id = 1, name = "a" });
         Assert.StartsWith("UPDATE people SET", command.ExecuteCalls[1].Text);
@@ -105,7 +105,7 @@ public class StatementMapperTests
         await repo.GetSingle();
         Assert.Equal("SELECT full_name, user_id FROM people LIMIT 1", command.ExecuteReaderCalls[0].Text);
         var row = new UserRow { id = 1, name = "a" };
-        await repo.Add(row);
+        await repo.Create(row);
         Assert.Equal("INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id", command.ExecuteCalls[0].Text);
         await repo.Update(row);
         Assert.Equal("UPDATE people SET name = $name WHERE id = $id RETURNING id", command.ExecuteCalls[1].Text);

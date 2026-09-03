@@ -100,7 +100,7 @@ public class MemoryTests
         Assert.NotEmpty(await repo.Get(new Query("{\"id\":1}")).ToListAsync());
         Assert.NotNull(await repo.GetSingle(new Where("{\"id\":1}")));
         Assert.NotEmpty(await repo.Get(new Where("{\"id\":1}")).ToListAsync());
-        await repo.Add(new Row { ["id"] = 4, ["name"] = "d" });
+        await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });
         await repo.Update(new Row { ["id"] = 4, ["name"] = "D" });
         await repo.Update(new Row { ["name"] = "Z" }, new Where("{\"id\":4}"));
         await repo.Delete(new Row { ["id"] = 4 });
@@ -115,7 +115,7 @@ public class MemoryTests
         var closed = new MemoryConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).ExecuteReader(""));
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).Execute("insert"));
-        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Add(new Row()));
+        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Create(new Row()));
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Update(new Row { ["id"] = 1 }));
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Delete(new Row { ["id"] = 1 }));
 

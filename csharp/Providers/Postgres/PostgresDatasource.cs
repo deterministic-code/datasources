@@ -35,8 +35,8 @@ public sealed class PostgresDatasource : IDatasource, IDatasourceFactory
     public ICommand CreateCommand(IConnection? connection = null) =>
         new PostgresCommand(connection as PostgresConnection ?? DefaultConnection());
 
-    public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new Repository<Dictionary<string, Value>>(
+    public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) =>
+        (ICRUDRepository<T>)(object)new Repository<Dictionary<string, Value>>(
             new RepositoryBuilderOptions<Dictionary<string, Value>>
             {
                 Connection = connection as PostgresConnection ?? DefaultConnection(),

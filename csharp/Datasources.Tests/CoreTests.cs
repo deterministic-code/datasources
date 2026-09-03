@@ -298,7 +298,7 @@ public class CoreTests
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.GetSingle(new Where("1=1")));
         Assert.Throws<ProviderNotImplementedException>(() => repo.Get());
         Assert.Throws<ProviderNotImplementedException>(() => repo.Get(new Where("1=1")));
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Add(new object()));
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Create(new object()));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Update(new object()));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => repo.Delete(new object(), new Where("1=1")));
         Assert.IsType<StubRepository<object>>(ds.CreateRepository<object>());
@@ -363,15 +363,15 @@ public class CoreTests
         Assert.Single(await repo.Get().ToListAsync());
         Assert.Single(await repo.Get(new MockQuery("all")).ToListAsync());
         Assert.Single(await repo.Get(new MockWhere("all")).ToListAsync());
-        await repo.Add(new Row { ["id"] = 3 });
+        await repo.Create(new Row { ["id"] = 3 });
         await repo.Update(new Row { ["id"] = 3 }, new MockWhere("id=3"));
         await repo.Delete(new Row { ["id"] = 3 });
         repo.GetSingleError = new InvalidOperationException("gs");
         await Assert.ThrowsAsync<InvalidOperationException>(() => repo.GetSingle());
         repo.GetError = new InvalidOperationException("g");
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await repo.Get().ToListAsync());
-        repo.AddError = new InvalidOperationException("ad");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Add(new Row()));
+        repo.CreateError = new InvalidOperationException("ad");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Create(new Row()));
         repo.UpdateError = new InvalidOperationException("up");
         await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Update(new Row()));
         repo.DeleteError = new InvalidOperationException("del");

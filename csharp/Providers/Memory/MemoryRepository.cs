@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryRepository : ReadonlyRepository<Dictionary<string, Value>>, IRepository<Dictionary<string, Value>>
+public sealed class MemoryRepository : ReadonlyRepository<Dictionary<string, Value>>, ICRUDRepository<Dictionary<string, Value>>
 {
     readonly MemoryConnection connection;
     public MemoryRepository(MemoryConnection connection) => this.connection = connection;
@@ -15,7 +15,7 @@ public sealed class MemoryRepository : ReadonlyRepository<Dictionary<string, Val
                 yield return record;
     }
 
-    public Task<Response> Add(Dictionary<string, Value> item)
+    public Task<Response> Create(Dictionary<string, Value> item)
     {
         connection.EnsureOpen();
         connection.GetCollection().Add(new Row(item));

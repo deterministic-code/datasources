@@ -2,7 +2,7 @@ using Datasources.Builders;
 
 namespace Datasources;
 
-public sealed class Repository<T> : ReadonlyRepository<T>, IRepository<T> where T : new()
+public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 {
     readonly IConnection connection;
     readonly List<ICommandMiddleware> middlewares = [];
@@ -51,7 +51,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, IRepository<T> where 
                 ?? throw new DatasourceException("Reader current must be a row")));
     }
 
-    public async Task<Response> Add(T item)
+    public async Task<Response> Create(T item)
     {
         var fields = Params(ReverseConvert(item), col => !assignIdentityOnAdd || !ids.Contains(col));
         return await Command().Execute(statements.Insert(fields).GetText(), fields);

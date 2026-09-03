@@ -101,7 +101,7 @@ public class RepositoryTests
     {
         var (repo, command) = Create(assignIdentityOnAdd: false);
         var obj = new UserRow { id = 1, name = "a" };
-        await repo.Add(obj);
+        await repo.Create(obj);
         Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
         await repo.Update(obj);
         Assert.Equal("UPDATE users SET name = $name WHERE id = $id", command.ExecuteCalls[1].Text);
@@ -115,7 +115,7 @@ public class RepositoryTests
     public async Task CompositeIdAndAssignIdentityOnAddAndOverrides()
     {
         var (repo, command) = Create<Composite>(id: ["org_id", "user_id"], assignIdentityOnAdd: true);
-        await repo.Add(new Composite { org_id = 1, user_id = 2, name = 3 });
+        await repo.Create(new Composite { org_id = 1, user_id = 2, name = 3 });
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
         Assert.Equal(new Value.Int(3), command.ExecuteCalls[0].Parameters![0].Value);
         await repo.Update(new Composite { org_id = 1, user_id = 2, name = 4 });
@@ -146,7 +146,7 @@ public class RepositoryTests
             Connection = connection2,
             Entity = "users"
         });
-        await typed.Add(new Item { Id = 1, Name = "a" });
+        await typed.Create(new Item { Id = 1, Name = "a" });
         Assert.Contains("INSERT INTO users", command2.ExecuteCalls[0].Text);
         var where = WhereBuilder.Equals("name", "z");
         await typed.Delete(new Item { Name = "z" }, where);
@@ -265,7 +265,7 @@ public class RepositoryTests
             email = "bob@asdf.com",
             Contacts = [new Contact { Name = "bob" }, new Contact { Name = "roberta" }]
         };
-        await repo.Add(user);
+        await repo.Create(user);
         Assert.Equal(
             "INSERT INTO users (contact_name1, contact_name2, email, id, username) VALUES ($contact_name1, $contact_name2, $email, $id, $username)",
             command.ExecuteCalls[0].Text);

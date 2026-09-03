@@ -25,6 +25,6 @@ public sealed class MockDatasource : IDatasource, IDatasourceFactory
     public ICommand CreateCommand(IConnection? connection = null) =>
         Command ?? new MockCommand(connection ?? Connection);
 
-    public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        Repository as IRepository<T> ?? new MockRepository<T>(connection ?? Connection);
+    public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) =>
+        Repository as ICRUDRepository<T> ?? new MockRepository<T>(connection ?? Connection);
 }

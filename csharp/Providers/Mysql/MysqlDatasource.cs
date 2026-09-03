@@ -34,8 +34,8 @@ public sealed class MysqlDatasource : IDatasource, IDatasourceFactory
     public ICommand CreateCommand(IConnection? connection = null) =>
         new MysqlCommand(connection as MysqlConnection ?? DefaultConnection());
 
-    public IRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (IRepository<T>)(object)new Repository<Dictionary<string, Value>>(
+    public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) =>
+        (ICRUDRepository<T>)(object)new Repository<Dictionary<string, Value>>(
             new RepositoryBuilderOptions<Dictionary<string, Value>>
             {
                 Connection = connection as MysqlConnection ?? DefaultConnection(),
