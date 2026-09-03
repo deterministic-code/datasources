@@ -14,6 +14,28 @@ Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `I
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
 
+## Factory
+
+Instance registry of factory callbacks. Register a builder, then create by entity type name or by type. The callback receives an optional connection.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `IRepositoryFactory` | `ReadonlyRepositoryFactory` | `IReadonlyRepositoryFactory` |
+| `ICRUDRepositoryFactory` | `CrudRepositoryFactory` | `IRepositoryFactory` |
+| `RepositoryFactory` | `RepositoryFactory` | `RepositoryFactory` |
+| `Register` / `Create` | `register` / `create` | `register` / `create` |
+| `Create<T>` / `Create(typeof(T))` | `register_type` / `create_type` | `register(type)` / `create(type)` |
+| `RepositoryNotRegisteredException` | `DatasourceError` | `RepositoryNotRegisteredError` |
+
+Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
+
+```csharp
+var factory = new RepositoryFactory();
+factory.Register<Contact>(connection => new Repository<Contact>(connection!));
+var repo = factory.Create<Contact>();
+var byName = factory.Create("Contact");
+```
+
 ## Enrichment
 
 A read-only service wraps an inner repository, then fills properties already on `T` from related repositories. This is a post-Get step (after convert-then-map). It does not join or collapse rows.
