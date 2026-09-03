@@ -2,13 +2,13 @@ import { describe, it } from "vitest";
 import {
   repositorySpecFiles,
   runRepositorySpec,
-} from "../../../repository-spec-runner.ts";
+} from "../../repository-spec-runner.ts";
 import {
   loadBetterSqlite3Driver,
   SqliteCommand,
   SqliteConnection,
   SqliteStatementBuilder,
-} from "./index.ts";
+} from "../src/index.ts";
 
 describe("repository specs", () => {
   for (const file of repositorySpecFiles()) {

@@ -18,8 +18,10 @@ pub use tokio_postgres_driver::TokioPostgresDriver;
 pub use transaction::PostgresTransaction;
 
 #[cfg(test)]
+#[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]
+#[path = "../tests/repository_spec.rs"]
 mod repository_spec;
 
 #[cfg(test)]

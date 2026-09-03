@@ -1,17 +1,18 @@
 import { beforeAll, describe, it } from "vitest";
-import { ensureCompose } from "../../../ensure-compose.ts";
+import { ensureCompose } from "../../ensure-compose.ts";
 import {
-  repositorySpecFiles,
-  runRepositorySpec,
-} from "../../../repository-spec-runner.ts";
+  loadDialect,
+  runSpec,
+  specFiles,
+} from "../../sql-spec-runner.ts";
 import {
   loadMysql2Driver,
   MysqlCommand,
   MysqlConnection,
-  MysqlStatementBuilder,
-} from "./index.ts";
-import type { Mysql2Module } from "./i-mysql-driver.ts";
+} from "../src/index.ts";
+import type { Mysql2Module } from "../src/i-mysql-driver.ts";
 
+const dialect = loadDialect("mysql");
 const url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
 
@@ -46,23 +47,34 @@ const isolate = async (base: string) => {
   };
 };
 
-describe("repository specs", () => {
-  for (const file of repositorySpecFiles()) {
+describe("shared sql specs", () => {
+  for (const file of specFiles()) {
     it(file.split("/").pop()!, async () => {
       const isolated = await isolate(url);
       try {
-        const connection = new MysqlConnection({
-          url: isolated.url,
-          driver: await loadMysql2Driver(isolated.url),
+        await runSpec(file, dialect, {
+          openSession: async () => {
+            const connection = new MysqlConnection({
+              url: isolated.url,
+              driver: await loadMysql2Driver(isolated.url),
+            });
+            return { connection, command: new MysqlCommand(connection) };
+          },
+          closedCommand: () =>
+            new MysqlCommand(
+              new MysqlConnection({
+                driver: {
+                  open: async () => {},
+                  close: async () => {},
+                  execute: async () => ({ rowsAffected: 0 }),
+                  query: async () => [],
+                  begin: async () => {},
+                  commit: async () => {},
+                  rollback: async () => {},
+                },
+              }),
+            ),
         });
-        await connection.open();
-        const command = new MysqlCommand(connection);
-        await runRepositorySpec(
-          file,
-          connection,
-          (sql) => command.execute(sql),
-          MysqlStatementBuilder,
-        );
       } finally {
         await isolated.cleanup();
       }

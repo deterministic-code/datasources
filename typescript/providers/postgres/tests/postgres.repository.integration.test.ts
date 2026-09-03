@@ -1,16 +1,16 @@
 import { beforeAll, describe, it } from "vitest";
-import { ensureCompose } from "../../../ensure-compose.ts";
+import { ensureCompose } from "../../ensure-compose.ts";
 import {
   repositorySpecFiles,
   runRepositorySpec,
-} from "../../../repository-spec-runner.ts";
+} from "../../repository-spec-runner.ts";
 import {
   loadPgDriver,
   PostgresCommand,
   PostgresConnection,
   PostgresStatementBuilder,
-} from "./index.ts";
-import type { PgModule } from "./i-postgres-driver.ts";
+} from "../src/index.ts";
+import type { PgModule } from "../src/i-postgres-driver.ts";
 
 const url = (process.env.POSTGRES_URL ??=
   "postgres://ds:ds@127.0.0.1:5432/datasources");
