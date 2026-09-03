@@ -68,9 +68,15 @@ impl DatasourceFactory for MysqlDatasource {
         "mysql"
     }
 
-    fn create(&self, options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
+    fn create(
+        &self,
+        options: Option<&std::collections::HashMap<String, String>>,
+    ) -> Arc<dyn Datasource> {
         Arc::new(MysqlDatasource::new(
-            options.and_then(|o| o.get("url")).cloned().or_else(|| self.url.clone()),
+            options
+                .and_then(|o| o.get("url"))
+                .cloned()
+                .or_else(|| self.url.clone()),
             self.driver.clone(),
             options
                 .and_then(|o| o.get("table"))

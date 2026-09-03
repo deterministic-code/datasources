@@ -1,8 +1,8 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::datasource_error::DatasourceError;
 use crate::parameter::Parameter;
-use crate::row::Row;
 use crate::result::Result;
+use crate::row::Row;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;

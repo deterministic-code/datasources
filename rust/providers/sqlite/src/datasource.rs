@@ -59,10 +59,7 @@ impl Datasource for SqliteDatasource {
         Arc::new(SqliteCommand::new(self.connection()))
     }
 
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
         let mut options = TableRepositoryBuilderOptions::with_factory(self.connection());
         options.entity = self.table.clone().unwrap_or_else(|| "items".into());
         options.mapping = Some(RowTypeConverter::new(vec![]));
@@ -75,7 +72,10 @@ impl DatasourceFactory for SqliteDatasource {
         "sqlite"
     }
 
-    fn create(&self, options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
+    fn create(
+        &self,
+        options: Option<&std::collections::HashMap<String, String>>,
+    ) -> Arc<dyn Datasource> {
         Arc::new(SqliteDatasource::new(
             options
                 .and_then(|o| o.get("filename"))

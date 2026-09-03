@@ -1,6 +1,6 @@
 use crate::reader::Reader;
-use crate::row::Row;
 use crate::result::Result;
+use crate::row::Row;
 use async_trait::async_trait;
 
 pub struct ArrayReader<T = Row> {

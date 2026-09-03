@@ -92,16 +92,23 @@ export class DeepCRUDRepository<T extends object>
   }
 
   add = async (item: T): Promise<IResponse> => {
-    const response = await this.crud.add(item);
+    const response = await this.crud.add(this.stripEnriched(item));
     applyIdentity(item, response);
     await this.persist(this.tree.parent, [item], "create");
     return response;
   };
 
   update = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
-    const response = await this.crud.update(item, byWhere);
+    const response = await this.crud.update(this.stripEnriched(item), byWhere);
     await this.persist(this.tree.parent, [item], "update");
     return response;
+  };
+
+  private stripEnriched = (item: T): T => {
+    const copy = { ...item } as Props;
+    for (const child of this.tree.parent.items)
+      if (child.enrichment) delete copy[child.enrichment.into];
+    return copy as T;
   };
 
   delete = async (item: T, byWhere?: IWhere): Promise<IResponse> => {

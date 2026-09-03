@@ -1,6 +1,6 @@
 use datasources::{
-    Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement, TextDeleteStatement,
-    TextInsertStatement, TextQuery, TextUpdateStatement, Where,
+    Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement,
+    TextDeleteStatement, TextInsertStatement, TextQuery, TextUpdateStatement, Where,
 };
 
 pub struct MysqlColumn {
@@ -151,8 +151,13 @@ mod tests {
             Parameter::new("username", "alice"),
         ];
         assert_eq!(
-            MysqlStatementBuilder::create_query("user", &["id", "username"], Some(&where_clause), &[])
-                .get_text(),
+            MysqlStatementBuilder::create_query(
+                "user",
+                &["id", "username"],
+                Some(&where_clause),
+                &[]
+            )
+            .get_text(),
             "SELECT `id`, `username` FROM `user` WHERE id = $id"
         );
         assert_eq!(

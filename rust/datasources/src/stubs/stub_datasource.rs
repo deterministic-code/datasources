@@ -40,10 +40,7 @@ impl Datasource for StubDatasource {
         Arc::new(StubCommand::new(self.provider.clone()))
     }
 
-    fn create_repository(
-        &self,
-        _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
         Arc::new(StubRepository::new(self.provider.clone()))
     }
 }
@@ -53,7 +50,10 @@ impl DatasourceFactory for StubDatasource {
         &self.provider
     }
 
-    fn create(&self, _options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
+    fn create(
+        &self,
+        _options: Option<&std::collections::HashMap<String, String>>,
+    ) -> Arc<dyn Datasource> {
         Arc::new(StubDatasource::new(self.provider.clone()))
     }
 }

@@ -9,6 +9,8 @@ export type BuiltRepository<T = Cells> = {
   rowConverter: TypeConverter<T, Cells>;
   statementMapper: StatementMapper<T>;
   statements: RepositoryStatements;
+  columns: string[];
+  writeColumns: string[];
   ids: string[];
   assignIdentityOnAdd: boolean;
 };

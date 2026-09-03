@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use datasources::{DatasourceError, IsolationLevel, Row, Result, Value};
+use datasources::{DatasourceError, IsolationLevel, Result, Row, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -34,7 +34,9 @@ pub fn to_postgres(sql: &str, params: &HashMap<String, Value>) -> (String, Vec<V
     let chars: Vec<char> = sql.chars().collect();
     let mut i = 0;
     while i < chars.len() {
-        if chars[i] == '$' && i + 1 < chars.len() && (chars[i + 1].is_ascii_alphabetic() || chars[i + 1] == '_')
+        if chars[i] == '$'
+            && i + 1 < chars.len()
+            && (chars[i + 1].is_ascii_alphabetic() || chars[i + 1] == '_')
         {
             i += 1;
             let start = i;
@@ -65,7 +67,10 @@ pub fn to_postgres(sql: &str, params: &HashMap<String, Value>) -> (String, Vec<V
 
 pub fn with_returning(sql: &str) -> String {
     let trimmed = sql.trim();
-    let head = trimmed.get(..6).unwrap_or("").eq_ignore_ascii_case("insert");
+    let head = trimmed
+        .get(..6)
+        .unwrap_or("")
+        .eq_ignore_ascii_case("insert");
     let returning = trimmed.to_ascii_lowercase().contains("returning");
     if head && !returning {
         format!("{} RETURNING id", trimmed.trim_end_matches(';'))

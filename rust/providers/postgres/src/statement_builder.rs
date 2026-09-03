@@ -1,6 +1,6 @@
 use datasources::{
-    Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement, TextDeleteStatement,
-    TextInsertStatement, TextQuery, TextUpdateStatement, Where,
+    Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement,
+    TextDeleteStatement, TextInsertStatement, TextQuery, TextUpdateStatement, Where,
 };
 
 pub struct PostgresColumn {
@@ -172,7 +172,8 @@ mod tests {
             "INSERT INTO \"user\" (id, username) VALUES ($id, $username)"
         );
         assert_eq!(
-            PostgresStatementBuilder::create_update("user", &fields, Some(&where_clause)).get_text(),
+            PostgresStatementBuilder::create_update("user", &fields, Some(&where_clause))
+                .get_text(),
             "UPDATE \"user\" SET id = $id, username = $username WHERE id = $id"
         );
         assert_eq!(

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use datasources::{DatasourceError, IsolationLevel, Row, Result, Value};
+use datasources::{DatasourceError, IsolationLevel, Result, Row, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 

@@ -1,18 +1,18 @@
 use crate::builders::WhereBuilder;
+use crate::built_repository::BuiltRepository;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
-use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::converters::{ConvertSchema, RowTypeConverter};
-use crate::mappers::{IMapper, StatementMapper};
+use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::datasource_error::DatasourceError;
+use crate::mappers::{IMapper, StatementMapper};
 use crate::parameter::Parameter;
 use crate::query::Query;
-use crate::row::Row;
 use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
-use crate::built_repository::BuiltRepository;
+use crate::row::Row;
 use crate::table_repository_builder::TableRepositoryBuilder;
 use crate::table_repository_builder_options::TableRepositoryBuilderOptions;
 use crate::table_repository_statements::TableRepositoryStatements;
@@ -126,10 +126,7 @@ impl TableRepository {
     }
 
     async fn read_single(&self, text: String, params: Vec<Parameter>) -> Result<Option<Row>> {
-        let reader = self
-            .command()
-            .execute_reader(&text, Some(&params))
-            .await?;
+        let reader = self.command().execute_reader(&text, Some(&params)).await?;
         if !reader.next().await? {
             return Ok(None);
         }
@@ -144,10 +141,7 @@ impl TableRepository {
     }
 
     async fn read_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Row>> {
-        let reader = self
-            .command()
-            .execute_reader(&text, Some(&params))
-            .await?;
+        let reader = self.command().execute_reader(&text, Some(&params)).await?;
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
@@ -161,8 +155,10 @@ impl TableRepository {
     }
 
     fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        self.row_converter
-            .reverse_convert(&IMapper::reverse_map(&self.statement_mapper.rows, item.clone()))
+        self.row_converter.reverse_convert(&IMapper::reverse_map(
+            &self.statement_mapper.rows,
+            item.clone(),
+        ))
     }
 }
 
@@ -195,9 +191,7 @@ impl Repository for TableRepository {
         let record = self.reverse_convert(item)?;
         let fields = self.params(&record, !self.assign_identity_on_add);
         let text = self.statements.insert(&fields);
-        self.command()
-            .execute(&text, Some(&fields))
-            .await
+        self.command().execute(&text, Some(&fields)).await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
@@ -221,9 +215,7 @@ impl Repository for TableRepository {
         let text = self.statements.update(&fields, predicate);
         let mut parameters = fields;
         parameters.extend(predicate.parameters());
-        self.command()
-            .execute(&text, Some(&parameters))
-            .await
+        self.command().execute(&text, Some(&parameters)).await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
@@ -240,8 +232,6 @@ impl Repository for TableRepository {
         };
         let text = self.statements.delete(predicate);
         let parameters = predicate.parameters();
-        self.command()
-            .execute(&text, Some(&parameters))
-            .await
+        self.command().execute(&text, Some(&parameters)).await
     }
 }

@@ -16,6 +16,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
+mod add_extra_contact;
 mod as_contacts_view;
 mod contact_view;
 mod contacts_join_query;
@@ -27,9 +28,11 @@ mod from_enriched_contacts;
 mod from_mapped_contacts;
 mod seed_contacts;
 
+pub use add_extra_contact::add_extra_contact;
 pub use as_contacts_view::as_contacts_view;
 pub use contact_view::{AddressView, ContactView, PhoneView};
 pub use contacts_parity::{apply_sql, contact_schema, contacts_parity, statements_of};
+pub use contacts_service_of::contacts_service_of;
 pub use expect_contacts_view::expect_contacts_view;
 pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
 

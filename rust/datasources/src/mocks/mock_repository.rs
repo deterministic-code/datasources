@@ -1,9 +1,9 @@
 use crate::datasource_error::DatasourceError;
 use crate::query::Query;
-use crate::row::Row;
 use crate::repository::{ReadonlyRepository, Repository};
 use crate::response::Response;
 use crate::result::Result;
+use crate::row::Row;
 use crate::value::Value;
 use crate::where_trait::Where;
 use async_trait::async_trait;

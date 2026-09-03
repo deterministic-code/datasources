@@ -2,9 +2,7 @@ use crate::command::SqliteCommand;
 use crate::driver::SqliteDriver;
 use crate::transaction::SqliteTransaction;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
-};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
 use std::sync::{Arc, Mutex};
 
 pub struct SqliteConnection {

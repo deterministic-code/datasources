@@ -1,8 +1,8 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::parameter::Parameter;
 use crate::response::Response;
-use crate::row::Row;
 use crate::result::Result;
+use crate::row::Row;
 use crate::value::Value;
 use std::any::Any;
 use std::future::Future;
@@ -20,7 +20,10 @@ impl CommandMiddlewareHost {
     }
 
     pub fn use_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
-        self.middlewares.lock().expect("middleware").push(middleware);
+        self.middlewares
+            .lock()
+            .expect("middleware")
+            .push(middleware);
     }
 
     pub async fn run<T: 'static, F, Fut>(

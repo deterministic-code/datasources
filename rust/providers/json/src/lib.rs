@@ -1,6 +1,6 @@
-mod converters;
 mod command;
 mod connection;
+mod converters;
 mod datasource;
 mod file_store;
 mod filter;
@@ -15,16 +15,14 @@ pub use repository::JsonRepository;
 pub use transaction::JsonTransaction;
 
 #[cfg(test)]
-pub(crate) use filter::{
-    json_from_record, json_to_value, matches, parse_filter, record_from_json,
-};
+pub(crate) use filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{
         create, register, reset, Command, Connection, DatasourceFactory, Parameter,
-        Row, ReadonlyRepository, Repository, TextQuery, TextWhere, Value,
+        ReadonlyRepository, Repository, Row, TextQuery, TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
     use std::sync::Arc;
@@ -42,12 +40,7 @@ mod tests {
             "db.json",
             "[{\"id\":1,\"name\":\"a\"}]",
         ));
-        let conn = Arc::new(JsonConnection::new(
-            "db.json",
-            None,
-            store.clone(),
-            None,
-        ));
+        let conn = Arc::new(JsonConnection::new("db.json", None, store.clone(), None));
         conn.open().await.unwrap();
         conn.open().await.unwrap();
         assert_eq!(conn.path(), "db.json");
@@ -58,7 +51,11 @@ mod tests {
             .await
             .unwrap()
             .is_none());
-        assert!(!repo.get(Some(&TextQuery::new("{\"id\":1}"))).await.unwrap().is_empty());
+        assert!(!repo
+            .get(Some(&TextQuery::new("{\"id\":1}")))
+            .await
+            .unwrap()
+            .is_empty());
         assert!(repo
             .get_single_where(&TextWhere::new("{\"id\":1}"))
             .await
@@ -205,10 +202,12 @@ mod tests {
             .delete(&rec(1, "a"), None)
             .await
             .is_err());
-        assert!(JsonConnection::new("", None, Arc::new(MemoryFileStore::new()), None)
-            .start_transaction(None)
-            .await
-            .is_err());
+        assert!(
+            JsonConnection::new("", None, Arc::new(MemoryFileStore::new()), None)
+                .start_transaction(None)
+                .await
+                .is_err()
+        );
 
         let with_col = Arc::new(JsonConnection::new(
             "c.json",
@@ -238,7 +237,9 @@ mod tests {
         ));
         empty_file.open().await.unwrap();
 
-        json_to_value(&JsonValue::Number(serde_json::Number::from_f64(1.25).unwrap()));
+        json_to_value(&JsonValue::Number(
+            serde_json::Number::from_f64(1.25).unwrap(),
+        ));
         json_to_value(&serde_json::json!([1]));
         if let JsonValue::Number(n) = serde_json::json!(1) {
             json_to_value(&JsonValue::Number(n));

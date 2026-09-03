@@ -23,8 +23,7 @@ impl TableRepositoryBuilder {
         let statement_mapper = match (options.statement_mapper, options.mapper) {
             (Some(mapper), _) => mapper,
             (None, rows) => {
-                let mut mapper =
-                    StatementMapper::identity(options.connection.provider(), "rust");
+                let mut mapper = StatementMapper::identity(options.connection.provider(), "rust");
                 mapper.rows = rows.unwrap_or_else(|| TransformMapper::new(|row| row, |row| row));
                 mapper
             }

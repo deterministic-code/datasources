@@ -41,11 +41,7 @@ impl Command for StubCommand {
             .await
     }
 
-    async fn execute(
-        &self,
-        text: &str,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
+    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
         self.host
             .run(text, parameters, |_query, _params| async {
                 Err(fail(&self.provider))
@@ -74,10 +70,7 @@ macro_rules! named_stub_command {
 
         #[async_trait::async_trait]
         impl $crate::Command for $name {
-            fn use_middleware(
-                &self,
-                middleware: std::sync::Arc<dyn $crate::CommandMiddleware>,
-            ) {
+            fn use_middleware(&self, middleware: std::sync::Arc<dyn $crate::CommandMiddleware>) {
                 self.inner.use_middleware(middleware);
             }
 

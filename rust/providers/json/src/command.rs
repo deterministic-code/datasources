@@ -59,11 +59,7 @@ impl Command for JsonCommand {
             .await
     }
 
-    async fn execute(
-        &self,
-        text: &str,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
+    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
         let connection = self.connection.clone();
         self.host
             .run(text, parameters, move |query, params| {

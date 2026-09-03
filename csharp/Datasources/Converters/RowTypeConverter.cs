@@ -77,6 +77,8 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
         {
             null => null,
             _ when type.IsInstanceOfType(raw) => raw,
+            string text when type == typeof(Guid) => Guid.Parse(text),
+            string text when type == typeof(DateTime) => DateTime.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
             _ => System.Convert.ChangeType(raw, type, CultureInfo.InvariantCulture)
         };
     }

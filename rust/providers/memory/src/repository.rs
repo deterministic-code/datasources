@@ -3,7 +3,7 @@ use crate::connection::MemoryConnection;
 use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, Command, Query, Row, ReadonlyRepository, Repository, Response, Result,
+    identity_filter, Command, Query, ReadonlyRepository, Repository, Response, Result, Row,
     TextQuery, Value, Where,
 };
 use std::sync::Arc;
@@ -46,7 +46,8 @@ impl ReadonlyRepository for MemoryRepository {
     }
 
     async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.get(Some(&TextQuery::new(where_clause.get_text()))).await
+        self.get(Some(&TextQuery::new(where_clause.get_text())))
+            .await
     }
 }
 

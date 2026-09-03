@@ -2,14 +2,14 @@ using Datasources;
 
 namespace Datasources.Tests.Contact;
 
-internal sealed class ContactsService : EnrichedReadonlyRepository<Contact>
+internal sealed class ContactsService : DeepCRUDRepository<Contact>
 {
     public ContactsService(
-        IReadonlyRepository<Contact> contacts,
+        ICRUDRepository<Contact> contacts,
         IReadonlyRepository<ContactType> types,
         IReadonlyRepository<ContactSource> sources,
-        IReadonlyRepository<Address> addresses,
-        IReadonlyRepository<Phone> phones)
+        ICRUDRepository<Address> addresses,
+        ICRUDRepository<Phone> phones)
         : base(contacts)
     {
         AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");

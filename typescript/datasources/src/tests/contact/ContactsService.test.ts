@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { collectAsync } from "../../collectAsync.ts";
+import { ListCRUDRepository } from "../listCRUDRepository.ts";
 import { ListReadonlyRepository } from "../listReadonlyRepository.ts";
 import { Address } from "./Address.ts";
 import { Contact } from "./Contact.ts";
@@ -10,38 +11,35 @@ import { Phone } from "./Phone.ts";
 
 describe("ContactsService", () => {
   it("fills names and child lists", async () => {
+    const addresses = new ListCRUDRepository<Address>([
+      Object.assign(new Address(), {
+        id: 11,
+        contact_id: 9,
+        line1: "other",
+        city: "x",
+      }),
+    ]);
     const service = new ContactsService(
-      new ListReadonlyRepository([
-        Object.assign(new Contact(), {
-          id: 1,
-          contact_type_id: 2,
-          contact_source_id: 3,
-          first_name: "Ada",
-        }),
-      ]),
+      new ListCRUDRepository<Contact>(),
       new ListReadonlyRepository([
         Object.assign(new ContactType(), { id: 2, name: "person" }),
       ]),
       new ListReadonlyRepository([
         Object.assign(new ContactSource(), { id: 3, name: "import" }),
       ]),
-      new ListReadonlyRepository([
-        Object.assign(new Address(), {
-          id: 10,
-          contact_id: 1,
-          line1: "1 Main",
-          city: "Paris",
-        }),
-        Object.assign(new Address(), {
-          id: 11,
-          contact_id: 9,
-          line1: "other",
-          city: "x",
-        }),
-      ]),
-      new ListReadonlyRepository([
-        Object.assign(new Phone(), { id: 20, contact_id: 1, number: "555" }),
-      ]),
+      addresses,
+      new ListCRUDRepository<Phone>(),
+    );
+    await service.add(
+      Object.assign(new Contact(), {
+        contact_type_id: 2,
+        contact_source_id: 3,
+        first_name: "Ada",
+        addresses: [
+          Object.assign(new Address(), { line1: "1 Main", city: "Paris" }),
+        ],
+        phones: [Object.assign(new Phone(), { number: "555" })],
+      }),
     );
     const contact = (await collectAsync(service.get()))[0];
     expect(contact?.contact_type_name).toBe("person");

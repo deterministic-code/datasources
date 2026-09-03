@@ -30,7 +30,9 @@ impl Value {
             Value::DateTime(date) => Self::iso_datetime(*date),
             Value::Uuid(id) => id.to_string(),
             Value::Decimal(number) => number.to_string(),
-            Value::Binary(bytes) => base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes),
+            Value::Binary(bytes) => {
+                base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes)
+            }
         }
     }
 }

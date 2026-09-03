@@ -38,7 +38,10 @@ impl MockConnection {
         Self::with_command_provider(command, "mock")
     }
 
-    pub fn with_command_provider(command: Arc<dyn Command>, provider: impl Into<String>) -> Arc<Self> {
+    pub fn with_command_provider(
+        command: Arc<dyn Command>,
+        provider: impl Into<String>,
+    ) -> Arc<Self> {
         Arc::new(Self {
             state: Mutex::new(CallState::default()),
             transaction: Arc::new(MockTransaction::new_unbound()),

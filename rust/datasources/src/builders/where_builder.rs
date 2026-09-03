@@ -99,7 +99,9 @@ impl WhereBuilder {
 impl Statement for WhereBuilder {
     fn parameters(&self) -> Vec<Parameter> {
         match &self.node {
-            Node::Compare { field, value, .. } => vec![Parameter::new(field.clone(), value.clone())],
+            Node::Compare { field, value, .. } => {
+                vec![Parameter::new(field.clone(), value.clone())]
+            }
             Node::Not { child } => child.parameters(),
             Node::Group { children, .. } => children.iter().flat_map(Self::parameters).collect(),
         }

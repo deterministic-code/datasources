@@ -1,6 +1,6 @@
 use datasources::{
-    Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement, TextDeleteStatement,
-    TextInsertStatement, TextQuery, TextUpdateStatement, Where,
+    Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement,
+    TextDeleteStatement, TextInsertStatement, TextQuery, TextUpdateStatement, Where,
 };
 
 pub struct SqliteColumn {
@@ -47,10 +47,7 @@ impl SqliteStatementBuilder {
         .into())
     }
 
-    pub fn create_table(
-        table: &str,
-        columns: &[SqliteColumn],
-    ) -> Result<TextCreateTableStatement> {
+    pub fn create_table(table: &str, columns: &[SqliteColumn]) -> Result<TextCreateTableStatement> {
         let mapped = columns
             .iter()
             .map(|column| {
@@ -130,7 +127,10 @@ mod tests {
     fn quotes_and_maps_types() {
         assert_eq!(SqliteStatementBuilder::quote("user"), "\"user\"");
         assert_eq!(SqliteStatementBuilder::quote("a\"b"), "\"a\"\"b\"");
-        assert_eq!(SqliteStatementBuilder::column_type("int").unwrap(), "INTEGER");
+        assert_eq!(
+            SqliteStatementBuilder::column_type("int").unwrap(),
+            "INTEGER"
+        );
         let error = SqliteStatementBuilder::column_type("xml").unwrap_err();
         assert!(error.to_string().contains("Unknown sqlite type \"xml\""));
     }
@@ -159,7 +159,7 @@ mod tests {
                 Some(&where_clause),
                 &[],
             )
-                .get_text(),
+            .get_text(),
             "SELECT \"id\", \"username\" FROM \"user\" WHERE id = $id"
         );
         assert_eq!(

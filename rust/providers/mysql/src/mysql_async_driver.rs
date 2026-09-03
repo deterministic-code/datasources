@@ -123,7 +123,11 @@ impl MysqlDriver for MysqlAsyncDriver {
         })
     }
 
-    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<datasources::Row>> {
+    async fn query(
+        &self,
+        sql: &str,
+        params: &HashMap<String, Value>,
+    ) -> Result<Vec<datasources::Row>> {
         if sql.trim().is_empty() {
             return Ok(Vec::new());
         }

@@ -6,6 +6,8 @@ import { asContactsView } from "../../../datasources/src/tests/contact/asContact
 import { contactsParity } from "../../../datasources/src/tests/contact/contactsParity.ts";
 import { expectContactsView } from "../../../datasources/src/tests/contact/expectContactsView.ts";
 import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
+import { addExtraContact } from "../../../datasources/src/tests/contact/extraContact.ts";
+import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { specVerbose } from "../../../sql-spec-runner.ts";
 import {
@@ -46,5 +48,13 @@ describe("contacts readonly repository", () => {
     expect(mapped?.contact_type_name).toBeTruthy();
     expect(new Set(mapped?.addresses.map((address) => address.id)).size).toBe(2);
     expect(asContactsView(enriched)).toEqual(asContactsView(eager));
+
+    const extra = await addExtraContact(contactsServiceOf(connection));
+    expect(extra.first_name).toBe("Extra");
+    expect(extra.addresses).toHaveLength(1);
+    expect(extra.addresses[0]?.line1).toBe("9 Extra");
+    expect(extra.addresses[0]?.contact_id).toBe(extra.id);
+    expect(extra.phones[0]?.number).toBe("555-extra");
+    expect(extra.phones[0]?.contact_id).toBe(extra.id);
   });
 });

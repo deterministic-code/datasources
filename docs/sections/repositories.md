@@ -47,6 +47,7 @@ A read-only service wraps an inner repository, then fills properties already on 
 | `IRepositoryTreeNode` | `RepositoryTreeNode` | `IRepositoryTreeNode` |
 | `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` |
 | `DeepCRUDRepository<T>` | `DeepCRUDRepository` | `DeepCRUDRepository<T>` |
+| `BulkCRUDRepository<T>` | `BulkCRUDRepository` | `BulkCRUDRepository<T>` |
 | `AddEnriched` | `add_enriched` / `add_enriched_repo` | `addEnriched` |
 | `Enrich` | `enrich` | `enrich` |
 
@@ -75,6 +76,14 @@ Nest only on walkable objects (`many: true` or a whole related row). A `select` 
 - **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
 - **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+
+`BulkCRUDRepository` inherits `DeepCRUDRepository` and adds list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+
+| C# | TypeScript | Rust |
+| --- | --- | --- |
+| `Create(IReadOnlyList<T>)` / `BulkCreate` | `addBulk` | `add_bulk` |
+| `Update(IReadOnlyList<T>)` / `BulkUpdate` | `updateBulk` | `update_bulk` |
+| `Delete(IReadOnlyList<T>)` / `BulkDelete` | `deleteBulk` | `delete_bulk` |
 
 ## Examples
 

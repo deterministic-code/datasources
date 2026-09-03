@@ -1,5 +1,6 @@
 mod array_reader;
 pub mod builders;
+mod bulk_crud_repository;
 mod built_repository;
 mod collect_reader;
 mod command;
@@ -75,6 +76,7 @@ pub use create_repository_builder_options::create_repository_builder_options;
 pub use datasource::Datasource;
 pub use datasource_error::DatasourceError;
 pub use datasource_factory::DatasourceFactory;
+pub use bulk_crud_repository::BulkCRUDRepository;
 pub use deep_crud_repository::DeepCRUDRepository;
 pub use defaults::defaults;
 pub use enriched::Enriched;
@@ -98,12 +100,12 @@ pub use query::Query;
 pub use reader::Reader;
 pub use register::register;
 pub use registered::registered;
-pub use repository::{ReadonlyRepository, Repository};
+pub use repository::{as_readonly, ReadonlyRepository, Repository};
 pub use repository_factory::{
     CrudRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory,
 };
 pub use repository_tree::RepositoryTree;
-pub use repository_tree_node::RepositoryTreeNode;
+pub use repository_tree_node::{encode_rows, RepositoryTreeNode};
 pub use reset::reset;
 pub use response::Response;
 pub use result::Result;

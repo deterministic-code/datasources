@@ -77,9 +77,15 @@ impl DatasourceFactory for PostgresDatasource {
         "postgres"
     }
 
-    fn create(&self, options: Option<&std::collections::HashMap<String, String>>) -> Arc<dyn Datasource> {
+    fn create(
+        &self,
+        options: Option<&std::collections::HashMap<String, String>>,
+    ) -> Arc<dyn Datasource> {
         Arc::new(PostgresDatasource::new(
-            options.and_then(|o| o.get("url")).cloned().or_else(|| self.url.clone()),
+            options
+                .and_then(|o| o.get("url"))
+                .cloned()
+                .or_else(|| self.url.clone()),
             options
                 .and_then(|o| o.get("schema"))
                 .cloned()

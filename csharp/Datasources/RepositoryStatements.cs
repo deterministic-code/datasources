@@ -30,6 +30,8 @@ public sealed class RepositoryStatements
         this.delete = delete;
     }
 
+    public IReadOnlyList<string> Columns => columns;
+
     public IQuery Query(IWhere? where = null) =>
         Mapped(StatementBuilder.CreateQuery(table, columns, where), query);
     public IInsertStatement Insert(IReadOnlyList<Parameter> fields) =>

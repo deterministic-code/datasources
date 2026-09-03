@@ -23,11 +23,11 @@ pub fn create(
 }
 
 pub fn create_default() -> Result<Arc<dyn Datasource>> {
-    let merged = defaults::snapshot().ok_or_else(|| {
-        DatasourceError::message("Datasource defaults are not specified")
-    })?;
-    let provider = merged.get("provider").cloned().ok_or_else(|| {
-        DatasourceError::message("Datasource defaults are not specified")
-    })?;
+    let merged = defaults::snapshot()
+        .ok_or_else(|| DatasourceError::message("Datasource defaults are not specified"))?;
+    let provider = merged
+        .get("provider")
+        .cloned()
+        .ok_or_else(|| DatasourceError::message("Datasource defaults are not specified"))?;
     create(&provider, Some(&merged))
 }

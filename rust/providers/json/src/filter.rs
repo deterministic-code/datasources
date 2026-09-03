@@ -1,4 +1,4 @@
-use datasources::{DatasourceError, Row, Result, Value};
+use datasources::{DatasourceError, Result, Row, Value};
 use serde_json::{Map, Value as JsonValue};
 
 pub(crate) fn parse_filter(text: Option<&str>) -> Result<Map<String, JsonValue>> {
@@ -6,8 +6,8 @@ pub(crate) fn parse_filter(text: Option<&str>) -> Result<Map<String, JsonValue>>
         None => Ok(Map::new()),
         Some(value) if value.trim().is_empty() => Ok(Map::new()),
         Some(value) => {
-            let parsed: JsonValue = serde_json::from_str(value)
-                .map_err(|e| DatasourceError::message(e.to_string()))?;
+            let parsed: JsonValue =
+                serde_json::from_str(value).map_err(|e| DatasourceError::message(e.to_string()))?;
             match parsed {
                 JsonValue::Object(map) => Ok(map),
                 _ => Err(DatasourceError::message("JSON filter must be an object")),

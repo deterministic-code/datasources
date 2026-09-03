@@ -1,7 +1,7 @@
 use super::not_implemented::fail;
 use crate::reader::Reader;
-use crate::row::Row;
 use crate::result::Result;
+use crate::row::Row;
 use async_trait::async_trait;
 use std::marker::PhantomData;
 
