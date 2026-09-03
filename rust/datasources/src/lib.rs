@@ -30,6 +30,7 @@ mod register;
 mod registered;
 mod registry_state;
 mod repository;
+mod repository_factory;
 mod repository_tree;
 mod repository_tree_node;
 mod reset;
@@ -96,6 +97,9 @@ pub use reader::Reader;
 pub use register::register;
 pub use registered::registered;
 pub use repository::{ReadonlyRepository, Repository};
+pub use repository_factory::{
+    CrudRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory,
+};
 pub use repository_tree::RepositoryTree;
 pub use repository_tree_node::RepositoryTreeNode;
 pub use reset::reset;
