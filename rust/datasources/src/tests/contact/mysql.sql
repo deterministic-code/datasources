@@ -25,11 +25,13 @@ CREATE TABLE "contacts_base" (
   "updated" TEXT NOT NULL,
   "version" BLOB NOT NULL,
   "contact_source_id" INT NOT NULL,
+  "contact_type_id" INT NOT NULL,
   "first_name" VARCHAR(128) NOT NULL,
   "last_name" VARCHAR(128) NOT NULL,
   "email" VARCHAR(256),
   "notes" TEXT,
-  FOREIGN KEY ("contact_source_id") REFERENCES "contact_source" ("id")
+  FOREIGN KEY ("contact_source_id") REFERENCES "contact_source" ("id"),
+  FOREIGN KEY ("contact_type_id") REFERENCES "contact_type" ("id")
 );
 
 CREATE TABLE "address" (

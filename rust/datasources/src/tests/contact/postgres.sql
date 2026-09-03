@@ -25,6 +25,7 @@ CREATE TABLE "contacts_base" (
   "updated" TIMESTAMPTZ NOT NULL,
   "version" BYTEA NOT NULL,
   "contact_source_id" INTEGER NOT NULL REFERENCES "contact_source" ("id"),
+  "contact_type_id" INTEGER NOT NULL REFERENCES "contact_type" ("id"),
   "first_name" VARCHAR(128) NOT NULL,
   "last_name" VARCHAR(128) NOT NULL,
   "email" VARCHAR(256),
