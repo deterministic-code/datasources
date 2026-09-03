@@ -1,6 +1,6 @@
-mod converters;
 mod command;
 mod connection;
+mod converters;
 mod datasource;
 mod driver;
 mod statement_builder;
@@ -11,12 +11,16 @@ pub use command::PostgresCommand;
 pub use connection::PostgresConnection;
 pub use datasource::PostgresDatasource;
 pub use driver::{
-    isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver, PostgresExecuteResult,
+    isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver,
+    PostgresExecuteResult,
 };
 pub use statement_builder::{PostgresColumn, PostgresStatementBuilder};
 pub use tokio_postgres_driver::TokioPostgresDriver;
 pub use transaction::PostgresTransaction;
 
+#[cfg(test)]
+#[path = "../tests/contacts.rs"]
+mod contacts;
 #[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
@@ -29,8 +33,8 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use datasources::{
-        create, register, reset, Command, Connection, Datasource, DatasourceFactory, IsolationLevel,
-        Row, Result, Value,
+        create, register, reset, Command, Connection, Datasource, DatasourceFactory,
+        IsolationLevel, Result, Row, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -104,7 +108,10 @@ mod tests {
             isolation_sql(IsolationLevel::ReadUncommitted),
             "READ UNCOMMITTED"
         );
-        assert_eq!(isolation_sql(IsolationLevel::ReadCommitted), "READ COMMITTED");
+        assert_eq!(
+            isolation_sql(IsolationLevel::ReadCommitted),
+            "READ COMMITTED"
+        );
         assert_eq!(
             isolation_sql(IsolationLevel::RepeatableRead),
             "REPEATABLE READ"
@@ -157,7 +164,8 @@ mod tests {
             missing.create_command(None)
         }))
         .is_err());
-        let factory = PostgresDatasource::new(None, None, Some(driver.clone()), Some("people".into()));
+        let factory =
+            PostgresDatasource::new(None, None, Some(driver.clone()), Some("people".into()));
         DatasourceFactory::create(&factory, None);
         assert_eq!(DatasourceFactory::provider(&factory), "postgres");
         let closed = Arc::new(PostgresConnection::new(None, None, driver));

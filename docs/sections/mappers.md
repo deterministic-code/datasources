@@ -44,6 +44,21 @@ Holds source/destination labels. Column names pass through as-is.
 | `Map` | `map` | `map` |
 | `ReverseMap` | `reverse_map` | `reverseMap` |
 
+## FlatToTypeMapper
+
+Collapses denormalized join rows into a typed graph. Scalars map column → field; groups collect unique children by key. Nested group fields on a collection are omitted.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `IFlatToTypeMapper` | `IFlatToTypeMapper` | `IFlatToTypeMapper<T>` |
+| `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
+| `TypeMap` | `TypeMap` | `TypeMap<T>` |
+| `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |
+| `TypeMapField` | `TypeMapField` | string or group |
+| `MappedValue` | `MappedValue` | `T` fields |
+| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
+| `Collapse` | `collapse` / `collapse_rows` | `collapse` |
+
 ## StatementMapper
 
 Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.

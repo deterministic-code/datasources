@@ -1,22 +1,25 @@
-mod converters;
 mod command;
 mod connection;
+mod converters;
 mod datasource;
 mod driver;
-mod statement_builder;
 #[cfg(any(test, feature = "rusqlite"))]
 mod rusqlite_driver;
+mod statement_builder;
 mod transaction;
 
 pub use command::SqliteCommand;
 pub use connection::SqliteConnection;
 pub use datasource::SqliteDatasource;
 pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
-pub use statement_builder::{SqliteColumn, SqliteStatementBuilder};
 #[cfg(any(test, feature = "rusqlite"))]
 pub use rusqlite_driver::RusqliteDriver;
+pub use statement_builder::{SqliteColumn, SqliteStatementBuilder};
 pub use transaction::SqliteTransaction;
 
+#[cfg(test)]
+#[path = "../tests/contacts.rs"]
+mod contacts;
 #[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
@@ -37,7 +40,10 @@ mod tests {
         assert!(require_driver(None).is_err());
         let driver: Arc<dyn SqliteDriver> = Arc::new(RusqliteDriver::new());
         require_driver(Some(driver.clone())).unwrap();
-        let conn = Arc::new(SqliteConnection::new(Some(":memory:".into()), driver.clone()));
+        let conn = Arc::new(SqliteConnection::new(
+            Some(":memory:".into()),
+            driver.clone(),
+        ));
         conn.open().await.unwrap();
         conn.open().await.unwrap();
         let command = SqliteCommand::new(conn.clone());
@@ -127,10 +133,7 @@ mod tests {
         assert_eq!(DatasourceFactory::provider(&factory), "sqlite");
 
         let closed = Arc::new(SqliteConnection::new(None, driver));
-        assert!(SqliteCommand::new(closed)
-            .execute("x", None)
-            .await
-            .is_err());
+        assert!(SqliteCommand::new(closed).execute("x", None).await.is_err());
     }
 }
 

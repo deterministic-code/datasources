@@ -1,20 +1,37 @@
 use base64::Engine;
 use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
-use std::str::FromStr;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, DefaultTypeConverters,
     Parameter, ReadonlyRepository, Repository, Result, Row, Statement, StatementBuilder,
-    TableRepository, StatementMapper, TableRepositoryBuilder, TableRepositoryBuilderOptions,
+    StatementMapper, TableRepository, TableRepositoryBuilder, TableRepositoryBuilderOptions,
     TransformMapper, TypeConverter, Value, WhereBuilder,
 };
+use rust_decimal::Decimal;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
+
+mod as_contacts_view;
+mod contact_view;
+mod contacts_join_query;
+mod contacts_parity;
+mod contacts_service_of;
+mod contacts_view;
+mod expect_contacts_view;
+mod from_enriched_contacts;
+mod from_mapped_contacts;
+mod seed_contacts;
+
+pub use as_contacts_view::as_contacts_view;
+pub use contact_view::{AddressView, ContactView, PhoneView};
+pub use contacts_parity::{apply_sql, contact_schema, contacts_parity, statements_of};
+pub use expect_contacts_view::expect_contacts_view;
+pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
 
 pub struct SpecColumn {
     pub name: String,
@@ -140,10 +157,7 @@ pub fn repo_root() -> std::path::PathBuf {
 }
 
 fn verbose() -> bool {
-    matches!(
-        std::env::var("VERBOSE").as_deref(),
-        Ok("1") | Ok("true")
-    )
+    matches!(std::env::var("VERBOSE").as_deref(), Ok("1") | Ok("true"))
 }
 
 fn yaml_value(value: &serde_yaml::Value) -> Value {
@@ -168,10 +182,7 @@ fn where_sql(map: &BTreeMap<String, serde_yaml::Value>) -> WhereBuilder {
     WhereBuilder::and(children)
 }
 
-fn where_of(
-    mapping: &RowTypeConverter,
-    map: &BTreeMap<String, serde_yaml::Value>,
-) -> WhereBuilder {
+fn where_of(mapping: &RowTypeConverter, map: &BTreeMap<String, serde_yaml::Value>) -> WhereBuilder {
     let children: Vec<WhereBuilder> = map
         .iter()
         .map(|(name, value)| {
@@ -290,7 +301,9 @@ fn domain_record(
 }
 
 fn decimal_text(text: &str) -> Option<String> {
-    Decimal::from_str(text).ok().map(|number| number.normalize().to_string())
+    Decimal::from_str(text)
+        .ok()
+        .map(|number| number.normalize().to_string())
 }
 
 fn cell_of(value: &Value) -> String {
@@ -313,8 +326,9 @@ fn expect_cell(value: &serde_yaml::Value) -> String {
     match value {
         serde_yaml::Value::Null => String::new(),
         serde_yaml::Value::Bool(flag) => flag.to_string(),
-        serde_yaml::Value::Number(number) => decimal_text(&number.to_string())
-            .unwrap_or_else(|| number.to_string()),
+        serde_yaml::Value::Number(number) => {
+            decimal_text(&number.to_string()).unwrap_or_else(|| number.to_string())
+        }
         serde_yaml::Value::String(text) => DateTime::parse_from_rfc3339(text)
             .map(|parsed| Value::iso_datetime(parsed.with_timezone(&Utc)))
             .ok()
@@ -361,7 +375,11 @@ fn assert_affected(name: &str, actual: i64, expect: Option<&serde_yaml::Value>) 
 
 fn assert_rows(name: &str, actual: &[Row], expect: &[BTreeMap<String, serde_yaml::Value>]) {
     if actual.len() != expect.len() {
-        panic!("{name}: expected {} rows got {}", expect.len(), actual.len());
+        panic!(
+            "{name}: expected {} rows got {}",
+            expect.len(),
+            actual.len()
+        );
     }
     for (index, (row, wanted)) in actual.iter().zip(expect).enumerate() {
         let mapping = serde_yaml::Value::Mapping(
@@ -484,7 +502,8 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(get) = &step.get {
                 let where_clause = WhereBuilder::equals("id", yaml_value(&get.id));
                 with_statement_sql(
-                    StatementBuilder::create_query(&table, &refs, Some(&where_clause), &[]).get_text(),
+                    StatementBuilder::create_query(&table, &refs, Some(&where_clause), &[])
+                        .get_text(),
                     false,
                     &spec.type_spec,
                 )
@@ -504,7 +523,8 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(get_by) = &step.get_by {
                 let where_clause = where_sql(&get_by.where_clause);
                 with_statement_sql(
-                    StatementBuilder::create_query(&table, &refs, Some(&where_clause), &[]).get_text(),
+                    StatementBuilder::create_query(&table, &refs, Some(&where_clause), &[])
+                        .get_text(),
                     false,
                     &spec.type_spec,
                 )
@@ -513,7 +533,8 @@ fn queries(spec: &Spec) -> Vec<String> {
                 let fields = fields_of(&flat, |col| !ids.contains(col));
                 let where_clause = WhereBuilder::equals("id", yaml_value(&flat["id"]));
                 with_statement_sql(
-                    StatementBuilder::create_update(&table, &fields, Some(&where_clause)).get_text(),
+                    StatementBuilder::create_update(&table, &fields, Some(&where_clause))
+                        .get_text(),
                     true,
                     &spec.type_spec,
                 )
@@ -524,7 +545,8 @@ fn queries(spec: &Spec) -> Vec<String> {
                 );
                 let where_clause = where_sql(&update_by.where_clause);
                 with_statement_sql(
-                    StatementBuilder::create_update(&table, &fields, Some(&where_clause)).get_text(),
+                    StatementBuilder::create_update(&table, &fields, Some(&where_clause))
+                        .get_text(),
                     true,
                     &spec.type_spec,
                 )
@@ -600,7 +622,11 @@ pub async fn run(
         .fields
         .iter()
         .map(|(name, canonical)| {
-            SpecColumn::new(name.clone(), canonical.clone(), spec.type_spec.ids.contains(name))
+            SpecColumn::new(
+                name.clone(),
+                canonical.clone(),
+                spec.type_spec.ids.contains(name),
+            )
         })
         .collect();
     command
@@ -661,8 +687,7 @@ pub async fn run(
                 }
             }
             Step {
-                query: Some(query),
-                ..
+                query: Some(query), ..
             } => {
                 let rows = if let Some(where_clause) = &query.where_clause {
                     repo.get_where(&where_of(&mapping, where_clause))
@@ -737,10 +762,7 @@ pub async fn run(
                 ..
             } => {
                 let where_clause = where_of(&mapping, &delete_by.where_clause);
-                let response = repo
-                    .delete(&Row::new(), Some(&where_clause))
-                    .await
-                    .unwrap();
+                let response = repo.delete(&Row::new(), Some(&where_clause)).await.unwrap();
                 assert_affected(
                     &format!("{} DELETEBY", spec.name),
                     response.rows_affected,

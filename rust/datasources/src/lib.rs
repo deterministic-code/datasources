@@ -81,8 +81,9 @@ pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
-    IMapper, ISourceDestinationMapper, NameMapper, NameSourceDestinationMapper, RowTypeMapper,
-    StatementMapper, TransformConverterMapper, TransformMapper,
+    FlatToTypeMapper, IFlatToTypeMapper, IMapper, ISourceDestinationMapper, MappedRow, MappedValue,
+    NameMapper, NameSourceDestinationMapper, RowTypeMapper, StatementMapper,
+    TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
 pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockQuery, MockReader, MockRepository,
