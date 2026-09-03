@@ -38,6 +38,15 @@ AddEnriched("addresses", "id", addresses, "contact_id", many: true);
 AddEnriched("phones", "id", phones, "contact_id", many: true);
 ```
 
+Nested rules run on the related objects after that node fills. `AddEnriched` stays fluent for siblings; `nest` receives the child node:
+
+```csharp
+AddEnriched("children", "id", children, "parent_id", many: true,
+    nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
+```
+
+Nest only on walkable objects (`many: true` or a whole related row). A `select` scalar is not walked. Depth is unbounded; each node applies, then children run on the related items.
+
 ## Examples
 
 TODO: fill as the generic `Repository<T>` / `TableRepository` surface settles.

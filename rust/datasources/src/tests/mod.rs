@@ -1186,6 +1186,67 @@ async fn enriched_fills_lists_and_get_single_is_enriched() {
 }
 
 #[tokio::test]
+async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
+    let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(1)),
+        ("type_id", Value::Int(10)),
+    ])]));
+    let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(10)),
+        ("name", Value::from("org")),
+    ])]));
+    let child_types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(3)),
+        ("name", Value::from("home")),
+    ])]));
+    let children = Arc::new(items_repository::ItemsRepository::new(vec![
+        record(&[
+            ("parent_id", Value::Int(1)),
+            ("type_id", Value::Int(3)),
+            ("label", Value::from("a")),
+        ]),
+        record(&[
+            ("parent_id", Value::Int(1)),
+            ("type_id", Value::Int(9)),
+            ("label", Value::from("b")),
+        ]),
+    ]));
+    let mut repo = EnrichedReadonlyRepository::new(parents);
+    repo.add_enriched(
+        "type_name",
+        "type_id",
+        types,
+        "id",
+        Some("name".into()),
+        false,
+    )
+    .add_enriched_with(
+        "children",
+        "id",
+        children,
+        "parent_id",
+        None,
+        true,
+        |node| {
+            node.include(
+                child_types,
+                "type_name",
+                "type_id",
+                "id",
+                Some("name".into()),
+                false,
+            );
+        },
+    );
+    let item = repo.get_single(None).await.unwrap().unwrap();
+    assert_eq!(item["type_name"], Value::from("org"));
+    let children_text = item["children"].wire_text();
+    let parts: Vec<_> = children_text.split('|').collect();
+    assert!(parts[0].contains("type_name=home"));
+    assert!(!parts[1].contains("type_name="));
+}
+
+#[tokio::test]
 async fn contacts_service_fills_names_and_child_lists() {
     let contacts = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
         ("id", Value::Int(1)),

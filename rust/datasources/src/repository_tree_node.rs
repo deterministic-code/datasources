@@ -43,7 +43,7 @@ impl RepositoryTreeNode {
             items: Vec::new(),
             enrichment: Some(enrichment),
         });
-        self
+        self.items.last_mut().expect("include")
     }
 
     pub fn enrich_from<'a>(
@@ -52,10 +52,11 @@ impl RepositoryTreeNode {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             if let Some(enrichment) = &self.enrichment {
-                apply(self.value.as_ref(), enrichment, parents).await?;
-            }
-            for child in &self.items {
-                child.enrich_from(parents).await?;
+                apply(self.value.as_ref(), enrichment, parents, &self.items).await?;
+            } else {
+                for child in &self.items {
+                    child.enrich_from(parents).await?;
+                }
             }
             Ok(())
         })
@@ -66,11 +67,12 @@ async fn apply(
     via: &dyn ReadonlyRepository,
     enrichment: &Enrichment,
     parents: &mut [Row],
+    children: &[RepositoryTreeNode],
 ) -> Result<()> {
     if enrichment.many {
-        apply_many(via, enrichment, parents).await
+        apply_many(via, enrichment, parents, children).await
     } else {
-        apply_lookup(via, enrichment, parents).await
+        apply_lookup(via, enrichment, parents, children).await
     }
 }
 
@@ -78,6 +80,7 @@ async fn apply_lookup(
     via: &dyn ReadonlyRepository,
     enrichment: &Enrichment,
     parents: &mut [Row],
+    children: &[RepositoryTreeNode],
 ) -> Result<()> {
     let mut cache: HashMap<String, Option<Row>> = HashMap::new();
     for parent in parents.iter_mut() {
@@ -91,14 +94,20 @@ async fn apply_lookup(
                 .await?;
             cache.insert(cache_key.clone(), related);
         }
-        let Some(related) = cache.get(&cache_key).and_then(|row| row.as_ref()) else {
+        let Some(mut related) = cache.get(&cache_key).cloned().flatten() else {
             continue;
         };
+        for child in children {
+            child
+                .enrich_from(std::slice::from_mut(&mut related))
+                .await?;
+        }
+        cache.insert(cache_key, Some(related.clone()));
         let value = enrichment
             .select
             .as_ref()
             .and_then(|select| related.get(select).cloned())
-            .unwrap_or_else(|| encode_row(related));
+            .unwrap_or_else(|| encode_row(&related));
         parent.insert(enrichment.into.clone(), value);
     }
     Ok(())
@@ -108,14 +117,18 @@ async fn apply_many(
     via: &dyn ReadonlyRepository,
     enrichment: &Enrichment,
     parents: &mut [Row],
+    children: &[RepositoryTreeNode],
 ) -> Result<()> {
     for parent in parents.iter_mut() {
         let Some(key) = parent.get(&enrichment.from).cloned() else {
             continue;
         };
-        let related = via
+        let mut related = via
             .get_where(&WhereBuilder::equals(enrichment.by.clone(), key))
             .await?;
+        for child in children {
+            child.enrich_from(&mut related).await?;
+        }
         parent.insert(enrichment.into.clone(), encode_rows(&related));
     }
     Ok(())

@@ -21,7 +21,9 @@ public class EnrichedReadonlyRepositoryTests
     sealed class Child
     {
         public int parent_id { get; set; }
+        public int type_id { get; set; }
         public string label { get; set; } = "";
+        public string type_name { get; set; } = "";
     }
 
     [Fact]
@@ -55,5 +57,25 @@ public class EnrichedReadonlyRepositoryTests
         var item = await repo.GetSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal(["a", "b"], item.children.Select(child => child.label));
+    }
+
+    [Fact]
+    public async Task GetNestsListLookupAndKeepsRootSibling()
+    {
+        var parents = new ListReadonlyRepository<Parent>(new Parent { id = 1, type_id = 10 });
+        var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 10, name = "org" });
+        var childTypes = new ListReadonlyRepository<TypeRow>(
+            new TypeRow { id = 3, name = "home" });
+        var children = new ListReadonlyRepository<Child>(
+            new Child { parent_id = 1, type_id = 3, label = "a" },
+            new Child { parent_id = 1, type_id = 9, label = "b" });
+        var repo = new EnrichedReadonlyRepository<Parent>(parents);
+        repo.AddEnriched("type_name", "type_id", types, "id", "name");
+        repo.AddEnriched("children", "id", children, "parent_id", many: true,
+            nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
+        var item = await repo.GetSingle();
+        Assert.Equal("org", item!.type_name);
+        Assert.Equal("home", item.children[0].type_name);
+        Assert.Equal("", item.children[1].type_name);
     }
 }

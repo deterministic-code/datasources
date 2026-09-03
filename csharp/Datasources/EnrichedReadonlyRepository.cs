@@ -18,9 +18,11 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
         IReadonlyRepository<TRelated> via,
         string by,
         string? select = null,
-        bool many = false)
+        bool many = false,
+        Action<IRepositoryTreeNode>? nest = null)
     {
-        Tree.Parent.Include(via, into, from, by, select, many);
+        var child = Tree.Parent.Include(via, into, from, by, select, many);
+        nest?.Invoke(child);
         return this;
     }
 
