@@ -1,5 +1,6 @@
 #[allow(dead_code)]
 mod contact;
+mod items_repository;
 
 use crate::converters::{Cells, RowTypeConverter};
 use crate::*;
@@ -32,7 +33,10 @@ fn isolation_from_name() {
         IsolationLevel::from_name("serializable"),
         IsolationLevel::Serializable
     );
-    assert_eq!(IsolationLevel::from_name("other"), IsolationLevel::Serializable);
+    assert_eq!(
+        IsolationLevel::from_name("other"),
+        IsolationLevel::Serializable
+    );
 }
 
 #[test]
@@ -75,7 +79,10 @@ fn identity_helpers() {
     let no_id = record(&[("name", Value::from("a")), ("city", Value::from("x"))]);
     assert_eq!(identity_filter(&no_id).len(), 2);
     assert_eq!(identity_where_text(&no_id), "city = $city AND name = $name");
-    assert_eq!(identity_where_text(&HashMap::<String, Value>::new()), "1 = 1");
+    assert_eq!(
+        identity_where_text(&HashMap::<String, Value>::new()),
+        "1 = 1"
+    );
 }
 
 #[tokio::test]
@@ -435,10 +442,7 @@ async fn stubs_throw() {
     let empty = Row::new();
     assert!(repo.get_single(None).await.is_err());
     assert!(repo.get(None).await.is_err());
-    assert!(repo
-        .get_single_where(&TextWhere::new("1=1"))
-        .await
-        .is_err());
+    assert!(repo.get_single_where(&TextWhere::new("1=1")).await.is_err());
     assert!(repo.get_where(&TextWhere::new("1=1")).await.is_err());
     assert!(repo.add(&empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
@@ -477,10 +481,7 @@ async fn published_mocks() {
         .start_transaction(Some(IsolationLevel::ReadUncommitted))
         .await
         .unwrap();
-    assert_eq!(
-        connection.last_isolation(),
-        IsolationLevel::ReadUncommitted
-    );
+    assert_eq!(connection.last_isolation(), IsolationLevel::ReadUncommitted);
     connection.close().await.unwrap();
     connection.set_open_error("open-fail");
     assert!(connection.open().await.is_err());
@@ -531,7 +532,10 @@ async fn published_mocks() {
         .await
         .unwrap()
         .is_some());
-    assert_eq!(repo.get(Some(&MockQuery::new("all"))).await.unwrap().len(), 1);
+    assert_eq!(
+        repo.get(Some(&MockQuery::new("all"))).await.unwrap().len(),
+        1
+    );
     assert!(repo
         .get_single_where(&MockWhere::new("id=1"))
         .await
@@ -542,9 +546,12 @@ async fn published_mocks() {
         1
     );
     repo.add(&record(&[("id", Value::Int(2))])).await.unwrap();
-    repo.update(&record(&[("id", Value::Int(2))]), Some(&MockWhere::new("id=2")))
-        .await
-        .unwrap();
+    repo.update(
+        &record(&[("id", Value::Int(2))]),
+        Some(&MockWhere::new("id=2")),
+    )
+    .await
+    .unwrap();
     repo.delete(&record(&[("id", Value::Int(2))]), None)
         .await
         .unwrap();
@@ -628,7 +635,11 @@ fn statements_and_builders() {
         "id = $id"
     );
     assert_eq!(
-        WhereBuilder::or(vec![where_clause.clone(), WhereBuilder::equals("name", "a")]).get_text(),
+        WhereBuilder::or(vec![
+            where_clause.clone(),
+            WhereBuilder::equals("name", "a")
+        ])
+        .get_text(),
         "(id = $id AND age > $age) OR name = $name"
     );
     assert_eq!(
@@ -636,10 +647,7 @@ fn statements_and_builders() {
         "NOT (id = $id)"
     );
 
-    let fields = [
-        Parameter::new("id", 1_i64),
-        Parameter::new("name", "a"),
-    ];
+    let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
     let query = StatementBuilder::create_query("users", &["id", "name"], Some(&where_clause), &[]);
     assert_eq!(
         query.get_text(),
@@ -650,11 +658,9 @@ fn statements_and_builders() {
         StatementBuilder::create_query("users", &[], None, &[]).get_text(),
         "SELECT * FROM users"
     );
-    assert!(
-        StatementBuilder::create_query("users", &[], None, &[])
-            .where_clause()
-            .is_none()
-    );
+    assert!(StatementBuilder::create_query("users", &[], None, &[])
+        .where_clause()
+        .is_none());
     assert_eq!(
         StatementBuilder::create_query("users", &["id", "name"], None, &[]).get_text(),
         "SELECT id, name FROM users"
@@ -733,10 +739,7 @@ fn statements_and_builders() {
     assert!(TextQuery::new("SELECT 1").where_clause().is_none());
     let mock = MockQuery::with_where("q", MockWhere::new("w"));
     assert!(mock.where_clause().is_some());
-    assert_eq!(
-        TextInsertStatement::new("x").get_text(),
-        "x"
-    );
+    assert_eq!(TextInsertStatement::new("x").get_text(), "x");
     assert_eq!(TextUpdateStatement::new("x", None).get_text(), "x");
     assert_eq!(TextDeleteStatement::new("x", None).get_text(), "x");
     assert_eq!(TextCreateTableStatement::new("x").get_text(), "x");
@@ -750,11 +753,14 @@ fn users_mapping() -> RowTypeConverter {
 #[tokio::test]
 async fn table_repository() {
     let command = Arc::new(MockCommand::new());
-    command.reader_rows.lock().unwrap().push(record(&[
-        ("id", Value::Int(1)),
-        ("name", Value::from("a")),
-    ]));
-    let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
+    let mut options = TableRepositoryBuilderOptions::with_factory(
+        MockConnection::with_command_provider(command.clone(), "memory"),
+    );
     options.entity = "users".into();
     options.mapping = Some(users_mapping());
     let mut repo = TableRepository::new(options).unwrap();
@@ -820,7 +826,9 @@ async fn table_repository() {
     );
 
     let generated = Arc::new(MockCommand::new());
-    let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(generated.clone(), "memory"));
+    let mut options = TableRepositoryBuilderOptions::with_factory(
+        MockConnection::with_command_provider(generated.clone(), "memory"),
+    );
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.assign_identity_on_add = true;
     options.entity = "users".into();
@@ -856,9 +864,13 @@ async fn table_repository() {
         .contains("org_id = $org_id AND user_id = $user_id"));
 
     let command = Arc::new(MockCommand::new());
-    TableRepository::new(TableRepositoryBuilderOptions::with_factory(MockConnection::with_command(command.clone())))
-        .unwrap();
-    let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
+    TableRepository::new(TableRepositoryBuilderOptions::with_factory(
+        MockConnection::with_command(command.clone()),
+    ))
+    .unwrap();
+    let mut options = TableRepositoryBuilderOptions::with_factory(
+        MockConnection::with_command_provider(command.clone(), "memory"),
+    );
     options.mapping = Some(users_mapping());
     let repo = TableRepository::new(options).unwrap();
     assert!(repo
@@ -873,20 +885,27 @@ async fn table_repository() {
         .update(&record(&[("id", Value::Int(1))]), None)
         .await
         .is_err());
-    let mut options = TableRepositoryBuilderOptions::with_factory(MockConnection::with_command_provider(command.clone(), "memory"));
+    let mut options = TableRepositoryBuilderOptions::with_factory(
+        MockConnection::with_command_provider(command.clone(), "memory"),
+    );
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Cells>());
     let repo = TableRepository::new(options).unwrap();
     repo.add(&record(&[("id", Value::Int(1))])).await.unwrap();
-    repo.delete(&record(&[("name", Value::from("z"))]), Some(&WhereBuilder::equals("name", "z")))
-        .await
-        .unwrap();
+    repo.delete(
+        &record(&[("name", Value::from("z"))]),
+        Some(&WhereBuilder::equals("name", "z")),
+    )
+    .await
+    .unwrap();
 
     let from_id = create_repository_builder_options::<Item>(MockConnection::new());
     assert_eq!(from_id.ids, vec!["id".to_string()]);
-    assert!(create_repository_builder_options::<Label>(MockConnection::new())
-        .ids
-        .is_empty());
+    assert!(
+        create_repository_builder_options::<Label>(MockConnection::new())
+            .ids
+            .is_empty()
+    );
     TableRepository::new(from_id).unwrap();
     TableRepository::from_type::<Item>(MockConnection::new()).unwrap();
 }
@@ -894,14 +913,8 @@ async fn table_repository() {
 fn user_contacts_mapper() -> TransformMapper<Row, Row> {
     TransformMapper::new(
         |mut row: Row| {
-            let first = row
-                .get("contact_name1")
-                .cloned()
-                .unwrap_or(Value::Null);
-            let second = row
-                .get("contact_name2")
-                .cloned()
-                .unwrap_or(Value::Null);
+            let first = row.get("contact_name1").cloned().unwrap_or(Value::Null);
+            let second = row.get("contact_name2").cloned().unwrap_or(Value::Null);
             row.insert(
                 "contacts".into(),
                 Value::from(format!(
@@ -936,10 +949,11 @@ fn user_contacts_mapper() -> TransformMapper<Row, Row> {
 #[tokio::test]
 async fn table_repository_maps_after_row_converter() {
     let command = Arc::new(MockCommand::new());
-    command.reader_rows.lock().unwrap().push(record(&[
-        ("id", Value::Int(1)),
-        ("name", Value::from("a")),
-    ]));
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     let mut options = TableRepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
@@ -1113,4 +1127,102 @@ impl ConvertSchema for Label {
     fn schema() -> Vec<(&'static str, &'static str)> {
         vec![("name", "TEXT")]
     }
+}
+
+#[tokio::test]
+async fn enriched_fills_lookup_select_and_leaves_missing_default() {
+    let parents = Arc::new(items_repository::ItemsRepository::new(vec![
+        record(&[("id", Value::Int(1)), ("type_id", Value::Int(10))]),
+        record(&[("id", Value::Int(2)), ("type_id", Value::Int(99))]),
+    ]));
+    let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(10)),
+        ("name", Value::from("person")),
+    ])]));
+    let mut repo = EnrichedReadonlyRepository::new(parents);
+    repo.add_enriched(
+        "type_name",
+        "type_id",
+        types,
+        "id",
+        Some("name".into()),
+        false,
+    );
+    let items = repo.get(None).await.unwrap();
+    assert_eq!(items[0]["type_name"], Value::from("person"));
+    assert!(!items[1].contains_key("type_name"));
+}
+
+#[tokio::test]
+async fn enriched_fills_lists_and_get_single_is_enriched() {
+    let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(1)),
+        ("type_id", Value::Int(10)),
+    ])]));
+    let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(10)),
+        ("name", Value::from("org")),
+    ])]));
+    let children = Arc::new(items_repository::ItemsRepository::new(vec![
+        record(&[("parent_id", Value::Int(1)), ("label", Value::from("a"))]),
+        record(&[("parent_id", Value::Int(1)), ("label", Value::from("b"))]),
+        record(&[("parent_id", Value::Int(2)), ("label", Value::from("x"))]),
+    ]));
+    let mut repo = EnrichedReadonlyRepository::new(parents);
+    repo.add_enriched(
+        "type_name",
+        "type_id",
+        types,
+        "id",
+        Some("name".into()),
+        false,
+    )
+    .add_enriched("children", "id", children, "parent_id", None, true);
+    let item = repo.get_single(None).await.unwrap().unwrap();
+    assert_eq!(item["type_name"], Value::from("org"));
+    assert!(item["children"].wire_text().contains("label=a"));
+    assert!(item["children"].wire_text().contains("label=b"));
+    assert!(!item["children"].wire_text().contains("label=x"));
+}
+
+#[tokio::test]
+async fn contacts_service_fills_names_and_child_lists() {
+    let contacts = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(1)),
+        ("contact_type_id", Value::Int(2)),
+        ("contact_source_id", Value::Int(3)),
+        ("first_name", Value::from("Ada")),
+    ])]));
+    let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(2)),
+        ("name", Value::from("person")),
+    ])]));
+    let sources = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(3)),
+        ("name", Value::from("import")),
+    ])]));
+    let addresses = Arc::new(items_repository::ItemsRepository::new(vec![
+        record(&[
+            ("id", Value::Int(10)),
+            ("contact_id", Value::Int(1)),
+            ("line1", Value::from("1 Main")),
+        ]),
+        record(&[
+            ("id", Value::Int(11)),
+            ("contact_id", Value::Int(9)),
+            ("line1", Value::from("other")),
+        ]),
+    ]));
+    let phones = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(20)),
+        ("contact_id", Value::Int(1)),
+        ("number", Value::from("555")),
+    ])]));
+    let service = contact::ContactsService::new(contacts, types, sources, addresses, phones);
+    let contact = service.get(None).await.unwrap().into_iter().next().unwrap();
+    assert_eq!(contact["contact_type_name"], Value::from("person"));
+    assert_eq!(contact["contact_source_name"], Value::from("import"));
+    assert!(contact["addresses"].wire_text().contains("line1=1 Main"));
+    assert!(!contact["addresses"].wire_text().contains("line1=other"));
+    assert!(contact["phones"].wire_text().contains("number=555"));
 }
