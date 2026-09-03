@@ -46,7 +46,8 @@ A read-only service wraps an inner repository, then fills properties already on 
 | `IRepositoryTree` | `RepositoryTree` | `IRepositoryTree` |
 | `IRepositoryTreeNode` | `RepositoryTreeNode` | `IRepositoryTreeNode` |
 | `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` |
-| `AddEnriched` | `add_enriched` | `addEnriched` |
+| `DeepCRUDRepository<T>` | `DeepCRUDRepository` | `DeepCRUDRepository<T>` |
+| `AddEnriched` | `add_enriched` / `add_enriched_repo` | `addEnriched` |
 | `Enrich` | `enrich` | `enrich` |
 
 Lookups use `GetSingle` / `get_single_where` (cached per distinct key). Lists use `Get` / `get_where`. Missing lookups leave the destination default.
@@ -68,6 +69,12 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 ```
 
 Nest only on walkable objects (`many: true` or a whole related row). A `select` scalar is not walked. Depth is unbounded; each node applies, then children run on the related items.
+
+`DeepCRUDRepository` is the write side of the same tree. `Get` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
+
+- **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
+- **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
 ## Examples
 

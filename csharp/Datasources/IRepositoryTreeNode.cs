@@ -6,6 +6,7 @@ public interface IRepositoryTreeNode
     string PropertyName { get; }
     IRepositoryTreeNode? Parent { get; }
     IReadOnlyList<IRepositoryTreeNode> Items { get; }
+    Enrichment? Enrichment { get; }
     IRepositoryTreeNode Include<TRelated>(
         IReadonlyRepository<TRelated> via,
         string into,

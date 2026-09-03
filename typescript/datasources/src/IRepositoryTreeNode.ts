@@ -1,3 +1,4 @@
+import type { Enrichment } from "./Enrichment.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 
 export interface IRepositoryTreeNode {
@@ -5,6 +6,7 @@ export interface IRepositoryTreeNode {
   readonly propertyName: string;
   readonly parent?: IRepositoryTreeNode;
   readonly items: IRepositoryTreeNode[];
+  readonly enrichment?: Enrichment;
   include<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     into: string,

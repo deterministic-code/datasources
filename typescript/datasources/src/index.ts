@@ -25,6 +25,7 @@ export type { IRepositoryTree } from "./IRepositoryTree.ts";
 export type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 export type { Enrichment } from "./Enrichment.ts";
 export { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
+export { DeepCRUDRepository } from "./DeepCRUDRepository.ts";
 export { RepositoryTree } from "./RepositoryTree.ts";
 export { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 export { Repository } from "./Repository.ts";

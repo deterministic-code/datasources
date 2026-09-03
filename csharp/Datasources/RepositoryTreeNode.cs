@@ -13,11 +13,13 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         object value,
         string propertyName,
         IRepositoryTreeNode? parent = null,
-        Func<IReadOnlyList<object>, Task>? apply = null)
+        Func<IReadOnlyList<object>, Task>? apply = null,
+        Enrichment? enrichment = null)
     {
         Value = value;
         PropertyName = propertyName;
         Parent = parent;
+        Enrichment = enrichment;
         this.apply = apply ?? (_ => Task.CompletedTask);
     }
 
@@ -25,6 +27,8 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
     public string PropertyName { get; }
     public IRepositoryTreeNode? Parent { get; }
     public IReadOnlyList<IRepositoryTreeNode> Items => items;
+    public Enrichment? Enrichment { get; }
+    internal IChildPersist? Persist { get; private set; }
 
     public IRepositoryTreeNode Include<TRelated>(
         IReadonlyRepository<TRelated> via,
@@ -35,7 +39,11 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         bool many = false)
     {
         var enrichment = new Enrichment(into, from, by, select, many);
-        var child = new RepositoryTreeNode(via, into, this, parents => Apply(via, enrichment, parents));
+        var child = new RepositoryTreeNode(
+            via, into, this, parents => Apply(via, enrichment, parents), enrichment)
+        {
+            Persist = via is ICRUDRepository<TRelated> crud ? new ChildPersist<TRelated>(crud) : null
+        };
         items.Add(child);
         return child;
     }
@@ -117,4 +125,28 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
     static PropertyInfo Prop(object obj, string name) =>
         obj.GetType().GetProperty(name)
         ?? throw new DatasourceException($"Unknown property \"{name}\"");
+
+    internal interface IChildPersist
+    {
+        Task<Response> Create(object item);
+        Task<Response> Update(object item, IWhere? byWhere = null);
+        Task<Response> Delete(object item, IWhere? byWhere = null);
+        IAsyncEnumerable<object> Get(IStatement? query = null);
+    }
+
+    sealed class ChildPersist<T> : IChildPersist
+    {
+        readonly ICRUDRepository<T> inner;
+        public ChildPersist(ICRUDRepository<T> inner) => this.inner = inner;
+        public Task<Response> Create(object item) => inner.Create((T)item);
+        public Task<Response> Update(object item, IWhere? byWhere = null) =>
+            inner.Update((T)item, byWhere);
+        public Task<Response> Delete(object item, IWhere? byWhere = null) =>
+            inner.Delete((T)item, byWhere);
+        public async IAsyncEnumerable<object> Get(IStatement? query = null)
+        {
+            await foreach (var item in inner.Get(query))
+                yield return item!;
+        }
+    }
 }

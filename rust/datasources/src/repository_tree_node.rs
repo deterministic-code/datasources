@@ -1,6 +1,6 @@
 use crate::builders::WhereBuilder;
 use crate::enrichment::Enrichment;
-use crate::repository::ReadonlyRepository;
+use crate::repository::{as_readonly, ReadonlyRepository, Repository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -11,15 +11,17 @@ use std::sync::Arc;
 
 pub struct RepositoryTreeNode {
     pub value: Arc<dyn ReadonlyRepository>,
+    pub write: Option<Arc<dyn Repository>>,
     pub property_name: String,
     pub items: Vec<RepositoryTreeNode>,
-    enrichment: Option<Enrichment>,
+    pub enrichment: Option<Enrichment>,
 }
 
 impl RepositoryTreeNode {
     pub fn new(value: Arc<dyn ReadonlyRepository>, property_name: impl Into<String>) -> Self {
         Self {
             value,
+            write: None,
             property_name: property_name.into(),
             items: Vec::new(),
             enrichment: None,
@@ -39,11 +41,26 @@ impl RepositoryTreeNode {
         let enrichment = Enrichment::new(into.clone(), from, by, select, many);
         self.items.push(Self {
             value: via,
+            write: None,
             property_name: into,
             items: Vec::new(),
             enrichment: Some(enrichment),
         });
         self.items.last_mut().expect("include")
+    }
+
+    pub fn include_repo(
+        &mut self,
+        via: Arc<dyn Repository>,
+        into: impl Into<String>,
+        from: impl Into<String>,
+        by: impl Into<String>,
+        select: Option<String>,
+        many: bool,
+    ) -> &mut Self {
+        let child = self.include(as_readonly(via.clone()), into, from, by, select, many);
+        child.write = Some(via);
+        child
     }
 
     pub fn enrich_from<'a>(
@@ -134,7 +151,7 @@ async fn apply_many(
     Ok(())
 }
 
-fn encode_rows(rows: &[Row]) -> Value {
+pub fn encode_rows(rows: &[Row]) -> Value {
     Value::Text(
         rows.iter()
             .map(encode_row_text)
