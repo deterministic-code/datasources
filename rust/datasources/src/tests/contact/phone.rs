@@ -8,6 +8,7 @@ pub struct Phone {
     pub updated: DateTime<Utc>,
     pub version: Vec<u8>,
     pub contact_id: i32,
+    pub phone_type_id: i32,
+    pub phone_type_name: String,
     pub number: String,
-    pub label: Option<String>,
 }

@@ -46,7 +46,8 @@ impl DeepCRUDRepository {
         select: Option<String>,
         many: bool,
     ) -> &mut Self {
-        self.enriched.add_enriched(into, from, via, by, select, many);
+        self.enriched
+            .add_enriched(into, from, via, by, select, many);
         self
     }
 
@@ -160,7 +161,7 @@ impl DeepCRUDRepository {
             if let Some(key) = &key {
                 row.insert(enrichment.by.clone(), key.clone());
             }
-            let response = writer.add(row).await?;
+            let response = writer.add(&strip_enriched(row, node)).await?;
             apply_identity(row, &response);
             self.persist(node, std::slice::from_mut(row), Mode::Create)
                 .await?;
@@ -208,10 +209,10 @@ impl DeepCRUDRepository {
                                 == Some(true)
                         }) =>
                 {
-                    writer.update(row, None).await?;
+                    writer.update(&strip_enriched(row, node), None).await?;
                 }
                 _ => {
-                    let response = writer.add(row).await?;
+                    let response = writer.add(&strip_enriched(row, node)).await?;
                     apply_identity(row, &response);
                 }
             }
@@ -347,8 +348,12 @@ impl Repository for DeepCRUDRepository {
             .add(&strip_enriched(&parent, &self.enriched.tree.parent))
             .await?;
         apply_identity(&mut parent, &response);
-        self.persist(&self.enriched.tree.parent, std::slice::from_mut(&mut parent), Mode::Create)
-            .await?;
+        self.persist(
+            &self.enriched.tree.parent,
+            std::slice::from_mut(&mut parent),
+            Mode::Create,
+        )
+        .await?;
         Ok(response)
     }
 
@@ -361,15 +366,23 @@ impl Repository for DeepCRUDRepository {
                 by_where,
             )
             .await?;
-        self.persist(&self.enriched.tree.parent, std::slice::from_mut(&mut parent), Mode::Update)
-            .await?;
+        self.persist(
+            &self.enriched.tree.parent,
+            std::slice::from_mut(&mut parent),
+            Mode::Update,
+        )
+        .await?;
         Ok(response)
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         let mut parent = item.clone();
-        self.persist(&self.enriched.tree.parent, std::slice::from_mut(&mut parent), Mode::Delete)
-            .await?;
+        self.persist(
+            &self.enriched.tree.parent,
+            std::slice::from_mut(&mut parent),
+            Mode::Delete,
+        )
+        .await?;
         self.inner.delete(item, by_where).await
     }
 }

@@ -2,6 +2,8 @@ import { Base } from "./Base.ts";
 
 export class Address extends Base {
   contact_id = 0;
+  address_type_id = 0;
+  address_type_name = "";
   line1 = "";
   line2: string | null = null;
   city = "";

@@ -1,5 +1,5 @@
-type AddressView = { id: number; line1: string; city: string };
-type PhoneView = { id: number; number: string; label: string | null };
+type AddressView = { id: number; line1: string; city: string; address_type_name: string };
+type PhoneView = { id: number; number: string; phone_type_name: string };
 
 export type ContactsView = {
   id: number;
@@ -25,9 +25,14 @@ export const asContactsView = (contacts: ContactsView[]): ContactsView[] =>
       contact_source_name: contact.contact_source_name,
       contact_type_name: contact.contact_type_name,
       addresses: [...contact.addresses]
-        .map(({ id, line1, city }) => ({ id, line1, city }))
+        .map(({ id, line1, city, address_type_name }) => ({
+          id,
+          line1,
+          city,
+          address_type_name,
+        }))
         .sort(byId),
       phones: [...contact.phones]
-        .map(({ id, number, label }) => ({ id, number, label }))
+        .map(({ id, number, phone_type_name }) => ({ id, number, phone_type_name }))
         .sort(byId),
     }));

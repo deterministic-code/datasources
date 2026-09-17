@@ -3,6 +3,8 @@ namespace Datasources.Tests.Contact;
 internal sealed class Address : Base
 {
     public int contact_id { get; set; }
+    public int address_type_id { get; set; }
+    public string address_type_name { get; set; } = "";
     public string line1 { get; set; } = "";
     public string? line2 { get; set; }
     public string city { get; set; } = "";

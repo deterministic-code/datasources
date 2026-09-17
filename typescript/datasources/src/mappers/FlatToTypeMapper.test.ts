@@ -3,8 +3,8 @@ import type { Cells } from "../converters/Cell.ts";
 import type { TypeMap } from "./TypeMap.ts";
 import { FlatToTypeMapper } from "./FlatToTypeMapper.ts";
 
-type Address = { id: number; line1: string; city: string };
-type Phone = { id: number; number: string; label: string | null };
+type Address = { id: number; line1: string; city: string; address_type_name: string };
+type Phone = { id: number; number: string; phone_type_name: string };
 type Contact = {
   id: number;
   first_name: string;
@@ -31,6 +31,7 @@ const contactsView: TypeMap<Contact> = {
         id: "address_id",
         line1: "address_line1",
         city: "address_city",
+        address_type_name: "address_type_name",
       },
     },
     phones: {
@@ -38,7 +39,7 @@ const contactsView: TypeMap<Contact> = {
       fields: {
         id: "phone_id",
         number: "phone_number",
-        label: "phone_label",
+        phone_type_name: "phone_type_name",
       },
     },
   },
@@ -54,9 +55,10 @@ const adaHome: Cells = {
   address_id: 101,
   address_line1: "10 Downing St",
   address_city: "London",
+  address_type_name: "Home",
   phone_id: 201,
   phone_number: "+44",
-  phone_label: "mobile",
+  phone_type_name: "Mobile",
 };
 
 const adaWork: Cells = {
@@ -76,9 +78,10 @@ const noAddress: Cells = {
   address_id: null,
   address_line1: null,
   address_city: null,
+  address_type_name: null,
   phone_id: 202,
   phone_number: "555",
-  phone_label: "work",
+  phone_type_name: "Work",
 };
 
 describe("FlatToTypeMapper", () => {
@@ -92,11 +95,11 @@ describe("FlatToTypeMapper", () => {
       email: "ada@ex.com",
       contact_source_name: "Web",
       contact_type_name: "Person",
-      addresses: [{ id: 101, line1: "10 Downing St", city: "London" }],
-      phones: [{ id: 201, number: "+44", label: "mobile" }],
+      addresses: [{ id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" }],
+      phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }],
     });
     expect(mapper.map(noAddress).addresses).toEqual([]);
-    expect(mapper.map(noAddress).phones).toEqual([{ id: 202, number: "555", label: "work" }]);
+    expect(mapper.map(noAddress).phones).toEqual([{ id: 202, number: "555", phone_type_name: "Work" }]);
   });
 
   it("reverseMaps the first child of each group", () => {
@@ -114,10 +117,10 @@ describe("FlatToTypeMapper", () => {
       contact_source_name: "Web",
       contact_type_name: "Person",
       addresses: [
-        { id: 101, line1: "10 Downing St", city: "London" },
-        { id: 102, line1: "1 Parliament Sq", city: "London" },
+        { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+        { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" },
       ],
-      phones: [{ id: 201, number: "+44", label: "mobile" }],
+      phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }],
     });
     expect(charles?.id).toBe(8);
     expect(charles?.addresses).toEqual([]);
@@ -133,10 +136,25 @@ describe("FlatToTypeMapper", () => {
   it("skips rows without a parent key and children without a group key", () => {
     const orphan = { ...adaHome, id: null };
     const mapped = mapper.map(adaHome);
-    mapped.addresses = [{ id: 0, line1: "x", city: "y" }, { id: 101, line1: "dup", city: "London" }];
-    mapped.addresses[0] = { id: undefined as unknown as number, line1: "x", city: "y" };
+    mapped.addresses = [
+      { id: 0, line1: "x", city: "y", address_type_name: "" },
+      { id: 101, line1: "dup", city: "London", address_type_name: "Home" },
+    ];
+    mapped.addresses[0] = {
+      id: undefined as unknown as number,
+      line1: "x",
+      city: "y",
+      address_type_name: "",
+    };
     const extra = mapper.map(adaWork);
-    extra.addresses = [{ id: undefined as unknown as number, line1: "ghost", city: "None" }];
+    extra.addresses = [
+      {
+        id: undefined as unknown as number,
+        line1: "ghost",
+        city: "None",
+        address_type_name: "",
+      },
+    ];
     const [ada] = mapper.collapse([orphan, mapped, extra]);
     expect(ada?.addresses.map((address) => address.line1)).toEqual(["x", "dup"]);
   });

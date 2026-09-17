@@ -64,7 +64,7 @@ public static class RepositorySpec
             await (step switch
             {
                 { Create: { } create } => repo.Create(ToEntity(create.Row, spec.Type, mapping)),
-                { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(WhereBuilder.Equals("id", Value.From(get.Id)))),
+                { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(WhereBuilder.Equals("id", IdValue(get.Id, spec.Type)))),
                 { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Get(Where(mapping, where, spec.Type)) : repo.Get()),
                 { GetBy: { } getBy } => AssertGet(spec.Name, getBy, repo.GetSingle(Where(mapping, getBy.Where, spec.Type))),
                 { Update: { } update } => AssertAffected($"{spec.Name} UPDATE", update.HasExpect, update.Expect,
@@ -355,10 +355,20 @@ public static class RepositorySpec
     static string? Canonical(TypeSpec type, string key) =>
         type.Converters.GetValueOrDefault(key) ?? type.Fields.GetValueOrDefault(key);
 
+    static Value IdValue(object? id, TypeSpec type) =>
+        Value.From(Coerce(id, Canonical(type, "id")));
+
     static object? Coerce(object? value, string? canonical = null) => (canonical, value) switch
     {
         ("bool", "true") => true,
         ("bool", "false") => false,
+        ("int" or "integer", var raw) when long.TryParse(
+            Convert.ToString(raw, CultureInfo.InvariantCulture),
+            NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) => number,
+        ("float", var raw) when double.TryParse(
+            Convert.ToString(raw, CultureInfo.InvariantCulture),
+            NumberStyles.Float, CultureInfo.InvariantCulture, out var number) => number,
+        ("uuid", string text) when Guid.TryParse(text, out var guid) => guid,
         ("decimal", string text) => decimal.Parse(text, CultureInfo.InvariantCulture),
         ("datetime", string text) when DateTime.TryParse(
             text, CultureInfo.InvariantCulture,

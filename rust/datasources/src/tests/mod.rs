@@ -1259,13 +1259,29 @@ async fn contacts_service_fills_names_and_child_lists() {
         ("id", Value::Int(3)),
         ("name", Value::from("import")),
     ])]));
+    let address_types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(1)),
+        ("name", Value::from("Home")),
+    ])]));
+    let phone_types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(2)),
+        ("name", Value::from("Work")),
+    ])]));
     let addresses = Arc::new(list_repository::ListRepository::new(vec![record(&[
         ("id", Value::Int(11)),
         ("contact_id", Value::Int(9)),
         ("line1", Value::from("other")),
     ])]));
     let phones = Arc::new(list_repository::ListRepository::new(vec![]));
-    let service = contact::ContactsService::new(contacts, types, sources, addresses, phones);
+    let service = contact::ContactsService::new(
+        contacts,
+        types,
+        sources,
+        address_types,
+        phone_types,
+        addresses,
+        phones,
+    );
     service
         .add(&record(&[
             ("contact_type_id", Value::Int(2)),
@@ -1276,11 +1292,15 @@ async fn contacts_service_fills_names_and_child_lists() {
                 encode_rows(&[record(&[
                     ("line1", Value::from("1 Main")),
                     ("city", Value::from("Paris")),
+                    ("address_type_id", Value::Int(1)),
                 ])]),
             ),
             (
                 "phones",
-                encode_rows(&[record(&[("number", Value::from("555"))])]),
+                encode_rows(&[record(&[
+                    ("number", Value::from("555")),
+                    ("phone_type_id", Value::Int(2)),
+                ])]),
             ),
         ]))
         .await
@@ -1289,8 +1309,14 @@ async fn contacts_service_fills_names_and_child_lists() {
     assert_eq!(contact["contact_type_name"], Value::from("person"));
     assert_eq!(contact["contact_source_name"], Value::from("import"));
     assert!(contact["addresses"].wire_text().contains("line1=1 Main"));
+    assert!(contact["addresses"]
+        .wire_text()
+        .contains("address_type_name=Home"));
     assert!(!contact["addresses"].wire_text().contains("line1=other"));
     assert!(contact["phones"].wire_text().contains("number=555"));
+    assert!(contact["phones"]
+        .wire_text()
+        .contains("phone_type_name=Work"));
 }
 
 #[tokio::test]
@@ -1478,7 +1504,10 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
         encode_rows(&[record(&[
             ("type_id", Value::Int(3)),
             ("label", Value::from("a")),
-            ("notes", encode_rows(&[record(&[("text", Value::from("hi"))])])),
+            (
+                "notes",
+                encode_rows(&[record(&[("text", Value::from("hi"))])]),
+            ),
         ])]),
     )]))
     .await

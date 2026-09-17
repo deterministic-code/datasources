@@ -11,10 +11,10 @@ mod datasource;
 mod driver;
 #[cfg(any(test, feature = "rusqlite"))]
 mod rusqlite_driver;
-#[cfg(any(test, feature = "rusqlite"))]
-mod transaction_driver;
 mod statement_builder;
 mod transaction;
+#[cfg(any(test, feature = "rusqlite"))]
+mod transaction_driver;
 
 pub use command::SqliteCommand;
 pub use connection::SqliteConnection;

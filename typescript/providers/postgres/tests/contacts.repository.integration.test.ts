@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { asContactsView } from "../../../datasources/src/tests/contact/asContactsView.ts";
 import { contactsParity } from "../../../datasources/src/tests/contact/contactsParity.ts";
-import { expectContactsView } from "../../../datasources/src/tests/contact/expectContactsView.ts";
+import { contactLookupIds } from "../../../datasources/src/tests/contact/contactLookupIds.ts";
+import { contactWith, expectContactsView } from "../../../datasources/src/tests/contact/expectContactsView.ts";
 import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
 import { addExtraContact } from "../../../datasources/src/tests/contact/extraContact.ts";
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
@@ -68,23 +69,28 @@ describe("contacts readonly repository", () => {
         await command.execute(sql);
 
       const { eager, enriched } = await contactsParity(connection, specVerbose());
-      const mapped = eager.find((contact) => contact.id === 10);
-      if (specVerbose() && mapped) logMapped(mapped);
+      const mapped = contactWith(eager, 2, 1);
+      if (specVerbose()) logMapped(mapped);
 
       expectContactsView(eager, seedContactCount);
       expectContactsView(enriched, seedContactCount);
-      expect(mapped?.contact_source_name).toBeTruthy();
-      expect(mapped?.contact_type_name).toBeTruthy();
-      expect(new Set(mapped?.addresses.map((address) => address.id)).size).toBe(2);
+      expect(mapped.contact_source_name).toBeTruthy();
+      expect(mapped.contact_type_name).toBeTruthy();
+      expect(new Set(mapped.addresses.map((address) => address.id)).size).toBe(2);
       expect(asContactsView(enriched)).toEqual(asContactsView(eager));
 
-      const extra = await addExtraContact(contactsServiceOf(connection));
+      const extra = await addExtraContact(
+        contactsServiceOf(connection),
+        await contactLookupIds(connection),
+      );
       expect(extra.first_name).toBe("Extra");
       expect(extra.addresses).toHaveLength(1);
       expect(extra.addresses[0]?.line1).toBe("9 Extra");
       expect(extra.addresses[0]?.contact_id).toBe(extra.id);
       expect(extra.phones[0]?.number).toBe("555-extra");
       expect(extra.phones[0]?.contact_id).toBe(extra.id);
+      expect(extra.addresses[0]?.address_type_name).toBe("Home");
+      expect(extra.phones[0]?.phone_type_name).toBe("Mobile");
     } finally {
       await isolated.cleanup();
     }

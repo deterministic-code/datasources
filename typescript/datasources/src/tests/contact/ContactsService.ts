@@ -2,16 +2,20 @@ import { DeepCRUDRepository } from "../../DeepCRUDRepository.ts";
 import type { IReadonlyRepository } from "../../IReadonlyRepository.ts";
 import type { IRepository } from "../../IRepository.ts";
 import type { Address } from "./Address.ts";
+import type { AddressType } from "./AddressType.ts";
 import type { Contact } from "./Contact.ts";
 import type { ContactSource } from "./ContactSource.ts";
 import type { ContactType } from "./ContactType.ts";
 import type { Phone } from "./Phone.ts";
+import type { PhoneType } from "./PhoneType.ts";
 
 export class ContactsService extends DeepCRUDRepository<Contact> {
   constructor(
     contacts: IRepository<Contact>,
     types: IReadonlyRepository<ContactType>,
     sources: IReadonlyRepository<ContactSource>,
+    addressTypes: IReadonlyRepository<AddressType>,
+    phoneTypes: IReadonlyRepository<PhoneType>,
     addresses: IRepository<Address>,
     phones: IRepository<Phone>,
   ) {
@@ -24,7 +28,11 @@ export class ContactsService extends DeepCRUDRepository<Contact> {
       "id",
       "name",
     );
-    this.addEnriched("addresses", "id", addresses, "contact_id", undefined, true);
-    this.addEnriched("phones", "id", phones, "contact_id", undefined, true);
+    this.addEnriched("addresses", "id", addresses, "contact_id", undefined, true, (node) =>
+      node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
+    );
+    this.addEnriched("phones", "id", phones, "contact_id", undefined, true, (node) =>
+      node.include(phoneTypes, "phone_type_name", "phone_type_id", "id", "name"),
+    );
   }
 }

@@ -1,12 +1,33 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    as_readonly, CommandMiddleware, Connection, DeepCRUDRepository, Repository, TableRepository,
-    TableRepositoryBuilderOptions,
+    as_readonly, CommandMiddleware, Connection, DeepCRUDRepository, DefaultTypeConverters,
+    Repository, TableRepository, TableRepositoryBuilderOptions, TypeConverter, Value,
 };
+use std::collections::HashMap;
 use std::sync::Arc;
 
 fn columns(names: &[&str]) -> Vec<String> {
     names.iter().map(|name| (*name).to_string()).collect()
+}
+
+fn take(provider: &str, key: &str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+    DefaultTypeConverters::for_provider(provider).remove(key)
+}
+
+fn stamp_fields(
+    provider: &str,
+) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+    [
+        ("uuid", "uuid"),
+        ("created", "datetime"),
+        ("updated", "datetime"),
+        ("version", "binary"),
+    ]
+    .into_iter()
+    .filter_map(|(column, key)| {
+        take(provider, key).map(|converter| (column.to_string(), converter))
+    })
+    .collect()
 }
 
 fn repo(
@@ -15,9 +36,11 @@ fn repo(
     names: &[&str],
     middleware: Option<Arc<dyn CommandMiddleware>>,
 ) -> Arc<dyn Repository> {
-    let mut options = TableRepositoryBuilderOptions::with_factory(connection);
+    let mut options = TableRepositoryBuilderOptions::with_factory(connection.clone());
     options.entity = entity.into();
-    options.mapping = Some(RowTypeConverter::new(columns(names)));
+    options.mapping = Some(
+        RowTypeConverter::new(columns(names)).with_fields(stamp_fields(&connection.provider())),
+    );
     let mut repo = TableRepository::new(options).expect("contacts repo");
     if let Some(middleware) = middleware {
         repo.use_middleware(middleware);
@@ -58,6 +81,7 @@ pub fn contacts_service_of(
         "updated",
         "version",
         "contact_id",
+        "address_type_id",
         "line1",
         "line2",
         "city",
@@ -72,9 +96,21 @@ pub fn contacts_service_of(
         "updated",
         "version",
         "contact_id",
+        "phone_type_id",
         "number",
-        "label",
     ];
+    let address_types = as_readonly(repo(
+        connection.clone(),
+        "address_type",
+        &named,
+        middleware.clone(),
+    ));
+    let phone_types = as_readonly(repo(
+        connection.clone(),
+        "phone_type",
+        &named,
+        middleware.clone(),
+    ));
     let mut inner = DeepCRUDRepository::new(repo(
         connection.clone(),
         "contacts_base",
@@ -108,21 +144,41 @@ pub fn contacts_service_of(
             Some("name".into()),
             false,
         )
-        .add_enriched_repo(
+        .add_enriched_repo_with(
             "addresses",
             "id",
             repo(connection.clone(), "address", &address, middleware.clone()),
             "contact_id",
             None,
             true,
+            |node| {
+                node.include(
+                    address_types,
+                    "address_type_name",
+                    "address_type_id",
+                    "id",
+                    Some("name".into()),
+                    false,
+                );
+            },
         )
-        .add_enriched_repo(
+        .add_enriched_repo_with(
             "phones",
             "id",
             repo(connection, "phone", &phone, middleware),
             "contact_id",
             None,
             true,
+            |node| {
+                node.include(
+                    phone_types,
+                    "phone_type_name",
+                    "phone_type_id",
+                    "id",
+                    Some("name".into()),
+                    false,
+                );
+            },
         );
     inner
 }

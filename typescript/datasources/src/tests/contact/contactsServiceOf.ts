@@ -4,12 +4,14 @@ import { Repository } from "../../Repository.ts";
 import type { Constructable } from "../../converters/Constructable.ts";
 import { fieldNamesOf } from "../../createRepositoryBuilderOptions.ts";
 import { Address } from "./Address.ts";
+import { AddressType } from "./AddressType.ts";
 import { Contact } from "./Contact.ts";
 import { ContactBase } from "./ContactBase.ts";
 import { ContactSource } from "./ContactSource.ts";
 import { ContactType } from "./ContactType.ts";
 import { ContactsService } from "./ContactsService.ts";
 import { Phone } from "./Phone.ts";
+import { PhoneType } from "./PhoneType.ts";
 
 export const contactsServiceOf = (
   connection: IConnection,
@@ -23,7 +25,32 @@ export const contactsServiceOf = (
     of(Contact, "contacts_base", fieldNamesOf(ContactBase)),
     of(ContactType, "contact_type"),
     of(ContactSource, "contact_source"),
-    of(Address, "address"),
-    of(Phone, "phone"),
+    of(AddressType, "address_type"),
+    of(PhoneType, "phone_type"),
+    of(Address, "address", [
+      "id",
+      "uuid",
+      "created",
+      "updated",
+      "version",
+      "contact_id",
+      "address_type_id",
+      "line1",
+      "line2",
+      "city",
+      "region",
+      "postal_code",
+      "country",
+    ]),
+    of(Phone, "phone", [
+      "id",
+      "uuid",
+      "created",
+      "updated",
+      "version",
+      "contact_id",
+      "phone_type_id",
+      "number",
+    ]),
   );
 };

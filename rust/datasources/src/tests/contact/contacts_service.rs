@@ -17,6 +17,8 @@ impl ContactsService {
         contacts: Arc<dyn Repository>,
         types: Arc<dyn ReadonlyRepository>,
         sources: Arc<dyn ReadonlyRepository>,
+        address_types: Arc<dyn ReadonlyRepository>,
+        phone_types: Arc<dyn ReadonlyRepository>,
         addresses: Arc<dyn Repository>,
         phones: Arc<dyn Repository>,
     ) -> Self {
@@ -38,8 +40,34 @@ impl ContactsService {
                 Some("name".into()),
                 false,
             )
-            .add_enriched_repo("addresses", "id", addresses, "contact_id", None, true)
-            .add_enriched_repo("phones", "id", phones, "contact_id", None, true);
+            .add_enriched_repo_with(
+                "addresses",
+                "id",
+                addresses,
+                "contact_id",
+                None,
+                true,
+                |node| {
+                    node.include(
+                        address_types,
+                        "address_type_name",
+                        "address_type_id",
+                        "id",
+                        Some("name".into()),
+                        false,
+                    );
+                },
+            )
+            .add_enriched_repo_with("phones", "id", phones, "contact_id", None, true, |node| {
+                node.include(
+                    phone_types,
+                    "phone_type_name",
+                    "phone_type_id",
+                    "id",
+                    Some("name".into()),
+                    false,
+                );
+            });
         Self { inner }
     }
 }

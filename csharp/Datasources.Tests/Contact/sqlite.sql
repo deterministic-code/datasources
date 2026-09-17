@@ -32,6 +32,26 @@ CREATE TABLE "contacts_base" (
   "notes" TEXT
 );
 
+CREATE TABLE "address_type" (
+  "id" INTEGER PRIMARY KEY,
+  "uuid" TEXT NOT NULL,
+  "created" TEXT NOT NULL,
+  "updated" TEXT NOT NULL,
+  "version" BLOB NOT NULL,
+  "name" VARCHAR(64) NOT NULL,
+  "description" TEXT
+);
+
+CREATE TABLE "phone_type" (
+  "id" INTEGER PRIMARY KEY,
+  "uuid" TEXT NOT NULL,
+  "created" TEXT NOT NULL,
+  "updated" TEXT NOT NULL,
+  "version" BLOB NOT NULL,
+  "name" VARCHAR(64) NOT NULL,
+  "description" TEXT
+);
+
 CREATE TABLE "address" (
   "id" INTEGER PRIMARY KEY,
   "uuid" TEXT NOT NULL,
@@ -39,6 +59,7 @@ CREATE TABLE "address" (
   "updated" TEXT NOT NULL,
   "version" BLOB NOT NULL,
   "contact_id" INTEGER NOT NULL REFERENCES "contacts_base" ("id"),
+  "address_type_id" INTEGER NOT NULL REFERENCES "address_type" ("id"),
   "line1" VARCHAR(256) NOT NULL,
   "line2" VARCHAR(256),
   "city" VARCHAR(128) NOT NULL,
@@ -54,8 +75,8 @@ CREATE TABLE "phone" (
   "updated" TEXT NOT NULL,
   "version" BLOB NOT NULL,
   "contact_id" INTEGER NOT NULL REFERENCES "contacts_base" ("id"),
-  "number" VARCHAR(32) NOT NULL,
-  "label" VARCHAR(32)
+  "phone_type_id" INTEGER NOT NULL REFERENCES "phone_type" ("id"),
+  "number" VARCHAR(32) NOT NULL
 );
 
 CREATE TABLE "contact_groups_base" (
@@ -107,3 +128,13 @@ INSERT INTO "contact_source" ("id", "uuid", "created", "updated", "version", "na
 INSERT INTO "contact_type" ("id", "uuid", "created", "updated", "version", "name", "description") VALUES
 (1, '44444444-4444-4444-4444-444444444444', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', X'', 'Person', 'Individual contact'),
 (2, '55555555-5555-5555-5555-555555555555', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', X'', 'Organization', 'Organization contact');
+
+INSERT INTO "phone_type" ("id", "uuid", "created", "updated", "version", "name", "description") VALUES
+(1, '66666666-6666-6666-6666-666666666666', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', X'', 'Mobile', 'Mobile phone'),
+(2, '77777777-7777-7777-7777-777777777777', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', X'', 'Work', 'Work phone'),
+(3, '88888888-8888-8888-8888-888888888888', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', X'', 'Home', 'Home phone');
+
+INSERT INTO "address_type" ("id", "uuid", "created", "updated", "version", "name", "description") VALUES
+(1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', X'', 'Home', 'Home address'),
+(2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', X'', 'Work', 'Work address'),
+(3, 'cccccccc-cccc-cccc-cccc-cccccccccccc', '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', X'', 'Other', 'Other address');

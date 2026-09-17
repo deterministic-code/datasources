@@ -1,7 +1,7 @@
 mod array_reader;
 pub mod builders;
-mod bulk_crud_repository;
 mod built_repository;
+mod bulk_crud_repository;
 mod collect_reader;
 mod command;
 mod command_middleware;
@@ -60,6 +60,7 @@ pub use builders::{
     WhereBuilder,
 };
 pub use built_repository::BuiltRepository;
+pub use bulk_crud_repository::BulkCRUDRepository;
 pub use collect_reader::collect_reader;
 pub use command::Command;
 pub use command_middleware::CommandMiddleware;
@@ -76,7 +77,6 @@ pub use create_repository_builder_options::create_repository_builder_options;
 pub use datasource::Datasource;
 pub use datasource_error::DatasourceError;
 pub use datasource_factory::DatasourceFactory;
-pub use bulk_crud_repository::BulkCRUDRepository;
 pub use deep_crud_repository::DeepCRUDRepository;
 pub use defaults::defaults;
 pub use enriched::Enriched;
@@ -101,9 +101,7 @@ pub use reader::Reader;
 pub use register::register;
 pub use registered::registered;
 pub use repository::{as_readonly, ReadonlyRepository, Repository};
-pub use repository_factory::{
-    CrudRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory,
-};
+pub use repository_factory::{CrudRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory};
 pub use repository_tree::RepositoryTree;
 pub use repository_tree_node::{encode_rows, RepositoryTreeNode};
 pub use reset::reset;

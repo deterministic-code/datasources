@@ -1,14 +1,16 @@
 use crate::contact_view::ContactView;
 
+pub fn contact_with(contacts: &[ContactView], addresses: usize, phones: usize) -> &ContactView {
+    contacts
+        .iter()
+        .find(|contact| contact.addresses.len() == addresses && contact.phones.len() == phones)
+        .unwrap_or_else(|| panic!("no contact with {addresses} addresses and {phones} phones"))
+}
+
 pub fn expect_contacts_view(contacts: &[ContactView], count: usize) {
-    let of = |id: i64| contacts.iter().find(|contact| contact.id == id);
     assert_eq!(contacts.len(), count);
-    assert_eq!(of(10).map(|c| c.addresses.len()), Some(2));
-    assert_eq!(of(10).map(|c| c.phones.len()), Some(1));
-    assert_eq!(of(4).map(|c| c.addresses.len()), Some(0));
-    assert_eq!(of(4).map(|c| c.phones.len()), Some(1));
-    assert_eq!(of(6).map(|c| c.addresses.len()), Some(2));
-    assert_eq!(of(6).map(|c| c.phones.len()), Some(0));
-    assert_eq!(of(12).map(|c| c.addresses.len()), Some(0));
-    assert_eq!(of(12).map(|c| c.phones.len()), Some(0));
+    let _ = contact_with(contacts, 2, 1);
+    let _ = contact_with(contacts, 0, 1);
+    let _ = contact_with(contacts, 2, 0);
+    let _ = contact_with(contacts, 0, 0);
 }

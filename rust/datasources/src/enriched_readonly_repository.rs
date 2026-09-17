@@ -74,9 +74,11 @@ impl EnrichedReadonlyRepository {
         many: bool,
         nest: impl FnOnce(&mut RepositoryTreeNode),
     ) -> &mut Self {
-        nest(self.tree
-            .parent
-            .include_repo(via, into, from, by, select, many));
+        nest(
+            self.tree
+                .parent
+                .include_repo(via, into, from, by, select, many),
+        );
         self
     }
 }

@@ -13,6 +13,7 @@ rust_decimal = "1"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
 
 [lints]
 workspace = true

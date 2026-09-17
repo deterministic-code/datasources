@@ -1,9 +1,13 @@
 use crate::connection_driver::{map_err, PostgresConnectionDriver};
 use crate::driver::{to_postgres, with_returning, PostgresExecuteResult};
+use crate::pg_value::PgValue;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{DatasourceError, Result, Value};
+use rust_decimal::Decimal;
 use std::collections::HashMap;
 use tokio_postgres::types::ToSql;
 use tokio_postgres::Row;
+use uuid::Uuid;
 
 pub struct PostgresCommandDriver<'a> {
     connection: &'a PostgresConnectionDriver,
@@ -80,19 +84,7 @@ impl<'a> PostgresCommandDriver<'a> {
 }
 
 fn box_value(value: &Value) -> Box<dyn ToSql + Sync + Send> {
-    match value {
-        Value::Null => Box::new(Option::<i64>::None),
-        Value::Bool(flag) => Box::new(*flag),
-        Value::Int(value) => i32::try_from(*value)
-            .map(|number| Box::new(number) as Box<dyn ToSql + Sync + Send>)
-            .unwrap_or_else(|_| Box::new(*value)),
-        Value::Float(value) => Box::new(*value),
-        Value::Text(value) => Box::new(value.clone()),
-        Value::DateTime(value) => Box::new(*value),
-        Value::Uuid(value) => Box::new(*value),
-        Value::Decimal(value) => Box::new(*value),
-        Value::Binary(value) => Box::new(value.clone()),
-    }
+    Box::new(PgValue(value.clone()))
 }
 
 fn from_cell(row: &Row, index: usize) -> Value {
@@ -107,6 +99,32 @@ fn from_cell(row: &Row, index: usize) -> Value {
     }
     if let Ok(value) = row.try_get::<_, f64>(index) {
         return Value::Float(value);
+    }
+    if let Ok(value) = row.try_get::<_, Uuid>(index) {
+        return Value::Uuid(value);
+    }
+    if let Ok(value) = row.try_get::<_, Option<Uuid>>(index) {
+        return value.map(Value::Uuid).unwrap_or(Value::Null);
+    }
+    if let Ok(value) = row.try_get::<_, DateTime<Utc>>(index) {
+        return Value::DateTime(value);
+    }
+    if let Ok(value) = row.try_get::<_, Option<DateTime<Utc>>>(index) {
+        return value.map(Value::DateTime).unwrap_or(Value::Null);
+    }
+    if let Ok(value) = row.try_get::<_, NaiveDateTime>(index) {
+        return Value::DateTime(value.and_utc());
+    }
+    if let Ok(value) = row.try_get::<_, Option<NaiveDateTime>>(index) {
+        return value
+            .map(|stamp| Value::DateTime(stamp.and_utc()))
+            .unwrap_or(Value::Null);
+    }
+    if let Ok(value) = row.try_get::<_, Decimal>(index) {
+        return Value::Decimal(value);
+    }
+    if let Ok(value) = row.try_get::<_, Option<Decimal>>(index) {
+        return value.map(Value::Decimal).unwrap_or(Value::Null);
     }
     if let Ok(value) = row.try_get::<_, String>(index) {
         return Value::Text(value);

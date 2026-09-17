@@ -23,6 +23,7 @@ public class FlatToTypeMapperTests
                     ["id"] = "address_id",
                     ["line1"] = "address_line1",
                     ["city"] = "address_city",
+                    ["address_type_name"] = "address_type_name",
                 },
             },
             ["phones"] = new TypeMapGroup
@@ -32,7 +33,7 @@ public class FlatToTypeMapperTests
                 {
                     ["id"] = "phone_id",
                     ["number"] = "phone_number",
-                    ["label"] = "phone_label",
+                    ["phone_type_name"] = "phone_type_name",
                 },
             },
         },
@@ -49,9 +50,10 @@ public class FlatToTypeMapperTests
         new("address_id", 101),
         new("address_line1", "10 Downing St"),
         new("address_city", "London"),
+        new("address_type_name", "Home"),
         new("phone_id", 201),
         new("phone_number", "+44"),
-        new("phone_label", "mobile"),
+        new("phone_type_name", "Mobile"),
     ]);
 
     static Row AdaWork()
@@ -73,9 +75,10 @@ public class FlatToTypeMapperTests
         new("address_id", Value.Null.Instance),
         new("address_line1", Value.Null.Instance),
         new("address_city", Value.Null.Instance),
+        new("address_type_name", Value.Null.Instance),
         new("phone_id", 202),
         new("phone_number", "555"),
-        new("phone_label", "work"),
+        new("phone_type_name", "Work"),
     ]);
 
     static readonly FlatToTypeMapper Mapper = new(ContactsView);
@@ -109,10 +112,11 @@ public class FlatToTypeMapperTests
         Assert.Equal(new Value.Int(101), Cell(Many(home, "addresses")[0], "id"));
         Assert.Equal(new Value.Text("10 Downing St"), Cell(Many(home, "addresses")[0], "line1"));
         Assert.Equal(new Value.Text("London"), Cell(Many(home, "addresses")[0], "city"));
+        Assert.Equal(new Value.Text("Home"), Cell(Many(home, "addresses")[0], "address_type_name"));
         Assert.Single(Many(home, "phones"));
         Assert.Equal(new Value.Int(201), Cell(Many(home, "phones")[0], "id"));
         Assert.Equal(new Value.Text("+44"), Cell(Many(home, "phones")[0], "number"));
-        Assert.Equal(new Value.Text("mobile"), Cell(Many(home, "phones")[0], "label"));
+        Assert.Equal(new Value.Text("Mobile"), Cell(Many(home, "phones")[0], "phone_type_name"));
         var missing = Mapper.Map(NoAddress());
         Assert.Empty(Many(missing, "addresses"));
         Assert.Single(Many(missing, "phones"));

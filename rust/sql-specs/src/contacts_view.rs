@@ -24,6 +24,10 @@ pub fn contacts_view() -> TypeMap {
                         ("id".into(), TypeMapField::column("address_id")),
                         ("line1".into(), TypeMapField::column("address_line1")),
                         ("city".into(), TypeMapField::column("address_city")),
+                        (
+                            "address_type_name".into(),
+                            TypeMapField::column("address_type_name"),
+                        ),
                     ],
                 )),
             ),
@@ -34,7 +38,10 @@ pub fn contacts_view() -> TypeMap {
                     vec![
                         ("id".into(), TypeMapField::column("phone_id")),
                         ("number".into(), TypeMapField::column("phone_number")),
-                        ("label".into(), TypeMapField::column("phone_label")),
+                        (
+                            "phone_type_name".into(),
+                            TypeMapField::column("phone_type_name"),
+                        ),
                     ],
                 )),
             ),
