@@ -20,8 +20,18 @@ public static class PostgresBind
             }
             return $"${index + 1}";
         });
-        return (text, names.Select(name => parameters.TryGetValue(name, out var value) ? value.ToObject() : null).ToArray());
+        return (text, names.Select(name => parameters.TryGetValue(name, out var value) ? Reverse(value).ToObject() : null).ToArray());
     }
+
+    static Value Reverse(Value value) => value switch
+    {
+        Value.DateTime => new DateTimeConverter().ReverseConvert(value),
+        Value.Guid => new UuidConverter().ReverseConvert(value),
+        Value.Decimal => new DecimalConverter().ReverseConvert(value),
+        Value.Bool => new BoolConverter().ReverseConvert(value),
+        Value.Binary => new BinaryConverter().ReverseConvert(value),
+        _ => value
+    };
 
     public static string WithReturning(string sql) =>
         Regex.IsMatch(sql, @"^\s*insert\b", RegexOptions.IgnoreCase)
