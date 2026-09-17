@@ -51,5 +51,8 @@ public class MysqlStatementBuilderTests
         Assert.Equal(
             "DELETE FROM `user` WHERE id = $id",
             MysqlStatementBuilder.CreateDelete("user", where).GetText());
+        Assert.Equal(
+            "CALL `save`($id, $username)",
+            MysqlStatementBuilder.CreateStoredProcedure("save", fields).GetText());
     }
 }

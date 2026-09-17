@@ -31,6 +31,10 @@ public static class PostgresStatementBuilder
     public static IInsertStatement CreateInsert(string table, IReadOnlyList<Parameter> fields) =>
         StatementBuilder.CreateInsert(Quote(table), fields);
 
+    public static IStoredProcedureStatement CreateStoredProcedure(
+        string name, IReadOnlyList<Parameter>? parameters = null) =>
+        StatementBuilder.CreateStoredProcedure(Quote(name), parameters);
+
     public static IUpdateStatement CreateUpdate(string table, IReadOnlyList<Parameter> fields, IWhere? where = null) =>
         StatementBuilder.CreateUpdate(Quote(table), fields, where);
 

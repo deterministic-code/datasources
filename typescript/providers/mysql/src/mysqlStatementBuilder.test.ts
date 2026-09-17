@@ -46,5 +46,8 @@ describe("MysqlStatementBuilder", () => {
     expect(MysqlStatementBuilder.createDelete("user", where).getText()).toBe(
       "DELETE FROM `user` WHERE id = $id",
     );
+    expect(MysqlStatementBuilder.createStoredProcedure("save", fields).getText()).toBe(
+      "CALL `save`($id, $username)",
+    );
   });
 });

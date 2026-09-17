@@ -1,5 +1,6 @@
 import type { IDeleteStatement } from "../builders/IDeleteStatement.ts";
 import type { IInsertStatement } from "../builders/IInsertStatement.ts";
+import type { IStoredProcedureStatement } from "../builders/IStoredProcedureStatement.ts";
 import type { IUpdateStatement } from "../builders/IUpdateStatement.ts";
 import type { IQuery } from "../IQuery.ts";
 import { NameSourceDestinationMapper } from "./NameSourceDestinationMapper.ts";
@@ -14,6 +15,7 @@ export type StatementMapperOptions<T> = {
   insert?: IMapper<IInsertStatement, IInsertStatement>;
   update?: IMapper<IUpdateStatement, IUpdateStatement>;
   delete?: IMapper<IDeleteStatement, IDeleteStatement>;
+  storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>;
 };
 
 export class StatementMapper<T> implements IMapper<T, T> {
@@ -24,6 +26,7 @@ export class StatementMapper<T> implements IMapper<T, T> {
   readonly insert?: IMapper<IInsertStatement, IInsertStatement>;
   readonly update?: IMapper<IUpdateStatement, IUpdateStatement>;
   readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>;
+  readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>;
 
   constructor(options: StatementMapperOptions<T> = {}) {
     this.entity = options.entity ?? new NameSourceDestinationMapper("", "");
@@ -34,6 +37,7 @@ export class StatementMapper<T> implements IMapper<T, T> {
     this.insert = options.insert;
     this.update = options.update;
     this.delete = options.delete;
+    this.storedProcedure = options.storedProcedure;
   }
 
   map = (value: T): T => this.rows.map(value);

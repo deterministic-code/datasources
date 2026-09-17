@@ -48,6 +48,12 @@ export const MysqlStatementBuilder = {
   createInsert: (table: string, fields: Field[]) =>
     StatementBuilder.createInsert(MysqlStatementBuilder.quote(table), fields),
 
+  createStoredProcedure: (name: string, parameters: Field[] = []) =>
+    StatementBuilder.createStoredProcedure(
+      MysqlStatementBuilder.quote(name),
+      parameters,
+    ),
+
   createUpdate: (table: string, fields: Field[], where?: IWhere) =>
     StatementBuilder.createUpdate(MysqlStatementBuilder.quote(table), fields, where),
 

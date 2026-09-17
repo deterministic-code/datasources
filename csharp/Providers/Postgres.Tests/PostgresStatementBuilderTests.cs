@@ -51,5 +51,8 @@ public class PostgresStatementBuilderTests
         Assert.Equal(
             "DELETE FROM \"user\" WHERE id = $id",
             PostgresStatementBuilder.CreateDelete("user", where).GetText());
+        Assert.Equal(
+            "CALL \"save\"($id, $username)",
+            PostgresStatementBuilder.CreateStoredProcedure("save", fields).GetText());
     }
 }

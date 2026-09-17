@@ -705,7 +705,7 @@ Provider tests inject fakes on options (`MemoryFileStore`, `ScriptedDriver`) and
 
 ## Builders
 
-Shared statement construction used by SQL providers. Dialect packages may wrap `StatementBuilder` for quoting and native column types.
+Shared statement construction used by SQL providers. Dialect packages may wrap `StatementBuilder` for quoting and native column types, including `CreateStoredProcedure` the same way as `CreateInsert`.
 
 ### StatementBuilder
 

@@ -1,6 +1,7 @@
 use datasources::{
     Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement,
-    TextDeleteStatement, TextInsertStatement, TextQuery, TextUpdateStatement, Where,
+    TextDeleteStatement, TextInsertStatement, TextQuery, TextStoredProcedureStatement,
+    TextUpdateStatement, Where,
 };
 
 pub struct PostgresColumn {
@@ -97,6 +98,13 @@ impl PostgresStatementBuilder {
         StatementBuilder::create_insert(Self::quote(table), fields)
     }
 
+    pub fn create_stored_procedure(
+        name: &str,
+        parameters: &[Parameter],
+    ) -> TextStoredProcedureStatement {
+        StatementBuilder::create_stored_procedure(Self::quote(name), parameters)
+    }
+
     pub fn create_update(
         table: &str,
         fields: &[Parameter],
@@ -179,6 +187,10 @@ mod tests {
         assert_eq!(
             PostgresStatementBuilder::create_delete("user", Some(&where_clause)).get_text(),
             "DELETE FROM \"user\" WHERE id = $id"
+        );
+        assert_eq!(
+            PostgresStatementBuilder::create_stored_procedure("save", &fields).get_text(),
+            "CALL \"save\"($id, $username)"
         );
         assert_eq!(
             PostgresStatementBuilder::create_query(

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DeleteStatement } from "../builders/DeleteStatement.ts";
 import { InsertStatement } from "../builders/InsertStatement.ts";
+import { StoredProcedureStatement } from "../builders/StoredProcedureStatement.ts";
+import { StatementBuilder } from "../builders/StatementBuilder.ts";
 import { UpdateStatement } from "../builders/UpdateStatement.ts";
 import { Query } from "../Query.ts";
 import { statementsOf } from "../RepositoryStatements.ts";
@@ -54,6 +56,18 @@ describe("StatementMapper", () => {
       "UPDATE users SET name = $name RETURNING id",
     );
     expect(statements.delete().getText()).toBe("DELETE FROM users RETURNING id");
+  });
+
+  it("rewrites a finished stored procedure", () => {
+    const mapper = new StatementMapper({
+      storedProcedure: new TransformMapper(
+        (proc) => new StoredProcedureStatement(`${proc.getText()} /* mapped */`),
+        (proc) => proc,
+      ),
+    });
+    const built = StatementBuilder.createStoredProcedure("save", [{ name: "id", value: 1 }]);
+    const statement = mapper.storedProcedure?.map(built) ?? built;
+    expect(statement.getText()).toBe("CALL save($id) /* mapped */");
   });
 
   it("delegates row map", () => {

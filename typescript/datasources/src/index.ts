@@ -1,4 +1,5 @@
 export type { ICommand } from "./ICommand.ts";
+export { execute, executeReader } from "./ICommand.ts";
 export type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";

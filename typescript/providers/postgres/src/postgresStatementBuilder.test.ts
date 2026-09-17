@@ -46,5 +46,8 @@ describe("PostgresStatementBuilder", () => {
     expect(PostgresStatementBuilder.createDelete("user", where).getText()).toBe(
       'DELETE FROM "user" WHERE id = $id',
     );
+    expect(PostgresStatementBuilder.createStoredProcedure("save", fields).getText()).toBe(
+      'CALL "save"($id, $username)',
+    );
   });
 });

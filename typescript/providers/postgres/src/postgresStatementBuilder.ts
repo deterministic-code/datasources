@@ -48,6 +48,12 @@ export const PostgresStatementBuilder = {
   createInsert: (table: string, fields: Field[]) =>
     StatementBuilder.createInsert(PostgresStatementBuilder.quote(table), fields),
 
+  createStoredProcedure: (name: string, parameters: Field[] = []) =>
+    StatementBuilder.createStoredProcedure(
+      PostgresStatementBuilder.quote(name),
+      parameters,
+    ),
+
   createUpdate: (table: string, fields: Field[], where?: IWhere) =>
     StatementBuilder.createUpdate(PostgresStatementBuilder.quote(table), fields, where),
 

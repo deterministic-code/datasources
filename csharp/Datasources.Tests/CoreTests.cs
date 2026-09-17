@@ -356,6 +356,18 @@ public class CoreTests
         command.ExecuteReaderError = new InvalidOperationException("read");
         await Assert.ThrowsAsync<InvalidOperationException>(() => command.ExecuteReader("x"));
 
+        command.ExecuteError = null;
+        command.ExecuteReaderError = null;
+        Parameter[] fields = [new("id", 1)];
+        var statement = StatementBuilder.CreateStoredProcedure("save", fields);
+        ICommand asCommand = command;
+        await asCommand.Execute(statement, fields);
+        Assert.Equal("CALL save($id)", command.ExecuteCalls[^1].Text);
+        Assert.Same(fields, command.ExecuteCalls[^1].Parameters);
+        await asCommand.ExecuteReader(statement, fields);
+        Assert.Equal("CALL save($id)", command.ExecuteReaderCalls[^1].Text);
+        Assert.Same(fields, command.ExecuteReaderCalls[^1].Parameters);
+
         var reader = new MockReader(new object?[] { "x" });
         Assert.True(await reader.Next());
         Assert.False(await reader.Next());
