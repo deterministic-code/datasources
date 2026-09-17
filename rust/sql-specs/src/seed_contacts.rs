@@ -14,17 +14,18 @@ pub fn seed_contacts_sql(count: usize, version: &str) -> Vec<String> {
             uuid(id)
         ));
         for a in 0..(id % 4) {
+            let address_type = if a == 0 { 1 } else { 2 };
             statements.push(format!(
-                r#"INSERT INTO "address" ("id", "uuid", "created", "updated", "version", "contact_id", "line1", "line2", "city", "region", "postal_code", "country") VALUES ({address_id}, '{}', '{stamp}', '{stamp}', {version}, {id}, '{id} Line {}', NULL, 'City{id}', NULL, NULL, NULL)"#,
+                r#"INSERT INTO "address" ("id", "uuid", "created", "updated", "version", "contact_id", "address_type_id", "line1", "line2", "city", "region", "postal_code", "country") VALUES ({address_id}, '{}', '{stamp}', '{stamp}', {version}, {id}, {address_type}, '{id} Line {}', NULL, 'City{id}', NULL, NULL, NULL)"#,
                 uuid(1000 + address_id),
                 a + 1
             ));
             address_id += 1;
         }
         for p in 0..(id % 3) {
-            let label = if p == 0 { "mobile" } else { "work" };
+            let phone_type = if p == 0 { 1 } else { 2 };
             statements.push(format!(
-                r#"INSERT INTO "phone" ("id", "uuid", "created", "updated", "version", "contact_id", "number", "label") VALUES ({phone_id}, '{}', '{stamp}', '{stamp}', {version}, {id}, '555-000-{:04}-{p}', '{label}')"#,
+                r#"INSERT INTO "phone" ("id", "uuid", "created", "updated", "version", "contact_id", "phone_type_id", "number") VALUES ({phone_id}, '{}', '{stamp}', '{stamp}', {version}, {id}, {phone_type}, '555-000-{:04}-{p}')"#,
                 uuid(2000 + phone_id),
                 id
             ));

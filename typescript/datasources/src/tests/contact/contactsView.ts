@@ -16,6 +16,7 @@ export const contactsView: TypeMap<Contact> = {
         id: "address_id",
         line1: "address_line1",
         city: "address_city",
+        address_type_name: "address_type_name",
       },
     },
     phones: {
@@ -23,7 +24,7 @@ export const contactsView: TypeMap<Contact> = {
       fields: {
         id: "phone_id",
         number: "phone_number",
-        label: "phone_label",
+        phone_type_name: "phone_type_name",
       },
     },
   },

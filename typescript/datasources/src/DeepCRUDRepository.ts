@@ -104,11 +104,13 @@ export class DeepCRUDRepository<T extends object>
     return response;
   };
 
-  private stripEnriched = (item: T): T => {
+  private stripEnriched = (item: T): T => this.stripNode(this.tree.parent, item) as T;
+
+  private stripNode = (node: IRepositoryTreeNode, item: object): object => {
     const copy = { ...item } as Props;
-    for (const child of this.tree.parent.items)
+    for (const child of node.items)
       if (child.enrichment) delete copy[child.enrichment.into];
-    return copy as T;
+    return copy;
   };
 
   delete = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
@@ -152,7 +154,7 @@ export class DeepCRUDRepository<T extends object>
   ): Promise<void> => {
     for (const related of payload(parent, enrichment.into)) {
       stamp(related, enrichment.by, get(parent, enrichment.from));
-      applyIdentity(related, await writer.add(related));
+      applyIdentity(related, await writer.add(this.stripNode(node, related)));
       await this.persist(node, [related], "create");
     }
   };
@@ -177,8 +179,8 @@ export class DeepCRUDRepository<T extends object>
     for (const related of rows) {
       const id = idOf(related);
       hasId(id) && existing.some((row) => idKey(idOf(row)) === idKey(id))
-        ? await writer.update(related)
-        : applyIdentity(related, await writer.add(related));
+        ? await writer.update(this.stripNode(node, related))
+        : applyIdentity(related, await writer.add(this.stripNode(node, related)));
       await this.persist(node, [related], "update");
     }
   };

@@ -9,7 +9,7 @@ namespace Datasources.Sqlite.Tests;
 public class ContactsRepositoryTests
 {
     [Fact]
-    public async Task CreateExtraContactAfterSeed()
+    public async Task MatchesEnrichedContactsServiceToFlatMapper()
     {
         var conn = new SqliteConnection(new SqliteConnectionOptions
         {
@@ -22,8 +22,17 @@ public class ContactsRepositoryTests
             .Concat(SeedContacts.Sql()))
             await command.Execute(sql);
 
+        var (eager, enriched) = await ContactsParity.Run(conn);
+        ExpectContactsView.AssertSeed(eager, SeedContacts.Count);
+        ExpectContactsView.AssertSeed(enriched, SeedContacts.Count);
+        var mapped = ExpectContactsView.With(eager, 2, 1);
+        Assert.False(string.IsNullOrEmpty(mapped.contact_source_name));
+        Assert.False(string.IsNullOrEmpty(mapped.contact_type_name));
+        Assert.Equal(2, mapped.addresses.Length);
+        Assert.Equal(eager, enriched);
+
         var service = ContactsServiceOf.Create(conn);
-        var created = ExtraContact.New();
+        var created = ExtraContact.New(await ContactLookupIds.Resolve(conn));
         await service.Create(created);
         var extra = await service.GetSingle(WhereBuilder.Equals("id", Value.From(created.id)));
         Assert.NotNull(extra);
@@ -31,8 +40,10 @@ public class ContactsRepositoryTests
         Assert.Single(extra.addresses);
         Assert.Equal("9 Extra", extra.addresses[0].line1);
         Assert.Equal(extra.id, extra.addresses[0].contact_id);
+        Assert.Equal("Home", extra.addresses[0].address_type_name);
         Assert.Equal("555-extra", Assert.Single(extra.phones).number);
         Assert.Equal(extra.id, extra.phones[0].contact_id);
+        Assert.Equal("Mobile", extra.phones[0].phone_type_name);
     }
 
     static string SchemaPath()

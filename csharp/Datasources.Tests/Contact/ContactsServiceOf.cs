@@ -27,12 +27,18 @@ internal static class ContactsServiceOf
             Of<ContactSource>("contact_source", [
                 "id", "uuid", "created", "updated", "version", "name", "description"
             ]),
+            Of<AddressType>("address_type", [
+                "id", "uuid", "created", "updated", "version", "name", "description"
+            ]),
+            Of<PhoneType>("phone_type", [
+                "id", "uuid", "created", "updated", "version", "name", "description"
+            ]),
             Of<Address>("address", [
-                "id", "uuid", "created", "updated", "version", "contact_id",
+                "id", "uuid", "created", "updated", "version", "contact_id", "address_type_id",
                 "line1", "line2", "city", "region", "postal_code", "country"
             ]),
             Of<Phone>("phone", [
-                "id", "uuid", "created", "updated", "version", "contact_id", "number", "label"
+                "id", "uuid", "created", "updated", "version", "contact_id", "phone_type_id", "number"
             ]));
     }
 }

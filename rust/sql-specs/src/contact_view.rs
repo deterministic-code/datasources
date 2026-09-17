@@ -3,13 +3,14 @@ pub struct AddressView {
     pub id: i64,
     pub line1: String,
     pub city: String,
+    pub address_type_name: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PhoneView {
     pub id: i64,
     pub number: String,
-    pub label: String,
+    pub phone_type_name: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

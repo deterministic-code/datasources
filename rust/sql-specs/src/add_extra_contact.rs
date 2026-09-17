@@ -1,7 +1,10 @@
+use crate::contact_lookups::ContactLookups;
+use chrono::{DateTime, Utc};
 use datasources::{
-    encode_rows, DeepCRUDRepository, DatasourceError, ReadonlyRepository, Repository, Result, Row,
+    encode_rows, DatasourceError, DeepCRUDRepository, ReadonlyRepository, Repository, Result, Row,
     Value, WhereBuilder,
 };
+use uuid::Uuid;
 
 fn record(pairs: &[(&str, Value)]) -> Row {
     pairs
@@ -10,27 +13,32 @@ fn record(pairs: &[(&str, Value)]) -> Row {
         .collect()
 }
 
-pub async fn add_extra_contact(service: &DeepCRUDRepository) -> Result<Row> {
-    let stamp = Value::from("2024-01-01T00:00:00Z");
+pub async fn add_extra_contact(service: &DeepCRUDRepository, ids: &ContactLookups) -> Result<Row> {
+    let stamp = Value::DateTime(
+        DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
+            .expect("stamp")
+            .with_timezone(&Utc),
+    );
     let version = Value::Binary(vec![]);
-    let uuid = Value::from("00000000-0000-4000-8000-000000000251");
+    let uuid = Value::Uuid(Uuid::new_v4());
     let response = service
         .add(&record(&[
             ("uuid", uuid.clone()),
             ("created", stamp.clone()),
             ("updated", stamp.clone()),
             ("version", version.clone()),
-            ("contact_source_id", Value::Int(1)),
-            ("contact_type_id", Value::Int(1)),
+            ("contact_source_id", Value::Int(ids.contact_source_id)),
+            ("contact_type_id", Value::Int(ids.contact_type_id)),
             ("first_name", Value::from("Extra")),
             ("last_name", Value::from("Contact")),
             (
                 "addresses",
                 encode_rows(&[record(&[
-                    ("uuid", uuid.clone()),
+                    ("uuid", Value::Uuid(Uuid::new_v4())),
                     ("created", stamp.clone()),
                     ("updated", stamp.clone()),
                     ("version", version.clone()),
+                    ("address_type_id", Value::Int(ids.address_type_id)),
                     ("line1", Value::from("9 Extra")),
                     ("city", Value::from("Oslo")),
                 ])]),
@@ -38,10 +46,11 @@ pub async fn add_extra_contact(service: &DeepCRUDRepository) -> Result<Row> {
             (
                 "phones",
                 encode_rows(&[record(&[
-                    ("uuid", uuid),
+                    ("uuid", Value::Uuid(Uuid::new_v4())),
                     ("created", stamp.clone()),
                     ("updated", stamp),
                     ("version", version),
+                    ("phone_type_id", Value::Int(ids.phone_type_id)),
                     ("number", Value::from("555-extra")),
                 ])]),
             ),

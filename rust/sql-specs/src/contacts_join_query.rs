@@ -13,9 +13,10 @@ pub fn contacts_join_query() -> TextQuery {
             "address.id AS address_id",
             "address.line1 AS address_line1",
             "address.city AS address_city",
+            "address_type.name AS address_type_name",
             "phone.id AS phone_id",
             "phone.number AS phone_number",
-            "phone.label AS phone_label",
+            "phone_type.name AS phone_type_name",
         ],
         None,
         &[
@@ -30,7 +31,9 @@ pub fn contacts_join_query() -> TextQuery {
                 "contact_type.id",
             ),
             Join::left("address", "contacts_base.id", "address.contact_id"),
+            Join::left("address_type", "address.address_type_id", "address_type.id"),
             Join::left("phone", "contacts_base.id", "phone.contact_id"),
+            Join::left("phone_type", "phone.phone_type_id", "phone_type.id"),
         ],
     )
 }

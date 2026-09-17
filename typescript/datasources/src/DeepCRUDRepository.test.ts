@@ -146,6 +146,82 @@ describe("DeepCRUDRepository", () => {
     ).rejects.toThrow(/children/);
   });
 
+  it("skips non-list child payloads", async () => {
+    const parents = new ListCRUDRepository<Parent>();
+    const children = new ListCRUDRepository<Child>();
+    const repo = new DeepCRUDRepository(parents);
+    repo.addEnriched("children", "id", children, "parent_id", undefined, true);
+    await repo.add(Object.assign(assign(Parent, {}), { children: "x" }));
+    await repo.add(Object.assign(assign(Parent, {}), { children: { label: "o" } }));
+    expect(children.items).toHaveLength(0);
+  });
+
+  it("applies Id identity and skips empty results", async () => {
+    class Capital {
+      Id = 0;
+    }
+    const ids = new ListCRUDRepository<Capital>();
+    await new DeepCRUDRepository(ids).add(new Capital());
+    expect(ids.items[0]?.Id).toBe(1);
+    const bare = new ListCRUDRepository<object>();
+    bare.add = async (item) => {
+      bare.items.push(item);
+      return { result: 1, rowsAffected: 1 };
+    };
+    await new DeepCRUDRepository(bare).add({});
+    expect(bare.items[0]).toEqual({});
+    const empty = new ListCRUDRepository<object>();
+    empty.add = async (item) => {
+      empty.items.push(item);
+      return { result: null, rowsAffected: 1 };
+    };
+    await new DeepCRUDRepository(empty).add({ id: 1 });
+    expect(empty.items[0]).toEqual({ id: 1 });
+  });
+
+  it("skips object ids when loading children", async () => {
+    const parents = new ListCRUDRepository<Parent>();
+    const children = new ListCRUDRepository<Child>();
+    const repo = new DeepCRUDRepository(parents);
+    repo.addEnriched("children", "id", children, "parent_id", undefined, true);
+    children.items.push(Object.assign({ parent_id: 1, label: "ghost" }));
+    await repo.delete(Object.assign(assign(Parent, {}), { id: { x: 1 } }));
+    await repo.update(
+      assign(Parent, {
+        id: 1,
+        children: [
+          Object.assign({ Id: 2, label: "z", parent_id: 1 }),
+          Object.assign(assign(Child, { label: "n" }), { id: { x: 1 } }),
+        ],
+      }),
+    );
+    expect(children.items.some((child) => child.label === "z")).toBe(true);
+  });
+
+  it("stamps bigint identity", async () => {
+    const parents = new ListCRUDRepository<Parent>();
+    parents.add = async (item) => {
+      Object.assign(item, { id: 9n });
+      parents.items.push(item);
+      return { result: 9n, rowsAffected: 1 };
+    };
+    await new DeepCRUDRepository(parents).add(assign(Parent, {}));
+    expect(parents.items[0]?.id).toBe(9n);
+  });
+
+  it("rejects unknown persist mode", async () => {
+    const repo = new DeepCRUDRepository(new ListCRUDRepository<Parent>());
+    repo.addEnriched("children", "id", new ListCRUDRepository<Child>(), "parent_id", undefined, true);
+    const persistNode = Reflect.get(repo, "persistNode") as (
+      child: object,
+      parents: object[],
+      mode: string,
+    ) => Promise<void>;
+    await expect(persistNode.call(repo, repo.tree.parent.items[0], [{}], "nope")).rejects.toThrow(
+      /Unknown persist mode/,
+    );
+  });
+
   it("get still enriches", async () => {
     const parents = new ListCRUDRepository([assign(Parent, { id: 1, type_id: 10 })]);
     const types = new ListCRUDRepository([assign(TypeRow, { id: 10, name: "org" })]);

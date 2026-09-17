@@ -18,6 +18,7 @@ impl PostgresConnection {
         schema: Option<String>,
         driver: Arc<dyn PostgresDriver>,
     ) -> Self {
+        crate::converters::register();
         Self {
             url: url.unwrap_or_default(),
             schema,

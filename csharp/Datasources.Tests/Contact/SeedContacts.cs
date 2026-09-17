@@ -19,15 +19,16 @@ internal static class SeedContacts
                 $"""INSERT INTO "contacts_base" ("id", "uuid", "created", "updated", "version", "contact_source_id", "contact_type_id", "first_name", "last_name", "email", "notes") VALUES ({id}, '{Uuid(id)}', '{stamp}', '{stamp}', {version}, {source}, {type}, 'First{id}', 'Last{id}', 'c{id}@ex.com', NULL)""");
             for (var a = 0; a < id % 4; a++)
             {
+                var addressType = a == 0 ? 1 : 2;
                 statements.Add(
-                    $"""INSERT INTO "address" ("id", "uuid", "created", "updated", "version", "contact_id", "line1", "line2", "city", "region", "postal_code", "country") VALUES ({addressId}, '{Uuid(1000 + addressId)}', '{stamp}', '{stamp}', {version}, {id}, '{id} Line {a + 1}', NULL, 'City{id}', NULL, NULL, NULL)""");
+                    $"""INSERT INTO "address" ("id", "uuid", "created", "updated", "version", "contact_id", "address_type_id", "line1", "line2", "city", "region", "postal_code", "country") VALUES ({addressId}, '{Uuid(1000 + addressId)}', '{stamp}', '{stamp}', {version}, {id}, {addressType}, '{id} Line {a + 1}', NULL, 'City{id}', NULL, NULL, NULL)""");
                 addressId += 1;
             }
             for (var p = 0; p < id % 3; p++)
             {
-                var label = p == 0 ? "mobile" : "work";
+                var phoneType = p == 0 ? 1 : 2;
                 statements.Add(
-                    $"""INSERT INTO "phone" ("id", "uuid", "created", "updated", "version", "contact_id", "number", "label") VALUES ({phoneId}, '{Uuid(2000 + phoneId)}', '{stamp}', '{stamp}', {version}, {id}, '555-000-{id.ToString().PadLeft(4, '0')}-{p}', '{label}')""");
+                    $"""INSERT INTO "phone" ("id", "uuid", "created", "updated", "version", "contact_id", "phone_type_id", "number") VALUES ({phoneId}, '{Uuid(2000 + phoneId)}', '{stamp}', '{stamp}', {version}, {id}, {phoneType}, '555-000-{id.ToString().PadLeft(4, '0')}-{p}')""");
                 phoneId += 1;
             }
         }

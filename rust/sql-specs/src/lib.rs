@@ -18,6 +18,8 @@ use std::time::SystemTime;
 
 mod add_extra_contact;
 mod as_contacts_view;
+mod contact_lookup_ids;
+mod contact_lookups;
 mod contact_view;
 mod contacts_join_query;
 mod contacts_parity;
@@ -30,10 +32,12 @@ mod seed_contacts;
 
 pub use add_extra_contact::add_extra_contact;
 pub use as_contacts_view::as_contacts_view;
+pub use contact_lookup_ids::contact_lookup_ids;
+pub use contact_lookups::ContactLookups;
 pub use contact_view::{AddressView, ContactView, PhoneView};
 pub use contacts_parity::{apply_sql, contact_schema, contacts_parity, statements_of};
 pub use contacts_service_of::contacts_service_of;
-pub use expect_contacts_view::expect_contacts_view;
+pub use expect_contacts_view::{contact_with, expect_contacts_view};
 pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
 
 pub struct SpecColumn {

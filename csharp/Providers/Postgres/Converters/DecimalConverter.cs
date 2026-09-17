@@ -13,9 +13,5 @@ public sealed class DecimalConverter : TypeConverter<Value, Value>
         _ => from
     };
 
-    public override Value ReverseConvert(Value to) => to switch
-    {
-        Value.Decimal(var number) => new Value.Text(number.ToString(CultureInfo.InvariantCulture)),
-        _ => to
-    };
+    public override Value ReverseConvert(Value to) => Convert(to);
 }

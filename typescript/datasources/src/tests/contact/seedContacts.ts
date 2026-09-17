@@ -14,13 +14,13 @@ export const seedContactsSql = (count = 250, version = "X''"): string[] => {
     );
     for (let a = 0; a < id % 4; a++) {
       statements.push(
-        `INSERT INTO "address" ("id", "uuid", "created", "updated", "version", "contact_id", "line1", "line2", "city", "region", "postal_code", "country") VALUES (${addressId}, '${uuid(1000 + addressId)}', '${stamp}', '${stamp}', ${version}, ${id}, '${id} Line ${a + 1}', NULL, 'City${id}', NULL, NULL, NULL)`,
+        `INSERT INTO "address" ("id", "uuid", "created", "updated", "version", "contact_id", "address_type_id", "line1", "line2", "city", "region", "postal_code", "country") VALUES (${addressId}, '${uuid(1000 + addressId)}', '${stamp}', '${stamp}', ${version}, ${id}, ${a === 0 ? 1 : 2}, '${id} Line ${a + 1}', NULL, 'City${id}', NULL, NULL, NULL)`,
       );
       addressId += 1;
     }
     for (let p = 0; p < id % 3; p++) {
       statements.push(
-        `INSERT INTO "phone" ("id", "uuid", "created", "updated", "version", "contact_id", "number", "label") VALUES (${phoneId}, '${uuid(2000 + phoneId)}', '${stamp}', '${stamp}', ${version}, ${id}, '555-000-${id.toString().padStart(4, "0")}-${p}', '${p === 0 ? "mobile" : "work"}')`,
+        `INSERT INTO "phone" ("id", "uuid", "created", "updated", "version", "contact_id", "phone_type_id", "number") VALUES (${phoneId}, '${uuid(2000 + phoneId)}', '${stamp}', '${stamp}', ${version}, ${id}, ${p === 0 ? 1 : 2}, '555-000-${id.toString().padStart(4, "0")}-${p}')`,
       );
       phoneId += 1;
     }

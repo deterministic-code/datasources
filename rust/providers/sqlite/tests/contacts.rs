@@ -3,8 +3,9 @@ use super::connection::SqliteConnection;
 use super::rusqlite_driver::RusqliteDriver;
 use datasources::Connection;
 use datasources_sql_specs::{
-    add_extra_contact, apply_sql, as_contacts_view, contact_schema, contacts_parity,
-    contacts_service_of, expect_contacts_view, seed_contacts_sql, statements_of, SEED_CONTACT_COUNT,
+    add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
+    contact_with, contacts_parity, contacts_service_of, expect_contacts_view, seed_contacts_sql,
+    statements_of, SEED_CONTACT_COUNT,
 };
 use std::sync::Arc;
 
@@ -27,13 +28,14 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     let (eager, enriched) = contacts_parity(conn.clone(), verbose()).await.unwrap();
     expect_contacts_view(&eager, SEED_CONTACT_COUNT);
     expect_contacts_view(&enriched, SEED_CONTACT_COUNT);
-    let mapped = eager.iter().find(|contact| contact.id == 10).unwrap();
+    let mapped = contact_with(&eager, 2, 1);
     assert!(!mapped.contact_source_name.is_empty());
     assert!(!mapped.contact_type_name.is_empty());
     assert_eq!(mapped.addresses.len(), 2);
     assert_eq!(as_contacts_view(&enriched), as_contacts_view(&eager));
 
-    let extra = add_extra_contact(&contacts_service_of(conn, None))
+    let ids = contact_lookup_ids(conn.clone()).await.unwrap();
+    let extra = add_extra_contact(&contacts_service_of(conn, None), &ids)
         .await
         .unwrap();
     assert_eq!(extra["first_name"], datasources::Value::from("Extra"));
@@ -42,4 +44,10 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
         .wire_text()
         .contains(&format!("contact_id={}", extra["id"].wire_text())));
     assert!(extra["phones"].wire_text().contains("number=555-extra"));
+    assert!(extra["addresses"]
+        .wire_text()
+        .contains("address_type_name=Home"));
+    assert!(extra["phones"]
+        .wire_text()
+        .contains("phone_type_name=Mobile"));
 }

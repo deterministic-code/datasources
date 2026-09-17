@@ -5,6 +5,7 @@ mod connection_driver;
 mod converters;
 mod datasource;
 mod driver;
+mod pg_value;
 mod statement_builder;
 mod tokio_postgres_driver;
 mod transaction;

@@ -39,6 +39,7 @@ pub fn from_mapped_contacts(rows: &[MappedRow]) -> Vec<ContactView> {
                     id: id_of(child, "id"),
                     line1: text(child, "line1"),
                     city: text(child, "city"),
+                    address_type_name: text(child, "address_type_name"),
                 })
                 .collect(),
             phones: many(row, "phones")
@@ -46,7 +47,7 @@ pub fn from_mapped_contacts(rows: &[MappedRow]) -> Vec<ContactView> {
                 .map(|child| PhoneView {
                     id: id_of(child, "id"),
                     number: text(child, "number"),
-                    label: text(child, "label"),
+                    phone_type_name: text(child, "phone_type_name"),
                 })
                 .collect(),
         })

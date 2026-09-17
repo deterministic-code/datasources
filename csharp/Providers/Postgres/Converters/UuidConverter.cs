@@ -8,9 +8,5 @@ public sealed class UuidConverter : TypeConverter<Value, Value>
         _ => from
     };
 
-    public override Value ReverseConvert(Value to) => to switch
-    {
-        Value.Guid(var guid) => new Value.Text(guid.ToString()),
-        _ => to
-    };
+    public override Value ReverseConvert(Value to) => Convert(to);
 }

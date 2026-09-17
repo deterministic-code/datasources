@@ -3,26 +3,26 @@ namespace Datasources.Tests.Contact;
 internal static class ExtraContact
 {
     static readonly DateTime Stamp = DateTime.Parse("2024-01-01T00:00:00Z").ToUniversalTime();
-    static readonly Guid Id = Guid.Parse("00000000-0000-4000-8000-000000000251");
 
-    public static Contact New() => new()
+    public static Contact New(ContactLookups ids) => new()
     {
-        uuid = Id,
+        uuid = Guid.NewGuid(),
         created = Stamp,
         updated = Stamp,
         version = [],
-        contact_source_id = 1,
-        contact_type_id = 1,
+        contact_source_id = ids.ContactSourceId,
+        contact_type_id = ids.ContactTypeId,
         first_name = "Extra",
         last_name = "Contact",
         addresses =
         [
             new Address
             {
-                uuid = Id,
+                uuid = Guid.NewGuid(),
                 created = Stamp,
                 updated = Stamp,
                 version = [],
+                address_type_id = ids.AddressTypeId,
                 line1 = "9 Extra",
                 city = "Oslo"
             }
@@ -31,10 +31,11 @@ internal static class ExtraContact
         [
             new Phone
             {
-                uuid = Id,
+                uuid = Guid.NewGuid(),
                 created = Stamp,
                 updated = Stamp,
                 version = [],
+                phone_type_id = ids.PhoneTypeId,
                 number = "555-extra"
             }
         ]

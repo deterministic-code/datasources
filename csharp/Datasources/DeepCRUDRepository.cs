@@ -64,7 +64,7 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
         foreach (var related in Payload(parent, enrichment.Into))
         {
             Stamp(related, enrichment.By, Get(parent, enrichment.From));
-            ApplyIdentity(related, await writer.Create(related));
+            ApplyIdentity(related, await writer.Create(Strip(node, related)));
             await Persist(node, [related], Mode.Create);
         }
     }
@@ -89,9 +89,9 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
         {
             var id = Id(related);
             if (HasId(id) && existing.Any(row => IdKey(Id(row)) == IdKey(id)))
-                await writer.Update(related);
+                await writer.Update(Strip(node, related));
             else
-                ApplyIdentity(related, await writer.Create(related));
+                ApplyIdentity(related, await writer.Create(Strip(node, related)));
             await Persist(node, [related], Mode.Update);
         }
     }
@@ -121,9 +121,11 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
         return items;
     }
 
-    T StripEnriched(T item)
+    T StripEnriched(T item) => (T)Strip(Tree.Parent, item!);
+
+    static object Strip(IRepositoryTreeNode node, object item)
     {
-        var skip = Tree.Parent.Items
+        var skip = node.Items
             .Select(child => child.Enrichment?.Into)
             .OfType<string>()
             .ToHashSet();
@@ -132,9 +134,9 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
             var copy = new Row(row);
             foreach (var name in skip)
                 copy.Remove(name);
-            return (T)(object)copy;
+            return copy;
         }
-        var dest = (T)Activator.CreateInstance(item!.GetType())!;
+        var dest = Activator.CreateInstance(item.GetType())!;
         foreach (var prop in item.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(prop => prop is { CanRead: true, CanWrite: true } && prop.GetIndexParameters().Length == 0))
         {

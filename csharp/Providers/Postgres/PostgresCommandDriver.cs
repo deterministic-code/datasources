@@ -1,4 +1,6 @@
+using System.Globalization;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Datasources.Postgres;
 
@@ -56,6 +58,19 @@ public sealed class PostgresCommandDriver(PostgresConnectionDriver connection)
     static void Bind(NpgsqlCommand command, object?[] values)
     {
         for (var i = 0; i < values.Length; i++)
-            command.Parameters.Add(new NpgsqlParameter($"${i + 1}", values[i] ?? DBNull.Value));
+            command.Parameters.Add(Param(values[i]));
     }
+
+    static NpgsqlParameter Param(object? value) => value switch
+    {
+        null => new() { Value = DBNull.Value },
+        bool or byte[] => new() { Value = value },
+        DateTime date => new() { Value = new Value.DateTime(date).IsoDateTime(), NpgsqlDbType = NpgsqlDbType.Unknown },
+        string text => new() { Value = text, NpgsqlDbType = NpgsqlDbType.Unknown },
+        _ => new()
+        {
+            Value = Convert.ToString(value, CultureInfo.InvariantCulture) ?? "",
+            NpgsqlDbType = NpgsqlDbType.Unknown,
+        }
+    };
 }

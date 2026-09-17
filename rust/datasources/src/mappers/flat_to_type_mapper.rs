@@ -298,6 +298,10 @@ mod tests {
                             ("id".into(), TypeMapField::column("address_id")),
                             ("line1".into(), TypeMapField::column("address_line1")),
                             ("city".into(), TypeMapField::column("address_city")),
+                            (
+                                "address_type_name".into(),
+                                TypeMapField::column("address_type_name"),
+                            ),
                         ],
                     )),
                 ),
@@ -308,7 +312,10 @@ mod tests {
                         vec![
                             ("id".into(), TypeMapField::column("phone_id")),
                             ("number".into(), TypeMapField::column("phone_number")),
-                            ("label".into(), TypeMapField::column("phone_label")),
+                            (
+                                "phone_type_name".into(),
+                                TypeMapField::column("phone_type_name"),
+                            ),
                         ],
                     )),
                 ),
@@ -327,9 +334,10 @@ mod tests {
             ("address_id", Value::Int(101)),
             ("address_line1", Value::from("10 Downing St")),
             ("address_city", Value::from("London")),
+            ("address_type_name", Value::from("Home")),
             ("phone_id", Value::Int(201)),
             ("phone_number", Value::from("+44")),
-            ("phone_label", Value::from("mobile")),
+            ("phone_type_name", Value::from("Mobile")),
         ])
     }
 
@@ -351,9 +359,10 @@ mod tests {
             ("address_id", Value::Null),
             ("address_line1", Value::Null),
             ("address_city", Value::Null),
+            ("address_type_name", Value::Null),
             ("phone_id", Value::Int(202)),
             ("phone_number", Value::from("555")),
-            ("phone_label", Value::from("work")),
+            ("phone_type_name", Value::from("Work")),
         ])
     }
 
@@ -398,8 +407,12 @@ mod tests {
             Value::from("+44")
         );
         assert_eq!(
-            text(&many(&home, "phones")[0], "label"),
-            Value::from("mobile")
+            text(&many(&home, "addresses")[0], "address_type_name"),
+            Value::from("Home")
+        );
+        assert_eq!(
+            text(&many(&home, "phones")[0], "phone_type_name"),
+            Value::from("Mobile")
         );
         let missing = IMapper::map(&mapper, no_address());
         assert!(many(&missing, "addresses").is_empty());

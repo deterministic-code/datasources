@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_imports)]
 
 mod address;
+mod address_type;
 mod base;
 mod contact;
 mod contact_base;
@@ -16,8 +17,10 @@ mod import_contact_result;
 mod legacy_contact;
 mod legacy_migration_result;
 mod phone;
+mod phone_type;
 
 pub use address::Address;
+pub use address_type::AddressType;
 pub use base::Base;
 pub use contact::Contact;
 pub use contact_base::ContactBase;
@@ -33,3 +36,4 @@ pub use import_contact_result::ImportContactResult;
 pub use legacy_contact::LegacyContact;
 pub use legacy_migration_result::LegacyMigrationResult;
 pub use phone::Phone;
+pub use phone_type::PhoneType;

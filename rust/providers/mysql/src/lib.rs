@@ -6,9 +6,9 @@ mod converters;
 mod datasource;
 mod driver;
 mod mysql_async_driver;
-mod transaction_driver;
 mod statement_builder;
 mod transaction;
+mod transaction_driver;
 
 pub use command::MysqlCommand;
 pub use connection::MysqlConnection;
