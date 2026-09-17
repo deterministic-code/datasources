@@ -1,6 +1,9 @@
 use crate::connection_driver::{map_err, MysqlConnectionDriver};
+use crate::converters::{
+    BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
+};
 use crate::driver::{to_mysql, MysqlExecuteResult};
-use datasources::{DatasourceError, Result, Value};
+use datasources::{DatasourceError, Result, TypeConverter, Value};
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Row, Value as MysqlValue};
 use std::collections::HashMap;
@@ -60,17 +63,26 @@ impl<'a> MysqlCommandDriver<'a> {
     }
 }
 
-fn to_mysql_value(value: &Value) -> MysqlValue {
+fn reverse(value: &Value) -> Value {
     match value {
+        Value::DateTime(_) => DateTimeConverter.reverse_convert(value),
+        Value::Bool(_) => BoolConverter.reverse_convert(value),
+        Value::Uuid(_) => UuidConverter.reverse_convert(value),
+        Value::Decimal(_) => DecimalConverter.reverse_convert(value),
+        Value::Binary(_) => BinaryConverter.reverse_convert(value),
+        _ => return value.clone(),
+    }
+    .unwrap_or_else(|_| value.clone())
+}
+
+fn to_mysql_value(value: &Value) -> MysqlValue {
+    match reverse(value) {
         Value::Null => MysqlValue::NULL,
-        Value::Bool(flag) => MysqlValue::Int(if *flag { 1 } else { 0 }),
-        Value::Int(value) => MysqlValue::Int(*value),
-        Value::Float(value) => MysqlValue::Double(*value),
-        Value::Text(value) => MysqlValue::Bytes(value.as_bytes().to_vec()),
-        Value::DateTime(value) => MysqlValue::Bytes(Value::iso_datetime(*value).into_bytes()),
-        Value::Uuid(value) => MysqlValue::Bytes(value.to_string().into_bytes()),
-        Value::Decimal(value) => MysqlValue::Bytes(value.to_string().into_bytes()),
-        Value::Binary(value) => MysqlValue::Bytes(value.clone()),
+        Value::Int(value) => MysqlValue::Int(value),
+        Value::Float(value) => MysqlValue::Double(value),
+        Value::Text(value) => MysqlValue::Bytes(value.into_bytes()),
+        Value::Binary(value) => MysqlValue::Bytes(value),
+        other => MysqlValue::Bytes(other.wire_text().into_bytes()),
     }
 }
 

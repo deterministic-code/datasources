@@ -13,5 +13,9 @@ public sealed class DateTimeConverter : TypeConverter<Value, Value>
         _ => from
     };
 
-    public override Value ReverseConvert(Value to) => to;
+    public override Value ReverseConvert(Value to) => to switch
+    {
+        Value.DateTime => new Value.Text(to.IsoDateTime()),
+        _ => to
+    };
 }

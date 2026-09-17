@@ -1,6 +1,9 @@
 use crate::connection_driver::{map_err, SqliteConnectionDriver};
+use crate::converters::{
+    BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
+};
 use crate::driver::SqliteExecuteResult;
-use datasources::{DatasourceError, Result, Row, Value};
+use datasources::{DatasourceError, Result, Row, TypeConverter, Value};
 use rusqlite::types::{ToSql, ValueRef};
 use std::collections::HashMap;
 
@@ -80,17 +83,26 @@ fn named_key(name: &str) -> String {
     }
 }
 
-fn to_sql(value: &Value) -> rusqlite::types::Value {
+fn reverse(value: &Value) -> Value {
     match value {
+        Value::DateTime(_) => DateTimeConverter.reverse_convert(value),
+        Value::Bool(_) => BoolConverter.reverse_convert(value),
+        Value::Uuid(_) => UuidConverter.reverse_convert(value),
+        Value::Decimal(_) => DecimalConverter.reverse_convert(value),
+        Value::Binary(_) => BinaryConverter.reverse_convert(value),
+        _ => return value.clone(),
+    }
+    .unwrap_or_else(|_| value.clone())
+}
+
+fn to_sql(value: &Value) -> rusqlite::types::Value {
+    match reverse(value) {
         Value::Null => rusqlite::types::Value::Null,
-        Value::Bool(flag) => rusqlite::types::Value::Integer(if *flag { 1 } else { 0 }),
-        Value::Int(value) => rusqlite::types::Value::Integer(*value),
-        Value::Float(value) => rusqlite::types::Value::Real(*value),
-        Value::Text(value) => rusqlite::types::Value::Text(value.clone()),
-        Value::DateTime(value) => rusqlite::types::Value::Text(Value::iso_datetime(*value)),
-        Value::Uuid(value) => rusqlite::types::Value::Text(value.to_string()),
-        Value::Decimal(value) => rusqlite::types::Value::Text(value.to_string()),
-        Value::Binary(value) => rusqlite::types::Value::Blob(value.clone()),
+        Value::Int(value) => rusqlite::types::Value::Integer(value),
+        Value::Float(value) => rusqlite::types::Value::Real(value),
+        Value::Text(value) => rusqlite::types::Value::Text(value),
+        Value::Binary(value) => rusqlite::types::Value::Blob(value),
+        other => rusqlite::types::Value::Text(other.wire_text()),
     }
 }
 

@@ -65,7 +65,6 @@ public sealed class PostgresCommandDriver(PostgresConnectionDriver connection)
     {
         null => new() { Value = DBNull.Value },
         bool or byte[] => new() { Value = value },
-        DateTime date => new() { Value = new Value.DateTime(date).IsoDateTime(), NpgsqlDbType = NpgsqlDbType.Unknown },
         string text => new() { Value = text, NpgsqlDbType = NpgsqlDbType.Unknown },
         _ => new()
         {
