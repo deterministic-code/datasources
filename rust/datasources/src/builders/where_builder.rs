@@ -18,6 +18,10 @@ enum Node {
     Not {
         child: Box<WhereBuilder>,
     },
+    In {
+        field: String,
+        values: Vec<Value>,
+    },
 }
 
 #[derive(Clone)]
@@ -78,6 +82,15 @@ impl WhereBuilder {
         }
     }
 
+    pub fn in_list(field: impl Into<String>, values: Vec<Value>) -> Self {
+        Self {
+            node: Node::In {
+                field: field.into(),
+                values,
+            },
+        }
+    }
+
     fn compare(field: impl Into<String>, op: &'static str, value: impl Into<Value>) -> Self {
         Self {
             node: Node::Compare {
@@ -104,6 +117,11 @@ impl Statement for WhereBuilder {
             }
             Node::Not { child } => child.parameters(),
             Node::Group { children, .. } => children.iter().flat_map(Self::parameters).collect(),
+            Node::In { field, values } => values
+                .iter()
+                .enumerate()
+                .map(|(i, value)| Parameter::new(format!("{field}_{i}"), value.clone()))
+                .collect(),
         }
     }
 
@@ -111,6 +129,17 @@ impl Statement for WhereBuilder {
         match &self.node {
             Node::Compare { field, op, .. } => format!("{field} {op} ${field}"),
             Node::Not { child } => format!("NOT ({})", child.get_text()),
+            Node::In { field, values } => {
+                if values.is_empty() {
+                    "1 = 0".to_string()
+                } else {
+                    let list = (0..values.len())
+                        .map(|i| format!("${field}_{i}"))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    format!("{field} IN ({list})")
+                }
+            }
             Node::Group {
                 join,
                 empty,

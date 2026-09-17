@@ -1,7 +1,9 @@
 use crate::builders::WhereBuilder;
 use crate::datasource_error::DatasourceError;
+use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enriched::Enriched;
 use crate::enriched_readonly_repository::EnrichedReadonlyRepository;
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::query::Query;
 use crate::repository::{as_readonly, ReadonlyRepository, Repository};
@@ -31,8 +33,15 @@ pub struct DeepCRUDRepository {
 
 impl DeepCRUDRepository {
     pub fn new(inner: Arc<dyn Repository>) -> Self {
+        Self::with_strategy(inner, Arc::new(DefaultReadonlyEnrichmentStrategy))
+    }
+
+    pub fn with_strategy(
+        inner: Arc<dyn Repository>,
+        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    ) -> Self {
         Self {
-            enriched: EnrichedReadonlyRepository::new(as_readonly(inner.clone())),
+            enriched: EnrichedReadonlyRepository::with_strategy(as_readonly(inner.clone()), strategy),
             inner,
         }
     }

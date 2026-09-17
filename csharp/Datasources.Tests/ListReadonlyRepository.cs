@@ -16,7 +16,17 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T>
     }
 
     static bool Matches(T item, IStatement? query) =>
-        ParametersOf(query).All(parameter => Same(Get(item, parameter.Name), parameter.Value));
+        query is IWhere where && where.GetText() == "1 = 0"
+            ? false
+            : ParametersOf(query)
+                .GroupBy(parameter => FieldOf(parameter.Name))
+                .All(group => group.Any(parameter => Same(Get(item, group.Key), parameter.Value)));
+
+    static string FieldOf(string name)
+    {
+        var split = name.LastIndexOf('_');
+        return split > 0 && name[(split + 1)..].All(char.IsDigit) ? name[..split] : name;
+    }
 
     static IReadOnlyList<Parameter> ParametersOf(IStatement? query) =>
         query switch

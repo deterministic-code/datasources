@@ -58,6 +58,13 @@ public class CoreTests
             "(id = $id AND age > $age) OR name = $name",
             WhereBuilder.Or(where, WhereBuilder.Equals("name", "a")).GetText());
         Assert.Equal("NOT (id = $id)", WhereBuilder.Not(WhereBuilder.Equals("id", 1)).GetText());
+        Assert.Equal("1 = 0", WhereBuilder.In("id", []).GetText());
+        Assert.Empty(WhereBuilder.In("id", []).Parameters);
+        var inIds = WhereBuilder.In("id", [1, 2]);
+        Assert.Equal("id IN ($id_0, $id_1)", inIds.GetText());
+        Assert.Equal(["id_0", "id_1"], inIds.Parameters.Select(parameter => parameter.Name));
+        Assert.Equal(new Value.Int(1), inIds.Parameters[0].Value);
+        Assert.Equal(new Value.Int(2), inIds.Parameters[1].Value);
 
         var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
         var query = StatementBuilder.CreateQuery("users", ["id", "name"], where);

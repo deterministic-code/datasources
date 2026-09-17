@@ -1,5 +1,7 @@
+use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enriched::Enriched;
 use crate::query::Query;
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::ReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
@@ -12,13 +14,26 @@ use std::sync::Arc;
 pub struct EnrichedReadonlyRepository {
     inner: Arc<dyn ReadonlyRepository>,
     pub tree: RepositoryTree,
+    strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
 }
 
 impl EnrichedReadonlyRepository {
     pub fn new(inner: Arc<dyn ReadonlyRepository>) -> Self {
+        Self::with_strategy(inner, Arc::new(DefaultReadonlyEnrichmentStrategy))
+    }
+
+    pub fn with_strategy(
+        inner: Arc<dyn ReadonlyRepository>,
+        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    ) -> Self {
         Self {
-            tree: RepositoryTree::new(RepositoryTreeNode::new(inner.clone(), "")),
+            tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
+                inner.clone(),
+                "",
+                strategy.clone(),
+            )),
             inner,
+            strategy,
         }
     }
 
@@ -86,7 +101,7 @@ impl EnrichedReadonlyRepository {
 #[async_trait]
 impl Enriched for EnrichedReadonlyRepository {
     async fn enrich(&self, items: &mut [Row]) -> Result<()> {
-        self.tree.parent.enrich_from(items).await
+        self.strategy.enrich(&self.tree, items).await
     }
 }
 
@@ -97,9 +112,9 @@ impl ReadonlyRepository for EnrichedReadonlyRepository {
     }
 
     async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
-        let mut items = self.inner.get(query).await?;
-        self.enrich(&mut items).await?;
-        Ok(items)
+        self.strategy
+            .get(self.inner.as_ref(), &self.tree, query)
+            .await
     }
 
     async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
@@ -107,8 +122,8 @@ impl ReadonlyRepository for EnrichedReadonlyRepository {
     }
 
     async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        let mut items = self.inner.get_where(where_clause).await?;
-        self.enrich(&mut items).await?;
-        Ok(items)
+        self.strategy
+            .get_where(self.inner.as_ref(), &self.tree, where_clause)
+            .await
     }
 }

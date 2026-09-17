@@ -40,12 +40,7 @@ impl ListRepository {
             None => items.clone(),
             Some(predicate) => items
                 .iter()
-                .filter(|row| {
-                    predicate
-                        .parameters()
-                        .iter()
-                        .all(|parameter| row.get(&parameter.name) == Some(&parameter.value))
-                })
+                .filter(|row| super::where_match::row_matches(row, predicate))
                 .cloned()
                 .collect(),
         }

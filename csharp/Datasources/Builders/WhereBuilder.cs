@@ -14,6 +14,8 @@ public sealed class WhereBuilder : IWhere
     public static WhereBuilder And(params WhereBuilder[] children) => new(new Node.Group("AND", "1 = 1", children));
     public static WhereBuilder Or(params WhereBuilder[] children) => new(new Node.Group("OR", "1 = 0", children));
     public static WhereBuilder Not(WhereBuilder child) => new(new Node.Negation(child));
+    public static WhereBuilder In(string field, IReadOnlyList<Value> values) =>
+        new(new Node.In(field, values));
 
     private static WhereBuilder Compare(string field, string op, Value? value) =>
         new(new Node.Comparison(field, op, value ?? Value.Null.Instance));
@@ -46,6 +48,16 @@ public sealed class WhereBuilder : IWhere
         {
             public override string Text() => $"NOT ({Child.GetText()})";
             public override IReadOnlyList<Parameter> Parameters() => Child.Parameters;
+        }
+
+        public sealed record In(string Field, IReadOnlyList<Value> Values) : Node
+        {
+            public override string Text() =>
+                Values.Count == 0
+                    ? "1 = 0"
+                    : $"{Field} IN ({string.Join(", ", Values.Select((_, i) => $"${Field}_{i}"))})";
+            public override IReadOnlyList<Parameter> Parameters() =>
+                Values.Select((value, i) => new Parameter($"{Field}_{i}", value)).ToArray();
         }
 
         private static string Wrap(WhereBuilder child) =>

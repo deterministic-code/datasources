@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Reflection;
-using Datasources.Builders;
 
 namespace Datasources;
 
@@ -8,18 +7,21 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
 {
     readonly List<RepositoryTreeNode> items = [];
     readonly Func<IReadOnlyList<object>, Task> apply;
+    readonly IReadonlyEnrichmentBinder binder;
 
     public RepositoryTreeNode(
         object value,
         string propertyName,
         IRepositoryTreeNode? parent = null,
         Func<IReadOnlyList<object>, Task>? apply = null,
-        Enrichment? enrichment = null)
+        Enrichment? enrichment = null,
+        IReadonlyEnrichmentBinder? binder = null)
     {
         Value = value;
         PropertyName = propertyName;
         Parent = parent;
         Enrichment = enrichment;
+        this.binder = binder ?? new DefaultReadonlyEnrichmentStrategy<object>();
         this.apply = apply ?? (_ => Task.CompletedTask);
     }
 
@@ -40,7 +42,12 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
     {
         var enrichment = new Enrichment(into, from, by, select, many);
         var child = new RepositoryTreeNode(
-            via, into, this, parents => Apply(via, enrichment, parents), enrichment)
+            via,
+            into,
+            this,
+            parents => binder.Apply(via, enrichment, parents),
+            enrichment,
+            binder)
         {
             Persist = via is ICRUDRepository<TRelated> crud ? new ChildPersist<TRelated>(crud) : null
         };
@@ -56,50 +63,9 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
             await child.EnrichFrom(next);
     }
 
-    static Task Apply<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        Enrichment enrichment,
-        IReadOnlyList<object> parents) =>
-        enrichment.Many ? ApplyMany(via, enrichment, parents) : ApplyLookup(via, enrichment, parents);
+    internal static string KeyOf(object? key) => key?.ToString() ?? "";
 
-    static async Task ApplyLookup<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        Enrichment enrichment,
-        IReadOnlyList<object> parents)
-    {
-        var cache = new Dictionary<string, TRelated?>();
-        foreach (var parent in parents)
-        {
-            var key = Get(parent, enrichment.From);
-            if (key is null) continue;
-            var cacheKey = key.ToString() ?? "";
-            if (!cache.TryGetValue(cacheKey, out var related))
-            {
-                related = await via.GetSingle(WhereBuilder.Equals(enrichment.By, Datasources.Value.From(key)));
-                cache[cacheKey] = related;
-            }
-            if (related is null) continue;
-            Set(parent, enrichment.Into, enrichment.Select is { } select ? Get(related, select) : related);
-        }
-    }
-
-    static async Task ApplyMany<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        Enrichment enrichment,
-        IReadOnlyList<object> parents)
-    {
-        foreach (var parent in parents)
-        {
-            var key = Get(parent, enrichment.From);
-            if (key is null) continue;
-            var related = new List<TRelated>();
-            await foreach (var item in via.Get(WhereBuilder.Equals(enrichment.By, Datasources.Value.From(key))))
-                related.Add(item);
-            Set(parent, enrichment.Into, related);
-        }
-    }
-
-    static IReadOnlyList<object> Related(IReadOnlyList<object> parents, string propertyName)
+    internal static IReadOnlyList<object> Related(IReadOnlyList<object> parents, string propertyName)
     {
         if (propertyName.Length == 0) return parents;
         var next = new List<object>();
@@ -118,9 +84,9 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         return next;
     }
 
-    static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
+    internal static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
 
-    static void Set(object obj, string name, object? value) => Prop(obj, name).SetValue(obj, value);
+    internal static void Set(object obj, string name, object? value) => Prop(obj, name).SetValue(obj, value);
 
     static PropertyInfo Prop(object obj, string name) =>
         obj.GetType().GetProperty(name)

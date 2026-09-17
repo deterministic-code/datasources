@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { collectAsync } from "./collectAsync.ts";
 import { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
+import { FlatToTypeMapper } from "./mappers/FlatToTypeMapper.ts";
+import { FlatToTypeReadonlyEnrichmentStrategy } from "./FlatToTypeReadonlyEnrichmentStrategy.ts";
+import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
+import { TransformMapper } from "./mappers/TransformMapper.ts";
+import type { IQuery } from "./IQuery.ts";
+import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
+import type { IWhere } from "./IWhere.ts";
 
 class Parent {
   id = 0;
@@ -191,4 +198,75 @@ describe("EnrichedReadonlyRepository", () => {
     );
     await expect(collectAsync(repo.get())).rejects.toThrow(/scalar/);
   });
+
+  it("hashset uses one get per edge", async () => {
+    const types = counting(
+      new ListReadonlyRepository([
+        Object.assign(new TypeRow(), { id: 10, name: "person" }),
+        Object.assign(new TypeRow(), { id: 11, name: "org" }),
+      ]),
+    );
+    const children = counting(
+      new ListReadonlyRepository([
+        Object.assign(new Child(), { parent_id: 1, label: "a" }),
+        Object.assign(new Child(), { parent_id: 2, label: "b" }),
+      ]),
+    );
+    const repo = new EnrichedReadonlyRepository(
+      new ListReadonlyRepository([parent(1, 10), parent(2, 11)]),
+      new HashsetOptimizedReadonlyEnrichmentStrategy(),
+    );
+    repo.addEnriched("type_name", "type_id", types, "id", "name");
+    repo.addEnriched("children", "id", children, "parent_id", undefined, true);
+    await collectAsync(repo.get());
+    expect(types.gets).toBe(1);
+    expect(types.getSingles).toBe(0);
+    expect(children.gets).toBe(1);
+    expect(children.getSingles).toBe(0);
+  });
+
+  it("collapses join rows with FlatToType", async () => {
+    const repo = new EnrichedReadonlyRepository(
+      new ListReadonlyRepository<Parent>([]),
+      new FlatToTypeReadonlyEnrichmentStrategy(
+        new ListReadonlyRepository([
+          { id: 1, type_name: "person" },
+          { id: 2, type_name: "org" },
+        ]),
+        new FlatToTypeMapper({
+          key: "id",
+          fields: { id: "id", type_name: "type_name" },
+        }),
+        new TransformMapper(
+          (item) => item,
+          (item) => item,
+        ),
+      ),
+    );
+    const items = await collectAsync(repo.get());
+    expect(items.map((item) => item.id)).toEqual([1, 2]);
+    expect(items.map((item) => item.type_name)).toEqual(["person", "org"]);
+  });
 });
+
+const counting = <T extends object>(
+  inner: IReadonlyRepository<T>,
+): IReadonlyRepository<T> & { gets: number; getSingles: number } => {
+  const state = { gets: 0, getSingles: 0 };
+  return {
+    get gets() {
+      return state.gets;
+    },
+    get getSingles() {
+      return state.getSingles;
+    },
+    getSingle: async (query?: IQuery | IWhere) => {
+      state.getSingles += 1;
+      return inner.getSingle(query);
+    },
+    async *get(query?: IQuery | IWhere) {
+      state.gets += 1;
+      yield* inner.get(query);
+    },
+  };
+};

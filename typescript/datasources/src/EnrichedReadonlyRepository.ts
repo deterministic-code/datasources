@@ -1,5 +1,7 @@
+import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import type { IEnriched } from "./IEnriched.ts";
 import type { IQuery } from "./IQuery.ts";
+import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
@@ -11,9 +13,16 @@ export class EnrichedReadonlyRepository<T extends object>
   implements IReadonlyRepository<T>, IEnriched<T>
 {
   readonly tree: IRepositoryTree;
+  private readonly strategy: IReadonlyEnrichmentStrategy<T>;
 
-  constructor(private readonly inner: IReadonlyRepository<T>) {
-    this.tree = new RepositoryTree(new RepositoryTreeNode(inner, ""));
+  constructor(
+    private readonly inner: IReadonlyRepository<T>,
+    strategy?: IReadonlyEnrichmentStrategy<T>,
+  ) {
+    this.strategy = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
+    this.tree = new RepositoryTree(
+      new RepositoryTreeNode(inner, "", undefined, undefined, undefined, this.strategy),
+    );
   }
 
   addEnriched<TRelated extends object>(
@@ -31,7 +40,7 @@ export class EnrichedReadonlyRepository<T extends object>
   }
 
   enrich = async (items: T[]): Promise<T[]> => {
-    await this.tree.parent.enrichFrom(items);
+    await this.strategy.enrich(this.tree, items);
     return items;
   };
 
@@ -41,9 +50,6 @@ export class EnrichedReadonlyRepository<T extends object>
   };
 
   async *get(query?: IQuery | IWhere): AsyncIterable<T> {
-    const items: T[] = [];
-    for await (const item of this.inner.get(query)) items.push(item);
-    await this.enrich(items);
-    for (const item of items) yield item;
+    yield* this.strategy.get(this.inner, this.tree, query);
   }
 }
