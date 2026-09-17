@@ -113,4 +113,82 @@ describe("EnrichedReadonlyRepository", () => {
     expect(item?.children[0]?.type_name).toBe("home");
     expect(item?.children[1]?.type_name).toBe("");
   });
+
+  it("skips missing enrichment keys", async () => {
+    const repo = new EnrichedReadonlyRepository(
+      new ListReadonlyRepository<object>([
+        { type_id: null, type_name: "", children: [] },
+        { type_name: "" },
+      ]),
+    );
+    repo.addEnriched(
+      "type_name",
+      "type_id",
+      new ListReadonlyRepository([Object.assign(new TypeRow(), { id: 10, name: "person" })]),
+      "id",
+      "name",
+    );
+    repo.addEnriched(
+      "children",
+      "id",
+      new ListReadonlyRepository([Object.assign(new Child(), { parent_id: 1, label: "a" })]),
+      "parent_id",
+      undefined,
+      true,
+    );
+    const items = await collectAsync(repo.get());
+    expect(items[0]?.type_name).toBe("");
+    expect(items[1]?.children).toBeUndefined();
+  });
+
+  it("getSingle is undefined when empty", async () => {
+    const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository<Parent>([]));
+    expect(await repo.getSingle()).toBeUndefined();
+  });
+
+  it("nests on a singular related object and skips strings", async () => {
+    const repo = new EnrichedReadonlyRepository(
+      new ListReadonlyRepository([
+        Object.assign(parent(1, 10), { child: "skip" }),
+        parent(2, 10),
+      ]),
+    );
+    repo.addEnriched(
+      "child",
+      "id",
+      new ListReadonlyRepository([
+        Object.assign(new Child(), { parent_id: 2, type_id: 3, label: "only" }),
+      ]),
+      "parent_id",
+      undefined,
+      false,
+      (node) =>
+        node.include(
+          new ListReadonlyRepository([
+            Object.assign(new TypeRow(), { id: 3, name: "home" }),
+          ]),
+          "type_name",
+          "type_id",
+          "id",
+          "name",
+        ),
+    );
+    const items = await collectAsync(repo.get());
+    expect(items[0]?.child).toBe("skip");
+    expect((items[1] as Parent & { child?: Child }).child?.type_name).toBe("home");
+  });
+
+  it("throws when an enrichment key is an object", async () => {
+    const repo = new EnrichedReadonlyRepository(
+      new ListReadonlyRepository([Object.assign(parent(1, 10), { type_id: { x: 1 } })]),
+    );
+    repo.addEnriched(
+      "type_name",
+      "type_id",
+      new ListReadonlyRepository<TypeRow>([]),
+      "id",
+      "name",
+    );
+    await expect(collectAsync(repo.get())).rejects.toThrow(/scalar/);
+  });
 });
