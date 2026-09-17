@@ -27,13 +27,20 @@ public class EnrichedReadonlyRepositoryTests
     }
 
     [Fact]
-    public async Task GetFillsLookupSelectAndLeavesMissingDefault()
+    public Task GetFillsLookupSelectAndLeavesMissingDefault() =>
+        FillLookup(new DefaultReadonlyEnrichmentStrategy<Parent>());
+
+    [Fact]
+    public Task HashsetFillsLookupSelectAndLeavesMissingDefault() =>
+        FillLookup(new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
+
+    async Task FillLookup(IReadonlyEnrichmentStrategy<Parent> strategy)
     {
         var parents = new ListReadonlyRepository<Parent>(
             new Parent { id = 1, type_id = 10 },
             new Parent { id = 2, type_id = 99 });
         var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 10, name = "person" });
-        var repo = new EnrichedReadonlyRepository<Parent>(parents);
+        var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         var items = new List<Parent>();
         await foreach (var item in repo.Get())
@@ -43,7 +50,14 @@ public class EnrichedReadonlyRepositoryTests
     }
 
     [Fact]
-    public async Task GetFillsListsAndGetSingleIsEnriched()
+    public Task GetFillsListsAndGetSingleIsEnriched() =>
+        FillLists(new DefaultReadonlyEnrichmentStrategy<Parent>());
+
+    [Fact]
+    public Task HashsetFillsListsAndGetSingleIsEnriched() =>
+        FillLists(new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
+
+    async Task FillLists(IReadonlyEnrichmentStrategy<Parent> strategy)
     {
         var parents = new ListReadonlyRepository<Parent>(new Parent { id = 1, type_id = 10 });
         var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 10, name = "org" });
@@ -51,7 +65,7 @@ public class EnrichedReadonlyRepositoryTests
             new Child { parent_id = 1, label = "a" },
             new Child { parent_id = 1, label = "b" },
             new Child { parent_id = 2, label = "x" });
-        var repo = new EnrichedReadonlyRepository<Parent>(parents);
+        var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         repo.AddEnriched("children", "id", children, "parent_id", many: true);
         var item = await repo.GetSingle();
@@ -60,7 +74,14 @@ public class EnrichedReadonlyRepositoryTests
     }
 
     [Fact]
-    public async Task GetNestsListLookupAndKeepsRootSibling()
+    public Task GetNestsListLookupAndKeepsRootSibling() =>
+        NestListLookup(new DefaultReadonlyEnrichmentStrategy<Parent>());
+
+    [Fact]
+    public Task HashsetNestsListLookupAndKeepsRootSibling() =>
+        NestListLookup(new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
+
+    async Task NestListLookup(IReadonlyEnrichmentStrategy<Parent> strategy)
     {
         var parents = new ListReadonlyRepository<Parent>(new Parent { id = 1, type_id = 10 });
         var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 10, name = "org" });
@@ -69,7 +90,7 @@ public class EnrichedReadonlyRepositoryTests
         var children = new ListReadonlyRepository<Child>(
             new Child { parent_id = 1, type_id = 3, label = "a" },
             new Child { parent_id = 1, type_id = 9, label = "b" });
-        var repo = new EnrichedReadonlyRepository<Parent>(parents);
+        var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         repo.AddEnriched("children", "id", children, "parent_id", many: true,
             nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
@@ -77,5 +98,99 @@ public class EnrichedReadonlyRepositoryTests
         Assert.Equal("org", item!.type_name);
         Assert.Equal("home", item.children[0].type_name);
         Assert.Equal("", item.children[1].type_name);
+    }
+
+    [Fact]
+    public async Task HashsetUsesOneGetPerEdge()
+    {
+        var types = new CountingReadonlyRepository<TypeRow>(
+            new ListReadonlyRepository<TypeRow>(
+                new TypeRow { id = 10, name = "person" },
+                new TypeRow { id = 11, name = "org" }));
+        var children = new CountingReadonlyRepository<Child>(
+            new ListReadonlyRepository<Child>(
+                new Child { parent_id = 1, label = "a" },
+                new Child { parent_id = 2, label = "b" }));
+        var repo = new EnrichedReadonlyRepository<Parent>(
+            new ListReadonlyRepository<Parent>(
+                new Parent { id = 1, type_id = 10 },
+                new Parent { id = 2, type_id = 11 }),
+            new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
+        repo.AddEnriched("type_name", "type_id", types, "id", "name");
+        repo.AddEnriched("children", "id", children, "parent_id", many: true);
+        await foreach (var _ in repo.Get()) { }
+        Assert.Equal(1, types.Gets);
+        Assert.Equal(0, types.GetSingles);
+        Assert.Equal(1, children.Gets);
+        Assert.Equal(0, children.GetSingles);
+    }
+
+    [Fact]
+    public async Task DefaultUsesGetSinglePerLookupKey()
+    {
+        var types = new CountingReadonlyRepository<TypeRow>(
+            new ListReadonlyRepository<TypeRow>(
+                new TypeRow { id = 10, name = "person" },
+                new TypeRow { id = 11, name = "org" }));
+        var repo = new EnrichedReadonlyRepository<Parent>(
+            new ListReadonlyRepository<Parent>(
+                new Parent { id = 1, type_id = 10 },
+                new Parent { id = 2, type_id = 11 }));
+        repo.AddEnriched("type_name", "type_id", types, "id", "name");
+        await foreach (var _ in repo.Get()) { }
+        Assert.Equal(2, types.GetSingles);
+        Assert.Equal(0, types.Gets);
+    }
+
+    [Fact]
+    public async Task FlatToTypeCollapsesJoinRows()
+    {
+        var source = new ListReadonlyRepository<Row>(
+            new Row { ["id"] = 1, ["type_name"] = "person" },
+            new Row { ["id"] = 2, ["type_name"] = "org" });
+        var repo = new EnrichedReadonlyRepository<Parent>(
+            new ListReadonlyRepository<Parent>(),
+            new FlatToTypeReadonlyEnrichmentStrategy<Parent>(
+                source,
+                new FlatToTypeMapper(new TypeMap
+                {
+                    Key = "id",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["id"] = "id",
+                        ["type_name"] = "type_name"
+                    }
+                }),
+                new TransformMapper<Dictionary<string, MappedValue>, Parent>(
+                    row => new Parent
+                    {
+                        id = row["id"] is MappedValue.Cell(Value.Int(var id)) ? (int)id : 0,
+                        type_name = row["type_name"] is MappedValue.Cell(Value.Text(var name)) ? name : ""
+                    },
+                    _ => throw new InvalidOperationException())));
+        var items = new List<Parent>();
+        await foreach (var item in repo.Get())
+            items.Add(item);
+        Assert.Equal([1, 2], items.Select(item => item.id));
+        Assert.Equal(["person", "org"], items.Select(item => item.type_name));
+    }
+
+    sealed class CountingReadonlyRepository<T>(IReadonlyRepository<T> inner) : ReadonlyRepository<T>
+    {
+        public int Gets { get; private set; }
+        public int GetSingles { get; private set; }
+
+        public override async IAsyncEnumerable<T> Get(IStatement? query = null)
+        {
+            Gets++;
+            await foreach (var item in inner.Get(query))
+                yield return item;
+        }
+
+        public override async Task<T?> GetSingle(IStatement? query = null)
+        {
+            GetSingles++;
+            return await inner.GetSingle(query);
+        }
     }
 }

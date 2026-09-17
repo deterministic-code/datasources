@@ -1,6 +1,7 @@
-import { WhereBuilder } from "./builders/WhereBuilder.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { Enrichment } from "./Enrichment.ts";
+import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import type { IReadonlyEnrichmentBinder } from "./IReadonlyEnrichmentBinder.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import type { Scalar } from "./builders/Scalar.ts";
@@ -9,14 +10,20 @@ type Props = Record<string, Scalar | object>;
 
 export class RepositoryTreeNode implements IRepositoryTreeNode {
   readonly items: RepositoryTreeNode[] = [];
+  private readonly apply: (parents: object[]) => Promise<void>;
+  private readonly binder: IReadonlyEnrichmentBinder;
 
   constructor(
     readonly value: object,
     readonly propertyName: string,
     readonly parent?: IRepositoryTreeNode,
-    private readonly apply: (parents: object[]) => Promise<void> = async () => {},
+    apply: (parents: object[]) => Promise<void> = async () => {},
     readonly enrichment?: Enrichment,
-  ) {}
+    binder?: IReadonlyEnrichmentBinder,
+  ) {
+    this.binder = binder ?? new DefaultReadonlyEnrichmentStrategy<object>();
+    this.apply = apply;
+  }
 
   include<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
@@ -31,8 +38,9 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
       via,
       into,
       this,
-      (parents) => apply(via, enrichment, parents),
+      (parents) => this.binder.apply(via, enrichment, parents),
       enrichment,
+      this.binder,
     );
     this.items.push(child);
     return child;
@@ -45,55 +53,20 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
   };
 }
 
-const apply = async <TRelated extends object>(
-  via: IReadonlyRepository<TRelated>,
-  enrichment: Enrichment,
-  parents: object[],
-): Promise<void> =>
-  enrichment.many
-    ? applyMany(via, enrichment, parents)
-    : applyLookup(via, enrichment, parents);
+export const props = (item: object): Props => item as Props;
 
-const applyLookup = async <TRelated extends object>(
-  via: IReadonlyRepository<TRelated>,
-  enrichment: Enrichment,
-  parents: object[],
-): Promise<void> => {
-  const cache = new Map<string, TRelated | undefined>();
-  for (const parent of parents) {
-    const key = props(parent)[enrichment.from];
-    if (key === undefined || key === null) continue;
-    const cacheKey = String(key);
-    if (!cache.has(cacheKey))
-      cache.set(
-        cacheKey,
-        await via.getSingle(WhereBuilder.equals(enrichment.by, scalar(key))),
-      );
-    const related = cache.get(cacheKey);
-    if (!related) continue;
-    const value = enrichment.select
-      ? props(related)[enrichment.select]
-      : related;
-    Object.assign(parent, { [enrichment.into]: value });
-  }
-};
+export const keyOf = (key: Scalar | object): string => String(key);
 
-const applyMany = async <TRelated extends object>(
-  via: IReadonlyRepository<TRelated>,
-  enrichment: Enrichment,
-  parents: object[],
-): Promise<void> => {
-  for (const parent of parents) {
-    const key = props(parent)[enrichment.from];
-    if (key === undefined || key === null) continue;
-    const related: TRelated[] = [];
-    for await (const item of via.get(
-      WhereBuilder.equals(enrichment.by, scalar(key)),
-    ))
-      related.push(item);
-    Object.assign(parent, { [enrichment.into]: related });
-  }
-};
+export const scalar = (value: Scalar | object): Scalar =>
+  value === null ||
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "boolean" ||
+  typeof value === "bigint"
+    ? value
+    : (() => {
+        throw new DatasourceError("Enrichment key must be a scalar");
+      })();
 
 const related = (parents: object[], propertyName: string): object[] => {
   if (!propertyName) return parents;
@@ -111,16 +84,3 @@ const related = (parents: object[], propertyName: string): object[] => {
   }
   return next;
 };
-
-const props = (item: object): Props => item as Props;
-
-const scalar = (value: Scalar | object): Scalar =>
-  value === null ||
-  typeof value === "string" ||
-  typeof value === "number" ||
-  typeof value === "boolean" ||
-  typeof value === "bigint"
-    ? value
-    : (() => {
-        throw new DatasourceError("Enrichment key must be a scalar");
-      })();

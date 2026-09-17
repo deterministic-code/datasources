@@ -1,10 +1,10 @@
-use crate::builders::WhereBuilder;
+use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment::Enrichment;
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{as_readonly, ReadonlyRepository, Repository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
-use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -15,16 +15,30 @@ pub struct RepositoryTreeNode {
     pub property_name: String,
     pub items: Vec<RepositoryTreeNode>,
     pub enrichment: Option<Enrichment>,
+    pub strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
 }
 
 impl RepositoryTreeNode {
     pub fn new(value: Arc<dyn ReadonlyRepository>, property_name: impl Into<String>) -> Self {
+        Self::with_strategy(
+            value,
+            property_name,
+            Arc::new(DefaultReadonlyEnrichmentStrategy),
+        )
+    }
+
+    pub fn with_strategy(
+        value: Arc<dyn ReadonlyRepository>,
+        property_name: impl Into<String>,
+        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    ) -> Self {
         Self {
             value,
             write: None,
             property_name: property_name.into(),
             items: Vec::new(),
             enrichment: None,
+            strategy,
         }
     }
 
@@ -45,6 +59,7 @@ impl RepositoryTreeNode {
             property_name: into,
             items: Vec::new(),
             enrichment: Some(enrichment),
+            strategy: self.strategy.clone(),
         });
         self.items.last_mut().expect("include")
     }
@@ -67,88 +82,8 @@ impl RepositoryTreeNode {
         &'a self,
         parents: &'a mut [Row],
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async move {
-            if let Some(enrichment) = &self.enrichment {
-                apply(self.value.as_ref(), enrichment, parents, &self.items).await?;
-            } else {
-                for child in &self.items {
-                    child.enrich_from(parents).await?;
-                }
-            }
-            Ok(())
-        })
+        Box::pin(async move { self.strategy.apply(self, parents).await })
     }
-}
-
-async fn apply(
-    via: &dyn ReadonlyRepository,
-    enrichment: &Enrichment,
-    parents: &mut [Row],
-    children: &[RepositoryTreeNode],
-) -> Result<()> {
-    if enrichment.many {
-        apply_many(via, enrichment, parents, children).await
-    } else {
-        apply_lookup(via, enrichment, parents, children).await
-    }
-}
-
-async fn apply_lookup(
-    via: &dyn ReadonlyRepository,
-    enrichment: &Enrichment,
-    parents: &mut [Row],
-    children: &[RepositoryTreeNode],
-) -> Result<()> {
-    let mut cache: HashMap<String, Option<Row>> = HashMap::new();
-    for parent in parents.iter_mut() {
-        let Some(key) = parent.get(&enrichment.from).cloned() else {
-            continue;
-        };
-        let cache_key = key.wire_text();
-        if !cache.contains_key(&cache_key) {
-            let related = via
-                .get_single_where(&WhereBuilder::equals(enrichment.by.clone(), key.clone()))
-                .await?;
-            cache.insert(cache_key.clone(), related);
-        }
-        let Some(mut related) = cache.get(&cache_key).cloned().flatten() else {
-            continue;
-        };
-        for child in children {
-            child
-                .enrich_from(std::slice::from_mut(&mut related))
-                .await?;
-        }
-        cache.insert(cache_key, Some(related.clone()));
-        let value = enrichment
-            .select
-            .as_ref()
-            .and_then(|select| related.get(select).cloned())
-            .unwrap_or_else(|| encode_row(&related));
-        parent.insert(enrichment.into.clone(), value);
-    }
-    Ok(())
-}
-
-async fn apply_many(
-    via: &dyn ReadonlyRepository,
-    enrichment: &Enrichment,
-    parents: &mut [Row],
-    children: &[RepositoryTreeNode],
-) -> Result<()> {
-    for parent in parents.iter_mut() {
-        let Some(key) = parent.get(&enrichment.from).cloned() else {
-            continue;
-        };
-        let mut related = via
-            .get_where(&WhereBuilder::equals(enrichment.by.clone(), key))
-            .await?;
-        for child in children {
-            child.enrich_from(&mut related).await?;
-        }
-        parent.insert(enrichment.into.clone(), encode_rows(&related));
-    }
-    Ok(())
 }
 
 pub fn encode_rows(rows: &[Row]) -> Value {
@@ -160,7 +95,7 @@ pub fn encode_rows(rows: &[Row]) -> Value {
     )
 }
 
-fn encode_row(row: &Row) -> Value {
+pub(crate) fn encode_row(row: &Row) -> Value {
     Value::Text(encode_row_text(row))
 }
 

@@ -10,7 +10,8 @@ type GroupNode = {
   children: WhereBuilder[];
 };
 type NotNode = { kind: "not"; child: WhereBuilder };
-type Node = CompareNode | GroupNode | NotNode;
+type InNode = { kind: "in"; field: string; values: Scalar[] };
+type Node = CompareNode | GroupNode | NotNode | InNode;
 
 export class WhereBuilder implements IWhere {
   private constructor(private readonly node: Node) {}
@@ -33,6 +34,8 @@ export class WhereBuilder implements IWhere {
     new WhereBuilder({ kind: "group", join: "OR", empty: "1 = 0", children });
   static not = (child: WhereBuilder): WhereBuilder =>
     new WhereBuilder({ kind: "not", child });
+  static in = (field: string, values: Scalar[]): WhereBuilder =>
+    new WhereBuilder({ kind: "in", field, values });
 
   private static compare = (
     field: string,
@@ -44,6 +47,10 @@ export class WhereBuilder implements IWhere {
     const { node } = this;
     if (node.kind === "compare") return `${node.field} ${node.op} $${node.field}`;
     if (node.kind === "not") return `NOT (${node.child.getText()})`;
+    if (node.kind === "in")
+      return node.values.length === 0
+        ? "1 = 0"
+        : `${node.field} IN (${node.values.map((_, i) => `$${node.field}_${i}`).join(", ")})`;
     const [only] = node.children;
     if (!only) return node.empty;
     if (node.children.length === 1) return only.getText();
@@ -60,6 +67,11 @@ export class WhereBuilder implements IWhere {
     const { node } = this;
     if (node.kind === "compare") return [{ name: node.field, value: node.value }];
     if (node.kind === "not") return node.child.parameters;
+    if (node.kind === "in")
+      return node.values.map((value, i) => ({
+        name: `${node.field}_${i}`,
+        value,
+      }));
     return node.children.flatMap((child) => child.parameters);
   }
 }

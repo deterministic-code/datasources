@@ -8,7 +8,9 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
 {
     readonly ICRUDRepository<T> inner;
 
-    public DeepCRUDRepository(ICRUDRepository<T> inner) : base(inner) =>
+    public DeepCRUDRepository(
+        ICRUDRepository<T> inner,
+        IReadonlyEnrichmentStrategy<T>? strategy = null) : base(inner, strategy) =>
         this.inner = inner;
 
     public async Task<Response> Create(T item)

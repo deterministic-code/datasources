@@ -2,6 +2,7 @@ import { WhereBuilder } from "./builders/WhereBuilder.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
+import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IRepository } from "./IRepository.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
@@ -87,8 +88,11 @@ export class DeepCRUDRepository<T extends object>
   extends EnrichedReadonlyRepository<T>
   implements IRepository<T>
 {
-  constructor(private readonly crud: IRepository<T>) {
-    super(crud);
+  constructor(
+    private readonly crud: IRepository<T>,
+    strategy?: IReadonlyEnrichmentStrategy<T>,
+  ) {
+    super(crud, strategy);
   }
 
   add = async (item: T): Promise<IResponse> => {

@@ -48,6 +48,13 @@ describe("WhereBuilder", () => {
     expect(WhereBuilder.not(WhereBuilder.equals("id", 1)).parameters).toEqual([
       { name: "id", value: 1 },
     ]);
+    expect(WhereBuilder.in("id", []).getText()).toBe("1 = 0");
+    expect(WhereBuilder.in("id", []).parameters).toEqual([]);
+    expect(WhereBuilder.in("id", [1, 2]).getText()).toBe("id IN ($id_0, $id_1)");
+    expect(WhereBuilder.in("id", [1, 2]).parameters).toEqual([
+      { name: "id_0", value: 1 },
+      { name: "id_1", value: 2 },
+    ]);
   });
 });
 

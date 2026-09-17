@@ -2,6 +2,7 @@
 mod contact;
 mod items_repository;
 mod list_repository;
+mod where_match;
 
 use crate::converters::{Cells, RowTypeConverter};
 use crate::repository_tree_node::encode_rows;
@@ -648,6 +649,12 @@ fn statements_and_builders() {
         WhereBuilder::not(WhereBuilder::equals("id", 1_i64)).get_text(),
         "NOT (id = $id)"
     );
+    assert_eq!(WhereBuilder::in_list("id", vec![]).get_text(), "1 = 0");
+    assert!(WhereBuilder::in_list("id", vec![]).parameters().is_empty());
+    let in_ids = WhereBuilder::in_list("id", vec![Value::Int(1), Value::Int(2)]);
+    assert_eq!(in_ids.get_text(), "id IN ($id_0, $id_1)");
+    assert_eq!(in_ids.parameters()[0].name, "id_0");
+    assert_eq!(in_ids.parameters()[1].name, "id_1");
 
     let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
     let query = StatementBuilder::create_query("users", &["id", "name"], Some(&where_clause), &[]);
@@ -1246,6 +1253,115 @@ async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
     let parts: Vec<_> = children_text.split('|').collect();
     assert!(parts[0].contains("type_name=home"));
     assert!(!parts[1].contains("type_name="));
+}
+
+struct CountingRepository {
+    inner: Arc<dyn ReadonlyRepository>,
+    gets: Mutex<u32>,
+    get_singles: Mutex<u32>,
+}
+
+#[async_trait]
+impl ReadonlyRepository for CountingRepository {
+    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+        *self.get_singles.lock().unwrap() += 1;
+        self.inner.get_single(query).await
+    }
+
+    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+        *self.gets.lock().unwrap() += 1;
+        self.inner.get(query).await
+    }
+
+    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
+        *self.get_singles.lock().unwrap() += 1;
+        self.inner.get_single_where(where_clause).await
+    }
+
+    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
+        *self.gets.lock().unwrap() += 1;
+        self.inner.get_where(where_clause).await
+    }
+}
+
+#[tokio::test]
+async fn hashset_uses_one_get_per_edge() {
+    let types = Arc::new(CountingRepository {
+        inner: Arc::new(items_repository::ItemsRepository::new(vec![
+            record(&[("id", Value::Int(10)), ("name", Value::from("person"))]),
+            record(&[("id", Value::Int(11)), ("name", Value::from("org"))]),
+        ])),
+        gets: Mutex::new(0),
+        get_singles: Mutex::new(0),
+    });
+    let children = Arc::new(CountingRepository {
+        inner: Arc::new(items_repository::ItemsRepository::new(vec![
+            record(&[("parent_id", Value::Int(1)), ("label", Value::from("a"))]),
+            record(&[("parent_id", Value::Int(2)), ("label", Value::from("b"))]),
+        ])),
+        gets: Mutex::new(0),
+        get_singles: Mutex::new(0),
+    });
+    let parents = Arc::new(items_repository::ItemsRepository::new(vec![
+        record(&[("id", Value::Int(1)), ("type_id", Value::Int(10))]),
+        record(&[("id", Value::Int(2)), ("type_id", Value::Int(11))]),
+    ]));
+    let mut repo = EnrichedReadonlyRepository::with_strategy(
+        parents,
+        Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy),
+    );
+    repo.add_enriched(
+        "type_name",
+        "type_id",
+        types.clone(),
+        "id",
+        Some("name".into()),
+        false,
+    )
+    .add_enriched("children", "id", children.clone(), "parent_id", None, true);
+    repo.get(None).await.unwrap();
+    assert_eq!(*types.gets.lock().unwrap(), 1);
+    assert_eq!(*types.get_singles.lock().unwrap(), 0);
+    assert_eq!(*children.gets.lock().unwrap(), 1);
+    assert_eq!(*children.get_singles.lock().unwrap(), 0);
+}
+
+#[tokio::test]
+async fn flat_to_type_collapses_join_rows() {
+    let source = Arc::new(items_repository::ItemsRepository::new(vec![
+        record(&[("id", Value::Int(1)), ("type_name", Value::from("person"))]),
+        record(&[("id", Value::Int(2)), ("type_name", Value::from("org"))]),
+    ]));
+    let mapper = FlatToTypeMapper::new(TypeMap::new(
+        "id",
+        vec![
+            ("id".into(), TypeMapField::column("id")),
+            ("type_name".into(), TypeMapField::column("type_name")),
+        ],
+    ));
+    let strategy = FlatToTypeReadonlyEnrichmentStrategy::new(
+        source,
+        mapper,
+        |mapped| {
+            mapped
+                .into_iter()
+                .filter_map(|(key, value)| match value {
+                    crate::mappers::MappedValue::Cell(cell) => Some((key, cell)),
+                    _ => None,
+                })
+                .collect()
+        },
+        None,
+    );
+    let repo = EnrichedReadonlyRepository::with_strategy(
+        Arc::new(items_repository::ItemsRepository::new(vec![])),
+        Arc::new(strategy),
+    );
+    let items = repo.get(None).await.unwrap();
+    assert_eq!(items[0]["id"], Value::Int(1));
+    assert_eq!(items[0]["type_name"], Value::from("person"));
+    assert_eq!(items[1]["id"], Value::Int(2));
+    assert_eq!(items[1]["type_name"], Value::from("org"));
 }
 
 #[tokio::test]

@@ -3,11 +3,15 @@ namespace Datasources;
 public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
 {
     readonly IReadonlyRepository<T> inner;
+    readonly IReadonlyEnrichmentStrategy<T> strategy;
 
-    public EnrichedReadonlyRepository(IReadonlyRepository<T> inner)
+    public EnrichedReadonlyRepository(
+        IReadonlyRepository<T> inner,
+        IReadonlyEnrichmentStrategy<T>? strategy = null)
     {
         this.inner = inner;
-        Tree = new RepositoryTree(new RepositoryTreeNode(inner, ""));
+        this.strategy = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
+        Tree = new RepositoryTree(new RepositoryTreeNode(inner, "", binder: this.strategy));
     }
 
     public IRepositoryTree Tree { get; }
@@ -21,21 +25,14 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
         bool many = false,
         Action<IRepositoryTreeNode>? nest = null)
     {
+        
         var child = Tree.Parent.Include(via, into, from, by, select, many);
         nest?.Invoke(child);
         return this;
     }
 
-    public Task Enrich(IList<T> items) =>
-        Tree.Parent.EnrichFrom(items.Cast<object>().ToList());
+    public Task Enrich(IList<T> items) => strategy.Enrich(Tree, items);
 
-    public override async IAsyncEnumerable<T> Get(IStatement? query = null)
-    {
-        var items = new List<T>();
-        await foreach (var item in inner.Get(query))
-            items.Add(item);
-        await Enrich(items);
-        foreach (var item in items)
-            yield return item;
-    }
+    public override IAsyncEnumerable<T> Get(IStatement? query = null) =>
+        strategy.Get(inner, Tree, query);
 }
