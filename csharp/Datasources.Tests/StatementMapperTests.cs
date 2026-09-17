@@ -81,6 +81,20 @@ public class StatementMapperTests
     }
 
     [Fact]
+    public void StoredProcedureMapperRewritesFinishedSql()
+    {
+        var mapper = new StatementMapper<UserRow>
+        {
+            StoredProcedure = new TransformMapper<IStoredProcedureStatement, IStoredProcedureStatement>(
+                proc => new StoredProcedureStatement($"{proc.GetText()} /* mapped */"),
+                proc => proc)
+        };
+        var built = StatementBuilder.CreateStoredProcedure("save", [new Parameter("id", 1)]);
+        var statement = mapper.StoredProcedure is { } map ? map.Map(built) : built;
+        Assert.Equal("CALL save($id) /* mapped */", statement.GetText());
+    }
+
+    [Fact]
     public async Task BuilderThenStatementMapper()
     {
         var names = Names();

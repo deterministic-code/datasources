@@ -5,6 +5,9 @@ import {
   createStubDatasource,
   Datasource,
   DatasourceError,
+  execute,
+  executeReader,
+  StatementBuilder,
   identityFilter,
   identityWhereText,
   IsolationLevel,
@@ -516,6 +519,21 @@ describe("published mocks", () => {
     await expect(command.execute("")).rejects.toThrow("exec");
     command.executeReaderError = new Error("read");
     await expect(command.executeReader("x")).rejects.toThrow("read");
+
+    command.executeError = undefined;
+    command.executeReaderError = undefined;
+    const fields = [{ name: "id", value: 1 }];
+    const statement = StatementBuilder.createStoredProcedure("save", fields);
+    await execute(command, statement, fields);
+    expect(command.executeCalls.at(-1)).toEqual({
+      text: "CALL save($id)",
+      parameters: fields,
+    });
+    await executeReader(command, statement, fields);
+    expect(command.executeReaderCalls.at(-1)).toEqual({
+      text: "CALL save($id)",
+      parameters: fields,
+    });
   });
 
   it("walks mock reader rows and errors", async () => {

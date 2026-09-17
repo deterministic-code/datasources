@@ -63,6 +63,12 @@ export const SqliteStatementBuilder = {
   createInsert: (table: string, fields: Field[]) =>
     StatementBuilder.createInsert(SqliteStatementBuilder.quote(table), fields),
 
+  createStoredProcedure: (name: string, parameters: Field[] = []) =>
+    StatementBuilder.createStoredProcedure(
+      SqliteStatementBuilder.quote(name),
+      parameters,
+    ),
+
   createUpdate: (table: string, fields: Field[], where?: IWhere) =>
     StatementBuilder.createUpdate(SqliteStatementBuilder.quote(table), fields, where),
 

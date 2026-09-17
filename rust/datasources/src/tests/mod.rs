@@ -755,6 +755,38 @@ fn statements_and_builders() {
     assert_eq!(TextStoredProcedureStatement::new("x").get_text(), "x");
 }
 
+#[test]
+fn stored_procedure_mapper_rewrites_finished_sql() {
+    let mut mapper = StatementMapper::identity("", "");
+    mapper.stored_procedure = Some(Arc::new(TransformMapper::new(
+        |text: String| format!("{text} /* mapped */"),
+        |text| text,
+    )));
+    let built = StatementBuilder::create_stored_procedure("save", &[Parameter::new("id", 1_i64)]);
+    let text = StatementMapper::map_sql(&mapper.stored_procedure, built.get_text());
+    assert_eq!(text, "CALL save($id) /* mapped */");
+}
+
+#[tokio::test]
+async fn executes_statement_helpers() {
+    let command = MockCommand::new();
+    let fields = [Parameter::new("id", 1_i64)];
+    let statement = StatementBuilder::create_stored_procedure("save", &fields);
+    command
+        .execute_statement(&statement, Some(&fields))
+        .await
+        .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "CALL save($id)"
+    );
+    command
+        .execute_reader_statement(&statement, Some(&fields))
+        .await
+        .unwrap();
+    assert_eq!(command.reader_logs.lock().unwrap()[0].0, "CALL save($id)");
+}
+
 fn users_mapping() -> RowTypeConverter {
     RowTypeConverter::of::<Item>()
 }

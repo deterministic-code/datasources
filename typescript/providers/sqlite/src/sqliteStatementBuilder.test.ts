@@ -46,6 +46,9 @@ describe("SqliteStatementBuilder", () => {
     expect(SqliteStatementBuilder.createDelete("user", where).getText()).toBe(
       'DELETE FROM "user" WHERE id = $id',
     );
+    expect(SqliteStatementBuilder.createStoredProcedure("save", fields).getText()).toBe(
+      'CALL "save"($id, $username)',
+    );
     expect(
       SqliteStatementBuilder.createQuery(
         "users",
