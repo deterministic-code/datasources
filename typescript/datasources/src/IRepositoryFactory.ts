@@ -1,16 +1,16 @@
 import type { Constructable } from "./converters/Constructable.ts";
 import type { IConnection } from "./IConnection.ts";
-import type { IRepository } from "./IRepository.ts";
+import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 
 export interface IRepositoryFactory {
   register<T>(
     type: Constructable<T>,
-    factory: (connection?: IConnection) => IRepository<T>,
+    factory: (connection?: IConnection) => IReadonlyRepository<T>,
   ): void;
   register(
     entityTypeName: string,
-    factory: (connection?: IConnection) => IRepository,
+    factory: (connection?: IConnection) => IReadonlyRepository,
   ): void;
-  create<T>(type: Constructable<T>, connection?: IConnection): IRepository<T>;
-  create(entityTypeName: string, connection?: IConnection): IRepository;
+  create<T>(type: Constructable<T>, connection?: IConnection): IReadonlyRepository<T>;
+  create(entityTypeName: string, connection?: IConnection): IReadonlyRepository;
 }

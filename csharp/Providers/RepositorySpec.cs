@@ -52,10 +52,10 @@ public static class RepositorySpec
             Mapping = mapping,
             StatementMapper = StatementMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings), quote),
             Ids = spec.Type.Ids,
-            AssignIdentityOnAdd = spec.Type.AssignIdentityOnAdd,
+            AssignIdentityOnCreate = spec.Type.AssignIdentityOnCreate,
             Columns = [.. spec.Type.Fields.Keys],
         });
-        var repo = new Repository<T>(built).Use(new ConsoleCommandMiddleware(line =>
+        var repo = new Repository<T>(built).AddMiddleware(new ConsoleCommandMiddleware(line =>
         {
             logs.Add(line);
             if (Verbose()) Console.WriteLine(line);
@@ -228,7 +228,7 @@ public static class RepositorySpec
         foreach (var step in spec.Steps)
             yield return step switch
             {
-                { Create: { } create } => WithStatementSql(StatementBuilder.CreateInsert(table, Fields(Flatten(create.Row, spec.Type), col => !spec.Type.AssignIdentityOnAdd || !ids.Contains(col))).GetText(), true, spec.Type),
+                { Create: { } create } => WithStatementSql(StatementBuilder.CreateInsert(table, Fields(Flatten(create.Row, spec.Type), col => !spec.Type.AssignIdentityOnCreate || !ids.Contains(col))).GetText(), true, spec.Type),
                 { Get: { } get } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, WhereBuilder.Equals("id", Value.From(get.Id))).GetText(), false, spec.Type),
                 { Query: { } query } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, query.Where is { } where ? SqlWhere(where) : null).GetText(), false, spec.Type),
                 { GetBy: { } getBy } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, SqlWhere(getBy.Where)).GetText(), false, spec.Type),
@@ -429,7 +429,7 @@ public static class RepositorySpec
         [YamlMember(Alias = "name")] public string Name { get; set; } = "";
         [YamlMember(Alias = "table")] public string Table { get; set; } = "";
         [YamlMember(Alias = "ids")] public List<string> Ids { get; set; } = [];
-        [YamlMember(Alias = "assignIdentityOnAdd")] public bool AssignIdentityOnAdd { get; set; }
+        [YamlMember(Alias = "assignIdentityOnAdd")] public bool AssignIdentityOnCreate { get; set; }
         [YamlMember(Alias = "fields")] public Dictionary<string, string> Fields { get; set; } = [];
         [YamlMember(Alias = "converters")] public Dictionary<string, string> Converters { get; set; } = [];
         [YamlMember(Alias = "mappings")] public Dictionary<string, Dictionary<string, string>> Mappings { get; set; } = [];

@@ -22,7 +22,7 @@ mod tests {
     use super::*;
     use datasources::{
         create, register, reset, Command, Connection, DatasourceFactory, Parameter,
-        ReadonlyRepository, Repository, Row, TextQuery, TextWhere, Value,
+        ReadonlyRepository, CRUDRepository, Row, TextQuery, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -81,7 +81,7 @@ mod tests {
             .await
             .unwrap()
             .is_empty());
-        repo.add(&rec(2, "b")).await.unwrap();
+        repo.create(&rec(2, "b")).await.unwrap();
         repo.update(&rec(2, "B"), None).await.unwrap();
         repo.update(&rec(2, "C"), Some(&TextWhere::new("{\"id\":2}")))
             .await
@@ -127,10 +127,10 @@ mod tests {
             .unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
         assert!(conn.in_transaction());
-        repo.add(&rec(9, "t")).await.unwrap();
+        repo.create(&rec(9, "t")).await.unwrap();
         txn.abort().await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
-        repo.add(&rec(8, "c")).await.unwrap();
+        repo.create(&rec(8, "c")).await.unwrap();
         txn.commit().await.unwrap();
         let _ = conn.start_transaction(None).await.unwrap();
         conn.finish_abort();
@@ -150,7 +150,7 @@ mod tests {
         ));
         named_conn.open().await.unwrap();
         MemoryRepository::new(named_conn.clone())
-            .add(&rec(2, "b"))
+            .create(&rec(2, "b"))
             .await
             .unwrap();
 
@@ -208,7 +208,7 @@ mod tests {
             .await
             .is_err());
         assert!(MemoryRepository::new(closed.clone())
-            .add(&rec(1, "a"))
+            .create(&rec(1, "a"))
             .await
             .is_err());
         assert!(MemoryRepository::new(closed.clone())

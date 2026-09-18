@@ -1,10 +1,10 @@
 import type { IConnection } from "../IConnection.ts";
 import type { IQuery } from "../IQuery.ts";
-import type { IRepository } from "../IRepository.ts";
-import type { IResponse } from "../IResponse.ts";
+import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import type { Response } from "../Response.ts";
 import type { IWhere } from "../IWhere.ts";
 
-export class MockRepository<T = unknown> implements IRepository<T> {
+export class MockRepository<T = unknown> implements ICRUDRepository<T> {
   items: T[] = [];
   getSingleCalls: Array<IQuery | IWhere | undefined> = [];
   getCalls: Array<IQuery | IWhere | undefined> = [];
@@ -16,9 +16,9 @@ export class MockRepository<T = unknown> implements IRepository<T> {
   addError?: unknown;
   updateError?: unknown;
   deleteError?: unknown;
-  addResponse: IResponse = { result: undefined, rowsAffected: 1 };
-  updateResponse: IResponse = { result: undefined, rowsAffected: 1 };
-  deleteResponse: IResponse = { result: undefined, rowsAffected: 1 };
+  addResponse: Response = { result: undefined, rowsAffected: 1 };
+  updateResponse: Response = { result: undefined, rowsAffected: 1 };
+  deleteResponse: Response = { result: undefined, rowsAffected: 1 };
 
   constructor(_connection: IConnection) {}
 
@@ -40,7 +40,7 @@ export class MockRepository<T = unknown> implements IRepository<T> {
     }
   }
 
-  async add(item: T): Promise<IResponse> {
+  async create(item: T): Promise<Response> {
     this.addCalls.push(item);
     if (this.addError) {
       throw this.addError;
@@ -50,7 +50,7 @@ export class MockRepository<T = unknown> implements IRepository<T> {
     return this.addResponse;
   }
 
-  async update(item: T, byWhere?: IWhere): Promise<IResponse> {
+  async update(item: T, byWhere?: IWhere): Promise<Response> {
     this.updateCalls.push({ item, byWhere });
     if (this.updateError) {
       throw this.updateError;
@@ -58,7 +58,7 @@ export class MockRepository<T = unknown> implements IRepository<T> {
     return this.updateResponse;
   }
 
-  async delete(item: T, byWhere?: IWhere): Promise<IResponse> {
+  async delete(item: T, byWhere?: IWhere): Promise<Response> {
     this.deleteCalls.push({ item, byWhere });
     if (this.deleteError) {
       throw this.deleteError;

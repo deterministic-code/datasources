@@ -3,7 +3,7 @@ use crate::connection::JsonConnection;
 use crate::file_store::{FileStore, MemoryFileStore};
 use crate::repository::JsonRepository;
 use async_trait::async_trait;
-use datasources::{Command, Connection, Datasource, DatasourceFactory, Repository, Result};
+use datasources::{Command, Connection, Datasource, DatasourceFactory, CRUDRepository, Result};
 use serde_json::Value as JsonValue;
 use std::sync::Arc;
 
@@ -62,7 +62,7 @@ impl Datasource for JsonDatasource {
         Arc::new(JsonCommand::new(self.typed_connection()))
     }
 
-    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> {
         Arc::new(JsonRepository::new(self.typed_connection()))
     }
 }

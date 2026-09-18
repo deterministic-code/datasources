@@ -1,5 +1,5 @@
 use crate::converters::TypeConverter;
-use crate::mappers::IMapper;
+use crate::mappers::Mapper;
 
 pub struct TransformConverterMapper<To, From = To> {
     converter: Box<dyn TypeConverter<To, From> + Send + Sync>,
@@ -44,7 +44,7 @@ impl<T: 'static> TransformConverterMapper<T, T> {
     }
 }
 
-impl<To, From> IMapper<From, To> for TransformConverterMapper<To, From> {
+impl<To, From> Mapper<From, To> for TransformConverterMapper<To, From> {
     fn map(&self, value: From) -> To {
         match &self.on_map {
             Some((filter, skip)) if !filter(&value) => skip(value),
@@ -82,22 +82,22 @@ mod tests {
     #[test]
     fn converts_both_ways_without_filter() {
         let mapper = TransformConverterMapper::new(Wrap);
-        assert_eq!(IMapper::map(&mapper, "ab".into()), "[ab]");
-        assert_eq!(IMapper::reverse_map(&mapper, "[ab]".into()), "ab");
+        assert_eq!(Mapper::map(&mapper, "ab".into()), "[ab]");
+        assert_eq!(Mapper::reverse_map(&mapper, "[ab]".into()), "ab");
     }
 
     #[test]
     fn converts_when_filter_is_true() {
         let mapper = TransformConverterMapper::with_filter(Wrap, |s| s.contains("ab"));
-        assert_eq!(IMapper::map(&mapper, "ab".into()), "[ab]");
-        assert_eq!(IMapper::reverse_map(&mapper, "[ab]".into()), "ab");
+        assert_eq!(Mapper::map(&mapper, "ab".into()), "[ab]");
+        assert_eq!(Mapper::reverse_map(&mapper, "[ab]".into()), "ab");
     }
 
     #[test]
     fn is_identity_when_filter_is_false() {
         let mapper = TransformConverterMapper::with_filter(Wrap, |s| s.contains("ab"));
-        assert_eq!(IMapper::map(&mapper, "a".into()), "a");
-        assert_eq!(IMapper::reverse_map(&mapper, "[a]".into()), "[a]");
+        assert_eq!(Mapper::map(&mapper, "a".into()), "a");
+        assert_eq!(Mapper::reverse_map(&mapper, "[a]".into()), "[a]");
     }
 
     #[derive(Clone, Debug, PartialEq, Eq)]
@@ -181,8 +181,8 @@ mod tests {
             },
         };
         let mapper = TransformConverterMapper::new(UserFromCells);
-        assert_eq!(IMapper::map(&mapper, cells.clone()), expected);
-        assert_eq!(IMapper::reverse_map(&mapper, expected), cells);
+        assert_eq!(Mapper::map(&mapper, cells.clone()), expected);
+        assert_eq!(Mapper::reverse_map(&mapper, expected), cells);
     }
 
     #[derive(Clone, Debug, PartialEq, Eq)]
@@ -306,9 +306,9 @@ mod tests {
             },
         });
         let mapper = TransformConverterMapper::with_filter(AccountFromCells, is_enabled);
-        assert_eq!(IMapper::map(&mapper, ada), expected);
+        assert_eq!(Mapper::map(&mapper, ada), expected);
         assert_eq!(
-            IMapper::reverse_map(&mapper, expected),
+            Mapper::reverse_map(&mapper, expected),
             Payload::Flat(vec![
                 "7".into(),
                 "ada".into(),
@@ -322,7 +322,7 @@ mod tests {
                 "".into(),
             ])
         );
-        assert_eq!(IMapper::map(&mapper, guest.clone()), guest);
-        assert_eq!(IMapper::reverse_map(&mapper, guest.clone()), guest);
+        assert_eq!(Mapper::map(&mapper, guest.clone()), guest);
+        assert_eq!(Mapper::reverse_map(&mapper, guest.clone()), guest);
     }
 }

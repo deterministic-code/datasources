@@ -1,10 +1,10 @@
-import type { DatasourceFactory } from "./DatasourceFactory.ts";
+import type { IDatasourceFactory } from "./IDatasourceFactory.ts";
 import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import type { IDatasource } from "./IDatasource.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
 
-const registry = new Map<string, DatasourceFactory>();
+const registry = new Map<string, IDatasourceFactory>();
 let specified: DatasourceOptions | undefined;
 
 const providerName = (options?: DatasourceOptions) => {
@@ -17,7 +17,7 @@ export class Datasource {
     specified = { ...options };
   };
 
-  static use(...factories: DatasourceFactory[]): void {
+  static use(...factories: IDatasourceFactory[]): void {
     for (const factory of factories) registry.set(factory.provider, factory);
   }
 

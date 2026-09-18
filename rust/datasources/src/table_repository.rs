@@ -6,41 +6,41 @@ use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::datasource_error::DatasourceError;
-use crate::mappers::{IMapper, StatementMapper};
+use crate::mappers::{Mapper, StatementMapper};
 use crate::parameter::Parameter;
 use crate::query::Query;
-use crate::repository::{ReadonlyRepository, Repository};
+use crate::repository::{ReadonlyRepository, CRUDRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::table_repository_builder::TableRepositoryBuilder;
-use crate::table_repository_builder_options::TableRepositoryBuilderOptions;
-use crate::table_repository_statements::TableRepositoryStatements;
+use crate::table_repository_builder::RepositoryBuilder;
+use crate::table_repository_builder_options::RepositoryBuilderOptions;
+use crate::table_repository_statements::RepositoryStatements;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-pub struct TableRepository {
+pub struct Repository {
     connection: Arc<dyn Connection>,
     middlewares: Vec<Arc<dyn CommandMiddleware>>,
     row_converter: RowTypeConverter,
     statement_mapper: Arc<StatementMapper>,
-    statements: TableRepositoryStatements,
+    statements: RepositoryStatements,
     id: Vec<String>,
     ids: HashSet<String>,
-    assign_identity_on_add: bool,
+    assign_identity_on_create: bool,
 }
 
-impl TableRepository {
+impl Repository {
     pub fn from_type<T: ConvertSchema>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_builder_options::<T>(connection.clone());
         options.mapping = Some(RowTypeConverter::of::<T>());
         Self::new(options)
     }
 
-    pub fn new(options: TableRepositoryBuilderOptions) -> Result<Self> {
-        TableRepositoryBuilder::build(options)
+    pub fn new(options: RepositoryBuilderOptions) -> Result<Self> {
+        RepositoryBuilder::build(options)
     }
 
     pub fn from_built(built: BuiltRepository) -> Self {
@@ -50,7 +50,7 @@ impl TableRepository {
             built.statement_mapper,
             built.statements,
             built.ids,
-            built.assign_identity_on_add,
+            built.assign_identity_on_create,
         )
     }
 
@@ -58,9 +58,9 @@ impl TableRepository {
         connection: Arc<dyn Connection>,
         row_converter: RowTypeConverter,
         statement_mapper: Arc<StatementMapper>,
-        statements: TableRepositoryStatements,
+        statements: RepositoryStatements,
         ids: Vec<String>,
-        assign_identity_on_add: bool,
+        assign_identity_on_create: bool,
     ) -> Self {
         Self {
             connection,
@@ -70,18 +70,18 @@ impl TableRepository {
             statements,
             ids: ids.iter().cloned().collect(),
             id: ids,
-            assign_identity_on_add,
+            assign_identity_on_create,
         }
     }
 
-    pub fn use_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
+    pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
         self.middlewares.push(middleware);
     }
 
     fn command(&self) -> Arc<dyn Command> {
         let command = self.connection.create_command();
         for middleware in &self.middlewares {
-            command.use_middleware(middleware.clone());
+            command.add_middleware(middleware.clone());
         }
         command
     }
@@ -135,7 +135,7 @@ impl TableRepository {
             .map(|row| {
                 self.row_converter
                     .convert(&row)
-                    .map(|converted| IMapper::map(&self.statement_mapper.rows, converted))
+                    .map(|converted| Mapper::map(&self.statement_mapper.rows, converted))
             })
             .transpose()
     }
@@ -145,7 +145,7 @@ impl TableRepository {
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                items.push(IMapper::map(
+                items.push(Mapper::map(
                     &self.statement_mapper.rows,
                     self.row_converter.convert(&row)?,
                 ));
@@ -155,7 +155,7 @@ impl TableRepository {
     }
 
     fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        self.row_converter.reverse_convert(&IMapper::reverse_map(
+        self.row_converter.reverse_convert(&Mapper::reverse_map(
             &self.statement_mapper.rows,
             item.clone(),
         ))
@@ -163,7 +163,7 @@ impl TableRepository {
 }
 
 #[async_trait]
-impl ReadonlyRepository for TableRepository {
+impl ReadonlyRepository for Repository {
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         let (text, params) = self.query_parts(query);
         self.read_single(text, params).await
@@ -186,10 +186,10 @@ impl ReadonlyRepository for TableRepository {
 }
 
 #[async_trait]
-impl Repository for TableRepository {
-    async fn add(&self, item: &Row) -> Result<Response> {
+impl CRUDRepository for Repository {
+    async fn create(&self, item: &Row) -> Result<Response> {
         let record = self.reverse_convert(item)?;
-        let fields = self.params(&record, !self.assign_identity_on_add);
+        let fields = self.params(&record, !self.assign_identity_on_create);
         let text = self.statements.insert(&fields);
         self.command().execute(&text, Some(&fields)).await
     }

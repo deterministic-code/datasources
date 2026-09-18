@@ -31,7 +31,7 @@ public class StatementMapperTests
         {
             Connection = connection,
             Entity = "users",
-            AssignIdentityOnAdd = false,
+            AssignIdentityOnCreate = false,
             StatementMapper = mapper
         }), command);
     }

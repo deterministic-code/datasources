@@ -1,6 +1,6 @@
 import type { IQuery } from "../IQuery.ts";
-import type { IRepository } from "../IRepository.ts";
-import type { IResponse } from "../IResponse.ts";
+import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import type { Response } from "../Response.ts";
 import type { IWhere } from "../IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
 
@@ -39,7 +39,7 @@ const setId = (item: object, id: number): void => {
   Object.assign(item, { [name]: id });
 };
 
-export class ListCRUDRepository<T extends object> implements IRepository<T> {
+export class ListCRUDRepository<T extends object> implements ICRUDRepository<T> {
   readonly items: T[];
   private nextId: number;
 
@@ -61,20 +61,20 @@ export class ListCRUDRepository<T extends object> implements IRepository<T> {
     for (const item of this.items) if (matches(item, query)) yield item;
   }
 
-  add = async (item: T): Promise<IResponse> => {
+  create = async (item: T): Promise<Response> => {
     if (!hasId(idOf(item))) setId(item, this.nextId++);
     this.items.push(item);
     return { result: idOf(item), rowsAffected: 1 };
   };
 
-  update = async (item: T, _byWhere?: IWhere): Promise<IResponse> => {
+  update = async (item: T, _byWhere?: IWhere): Promise<Response> => {
     const key = idKey(idOf(item));
     const index = this.items.findIndex((row) => idKey(idOf(row)) === key);
     if (index >= 0) this.items[index] = item;
     return { result: null, rowsAffected: 1 };
   };
 
-  delete = async (item: T, _byWhere?: IWhere): Promise<IResponse> => {
+  delete = async (item: T, _byWhere?: IWhere): Promise<Response> => {
     const key = idKey(idOf(item));
     const index = this.items.findIndex((row) => idKey(idOf(row)) === key);
     if (index >= 0) this.items.splice(index, 1);

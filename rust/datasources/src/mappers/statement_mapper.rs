@@ -1,4 +1,4 @@
-use super::{IMapper, TransformMapper};
+use super::{Mapper, TransformMapper};
 use crate::row::Row;
 use std::sync::Arc;
 
@@ -29,18 +29,18 @@ impl StatementMapper {
 
     pub fn map_sql(mapper: &Option<Arc<TransformMapper<String, String>>>, text: String) -> String {
         match mapper {
-            Some(map) => IMapper::map(map.as_ref(), text),
+            Some(map) => Mapper::map(map.as_ref(), text),
             None => text,
         }
     }
 }
 
-impl IMapper<Row, Row> for StatementMapper {
+impl Mapper<Row, Row> for StatementMapper {
     fn map(&self, value: Row) -> Row {
-        IMapper::map(&self.rows, value)
+        Mapper::map(&self.rows, value)
     }
 
     fn reverse_map(&self, value: Row) -> Row {
-        IMapper::reverse_map(&self.rows, value)
+        Mapper::reverse_map(&self.rows, value)
     }
 }

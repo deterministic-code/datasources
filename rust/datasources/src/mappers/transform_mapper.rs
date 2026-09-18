@@ -1,4 +1,4 @@
-use super::IMapper;
+use super::Mapper;
 
 pub struct TransformMapper<TFrom, TTo> {
     map: Box<dyn Fn(TFrom) -> TTo + Send + Sync>,
@@ -17,7 +17,7 @@ impl<TFrom, TTo> TransformMapper<TFrom, TTo> {
     }
 }
 
-impl<TFrom, TTo> IMapper<TFrom, TTo> for TransformMapper<TFrom, TTo> {
+impl<TFrom, TTo> Mapper<TFrom, TTo> for TransformMapper<TFrom, TTo> {
     fn map(&self, value: TFrom) -> TTo {
         (self.map)(value)
     }

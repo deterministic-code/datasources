@@ -6,4 +6,4 @@ public sealed record BuiltRepository<T>(
     StatementMapper<T> StatementMapper,
     RepositoryStatements Statements,
     IReadOnlyList<string> Ids,
-    bool AssignIdentityOnAdd) where T : new();
+    bool AssignIdentityOnCreate) where T : new();

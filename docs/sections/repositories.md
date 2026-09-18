@@ -1,16 +1,16 @@
 # Repositories
 
-Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C#) / `IRepository<T>` (TypeScript) / `Repository` (Rust) adds `create`/`add`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
+Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C# / TypeScript) / `CRUDRepository` (Rust) adds `create`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
 
 ## IReadonlyRepository / ICRUDRepository
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` |
-| `ICRUDRepository<T>` | `Repository` | `IRepository<T>` |
+| `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` |
 | `GetSingle` | `get_single` | `getSingle` |
 | `Get` | `get` | `get` |
-| `Create` | `add` | `add` |
+| `Create` | `create` | `create` |
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
 
@@ -20,8 +20,8 @@ Instance registry of factory callbacks. Register a builder, then create by entit
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `IRepositoryFactory` | `ReadonlyRepositoryFactory` | `IReadonlyRepositoryFactory` |
-| `ICRUDRepositoryFactory` | `CrudRepositoryFactory` | `IRepositoryFactory` |
+| `IRepositoryFactory` | `ReadonlyRepositoryFactory` | `IRepositoryFactory` |
+| `ICRUDRepositoryFactory` | `CRUDRepositoryFactory` | `ICRUDRepositoryFactory` |
 | `RepositoryFactory` | `RepositoryFactory` | `RepositoryFactory` |
 | `Register` / `Create` | `register` / `create` | `register` / `create` |
 | `Create<T>` / `Create(typeof(T))` | `register_type` / `create_type` | `register(type)` / `create(type)` |
@@ -81,10 +81,10 @@ Nest only on walkable objects (`many: true` or a whole related row). A `select` 
 
 | C# | TypeScript | Rust |
 | --- | --- | --- |
-| `Create(IReadOnlyList<T>)` / `BulkCreate` | `addBulk` | `add_bulk` |
+| `Create(IReadOnlyList<T>)` / `BulkCreate` | `createBulk` | `create_bulk` |
 | `Update(IReadOnlyList<T>)` / `BulkUpdate` | `updateBulk` | `update_bulk` |
 | `Delete(IReadOnlyList<T>)` / `BulkDelete` | `deleteBulk` | `delete_bulk` |
 
 ## Examples
 
-TODO: fill as the generic `Repository<T>` / `TableRepository` surface settles.
+TODO: fill as the generic `Repository<T>` surface settles.

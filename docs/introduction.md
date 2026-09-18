@@ -1,70 +1,10 @@
 # Datasources
 
-Async interfaces for reading, writing, updating, and deleting resources. Providers implement the same surface for files, SQL, and (later) document stores. Install only the providers you use.
+Datasources is a data-access and object-relational mapper library with parity across multiple languages and datasource providers.
 
-This site and the generated root `README.md` are built from the markdown in `docs/`. Edit those files and run `npm run docs:readme` (or `npm run docs` for the site).
+It is designed for AI agents. The motivation is that current AI-generated data-access code is not deterministic, and quality often degrades as a project scales.
 
-## Layout
+The feature stack starts with standard data-access modules for commands, connections, and object mapping. Higher up, the API is more opinionated and adds time-saving features for CRUD repositories, enriched reading, and bulk commands.
 
-```
-typescript/   npm workspaces (datasources + providers/{json,memory,sqlite,mysql,postgres,stubs})
-rust/         cargo workspace (datasources + providers/{json,memory,sqlite,mysql,postgres,stubs})
-csharp/       .NET 10 solution (Datasources + Providers/{Json,Memory,Sqlite,Mysql,Postgres,stubs})
-```
-
-Optional helpers register factories from a provider list (`DATASOURCE_PROVIDERS`) without calling `Use` per dialect: `Datasources.Hosting`, `datasources-register`, `@datasources/register`. See [QuickStart](./quickstart.md).
-
-## Interfaces
-
-| Type | Role |
-| --- | --- |
-| `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository`, `createReadonlyRepository` |
-| `IConnection` | `open`, `close`, `startTransaction(isolation)` |
-| `ITransaction` | `isolation`, `commit`, `abort` |
-| `IsolationLevel` | `readUncommitted`, `readCommitted`, `repeatableRead`, `serializable` |
-| `ICommand` | `executeReader`, `execute` |
-| `IReadonlyRepository<T>` | `connection`, `getSingle`, `get` |
-| `IRepository<T>` / `ICRUDRepository<T>` (C#) | extends `IReadonlyRepository<T>` with `add`/`create`, `update`, `delete` |
-| `IReader` | `current`, `next` |
-| `IQuery` / `Where` | `getText()` — provider-specific |
-| `Parameter` / `IResponse` | `{ name, value }` / `{ result, rowsAffected }` |
-
-`ICommand` supports `use(ICommandMiddleware)` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
-
-## Providers
-
-Working: **json**, **memory**, **sqlite**, **mysql**, **postgres** (inject `IFileStore` / `ISqliteDriver` / `IMysqlDriver` / `IPostgresDriver`). Native engines are opt-in: `better-sqlite3` / `mysql2` / `pg` (optional npm peers), `rusqlite` / `mysql_async` / `tokio-postgres`, or `Datasources.Sqlite.Microsoft` / MySqlConnector / Npgsql.
-
-Stubs (installable, throw “not implemented”): text, xml, yaml, sqlserver, oracle, mongodb, dynamodb.
-
-Shared SQL scenarios live in `specs/*.yaml`. Engine-specific DDL and isolation expects are in `specs/dialects/{sqlite,mysql,postgres}.yaml` (fragment names such as `createUserTable` and `dirtyReadRows`).
-
-## Tests
-
-`npm test` is offline: mocks, injectable ports, and in-process SQLite command specs. `npm run test:e2e` runs repository specs against in-process SQLite plus MySQL/Postgres Docker command specs (starts the matching Compose services).
-
-```
-npm test
-npm run test:e2e
-npm run test:e2e:verbose
-```
-
-`test:e2e:verbose` (or `npm run test:e2e -- --verbose` / `VERBOSE=1`) prints each `ConsoleCommandMiddleware` Start/Finish line while specs run, plus Request parameters and Response rows when `isVerbose` is set.
-
-`test:e2e` defaults to `MYSQL_URL=mysql://ds:ds@127.0.0.1:3306/datasources` and `POSTGRES_URL=postgres://ds:ds@127.0.0.1:5432/datasources`. Override those env vars if the servers are elsewhere.
-
-All languages against Docker (Rust/C# expect Compose already up):
-
-```
-npm run test:e2e
-npm run test:e2e:rust
-npm run test:e2e:csharp
-```
-
-- TypeScript: `npm test` / `npm run test:e2e` (Vitest; unused locals/parameters fail `tsc`; unit coverage 100% line/branch/function/statement)
-- Rust: `cd rust && cargo test --workspace` (workspace rustc warnings are deny; optional: `./coverage.sh` with cargo-llvm-cov)
-- C#: `cd csharp && dotnet test Datasources.slnx` (`TreatWarningsAsErrors`)
-
-CI (`.github/workflows/ci.yml`) runs `npm test` plus Rust/C# unit tests, then a second job that starts Compose and runs `test:e2e:ci` (skips starting Docker) plus Rust/C# e2e.
-
-`Datasources` publishes test doubles (`MockConnection`, `MockCommand`, `MockRepository`, …) for consumers.
+- [Quick Start](./quickstart.md)
+- [Feature Matrix](./feature-matrix.md)

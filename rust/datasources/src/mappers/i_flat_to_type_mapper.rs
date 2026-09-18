@@ -1,9 +1,9 @@
 use crate::mappers::mapped_value::MappedRow;
 use crate::mappers::type_map::TypeMap;
-use crate::mappers::IMapper;
+use crate::mappers::Mapper;
 use crate::row::Row;
 
-pub trait IFlatToTypeMapper: IMapper<Row, MappedRow> {
+pub trait FlatToTypeMapper: Mapper<Row, MappedRow> {
     fn spec(&self) -> &TypeMap;
     fn collapse(&self, rows: Vec<MappedRow>) -> Vec<MappedRow>;
     fn collapse_rows(&self, rows: Vec<Row>) -> Vec<MappedRow> {

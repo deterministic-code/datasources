@@ -36,7 +36,7 @@ public static class RepositoryBuilder<T> where T : new()
                 statementMapper.Update,
                 statementMapper.Delete),
             options.Ids,
-            options.AssignIdentityOnAdd);
+            options.AssignIdentityOnCreate);
     }
 
     public static Repository<T> Build(RepositoryBuilderOptions<T> options) => new(Parts(options));

@@ -15,13 +15,13 @@ pub trait ReadonlyRepository: Send + Sync {
 }
 
 #[async_trait]
-pub trait Repository: ReadonlyRepository {
-    async fn add(&self, item: &Row) -> Result<Response>;
+pub trait CRUDRepository: ReadonlyRepository {
+    async fn create(&self, item: &Row) -> Result<Response>;
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
 }
 
-struct AsReadonly(Arc<dyn Repository>);
+struct AsReadonly(Arc<dyn CRUDRepository>);
 
 #[async_trait]
 impl ReadonlyRepository for AsReadonly {
@@ -42,6 +42,6 @@ impl ReadonlyRepository for AsReadonly {
     }
 }
 
-pub fn as_readonly(repo: Arc<dyn Repository>) -> Arc<dyn ReadonlyRepository> {
+pub fn as_readonly(repo: Arc<dyn CRUDRepository>) -> Arc<dyn ReadonlyRepository> {
     Arc::new(AsReadonly(repo))
 }

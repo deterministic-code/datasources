@@ -6,7 +6,7 @@ use crate::enriched_readonly_repository::EnrichedReadonlyRepository;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::query::Query;
-use crate::repository::{as_readonly, ReadonlyRepository, Repository};
+use crate::repository::{as_readonly, ReadonlyRepository, CRUDRepository};
 use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
 use crate::result::Result;
@@ -27,17 +27,17 @@ enum Mode {
 }
 
 pub struct DeepCRUDRepository {
-    inner: Arc<dyn Repository>,
+    inner: Arc<dyn CRUDRepository>,
     enriched: EnrichedReadonlyRepository,
 }
 
 impl DeepCRUDRepository {
-    pub fn new(inner: Arc<dyn Repository>) -> Self {
+    pub fn new(inner: Arc<dyn CRUDRepository>) -> Self {
         Self::with_strategy(inner, Arc::new(DefaultReadonlyEnrichmentStrategy))
     }
 
     pub fn with_strategy(
-        inner: Arc<dyn Repository>,
+        inner: Arc<dyn CRUDRepository>,
         strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
     ) -> Self {
         Self {
@@ -79,7 +79,7 @@ impl DeepCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn Repository>,
+        via: Arc<dyn CRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -93,7 +93,7 @@ impl DeepCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn Repository>,
+        via: Arc<dyn CRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -160,7 +160,7 @@ impl DeepCRUDRepository {
     async fn create_children(
         &self,
         node: &RepositoryTreeNode,
-        writer: &dyn Repository,
+        writer: &dyn CRUDRepository,
         enrichment: &Enrichment,
         parent: &mut Row,
     ) -> Result<()> {
@@ -170,7 +170,7 @@ impl DeepCRUDRepository {
             if let Some(key) = &key {
                 row.insert(enrichment.by.clone(), key.clone());
             }
-            let response = writer.add(&strip_enriched(row, node)).await?;
+            let response = writer.create(&strip_enriched(row, node)).await?;
             apply_identity(row, &response);
             self.persist(node, std::slice::from_mut(row), Mode::Create)
                 .await?;
@@ -182,7 +182,7 @@ impl DeepCRUDRepository {
     async fn sync_children(
         &self,
         node: &RepositoryTreeNode,
-        writer: &dyn Repository,
+        writer: &dyn CRUDRepository,
         enrichment: &Enrichment,
         parent: &mut Row,
     ) -> Result<()> {
@@ -221,7 +221,7 @@ impl DeepCRUDRepository {
                     writer.update(&strip_enriched(row, node), None).await?;
                 }
                 _ => {
-                    let response = writer.add(&strip_enriched(row, node)).await?;
+                    let response = writer.create(&strip_enriched(row, node)).await?;
                     apply_identity(row, &response);
                 }
             }
@@ -235,7 +235,7 @@ impl DeepCRUDRepository {
     async fn delete_children(
         &self,
         node: &RepositoryTreeNode,
-        writer: &dyn Repository,
+        writer: &dyn CRUDRepository,
         enrichment: &Enrichment,
         parent: &Row,
     ) -> Result<()> {
@@ -286,7 +286,7 @@ fn id_key(id: Value) -> String {
     id.wire_text()
 }
 
-async fn load(writer: &dyn Repository, enrichment: &Enrichment, parent: &Row) -> Result<Vec<Row>> {
+async fn load(writer: &dyn CRUDRepository, enrichment: &Enrichment, parent: &Row) -> Result<Vec<Row>> {
     let Some(key) = parent.get(&enrichment.from).cloned() else {
         return Ok(Vec::new());
     };
@@ -349,12 +349,12 @@ impl ReadonlyRepository for DeepCRUDRepository {
 }
 
 #[async_trait]
-impl Repository for DeepCRUDRepository {
-    async fn add(&self, item: &Row) -> Result<Response> {
+impl CRUDRepository for DeepCRUDRepository {
+    async fn create(&self, item: &Row) -> Result<Response> {
         let mut parent = item.clone();
         let response = self
             .inner
-            .add(&strip_enriched(&parent, &self.enriched.tree.parent))
+            .create(&strip_enriched(&parent, &self.enriched.tree.parent))
             .await?;
         apply_identity(&mut parent, &response);
         self.persist(

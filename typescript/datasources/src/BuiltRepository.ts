@@ -11,5 +11,5 @@ export type BuiltRepository<T = Cells> = {
   statements: RepositoryStatements;
   columns: string[];
   ids: string[];
-  assignIdentityOnAdd: boolean;
+  assignIdentityOnCreate: boolean;
 };

@@ -29,7 +29,7 @@ public static class SqlSpec
         var target = dialect.Target(names.Count);
         var logs = new List<string>();
         var middleware = new ConsoleCommandMiddleware(logs.Add);
-        ICommand Attach(ICommand command) => command.Use(middleware);
+        ICommand Attach(ICommand command) => command.AddMiddleware(middleware);
         var sessions = new Dictionary<string, Session>();
         foreach (var name in names)
         {

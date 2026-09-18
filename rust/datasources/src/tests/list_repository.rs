@@ -1,5 +1,5 @@
 use crate::query::Query;
-use crate::repository::{ReadonlyRepository, Repository};
+use crate::repository::{ReadonlyRepository, CRUDRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -70,8 +70,8 @@ impl ReadonlyRepository for ListRepository {
 }
 
 #[async_trait]
-impl Repository for ListRepository {
-    async fn add(&self, item: &Row) -> Result<Response> {
+impl CRUDRepository for ListRepository {
+    async fn create(&self, item: &Row) -> Result<Response> {
         let mut row = item.clone();
         let id = match row.get("id") {
             Some(Value::Int(id)) if *id != 0 => *id,

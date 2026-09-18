@@ -4,9 +4,9 @@ import { DatasourceError } from "./DatasourceError.ts";
 import { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
-import type { IRepository } from "./IRepository.ts";
+import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
-import type { IResponse } from "./IResponse.ts";
+import type { Response } from "./Response.ts";
 import type { IWhere } from "./IWhere.ts";
 
 type Props = Record<string, Scalar | object>;
@@ -14,10 +14,10 @@ type Mode = "create" | "update" | "delete";
 
 const props = (item: object): Props => item as Props;
 
-const isRepository = (via: object): via is IRepository<object> =>
-  "add" in via && typeof via.add === "function";
+const isRepository = (via: object): via is ICRUDRepository<object> =>
+  "create" in via && typeof via.create === "function";
 
-const writerOf = (via: object, into: string): IRepository<object> =>
+const writerOf = (via: object, into: string): ICRUDRepository<object> =>
   isRepository(via)
     ? via
     : (() => {
@@ -57,7 +57,7 @@ const stamp = (related: object, by: string, key: Scalar | object | undefined): v
     set(related, by, key);
 };
 
-const applyIdentity = (item: object, response: IResponse): void => {
+const applyIdentity = (item: object, response: Response): void => {
   if (response.result === undefined || response.result === null) return;
   const name = "id" in item ? "id" : "Id" in item ? "Id" : undefined;
   if (name === undefined) return;
@@ -72,7 +72,7 @@ const applyIdentity = (item: object, response: IResponse): void => {
 };
 
 const load = async (
-  writer: IRepository<object>,
+  writer: ICRUDRepository<object>,
   enrichment: Enrichment,
   parent: object,
 ): Promise<object[]> => {
@@ -86,23 +86,23 @@ const load = async (
 
 export class DeepCRUDRepository<T extends object>
   extends EnrichedReadonlyRepository<T>
-  implements IRepository<T>
+  implements ICRUDRepository<T>
 {
   constructor(
-    private readonly crud: IRepository<T>,
+    private readonly crud: ICRUDRepository<T>,
     strategy?: IReadonlyEnrichmentStrategy<T>,
   ) {
     super(crud, strategy);
   }
 
-  add = async (item: T): Promise<IResponse> => {
-    const response = await this.crud.add(this.stripEnriched(item));
+  create = async (item: T): Promise<Response> => {
+    const response = await this.crud.create(this.stripEnriched(item));
     applyIdentity(item, response);
     await this.persist(this.tree.parent, [item], "create");
     return response;
   };
 
-  update = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
+  update = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const response = await this.crud.update(this.stripEnriched(item), byWhere);
     await this.persist(this.tree.parent, [item], "update");
     return response;
@@ -117,7 +117,7 @@ export class DeepCRUDRepository<T extends object>
     return copy;
   };
 
-  delete = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
+  delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
     await this.persist(this.tree.parent, [item], "delete");
     return this.crud.delete(item, byWhere);
   };
@@ -152,20 +152,20 @@ export class DeepCRUDRepository<T extends object>
 
   private createChildren = async (
     node: IRepositoryTreeNode,
-    writer: IRepository<object>,
+    writer: ICRUDRepository<object>,
     enrichment: Enrichment,
     parent: object,
   ): Promise<void> => {
     for (const related of payload(parent, enrichment.into)) {
       stamp(related, enrichment.by, get(parent, enrichment.from));
-      applyIdentity(related, await writer.add(this.stripNode(node, related)));
+      applyIdentity(related, await writer.create(this.stripNode(node, related)));
       await this.persist(node, [related], "create");
     }
   };
 
   private syncChildren = async (
     node: IRepositoryTreeNode,
-    writer: IRepository<object>,
+    writer: ICRUDRepository<object>,
     enrichment: Enrichment,
     parent: object,
   ): Promise<void> => {
@@ -184,14 +184,14 @@ export class DeepCRUDRepository<T extends object>
       const id = idOf(related);
       hasId(id) && existing.some((row) => idKey(idOf(row)) === idKey(id))
         ? await writer.update(this.stripNode(node, related))
-        : applyIdentity(related, await writer.add(this.stripNode(node, related)));
+        : applyIdentity(related, await writer.create(this.stripNode(node, related)));
       await this.persist(node, [related], "update");
     }
   };
 
   private deleteChildren = async (
     node: IRepositoryTreeNode,
-    writer: IRepository<object>,
+    writer: ICRUDRepository<object>,
     enrichment: Enrichment,
     parent: object,
   ): Promise<void> => {

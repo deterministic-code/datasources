@@ -36,7 +36,7 @@ public class RepositoryTests
 
     static (Repository<T> Repo, MockCommand Command) Create<T>(
         IReadOnlyList<string>? id = null,
-        bool assignIdentityOnAdd = true)
+        bool assignIdentityOnCreate = true)
         where T : new()
     {
         var connection = new MockConnection { Provider = "memory" };
@@ -46,21 +46,21 @@ public class RepositoryTests
         {
             Connection = connection,
             Ids = id ?? ["id"],
-            AssignIdentityOnAdd = assignIdentityOnAdd,
+            AssignIdentityOnCreate = assignIdentityOnCreate,
             Entity = "users"
         }), command);
     }
 
     static (Repository<UserRow> Repo, MockCommand Command) Create(
         IReadOnlyList<string>? id = null,
-        bool assignIdentityOnAdd = true) =>
-        Create<UserRow>(id, assignIdentityOnAdd);
+        bool assignIdentityOnCreate = true) =>
+        Create<UserRow>(id, assignIdentityOnCreate);
 
     [Fact]
     public async Task GetBuildsSelectAndMapsRows()
     {
         var (repo, command) = Create();
-        repo.Use(new PassMiddleware());
+        repo.AddMiddleware(new PassMiddleware());
         command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
         var rows = new List<UserRow>();
         await foreach (var row in repo.Get())
@@ -99,7 +99,7 @@ public class RepositoryTests
     [Fact]
     public async Task AddUpdateDeleteUseBuilders()
     {
-        var (repo, command) = Create(assignIdentityOnAdd: false);
+        var (repo, command) = Create(assignIdentityOnCreate: false);
         var obj = new UserRow { id = 1, name = "a" };
         await repo.Create(obj);
         Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
@@ -112,9 +112,9 @@ public class RepositoryTests
     }
 
     [Fact]
-    public async Task CompositeIdAndAssignIdentityOnAddAndOverrides()
+    public async Task CompositeIdAndAssignIdentityOnCreateAndOverrides()
     {
-        var (repo, command) = Create<Composite>(id: ["org_id", "user_id"], assignIdentityOnAdd: true);
+        var (repo, command) = Create<Composite>(id: ["org_id", "user_id"], assignIdentityOnCreate: true);
         await repo.Create(new Composite { org_id = 1, user_id = 2, name = 3 });
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
         Assert.Equal(new Value.Int(3), command.ExecuteCalls[0].Parameters![0].Value);
@@ -255,7 +255,7 @@ public class RepositoryTests
         {
             Connection = connection,
             Entity = "users",
-            AssignIdentityOnAdd = false,
+            AssignIdentityOnCreate = false,
             Mapper = UserContactsMapper()
         });
         var user = new User

@@ -48,8 +48,8 @@ impl MockCommand {
 
 #[async_trait]
 impl Command for MockCommand {
-    fn use_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
-        self.host.use_middleware(middleware);
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.host.add_middleware(middleware);
     }
 
     async fn execute_reader(

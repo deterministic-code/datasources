@@ -288,7 +288,7 @@ describe("JsonCommand and JsonRepository", () => {
     expect(await collectAsync(repo.get(new Where('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
-    expect((await repo.add({ id: 2, name: "b" })).rowsAffected).toBe(1);
+    expect((await repo.create({ id: 2, name: "b" })).rowsAffected).toBe(1);
     expect(
       (await repo.update({ id: 2, name: "B" })).rowsAffected,
     ).toBe(1);
@@ -308,7 +308,7 @@ describe("JsonCommand and JsonRepository", () => {
     const repo = new JsonRepository(connection);
     await expect(command.executeReader("")).rejects.toThrow(DatasourceError);
     await expect(command.execute("insert")).rejects.toThrow(DatasourceError);
-    await expect(repo.add({ id: 2 })).rejects.toThrow(DatasourceError);
+    await expect(repo.create({ id: 2 })).rejects.toThrow(DatasourceError);
     await expect(repo.update({ id: 1 })).rejects.toThrow(DatasourceError);
     await expect(repo.delete({ id: 1 })).rejects.toThrow(DatasourceError);
   });

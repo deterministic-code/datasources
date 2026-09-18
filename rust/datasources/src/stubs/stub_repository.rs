@@ -1,6 +1,6 @@
 use super::not_implemented::fail;
 use crate::query::Query;
-use crate::repository::{ReadonlyRepository, Repository};
+use crate::repository::{ReadonlyRepository, CRUDRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -39,8 +39,8 @@ impl ReadonlyRepository for StubRepository {
 }
 
 #[async_trait]
-impl Repository for StubRepository {
-    async fn add(&self, _item: &Row) -> Result<Response> {
+impl CRUDRepository for StubRepository {
+    async fn create(&self, _item: &Row) -> Result<Response> {
         Err(fail(&self.provider))
     }
 

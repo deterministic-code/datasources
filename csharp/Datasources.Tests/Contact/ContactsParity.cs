@@ -18,7 +18,7 @@ internal static class ContactsParity
             Entity = "contacts_base"
         });
         if (middleware is not null)
-            join.Use(middleware);
+            join.AddMiddleware(middleware);
         await foreach (var row in join.Get(ContactsJoinQuery.Create()))
             rows.Add(row);
         var eager = AsContactsView.FromMapped(new FlatToTypeMapper(ContactsView.TypeMap).Collapse(rows));

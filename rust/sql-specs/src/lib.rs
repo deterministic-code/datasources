@@ -3,8 +3,8 @@ use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
     Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, DefaultTypeConverters,
-    Parameter, ReadonlyRepository, Repository, Result, Row, Statement, StatementBuilder,
-    StatementMapper, TableRepository, TableRepositoryBuilder, TableRepositoryBuilderOptions,
+    Parameter, ReadonlyRepository, CRUDRepository, Result, Row, Statement, StatementBuilder,
+    StatementMapper, Repository, RepositoryBuilder, RepositoryBuilderOptions,
     TransformMapper, TypeConverter, Value, WhereBuilder,
 };
 use rust_decimal::Decimal;
@@ -77,7 +77,7 @@ struct TypeSpec {
     table: String,
     ids: Vec<String>,
     #[serde(rename = "assignIdentityOnAdd")]
-    assign_identity_on_add: bool,
+    assign_identity_on_create: bool,
     fields: BTreeMap<String, String>,
     #[serde(default)]
     converters: BTreeMap<String, String>,
@@ -499,7 +499,7 @@ fn queries(spec: &Spec) -> Vec<String> {
                         &table,
                         &fields_of(
                             &flatten_yaml(&create.row, &spec.type_spec.mappings),
-                            |col| !spec.type_spec.assign_identity_on_add || !ids.contains(col),
+                            |col| !spec.type_spec.assign_identity_on_create || !ids.contains(col),
                         ),
                     )
                     .get_text(),
@@ -643,10 +643,10 @@ pub async fn run(
         )
         .await?;
     let mapping = mapping_of(&spec, dialect);
-    let options = TableRepositoryBuilderOptions {
+    let options = RepositoryBuilderOptions {
         connection,
         ids: spec.type_spec.ids.clone(),
-        assign_identity_on_add: spec.type_spec.assign_identity_on_add,
+        assign_identity_on_create: spec.type_spec.assign_identity_on_create,
         entity: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec, dialect)),
         mapper: None,
@@ -654,7 +654,7 @@ pub async fn run(
         types: Default::default(),
         fields: Default::default(),
     };
-    let built = TableRepositoryBuilder::parts(options).unwrap();
+    let built = RepositoryBuilder::parts(options).unwrap();
     let logs = Arc::new(Mutex::new(Vec::<String>::new()));
     let middleware: Arc<dyn CommandMiddleware> = Arc::new(
         ConsoleCommandMiddleware::with_sink(
@@ -674,15 +674,15 @@ pub async fn run(
             if verbose() { "true" } else { "false" }.into(),
         )])),
     );
-    let mut repo = TableRepository::from_built(built);
-    repo.use_middleware(middleware);
+    let mut repo = Repository::from_built(built);
+    repo.add_middleware(middleware);
     for step in &spec.steps {
         match step {
             Step {
                 create: Some(create),
                 ..
             } => {
-                repo.add(&domain_record(&create.row, &spec.type_spec.mappings))
+                repo.create(&domain_record(&create.row, &spec.type_spec.mappings))
                     .await
                     .unwrap();
             }

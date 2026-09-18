@@ -1,9 +1,9 @@
 import type { Constructable } from "./converters/Constructable.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
-import type { IReadonlyRepositoryFactory } from "./IReadonlyRepositoryFactory.ts";
-import type { IRepository } from "./IRepository.ts";
 import type { IRepositoryFactory } from "./IRepositoryFactory.ts";
+import type { ICRUDRepository } from "./ICRUDRepository.ts";
+import type { ICRUDRepositoryFactory } from "./ICRUDRepositoryFactory.ts";
 import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
 
 type CreateFn = (connection?: IConnection) => unknown;
@@ -11,7 +11,7 @@ type CreateFn = (connection?: IConnection) => unknown;
 const nameOf = (typeOrName: Constructable<unknown> | string) =>
   typeof typeOrName === "string" ? typeOrName : typeOrName.name;
 
-export class RepositoryFactory implements IRepositoryFactory {
+export class RepositoryFactory implements ICRUDRepositoryFactory {
   readonly #readonlyByName = new Map<string, CreateFn>();
   readonly #readonlyByType = new Map<Constructable<unknown>, CreateFn>();
   readonly #crudByName = new Map<string, CreateFn>();
@@ -30,8 +30,8 @@ export class RepositoryFactory implements IRepositoryFactory {
   create = (
     typeOrName: Constructable<unknown> | string,
     connection?: IConnection,
-  ): IRepository =>
-    this.#invoke(this.#lookup(this.#crudByType, this.#crudByName, typeOrName), connection) as IRepository;
+  ): ICRUDRepository =>
+    this.#invoke(this.#lookup(this.#crudByType, this.#crudByName, typeOrName), connection) as ICRUDRepository;
 
   createReadonly = (
     typeOrName: Constructable<unknown> | string,
@@ -42,7 +42,7 @@ export class RepositoryFactory implements IRepositoryFactory {
       connection,
     ) as IReadonlyRepository;
 
-  readonly asReadonly: IReadonlyRepositoryFactory = {
+  readonly asReadonly: IRepositoryFactory = {
     register: this.registerReadonly,
     create: this.createReadonly,
   };

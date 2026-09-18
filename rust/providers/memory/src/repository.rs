@@ -3,7 +3,7 @@ use crate::connection::MemoryConnection;
 use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, Command, Query, ReadonlyRepository, Repository, Response, Result, Row,
+    identity_filter, Command, Query, ReadonlyRepository, CRUDRepository, Response, Result, Row,
     TextQuery, Value, Where,
 };
 use std::sync::Arc;
@@ -52,8 +52,8 @@ impl ReadonlyRepository for MemoryRepository {
 }
 
 #[async_trait]
-impl Repository for MemoryRepository {
-    async fn add(&self, item: &Row) -> Result<Response> {
+impl CRUDRepository for MemoryRepository {
+    async fn create(&self, item: &Row) -> Result<Response> {
         self.connection.ensure_open()?;
         self.connection.collection(|items| items.push(item.clone()));
         Ok(Response::new(Value::Null, 1))

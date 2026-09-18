@@ -7,8 +7,8 @@ use crate::from_mapped_contacts::from_mapped_contacts;
 use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Command, Connection, ConsoleCommandMiddleware, FlatToTypeMapper, IFlatToTypeMapper,
-    ReadonlyRepository, TableRepository, TableRepositoryBuilderOptions,
+    Command, Connection, ConsoleCommandMiddleware, FlatToTypeMapper, FlatToTypeMapperTrait,
+    ReadonlyRepository, Repository, RepositoryBuilderOptions,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -46,11 +46,11 @@ pub async fn contacts_parity(
         if verbose { "true" } else { "false" }.into(),
     );
     let middleware = Arc::new(ConsoleCommandMiddleware::new().options(options));
-    let mut cells = TableRepositoryBuilderOptions::with_factory(connection.clone());
+    let mut cells = RepositoryBuilderOptions::with_factory(connection.clone());
     cells.entity = "contacts_base".into();
     cells.mapping = Some(RowTypeConverter::new(Vec::new()));
-    let mut join_repo = TableRepository::new(cells).expect("join repo");
-    join_repo.use_middleware(middleware.clone());
+    let mut join_repo = Repository::new(cells).expect("join repo");
+    join_repo.add_middleware(middleware.clone());
     let query = contacts_join_query();
     let eager = from_mapped_contacts(
         &FlatToTypeMapper::new(contacts_view()).collapse_rows(join_repo.get(Some(&query)).await?),

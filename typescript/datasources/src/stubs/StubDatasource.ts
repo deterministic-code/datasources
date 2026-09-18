@@ -3,7 +3,7 @@ import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
 import type { IReadonlyRepository } from "../IReadonlyRepository.ts";
-import type { IRepository } from "../IRepository.ts";
+import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { StubCommand } from "./StubCommand.ts";
 import { StubConnection } from "./StubConnection.ts";
 import { StubRepository } from "./StubRepository.ts";
@@ -25,7 +25,7 @@ export class StubDatasource implements IDatasource {
   createCommand = (connection?: IConnection): ICommand =>
     new StubCommand(this.provider, connection ?? this.defaultConnection());
 
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
 
   createReadonlyRepository = <T>(

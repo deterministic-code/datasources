@@ -187,7 +187,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str) {
         || utc_iso_millis(SystemTime::now()),
     ));
     let attach = |command: MysqlCommand| {
-        command.use_middleware(middleware.clone());
+        command.add_middleware(middleware.clone());
         command
     };
     let mut sessions = HashMap::new();

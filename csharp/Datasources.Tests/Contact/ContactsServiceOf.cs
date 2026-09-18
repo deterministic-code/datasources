@@ -14,7 +14,7 @@ internal static class ContactsServiceOf
                 Entity = entity,
                 Columns = columns
             });
-            return middleware is null ? repo : repo.Use(middleware);
+            return middleware is null ? repo : repo.AddMiddleware(middleware);
         }
         return new ContactsService(
             Of<Contact>("contacts_base", [

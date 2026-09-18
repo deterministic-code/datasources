@@ -35,7 +35,7 @@ export const addExtraContact = async (
   ids: ContactLookups,
 ): Promise<Contact> => {
   const contact = extraContact(ids);
-  await service.add(contact);
+  await service.create(contact);
   const loaded = (
     await collectAsync(service.get(WhereBuilder.equals("id", contact.id)))
   )[0];

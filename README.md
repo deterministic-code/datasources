@@ -2,74 +2,14 @@
 
 # Datasources
 
-Async interfaces for reading, writing, updating, and deleting resources. Providers implement the same surface for files, SQL, and (later) document stores. Install only the providers you use.
+Datasources is a data-access and object-relational mapper library with parity across multiple languages and datasource providers.
 
-This site and the generated root `README.md` are built from the markdown in `docs/`. Edit those files and run `npm run docs:readme` (or `npm run docs` for the site).
+It is designed for AI agents. The motivation is that current AI-generated data-access code is not deterministic, and quality often degrades as a project scales.
 
-## Layout
+The feature stack starts with standard data-access modules for commands, connections, and object mapping. Higher up, the API is more opinionated and adds time-saving features for CRUD repositories, enriched reading, and bulk commands.
 
-```
-typescript/   npm workspaces (datasources + providers/{json,memory,sqlite,mysql,postgres,stubs})
-rust/         cargo workspace (datasources + providers/{json,memory,sqlite,mysql,postgres,stubs})
-csharp/       .NET 10 solution (Datasources + Providers/{Json,Memory,Sqlite,Mysql,Postgres,stubs})
-```
-
-Optional helpers register factories from a provider list (`DATASOURCE_PROVIDERS`) without calling `Use` per dialect: `Datasources.Hosting`, `datasources-register`, `@datasources/register`. See [QuickStart](#quickstart).
-
-## Interfaces
-
-| Type | Role |
-| --- | --- |
-| `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository`, `createReadonlyRepository` |
-| `IConnection` | `open`, `close`, `startTransaction(isolation)` |
-| `ITransaction` | `isolation`, `commit`, `abort` |
-| `IsolationLevel` | `readUncommitted`, `readCommitted`, `repeatableRead`, `serializable` |
-| `ICommand` | `executeReader`, `execute` |
-| `IReadonlyRepository<T>` | `connection`, `getSingle`, `get` |
-| `IRepository<T>` / `ICRUDRepository<T>` (C#) | extends `IReadonlyRepository<T>` with `add`/`create`, `update`, `delete` |
-| `IReader` | `current`, `next` |
-| `IQuery` / `Where` | `getText()` — provider-specific |
-| `Parameter` / `IResponse` | `{ name, value }` / `{ result, rowsAffected }` |
-
-`ICommand` supports `use(ICommandMiddleware)` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
-
-## Providers
-
-Working: **json**, **memory**, **sqlite**, **mysql**, **postgres** (inject `IFileStore` / `ISqliteDriver` / `IMysqlDriver` / `IPostgresDriver`). Native engines are opt-in: `better-sqlite3` / `mysql2` / `pg` (optional npm peers), `rusqlite` / `mysql_async` / `tokio-postgres`, or `Datasources.Sqlite.Microsoft` / MySqlConnector / Npgsql.
-
-Stubs (installable, throw “not implemented”): text, xml, yaml, sqlserver, oracle, mongodb, dynamodb.
-
-Shared SQL scenarios live in `specs/*.yaml`. Engine-specific DDL and isolation expects are in `specs/dialects/{sqlite,mysql,postgres}.yaml` (fragment names such as `createUserTable` and `dirtyReadRows`).
-
-## Tests
-
-`npm test` is offline: mocks, injectable ports, and in-process SQLite command specs. `npm run test:e2e` runs repository specs against in-process SQLite plus MySQL/Postgres Docker command specs (starts the matching Compose services).
-
-```
-npm test
-npm run test:e2e
-npm run test:e2e:verbose
-```
-
-`test:e2e:verbose` (or `npm run test:e2e -- --verbose` / `VERBOSE=1`) prints each `ConsoleCommandMiddleware` Start/Finish line while specs run, plus Request parameters and Response rows when `isVerbose` is set.
-
-`test:e2e` defaults to `MYSQL_URL=mysql://ds:ds@127.0.0.1:3306/datasources` and `POSTGRES_URL=postgres://ds:ds@127.0.0.1:5432/datasources`. Override those env vars if the servers are elsewhere.
-
-All languages against Docker (Rust/C# expect Compose already up):
-
-```
-npm run test:e2e
-npm run test:e2e:rust
-npm run test:e2e:csharp
-```
-
-- TypeScript: `npm test` / `npm run test:e2e` (Vitest; unused locals/parameters fail `tsc`; unit coverage 100% line/branch/function/statement)
-- Rust: `cd rust && cargo test --workspace` (workspace rustc warnings are deny; optional: `./coverage.sh` with cargo-llvm-cov)
-- C#: `cd csharp && dotnet test Datasources.slnx` (`TreatWarningsAsErrors`)
-
-CI (`.github/workflows/ci.yml`) runs `npm test` plus Rust/C# unit tests, then a second job that starts Compose and runs `test:e2e:ci` (skips starting Docker) plus Rust/C# e2e.
-
-`Datasources` publishes test doubles (`MockConnection`, `MockCommand`, `MockRepository`, …) for consumers.
+- [Quick Start](#quickstart)
+- [Feature Matrix](#feature-matrix)
 
 ## QuickStart
 
@@ -296,13 +236,44 @@ const command = datasource.createCommand();
 ```
 Register factories (explicitly or via install), create the default datasource, then `createConnection`. Do not `open` during bootstrap. Hold both in DI or a module binding. On first command or repository call, open if needed. See [Connection](#connection).
 
+## Feature Matrix
+
+Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repositories above them.
+
+### Feature stack
+
+| Feature | C# | Rust | TypeScript | Role |
+| --- | --- | --- | --- | --- |
+| Datasource | `IDatasource` | `Datasource` | `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository`, `createReadonlyRepository` |
+| Mapping | `IMapper<TFrom, TTo>`, `TypeConverter<To, From>` | `Mapper<TFrom, TTo>`, `TypeConverter<To, From>` | `IMapper<TFrom, TTo>`, `TypeConverter` | column → object convert, then map |
+| Connection | `IConnection` | `Connection` | `IConnection` | `open`, `close`, `startTransaction(isolation)` |
+| Transaction | `ITransaction` | `Transaction` | `ITransaction` | `isolation`, `commit`, `abort` |
+| Command | `ICommand` | `Command` | `ICommand` | `executeReader`, `execute` |
+| Reader | `IReader` | `Reader` | `IReader` | `current`, `next` |
+| Query / Where | `IQuery` / `IWhere` | `Query` / `Where` | `IQuery` / `IWhere` | `getText()` — provider-specific |
+| Parameter / Response | `Parameter` / `Response` | `Parameter` / `Response` | `Parameter` / `Response` | `{ name, value }` / `{ result, rowsAffected }` |
+| Readonly repository | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` | `connection`, `getSingle`, `get` |
+| CRUD repository | `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` | extends `IReadonlyRepository<T>` with `create`, `update`, `delete` |
+| Enriched reading | `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` | fill related properties after get |
+| Bulk commands | `BulkCRUDRepository<T>` | `BulkCRUDRepository` | `BulkCRUDRepository<T>` | list create / update / delete |
+
+`ICommand` supports `addMiddleware` / `AddMiddleware` / `add_middleware` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
+
+### Providers
+
+Working: **json**, **memory**, **sqlite**, **mysql**, **postgres** (inject `IFileStore` / `ISqliteDriver` / `IMysqlDriver` / `IPostgresDriver`). Native engines are opt-in: `better-sqlite3` / `mysql2` / `pg` (optional npm peers), `rusqlite` / `mysql_async` / `tokio-postgres`, or `Datasources.Sqlite.Microsoft` / MySqlConnector / Npgsql.
+
+Stubs (installable, throw “not implemented”): text, xml, yaml, sqlserver, oracle, mongodb, dynamodb.
+
+Package names per language are on [QuickStart](#packages).
+
 ## Common Examples
 
 Short recipes for the usual paths. Add samples here as Repository and related types land.
 
 ### Create a repository
 
-TODO: register a provider, create a connection, `createRepository`, then `add` / `get` / `update` / `delete`.
+TODO: register a provider, create a connection, `createRepository`, then `create` / `get` / `update` / `delete`.
 
 ### Run a command
 
@@ -363,19 +334,41 @@ See [QuickStart](#quickstart) for full registration and default-provider setup.
 
 ## Repositories
 
-Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C#) / `IRepository<T>` (TypeScript) / `Repository` (Rust) adds `create`/`add`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
+Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C# / TypeScript) / `CRUDRepository` (Rust) adds `create`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
 
 ### IReadonlyRepository / ICRUDRepository
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` |
-| `ICRUDRepository<T>` | `Repository` | `IRepository<T>` |
+| `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` |
 | `GetSingle` | `get_single` | `getSingle` |
 | `Get` | `get` | `get` |
-| `Create` | `add` | `add` |
+| `Create` | `create` | `create` |
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
+
+### Factory
+
+Instance registry of factory callbacks. Register a builder, then create by entity type name or by type. The callback receives an optional connection.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `IRepositoryFactory` | `ReadonlyRepositoryFactory` | `IRepositoryFactory` |
+| `ICRUDRepositoryFactory` | `CRUDRepositoryFactory` | `ICRUDRepositoryFactory` |
+| `RepositoryFactory` | `RepositoryFactory` | `RepositoryFactory` |
+| `Register` / `Create` | `register` / `create` | `register` / `create` |
+| `Create<T>` / `Create(typeof(T))` | `register_type` / `create_type` | `register(type)` / `create(type)` |
+| `RepositoryNotRegisteredException` | `DatasourceError` | `RepositoryNotRegisteredError` |
+
+Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
+
+```csharp
+var factory = new RepositoryFactory();
+factory.Register<Contact>(connection => new Repository<Contact>(connection!));
+var repo = factory.Create<Contact>();
+var byName = factory.Create("Contact");
+```
 
 ### Enrichment
 
@@ -387,7 +380,9 @@ A read-only service wraps an inner repository, then fills properties already on 
 | `IRepositoryTree` | `RepositoryTree` | `IRepositoryTree` |
 | `IRepositoryTreeNode` | `RepositoryTreeNode` | `IRepositoryTreeNode` |
 | `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` |
-| `AddEnriched` | `add_enriched` | `addEnriched` |
+| `DeepCRUDRepository<T>` | `DeepCRUDRepository` | `DeepCRUDRepository<T>` |
+| `BulkCRUDRepository<T>` | `BulkCRUDRepository` | `BulkCRUDRepository<T>` |
+| `AddEnriched` | `add_enriched` / `add_enriched_repo` | `addEnriched` |
 | `Enrich` | `enrich` | `enrich` |
 
 Lookups use `GetSingle` / `get_single_where` (cached per distinct key). Lists use `Get` / `get_where`. Missing lookups leave the destination default.
@@ -410,9 +405,23 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 
 Nest only on walkable objects (`many: true` or a whole related row). A `select` scalar is not walked. Depth is unbounded; each node applies, then children run on the related items.
 
+`DeepCRUDRepository` is the write side of the same tree. `Get` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
+
+- **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
+- **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+
+`BulkCRUDRepository` inherits `DeepCRUDRepository` and adds list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+
+| C# | TypeScript | Rust |
+| --- | --- | --- |
+| `Create(IReadOnlyList<T>)` / `BulkCreate` | `createBulk` | `create_bulk` |
+| `Update(IReadOnlyList<T>)` / `BulkUpdate` | `updateBulk` | `update_bulk` |
+| `Delete(IReadOnlyList<T>)` / `BulkDelete` | `deleteBulk` | `delete_bulk` |
+
 ### Examples
 
-TODO: fill as the generic `Repository<T>` / `TableRepository` surface settles.
+TODO: fill as the generic `Repository<T>` surface settles.
 
 ## Connection
 
@@ -587,7 +596,7 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `ICommand` | `Command` | `ICommand` |
-| `Use` | `use_middleware` | `use` |
+| `AddMiddleware` | `add_middleware` | `addMiddleware` |
 | `ExecuteReader` | `execute_reader` | `executeReader` |
 | `Execute` | `execute` | `execute` |
 
@@ -739,7 +748,7 @@ Holds source/destination labels. Column names pass through as-is.
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `IMapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
+| `IMapper<TFrom, TTo>` | `Mapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
 | `Map` | `map` | `map` |
 | `ReverseMap` | `reverse_map` | `reverseMap` |
 
@@ -747,7 +756,7 @@ Holds source/destination labels. Column names pass through as-is.
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `ISourceDestinationMapper` | `ISourceDestinationMapper` | `ISourceDestinationMapper` |
+| `ISourceDestinationMapper` | `SourceDestinationMapper` | `ISourceDestinationMapper` |
 | `Source` | `source` | `source` |
 | `Destination` | `destination` | `destination` |
 
@@ -776,6 +785,21 @@ Holds source/destination labels. Column names pass through as-is.
 | constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
 | `Map` | `map` | `map` |
 | `ReverseMap` | `reverse_map` | `reverseMap` |
+
+### FlatToTypeMapper
+
+Collapses denormalized join rows into a typed graph. Scalars map column → field; groups collect unique children by key. Nested group fields on a collection are omitted.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `IFlatToTypeMapper` | `FlatToTypeMapperTrait` | `IFlatToTypeMapper<T>` |
+| `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
+| `TypeMap` | `TypeMap` | `TypeMap<T>` |
+| `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |
+| `TypeMapField` | `TypeMapField` | string or group |
+| `MappedValue` | `MappedValue` | `T` fields |
+| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
+| `Collapse` | `collapse` / `collapse_rows` | `collapse` |
 
 ### StatementMapper
 

@@ -38,7 +38,7 @@ describe("ContactsService", () => {
       addresses,
       new ListCRUDRepository<Phone>(),
     );
-    await service.add(
+    await service.create(
       Object.assign(new Contact(), {
         contact_type_id: 2,
         contact_source_id: 3,

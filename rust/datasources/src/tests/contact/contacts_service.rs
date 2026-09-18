@@ -1,6 +1,6 @@
 use crate::deep_crud_repository::DeepCRUDRepository;
 use crate::query::Query;
-use crate::repository::{ReadonlyRepository, Repository};
+use crate::repository::{ReadonlyRepository, CRUDRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -14,13 +14,13 @@ pub struct ContactsService {
 
 impl ContactsService {
     pub fn new(
-        contacts: Arc<dyn Repository>,
+        contacts: Arc<dyn CRUDRepository>,
         types: Arc<dyn ReadonlyRepository>,
         sources: Arc<dyn ReadonlyRepository>,
         address_types: Arc<dyn ReadonlyRepository>,
         phone_types: Arc<dyn ReadonlyRepository>,
-        addresses: Arc<dyn Repository>,
-        phones: Arc<dyn Repository>,
+        addresses: Arc<dyn CRUDRepository>,
+        phones: Arc<dyn CRUDRepository>,
     ) -> Self {
         let mut inner = DeepCRUDRepository::new(contacts);
         inner
@@ -92,9 +92,9 @@ impl ReadonlyRepository for ContactsService {
 }
 
 #[async_trait]
-impl Repository for ContactsService {
-    async fn add(&self, item: &Row) -> Result<Response> {
-        self.inner.add(item).await
+impl CRUDRepository for ContactsService {
+    async fn create(&self, item: &Row) -> Result<Response> {
+        self.inner.create(item).await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {

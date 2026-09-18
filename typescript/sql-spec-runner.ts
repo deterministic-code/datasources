@@ -166,7 +166,7 @@ export const runSpec = async (
   const logs: string[] = [];
   if (specVerbose()) console.log(`\n--- ${spec.name} (${dialect.connection.kind}) ---`);
   const attach = (command: ICommand) =>
-    command.use(new ConsoleCommandMiddleware(capture(logs)));
+    command.addMiddleware(new ConsoleCommandMiddleware(capture(logs)));
   const sessions = new Map<string, Session>();
   for (const name of names) {
     const session = await host.openSession(target);

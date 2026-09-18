@@ -1,13 +1,13 @@
 import { DeepCRUDRepository } from "./DeepCRUDRepository.ts";
-import type { IRepository } from "./IRepository.ts";
-import type { IResponse } from "./IResponse.ts";
+import type { ICRUDRepository } from "./ICRUDRepository.ts";
+import type { Response } from "./Response.ts";
 import type { IWhere } from "./IWhere.ts";
 
 const fold = async <T>(
   items: T[],
-  write: (item: T) => Promise<IResponse>,
-): Promise<IResponse> => {
-  let result: IResponse["result"] = null;
+  write: (item: T) => Promise<Response>,
+): Promise<Response> => {
+  let result: Response["result"] = null;
   let rowsAffected = 0;
   for (const item of items) {
     const response = await write(item);
@@ -18,16 +18,16 @@ const fold = async <T>(
 };
 
 export class BulkCRUDRepository<T extends object> extends DeepCRUDRepository<T> {
-  constructor(crud: IRepository<T>) {
+  constructor(crud: ICRUDRepository<T>) {
     super(crud);
   }
 
-  addBulk = (items: T[]): Promise<IResponse> =>
-    fold(items, (item) => this.add(item));
+  createBulk = (items: T[]): Promise<Response> =>
+    fold(items, (item) => this.create(item));
 
-  updateBulk = (items: T[], byWhere?: IWhere): Promise<IResponse> =>
+  updateBulk = (items: T[], byWhere?: IWhere): Promise<Response> =>
     fold(items, (item) => this.update(item, byWhere));
 
-  deleteBulk = (items: T[], byWhere?: IWhere): Promise<IResponse> =>
+  deleteBulk = (items: T[], byWhere?: IWhere): Promise<Response> =>
     fold(items, (item) => this.delete(item, byWhere));
 }

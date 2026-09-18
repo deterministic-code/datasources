@@ -187,7 +187,7 @@ async fn middleware_paths() {
 
     let order = Arc::new(Mutex::new(Vec::new()));
     let seen = order.clone();
-    host.use_middleware(Arc::new(RecordingMiddleware {
+    host.add_middleware(Arc::new(RecordingMiddleware {
         before: {
             let seen = seen.clone();
             Arc::new(move |query| {
@@ -223,7 +223,7 @@ async fn middleware_paths() {
 
     let blocked = CommandMiddlewareHost::new();
     let ran = Arc::new(Mutex::new(false));
-    blocked.use_middleware(Arc::new(RecordingMiddleware {
+    blocked.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Err(DatasourceError::message("blocked"))),
         after: {
             let ran = ran.clone();
@@ -250,7 +250,7 @@ async fn middleware_paths() {
 
     let failed = CommandMiddlewareHost::new();
     let captured = Arc::new(Mutex::new(None));
-    failed.use_middleware(Arc::new(RecordingMiddleware {
+    failed.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Ok(None)),
         after: {
             let captured = captured.clone();
@@ -305,7 +305,7 @@ async fn console_lines() {
         move || write_stamps.lock().unwrap().remove(0),
     );
     let host = CommandMiddlewareHost::new();
-    host.use_middleware(Arc::new(middleware));
+    host.add_middleware(Arc::new(middleware));
     host.run(
         r#"SELECT * FROM "widget" ORDER BY "id""#,
         None,
@@ -332,7 +332,7 @@ async fn console_trims_query() {
         || "2026-08-28T01:54:12.101Z".to_string(),
     );
     let host = CommandMiddlewareHost::new();
-    host.use_middleware(Arc::new(middleware));
+    host.add_middleware(Arc::new(middleware));
     host.run("SELECT 1\n", None, |_q, _p| async { Ok(((), vec![])) })
         .await
         .unwrap();
@@ -358,7 +358,7 @@ async fn console_verbose_bodies() {
     )
     .options(HashMap::from([("isVerbose".into(), "true".into())]));
     let host = CommandMiddlewareHost::new();
-    host.use_middleware(Arc::new(middleware));
+    host.add_middleware(Arc::new(middleware));
     host.run(
         "SELECT 1",
         Some(&[Parameter::new("id", 1i64)]),
@@ -447,7 +447,7 @@ async fn stubs_throw() {
     assert!(repo.get(None).await.is_err());
     assert!(repo.get_single_where(&TextWhere::new("1=1")).await.is_err());
     assert!(repo.get_where(&TextWhere::new("1=1")).await.is_err());
-    assert!(repo.add(&empty).await.is_err());
+    assert!(repo.create(&empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
     let readonly = ds.create_readonly_repository(None);
@@ -466,7 +466,7 @@ async fn stubs_throw() {
     assert!(reader.next().await.is_err());
     let conn = StubConnection::new("text");
     let cmd = StubCommand::new("text");
-    cmd.use_middleware(Arc::new(RecordingMiddleware {
+    cmd.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
     }));
@@ -548,7 +548,7 @@ async fn published_mocks() {
         repo.get_where(&MockWhere::new("all")).await.unwrap().len(),
         1
     );
-    repo.add(&record(&[("id", Value::Int(2))])).await.unwrap();
+    repo.create(&record(&[("id", Value::Int(2))])).await.unwrap();
     repo.update(
         &record(&[("id", Value::Int(2))]),
         Some(&MockWhere::new("id=2")),
@@ -563,7 +563,7 @@ async fn published_mocks() {
     repo.set_get_error("g");
     assert!(repo.get(None).await.is_err());
     repo.set_add_error("ad");
-    assert!(repo.add(&Row::new()).await.is_err());
+    assert!(repo.create(&Row::new()).await.is_err());
     repo.set_update_error("up");
     assert!(repo.update(&Row::new(), None).await.is_err());
     repo.set_delete_error("del");
@@ -590,7 +590,7 @@ async fn published_mocks() {
 
     let command = MockCommand::new();
     let seen = Arc::new(Mutex::new(Vec::new()));
-    command.use_middleware(Arc::new(RecordingMiddleware {
+    command.add_middleware(Arc::new(RecordingMiddleware {
         before: {
             let seen = seen.clone();
             Arc::new(move |query| {
@@ -799,13 +799,13 @@ async fn table_repository() {
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
-    let mut options = TableRepositoryBuilderOptions::with_factory(
+    let mut options = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.entity = "users".into();
     options.mapping = Some(users_mapping());
-    let mut repo = TableRepository::new(options).unwrap();
-    repo.use_middleware(Arc::new(RecordingMiddleware {
+    let mut repo = Repository::new(options).unwrap();
+    repo.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
     }));
@@ -843,14 +843,14 @@ async fn table_repository() {
         .is_empty());
 
     let obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
-    let mut include_id = TableRepositoryBuilderOptions::with_factory(
+    let mut include_id = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
-    include_id.assign_identity_on_add = false;
+    include_id.assign_identity_on_create = false;
     include_id.entity = "users".into();
     include_id.mapping = Some(users_mapping());
-    let repo = TableRepository::new(include_id).unwrap();
-    repo.add(&obj).await.unwrap();
+    let repo = Repository::new(include_id).unwrap();
+    repo.create(&obj).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO users (id, name) VALUES ($id, $name)"
@@ -867,15 +867,15 @@ async fn table_repository() {
     );
 
     let generated = Arc::new(MockCommand::new());
-    let mut options = TableRepositoryBuilderOptions::with_factory(
+    let mut options = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(generated.clone(), "memory"),
     );
     options.ids = vec!["org_id".into(), "user_id".into()];
-    options.assign_identity_on_add = true;
+    options.assign_identity_on_create = true;
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Composite>());
-    let repo = TableRepository::new(options).unwrap();
-    repo.add(&record(&[
+    let repo = Repository::new(options).unwrap();
+    repo.create(&record(&[
         ("org_id", Value::Int(1)),
         ("user_id", Value::Int(2)),
         ("name", Value::Int(3)),
@@ -905,15 +905,15 @@ async fn table_repository() {
         .contains("org_id = $org_id AND user_id = $user_id"));
 
     let command = Arc::new(MockCommand::new());
-    TableRepository::new(TableRepositoryBuilderOptions::with_factory(
+    Repository::new(RepositoryBuilderOptions::with_factory(
         MockConnection::with_command(command.clone()),
     ))
     .unwrap();
-    let mut options = TableRepositoryBuilderOptions::with_factory(
+    let mut options = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.mapping = Some(users_mapping());
-    let repo = TableRepository::new(options).unwrap();
+    let repo = Repository::new(options).unwrap();
     assert!(repo
         .update(&record(&[("name", Value::from("a"))]), None)
         .await
@@ -926,13 +926,13 @@ async fn table_repository() {
         .update(&record(&[("id", Value::Int(1))]), None)
         .await
         .is_err());
-    let mut options = TableRepositoryBuilderOptions::with_factory(
+    let mut options = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Cells>());
-    let repo = TableRepository::new(options).unwrap();
-    repo.add(&record(&[("id", Value::Int(1))])).await.unwrap();
+    let repo = Repository::new(options).unwrap();
+    repo.create(&record(&[("id", Value::Int(1))])).await.unwrap();
     repo.delete(
         &record(&[("name", Value::from("z"))]),
         Some(&WhereBuilder::equals("name", "z")),
@@ -947,8 +947,8 @@ async fn table_repository() {
             .ids
             .is_empty()
     );
-    TableRepository::new(from_id).unwrap();
-    TableRepository::from_type::<Item>(MockConnection::new()).unwrap();
+    Repository::new(from_id).unwrap();
+    Repository::from_type::<Item>(MockConnection::new()).unwrap();
 }
 
 fn user_contacts_mapper() -> TransformMapper<Row, Row> {
@@ -995,7 +995,7 @@ async fn table_repository_maps_after_row_converter() {
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
-    let mut options = TableRepositoryBuilderOptions::with_factory(
+    let mut options = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.entity = "users".into();
@@ -1014,7 +1014,7 @@ async fn table_repository_maps_after_row_converter() {
             row
         },
     ));
-    let repo = TableRepository::new(options).unwrap();
+    let repo = Repository::new(options).unwrap();
     let rows = repo.get(None).await.unwrap();
     assert_eq!(rows[0]["name"], Value::from("A"));
 }
@@ -1029,14 +1029,14 @@ async fn table_repository_maps_flat_row_into_contacts() {
         ("contact_name1", Value::from("bob")),
         ("contact_name2", Value::from("roberta")),
     ]));
-    let mut options = TableRepositoryBuilderOptions::with_factory(
+    let mut options = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.entity = "users".into();
-    options.assign_identity_on_add = false;
+    options.assign_identity_on_create = false;
     options.mapping = Some(RowTypeConverter::of::<UserRow>());
     options.mapper = Some(user_contacts_mapper());
-    let repo = TableRepository::new(options).unwrap();
+    let repo = Repository::new(options).unwrap();
     let user = repo.get_single(None).await.unwrap().unwrap();
     assert_eq!(user["username"], Value::from("bobby"));
     assert_eq!(user["email"], Value::from("bob@asdf.com"));
@@ -1045,7 +1045,7 @@ async fn table_repository_maps_flat_row_into_contacts() {
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT contact_name1, contact_name2, email, id, username FROM users"
     );
-    repo.add(&user).await.unwrap();
+    repo.create(&user).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO users (contact_name1, contact_name2, email, id, username) VALUES ($contact_name1, $contact_name2, $email, $id, $username)"
@@ -1096,14 +1096,14 @@ async fn table_repository_statement_mapper() {
         |text: String| format!("{text} RETURNING id"),
         |text| text,
     )));
-    let mut options = TableRepositoryBuilderOptions::with_factory(
+    let mut options = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.entity = "users".into();
-    options.assign_identity_on_add = false;
+    options.assign_identity_on_create = false;
     options.mapping = Some(users_mapping());
     options.statement_mapper = Some(mapper);
-    let repo = TableRepository::new(options).unwrap();
+    let repo = Repository::new(options).unwrap();
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.get_single(None).await.unwrap().is_none());
     assert_eq!(
@@ -1111,7 +1111,7 @@ async fn table_repository_statement_mapper() {
         "SELECT full_name, user_id FROM people LIMIT 1"
     );
     let row = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
-    repo.add(&row).await.unwrap();
+    repo.create(&row).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id"
@@ -1431,7 +1431,7 @@ async fn contacts_service_fills_names_and_child_lists() {
         phones,
     );
     service
-        .add(&record(&[
+        .create(&record(&[
             ("contact_type_id", Value::Int(2)),
             ("contact_source_id", Value::Int(3)),
             ("first_name", Value::from("Ada")),
@@ -1485,7 +1485,7 @@ async fn deep_create_writes_children_stamps_fk_and_skips_select() {
         false,
     )
     .add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
-    repo.add(&record(&[
+    repo.create(&record(&[
         ("type_id", Value::Int(10)),
         (
             "children",
@@ -1513,7 +1513,7 @@ async fn deep_create_applies_generated_parent_id_before_child_fks() {
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
     let mut repo = DeepCRUDRepository::new(parents);
     repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
-    repo.add(&record(&[(
+    repo.create(&record(&[(
         "children",
         encode_rows(&[record(&[("label", Value::from("n"))])]),
     )]))
@@ -1647,7 +1647,7 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
             node.include_repo(notes.clone(), "notes", "id", "child_id", None, true);
         },
     );
-    repo.add(&record(&[(
+    repo.create(&record(&[(
         "children",
         encode_rows(&[record(&[
             ("type_id", Value::Int(3)),
@@ -1678,7 +1678,7 @@ async fn deep_many_readonly_via_throws() {
         true,
     );
     let error = repo
-        .add(&record(&[(
+        .create(&record(&[(
             "children",
             encode_rows(&[record(&[("label", Value::from("a"))])]),
         )]))
@@ -1723,7 +1723,7 @@ async fn bulk_create_writes_parents_and_children() {
     let mut repo = BulkCRUDRepository::new(parents.clone());
     repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
     let response = repo
-        .add_bulk(&[
+        .create_bulk(&[
             record(&[(
                 "children",
                 encode_rows(&[record(&[("label", Value::from("a"))])]),

@@ -6,7 +6,7 @@ public class CommandMiddlewareHost
 {
     private readonly List<ICommandMiddleware> _middlewares = new();
 
-    public ICommand Use(ICommandMiddleware middleware)
+    public ICommand AddMiddleware(ICommandMiddleware middleware)
     {
         _middlewares.Add(middleware);
         return (ICommand)this;

@@ -1,6 +1,6 @@
 use crate::enriched::Enriched;
 use crate::query::Query;
-use crate::repository::{ReadonlyRepository, Repository};
+use crate::repository::{ReadonlyRepository, CRUDRepository};
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
@@ -16,7 +16,7 @@ pub struct BulkCRUDRepository {
 }
 
 impl BulkCRUDRepository {
-    pub fn new(inner: Arc<dyn Repository>) -> Self {
+    pub fn new(inner: Arc<dyn CRUDRepository>) -> Self {
         Self {
             inner: DeepCRUDRepository::new(inner),
         }
@@ -54,7 +54,7 @@ impl BulkCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn Repository>,
+        via: Arc<dyn CRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -68,7 +68,7 @@ impl BulkCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn Repository>,
+        via: Arc<dyn CRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -79,8 +79,8 @@ impl BulkCRUDRepository {
         self
     }
 
-    pub async fn add_bulk(&self, items: &[Row]) -> Result<Response> {
-        fold(items, |item| self.inner.add(item)).await
+    pub async fn create_bulk(&self, items: &[Row]) -> Result<Response> {
+        fold(items, |item| self.inner.create(item)).await
     }
 
     pub async fn update_bulk(
@@ -142,9 +142,9 @@ impl ReadonlyRepository for BulkCRUDRepository {
 }
 
 #[async_trait]
-impl Repository for BulkCRUDRepository {
-    async fn add(&self, item: &Row) -> Result<Response> {
-        self.inner.add(item).await
+impl CRUDRepository for BulkCRUDRepository {
+    async fn create(&self, item: &Row) -> Result<Response> {
+        self.inner.create(item).await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
