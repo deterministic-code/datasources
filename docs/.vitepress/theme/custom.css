@@ -1,0 +1,4 @@
+.group:has([role="button"]) .VPSidebarItem.level-0 .items {
+  padding-left: 16px;
+  border-left: 1px solid var(--vp-c-divider);
+}

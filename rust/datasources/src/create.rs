@@ -28,6 +28,12 @@ pub fn create_default() -> Result<Arc<dyn Datasource>> {
     let provider = merged
         .get("provider")
         .cloned()
+        .or_else(|| {
+            merged
+                .get("url")
+                .or_else(|| merged.get("DATABASE_URL"))
+                .and_then(|url| crate::provider_from_url::provider_from_url(url))
+        })
         .ok_or_else(|| DatasourceError::message("Datasource defaults are not specified"))?;
     create(&provider, Some(&merged))
 }

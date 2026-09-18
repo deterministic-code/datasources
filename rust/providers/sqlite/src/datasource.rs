@@ -1,6 +1,7 @@
 use crate::command::SqliteCommand;
 use crate::connection::SqliteConnection;
 use crate::driver::{require_driver, SqliteDriver};
+use crate::sqlite_path::sqlite_filename;
 use async_trait::async_trait;
 use datasources::converters::RowTypeConverter;
 use datasources::{
@@ -78,8 +79,7 @@ impl DatasourceFactory for SqliteDatasource {
     ) -> Arc<dyn Datasource> {
         Arc::new(SqliteDatasource::new(
             options
-                .and_then(|o| o.get("filename"))
-                .cloned()
+                .and_then(|o| o.get("filename").cloned().or_else(|| o.get("url").and_then(|url| sqlite_filename(url))))
                 .or_else(|| self.filename.clone()),
             self.driver.clone(),
             options

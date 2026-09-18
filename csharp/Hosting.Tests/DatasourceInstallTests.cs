@@ -18,8 +18,8 @@ public class DatasourceInstallTests
             new[] { "json", "memory" },
             ProviderNames.From(new Dictionary<string, string?>
             {
-                ["DATASOURCE_PROVIDERS"] = "json,memory",
-                ["DATASOURCE_PROVIDER"] = "json"
+                ["INSTALLED_PROVIDERS"] = "json,memory",
+                ["url"] = "json://"
             }));
         Assert.Equal(
             new[] { "sqlite" },

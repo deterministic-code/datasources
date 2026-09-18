@@ -412,7 +412,7 @@ fn registry() {
     let created = create("json", None).unwrap();
     assert_eq!(created.provider(), "json");
     assert!(create_default().is_err());
-    defaults(HashMap::from([("provider".into(), "json".into())]));
+    defaults(HashMap::from([("url".into(), "json://".into())]));
     assert_eq!(create_default().unwrap().provider(), "json");
     reset();
     assert!(create("json", None).is_err());

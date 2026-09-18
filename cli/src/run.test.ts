@@ -31,7 +31,6 @@ const silentPrompt: Prompter = {
   select: async ({ default: def }) => def,
   checkbox: async ({ choices }) => choices.filter((c) => c.checked).map((c) => c.value),
   input: async ({ default: def }) => def,
-  confirm: async ({ default: def }) => def,
 };
 
 const deps = (
@@ -65,11 +64,12 @@ describe("run", () => {
   it("sets up with --yes and installs missing providers", async () => {
     const { files, fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }),
-      [join(cwd, ".env.example")]: "DATASOURCE_PROVIDER=sqlite\nCUSTOM=keep\n",
+      [join(cwd, ".env.example")]: "INSTALLED_PROVIDERS=sqlite\nCUSTOM=keep\n",
     });
     const io = deps(fs);
     expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], io)).toBe(0);
-    expect(files[join(cwd, ".env")]).toMatch(/DATASOURCE_PROVIDER=sqlite/);
+    expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=sqlite/);
+    expect(files[join(cwd, ".env")]).toMatch(/DATABASE_URL=sqlite:\/\/\/:memory:/);
     expect(files[join(cwd, ".env")]).toMatch(/CUSTOM=keep/);
     expect(io.ran[0]).toMatch(/npm install/);
     expect(io.ran[0]).toMatch(/@datasources\/sqlite/);
@@ -81,14 +81,13 @@ describe("run", () => {
       [join(cwd, "package.json")]: JSON.stringify({
         dependencies: { "@datasources/json": "*", "@datasources/sqlite": "*" },
       }),
-      [join(cwd, ".env")]: "DATASOURCE_PROVIDER=json\nDATASOURCE_PROVIDERS=json,sqlite\n",
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json,sqlite\nDATABASE_URL=json://\n",
     });
     const io = deps(fs, {
       prompt: {
         select: async () => "memory",
         checkbox: async () => ["memory"],
         input: async ({ default: def }) => def,
-        confirm: async () => false,
       },
     });
     expect(await run(["setup", "--cwd", cwd], io)).toBe(0);
@@ -100,12 +99,12 @@ describe("run", () => {
     const { files, fs } = mem(["Cargo.toml"], {
       [join(cwd, "Cargo.toml")]:
         `datasources-register = { version = "0.1.0", features = ["json"] }\n`,
-      [join(cwd, ".env")]: "DATASOURCE_PROVIDER=json\n",
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\n",
     });
     const io = deps(fs);
     expect(await run(["add", "sqlite", "--cwd", cwd, "--ecosystem", "rust"], io)).toBe(0);
     expect(files[join(cwd, "Cargo.toml")]).toMatch(/features = \["json", "sqlite"\]/);
-    expect(files[join(cwd, ".env")]).toMatch(/DATASOURCE_PROVIDERS=json,sqlite/);
+    expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=json,sqlite/);
     expect(await run(["remove", "json", "--cwd", cwd, "--ecosystem", "rust"], io)).toBe(0);
     const dry = deps(fs);
     expect(await run(["remove", "sqlite", "--cwd", cwd, "--dry-run"], dry)).toBe(0);
@@ -119,7 +118,7 @@ describe("run", () => {
     });
     const io = deps(fs);
     expect(
-      await run(["add", "text", "--cwd", cwd, "--dry-run", "--no-engine"], io),
+      await run(["add", "text", "--cwd", cwd, "--dry-run"], io),
     ).toBe(0);
     expect(io.ran).toEqual([]);
     expect(io.logs.some((line) => line.includes("dotnet add"))).toBe(true);

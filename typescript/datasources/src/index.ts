@@ -59,6 +59,7 @@ export {
   formatElapsed,
 } from "./ConsoleCommandMiddleware.ts";
 export { Datasource } from "./Datasource.ts";
+export { providerFromUrl } from "./providerFromUrl.ts";
 export { DatasourceError } from "./DatasourceError.ts";
 export type { Cell, Cells } from "./converters/Cell.ts";
 export type { Constructable } from "./converters/Constructable.ts";

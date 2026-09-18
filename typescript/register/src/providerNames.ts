@@ -1,4 +1,4 @@
-import type { DatasourceOptions } from "@datasources/core";
+import { providerFromUrl, type DatasourceOptions } from "@datasources/core";
 
 const text = (options: DatasourceOptions, key: string): string | undefined => {
   const value = options[key];
@@ -12,7 +12,9 @@ const split = (value: string | undefined): string[] =>
     .filter((name) => name.length > 0);
 
 export const providerNames = (options: DatasourceOptions): string[] => {
-  const names = [...new Set(split(text(options, "providers") ?? text(options, "DATASOURCE_PROVIDERS")))];
-  const provider = text(options, "provider") ?? text(options, "DATASOURCE_PROVIDER");
+  const names = [...new Set(split(text(options, "providers") ?? text(options, "INSTALLED_PROVIDERS")))];
+  const provider =
+    text(options, "provider") ??
+    providerFromUrl(text(options, "url") ?? text(options, "DATABASE_URL") ?? "");
   return provider && !names.includes(provider) ? [...names, provider] : names;
 };

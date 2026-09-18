@@ -35,7 +35,7 @@ cargo add datasources-json
 
 ## Setup
 
-Add dialect packages and write a local `.env` with `@datasources/cli`. Core does not read `.env`; the app loads it, then registers providers and defaults.
+Add dialect packages and write a local `.env` with [`@datasources/cli`](./cli.md). Core does not read `.env`; the app loads it, then registers providers and defaults.
 
 ```sh
 npx @datasources/cli add sqlite
@@ -43,16 +43,14 @@ npx @datasources/cli add sqlite
 
 Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
 
-The optional install helper (`Datasources.Hosting` / `datasources-register` / `@datasources/register`) registers each name in `providers` / `DATASOURCE_PROVIDERS`, always includes `provider` / `DATASOURCE_PROVIDER`, then sets defaults. Connections are constructed **closed**; open on first use.
+The optional install helper (`Datasources.Hosting` / `datasources-register` / `@datasources/register`) registers each name in `providers` / `INSTALLED_PROVIDERS`, always includes the `DATABASE_URL` scheme, then sets defaults. Connections are constructed **closed**; open on first use.
 
 ::: dialects
 ```csharp
 var options = new Dictionary<string, string?>
 {
-    ["provider"] = Environment.GetEnvironmentVariable("DATASOURCE_PROVIDER") ?? "sqlite",
-    ["providers"] = Environment.GetEnvironmentVariable("DATASOURCE_PROVIDERS"),
-    ["filename"] = Environment.GetEnvironmentVariable("SQLITE_FILENAME") ?? ":memory:",
-    ["url"] = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ["providers"] = Environment.GetEnvironmentVariable("INSTALLED_PROVIDERS"),
+    ["url"] = Environment.GetEnvironmentVariable("DATABASE_URL") ?? "sqlite:///:memory:"
 };
 DatasourceInstall.From(options);
 
@@ -65,9 +63,8 @@ use datasources::create_default;
 use datasources_register::register_from;
 
 let options = HashMap::from([
-    ("provider".into(), std::env::var("DATASOURCE_PROVIDER").unwrap_or_else(|_| "sqlite".into())),
-    ("providers".into(), std::env::var("DATASOURCE_PROVIDERS").unwrap_or_default()),
-    ("filename".into(), std::env::var("SQLITE_FILENAME").unwrap_or_else(|_| ":memory:".into())),
+    ("providers".into(), std::env::var("INSTALLED_PROVIDERS").unwrap_or_default()),
+    ("url".into(), std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:///:memory:".into())),
 ]);
 register_from(options)?;
 
@@ -79,10 +76,8 @@ import { Datasource } from "@datasources/core";
 import { install } from "@datasources/register";
 
 await install({
-  provider: process.env.DATASOURCE_PROVIDER ?? "sqlite",
-  providers: process.env.DATASOURCE_PROVIDERS,
-  filename: process.env.SQLITE_FILENAME ?? ":memory:",
-  url: process.env.DATABASE_URL,
+  providers: process.env.INSTALLED_PROVIDERS,
+  url: process.env.DATABASE_URL ?? "sqlite:///:memory:",
 });
 
 const datasource = Datasource.create();

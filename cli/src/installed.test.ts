@@ -28,7 +28,6 @@ datasources-sqlite = { path = "../sqlite" }
     expect(
       csharpProviders(`
 <PackageReference Include="Datasources.Sqlite" />
-<PackageReference Include="Datasources.Sqlite.Microsoft" />
 <ProjectReference Include="..\\Json\\Datasources.Json.csproj" />
 `),
     ).toEqual(["json", "sqlite"]);

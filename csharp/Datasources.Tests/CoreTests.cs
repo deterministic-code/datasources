@@ -270,8 +270,7 @@ public class CoreTests
         Datasource.Register(new MockDatasource("sqlite"));
         Datasource.Defaults(new Dictionary<string, string?>
         {
-            ["provider"] = "sqlite",
-            ["filename"] = ":memory:"
+            ["url"] = "sqlite:///:memory:"
         });
         var ds = Datasource.Create();
         Assert.Equal("sqlite", ds.Provider);

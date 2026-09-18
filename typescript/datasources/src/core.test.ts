@@ -390,7 +390,7 @@ describe("Datasource registry", () => {
   it("requires consumer defaults when provider is omitted", async () => {
     expect(() => Datasource.create()).toThrow(DatasourceError);
     Datasource.register(new MockDatasource("sqlite"));
-    Datasource.defaults({ provider: "sqlite", filename: ":memory:" });
+    Datasource.defaults({ url: "sqlite:///:memory:" });
     const ds = Datasource.create();
     expect(ds.provider).toBe("sqlite");
     const connection = await ds.createConnection();

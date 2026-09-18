@@ -1,15 +1,13 @@
 import { providers, type Ecosystem } from "./catalog.ts";
 import { isEcosystem } from "./detect.ts";
 import { answersFromEnv, ensureProviders, type EnvMap } from "./env.ts";
+import { providerFromUrl } from "./providerFromUrl.ts";
 
 export type SetupAnswers = {
   ecosystem?: Ecosystem;
-  provider: string;
   providers: string[];
-  filename: string;
   url: string;
   schema: string;
-  engine: boolean;
 };
 
 export type Prompter = {
@@ -23,7 +21,6 @@ export type Prompter = {
     choices: { name: string; value: string; checked: boolean }[];
   }) => Promise<string[]>;
   input: (opts: { message: string; default: string }) => Promise<string>;
-  confirm: (opts: { message: string; default: boolean }) => Promise<boolean>;
 };
 
 export const promptSetup = async (
@@ -44,40 +41,32 @@ export const promptSetup = async (
             choices: found.map((value) => ({ name: value, value })),
             default: found[0]!,
           })));
-  const provider = await prompt.select({
-    message: "Default provider",
-    choices: providers.map((value) => ({ name: value, value })),
-    default: defaults.provider,
+  const fromUrl = providerFromUrl(defaults.url);
+  const selected = await prompt.checkbox({
+    message: "Providers",
+    choices: providers.map((value) => ({
+      name: value,
+      value,
+      checked: defaults.providers.includes(value) || value === fromUrl,
+    })),
   });
-  const selected = ensureProviders(
-    await prompt.checkbox({
-      message: "Providers",
-      choices: providers.map((value) => ({
-        name: value,
-        value,
-        checked: defaults.providers.includes(value) || value === provider,
-      })),
-    }),
-    provider,
-  );
-  const filename = selected.includes("sqlite")
-    ? await prompt.input({ message: "SQLITE_FILENAME", default: defaults.filename })
-    : defaults.filename;
-  const url = await prompt.input({ message: "DATABASE_URL", default: defaults.url });
+  const url = await prompt.input({
+    message: "DATABASE_URL",
+    default:
+      defaults.url || (selected.includes("sqlite") ? "sqlite:///:memory:" : ""),
+  });
   const schema = await prompt.input({ message: "DATABASE_SCHEMA", default: defaults.schema });
-  const engine = selected.some((name) => name === "sqlite" || name === "mysql" || name === "postgres")
-    ? await prompt.confirm({ message: "Install native engines", default: true })
-    : false;
-  return { ecosystem, provider, providers: selected, filename, url, schema, engine };
+  return { ecosystem, providers: selected, url, schema };
 };
 
 const ecosystemOr = (value: string): Ecosystem | undefined =>
   isEcosystem(value) ? value : undefined;
 
 export const envFromAnswers = (answers: SetupAnswers): EnvMap => ({
-  DATASOURCE_PROVIDER: answers.provider,
-  DATASOURCE_PROVIDERS: ensureProviders(answers.providers, answers.provider).join(","),
-  SQLITE_FILENAME: answers.filename,
+  INSTALLED_PROVIDERS: ensureProviders(
+    answers.providers,
+    providerFromUrl(answers.url) ?? answers.providers[0] ?? "sqlite",
+  ).join(","),
   DATABASE_URL: answers.url,
   DATABASE_SCHEMA: answers.schema,
 });

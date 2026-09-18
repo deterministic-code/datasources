@@ -3,29 +3,23 @@ import { csharpTarget } from "./detect.ts";
 
 export type Proc = { command: string; args: string[] };
 
-export const addCommands = (
-  ecosystem: Ecosystem,
-  names: Provider[],
-  engine: boolean,
-  entries: string[],
-): Proc[] =>
+export const addCommands = (ecosystem: Ecosystem, names: Provider[], entries: string[]): Proc[] =>
   ({
     ts: () => npmInstall(names),
     rust: () => cargoAdd(names),
-    csharp: () => dotnetAdd(names, engine, csharpTarget(entries)),
+    csharp: () => dotnetAdd(names, csharpTarget(entries)),
   })[ecosystem]();
 
 export const removeCommands = (
   ecosystem: Ecosystem,
   names: Provider[],
-  engine: boolean,
   remaining: Provider[],
   entries: string[],
 ): Proc[] =>
   ({
     ts: () => npmUninstall(names),
     rust: () => cargoRemove(names, remaining),
-    csharp: () => dotnetRemove(names, engine, remaining, csharpTarget(entries)),
+    csharp: () => dotnetRemove(names, csharpTarget(entries)),
   })[ecosystem]();
 
 const npmInstall = (names: Provider[]): Proc[] => [
@@ -64,51 +58,22 @@ const cargoRemove = (names: Provider[], remaining: Provider[]): Proc[] => [
     : []),
 ];
 
-const dotnetAdd = (names: Provider[], engine: boolean, project: string): Proc[] => {
+const dotnetAdd = (names: Provider[], project: string): Proc[] => {
   const prefix = project === "." ? [] : [project];
   return [
     { command: "dotnet", args: ["add", ...prefix, "package", host.csharp.core] },
     { command: "dotnet", args: ["add", ...prefix, "package", host.csharp.register] },
-    ...names.flatMap((name) => [
-      { command: "dotnet", args: ["add", ...prefix, "package", catalog[name].nuget] },
-      ...(engine && catalog[name].nugetEngine
-        ? [{ command: "dotnet", args: ["add", ...prefix, "package", catalog[name].nugetEngine] }]
-        : []),
-    ]),
-  ];
-};
-
-const dotnetRemove = (
-  names: Provider[],
-  engine: boolean,
-  remaining: Provider[],
-  project: string,
-): Proc[] => {
-  const prefix = project === "." ? [] : [project];
-  const engines = enginePackages(names, engine, "nugetEngine").filter(
-    (pkg) => !enginePackages(remaining, true, "nugetEngine").includes(pkg),
-  );
-  return [
     ...names.map((name) => ({
       command: "dotnet",
-      args: ["remove", ...prefix, "package", catalog[name].nuget],
+      args: ["add", ...prefix, "package", catalog[name].nuget],
     })),
-    ...engines.map((pkg) => ({ command: "dotnet", args: ["remove", ...prefix, "package", pkg] })),
   ];
 };
 
-const enginePackages = (
-  names: Provider[],
-  engine: boolean,
-  key: "nugetEngine",
-): string[] =>
-  engine
-    ? [
-        ...new Set(
-          names.flatMap((name) => {
-            const pkg = catalog[name][key];
-            return pkg ? [pkg] : [];
-          }),
-        ),
-      ]
-    : [];
+const dotnetRemove = (names: Provider[], project: string): Proc[] => {
+  const prefix = project === "." ? [] : [project];
+  return names.map((name) => ({
+    command: "dotnet",
+    args: ["remove", ...prefix, "package", catalog[name].nuget],
+  }));
+};

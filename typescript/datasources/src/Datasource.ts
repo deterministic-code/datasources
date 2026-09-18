@@ -3,14 +3,18 @@ import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import type { IDatasource } from "./IDatasource.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
+import { providerFromUrl } from "./providerFromUrl.ts";
 
 const registry = new Map<string, IDatasourceFactory>();
 let specified: DatasourceOptions | undefined;
 
-const providerName = (options?: DatasourceOptions) => {
-  const value = options?.provider;
-  return typeof value === "string" ? value : undefined;
+const text = (options: DatasourceOptions | undefined, key: string): string | undefined => {
+  const value = options?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 };
+
+const providerName = (options?: DatasourceOptions) =>
+  text(options, "provider") ?? providerFromUrl(text(options, "url") ?? text(options, "DATABASE_URL") ?? "");
 
 export class Datasource {
   static defaults = (options: DatasourceOptions): void => {

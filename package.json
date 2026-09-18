@@ -2,7 +2,7 @@
   "name": "datasources",
   "private": true,
   "scripts": {
-    "test": "npm test --prefix typescript",
+    "test": "npm test --prefix typescript && npm test --prefix cli",
     "test:e2e": "npm run test:e2e --prefix typescript --",
     "test:e2e:verbose": "npm run test:e2e:verbose --prefix typescript",
     "test:e2e:ci": "npm run test:e2e:ci --prefix typescript --",
@@ -11,8 +11,8 @@
     "docs": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:readme": "node scripts/generate-readme.mjs",
-    "setup": "node --experimental-strip-types typescript/cli/src/main.ts setup",
-    "cli": "node --experimental-strip-types typescript/cli/src/main.ts"
+    "setup": "node --experimental-strip-types cli/src/main.ts setup",
+    "cli": "node --experimental-strip-types cli/src/main.ts"
   },
   "devDependencies": {
     "vitepress": "^1.6.4"

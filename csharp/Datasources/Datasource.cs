@@ -20,6 +20,7 @@ public static class Datasource
     public static IDatasource Create(string? provider = null, object? options = null)
     {
         var name = provider ?? Get(Specified, "provider")
+            ?? ProviderFromUrl.From(Get(Specified, "url") ?? Get(Specified, "DATABASE_URL"))
             ?? throw new DatasourceException("Datasource defaults are not specified");
         return Factories.TryGetValue(name, out var factory)
             ? factory.Create(options ?? Specified)
