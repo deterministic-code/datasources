@@ -6,18 +6,18 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 | Feature | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
-| Datasource | [✅](./sections/datasource.md) | [✅](./sections/datasource.md) | [✅](./sections/datasource.md) |
-| Mapping | [✅](./sections/mappers.md#mappers) | [✅](./sections/mappers.md#mappers) | [✅](./sections/mappers.md#mappers) |
-| Type Converters | [✅](./sections/type-converters.md#typeconverters) | [✅](./sections/type-converters.md#typeconverters) | [✅](./sections/type-converters.md#typeconverters) |
-| Connection | [✅](./sections/connection.md) | [✅](./sections/connection.md) | [✅](./sections/connection.md) |
-| Transaction | [✅](./sections/connection.md#transaction) | [✅](./sections/connection.md#transaction) | [✅](./sections/connection.md#transaction) |
-| Command | [✅](./sections/command.md) | [✅](./sections/command.md) | [✅](./sections/command.md) |
-| Reader | [✅](./sections/command.md#reader) | [✅](./sections/command.md#reader) | [✅](./sections/command.md#reader) |
-| Statements | [✅](./sections/builders.md) | [✅](./sections/builders.md) | [✅](./sections/builders.md) |
-| Readonly repository | [✅](./sections/repositories.md#readonly-repository) | [✅](./sections/repositories.md#readonly-repository) | [✅](./sections/repositories.md#readonly-repository) |
-| CRUD repository | [✅](./sections/repositories.md#crud-repository) | [✅](./sections/repositories.md#crud-repository) | [✅](./sections/repositories.md#crud-repository) |
-| Enriched repository | [✅](./sections/repositories.md#enriched-repository) | [✅](./sections/repositories.md#enriched-repository) | [✅](./sections/repositories.md#enriched-repository) |
-| Bulk repository | [✅](./sections/repositories.md#bulk-repository) | [✅](./sections/repositories.md#bulk-repository) | [✅](./sections/repositories.md#bulk-repository) |
+| [Datasource](./sections/datasource.md) | ✅ | ✅ | ✅ |
+| [Mapping](./sections/mappers.md#mappers) | ✅ | ✅ | ✅ |
+| [Type Converters](./sections/type-converters.md#typeconverters) | ✅ | ✅ | ✅ |
+| [Connection](./sections/connection.md) | ✅ | ✅ | ✅ |
+| [Transaction](./sections/connection.md#transaction) | ✅ | ✅ | ✅ |
+| [Command](./sections/command.md) | ✅ | ✅ | ✅ |
+| [Reader](./sections/command.md#reader) | ✅ | ✅ | ✅ |
+| [Statements](./sections/builders.md) | ✅ | ✅ | ✅ |
+| [Readonly repository](./sections/repositories.md#readonly-repository) | ✅ | ✅ | ✅ |
+| [CRUD repository](./sections/repositories.md#crud-repository) | ✅ | ✅ | ✅ |
+| [Enriched repository](./sections/repositories.md#enriched-repository) | ✅ | ✅ | ✅ |
+| [Bulk repository](./sections/repositories.md#bulk-repository) | ✅ | ✅ | ✅ |
 
 ## Providers
 
