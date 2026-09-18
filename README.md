@@ -13,8 +13,6 @@ The feature stack starts with standard data-access modules for commands, connect
 
 ## QuickStart
 
-Register a factory, then create by provider name. Install only the dialect packages you use.
-
 ### Installation
 
 ```sh
@@ -277,7 +275,7 @@ const mapper = new TransformMapper<Nested, Flat>(
 const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
-See [Mappers](#mapping) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
+See [Mappers](#mappers) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
 
 ### Type Converter
 
