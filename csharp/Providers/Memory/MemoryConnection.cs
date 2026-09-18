@@ -8,7 +8,7 @@ public sealed class MemoryConnection : IConnection
     public string Collection { get; set; }
     public string Provider => "memory";
     public ICommand CreateCommand() => new MemoryCommand(this);
-    public bool Opened { get; private set; }
+    public bool IsOpen { get; private set; }
     public bool InTransaction { get; private set; }
     private readonly object? _data;
     private Dictionary<string, List<Row>>? _snapshot;
@@ -23,16 +23,16 @@ public sealed class MemoryConnection : IConnection
 
     public Task Open()
     {
-        if (Opened) return Task.CompletedTask;
+        if (IsOpen) return Task.CompletedTask;
         if (_data is not null) Store.Seed(_data, Collection);
         Store.GetCollection(Collection);
-        Opened = true;
+        IsOpen = true;
         return Task.CompletedTask;
     }
 
     public Task Close()
     {
-        Opened = false;
+        IsOpen = false;
         return Task.CompletedTask;
     }
 
@@ -61,6 +61,6 @@ public sealed class MemoryConnection : IConnection
 
     public void EnsureOpen()
     {
-        if (!Opened) throw new DatasourceException("Connection is not open");
+        if (!IsOpen) throw new DatasourceException("Connection is not open");
     }
 }

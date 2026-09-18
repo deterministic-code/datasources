@@ -193,7 +193,7 @@ describe("SqliteConnection", () => {
     const connection = new SqliteConnection({ filename: "x.db", driver });
     await connection.open();
     await connection.open();
-    expect(connection.opened).toBe(true);
+    expect(connection.isOpen).toBe(true);
     const txn = await connection.startTransaction();
     await txn.commit();
     const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);

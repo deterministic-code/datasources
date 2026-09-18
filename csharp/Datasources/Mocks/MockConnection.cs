@@ -8,7 +8,7 @@ public sealed class MockConnection : IConnection
     public Exception? OpenError { get; set; }
     public Exception? CloseError { get; set; }
     public Exception? StartTransactionError { get; set; }
-    public bool Opened { get; private set; }
+    public bool IsOpen { get; private set; }
     public ITransaction Transaction { get; }
     public string Provider { get; set; } = "mock";
     public ICommand? Command { get; set; }
@@ -21,7 +21,7 @@ public sealed class MockConnection : IConnection
     {
         OpenCalls++;
         if (OpenError is not null) throw OpenError;
-        Opened = true;
+        IsOpen = true;
         return Task.CompletedTask;
     }
 
@@ -29,7 +29,7 @@ public sealed class MockConnection : IConnection
     {
         CloseCalls++;
         if (CloseError is not null) throw CloseError;
-        Opened = false;
+        IsOpen = false;
         return Task.CompletedTask;
     }
 

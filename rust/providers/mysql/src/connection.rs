@@ -34,7 +34,7 @@ impl Connection for MysqlConnection {
         "mysql"
     }
 
-    fn opened(&self) -> bool {
+    fn is_open(&self) -> bool {
         *self.opened.lock().unwrap()
     }
 

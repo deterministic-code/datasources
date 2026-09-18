@@ -26,7 +26,7 @@ impl Connection for StubConnection {
         &self.provider
     }
 
-    fn opened(&self) -> bool {
+    fn is_open(&self) -> bool {
         false
     }
 
@@ -70,8 +70,8 @@ macro_rules! named_stub_connection {
             fn provider(&self) -> &str {
                 self.inner.provider()
             }
-            fn opened(&self) -> bool {
-                self.inner.opened()
+            fn is_open(&self) -> bool {
+                self.inner.is_open()
             }
             fn create_command(&self) -> std::sync::Arc<dyn $crate::Command> {
                 self.inner.create_command()

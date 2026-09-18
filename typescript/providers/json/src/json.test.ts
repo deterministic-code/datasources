@@ -116,7 +116,7 @@ describe("JsonConnection", () => {
     await connection.open();
     expect(connection.getCollection()).toEqual([{ id: 1 }]);
     await connection.close();
-    expect(connection.opened).toBe(false);
+    expect(connection.isOpen).toBe(false);
   });
 
   it("loads an existing file and starts empty when missing", async () => {

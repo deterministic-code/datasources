@@ -5,7 +5,7 @@ import { StubCommand } from "./StubCommand.ts";
 import { notImplemented } from "./notImplemented.ts";
 
 export class StubConnection implements IConnection {
-  opened = false;
+  isOpen = false;
   constructor(readonly provider: string) {}
 
   createCommand = (): ICommand => new StubCommand(this.provider, this);

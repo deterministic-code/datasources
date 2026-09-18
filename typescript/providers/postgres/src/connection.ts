@@ -16,7 +16,7 @@ export class PostgresConnection implements IConnection {
   url: string;
   schema?: string;
   driver: IPostgresDriver;
-  opened = false;
+  isOpen = false;
 
   constructor(options: PostgresConnectionOptions = {}) {
     this.url = options.url ?? "";
@@ -27,14 +27,14 @@ export class PostgresConnection implements IConnection {
   createCommand = (): ICommand => new PostgresCommand(this);
 
   async open(): Promise<void> {
-    if (this.opened) return;
+    if (this.isOpen) return;
     await this.driver.open(this.url);
-    this.opened = true;
+    this.isOpen = true;
   }
 
   async close(): Promise<void> {
     await this.driver.close();
-    this.opened = false;
+    this.isOpen = false;
   }
 
   async startTransaction(
@@ -46,6 +46,6 @@ export class PostgresConnection implements IConnection {
   }
 
   ensureOpen(): void {
-    if (!this.opened) throw new DatasourceError("Connection is not open");
+    if (!this.isOpen) throw new DatasourceError("Connection is not open");
   }
 }

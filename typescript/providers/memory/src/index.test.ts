@@ -81,7 +81,7 @@ describe("MemoryConnection", () => {
     await connection.open();
     expect(connection.getCollection()).toEqual([{ id: 1 }]);
     await connection.close();
-    expect(connection.opened).toBe(false);
+    expect(connection.isOpen).toBe(false);
   });
 
   it("uses a named collection and shared store", async () => {

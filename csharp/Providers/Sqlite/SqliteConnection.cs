@@ -8,7 +8,7 @@ public sealed class SqliteConnection : IConnection
     public ISqliteDriver Driver { get; }
     public string Provider => "sqlite";
     public ICommand CreateCommand() => new SqliteCommand(this);
-    public bool Opened { get; private set; }
+    public bool IsOpen { get; private set; }
 
     public SqliteConnection(SqliteConnectionOptions? options = null)
     {
@@ -19,15 +19,15 @@ public sealed class SqliteConnection : IConnection
 
     public async Task Open()
     {
-        if (Opened) return;
+        if (IsOpen) return;
         await Driver.Open(Filename);
-        Opened = true;
+        IsOpen = true;
     }
 
     public async Task Close()
     {
         await Driver.Close();
-        Opened = false;
+        IsOpen = false;
     }
 
     public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
@@ -39,6 +39,6 @@ public sealed class SqliteConnection : IConnection
 
     public void EnsureOpen()
     {
-        if (!Opened) throw new DatasourceException("Connection is not open");
+        if (!IsOpen) throw new DatasourceException("Connection is not open");
     }
 }

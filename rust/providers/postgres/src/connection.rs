@@ -41,7 +41,7 @@ impl Connection for PostgresConnection {
         "postgres"
     }
 
-    fn opened(&self) -> bool {
+    fn is_open(&self) -> bool {
         *self.opened.lock().unwrap()
     }
 

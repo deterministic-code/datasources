@@ -7,7 +7,7 @@ public sealed class PostgresConnection : IConnection
     public IPostgresDriver Driver { get; }
     public string Provider => "postgres";
     public ICommand CreateCommand() => new PostgresCommand(this);
-    public bool Opened { get; private set; }
+    public bool IsOpen { get; private set; }
 
     public PostgresConnection(PostgresConnectionOptions? options = null)
     {
@@ -19,15 +19,15 @@ public sealed class PostgresConnection : IConnection
 
     public async Task Open()
     {
-        if (Opened) return;
+        if (IsOpen) return;
         await Driver.Open(Url);
-        Opened = true;
+        IsOpen = true;
     }
 
     public async Task Close()
     {
         await Driver.Close();
-        Opened = false;
+        IsOpen = false;
     }
 
     public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
@@ -39,6 +39,6 @@ public sealed class PostgresConnection : IConnection
 
     public void EnsureOpen()
     {
-        if (!Opened) throw new DatasourceException("Connection is not open");
+        if (!IsOpen) throw new DatasourceException("Connection is not open");
     }
 }
