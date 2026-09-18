@@ -32,9 +32,8 @@ pages:
     group: Reference
     hash: reader
   - path: sections/builders.md
-    title: Query / Where
+    title: Statements
     group: Reference
-    hash: query-where
   - path: sections/repositories.md
     title: Readonly repository
     group: Reference
