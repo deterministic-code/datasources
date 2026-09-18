@@ -8,6 +8,7 @@ import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts"
 class Item {}
 
 const emptyReadonly = (): IReadonlyRepository => ({
+  type: Object,
   getSingle: async () => undefined,
   async *get() {},
 });

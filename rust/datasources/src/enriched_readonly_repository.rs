@@ -9,6 +9,7 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::where_trait::Where;
 use async_trait::async_trait;
+use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct EnrichedReadonlyRepository {
@@ -107,6 +108,10 @@ impl Enriched for EnrichedReadonlyRepository {
 
 #[async_trait]
 impl ReadonlyRepository for EnrichedReadonlyRepository {
+    fn entity_type(&self) -> TypeId {
+        self.inner.entity_type()
+    }
+
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         Ok(self.get(query).await?.into_iter().next())
     }

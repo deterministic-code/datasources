@@ -1,18 +1,20 @@
+import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IQuery } from "../IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../IWhere.ts";
 import { notImplemented } from "./notImplemented.ts";
 
-export class StubRepository<T = unknown> implements ICRUDRepository<T> {
+export class StubRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   constructor(
     readonly provider: string,
     _connection: IConnection,
-  ) {}
-
-  getSingle = async (_query?: IQuery | IWhere): Promise<T | undefined> =>
-    notImplemented(this.provider);
+    type: Constructable<T> = untyped<T>(),
+  ) {
+    super(type);
+  }
 
   async *get(_query?: IQuery | IWhere): AsyncIterable<T> {
     notImplemented(this.provider);

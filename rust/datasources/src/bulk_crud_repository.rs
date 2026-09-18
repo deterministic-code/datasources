@@ -9,6 +9,7 @@ use crate::value::Value;
 use crate::where_trait::Where;
 use crate::DeepCRUDRepository;
 use async_trait::async_trait;
+use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct BulkCRUDRepository {
@@ -124,6 +125,10 @@ impl Enriched for BulkCRUDRepository {
 
 #[async_trait]
 impl ReadonlyRepository for BulkCRUDRepository {
+    fn entity_type(&self) -> TypeId {
+        self.inner.entity_type()
+    }
+
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.inner.get_single(query).await
     }

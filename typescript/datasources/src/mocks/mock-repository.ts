@@ -1,10 +1,12 @@
+import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IQuery } from "../IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../IWhere.ts";
 
-export class MockRepository<T = unknown> implements ICRUDRepository<T> {
+export class MockRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   items: T[] = [];
   getSingleCalls: Array<IQuery | IWhere | undefined> = [];
   getCalls: Array<IQuery | IWhere | undefined> = [];
@@ -20,7 +22,12 @@ export class MockRepository<T = unknown> implements ICRUDRepository<T> {
   updateResponse: Response = { result: undefined, rowsAffected: 1 };
   deleteResponse: Response = { result: undefined, rowsAffected: 1 };
 
-  constructor(_connection: IConnection) {}
+  constructor(
+    _connection: IConnection,
+    type: Constructable<T> = untyped<T>(),
+  ) {
+    super(type);
+  }
 
   async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     this.getSingleCalls.push(query);

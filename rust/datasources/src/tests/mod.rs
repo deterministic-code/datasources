@@ -8,6 +8,7 @@ use crate::converters::{Cells, RowTypeConverter};
 use crate::repository_tree_node::encode_rows;
 use crate::*;
 use async_trait::async_trait;
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -951,6 +952,23 @@ async fn table_repository() {
     Repository::from_type::<Item>(MockConnection::new()).unwrap();
 }
 
+#[test]
+fn repository_entity_type() {
+    let typed = Repository::from_type::<Item>(MockConnection::new()).unwrap();
+    assert_eq!(typed.entity_type(), TypeId::of::<Item>());
+    let untyped = Repository::new(create_repository_builder_options::<Item>(
+        MockConnection::new(),
+    ))
+    .unwrap();
+    assert_eq!(untyped.entity_type(), TypeId::of::<Row>());
+    assert_eq!(
+        StubRepository::new("memory").entity_type(),
+        TypeId::of::<Row>()
+    );
+    let deep = DeepCRUDRepository::new(Arc::new(typed));
+    assert_eq!(deep.entity_type(), TypeId::of::<Item>());
+}
+
 fn user_contacts_mapper() -> TransformMapper<Row, Row> {
     TransformMapper::new(
         |mut row: Row| {
@@ -1295,6 +1313,10 @@ struct CountingRepository {
 
 #[async_trait]
 impl ReadonlyRepository for CountingRepository {
+    fn entity_type(&self) -> TypeId {
+        self.inner.entity_type()
+    }
+
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         *self.get_singles.lock().unwrap() += 1;
         self.inner.get_single(query).await

@@ -14,6 +14,7 @@ use crate::row::Row;
 use crate::value::Value;
 use crate::where_trait::Where;
 use async_trait::async_trait;
+use std::any::TypeId;
 use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
@@ -331,6 +332,10 @@ impl Enriched for DeepCRUDRepository {
 
 #[async_trait]
 impl ReadonlyRepository for DeepCRUDRepository {
+    fn entity_type(&self) -> TypeId {
+        self.inner.entity_type()
+    }
+
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.enriched.get_single(query).await
     }

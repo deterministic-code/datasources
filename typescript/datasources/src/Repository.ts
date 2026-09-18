@@ -15,6 +15,7 @@ import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { parts } from "./RepositoryBuilder.ts";
+import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import type { StatementMapper } from "./mappers/StatementMapper.ts";
@@ -31,7 +32,7 @@ const isBuilt = <T>(
 ): value is BuiltRepository<T> =>
   "statements" in value && "rowConverter" in value && "statementMapper" in value;
 
-export class Repository<T = Cells> implements ICRUDRepository<T> {
+export class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   private readonly connection: IConnection;
   readonly rowConverter: TypeConverter<T, Cells>;
   readonly statementsMapper: StatementMapper<T>;
@@ -55,6 +56,7 @@ export class Repository<T = Cells> implements ICRUDRepository<T> {
             ? (typeOrOptions as RepositoryBuilderOptions<T>)
             : createRepositoryBuilderOptions(typeOrOptions as Constructable<T>, connection),
         );
+    super(built.type);
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
     this.statementsMapper = built.statementMapper;
@@ -67,11 +69,6 @@ export class Repository<T = Cells> implements ICRUDRepository<T> {
   addMiddleware = (middleware: ICommandMiddleware): this => {
     this.middlewares.push(middleware);
     return this;
-  };
-
-  getSingle = async (query?: IQuery | IWhere): Promise<T | undefined> => {
-    for await (const item of this.get(query)) return item;
-    return undefined;
   };
 
   async *get(query?: IQuery | IWhere): AsyncIterable<T> {
