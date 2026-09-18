@@ -242,7 +242,7 @@ await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 See [Repositories](#readonly-repository) for readonly, CRUD, and bulk.
 
-### Mapping
+### Mappers
 
 `TransformMapper` reshapes an already-converted object. Repository get is convert, then map.
 
@@ -344,7 +344,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | Feature | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
 | [Datasource](#datasource) | ✅ | ✅ | ✅ |
-| [Mapping](#mappers) | ✅ | ✅ | ✅ |
+| [Mappers](#mappers) | ✅ | ✅ | ✅ |
 | [Type Converters](#typeconverters) | ✅ | ✅ | ✅ |
 | [Connection](#connection) | ✅ | ✅ | ✅ |
 | [Transaction](#transaction) | ✅ | ✅ | ✅ |
