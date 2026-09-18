@@ -5,6 +5,7 @@ import { FlatToTypeMapper } from "./mappers/FlatToTypeMapper.ts";
 import { FlatToTypeReadonlyEnrichmentStrategy } from "./FlatToTypeReadonlyEnrichmentStrategy.ts";
 import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
+import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
 import type { IQuery } from "./IQuery.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -14,6 +15,7 @@ class Parent {
   id = 0;
   type_id = 0;
   type_name = "";
+  type?: TypeRow;
   children: Child[] = [];
 }
 
@@ -153,6 +155,12 @@ describe("EnrichedReadonlyRepository", () => {
     expect(await repo.getSingle()).toBeUndefined();
   });
 
+  it("enrich returns the same items", async () => {
+    const items = [parent(1, 10)];
+    const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository(items));
+    expect(await repo.enrich(items)).toBe(items);
+  });
+
   it("nests on a singular related object and skips strings", async () => {
     const repo = new EnrichedReadonlyRepository(
       new ListReadonlyRepository([
@@ -225,27 +233,119 @@ describe("EnrichedReadonlyRepository", () => {
     expect(children.getSingles).toBe(0);
   });
 
+  it("hashset assigns the related row when select is omitted", async () => {
+    const repo = new EnrichedReadonlyRepository(
+      new ListReadonlyRepository([parent(1, 10)]),
+      new HashsetOptimizedReadonlyEnrichmentStrategy(),
+    );
+    repo.addEnriched(
+      "type",
+      "type_id",
+      new ListReadonlyRepository([
+        Object.assign(new TypeRow(), { id: 10, name: "person" }),
+      ]),
+      "id",
+    );
+    const items = await collectAsync(repo.get());
+    expect(items[0]).toMatchObject({
+      type: { id: 10, name: "person" },
+    });
+  });
+
+  it("hashset skips missing keys and unmatched rows", async () => {
+    const blank = Object.assign(parent(2, 0), { type_id: undefined });
+    const repo = new EnrichedReadonlyRepository(
+      new ListReadonlyRepository([parent(1, 10), parent(3, 99), blank]),
+      new HashsetOptimizedReadonlyEnrichmentStrategy(),
+    );
+    repo.addEnriched(
+      "type_name",
+      "type_id",
+      new ListReadonlyRepository([
+        Object.assign(new TypeRow(), { id: 10, name: "person" }),
+      ]),
+      "id",
+      "name",
+    );
+    repo.addEnriched(
+      "children",
+      "id",
+      new ListReadonlyRepository([
+        Object.assign(new Child(), { label: "orphan" }),
+        Object.assign(new Child(), { parent_id: 1, label: "a" }),
+        Object.assign(new Child(), { parent_id: 1, label: "b" }),
+      ]),
+      "parent_id",
+      undefined,
+      true,
+    );
+    const items = await collectAsync(repo.get());
+    expect(items[0]?.type_name).toBe("person");
+    expect(items[0]?.children.map((child) => child.label)).toEqual(["a", "b"]);
+    expect(items[1]?.type_name).toBe("");
+    expect(items[1]?.children).toEqual([]);
+    expect(items[2]?.children).toEqual([]);
+    expect(new RepositoryTreeNode({}, "").value).toEqual({});
+    const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy();
+    await strategy.apply(
+      new ListReadonlyRepository<TypeRow>([]),
+      { into: "type_name", from: "type_id", by: "id" },
+      [{ id: 1 }],
+    );
+    await strategy.apply(
+      {
+        type: Object,
+        getSingle: async () => undefined,
+        async *get() {},
+      },
+      { into: "children", from: "id", by: "parent_id", many: true },
+      [{}],
+    );
+    await strategy.apply(
+      {
+        type: Object,
+        getSingle: async () => undefined,
+        async *get() {
+          yield { label: "missing" };
+          yield { parent_id: null, label: "n" };
+          yield { parent_id: undefined, label: "u" };
+          yield { parent_id: 1, label: "a" };
+          yield { parent_id: 1, label: "b" };
+        },
+      },
+      { into: "children", from: "id", by: "parent_id", many: true },
+      [{ id: 1 }, {}],
+    );
+  });
+
   it("collapses join rows with FlatToType", async () => {
+    const strategy = new FlatToTypeReadonlyEnrichmentStrategy(
+      new ListReadonlyRepository([
+        { id: 1, type_name: "person" },
+        { id: 2, type_name: "org" },
+      ]),
+      new FlatToTypeMapper({
+        key: "id",
+        fields: { id: "id", type_name: "type_name" },
+      }),
+      new TransformMapper(
+        (item) => item,
+        (item) => item,
+      ),
+    );
     const repo = new EnrichedReadonlyRepository(
       new ListReadonlyRepository<Parent>([]),
-      new FlatToTypeReadonlyEnrichmentStrategy(
-        new ListReadonlyRepository([
-          { id: 1, type_name: "person" },
-          { id: 2, type_name: "org" },
-        ]),
-        new FlatToTypeMapper({
-          key: "id",
-          fields: { id: "id", type_name: "type_name" },
-        }),
-        new TransformMapper(
-          (item) => item,
-          (item) => item,
-        ),
-      ),
+      strategy,
     );
     const items = await collectAsync(repo.get());
     expect(items.map((item) => item.id)).toEqual([1, 2]);
     expect(items.map((item) => item.type_name)).toEqual(["person", "org"]);
+    await strategy.enrich(repo.tree, items);
+    await strategy.apply(
+      new ListReadonlyRepository<TypeRow>([]),
+      { into: "type_name", from: "type_id", by: "id" },
+      items,
+    );
   });
 });
 
@@ -254,6 +354,7 @@ const counting = <T extends object>(
 ): IReadonlyRepository<T> & { gets: number; getSingles: number } => {
   const state = { gets: 0, getSingles: 0 };
   return {
+    type: inner.type,
     get gets() {
       return state.gets;
     },

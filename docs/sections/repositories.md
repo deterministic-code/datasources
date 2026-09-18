@@ -2,11 +2,14 @@
 
 Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C# / TypeScript) / `CRUDRepository` (Rust) adds `create`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
 
+`Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. SQL provider generic casts may report the row or dictionary type.
+
 ## Readonly repository
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` |
+| `Type` | `entity_type` | `type` |
 | `GetSingle` | `get_single` | `getSingle` |
 | `Get` | `get` | `get` |
 

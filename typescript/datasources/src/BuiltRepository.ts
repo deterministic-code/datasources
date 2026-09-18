@@ -1,5 +1,6 @@
 import type { IConnection } from "./IConnection.ts";
 import type { Cells } from "./converters/Cell.ts";
+import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { StatementMapper } from "./mappers/StatementMapper.ts";
 import type { RepositoryStatements } from "./RepositoryStatements.ts";
@@ -12,4 +13,5 @@ export type BuiltRepository<T = Cells> = {
   columns: string[];
   ids: string[];
   assignIdentityOnCreate: boolean;
+  type: Constructable<T>;
 };

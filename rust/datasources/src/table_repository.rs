@@ -18,6 +18,7 @@ use crate::table_repository_builder_options::RepositoryBuilderOptions;
 use crate::table_repository_statements::RepositoryStatements;
 use crate::where_trait::Where;
 use async_trait::async_trait;
+use std::any::TypeId;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -30,13 +31,16 @@ pub struct Repository {
     id: Vec<String>,
     ids: HashSet<String>,
     assign_identity_on_create: bool,
+    entity_type: TypeId,
 }
 
 impl Repository {
-    pub fn from_type<T: ConvertSchema>(connection: Arc<dyn Connection>) -> Result<Self> {
+    pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_builder_options::<T>(connection.clone());
         options.mapping = Some(RowTypeConverter::of::<T>());
-        Self::new(options)
+        let mut repo = Self::new(options)?;
+        repo.entity_type = TypeId::of::<T>();
+        Ok(repo)
     }
 
     pub fn new(options: RepositoryBuilderOptions) -> Result<Self> {
@@ -71,6 +75,7 @@ impl Repository {
             ids: ids.iter().cloned().collect(),
             id: ids,
             assign_identity_on_create,
+            entity_type: TypeId::of::<Row>(),
         }
     }
 
@@ -164,6 +169,10 @@ impl Repository {
 
 #[async_trait]
 impl ReadonlyRepository for Repository {
+    fn entity_type(&self) -> TypeId {
+        self.entity_type
+    }
+
     async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         let (text, params) = self.query_parts(query);
         self.read_single(text, params).await

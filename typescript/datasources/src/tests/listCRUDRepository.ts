@@ -1,5 +1,7 @@
+import type { Constructable } from "../converters/Constructable.ts";
 import type { IQuery } from "../IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
@@ -39,11 +41,18 @@ const setId = (item: object, id: number): void => {
   Object.assign(item, { [name]: id });
 };
 
-export class ListCRUDRepository<T extends object> implements ICRUDRepository<T> {
+export class ListCRUDRepository<T extends object>
+  extends ReadonlyRepository<T>
+  implements ICRUDRepository<T>
+{
   readonly items: T[];
   private nextId: number;
 
-  constructor(items: T[] = []) {
+  constructor(
+    items: T[] = [],
+    type: Constructable<T> = untyped<T>(),
+  ) {
+    super(type);
     this.items = [...items];
     this.nextId =
       items.reduce((max, item) => {
@@ -51,11 +60,6 @@ export class ListCRUDRepository<T extends object> implements ICRUDRepository<T> 
         return typeof id === "number" && id > max ? id : max;
       }, 0) + 1;
   }
-
-  getSingle = async (query?: IQuery | IWhere): Promise<T | undefined> => {
-    for await (const item of this.get(query)) return item;
-    return undefined;
-  };
 
   async *get(query?: IQuery | IWhere): AsyncIterable<T> {
     for (const item of this.items) if (matches(item, query)) yield item;

@@ -36,6 +36,9 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
       : applyLookup(via, enrichment, parents);
 }
 
+const hasKey = (value: Scalar | object | undefined): value is Scalar =>
+  value !== undefined && value !== null;
+
 const keysOf = (parents: object[], from: string): Map<string, Scalar> => {
   const keys = new Map<string, Scalar>();
   for (const parent of parents) {
@@ -58,7 +61,7 @@ const applyLookup = async <TRelated extends object>(
     WhereBuilder.in(enrichment.by, [...keys.values()]),
   )) {
     const by = props(item)[enrichment.by];
-    if (by !== undefined && by !== null) index.set(keyOf(by), item);
+    if (hasKey(by)) index.set(keyOf(by), item);
   }
   for (const parent of parents) {
     const key = props(parent)[enrichment.from];
@@ -85,11 +88,12 @@ const applyMany = async <TRelated extends object>(
     WhereBuilder.in(enrichment.by, [...keys.values()]),
   )) {
     const by = props(item)[enrichment.by];
-    if (by === undefined || by === null) continue;
-    const cacheKey = keyOf(by);
-    const list = index.get(cacheKey) ?? [];
-    list.push(item);
-    index.set(cacheKey, list);
+    if (hasKey(by)) {
+      const cacheKey = keyOf(by);
+      const list = index.get(cacheKey) ?? [];
+      list.push(item);
+      index.set(cacheKey, list);
+    }
   }
   for (const parent of parents) {
     const key = props(parent)[enrichment.from];

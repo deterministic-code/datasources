@@ -6,11 +6,13 @@ import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import type { IWhere } from "./IWhere.ts";
+import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 
 export class EnrichedReadonlyRepository<T extends object>
-  implements IReadonlyRepository<T>, IEnriched<T>
+  extends ReadonlyRepository<T>
+  implements IEnriched<T>
 {
   readonly tree: IRepositoryTree;
   private readonly strategy: IReadonlyEnrichmentStrategy<T>;
@@ -19,6 +21,7 @@ export class EnrichedReadonlyRepository<T extends object>
     private readonly inner: IReadonlyRepository<T>,
     strategy?: IReadonlyEnrichmentStrategy<T>,
   ) {
+    super(inner.type);
     this.strategy = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
     this.tree = new RepositoryTree(
       new RepositoryTreeNode(inner, "", undefined, undefined, undefined, this.strategy),
@@ -42,11 +45,6 @@ export class EnrichedReadonlyRepository<T extends object>
   enrich = async (items: T[]): Promise<T[]> => {
     await this.strategy.enrich(this.tree, items);
     return items;
-  };
-
-  getSingle = async (query?: IQuery | IWhere): Promise<T | undefined> => {
-    for await (const item of this.get(query)) return item;
-    return undefined;
   };
 
   async *get(query?: IQuery | IWhere): AsyncIterable<T> {

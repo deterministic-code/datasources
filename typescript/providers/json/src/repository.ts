@@ -1,6 +1,7 @@
 import {
   identityFilter,
   readerToAsyncIterable,
+  type Constructable,
   type IQuery,
   type ICRUDRepository,
   type Response,
@@ -11,7 +12,10 @@ import { JsonCommand } from "./command.ts";
 import { asRecord, matches, parseFilter } from "./filter.ts";
 
 export class JsonRepository<T = unknown> implements ICRUDRepository<T> {
-  constructor(private readonly connection: JsonConnection) {}
+  constructor(
+    private readonly connection: JsonConnection,
+    readonly type: Constructable<T> = Object as never as Constructable<T>,
+  ) {}
 
   async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     const reader = await new JsonCommand(this.connection).executeReader(
