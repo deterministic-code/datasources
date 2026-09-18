@@ -1,4 +1,4 @@
-# QuickStart
+# Quick Start
 
 ## Installation
 
@@ -6,6 +6,7 @@
 ```typescript
 npm install @datasources/core
 ---
+npm install @datasources/register
 npm install @datasources/sqlite
 npm install @datasources/mysql
 npm install @datasources/postgres
@@ -15,6 +16,7 @@ npm install @datasources/json
 ```csharp
 dotnet add package Datasources
 ---
+dotnet add package Datasources.Hosting
 dotnet add package Datasources.Sqlite
 dotnet add package Datasources.Sqlite.Microsoft
 dotnet add package Datasources.Mysql
@@ -25,6 +27,7 @@ dotnet add package Datasources.Json
 ```rust
 cargo add datasources
 ---
+cargo add datasources-register --features sqlite
 cargo add datasources-sqlite
 cargo add datasources-mysql
 cargo add datasources-postgres
@@ -35,57 +38,17 @@ cargo add datasources-json
 
 ## Setup
 
-Add dialect packages and write a local `.env` with [`@datasources/cli`](./cli.md). Core does not read `.env`; the app loads it, then registers providers and defaults.
+Run interactive setup.
+
+```sh
+npx @datasources/cli setup
+```
+
+Add a new datasource provider.
 
 ```sh
 npx @datasources/cli add sqlite
 ```
-
-Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
-
-The optional install helper (`Datasources.Hosting` / `datasources-register` / `@datasources/register`) registers each name in `providers` / `INSTALLED_PROVIDERS`, always includes the `DATABASE_URL` scheme, then sets defaults. Connections are constructed **closed**; open on first use.
-
-::: dialects
-```csharp
-var options = new Dictionary<string, string?>
-{
-    ["providers"] = Environment.GetEnvironmentVariable("INSTALLED_PROVIDERS"),
-    ["url"] = Environment.GetEnvironmentVariable("DATABASE_URL") ?? "sqlite:///:memory:"
-};
-DatasourceInstall.From(options);
-
-var datasource = Datasource.Create();
-var connection = await datasource.CreateConnection();
-```
-```rust
-use std::collections::HashMap;
-use datasources::create_default;
-use datasources_register::register_from;
-
-let options = HashMap::from([
-    ("providers".into(), std::env::var("INSTALLED_PROVIDERS").unwrap_or_default()),
-    ("url".into(), std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:///:memory:".into())),
-]);
-register_from(options)?;
-
-let datasource = create_default()?;
-let connection = datasource.create_connection().await?;
-```
-```typescript
-import { Datasource } from "@datasources/core";
-import { install } from "@datasources/register";
-
-await install({
-  providers: process.env.INSTALLED_PROVIDERS,
-  url: process.env.DATABASE_URL ?? "sqlite:///:memory:",
-});
-
-const datasource = Datasource.create();
-const connection = await datasource.createConnection();
-```
-:::
-
-Do not commit URLs with credentials. Production uses the real environment or a secrets manager.
 
 ## Readonly command
 
@@ -93,9 +56,7 @@ Start with `createCommand` and `executeReader`. The connection must be open.
 
 ::: dialects
 ```csharp
-Datasource.Register(SqliteDatasource.Instance);
-
-var ds = Datasource.Create("sqlite", new SqliteConnectionOptions { Filename = ":memory:" });
+var ds = Datasource.Create();
 var connection = await ds.CreateConnection();
 await connection.Open();
 
@@ -107,12 +68,9 @@ while (await reader.Next())
     Console.WriteLine(reader.Current);
 ```
 ```rust
-use datasources::{create, register, Parameter};
-use datasources_sqlite::SqliteDatasource;
+use datasources::{create_default, Parameter};
 
-register(SqliteDatasource::instance());
-
-let ds = create("sqlite", None)?;
+let ds = create_default()?;
 let connection = ds.create_connection().await?;
 connection.open().await?;
 
@@ -126,11 +84,8 @@ while reader.next().await? {
 ```
 ```typescript
 import { Datasource } from "@datasources/core";
-import { SqliteDatasource } from "@datasources/sqlite";
 
-Datasource.register(SqliteDatasource.instance);
-
-const ds = Datasource.create("sqlite", { filename: ":memory:" });
+const ds = Datasource.create();
 const connection = await ds.createConnection();
 await connection.open();
 

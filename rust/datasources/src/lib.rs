@@ -85,7 +85,7 @@ pub use datasource_error::DatasourceError;
 pub use datasource_factory::DatasourceFactory;
 pub use deep_crud_repository::DeepCRUDRepository;
 pub use default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-pub use defaults::defaults;
+pub use defaults::{bind_install, defaults};
 pub use enriched::Enriched;
 pub use enriched_readonly_repository::EnrichedReadonlyRepository;
 pub use enrichment::Enrichment;

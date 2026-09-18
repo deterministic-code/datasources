@@ -4,11 +4,32 @@ import {
 } from "@datasources/core";
 import { JsonDatasource } from "@datasources/json";
 import { MemoryDatasource } from "@datasources/memory";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { install } from "./install.ts";
 import { providerNames } from "./providerNames.ts";
 
+const envKeys = [
+  "INSTALLED_PROVIDERS",
+  "providers",
+  "DATABASE_URL",
+  "url",
+  "DATABASE_SCHEMA",
+  "provider",
+] as const;
+const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+
+beforeEach(() => {
+  for (const key of envKeys) delete process.env[key];
+});
+
 afterEach(() => Datasource.reset());
+
+afterAll(() => {
+  for (const key of envKeys) {
+    if (savedEnv[key] === undefined) delete process.env[key];
+    else process.env[key] = savedEnv[key];
+  }
+});
 
 describe("providerNames", () => {
   it("splits, de-dupes, and appends the default provider", () => {
@@ -40,6 +61,27 @@ describe("install", () => {
     expect(Datasource.registered().sort()).toEqual(["json", "memory"]);
     expect(Datasource.create().provider).toBe("memory");
     expect(Datasource.create("json").provider).toBe("json");
+  });
+
+  it("registers INSTALLED_PROVIDERS", async () => {
+    await install({
+      INSTALLED_PROVIDERS: "json,memory",
+      provider: "memory",
+    });
+    expect(Datasource.registered().sort()).toEqual(["json", "memory"]);
+    expect(Datasource.create().provider).toBe("memory");
+  });
+
+  it("creates from INSTALLED_PROVIDERS in the environment", () => {
+    process.env.INSTALLED_PROVIDERS = "json,memory";
+    process.env.provider = "memory";
+    expect(Datasource.create().provider).toBe("memory");
+    expect(Datasource.registered().sort()).toEqual(["json", "memory"]);
+  });
+
+  it("throws when the env package cannot be required", () => {
+    process.env.provider = "sqlite";
+    expect(() => Datasource.create()).toThrow(ProviderNotInstalledError);
   });
 
   it("throws when the name is unknown", async () => {

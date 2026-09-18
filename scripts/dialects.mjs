@@ -11,8 +11,8 @@ const LABELS = {
   js: "JavaScript",
 };
 
-const DIALECT_BLOCK = /^::: dialects\r?\n([\s\S]*?)^:::\s*$/gm;
-const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::\s*$/gm;
+const DIALECT_BLOCK = /^::: dialects\r?\n([\s\S]*?)^:::[ \t]*$/gm;
+const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
 
 export const labelFor = (lang) => LABELS[lang.toLowerCase()] ?? lang;

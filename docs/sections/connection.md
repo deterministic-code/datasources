@@ -58,7 +58,6 @@ Apps create the default datasource and connection at process start, then hold th
 
 ::: dialects
 ```csharp
-Datasource.Defaults(options);
 var datasource = Datasource.Create();
 var connection = await datasource.CreateConnection();
 
@@ -66,9 +65,8 @@ Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();
 ```
 ```rust
 use std::sync::Arc;
-use datasources::{create_default, defaults, Connection, Result};
+use datasources::{create_default, Connection, Result};
 
-defaults(options);
 let datasource = create_default()?;
 let connection = datasource.create_connection().await?;
 
@@ -80,7 +78,6 @@ async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
 }
 ```
 ```typescript
-Datasource.defaults(options);
 const datasource = Datasource.create();
 const connection = await datasource.createConnection();
 

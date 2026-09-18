@@ -2,7 +2,15 @@ namespace Datasources.Tests;
 
 public class DatasourceInstallTests
 {
-    public DatasourceInstallTests() => Datasource.Reset();
+    static readonly string[] EnvKeys =
+        ["INSTALLED_PROVIDERS", "providers", "DATABASE_URL", "url", "DATABASE_SCHEMA", "provider"];
+
+    public DatasourceInstallTests()
+    {
+        Datasource.Reset();
+        foreach (var key in EnvKeys)
+            Environment.SetEnvironmentVariable(key, null);
+    }
 
     [Fact]
     public void ProviderNamesFromListAndDefault()
@@ -39,6 +47,46 @@ public class DatasourceInstallTests
         Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
         Assert.Equal("memory", Datasource.Create().Provider);
         Assert.Equal("json", Datasource.Create("json").Provider);
+    }
+
+    [Fact]
+    public void DefaultsRegistersInstalledProviders()
+    {
+        Datasource.Defaults(new Dictionary<string, string?>
+        {
+            ["INSTALLED_PROVIDERS"] = "json,memory",
+            ["provider"] = "memory"
+        });
+        Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
+        Assert.Equal("memory", Datasource.Create().Provider);
+    }
+
+    [Fact]
+    public void CreateRegistersInstalledProviders()
+    {
+        Assert.Equal("json", Datasource.Create(null, new Dictionary<string, string?>
+        {
+            ["INSTALLED_PROVIDERS"] = "json,memory",
+            ["provider"] = "json"
+        }).Provider);
+        Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
+    }
+
+    [Fact]
+    public void CreateReadsInstalledProvidersFromEnvironment()
+    {
+        Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "json,memory");
+        Environment.SetEnvironmentVariable("provider", "memory");
+        try
+        {
+            Assert.Equal("memory", Datasource.Create().Provider);
+            Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", null);
+            Environment.SetEnvironmentVariable("provider", null);
+        }
     }
 
     [Fact]

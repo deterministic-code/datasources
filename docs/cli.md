@@ -1,6 +1,6 @@
 # Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. Core does not read `.env`; the app loads it, then registers providers and defaults.
+`@datasources/cli` installs provider packages and writes a local `.env`. Core does not parse a `.env` file; the app loads it into the process. `Create` / `create` / `create_default` then reads `INSTALLED_PROVIDERS` and `DATABASE_URL`, registers each listed factory, and creates.
 
 ```sh
 npx @datasources/cli setup
@@ -60,7 +60,7 @@ npx @datasources/cli remove postgres
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `INSTALLED_PROVIDERS` | scheme of `DATABASE_URL` | Comma-separated providers to install and register. |
+| `INSTALLED_PROVIDERS` | scheme of `DATABASE_URL` | Comma-separated providers `Create` registers. |
 | `DATABASE_URL` | `sqlite:///:memory:` | Connection URL. The scheme is the default provider. |
 | `DATABASE_SCHEMA` | *(empty)* | Schema / search path (postgres). |
 

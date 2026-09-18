@@ -20,11 +20,13 @@ public static class DatasourceInstall
         ["dynamodb"] = ("Datasources.DynamoDb", "Datasources.DynamoDb.DynamoDbDatasource")
     };
 
-    public static void From(IReadOnlyDictionary<string, string?> options)
+    public static void From(IReadOnlyDictionary<string, string?> options) =>
+        Datasource.Defaults(options);
+
+    public static void RegisterListed(IReadOnlyDictionary<string, string?> options)
     {
         foreach (var name in ProviderNames.From(options))
             Datasource.Register(Resolve(name));
-        Datasource.Defaults(options);
     }
 
     static IDatasourceFactory Resolve(string name) =>

@@ -405,6 +405,16 @@ async fn console_verbose_bodies() {
 #[test]
 fn registry() {
     reset();
+    for key in [
+        "INSTALLED_PROVIDERS",
+        "providers",
+        "DATABASE_URL",
+        "url",
+        "DATABASE_SCHEMA",
+        "provider",
+    ] {
+        std::env::remove_var(key);
+    }
     assert!(registered().is_empty());
     let factory = Arc::new(MockDatasource::new("json"));
     register(factory);
@@ -412,7 +422,7 @@ fn registry() {
     let created = create("json", None).unwrap();
     assert_eq!(created.provider(), "json");
     assert!(create_default().is_err());
-    defaults(HashMap::from([("url".into(), "json://".into())]));
+    defaults(HashMap::from([("url".into(), "json://".into())])).unwrap();
     assert_eq!(create_default().unwrap().provider(), "json");
     reset();
     assert!(create("json", None).is_err());

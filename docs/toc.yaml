@@ -3,7 +3,7 @@ pages:
   - path: introduction.md
     title: Introduction
   - path: quickstart.md
-    title: QuickStart
+    title: Quick Start
   - path: feature-matrix.md
     title: Feature Matrix
   - path: examples.md

@@ -12,9 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datasources/core": "*"
-  },
-  "devDependencies": {
+    "@datasources/core": "*",
     "@datasources/json": "*",
     "@datasources/memory": "*"
   }

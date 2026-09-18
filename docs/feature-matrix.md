@@ -36,4 +36,4 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | mongodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | dynamodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 
-Package names per language are on [QuickStart](./quickstart.md#installation).
+Package names per language are on [Quick Start](./quickstart.md#installation).
