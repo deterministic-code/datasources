@@ -2,42 +2,34 @@
 
 ## Installation
 
-```sh
-npm i @datasources/core
-```
-
-::: packages
-```sh [sqlite]
-npm i @datasources/sqlite better-sqlite3
-```
-```sh [mysql]
-npm i @datasources/mysql mysql2
-```
-```sh [postgres]
-npm i @datasources/postgres pg
-```
-```sh [memory]
-npm i @datasources/memory
-```
-```sh [json]
-npm i @datasources/json
-```
-:::
-
-C# and Rust:
-
 ::: dialects
+```typescript
+npm install @datasources/core
+---
+npm install @datasources/sqlite
+npm install @datasources/mysql
+npm install @datasources/postgres
+npm install @datasources/memory
+npm install @datasources/json
+```
 ```csharp
 dotnet add package Datasources
+---
 dotnet add package Datasources.Sqlite
 dotnet add package Datasources.Sqlite.Microsoft
+dotnet add package Datasources.Mysql
+dotnet add package Datasources.Postgres
+dotnet add package Datasources.Memory
+dotnet add package Datasources.Json
 ```
 ```rust
 cargo add datasources
-cargo add datasources-sqlite --features rusqlite
-```
-```typescript
-npm i @datasources/core @datasources/sqlite better-sqlite3
+---
+cargo add datasources-sqlite
+cargo add datasources-mysql
+cargo add datasources-postgres
+cargo add datasources-memory
+cargo add datasources-json
 ```
 :::
 

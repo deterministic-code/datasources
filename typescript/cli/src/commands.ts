@@ -10,8 +10,8 @@ export const addCommands = (
   entries: string[],
 ): Proc[] =>
   ({
-    ts: () => npmInstall(names, engine),
-    rust: () => cargoAdd(names, engine),
+    ts: () => npmInstall(names),
+    rust: () => cargoAdd(names),
     csharp: () => dotnetAdd(names, engine, csharpTarget(entries)),
   })[ecosystem]();
 
@@ -23,12 +23,12 @@ export const removeCommands = (
   entries: string[],
 ): Proc[] =>
   ({
-    ts: () => npmUninstall(names, engine, remaining),
+    ts: () => npmUninstall(names),
     rust: () => cargoRemove(names, remaining),
     csharp: () => dotnetRemove(names, engine, remaining, csharpTarget(entries)),
   })[ecosystem]();
 
-const npmInstall = (names: Provider[], engine: boolean): Proc[] => [
+const npmInstall = (names: Provider[]): Proc[] => [
   {
     command: "npm",
     args: [
@@ -36,22 +36,16 @@ const npmInstall = (names: Provider[], engine: boolean): Proc[] => [
       host.ts.core,
       host.ts.register,
       ...names.map((name) => catalog[name].npm),
-      ...enginePackages(names, engine, "npmEngine"),
     ],
   },
 ];
 
-const npmUninstall = (names: Provider[], engine: boolean, remaining: Provider[]): Proc[] => {
-  const pkgs = [
-    ...names.map((name) => catalog[name].npm),
-    ...enginePackages(names, engine, "npmEngine").filter(
-      (pkg) => !enginePackages(remaining, true, "npmEngine").includes(pkg),
-    ),
-  ];
+const npmUninstall = (names: Provider[]): Proc[] => {
+  const pkgs = names.map((name) => catalog[name].npm);
   return pkgs.length ? [{ command: "npm", args: ["uninstall", ...pkgs] }] : [];
 };
 
-const cargoAdd = (names: Provider[], engine: boolean): Proc[] => [
+const cargoAdd = (names: Provider[]): Proc[] => [
   { command: "cargo", args: ["add", host.rust.core] },
   {
     command: "cargo",
@@ -59,13 +53,7 @@ const cargoAdd = (names: Provider[], engine: boolean): Proc[] => [
   },
   ...names.map((name) => ({
     command: "cargo",
-    args: [
-      "add",
-      catalog[name].cargo,
-      ...(engine && catalog[name].cargoFeatures
-        ? ["--features", catalog[name].cargoFeatures.join(",")]
-        : []),
-    ],
+    args: ["add", catalog[name].cargo],
   })),
 ];
 
@@ -112,7 +100,7 @@ const dotnetRemove = (
 const enginePackages = (
   names: Provider[],
   engine: boolean,
-  key: "npmEngine" | "nugetEngine",
+  key: "nugetEngine",
 ): string[] =>
   engine
     ? [

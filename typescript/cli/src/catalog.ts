@@ -21,8 +21,6 @@ export type ProviderPackages = {
   npm: string;
   cargo: string;
   nuget: string;
-  npmEngine?: string;
-  cargoFeatures?: string[];
   nugetEngine?: string;
 };
 
@@ -33,8 +31,6 @@ export const catalog: Record<Provider, ProviderPackages> = {
     npm: "@datasources/sqlite",
     cargo: "datasources-sqlite",
     nuget: "Datasources.Sqlite",
-    npmEngine: "better-sqlite3",
-    cargoFeatures: ["rusqlite"],
     nugetEngine: "Datasources.Sqlite.Microsoft",
   },
   text: { npm: "@datasources/text", cargo: "datasources-text", nuget: "Datasources.Text" },
@@ -44,7 +40,6 @@ export const catalog: Record<Provider, ProviderPackages> = {
     npm: "@datasources/mysql",
     cargo: "datasources-mysql",
     nuget: "Datasources.Mysql",
-    npmEngine: "mysql2",
   },
   sqlserver: {
     npm: "@datasources/sqlserver",
@@ -55,7 +50,6 @@ export const catalog: Record<Provider, ProviderPackages> = {
     npm: "@datasources/postgres",
     cargo: "datasources-postgres",
     nuget: "Datasources.Postgres",
-    npmEngine: "pg",
   },
   oracle: { npm: "@datasources/oracle", cargo: "datasources-oracle", nuget: "Datasources.Oracle" },
   mongodb: { npm: "@datasources/mongodb", cargo: "datasources-mongodb", nuget: "Datasources.MongoDb" },
