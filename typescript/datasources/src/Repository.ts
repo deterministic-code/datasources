@@ -3,8 +3,8 @@ import type { ICommand } from "./ICommand.ts";
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { IQuery } from "./IQuery.ts";
-import type { IRepository } from "./IRepository.ts";
-import type { IResponse } from "./IResponse.ts";
+import type { ICRUDRepository } from "./ICRUDRepository.ts";
+import type { Response } from "./Response.ts";
 import type { IWhere } from "./IWhere.ts";
 import { WhereBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
@@ -31,7 +31,7 @@ const isBuilt = <T>(
 ): value is BuiltRepository<T> =>
   "statements" in value && "rowConverter" in value && "statementMapper" in value;
 
-export class Repository<T = Cells> implements IRepository<T> {
+export class Repository<T = Cells> implements ICRUDRepository<T> {
   private readonly connection: IConnection;
   readonly rowConverter: TypeConverter<T, Cells>;
   readonly statementsMapper: StatementMapper<T>;
@@ -39,7 +39,7 @@ export class Repository<T = Cells> implements IRepository<T> {
   readonly statements: RepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
   private readonly ids: Set<string>;
-  private readonly assignIdentityOnAdd: boolean;
+  private readonly assignIdentityOnCreate: boolean;
 
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(options: RepositoryBuilderOptions<T>);
@@ -61,10 +61,10 @@ export class Repository<T = Cells> implements IRepository<T> {
     this.mapper = built.statementMapper.rows;
     this.statements = built.statements;
     this.ids = new Set(built.ids);
-    this.assignIdentityOnAdd = built.assignIdentityOnAdd;
+    this.assignIdentityOnCreate = built.assignIdentityOnCreate;
   }
 
-  use = (middleware: ICommandMiddleware): this => {
+  addMiddleware = (middleware: ICommandMiddleware): this => {
     this.middlewares.push(middleware);
     return this;
   };
@@ -91,15 +91,15 @@ export class Repository<T = Cells> implements IRepository<T> {
       );
   }
 
-  add = async (item: T): Promise<IResponse> => {
+  create = async (item: T): Promise<Response> => {
     const fields = fieldsOf(
       this.reverseConvert(item),
-      (col) => !this.assignIdentityOnAdd || !this.ids.has(col),
+      (col) => !this.assignIdentityOnCreate || !this.ids.has(col),
     );
     return this.command().execute(this.statements.insert(fields).getText(), fields);
   };
 
-  update = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
+  update = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ?? this.idWhere(record);
     const fields = fieldsOf(record, (col) => !this.ids.has(col));
@@ -111,7 +111,7 @@ export class Repository<T = Cells> implements IRepository<T> {
     ]);
   };
 
-  delete = async (item: T, byWhere?: IWhere): Promise<IResponse> => {
+  delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const where = byWhere ?? this.idWhere(this.reverseConvert(item));
     return this.command().execute(
       this.statements.delete(where).getText(),
@@ -121,7 +121,7 @@ export class Repository<T = Cells> implements IRepository<T> {
 
   private command = (): ICommand =>
     this.middlewares.reduce(
-      (command, middleware) => command.use(middleware),
+      (command, middleware) => command.addMiddleware(middleware),
       this.connection.createCommand(),
     );
 

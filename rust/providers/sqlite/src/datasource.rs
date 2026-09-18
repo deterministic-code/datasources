@@ -4,8 +4,8 @@ use crate::driver::{require_driver, SqliteDriver};
 use async_trait::async_trait;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Command, Connection, Datasource, DatasourceFactory, Repository, Result, TableRepository,
-    TableRepositoryBuilderOptions,
+    Command, Connection, Datasource, DatasourceFactory, CRUDRepository, Result, Repository,
+    RepositoryBuilderOptions,
 };
 use std::sync::Arc;
 
@@ -59,11 +59,11 @@ impl Datasource for SqliteDatasource {
         Arc::new(SqliteCommand::new(self.connection()))
     }
 
-    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
-        let mut options = TableRepositoryBuilderOptions::with_factory(self.connection());
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> {
+        let mut options = RepositoryBuilderOptions::with_factory(self.connection());
         options.entity = self.table.clone().unwrap_or_else(|| "items".into());
         options.mapping = Some(RowTypeConverter::new(vec![]));
-        Arc::new(TableRepository::new(options).expect("repository"))
+        Arc::new(Repository::new(options).expect("repository"))
     }
 }
 

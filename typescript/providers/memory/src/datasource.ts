@@ -4,7 +4,7 @@ import {
   type IConnection,
   type IDatasource,
   type IReadonlyRepository,
-  type IRepository,
+  type ICRUDRepository,
 } from "@datasources/core";
 import type { MemoryConnectionOptions } from "./connection-options.ts";
 import { MemoryConnection } from "./connection.ts";
@@ -44,7 +44,7 @@ export class MemoryDatasource implements IDatasource {
       (connection as MemoryConnection | undefined) ?? this.defaultConnection(),
     );
 
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new MemoryRepository<T>(
       (connection as MemoryConnection | undefined) ?? this.defaultConnection(),
     );

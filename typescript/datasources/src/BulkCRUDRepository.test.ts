@@ -29,7 +29,7 @@ describe("BulkCRUDRepository", () => {
   it("creates parents and children", async () => {
     const parents = new ListCRUDRepository<Parent>();
     const children = new ListCRUDRepository<Child>();
-    const response = await repoOf(parents, children).addBulk([
+    const response = await repoOf(parents, children).createBulk([
       assign(Parent, { children: [assign(Child, { label: "a" })] }),
       assign(Parent, {
         children: [assign(Child, { label: "b" }), assign(Child, { label: "c" })],

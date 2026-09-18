@@ -94,7 +94,7 @@ pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
-    FlatToTypeMapper, IFlatToTypeMapper, IMapper, ISourceDestinationMapper, MappedRow, MappedValue,
+    FlatToTypeMapper, FlatToTypeMapperTrait, Mapper, SourceDestinationMapper, MappedRow, MappedValue,
     NameMapper, NameSourceDestinationMapper, RowTypeMapper, StatementMapper,
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
@@ -108,8 +108,8 @@ pub use query::Query;
 pub use reader::Reader;
 pub use register::register;
 pub use registered::registered;
-pub use repository::{as_readonly, ReadonlyRepository, Repository};
-pub use repository_factory::{CrudRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory};
+pub use repository::{as_readonly, ReadonlyRepository, CRUDRepository};
+pub use repository_factory::{CRUDRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory};
 pub use repository_tree::RepositoryTree;
 pub use repository_tree_node::{encode_rows, RepositoryTreeNode};
 pub use reset::reset;
@@ -120,10 +120,10 @@ pub use stubs::{
     create_stub_datasource, StubCommand, StubConnection, StubDatasource, StubReader,
     StubRepository, StubTransaction,
 };
-pub use table_repository::TableRepository;
-pub use table_repository_builder::TableRepositoryBuilder;
-pub use table_repository_builder_options::TableRepositoryBuilderOptions;
-pub use table_repository_statements::TableRepositoryStatements;
+pub use table_repository::Repository;
+pub use table_repository_builder::RepositoryBuilder;
+pub use table_repository_builder_options::RepositoryBuilderOptions;
+pub use table_repository_statements::RepositoryStatements;
 pub use text_query::TextQuery;
 pub use text_where::TextWhere;
 pub use transaction::Transaction;

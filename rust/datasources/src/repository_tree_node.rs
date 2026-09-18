@@ -1,7 +1,7 @@
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::repository::{as_readonly, ReadonlyRepository, Repository};
+use crate::repository::{as_readonly, ReadonlyRepository, CRUDRepository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 pub struct RepositoryTreeNode {
     pub value: Arc<dyn ReadonlyRepository>,
-    pub write: Option<Arc<dyn Repository>>,
+    pub write: Option<Arc<dyn CRUDRepository>>,
     pub property_name: String,
     pub items: Vec<RepositoryTreeNode>,
     pub enrichment: Option<Enrichment>,
@@ -66,7 +66,7 @@ impl RepositoryTreeNode {
 
     pub fn include_repo(
         &mut self,
-        via: Arc<dyn Repository>,
+        via: Arc<dyn CRUDRepository>,
         into: impl Into<String>,
         from: impl Into<String>,
         by: impl Into<String>,

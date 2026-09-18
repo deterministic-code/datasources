@@ -2,7 +2,7 @@ use crate::command::XmlCommand;
 use crate::connection::XmlConnection;
 use async_trait::async_trait;
 use datasources::{
-    Command, Connection, Datasource, DatasourceFactory, Repository, Result, StubRepository,
+    Command, Connection, Datasource, DatasourceFactory, CRUDRepository, Result, StubRepository,
 };
 use std::sync::Arc;
 
@@ -34,7 +34,7 @@ impl Datasource for XmlDatasource {
         ))
     }
 
-    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> {
         Arc::new(StubRepository::new("xml"))
     }
 }

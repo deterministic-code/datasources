@@ -1,17 +1,17 @@
 import {
-  type DatasourceFactory,
+  type IDatasourceFactory,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
   type IReadonlyRepository,
-  type IRepository,
+  type ICRUDRepository,
   StubRepository,
 } from "@datasources/core";
 import { SqlServerConnection } from "./connection.ts";
 import { SqlServerCommand } from "./command.ts";
 
-export class SqlServerDatasource implements IDatasource, DatasourceFactory {
+export class SqlServerDatasource implements IDatasource, IDatasourceFactory {
   static readonly instance = new SqlServerDatasource();
   readonly provider = "sqlserver";
   private connection?: IConnection;
@@ -22,7 +22,7 @@ export class SqlServerDatasource implements IDatasource, DatasourceFactory {
     Promise.resolve(this.defaultConnection());
   createCommand = (connection?: IConnection): ICommand =>
     new SqlServerCommand(connection ?? this.defaultConnection());
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
   createReadonlyRepository = <T>(
     connection?: IConnection,

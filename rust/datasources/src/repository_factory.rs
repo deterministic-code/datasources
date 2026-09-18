@@ -1,20 +1,20 @@
 use crate::connection::Connection;
 use crate::datasource_error::DatasourceError;
-use crate::repository::{as_readonly, ReadonlyRepository, Repository};
+use crate::repository::{as_readonly, ReadonlyRepository, CRUDRepository};
 use crate::result::Result;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-type CrudFn = Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn Repository> + Send + Sync>;
+type CRUDFn = Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync>;
 type ReadonlyFn =
     Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync>;
 
 struct Maps {
     readonly_by_name: HashMap<String, ReadonlyFn>,
     readonly_by_type: HashMap<TypeId, ReadonlyFn>,
-    crud_by_name: HashMap<String, CrudFn>,
-    crud_by_type: HashMap<TypeId, CrudFn>,
+    crud_by_name: HashMap<String, CRUDFn>,
+    crud_by_type: HashMap<TypeId, CRUDFn>,
 }
 
 pub trait ReadonlyRepositoryFactory: Send + Sync {
@@ -31,18 +31,18 @@ pub trait ReadonlyRepositoryFactory: Send + Sync {
     ) -> Result<Arc<dyn ReadonlyRepository>>;
 }
 
-pub trait CrudRepositoryFactory: Send + Sync {
-    fn register(&self, name: &str, factory: CrudFn);
-    fn register_type<T: 'static>(&self, factory: CrudFn);
+pub trait CRUDRepositoryFactory: Send + Sync {
+    fn register(&self, name: &str, factory: CRUDFn);
+    fn register_type<T: 'static>(&self, factory: CRUDFn);
     fn create(
         &self,
         name: &str,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Result<Arc<dyn Repository>>;
+    ) -> Result<Arc<dyn CRUDRepository>>;
     fn create_type<T: 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Result<Arc<dyn Repository>>;
+    ) -> Result<Arc<dyn CRUDRepository>>;
 }
 
 pub struct RepositoryFactory {
@@ -70,14 +70,14 @@ impl RepositoryFactory {
     pub fn register(
         &self,
         name: &str,
-        factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn Repository> + Send + Sync + 'static,
+        factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static,
     ) {
         self.put_crud(name, None, Arc::new(factory));
     }
 
     pub fn register_type<T: 'static>(
         &self,
-        factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn Repository> + Send + Sync + 'static,
+        factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static,
     ) {
         self.put_crud(
             &short_name::<T>(),
@@ -115,7 +115,7 @@ impl RepositoryFactory {
         &self,
         name: &str,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Result<Arc<dyn Repository>> {
+    ) -> Result<Arc<dyn CRUDRepository>> {
         let factory = {
             let maps = self.lock();
             maps.crud_by_name.get(name).cloned()
@@ -129,7 +129,7 @@ impl RepositoryFactory {
     pub fn create_type<T: 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Result<Arc<dyn Repository>> {
+    ) -> Result<Arc<dyn CRUDRepository>> {
         let factory = {
             let maps = self.lock();
             maps.crud_by_type
@@ -175,7 +175,7 @@ impl RepositoryFactory {
         }
     }
 
-    fn put_crud(&self, name: &str, type_id: Option<TypeId>, factory: CrudFn) {
+    fn put_crud(&self, name: &str, type_id: Option<TypeId>, factory: CRUDFn) {
         let crud = factory.clone();
         let readonly: ReadonlyFn = Arc::new(move |connection| as_readonly(crud(connection)));
         let mut maps = self.lock();
@@ -227,12 +227,12 @@ impl ReadonlyRepositoryFactory for RepositoryFactory {
     }
 }
 
-impl CrudRepositoryFactory for RepositoryFactory {
-    fn register(&self, name: &str, factory: CrudFn) {
+impl CRUDRepositoryFactory for RepositoryFactory {
+    fn register(&self, name: &str, factory: CRUDFn) {
         self.put_crud(name, None, factory);
     }
 
-    fn register_type<T: 'static>(&self, factory: CrudFn) {
+    fn register_type<T: 'static>(&self, factory: CRUDFn) {
         self.put_crud(&short_name::<T>(), Some(TypeId::of::<T>()), factory);
     }
 
@@ -240,14 +240,14 @@ impl CrudRepositoryFactory for RepositoryFactory {
         &self,
         name: &str,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Result<Arc<dyn Repository>> {
+    ) -> Result<Arc<dyn CRUDRepository>> {
         RepositoryFactory::create(self, name, connection)
     }
 
     fn create_type<T: 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Result<Arc<dyn Repository>> {
+    ) -> Result<Arc<dyn CRUDRepository>> {
         RepositoryFactory::create_type::<T>(self, connection)
     }
 }
@@ -261,7 +261,7 @@ fn short_name<T: ?Sized>() -> String {
 }
 
 fn missing(name: &str) -> DatasourceError {
-    DatasourceError::message(format!("Repository \"{name}\" is not registered"))
+    DatasourceError::message(format!("CRUDRepository \"{name}\" is not registered"))
 }
 
 #[cfg(test)]
@@ -327,7 +327,7 @@ mod tests {
         let factory = RepositoryFactory::new();
         match factory.create_type::<Item>(None) {
             Ok(_) => panic!("expected missing type"),
-            Err(err) => assert_eq!(err.to_string(), "Repository \"Item\" is not registered"),
+            Err(err) => assert_eq!(err.to_string(), "CRUDRepository \"Item\" is not registered"),
         }
         assert!(factory.create("missing", None).is_err());
     }

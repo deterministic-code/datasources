@@ -4,7 +4,7 @@ import {
   type IConnection,
   type IDatasource,
   type IReadonlyRepository,
-  type IRepository,
+  type ICRUDRepository,
 } from "@datasources/core";
 import type { JsonConnectionOptions } from "./connection-options.ts";
 import { JsonConnection } from "./connection.ts";
@@ -40,7 +40,7 @@ export class JsonDatasource implements IDatasource {
       (connection as JsonConnection | undefined) ?? this.defaultConnection(),
     );
 
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new JsonRepository<T>(
       (connection as JsonConnection | undefined) ?? this.defaultConnection(),
     );

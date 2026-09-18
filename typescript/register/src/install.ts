@@ -1,7 +1,7 @@
 import {
   Datasource,
   ProviderNotInstalledError,
-  type DatasourceFactory,
+  type IDatasourceFactory,
   type DatasourceOptions,
 } from "@datasources/core";
 import { packages, typeNames } from "./packages.ts";
@@ -9,9 +9,9 @@ import { providerNames } from "./providerNames.ts";
 
 export type ProviderLoader = (pkg: string) => Promise<object>;
 
-type FactoryHolder = { readonly instance: DatasourceFactory };
+type FactoryHolder = { readonly instance: IDatasourceFactory };
 
-const factoryOf = (mod: object, name: string): DatasourceFactory => {
+const factoryOf = (mod: object, name: string): IDatasourceFactory => {
   const exported = (mod as Record<string, FactoryHolder | undefined>)[typeNames[name]];
   return exported?.instance ?? (() => { throw new ProviderNotInstalledError(name); })();
 };

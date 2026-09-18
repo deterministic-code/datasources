@@ -10,7 +10,7 @@ mod type_map_field;
 mod type_map_group;
 
 pub use flat_to_type_mapper::FlatToTypeMapper;
-pub use i_flat_to_type_mapper::IFlatToTypeMapper;
+pub use i_flat_to_type_mapper::FlatToTypeMapper as FlatToTypeMapperTrait;
 pub use mapped_value::{MappedRow, MappedValue};
 pub use row_type_mapper::RowTypeMapper;
 pub use statement_mapper::StatementMapper;
@@ -20,12 +20,12 @@ pub use type_map::TypeMap;
 pub use type_map_field::TypeMapField;
 pub use type_map_group::TypeMapGroup;
 
-pub trait IMapper<TFrom, TTo> {
+pub trait Mapper<TFrom, TTo> {
     fn map(&self, value: TFrom) -> TTo;
     fn reverse_map(&self, value: TTo) -> TFrom;
 }
 
-pub trait ISourceDestinationMapper {
+pub trait SourceDestinationMapper {
     fn source(&self) -> &str;
     fn destination(&self) -> &str;
 }
@@ -65,7 +65,7 @@ impl NameSourceDestinationMapper {
 
 impl NameMapper for NameSourceDestinationMapper {}
 
-impl IMapper<String, String> for NameSourceDestinationMapper {
+impl Mapper<String, String> for NameSourceDestinationMapper {
     fn map(&self, name: String) -> String {
         name
     }
@@ -75,7 +75,7 @@ impl IMapper<String, String> for NameSourceDestinationMapper {
     }
 }
 
-impl ISourceDestinationMapper for NameSourceDestinationMapper {
+impl SourceDestinationMapper for NameSourceDestinationMapper {
     fn source(&self) -> &str {
         &self.source
     }
@@ -95,11 +95,11 @@ mod tests {
         assert_eq!(mapper.map("user_accounts"), "user_accounts");
         assert_eq!(mapper.reverse_map("UserAccounts"), "UserAccounts");
         assert_eq!(
-            IMapper::map(&mapper, "user_accounts".into()),
+            Mapper::map(&mapper, "user_accounts".into()),
             "user_accounts"
         );
         assert_eq!(
-            IMapper::reverse_map(&mapper, "UserAccounts".into()),
+            Mapper::reverse_map(&mapper, "UserAccounts".into()),
             "UserAccounts"
         );
     }
@@ -171,11 +171,11 @@ mod tests {
                 },
             },
         );
-        let flat = IMapper::map(&mapper, nested.clone());
+        let flat = Mapper::map(&mapper, nested.clone());
         assert_eq!(flat.user_id, 1);
         assert_eq!(flat.user_name, "Ada");
         assert_eq!(flat.contact_email, "ada@x.dev");
         assert_eq!(flat.contact_phone, "555");
-        assert_eq!(IMapper::reverse_map(&mapper, flat), nested);
+        assert_eq!(Mapper::reverse_map(&mapper, flat), nested);
     }
 }

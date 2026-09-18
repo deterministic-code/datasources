@@ -1,11 +1,11 @@
 import type { IConnection } from "../IConnection.ts";
 import type { IQuery } from "../IQuery.ts";
-import type { IRepository } from "../IRepository.ts";
-import type { IResponse } from "../IResponse.ts";
+import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import type { Response } from "../Response.ts";
 import type { IWhere } from "../IWhere.ts";
 import { notImplemented } from "./notImplemented.ts";
 
-export class StubRepository<T = unknown> implements IRepository<T> {
+export class StubRepository<T = unknown> implements ICRUDRepository<T> {
   constructor(
     readonly provider: string,
     _connection: IConnection,
@@ -18,11 +18,11 @@ export class StubRepository<T = unknown> implements IRepository<T> {
     notImplemented(this.provider);
   }
 
-  add = async (_item: T): Promise<IResponse> => notImplemented(this.provider);
+  create = async (_item: T): Promise<Response> => notImplemented(this.provider);
 
-  update = async (_item: T, _byWhere?: IWhere): Promise<IResponse> =>
+  update = async (_item: T, _byWhere?: IWhere): Promise<Response> =>
     notImplemented(this.provider);
 
-  delete = async (_item: T, _byWhere?: IWhere): Promise<IResponse> =>
+  delete = async (_item: T, _byWhere?: IWhere): Promise<Response> =>
     notImplemented(this.provider);
 }

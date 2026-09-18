@@ -139,7 +139,7 @@ public class CoreTests
 
         var seen = new List<string>();
         string? used = null;
-        host.Use(new DelegateMiddleware(
+        host.AddMiddleware(new DelegateMiddleware(
             (query, _) =>
             {
                 seen.Add($"before:{query}");
@@ -161,7 +161,7 @@ public class CoreTests
 
         var blocked = new RecordingCommand();
         var ran = false;
-        blocked.Use(new DelegateMiddleware(
+        blocked.AddMiddleware(new DelegateMiddleware(
             (_, _) => throw new InvalidOperationException("blocked"),
             (_, _, _, _, _) => { ran = true; return Task.CompletedTask; }));
         await Assert.ThrowsAsync<InvalidOperationException>(() => blocked.Run("select", null, (_, _) =>
@@ -173,7 +173,7 @@ public class CoreTests
 
         Exception? captured = null;
         var failed = new RecordingCommand();
-        failed.Use(new DelegateMiddleware(
+        failed.AddMiddleware(new DelegateMiddleware(
             (_, _) => Task.FromResult<(string, IReadOnlyList<Parameter>?)?>(null),
             (_, _, _, _, error) => { captured = error; return Task.CompletedTask; }));
         await Assert.ThrowsAsync<InvalidOperationException>(() => failed.Run<int>("select", null, (_, _) => throw new InvalidOperationException("fail-op")));
@@ -199,7 +199,7 @@ public class CoreTests
             new DateTimeOffset(2026, 8, 28, 1, 54, 12, 103, TimeSpan.Zero),
         });
         var host = new RecordingCommand();
-        host.Use(new ConsoleCommandMiddleware(lines.Add, () => stamps.Dequeue()));
+        host.AddMiddleware(new ConsoleCommandMiddleware(lines.Add, () => stamps.Dequeue()));
         await host.Run("SELECT * FROM \"widget\" ORDER BY \"id\"", null, (_, _) => Task.FromResult((1, EmptyRows())));
         Assert.Equal("[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT * FROM \"widget\" ORDER BY \"id\"]", lines[0]);
         Assert.StartsWith("[2026-08-28T01:54:12.103Z]-[datasource][Finish]-[SELECT * FROM \"widget\" ORDER BY \"id\"] ", lines[1]);
@@ -211,7 +211,7 @@ public class CoreTests
     {
         var lines = new List<string>();
         var host = new RecordingCommand();
-        host.Use(new ConsoleCommandMiddleware(lines.Add));
+        host.AddMiddleware(new ConsoleCommandMiddleware(lines.Add));
         await host.Run("SELECT 1\n", null, (_, _) => Task.FromResult((1, EmptyRows())));
         var signature = System.Text.RegularExpressions.Regex.Replace(lines[0], @"^\[[^\]]+\]-", "");
         Assert.Equal("[datasource][Start]-[SELECT 1]", signature);
@@ -229,7 +229,7 @@ public class CoreTests
             new DateTimeOffset(2026, 8, 28, 1, 54, 12, 104, TimeSpan.Zero),
         });
         var host = new RecordingCommand();
-        host.Use(new ConsoleCommandMiddleware(lines.Add, () => stamps.Count > 0
+        host.AddMiddleware(new ConsoleCommandMiddleware(lines.Add, () => stamps.Count > 0
             ? stamps.Dequeue()
             : new DateTimeOffset(2026, 8, 28, 1, 54, 12, 104, TimeSpan.Zero), new Dictionary<string, string>
         {
@@ -421,7 +421,7 @@ public class CoreTests
         Assert.Equal(1, w.GetTextCalls);
 
         var seen = new List<string>();
-        command.Use(new DelegateMiddleware(
+        command.AddMiddleware(new DelegateMiddleware(
             (query, _) => { seen.Add($"before:{query}"); return Task.FromResult<(string, IReadOnlyList<Parameter>?)?>(null); },
             (query, _, _, _, _) => { seen.Add($"after:{query}"); return Task.CompletedTask; }));
         command.ExecuteError = null;

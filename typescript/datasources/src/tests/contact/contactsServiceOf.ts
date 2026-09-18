@@ -19,7 +19,7 @@ export const contactsServiceOf = (
 ): ContactsService => {
   const of = <T>(type: Constructable<T>, entity: string, columns?: string[]) => {
     const repo = new Repository({ type, entity, connection, columns });
-    return middleware ? repo.use(middleware) : repo;
+    return middleware ? repo.addMiddleware(middleware) : repo;
   };
   return new ContactsService(
     of(Contact, "contacts_base", fieldNamesOf(ContactBase)),

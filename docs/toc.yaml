@@ -4,6 +4,8 @@ pages:
     title: Introduction
   - path: quickstart.md
     title: QuickStart
+  - path: feature-matrix.md
+    title: Feature Matrix
   - path: common-examples.md
     title: Common Examples
   - path: sections/datasource.md

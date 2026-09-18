@@ -5,7 +5,7 @@ import {
   type Cells,
   type ICommand,
   type IReader,
-  type IResponse,
+  type Response,
   type Parameter,
 } from "@datasources/core";
 import type { MemoryConnection } from "./connection.ts";
@@ -37,7 +37,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
   async execute(
     text: string,
     parameters?: Parameter[],
-  ): Promise<IResponse> {
+  ): Promise<Response> {
     return this.run(text, parameters, async (query, params) => {
         this.connection.ensureOpen();
         const op = query.trim().toLowerCase();
@@ -66,7 +66,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
   private applyUpdate(
     obj: MemoryRecord,
     filter: MemoryRecord,
-  ): IResponse {
+  ): Response {
     const collection = this.connection.getCollection();
     let rowsAffected = 0;
     for (let i = 0; i < collection.length; i += 1) {
@@ -78,7 +78,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     return { result: obj, rowsAffected };
   }
 
-  private applyDelete(filter: MemoryRecord): IResponse {
+  private applyDelete(filter: MemoryRecord): Response {
     const collection = this.connection.getCollection();
     const remaining = collection.filter((row) => !matches(row, filter));
     const rowsAffected = collection.length - remaining.length;

@@ -61,7 +61,7 @@ const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
 describe("Repository", () => {
   it("builds select and maps rows", async () => {
     const { repo, command } = create();
-    repo.use({ beforeQuery() {}, afterQuery() {} });
+    repo.addMiddleware({ beforeQuery() {}, afterQuery() {} });
     command.reader = new MockReader([
       { id: 1, name: "a" },
     ]);
@@ -97,9 +97,9 @@ describe("Repository", () => {
   });
 
   it("adds updates and deletes through builders", async () => {
-    const { repo, command } = create({ assignIdentityOnAdd: false });
+    const { repo, command } = create({ assignIdentityOnCreate: false });
     const obj = { id: 1, name: "a" };
-    await repo.add(obj);
+    await repo.create(obj);
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO users (id, name) VALUES ($id, $name)",
     );
@@ -111,13 +111,13 @@ describe("Repository", () => {
     expect(command.executeCalls[2]?.text).toBe("DELETE FROM users WHERE id = $id");
   });
 
-  it("supports composite id, assignIdentityOnAdd, and overrides", async () => {
+  it("supports composite id, assignIdentityOnCreate, and overrides", async () => {
     const { repo, command } = create({
       ids: ["org_id", "user_id"],
-      assignIdentityOnAdd: true,
+      assignIdentityOnCreate: true,
       type: asType(Composite),
     });
-    await repo.add({ org_id: 1, user_id: 2, name: 3 });
+    await repo.create({ org_id: 1, user_id: 2, name: 3 });
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (name) VALUES ($name)");
     expect(command.executeCalls[0]?.parameters?.[0]?.value).toBe(3);
     await repo.update({ org_id: 1, user_id: 2, name: 4 });
@@ -153,7 +153,7 @@ describe("Repository", () => {
       entity: "users",
       mapping: new RowTypeConverter(),
     });
-    await typed.add(Object.assign(new Item(), { id: 1, name: "a" }));
+    await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
     await typed.delete(Object.assign(new Item(), { name: "z" }), WhereBuilder.equals("name", "z"));
     expect(command.executeCalls[1]?.text).toBe("DELETE FROM users WHERE name = $name");
@@ -235,7 +235,7 @@ describe("Repository", () => {
       connection,
       type: User,
       entity: "users",
-      assignIdentityOnAdd: false,
+      assignIdentityOnCreate: false,
       mapping: new RowTypeConverter<User>(),
       mapper: userContactsMapper(),
     });
@@ -248,7 +248,7 @@ describe("Repository", () => {
         Object.assign(new Contact(), { name: "roberta" }),
       ],
     });
-    await repo.add(user);
+    await repo.create(user);
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO users (contact_name1, contact_name2, email, id, username) VALUES ($contact_name1, $contact_name2, $email, $id, $username)",
     );
@@ -288,7 +288,7 @@ describe("Repository", () => {
       (name) => name,
     );
     const { repo, command } = create({
-      assignIdentityOnAdd: false,
+      assignIdentityOnCreate: false,
       statementMapper: new StatementMapper({
         entity: names,
         columns: names,
@@ -318,7 +318,7 @@ describe("Repository", () => {
       "SELECT full_name, user_id FROM people LIMIT 1",
     );
     const row = { id: 1, name: "a" };
-    await repo.add(row);
+    await repo.create(row);
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id",
     );

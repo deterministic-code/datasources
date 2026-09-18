@@ -44,7 +44,7 @@ export const parts = <T>(
     statements: statementsOf(entity, columns, statementMapper),
     columns,
     ids: options.ids ?? ["id"],
-    assignIdentityOnAdd: options.assignIdentityOnAdd !== false,
+    assignIdentityOnCreate: options.assignIdentityOnCreate !== false,
   };
 };
 

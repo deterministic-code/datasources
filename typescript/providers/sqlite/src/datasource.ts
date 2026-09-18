@@ -4,7 +4,7 @@ import type {
   IConnection,
   IDatasource,
   IReadonlyRepository,
-  IRepository,
+  ICRUDRepository,
 } from "@datasources/core";
 import { Repository, RowTypeConverter } from "@datasources/core";
 import "./converters/SqliteTypes.ts";
@@ -48,12 +48,12 @@ export class SqliteDatasource implements IDatasource {
       (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
     );
 
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new Repository({
       connection: (connection as SqliteConnection | undefined) ?? this.defaultConnection(),
       entity: this.options.table ?? "items",
       mapping: new RowTypeConverter(),
-    }) as IRepository<T>;
+    }) as ICRUDRepository<T>;
 
   createReadonlyRepository = <T>(
     connection?: IConnection,

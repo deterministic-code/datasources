@@ -1,17 +1,17 @@
 import {
-  type DatasourceFactory,
+  type IDatasourceFactory,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
   type IReadonlyRepository,
-  type IRepository,
+  type ICRUDRepository,
   StubRepository,
 } from "@datasources/core";
 import { MongoDbConnection } from "./connection.ts";
 import { MongoDbCommand } from "./command.ts";
 
-export class MongoDbDatasource implements IDatasource, DatasourceFactory {
+export class MongoDbDatasource implements IDatasource, IDatasourceFactory {
   static readonly instance = new MongoDbDatasource();
   readonly provider = "mongodb";
   private connection?: IConnection;
@@ -22,7 +22,7 @@ export class MongoDbDatasource implements IDatasource, DatasourceFactory {
     Promise.resolve(this.defaultConnection());
   createCommand = (connection?: IConnection): ICommand =>
     new MongoDbCommand(connection ?? this.defaultConnection());
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
   createReadonlyRepository = <T>(
     connection?: IConnection,

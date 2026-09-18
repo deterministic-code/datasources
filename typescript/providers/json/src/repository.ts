@@ -2,15 +2,15 @@ import {
   identityFilter,
   readerToAsyncIterable,
   type IQuery,
-  type IRepository,
-  type IResponse,
+  type ICRUDRepository,
+  type Response,
   type IWhere,
 } from "@datasources/core";
 import type { JsonConnection } from "./connection.ts";
 import { JsonCommand } from "./command.ts";
 import { asRecord, matches, parseFilter } from "./filter.ts";
 
-export class JsonRepository<T = unknown> implements IRepository<T> {
+export class JsonRepository<T = unknown> implements ICRUDRepository<T> {
   constructor(private readonly connection: JsonConnection) {}
 
   async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
@@ -34,7 +34,7 @@ export class JsonRepository<T = unknown> implements IRepository<T> {
     };
   }
 
-  async add(item: T): Promise<IResponse> {
+  async create(item: T): Promise<Response> {
     this.connection.ensureOpen();
     const record = asRecord(item);
     this.connection.getCollection().push(record);
@@ -42,7 +42,7 @@ export class JsonRepository<T = unknown> implements IRepository<T> {
     return { result: item, rowsAffected: 1 };
   }
 
-  async update(item: T, byWhere?: IWhere): Promise<IResponse> {
+  async update(item: T, byWhere?: IWhere): Promise<Response> {
     this.connection.ensureOpen();
     const record = asRecord(item);
     const filter = byWhere
@@ -60,7 +60,7 @@ export class JsonRepository<T = unknown> implements IRepository<T> {
     return { result: item, rowsAffected };
   }
 
-  async delete(item: T, byWhere?: IWhere): Promise<IResponse> {
+  async delete(item: T, byWhere?: IWhere): Promise<Response> {
     this.connection.ensureOpen();
     const record = asRecord(item);
     const filter = byWhere

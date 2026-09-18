@@ -11,7 +11,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
     public IMapper<T, T> Mapper => StatementsMapper.Rows;
     readonly RepositoryStatements statements;
     readonly HashSet<string> ids;
-    readonly bool assignIdentityOnAdd;
+    readonly bool assignIdentityOnCreate;
 
     public Repository(IConnection connection) :
         this(CreateRepositoryBuilderOptions.FromType<T>(connection)) { }
@@ -26,10 +26,10 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
         StatementsMapper = built.StatementMapper;
         statements = built.Statements;
         ids = new(built.Ids);
-        assignIdentityOnAdd = built.AssignIdentityOnAdd;
+        assignIdentityOnCreate = built.AssignIdentityOnCreate;
     }
 
-    public Repository<T> Use(ICommandMiddleware middleware)
+    public Repository<T> AddMiddleware(ICommandMiddleware middleware)
     {
         middlewares.Add(middleware);
         return this;
@@ -54,7 +54,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
     public async Task<Response> Create(T item)
     {
         var fields = Params(ReverseConvert(item), col =>
-            !assignIdentityOnAdd || !ids.Contains(col));
+            !assignIdentityOnCreate || !ids.Contains(col));
         return await Command().Execute(statements.Insert(fields).GetText(), fields);
     }
 
@@ -77,7 +77,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
     }
 
     ICommand Command() =>
-        middlewares.Aggregate(connection.CreateCommand(), (command, middleware) => command.Use(middleware));
+        middlewares.Aggregate(connection.CreateCommand(), (command, middleware) => command.AddMiddleware(middleware));
 
     IWhere IdWhere(Row record) =>
         WhereBuilder.And([.. ids.Select(col =>

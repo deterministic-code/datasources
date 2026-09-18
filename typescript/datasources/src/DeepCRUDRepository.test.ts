@@ -39,7 +39,7 @@ describe("DeepCRUDRepository", () => {
     const types = new ListCRUDRepository([assign(TypeRow, { id: 10, name: "person" })]);
     const children = new ListCRUDRepository<Child>();
     const repo = repoOf(parents, types, children);
-    await repo.add(
+    await repo.create(
       assign(Parent, {
         type_id: 10,
         children: [assign(Child, { label: "a" }), assign(Child, { label: "b" })],
@@ -57,7 +57,7 @@ describe("DeepCRUDRepository", () => {
     const children = new ListCRUDRepository<Child>();
     const repo = new DeepCRUDRepository(parents);
     repo.addEnriched("children", "id", children, "parent_id", undefined, true);
-    await repo.add(assign(Parent, { children: [assign(Child, { label: "n" })] }));
+    await repo.create(assign(Parent, { children: [assign(Child, { label: "n" })] }));
     expect(children.items[0]?.parent_id).toBe(5);
   });
 
@@ -115,7 +115,7 @@ describe("DeepCRUDRepository", () => {
       node.include(childTypes, "type_name", "type_id", "id", "name");
       node.include(notes, "notes", "id", "child_id", undefined, true);
     });
-    await repo.add(
+    await repo.create(
       assign(Parent, {
         children: [
           assign(Child, {
@@ -142,7 +142,7 @@ describe("DeepCRUDRepository", () => {
       true,
     );
     await expect(
-      repo.add(assign(Parent, { children: [assign(Child, { label: "a" })] })),
+      repo.create(assign(Parent, { children: [assign(Child, { label: "a" })] })),
     ).rejects.toThrow(/children/);
   });
 
@@ -151,8 +151,8 @@ describe("DeepCRUDRepository", () => {
     const children = new ListCRUDRepository<Child>();
     const repo = new DeepCRUDRepository(parents);
     repo.addEnriched("children", "id", children, "parent_id", undefined, true);
-    await repo.add(Object.assign(assign(Parent, {}), { children: "x" }));
-    await repo.add(Object.assign(assign(Parent, {}), { children: { label: "o" } }));
+    await repo.create(Object.assign(assign(Parent, {}), { children: "x" }));
+    await repo.create(Object.assign(assign(Parent, {}), { children: { label: "o" } }));
     expect(children.items).toHaveLength(0);
   });
 
@@ -161,21 +161,21 @@ describe("DeepCRUDRepository", () => {
       Id = 0;
     }
     const ids = new ListCRUDRepository<Capital>();
-    await new DeepCRUDRepository(ids).add(new Capital());
+    await new DeepCRUDRepository(ids).create(new Capital());
     expect(ids.items[0]?.Id).toBe(1);
     const bare = new ListCRUDRepository<object>();
-    bare.add = async (item) => {
+    bare.create = async (item) => {
       bare.items.push(item);
       return { result: 1, rowsAffected: 1 };
     };
-    await new DeepCRUDRepository(bare).add({});
+    await new DeepCRUDRepository(bare).create({});
     expect(bare.items[0]).toEqual({});
     const empty = new ListCRUDRepository<object>();
-    empty.add = async (item) => {
+    empty.create = async (item) => {
       empty.items.push(item);
       return { result: null, rowsAffected: 1 };
     };
-    await new DeepCRUDRepository(empty).add({ id: 1 });
+    await new DeepCRUDRepository(empty).create({ id: 1 });
     expect(empty.items[0]).toEqual({ id: 1 });
   });
 
@@ -200,12 +200,12 @@ describe("DeepCRUDRepository", () => {
 
   it("stamps bigint identity", async () => {
     const parents = new ListCRUDRepository<Parent>();
-    parents.add = async (item) => {
+    parents.create = async (item) => {
       Object.assign(item, { id: 9n });
       parents.items.push(item);
       return { result: 9n, rowsAffected: 1 };
     };
-    await new DeepCRUDRepository(parents).add(assign(Parent, {}));
+    await new DeepCRUDRepository(parents).create(assign(Parent, {}));
     expect(parents.items[0]?.id).toBe(9n);
   });
 

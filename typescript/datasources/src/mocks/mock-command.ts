@@ -2,7 +2,7 @@ import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { Cells } from "../converters/Cell.ts";
 import type { IReader } from "../IReader.ts";
-import type { IResponse } from "../IResponse.ts";
+import type { Response } from "../Response.ts";
 import { CommandMiddlewareHost } from "../CommandMiddlewareHost.ts";
 import type { Parameter } from "../Parameter.ts";
 import type { Row } from "../Row.ts";
@@ -13,7 +13,7 @@ export class MockCommand extends CommandMiddlewareHost implements ICommand {
   executeReaderCalls: { text: string; parameters?: Parameter[] }[] = [];
   executeError?: unknown;
   executeReaderError?: unknown;
-  response: IResponse = { result: undefined, rowsAffected: 0 };
+  response: Response = { result: undefined, rowsAffected: 0 };
   reader: IReader<Cells> = new MockReader();
 
   constructor(readonly connection: IConnection) {
@@ -40,7 +40,7 @@ export class MockCommand extends CommandMiddlewareHost implements ICommand {
   async execute(
     text: string,
     parameters?: Parameter[],
-  ): Promise<IResponse> {
+  ): Promise<Response> {
     return this.run(text, parameters, async (query, params) => {
       this.executeCalls.push({ text: query, parameters: params });
       if (this.executeError) {

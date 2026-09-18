@@ -1,11 +1,11 @@
 import type {
-  DatasourceFactory,
+  IDatasourceFactory,
   DatasourceOptions,
   ICommand,
   IConnection,
   IDatasource,
   IReadonlyRepository,
-  IRepository,
+  ICRUDRepository,
 } from "@datasources/core";
 import { Repository, RowTypeConverter } from "@datasources/core";
 import type { PostgresConnectionOptions } from "./connection-options.ts";
@@ -18,7 +18,7 @@ export interface PostgresDatasourceOptions extends PostgresConnectionOptions {
   table?: string;
 }
 
-export class PostgresDatasource implements IDatasource, DatasourceFactory {
+export class PostgresDatasource implements IDatasource, IDatasourceFactory {
   static readonly instance = new PostgresDatasource();
   static readonly provider = "postgres";
   readonly provider = "postgres";
@@ -49,13 +49,13 @@ export class PostgresDatasource implements IDatasource, DatasourceFactory {
       (connection as PostgresConnection | undefined) ?? this.defaultConnection(),
     );
 
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new Repository({
       connection:
         (connection as PostgresConnection | undefined) ?? this.defaultConnection(),
       entity: this.options.table ?? "items",
       mapping: new RowTypeConverter(),
-    }) as IRepository<T>;
+    }) as ICRUDRepository<T>;
 
   createReadonlyRepository = <T>(
     connection?: IConnection,

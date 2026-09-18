@@ -6,10 +6,10 @@ use crate::value::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub struct TableRepositoryBuilderOptions {
+pub struct RepositoryBuilderOptions {
     pub connection: Arc<dyn Connection>,
     pub ids: Vec<String>,
-    pub assign_identity_on_add: bool,
+    pub assign_identity_on_create: bool,
     pub entity: String,
     pub mapping: Option<RowTypeConverter>,
     pub mapper: Option<TransformMapper<Row, Row>>,
@@ -18,12 +18,12 @@ pub struct TableRepositoryBuilderOptions {
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
 
-impl TableRepositoryBuilderOptions {
+impl RepositoryBuilderOptions {
     pub fn with_factory(connection: Arc<dyn Connection>) -> Self {
         Self {
             connection,
             ids: vec!["id".into()],
-            assign_identity_on_add: true,
+            assign_identity_on_create: true,
             entity: "items".into(),
             mapping: None,
             mapper: None,

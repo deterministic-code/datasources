@@ -6,7 +6,7 @@ Holds source/destination labels. Column names pass through as-is.
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `IMapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
+| `IMapper<TFrom, TTo>` | `Mapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
 | `Map` | `map` | `map` |
 | `ReverseMap` | `reverse_map` | `reverseMap` |
 
@@ -14,7 +14,7 @@ Holds source/destination labels. Column names pass through as-is.
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `ISourceDestinationMapper` | `ISourceDestinationMapper` | `ISourceDestinationMapper` |
+| `ISourceDestinationMapper` | `SourceDestinationMapper` | `ISourceDestinationMapper` |
 | `Source` | `source` | `source` |
 | `Destination` | `destination` | `destination` |
 
@@ -50,7 +50,7 @@ Collapses denormalized join rows into a typed graph. Scalars map column → fiel
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `IFlatToTypeMapper` | `IFlatToTypeMapper` | `IFlatToTypeMapper<T>` |
+| `IFlatToTypeMapper` | `FlatToTypeMapperTrait` | `IFlatToTypeMapper<T>` |
 | `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
 | `TypeMap` | `TypeMap` | `TypeMap<T>` |
 | `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |

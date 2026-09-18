@@ -3,7 +3,7 @@ import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
 import type { IReadonlyRepository } from "../IReadonlyRepository.ts";
-import type { IRepository } from "../IRepository.ts";
+import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { MockCommand } from "./mock-command.ts";
 import { MockConnection } from "./mock-connection.ts";
 import { MockRepository } from "./mock-repository.ts";
@@ -14,7 +14,7 @@ export class MockDatasource implements IDatasource {
   createRepositoryCalls: Array<IConnection | undefined> = [];
   connection: IConnection;
   command?: ICommand;
-  repository?: IRepository;
+  repository?: ICRUDRepository;
 
   constructor(readonly provider = "mock") {
     this.connection = new MockConnection();
@@ -33,9 +33,9 @@ export class MockDatasource implements IDatasource {
     return this.command ?? new MockCommand(connection ?? this.connection);
   }
 
-  createRepository<T>(connection?: IConnection): IRepository<T> {
+  createRepository<T>(connection?: IConnection): ICRUDRepository<T> {
     this.createRepositoryCalls.push(connection);
-    return (this.repository as IRepository<T> | undefined) ??
+    return (this.repository as ICRUDRepository<T> | undefined) ??
       new MockRepository<T>(connection ?? this.connection);
   }
 

@@ -5,7 +5,7 @@ use crate::command::Command;
 use crate::connection::Connection;
 use crate::datasource::Datasource;
 use crate::datasource_factory::DatasourceFactory;
-use crate::repository::Repository;
+use crate::repository::CRUDRepository;
 use crate::result::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -40,7 +40,7 @@ impl Datasource for StubDatasource {
         Arc::new(StubCommand::new(self.provider.clone()))
     }
 
-    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> {
         Arc::new(StubRepository::new(self.provider.clone()))
     }
 }

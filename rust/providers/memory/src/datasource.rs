@@ -3,7 +3,7 @@ use crate::connection::MemoryConnection;
 use crate::repository::MemoryRepository;
 use crate::store::{MemoryData, MemoryStore};
 use async_trait::async_trait;
-use datasources::{Command, Connection, Datasource, DatasourceFactory, Repository, Result};
+use datasources::{Command, Connection, Datasource, DatasourceFactory, CRUDRepository, Result};
 use std::sync::Arc;
 
 pub struct MemoryDatasource {
@@ -58,7 +58,7 @@ impl Datasource for MemoryDatasource {
         Arc::new(MemoryCommand::new(self.typed_connection()))
     }
 
-    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Repository> {
+    fn create_repository(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> {
         Arc::new(MemoryRepository::new(self.typed_connection()))
     }
 }

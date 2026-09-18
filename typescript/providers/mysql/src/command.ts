@@ -4,7 +4,7 @@ import {
   type Cells,
   type ICommand,
   type IReader,
-  type IResponse,
+  type Response,
   type Parameter,
 } from "@datasources/core";
 import type { MysqlConnection } from "./connection.ts";
@@ -32,7 +32,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
   async execute(
     text: string,
     parameters?: Parameter[],
-  ): Promise<IResponse> {
+  ): Promise<Response> {
     return this.run(text, parameters, async (query, params) => {
       this.connection.ensureOpen();
       const result = await this.connection.driver.execute(

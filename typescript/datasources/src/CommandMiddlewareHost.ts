@@ -30,7 +30,7 @@ const logged = <T>(value: T, rows: readonly Row[]): readonly Row[] =>
 export class CommandMiddlewareHost {
   private readonly middlewares: ICommandMiddleware[] = [];
 
-  use(middleware: ICommandMiddleware): this {
+  addMiddleware(middleware: ICommandMiddleware): this {
     this.middlewares.push(middleware);
     return this;
   }

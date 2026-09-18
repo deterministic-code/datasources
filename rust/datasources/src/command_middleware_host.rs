@@ -19,7 +19,7 @@ impl CommandMiddlewareHost {
         Self::default()
     }
 
-    pub fn use_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+    pub fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
         self.middlewares
             .lock()
             .expect("middleware")

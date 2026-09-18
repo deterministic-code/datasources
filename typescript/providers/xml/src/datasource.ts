@@ -1,17 +1,17 @@
 import {
-  type DatasourceFactory,
+  type IDatasourceFactory,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
   type IReadonlyRepository,
-  type IRepository,
+  type ICRUDRepository,
   StubRepository,
 } from "@datasources/core";
 import { XmlConnection } from "./connection.ts";
 import { XmlCommand } from "./command.ts";
 
-export class XmlDatasource implements IDatasource, DatasourceFactory {
+export class XmlDatasource implements IDatasource, IDatasourceFactory {
   static readonly instance = new XmlDatasource();
   readonly provider = "xml";
   private connection?: IConnection;
@@ -22,7 +22,7 @@ export class XmlDatasource implements IDatasource, DatasourceFactory {
     Promise.resolve(this.defaultConnection());
   createCommand = (connection?: IConnection): ICommand =>
     new XmlCommand(connection ?? this.defaultConnection());
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
   createReadonlyRepository = <T>(
     connection?: IConnection,

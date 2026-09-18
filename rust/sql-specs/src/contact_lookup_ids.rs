@@ -1,16 +1,16 @@
 use crate::contact_lookups::ContactLookups;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Connection, DatasourceError, ReadonlyRepository, Result, TableRepository,
-    TableRepositoryBuilderOptions, Value, WhereBuilder,
+    Connection, DatasourceError, ReadonlyRepository, Result, Repository,
+    RepositoryBuilderOptions, Value, WhereBuilder,
 };
 use std::sync::Arc;
 
 async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> Result<i64> {
-    let mut options = TableRepositoryBuilderOptions::with_factory(connection);
+    let mut options = RepositoryBuilderOptions::with_factory(connection);
     options.entity = entity.into();
     options.mapping = Some(RowTypeConverter::new(vec!["id".into(), "name".into()]));
-    let repo = TableRepository::new(options)?;
+    let repo = Repository::new(options)?;
     let row = repo
         .get_single_where(&WhereBuilder::equals("name", Value::from(name)))
         .await?

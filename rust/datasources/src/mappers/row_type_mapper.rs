@@ -20,7 +20,7 @@ impl RowTypeMapper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mappers::IMapper;
+    use crate::mappers::Mapper;
     use crate::value::Value;
     use std::collections::HashMap;
 
@@ -28,7 +28,7 @@ mod tests {
     fn maps_a_flat_row_and_back() {
         let mapper = RowTypeMapper::transform(RowTypeConverter::new(vec!["id".into()]));
         let row = HashMap::from([("id".into(), Value::Int(1))]);
-        assert_eq!(IMapper::map(&mapper, row.clone()), row);
-        assert_eq!(IMapper::reverse_map(&mapper, row.clone()), row);
+        assert_eq!(Mapper::map(&mapper, row.clone()), row);
+        assert_eq!(Mapper::reverse_map(&mapper, row.clone()), row);
     }
 }

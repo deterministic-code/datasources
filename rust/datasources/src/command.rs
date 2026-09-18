@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 #[async_trait]
 pub trait Command: Send + Sync {
-    fn use_middleware(&self, middleware: Arc<dyn CommandMiddleware>);
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>);
     async fn execute_reader(
         &self,
         text: &str,

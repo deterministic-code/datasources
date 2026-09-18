@@ -1,7 +1,7 @@
 use crate::contact_lookups::ContactLookups;
 use chrono::{DateTime, Utc};
 use datasources::{
-    encode_rows, DatasourceError, DeepCRUDRepository, ReadonlyRepository, Repository, Result, Row,
+    encode_rows, DatasourceError, DeepCRUDRepository, ReadonlyRepository, CRUDRepository, Result, Row,
     Value, WhereBuilder,
 };
 use uuid::Uuid;
@@ -22,7 +22,7 @@ pub async fn add_extra_contact(service: &DeepCRUDRepository, ids: &ContactLookup
     let version = Value::Binary(vec![]);
     let uuid = Value::Uuid(Uuid::new_v4());
     let response = service
-        .add(&record(&[
+        .create(&record(&[
             ("uuid", uuid.clone()),
             ("created", stamp.clone()),
             ("updated", stamp.clone()),

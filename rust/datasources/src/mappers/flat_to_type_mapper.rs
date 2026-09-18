@@ -1,8 +1,8 @@
-use crate::mappers::i_flat_to_type_mapper::IFlatToTypeMapper;
+use crate::mappers::i_flat_to_type_mapper::FlatToTypeMapper as FlatToTypeMapperTrait;
 use crate::mappers::mapped_value::{MappedRow, MappedValue};
 use crate::mappers::type_map::TypeMap;
 use crate::mappers::type_map_field::TypeMapField;
-use crate::mappers::IMapper;
+use crate::mappers::Mapper;
 use crate::row::Row;
 use crate::value::Value;
 use std::collections::{HashMap, HashSet};
@@ -93,7 +93,7 @@ fn passthrough(row: &Row) -> MappedRow {
         .collect()
 }
 
-impl IMapper<Row, MappedRow> for FlatToTypeMapper {
+impl Mapper<Row, MappedRow> for FlatToTypeMapper {
     fn map(&self, row: Row) -> MappedRow {
         let mut dest = MappedRow::new();
         for (name, column) in &self.scalars {
@@ -191,7 +191,7 @@ impl FlatToTypeMapper {
     }
 }
 
-impl IFlatToTypeMapper for FlatToTypeMapper {
+impl FlatToTypeMapperTrait for FlatToTypeMapper {
     fn spec(&self) -> &TypeMap {
         &self.spec
     }
@@ -230,7 +230,7 @@ impl IFlatToTypeMapper for FlatToTypeMapper {
                     if self.groups.is_empty() {
                         passthrough(&row)
                     } else {
-                        IMapper::map(self, row)
+                        Mapper::map(self, row)
                     }
                 })
                 .collect(),
@@ -247,7 +247,7 @@ impl FlatToTypeMapper {
                         if self.groups.is_empty() {
                             passthrough(&row)
                         } else {
-                            IMapper::map(self, row)
+                            Mapper::map(self, row)
                         }
                     }
                     CollapseInput::Mapped(row) => row,
@@ -383,7 +383,7 @@ mod tests {
     #[test]
     fn maps_one_denormalized_row_into_a_contact_with_0_1_children() {
         let mapper = FlatToTypeMapper::new(contacts_view());
-        let home = IMapper::map(&mapper, ada_home());
+        let home = Mapper::map(&mapper, ada_home());
         assert_eq!(text(&home, "id"), Value::Int(7));
         assert_eq!(text(&home, "first_name"), Value::from("Ada"));
         assert_eq!(text(&home, "last_name"), Value::from("Lovelace"));
@@ -414,7 +414,7 @@ mod tests {
             text(&many(&home, "phones")[0], "phone_type_name"),
             Value::from("Mobile")
         );
-        let missing = IMapper::map(&mapper, no_address());
+        let missing = Mapper::map(&mapper, no_address());
         assert!(many(&missing, "addresses").is_empty());
         assert_eq!(many(&missing, "phones").len(), 1);
         assert_eq!(
@@ -427,11 +427,11 @@ mod tests {
     fn reverse_maps_the_first_child_of_each_group() {
         let mapper = FlatToTypeMapper::new(contacts_view());
         assert_eq!(
-            IMapper::reverse_map(&mapper, IMapper::map(&mapper, ada_home())),
+            Mapper::reverse_map(&mapper, Mapper::map(&mapper, ada_home())),
             ada_home()
         );
         assert_eq!(
-            IMapper::reverse_map(&mapper, IMapper::map(&mapper, no_address())),
+            Mapper::reverse_map(&mapper, Mapper::map(&mapper, no_address())),
             no_address()
         );
     }
@@ -461,8 +461,8 @@ mod tests {
     fn collapses_already_mapped_rows() {
         let mapper = FlatToTypeMapper::new(contacts_view());
         let rows = mapper.collapse(vec![
-            IMapper::map(&mapper, ada_home()),
-            IMapper::map(&mapper, ada_work()),
+            Mapper::map(&mapper, ada_home()),
+            Mapper::map(&mapper, ada_work()),
         ]);
         assert_eq!(many(&rows[0], "addresses").len(), 2);
         assert_eq!(many(&rows[0], "phones").len(), 1);
@@ -473,7 +473,7 @@ mod tests {
         let mapper = FlatToTypeMapper::new(contacts_view());
         let mut orphan = ada_home();
         orphan.insert("id".into(), Value::Null);
-        let mut mapped = IMapper::map(&mapper, ada_home());
+        let mut mapped = Mapper::map(&mapper, ada_home());
         mapped.insert(
             "addresses".into(),
             MappedValue::Many(vec![
@@ -488,7 +488,7 @@ mod tests {
                 ]),
             ]),
         );
-        let mut extra = IMapper::map(&mapper, ada_work());
+        let mut extra = Mapper::map(&mapper, ada_work());
         extra.insert(
             "addresses".into(),
             MappedValue::Many(vec![HashMap::from([
@@ -547,7 +547,7 @@ mod tests {
                 ),
             ],
         ));
-        let mapped = IMapper::map(
+        let mapped = Mapper::map(
             &mapper,
             cell(&[("id", Value::Int(1)), ("item_id", Value::Int(2))]),
         );
@@ -556,8 +556,8 @@ mod tests {
         assert_eq!(text(&many(&mapped, "items")[0], "id"), Value::Int(2));
         assert_eq!(text(&many(&mapped, "items")[0], "title"), Value::Null);
         assert!(!many(&mapped, "items")[0].contains_key("kids"));
-        assert_eq!(text(&IMapper::map(&mapper, Row::new()), "id"), Value::Null);
-        let reversed = IMapper::reverse_map(&mapper, MappedRow::new());
+        assert_eq!(text(&Mapper::map(&mapper, Row::new()), "id"), Value::Null);
+        let reversed = Mapper::reverse_map(&mapper, MappedRow::new());
         assert_eq!(reversed.get("id"), Some(&Value::Null));
         assert_eq!(reversed.get("item_id"), Some(&Value::Null));
         assert_eq!(reversed.get("item_title"), Some(&Value::Null));

@@ -25,8 +25,8 @@ impl StubCommand {
 
 #[async_trait]
 impl Command for StubCommand {
-    fn use_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
-        self.host.use_middleware(middleware);
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.host.add_middleware(middleware);
     }
 
     async fn execute_reader(
@@ -70,8 +70,8 @@ macro_rules! named_stub_command {
 
         #[async_trait::async_trait]
         impl $crate::Command for $name {
-            fn use_middleware(&self, middleware: std::sync::Arc<dyn $crate::CommandMiddleware>) {
-                self.inner.use_middleware(middleware);
+            fn add_middleware(&self, middleware: std::sync::Arc<dyn $crate::CommandMiddleware>) {
+                self.inner.add_middleware(middleware);
             }
 
             async fn execute_reader(

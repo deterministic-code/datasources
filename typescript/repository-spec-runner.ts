@@ -94,7 +94,7 @@ const attach = (repo: Repository<SpecRow>, logs: string[]) => {
     logs.push(line);
     if (specVerbose()) console.log(line);
   };
-  repo.use(
+  repo.addMiddleware(
     new ConsoleCommandMiddleware(write, undefined, {
       isVerbose: specVerbose() ? "true" : "false",
     }),
@@ -246,7 +246,7 @@ export const runRepositorySpec = async (
   const repo = new Repository<SpecRow>({
     connection,
     ids: spec.type.ids,
-    assignIdentityOnAdd: spec.type.assignIdentityOnAdd,
+    assignIdentityOnCreate: spec.type.assignIdentityOnAdd,
     type: typeOf(spec.type),
     entity: spec.type.table,
     mapping,
@@ -258,7 +258,7 @@ export const runRepositorySpec = async (
   for (const step of spec.steps) {
     await ({
       CREATE: async () => {
-        if (step.CREATE) await repo.add(step.CREATE.row);
+        if (step.CREATE) await repo.create(step.CREATE.row);
       },
       GET: async () => {
         if (!step.GET) return;

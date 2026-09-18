@@ -1,4 +1,4 @@
-export interface IResponse {
+export interface Response {
   result: unknown;
   rowsAffected: number;
 }

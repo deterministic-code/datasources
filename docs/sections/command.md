@@ -11,7 +11,7 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `ICommand` | `Command` | `ICommand` |
-| `Use` | `use_middleware` | `use` |
+| `AddMiddleware` | `add_middleware` | `addMiddleware` |
 | `ExecuteReader` | `execute_reader` | `executeReader` |
 | `Execute` | `execute` | `execute` |
 

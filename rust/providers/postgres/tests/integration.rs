@@ -173,7 +173,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
         || utc_iso_millis(SystemTime::now()),
     ));
     let attach = |command: PostgresCommand| {
-        command.use_middleware(middleware.clone());
+        command.add_middleware(middleware.clone());
         command
     };
     let mut sessions = HashMap::new();

@@ -163,7 +163,7 @@ describe("middleware", () => {
     const host = new CommandMiddlewareHost();
     const seen: string[] = [];
     let used = "";
-    host.use({
+    host.addMiddleware({
       beforeQuery: (query) => {
         seen.push(`before:${query}`);
         return { query: "SELECT 2" };
@@ -194,7 +194,7 @@ describe("middleware", () => {
   it("skips the query when beforeQuery throws", async () => {
     const host = new CommandMiddlewareHost();
     let ran = false;
-    host.use({
+    host.addMiddleware({
       beforeQuery: () => {
         throw new Error("blocked");
       },
@@ -214,7 +214,7 @@ describe("middleware", () => {
   it("runs afterQuery with error when the query fails", async () => {
     const host = new CommandMiddlewareHost();
     let captured: Error | undefined;
-    host.use({
+    host.addMiddleware({
       beforeQuery: () => undefined,
       afterQuery: (_q, _p, _r, _e, error) => {
         captured = error;
@@ -231,7 +231,7 @@ describe("middleware", () => {
   it("wraps a non-Error throw for afterQuery", async () => {
     const host = new CommandMiddlewareHost();
     let captured: Error | undefined;
-    host.use({
+    host.addMiddleware({
       beforeQuery: () => undefined,
       afterQuery: (_q, _p, _r, _e, error) => {
         captured = error;
@@ -265,7 +265,7 @@ describe("console middleware", () => {
       () => stamps.shift() ?? new Date("2026-08-28T01:54:12.103Z"),
     );
     const host = new CommandMiddlewareHost();
-    host.use(middleware);
+    host.addMiddleware(middleware);
     await host.run('SELECT * FROM "widget" ORDER BY "id"', undefined, async () => {
       await new Promise((resolve) => setTimeout(resolve, 2));
       return { value: 1, rows: [] };
@@ -296,7 +296,7 @@ describe("console middleware", () => {
   it("trims trailing newlines before logging", async () => {
     const lines: string[] = [];
     const host = new CommandMiddlewareHost();
-    host.use(new ConsoleCommandMiddleware((line) => lines.push(line)));
+    host.addMiddleware(new ConsoleCommandMiddleware((line) => lines.push(line)));
     await host.run("SELECT 1\n", undefined, async () => ({ value: 1, rows: [] }));
     expect(lines[0].replace(/^\[[^\]]+\]-/, "")).toBe("[datasource][Start]-[SELECT 1]");
   });
@@ -310,7 +310,7 @@ describe("console middleware", () => {
       new Date("2026-08-28T01:54:12.104Z"),
     ];
     const host = new CommandMiddlewareHost();
-    host.use(
+    host.addMiddleware(
       new ConsoleCommandMiddleware(
         (line) => lines.push(line),
         () => stamps.shift() ?? new Date("2026-08-28T01:54:12.104Z"),
@@ -440,7 +440,7 @@ describe("stubs", () => {
     await expect(collectAsync(repo.get(new Where("1=1")))).rejects.toThrow(
       ProviderNotImplementedError,
     );
-    await expect(repo.add({})).rejects.toThrow(ProviderNotImplementedError);
+    await expect(repo.create({})).rejects.toThrow(ProviderNotImplementedError);
     await expect(repo.update({})).rejects.toThrow(ProviderNotImplementedError);
     await expect(repo.delete({}, new Where("1=1"))).rejects.toThrow(
       ProviderNotImplementedError,
@@ -558,7 +558,7 @@ describe("published mocks", () => {
     expect(await collectAsync(repo.get(new MockQuery("all")))).toHaveLength(2);
     expect(await repo.getSingle(new MockWhere("id=1"))).toEqual({ id: 1 });
     expect(await collectAsync(repo.get(new MockWhere("all")))).toHaveLength(2);
-    expect((await repo.add({ id: 3 })).rowsAffected).toBe(1);
+    expect((await repo.create({ id: 3 })).rowsAffected).toBe(1);
     expect(
       (await repo.update({ id: 3 }, new MockWhere("id=3"))).rowsAffected,
     ).toBe(1);
@@ -569,7 +569,7 @@ describe("published mocks", () => {
     repo.getError = new Error("g");
     await expect(collectAsync(repo.get())).rejects.toThrow("g");
     repo.addError = new Error("ad");
-    await expect(repo.add({ id: 0 })).rejects.toThrow("ad");
+    await expect(repo.create({ id: 0 })).rejects.toThrow("ad");
     repo.updateError = new Error("up");
     await expect(repo.update({ id: 0 })).rejects.toThrow("up");
     repo.deleteError = new Error("del");
@@ -614,7 +614,7 @@ describe("published mocks", () => {
     const connection = new MockConnection();
     const command = new MockCommand(connection);
     const seen: string[] = [];
-    command.use({
+    command.addMiddleware({
       beforeQuery: (query) => {
         seen.push(`before:${query}`);
       },

@@ -4,7 +4,7 @@ Short recipes for the usual paths. Add samples here as Repository and related ty
 
 ## Create a repository
 
-TODO: register a provider, create a connection, `createRepository`, then `add` / `get` / `update` / `delete`.
+TODO: register a provider, create a connection, `createRepository`, then `create` / `get` / `update` / `delete`.
 
 ## Run a command
 

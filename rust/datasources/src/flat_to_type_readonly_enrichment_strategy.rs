@@ -1,4 +1,4 @@
-use crate::mappers::{FlatToTypeMapper, IFlatToTypeMapper, MappedRow};
+use crate::mappers::{FlatToTypeMapper, FlatToTypeMapperTrait, MappedRow};
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::ReadonlyRepository;

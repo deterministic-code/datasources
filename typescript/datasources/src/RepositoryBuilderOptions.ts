@@ -8,7 +8,7 @@ import type { StatementMapper } from "./mappers/StatementMapper.ts";
 export type RepositoryBuilderOptions<T = Cells> = {
   connection: IConnection;
   ids?: string[];
-  assignIdentityOnAdd?: boolean;
+  assignIdentityOnCreate?: boolean;
   entity?: string;
   mapping?: TypeConverter<T, Cells>;
   mapper?: IMapper<T, T>;

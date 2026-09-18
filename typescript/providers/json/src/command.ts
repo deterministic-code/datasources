@@ -5,7 +5,7 @@ import {
   type Cells,
   type ICommand,
   type IReader,
-  type IResponse,
+  type Response,
   type Parameter,
 } from "@datasources/core";
 import type { JsonConnection } from "./connection.ts";
@@ -42,7 +42,7 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
   async execute(
     text: string,
     parameters?: Parameter[],
-  ): Promise<IResponse> {
+  ): Promise<Response> {
     return this.run(text, parameters, async (query, params) => {
         this.connection.ensureOpen();
         const op = query.trim().toLowerCase();
@@ -72,7 +72,7 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
   private async applyUpdate(
     obj: Record<string, unknown>,
     filter: Record<string, unknown>,
-  ): Promise<IResponse> {
+  ): Promise<Response> {
     const collection = this.connection.getCollection();
     let rowsAffected = 0;
     for (let i = 0; i < collection.length; i += 1) {
@@ -87,7 +87,7 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
 
   private async applyDelete(
     filter: Record<string, unknown>,
-  ): Promise<IResponse> {
+  ): Promise<Response> {
     const collection = this.connection.getCollection();
     const remaining = collection.filter(
       (row) => !matches(asRecord(row), filter),

@@ -1,17 +1,17 @@
 import {
-  type DatasourceFactory,
+  type IDatasourceFactory,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IDatasource,
   type IReadonlyRepository,
-  type IRepository,
+  type ICRUDRepository,
   StubRepository,
 } from "@datasources/core";
 import { OracleConnection } from "./connection.ts";
 import { OracleCommand } from "./command.ts";
 
-export class OracleDatasource implements IDatasource, DatasourceFactory {
+export class OracleDatasource implements IDatasource, IDatasourceFactory {
   static readonly instance = new OracleDatasource();
   readonly provider = "oracle";
   private connection?: IConnection;
@@ -22,7 +22,7 @@ export class OracleDatasource implements IDatasource, DatasourceFactory {
     Promise.resolve(this.defaultConnection());
   createCommand = (connection?: IConnection): ICommand =>
     new OracleCommand(connection ?? this.defaultConnection());
-  createRepository = <T>(connection?: IConnection): IRepository<T> =>
+  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
   createReadonlyRepository = <T>(
     connection?: IConnection,

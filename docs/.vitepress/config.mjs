@@ -15,7 +15,7 @@ const toLink = (path) => `/${path.replace(/\.md$/, "")}`;
 
 export default defineConfig({
   title: "Datasources",
-  description: "Async interfaces for files, SQL, and document stores.",
+  description: "Data-access and object-relational mapper with parity across languages and providers.",
   cleanUrls: true,
   rewrites: {
     "introduction.md": "index.md",

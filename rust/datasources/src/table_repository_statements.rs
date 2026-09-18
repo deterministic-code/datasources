@@ -5,13 +5,13 @@ use crate::statement::Statement;
 use crate::where_trait::Where;
 use std::sync::Arc;
 
-pub struct TableRepositoryStatements {
+pub struct RepositoryStatements {
     table: String,
     columns: Vec<String>,
     mapper: Arc<StatementMapper>,
 }
 
-impl TableRepositoryStatements {
+impl RepositoryStatements {
     pub fn new(table: impl Into<String>, columns: Vec<String>) -> Self {
         Self::with_mapper(table, columns, Arc::new(StatementMapper::identity("", "")))
     }

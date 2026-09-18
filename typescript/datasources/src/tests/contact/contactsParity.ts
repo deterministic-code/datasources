@@ -19,7 +19,7 @@ export const contactsParity = async (
   const eager = new FlatToTypeMapper(contactsView).collapse(
     await collectAsync(
       new Repository<Cells>({ connection, entity: "contacts_base" })
-        .use(middleware)
+        .addMiddleware(middleware)
         .get(contactsJoinQuery()),
     ),
   );
