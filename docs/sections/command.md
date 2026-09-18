@@ -15,6 +15,12 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 | `ExecuteReader` | `execute_reader` | `executeReader` |
 | `Execute` | `execute` | `execute` |
 
+`ICommand` supports `addMiddleware` / `AddMiddleware` / `add_middleware` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
+
+## Reader
+
+`ExecuteReader` / `executeReader` / `execute_reader` returns a reader over query results.
+
 ## Provider types
 
 | Dialect | Provider | Command |

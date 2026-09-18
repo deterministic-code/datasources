@@ -2,14 +2,19 @@
 
 Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C# / TypeScript) / `CRUDRepository` (Rust) adds `create`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
 
-## IReadonlyRepository / ICRUDRepository
+## Readonly repository
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
 | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` |
-| `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` |
 | `GetSingle` | `get_single` | `getSingle` |
 | `Get` | `get` | `get` |
+
+## CRUD repository
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` |
 | `Create` | `create` | `create` |
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
@@ -36,7 +41,7 @@ var repo = factory.Create<Contact>();
 var byName = factory.Create("Contact");
 ```
 
-## Enrichment
+## Enriched repository
 
 A read-only service wraps an inner repository, then fills properties already on `T` from related repositories. This is a post-Get step (after convert-then-map). It does not join or collapse rows.
 
@@ -76,6 +81,8 @@ Nest only on walkable objects (`many: true` or a whole related row). A `select` 
 - **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
 - **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+
+## Bulk repository
 
 `BulkCRUDRepository` inherits `DeepCRUDRepository` and adds list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
 

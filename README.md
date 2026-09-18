@@ -6,7 +6,7 @@ Datasources is a data-access and object-relational mapper library with parity ac
 
 It is designed for AI agents. The motivation is that current AI-generated data-access code is not deterministic, and quality often degrades as a project scales.
 
-The feature stack starts with standard data-access modules for commands, connections, and object mapping. Higher up, the API is more opinionated and adds time-saving features for CRUD repositories, enriched reading, and bulk commands.
+The feature stack starts with standard data-access modules for commands, connections, and object mapping. Higher up, the API is more opinionated and adds time-saving features for CRUD repositories, enriched repositories, and bulk repositories.
 
 - [Quick Start](#quickstart)
 - [Feature Matrix](#feature-matrix)
@@ -242,32 +242,41 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 ### Feature stack
 
-| Feature | C# | Rust | TypeScript | Role |
-| --- | --- | --- | --- | --- |
-| Datasource | `IDatasource` | `Datasource` | `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository`, `createReadonlyRepository` |
-| Mapping | `IMapper<TFrom, TTo>`, `TypeConverter<To, From>` | `Mapper<TFrom, TTo>`, `TypeConverter<To, From>` | `IMapper<TFrom, TTo>`, `TypeConverter` | column → object convert, then map |
-| Connection | `IConnection` | `Connection` | `IConnection` | `open`, `close`, `startTransaction(isolation)` |
-| Transaction | `ITransaction` | `Transaction` | `ITransaction` | `isolation`, `commit`, `abort` |
-| Command | `ICommand` | `Command` | `ICommand` | `executeReader`, `execute` |
-| Reader | `IReader` | `Reader` | `IReader` | `current`, `next` |
-| Query / Where | `IQuery` / `IWhere` | `Query` / `Where` | `IQuery` / `IWhere` | `getText()` — provider-specific |
-| Parameter / Response | `Parameter` / `Response` | `Parameter` / `Response` | `Parameter` / `Response` | `{ name, value }` / `{ result, rowsAffected }` |
-| Readonly repository | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` | `connection`, `getSingle`, `get` |
-| CRUD repository | `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` | extends `IReadonlyRepository<T>` with `create`, `update`, `delete` |
-| Enriched reading | `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` | fill related properties after get |
-| Bulk commands | `BulkCRUDRepository<T>` | `BulkCRUDRepository` | `BulkCRUDRepository<T>` | list create / update / delete |
-
-`ICommand` supports `addMiddleware` / `AddMiddleware` / `add_middleware` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
+| Feature | C# | Rust | TypeScript |
+| --- | :---: | :---: | :---: |
+| Datasource | [✅](#datasource) | [✅](#datasource) | [✅](#datasource) |
+| Mapping | [✅](#mappers) | [✅](#mappers) | [✅](#mappers) |
+| Type Converters | [✅](#typeconverters) | [✅](#typeconverters) | [✅](#typeconverters) |
+| Connection | [✅](#connection) | [✅](#connection) | [✅](#connection) |
+| Transaction | [✅](#transaction) | [✅](#transaction) | [✅](#transaction) |
+| Command | [✅](#command) | [✅](#command) | [✅](#command) |
+| Reader | [✅](#reader) | [✅](#reader) | [✅](#reader) |
+| Query / Where | [✅](#query-where) | [✅](#query-where) | [✅](#query-where) |
+| Readonly repository | [✅](#readonly-repository) | [✅](#readonly-repository) | [✅](#readonly-repository) |
+| CRUD repository | [✅](#crud-repository) | [✅](#crud-repository) | [✅](#crud-repository) |
+| Enriched repository | [✅](#enriched-repository) | [✅](#enriched-repository) | [✅](#enriched-repository) |
+| Bulk repository | [✅](#bulk-repository) | [✅](#bulk-repository) | [✅](#bulk-repository) |
 
 ### Providers
 
-Working: **json**, **memory**, **sqlite**, **mysql**, **postgres** (inject `IFileStore` / `ISqliteDriver` / `IMysqlDriver` / `IPostgresDriver`). Native engines are opt-in: `better-sqlite3` / `mysql2` / `pg` (optional npm peers), `rusqlite` / `mysql_async` / `tokio-postgres`, or `Datasources.Sqlite.Microsoft` / MySqlConnector / Npgsql.
-
-Stubs (installable, throw “not implemented”): text, xml, yaml, sqlserver, oracle, mongodb, dynamodb.
+| Provider | C# | Rust | TypeScript |
+| --- | :---: | :---: | :---: |
+| json | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| memory | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| sqlite | ✅ | ✅ | ✅ |
+| text | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| xml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| yaml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| mysql | ✅ | ✅ | ✅ |
+| sqlserver | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| postgres | ✅ | ✅ | ✅ |
+| oracle | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| mongodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| dynamodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 
 Package names per language are on [QuickStart](#packages).
 
-## Common Examples
+## Examples
 
 Short recipes for the usual paths. Add samples here as Repository and related types land.
 
@@ -332,96 +341,109 @@ const ds = Datasource.create("sqlite");
 ```
 See [QuickStart](#quickstart) for full registration and default-provider setup.
 
-## Repositories
+## Mappers
 
-Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C# / TypeScript) / `CRUDRepository` (Rust) adds `create`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
+Holds source/destination labels. Column names pass through as-is.
 
-### IReadonlyRepository / ICRUDRepository
+### IMapper
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` |
-| `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` |
-| `GetSingle` | `get_single` | `getSingle` |
-| `Get` | `get` | `get` |
-| `Create` | `create` | `create` |
+| `IMapper<TFrom, TTo>` | `Mapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
+
+### ISourceDestinationMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `ISourceDestinationMapper` | `SourceDestinationMapper` | `ISourceDestinationMapper` |
+| `Source` | `source` | `source` |
+| `Destination` | `destination` | `destination` |
+
+### NameMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `NameMapper` | `NameMapper` | `NameMapper` |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
+
+### NameSourceDestinationMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `NameSourceDestinationMapper` | `NameSourceDestinationMapper` | `NameSourceDestinationMapper` |
+| constructor | `new` | constructor |
+| `Source` | `source` | `source` |
+| `Destination` | `destination` | `destination` |
+
+### TransformMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` |
+| constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
+
+### FlatToTypeMapper
+
+Collapses denormalized join rows into a typed graph. Scalars map column → field; groups collect unique children by key. Nested group fields on a collection are omitted.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `IFlatToTypeMapper` | `FlatToTypeMapperTrait` | `IFlatToTypeMapper<T>` |
+| `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
+| `TypeMap` | `TypeMap` | `TypeMap<T>` |
+| `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |
+| `TypeMapField` | `TypeMapField` | string or group |
+| `MappedValue` | `MappedValue` | `T` fields |
+| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
+| `Collapse` | `collapse` / `collapse_rows` | `collapse` |
+
+### StatementMapper
+
+Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.
+
+Apply in either or both places:
+
+1. **Builder** — `RepositoryBuilder` maps `Entity` and `Columns` into `RepositoryStatements`.
+2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` mappers rewrite the finished statement.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `StatementMapper<T>` | `StatementMapper` | `StatementMapper<T>` |
+| `Entity` | `entity` | `entity` |
+| `Columns` | `columns` | `columns` |
+| `Query` | `query` | `query` |
+| `Insert` | `insert` | `insert` |
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
+| `Rows` | `rows` | `rows` |
+| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
 
-### Factory
+## TypeConverters
 
-Instance registry of factory callbacks. Register a builder, then create by entity type name or by type. The callback receives an optional connection.
+`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`.
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IRepositoryFactory` | `ReadonlyRepositoryFactory` | `IRepositoryFactory` |
-| `ICRUDRepositoryFactory` | `CRUDRepositoryFactory` | `ICRUDRepositoryFactory` |
-| `RepositoryFactory` | `RepositoryFactory` | `RepositoryFactory` |
-| `Register` / `Create` | `register` / `create` | `register` / `create` |
-| `Create<T>` / `Create(typeof(T))` | `register_type` / `create_type` | `register(type)` / `create(type)` |
-| `RepositoryNotRegisteredException` | `DatasourceError` | `RepositoryNotRegisteredError` |
+A dialect adds a `TypeConverter` only when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
-Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
-
-```csharp
-var factory = new RepositoryFactory();
-factory.Register<Contact>(connection => new Repository<Contact>(connection!));
-var repo = factory.Create<Contact>();
-var byName = factory.Create("Contact");
-```
-
-### Enrichment
-
-A read-only service wraps an inner repository, then fills properties already on `T` from related repositories. This is a post-Get step (after convert-then-map). It does not join or collapse rows.
+### TypeConverter
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `IEnriched<T>` | `Enriched` | `IEnriched<T>` |
-| `IRepositoryTree` | `RepositoryTree` | `IRepositoryTree` |
-| `IRepositoryTreeNode` | `RepositoryTreeNode` | `IRepositoryTreeNode` |
-| `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` |
-| `DeepCRUDRepository<T>` | `DeepCRUDRepository` | `DeepCRUDRepository<T>` |
-| `BulkCRUDRepository<T>` | `BulkCRUDRepository` | `BulkCRUDRepository<T>` |
-| `AddEnriched` | `add_enriched` / `add_enriched_repo` | `addEnriched` |
-| `Enrich` | `enrich` | `enrich` |
+| `TypeConverter<To, From>` | `TypeConverter<To, From>` | `TypeConverter` |
+| `Convert` | `convert` | `convert` |
+| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
 
-Lookups use `GetSingle` / `get_single_where` (cached per distinct key). Lists use `Get` / `get_where`. Missing lookups leave the destination default.
+### RowTypeConverter
 
-Contacts as the model — fill existing fields only (`contact_type_name`, `contact_source_name`, `addresses`, `phones`):
-
-```csharp
-AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
-AddEnriched("contact_source_name", "contact_source_id", sources, "id", "name");
-AddEnriched("addresses", "id", addresses, "contact_id", many: true);
-AddEnriched("phones", "id", phones, "contact_id", many: true);
-```
-
-Nested rules run on the related objects after that node fills. `AddEnriched` stays fluent for siblings; `nest` receives the child node:
-
-```csharp
-AddEnriched("children", "id", children, "parent_id", many: true,
-    nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
-```
-
-Nest only on walkable objects (`many: true` or a whole related row). A `select` scalar is not walked. Depth is unbounded; each node applies, then children run on the related items.
-
-`DeepCRUDRepository` is the write side of the same tree. `Get` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
-
-- **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
-- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
-- **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
-
-`BulkCRUDRepository` inherits `DeepCRUDRepository` and adds list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
-
-| C# | TypeScript | Rust |
+| C# | Rust | TypeScript |
 | --- | --- | --- |
-| `Create(IReadOnlyList<T>)` / `BulkCreate` | `createBulk` | `create_bulk` |
-| `Update(IReadOnlyList<T>)` / `BulkUpdate` | `updateBulk` | `update_bulk` |
-| `Delete(IReadOnlyList<T>)` / `BulkDelete` | `deleteBulk` | `delete_bulk` |
-
-### Examples
-
-TODO: fill as the generic `Repository<T>` surface settles.
+| `RowTypeConverter<T>` | `RowTypeConverter` | `RowTypeConverter` |
+| `Convert` / `ReverseConvert` | `convert` / `reverse_convert` | `convert` / `reverseConvert` |
+| `Types` / `Fields` | `types` / `fields` | `types` / `fields` |
 
 ## Connection
 
@@ -440,6 +462,10 @@ TODO: fill as the generic `Repository<T>` surface settles.
 | `StartTransaction` | `start_transaction` | `startTransaction` |
 
 Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`, `ISqliteDriver` / `SqliteDriver`). Stub dialects return a named connection; open / close / start-transaction throw or return not-implemented.
+
+### Transaction
+
+`StartTransaction` / `startTransaction` / `start_transaction` begins a transaction on an open connection.
 
 ### Provider types
 
@@ -600,6 +626,12 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 | `ExecuteReader` | `execute_reader` | `executeReader` |
 | `Execute` | `execute` | `execute` |
 
+`ICommand` supports `addMiddleware` / `AddMiddleware` / `add_middleware` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
+
+### Reader
+
+`ExecuteReader` / `executeReader` / `execute_reader` returns a reader over query results.
+
 ### Provider types
 
 | Dialect | Provider | Command |
@@ -716,6 +748,10 @@ Provider tests inject fakes on options (`MemoryFileStore`, `ScriptedDriver`) and
 
 Shared statement construction used by SQL providers. Dialect packages may wrap `StatementBuilder` for quoting and native column types, including `CreateStoredProcedure` the same way as `CreateInsert`.
 
+### Query / Where
+
+`StatementBuilder` builds query / insert / update / delete text. `WhereBuilder` composes predicates.
+
 ### StatementBuilder
 
 | C# | Rust | TypeScript |
@@ -740,106 +776,100 @@ Shared statement construction used by SQL providers. Dialect packages may wrap `
 
 TODO: query / insert / where samples as the builder API is documented.
 
-## Mappers
+## Repositories
 
-Holds source/destination labels. Column names pass through as-is.
+Typed read and write over a connection. `IReadonlyRepository<T>` is get-only; `ICRUDRepository<T>` (C# / TypeScript) / `CRUDRepository` (Rust) adds `create`, `update`, and `delete`. SQL providers typically build a table repository from `RepositoryBuilder` and a `TypeConverter` mapping.
 
-### IMapper
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IMapper<TFrom, TTo>` | `Mapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
-
-### ISourceDestinationMapper
+### Readonly repository
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `ISourceDestinationMapper` | `SourceDestinationMapper` | `ISourceDestinationMapper` |
-| `Source` | `source` | `source` |
-| `Destination` | `destination` | `destination` |
+| `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` |
+| `GetSingle` | `get_single` | `getSingle` |
+| `Get` | `get` | `get` |
 
-### NameMapper
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `NameMapper` | `NameMapper` | `NameMapper` |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
-
-### NameSourceDestinationMapper
+### CRUD repository
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `NameSourceDestinationMapper` | `NameSourceDestinationMapper` | `NameSourceDestinationMapper` |
-| constructor | `new` | constructor |
-| `Source` | `source` | `source` |
-| `Destination` | `destination` | `destination` |
-
-### TransformMapper
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` |
-| constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
-
-### FlatToTypeMapper
-
-Collapses denormalized join rows into a typed graph. Scalars map column → field; groups collect unique children by key. Nested group fields on a collection are omitted.
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IFlatToTypeMapper` | `FlatToTypeMapperTrait` | `IFlatToTypeMapper<T>` |
-| `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
-| `TypeMap` | `TypeMap` | `TypeMap<T>` |
-| `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |
-| `TypeMapField` | `TypeMapField` | string or group |
-| `MappedValue` | `MappedValue` | `T` fields |
-| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
-| `Collapse` | `collapse` / `collapse_rows` | `collapse` |
-
-### StatementMapper
-
-Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.
-
-Apply in either or both places:
-
-1. **Builder** — `RepositoryBuilder` maps `Entity` and `Columns` into `RepositoryStatements`.
-2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` mappers rewrite the finished statement.
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `StatementMapper<T>` | `StatementMapper` | `StatementMapper<T>` |
-| `Entity` | `entity` | `entity` |
-| `Columns` | `columns` | `columns` |
-| `Query` | `query` | `query` |
-| `Insert` | `insert` | `insert` |
+| `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` |
+| `Create` | `create` | `create` |
 | `Update` | `update` | `update` |
 | `Delete` | `delete` | `delete` |
-| `Rows` | `rows` | `rows` |
-| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
 
-## TypeConverters
+### Factory
 
-`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`.
-
-A dialect adds a `TypeConverter` only when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
-
-### TypeConverter
+Instance registry of factory callbacks. Register a builder, then create by entity type name or by type. The callback receives an optional connection.
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `TypeConverter<To, From>` | `TypeConverter<To, From>` | `TypeConverter` |
-| `Convert` | `convert` | `convert` |
-| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
+| `IRepositoryFactory` | `ReadonlyRepositoryFactory` | `IRepositoryFactory` |
+| `ICRUDRepositoryFactory` | `CRUDRepositoryFactory` | `ICRUDRepositoryFactory` |
+| `RepositoryFactory` | `RepositoryFactory` | `RepositoryFactory` |
+| `Register` / `Create` | `register` / `create` | `register` / `create` |
+| `Create<T>` / `Create(typeof(T))` | `register_type` / `create_type` | `register(type)` / `create(type)` |
+| `RepositoryNotRegisteredException` | `DatasourceError` | `RepositoryNotRegisteredError` |
 
-### RowTypeConverter
+Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
+
+```csharp
+var factory = new RepositoryFactory();
+factory.Register<Contact>(connection => new Repository<Contact>(connection!));
+var repo = factory.Create<Contact>();
+var byName = factory.Create("Contact");
+```
+
+### Enriched repository
+
+A read-only service wraps an inner repository, then fills properties already on `T` from related repositories. This is a post-Get step (after convert-then-map). It does not join or collapse rows.
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `RowTypeConverter<T>` | `RowTypeConverter` | `RowTypeConverter` |
-| `Convert` / `ReverseConvert` | `convert` / `reverse_convert` | `convert` / `reverseConvert` |
-| `Types` / `Fields` | `types` / `fields` | `types` / `fields` |
+| `IEnriched<T>` | `Enriched` | `IEnriched<T>` |
+| `IRepositoryTree` | `RepositoryTree` | `IRepositoryTree` |
+| `IRepositoryTreeNode` | `RepositoryTreeNode` | `IRepositoryTreeNode` |
+| `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` |
+| `DeepCRUDRepository<T>` | `DeepCRUDRepository` | `DeepCRUDRepository<T>` |
+| `BulkCRUDRepository<T>` | `BulkCRUDRepository` | `BulkCRUDRepository<T>` |
+| `AddEnriched` | `add_enriched` / `add_enriched_repo` | `addEnriched` |
+| `Enrich` | `enrich` | `enrich` |
+
+Lookups use `GetSingle` / `get_single_where` (cached per distinct key). Lists use `Get` / `get_where`. Missing lookups leave the destination default.
+
+Contacts as the model — fill existing fields only (`contact_type_name`, `contact_source_name`, `addresses`, `phones`):
+
+```csharp
+AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
+AddEnriched("contact_source_name", "contact_source_id", sources, "id", "name");
+AddEnriched("addresses", "id", addresses, "contact_id", many: true);
+AddEnriched("phones", "id", phones, "contact_id", many: true);
+```
+
+Nested rules run on the related objects after that node fills. `AddEnriched` stays fluent for siblings; `nest` receives the child node:
+
+```csharp
+AddEnriched("children", "id", children, "parent_id", many: true,
+    nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
+```
+
+Nest only on walkable objects (`many: true` or a whole related row). A `select` scalar is not walked. Depth is unbounded; each node applies, then children run on the related items.
+
+`DeepCRUDRepository` is the write side of the same tree. `Get` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
+
+- **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
+- **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+
+### Bulk repository
+
+`BulkCRUDRepository` inherits `DeepCRUDRepository` and adds list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+
+| C# | TypeScript | Rust |
+| --- | --- | --- |
+| `Create(IReadOnlyList<T>)` / `BulkCreate` | `createBulk` | `create_bulk` |
+| `Update(IReadOnlyList<T>)` / `BulkUpdate` | `updateBulk` | `update_bulk` |
+| `Delete(IReadOnlyList<T>)` / `BulkDelete` | `deleteBulk` | `delete_bulk` |
+
+### Examples
+
+TODO: fill as the generic `Repository<T>` surface settles.

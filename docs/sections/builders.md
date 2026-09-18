@@ -2,6 +2,10 @@
 
 Shared statement construction used by SQL providers. Dialect packages may wrap `StatementBuilder` for quoting and native column types, including `CreateStoredProcedure` the same way as `CreateInsert`.
 
+## Query / Where
+
+`StatementBuilder` builds query / insert / update / delete text. `WhereBuilder` composes predicates.
+
 ## StatementBuilder
 
 | C# | Rust | TypeScript |
