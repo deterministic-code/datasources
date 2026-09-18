@@ -1,10 +1,6 @@
-# Builders
+# Statements
 
-Shared statement construction used by SQL providers. Dialect packages may wrap `StatementBuilder` for quoting and native column types, including `CreateStoredProcedure` the same way as `CreateInsert`.
-
-## Query / Where
-
-`StatementBuilder` builds query / insert / update / delete text. `WhereBuilder` composes predicates.
+Shared statement construction used by SQL providers. `StatementBuilder` builds query / insert / update / delete text. `WhereBuilder` composes predicates. Dialect packages may wrap `StatementBuilder` for quoting and native column types, including `CreateStoredProcedure` the same way as `CreateInsert`.
 
 ## StatementBuilder
 

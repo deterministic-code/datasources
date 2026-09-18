@@ -1,4 +1,4 @@
-/** @typedef {{ lang: string, code: string }} DialectFence */
+/** @typedef {{ lang: string, label?: string, code: string }} DialectFence */
 
 const LABELS = {
   csharp: "C#",
@@ -12,33 +12,42 @@ const LABELS = {
 };
 
 const DIALECT_BLOCK = /^::: dialects\r?\n([\s\S]*?)^:::\s*$/gm;
-const FENCE = /^```([a-zA-Z0-9_+-]+)[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
+const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::\s*$/gm;
+const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
 
 export const labelFor = (lang) => LABELS[lang.toLowerCase()] ?? lang;
 
 export const parseFences = (body) => {
   const fences = [];
   for (const match of body.matchAll(FENCE)) {
-    fences.push({ lang: match[1], code: match[2].replace(/\n$/, "") });
+    fences.push({ lang: match[1], label: match[2], code: match[3].replace(/\n$/, "") });
   }
   return fences;
 };
 
-export const toReadmeDialects = (body) =>
-  parseFences(body)
-    .map(({ lang, code }) => `#### ${labelFor(lang)}\n\n\`\`\`${lang}\n${code}\n\`\`\``)
-    .join("\n\n");
-
-export const toVitePressDialects = (body) => {
+const toGroup = (body, title) => {
   const fences = parseFences(body)
-    .map(({ lang, code }) => `\`\`\`${lang} [${labelFor(lang)}]\n${code}\n\`\`\``)
+    .map(({ lang, label, code }) => `\`\`\`${lang} [${title({ lang, label })}]\n${code}\n\`\`\``)
     .join("\n\n");
   return `::: code-group\n\n${fences}\n\n:::`;
 };
 
+const toReadme = (body, title) =>
+  parseFences(body)
+    .map(({ lang, label, code }) => `#### ${title({ lang, label })}\n\n\`\`\`${lang}\n${code}\n\`\`\``)
+    .join("\n\n");
+
+export const toReadmeDialects = (body) => toReadme(body, ({ lang }) => labelFor(lang));
+export const toVitePressDialects = (body) => toGroup(body, ({ lang }) => labelFor(lang));
+export const toReadmePackages = (body) => toReadme(body, ({ lang, label }) => label ?? lang);
+export const toVitePressPackages = (body) => toGroup(body, ({ lang, label }) => label ?? lang);
+
 export const transformDialects = (markdown, style) => {
-  const replace = style === "vitepress" ? toVitePressDialects : toReadmeDialects;
-  return markdown.replace(DIALECT_BLOCK, (_, body) => replace(body));
+  const dialects = style === "vitepress" ? toVitePressDialects : toReadmeDialects;
+  const packages = style === "vitepress" ? toVitePressPackages : toReadmePackages;
+  return markdown
+    .replace(DIALECT_BLOCK, (_, body) => dialects(body))
+    .replace(PACKAGES_BLOCK, (_, body) => packages(body));
 };
 
 export const dialectsVitePlugin = () => ({

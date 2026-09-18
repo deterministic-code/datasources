@@ -13,7 +13,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | Transaction | [✅](./sections/connection.md#transaction) | [✅](./sections/connection.md#transaction) | [✅](./sections/connection.md#transaction) |
 | Command | [✅](./sections/command.md) | [✅](./sections/command.md) | [✅](./sections/command.md) |
 | Reader | [✅](./sections/command.md#reader) | [✅](./sections/command.md#reader) | [✅](./sections/command.md#reader) |
-| Query / Where | [✅](./sections/builders.md#query-where) | [✅](./sections/builders.md#query-where) | [✅](./sections/builders.md#query-where) |
+| Statements | [✅](./sections/builders.md) | [✅](./sections/builders.md) | [✅](./sections/builders.md) |
 | Readonly repository | [✅](./sections/repositories.md#readonly-repository) | [✅](./sections/repositories.md#readonly-repository) | [✅](./sections/repositories.md#readonly-repository) |
 | CRUD repository | [✅](./sections/repositories.md#crud-repository) | [✅](./sections/repositories.md#crud-repository) | [✅](./sections/repositories.md#crud-repository) |
 | Enriched repository | [✅](./sections/repositories.md#enriched-repository) | [✅](./sections/repositories.md#enriched-repository) | [✅](./sections/repositories.md#enriched-repository) |
@@ -36,4 +36,4 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | mongodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | dynamodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 
-Package names per language are on [QuickStart](./quickstart.md#packages).
+Package names per language are on [QuickStart](./quickstart.md#installation).
