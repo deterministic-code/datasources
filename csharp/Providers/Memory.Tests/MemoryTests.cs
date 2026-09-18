@@ -8,7 +8,7 @@ public class MemoryTests
     public MemoryTests()
     {
         Datasource.Reset();
-        Datasource.Use(MemoryDatasource.Instance);
+        Datasource.Register(MemoryDatasource.Instance);
     }
 
     [Fact]

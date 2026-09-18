@@ -8,7 +8,7 @@ public class SqliteTests
     public SqliteTests()
     {
         Datasource.Reset();
-        Datasource.Use(SqliteDatasource.Instance);
+        Datasource.Register(SqliteDatasource.Instance);
     }
 
     [Fact]

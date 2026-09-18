@@ -8,7 +8,7 @@ public class MysqlTests
     public MysqlTests()
     {
         Datasource.Reset();
-        Datasource.Use(MysqlDatasource.Instance);
+        Datasource.Register(MysqlDatasource.Instance);
     }
 
     [Fact]

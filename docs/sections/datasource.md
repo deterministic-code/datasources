@@ -17,8 +17,8 @@ Factory for connections, commands, and repositories. Register providers, then cr
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `Datasource` | `register` / `create` / `defaults` | `Datasource` |
-| `Use` | `register` | `use` |
+| `Datasource` | `datasources` | `Datasource` |
+| `Register` | `register` | `register` |
 | `DatasourceInstall.From` (Hosting) | `register_from` (`datasources-register`) | `install` (`@datasources/register`) |
 | `Create` | `create` / `create_default` | `create` |
 | `Defaults` | `defaults` | `defaults` |
@@ -27,7 +27,7 @@ Factory for connections, commands, and repositories. Register providers, then cr
 
 ::: dialects
 ```csharp
-Datasource.Use(SqliteDatasource.Instance);
+Datasource.Register(SqliteDatasource.Instance);
 var ds = Datasource.Create("sqlite");
 ```
 ```rust
@@ -35,7 +35,7 @@ register(SqliteDatasource::instance());
 let ds = create("sqlite", None)?;
 ```
 ```typescript
-Datasource.use(SqliteDatasource.instance);
+Datasource.register(SqliteDatasource.instance);
 const ds = Datasource.create("sqlite");
 ```
 :::

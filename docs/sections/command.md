@@ -42,7 +42,7 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 
 ::: dialects
 ```csharp
-Datasource.Use(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
+Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
 
 var json = Datasource.Create("json", new JsonConnectionOptions { Data = new JsonArray() });
 var connection = await json.CreateConnection();
@@ -70,7 +70,7 @@ command.execute_reader("", None).await?;
 import { Datasource } from "@datasources/core";
 import { JsonDatasource } from "@datasources/json";
 
-Datasource.use(JsonDatasource.instance);
+Datasource.register(JsonDatasource.instance);
 
 const json = Datasource.create("json", { data: [] });
 const connection = await json.createConnection();

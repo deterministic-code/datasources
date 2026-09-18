@@ -8,13 +8,13 @@ public static class Datasource
     public static void Defaults(IReadOnlyDictionary<string, string?> options) =>
         Specified = options;
 
-    public static void Use(IDatasourceFactory factory) => Factories[factory.Provider] = factory;
+    public static void Register(IDatasourceFactory factory) => Factories[factory.Provider] = factory;
 
-    public static void Use(IDatasourceFactory first, params IDatasourceFactory[] rest)
+    public static void Register(IDatasourceFactory first, params IDatasourceFactory[] rest)
     {
-        Use(first);
+        Register(first);
         foreach (var factory in rest)
-            Use(factory);
+            Register(factory);
     }
 
     public static IDatasource Create(string? provider = null, object? options = null)

@@ -20,7 +20,7 @@ import {
 
 afterEach(() => {
   Datasource.reset();
-  Datasource.use(MemoryDatasource.instance);
+  Datasource.register(MemoryDatasource.instance);
 });
 
 describe("filter helpers", () => {
