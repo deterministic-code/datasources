@@ -1,7 +1,5 @@
 # QuickStart
 
-Register a factory, then create by provider name. Install only the dialect packages you use.
-
 ## Installation
 
 ```sh
