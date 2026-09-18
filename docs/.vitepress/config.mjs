@@ -3,15 +3,35 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
 import { dialectsVitePlugin, transformDialects } from "../../scripts/dialects.mjs";
+import { parseToc } from "../../scripts/toc.mjs";
 
 const docsDir = join(dirname(fileURLToPath(import.meta.url)), "..");
-const toc = readFileSync(join(docsDir, "toc.yaml"), "utf8");
-const pages = [...toc.matchAll(/^\s+- path:\s+(\S+)\s*\n\s+title:\s*(.+)$/gm)].map((match) => ({
-  path: match[1],
-  title: match[2].trim(),
-}));
+const tocPath = join(docsDir, "toc.yaml");
+const { pages } = parseToc(readFileSync(tocPath, "utf8"));
 
-const toLink = (path) => `/${path.replace(/\.md$/, "")}`;
+const toLink = ({ path, hash }) =>
+  `${path === "introduction.md" ? "/" : `/${path.replace(/\.md$/, "")}`}${hash ? `#${hash}` : ""}`;
+
+const toItem = (page) => ({ text: page.title, link: toLink(page) });
+
+const sidebar = [
+  ...pages.filter((page) => !page.group).map(toItem),
+  ...[...new Set(pages.map((page) => page.group).filter(Boolean))].map((group) => ({
+    text: group,
+    collapsed: false,
+    items: pages.filter((page) => page.group === group).map(toItem),
+  })),
+];
+
+const watchToc = () => ({
+  name: "watch-toc",
+  configureServer(server) {
+    server.watcher.add(tocPath);
+    server.watcher.on("change", (file) => {
+      if (file === tocPath) server.restart();
+    });
+  },
+});
 
 export default defineConfig({
   title: "Datasources",
@@ -21,10 +41,7 @@ export default defineConfig({
     "introduction.md": "index.md",
   },
   themeConfig: {
-    sidebar: pages.map(({ path, title }) => ({
-      text: title,
-      link: path === "introduction.md" ? "/" : toLink(path),
-    })),
+    sidebar,
     outline: "deep",
   },
   markdown: {
@@ -34,6 +51,6 @@ export default defineConfig({
     },
   },
   vite: {
-    plugins: [dialectsVitePlugin()],
+    plugins: [dialectsVitePlugin(), watchToc()],
   },
 });

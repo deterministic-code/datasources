@@ -6,19 +6,48 @@ pages:
     title: QuickStart
   - path: feature-matrix.md
     title: Feature Matrix
-  - path: common-examples.md
-    title: Common Examples
+  - path: examples.md
+    title: Examples
   - path: sections/datasource.md
     title: Datasource
-  - path: sections/repositories.md
-    title: Repositories
+    group: Reference
+  - path: sections/mappers.md
+    title: Mapping
+    group: Reference
+  - path: sections/type-converters.md
+    title: Type Converters
+    group: Reference
   - path: sections/connection.md
     title: Connection
+    group: Reference
+  - path: sections/connection.md
+    title: Transaction
+    group: Reference
+    hash: transaction
   - path: sections/command.md
     title: Command
+    group: Reference
+  - path: sections/command.md
+    title: Reader
+    group: Reference
+    hash: reader
   - path: sections/builders.md
-    title: Builders
-  - path: sections/mappers.md
-    title: Mappers
-  - path: sections/type-converters.md
-    title: TypeConverters
+    title: Query / Where
+    group: Reference
+    hash: query-where
+  - path: sections/repositories.md
+    title: Readonly repository
+    group: Reference
+    hash: readonly-repository
+  - path: sections/repositories.md
+    title: CRUD repository
+    group: Reference
+    hash: crud-repository
+  - path: sections/repositories.md
+    title: Enriched repository
+    group: Reference
+    hash: enriched-repository
+  - path: sections/repositories.md
+    title: Bulk repository
+    group: Reference
+    hash: bulk-repository

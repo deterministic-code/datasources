@@ -4,27 +4,36 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 ## Feature stack
 
-| Feature | C# | Rust | TypeScript | Role |
-| --- | --- | --- | --- | --- |
-| Datasource | `IDatasource` | `Datasource` | `IDatasource` | Factory: `createConnection` (async, construct only), `createCommand`, `createRepository`, `createReadonlyRepository` |
-| Mapping | `IMapper<TFrom, TTo>`, `TypeConverter<To, From>` | `Mapper<TFrom, TTo>`, `TypeConverter<To, From>` | `IMapper<TFrom, TTo>`, `TypeConverter` | column → object convert, then map |
-| Connection | `IConnection` | `Connection` | `IConnection` | `open`, `close`, `startTransaction(isolation)` |
-| Transaction | `ITransaction` | `Transaction` | `ITransaction` | `isolation`, `commit`, `abort` |
-| Command | `ICommand` | `Command` | `ICommand` | `executeReader`, `execute` |
-| Reader | `IReader` | `Reader` | `IReader` | `current`, `next` |
-| Query / Where | `IQuery` / `IWhere` | `Query` / `Where` | `IQuery` / `IWhere` | `getText()` — provider-specific |
-| Parameter / Response | `Parameter` / `Response` | `Parameter` / `Response` | `Parameter` / `Response` | `{ name, value }` / `{ result, rowsAffected }` |
-| Readonly repository | `IReadonlyRepository<T>` | `ReadonlyRepository` | `IReadonlyRepository<T>` | `connection`, `getSingle`, `get` |
-| CRUD repository | `ICRUDRepository<T>` | `CRUDRepository` | `ICRUDRepository<T>` | extends `IReadonlyRepository<T>` with `create`, `update`, `delete` |
-| Enriched reading | `EnrichedReadonlyRepository<T>` | `EnrichedReadonlyRepository` | `EnrichedReadonlyRepository<T>` | fill related properties after get |
-| Bulk commands | `BulkCRUDRepository<T>` | `BulkCRUDRepository` | `BulkCRUDRepository<T>` | list create / update / delete |
-
-`ICommand` supports `addMiddleware` / `AddMiddleware` / `add_middleware` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
+| Feature | C# | Rust | TypeScript |
+| --- | :---: | :---: | :---: |
+| Datasource | [✅](./sections/datasource.md) | [✅](./sections/datasource.md) | [✅](./sections/datasource.md) |
+| Mapping | [✅](./sections/mappers.md#mappers) | [✅](./sections/mappers.md#mappers) | [✅](./sections/mappers.md#mappers) |
+| Type Converters | [✅](./sections/type-converters.md#typeconverters) | [✅](./sections/type-converters.md#typeconverters) | [✅](./sections/type-converters.md#typeconverters) |
+| Connection | [✅](./sections/connection.md) | [✅](./sections/connection.md) | [✅](./sections/connection.md) |
+| Transaction | [✅](./sections/connection.md#transaction) | [✅](./sections/connection.md#transaction) | [✅](./sections/connection.md#transaction) |
+| Command | [✅](./sections/command.md) | [✅](./sections/command.md) | [✅](./sections/command.md) |
+| Reader | [✅](./sections/command.md#reader) | [✅](./sections/command.md#reader) | [✅](./sections/command.md#reader) |
+| Query / Where | [✅](./sections/builders.md#query-where) | [✅](./sections/builders.md#query-where) | [✅](./sections/builders.md#query-where) |
+| Readonly repository | [✅](./sections/repositories.md#readonly-repository) | [✅](./sections/repositories.md#readonly-repository) | [✅](./sections/repositories.md#readonly-repository) |
+| CRUD repository | [✅](./sections/repositories.md#crud-repository) | [✅](./sections/repositories.md#crud-repository) | [✅](./sections/repositories.md#crud-repository) |
+| Enriched repository | [✅](./sections/repositories.md#enriched-repository) | [✅](./sections/repositories.md#enriched-repository) | [✅](./sections/repositories.md#enriched-repository) |
+| Bulk repository | [✅](./sections/repositories.md#bulk-repository) | [✅](./sections/repositories.md#bulk-repository) | [✅](./sections/repositories.md#bulk-repository) |
 
 ## Providers
 
-Working: **json**, **memory**, **sqlite**, **mysql**, **postgres** (inject `IFileStore` / `ISqliteDriver` / `IMysqlDriver` / `IPostgresDriver`). Native engines are opt-in: `better-sqlite3` / `mysql2` / `pg` (optional npm peers), `rusqlite` / `mysql_async` / `tokio-postgres`, or `Datasources.Sqlite.Microsoft` / MySqlConnector / Npgsql.
-
-Stubs (installable, throw “not implemented”): text, xml, yaml, sqlserver, oracle, mongodb, dynamodb.
+| Provider | C# | Rust | TypeScript |
+| --- | :---: | :---: | :---: |
+| json | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| memory | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| sqlite | ✅ | ✅ | ✅ |
+| text | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| xml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| yaml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| mysql | ✅ | ✅ | ✅ |
+| sqlserver | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| postgres | ✅ | ✅ | ✅ |
+| oracle | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| mongodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
+| dynamodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 
 Package names per language are on [QuickStart](./quickstart.md#packages).

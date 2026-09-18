@@ -1,4 +1,4 @@
-# Common Examples
+# Examples
 
 Short recipes for the usual paths. Add samples here as Repository and related types land.
 

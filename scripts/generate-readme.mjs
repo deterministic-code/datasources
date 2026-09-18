@@ -2,21 +2,13 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { transformDialects } from "./dialects.mjs";
+import { parseToc, uniquePages } from "./toc.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const docsDir = join(root, "docs");
 const readmePath = join(root, "README.md");
 const banner =
   "<!-- Generated from docs/. Edit the markdown in docs/ and run npm run docs:readme. -->\n\n";
-
-const parseToc = (text) => {
-  const title = text.match(/^title:\s*(.+)$/m)?.[1]?.trim() ?? "Datasources";
-  const pages = [...text.matchAll(/^\s+- path:\s+(\S+)\s*\n\s+title:\s*(.+)$/gm)].map((match) => ({
-    path: match[1],
-    title: match[2].trim(),
-  }));
-  return { title, pages };
-};
 
 const transformOutsideFences = (markdown, fn) =>
   markdown
@@ -45,7 +37,7 @@ const rewriteDocLinks = (markdown, pages) =>
 
 const generate = () => {
   const { pages } = parseToc(readFileSync(join(docsDir, "toc.yaml"), "utf8"));
-  const body = pages
+  const body = uniquePages(pages)
     .map(({ path }, index) => {
       const source = readFileSync(join(docsDir, path), "utf8").trim();
       const shifted = index === 0 ? source : demoteHeadings(source);

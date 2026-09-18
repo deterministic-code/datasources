@@ -16,6 +16,10 @@
 
 Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`, `ISqliteDriver` / `SqliteDriver`). Stub dialects return a named connection; open / close / start-transaction throw or return not-implemented.
 
+## Transaction
+
+`StartTransaction` / `startTransaction` / `start_transaction` begins a transaction on an open connection.
+
 ## Provider types
 
 | Dialect | Provider | Connection |
