@@ -12,7 +12,7 @@ pages:
     title: Datasource
     group: Reference
   - path: sections/mappers.md
-    title: Mapping
+    title: Mappers
     group: Reference
   - path: sections/type-converters.md
     title: Type Converters

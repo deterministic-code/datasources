@@ -198,7 +198,7 @@ await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 
 See [Repositories](./sections/repositories.md) for readonly, CRUD, and bulk.
 
-## Mapping
+## Mappers
 
 `TransformMapper` reshapes an already-converted object. Repository get is convert, then map.
 
