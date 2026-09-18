@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { readdir, readFile, writeFile } from "node:fs/promises";
-import { checkbox, confirm, input, select } from "@inquirer/prompts";
+import { checkbox, input, select } from "@inquirer/prompts";
 import type { Prompter } from "./setup.ts";
 
 export type Fs = {
@@ -34,5 +34,4 @@ export const inquirerPrompt: Prompter = {
   select: ({ message, choices, default: def }) => select({ message, choices, default: def }),
   checkbox: ({ message, choices }) => checkbox({ message, choices, required: true }),
   input: ({ message, default: def }) => input({ message, default: def }),
-  confirm: ({ message, default: def }) => confirm({ message, default: def }),
 };

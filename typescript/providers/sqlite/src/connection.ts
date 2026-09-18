@@ -9,6 +9,7 @@ import {
 import { SqliteCommand } from "./command.ts";
 import type { SqliteConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type ISqliteDriver } from "./driver.ts";
+import { filenameOf } from "./sqlitePath.ts";
 import { SqliteTransaction } from "./transaction.ts";
 
 export class SqliteConnection implements IConnection {
@@ -18,7 +19,7 @@ export class SqliteConnection implements IConnection {
   isOpen = false;
 
   constructor(options: SqliteConnectionOptions = {}) {
-    this.filename = options.filename ?? ":memory:";
+    this.filename = filenameOf(options);
     this.driver = requireDriver(options.driver);
   }
 

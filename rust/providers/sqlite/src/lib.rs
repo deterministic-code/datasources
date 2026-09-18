@@ -7,6 +7,7 @@ mod converters;
 mod datasource;
 mod driver;
 mod rusqlite_driver;
+mod sqlite_path;
 mod statement_builder;
 mod transaction;
 mod transaction_driver;

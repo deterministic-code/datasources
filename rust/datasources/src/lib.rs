@@ -10,6 +10,7 @@ mod connection;
 mod console_command_middleware;
 pub mod converters;
 mod create;
+mod provider_from_url;
 mod create_repository_builder_options;
 mod datasource;
 mod datasource_error;
@@ -77,6 +78,7 @@ pub use converters::{
     TypeConverter,
 };
 pub use create::{create, create_default};
+pub use provider_from_url::provider_from_url;
 pub use create_repository_builder_options::create_repository_builder_options;
 pub use datasource::Datasource;
 pub use datasource_error::DatasourceError;

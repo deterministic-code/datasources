@@ -10,43 +10,59 @@ pages:
     title: Examples
   - path: sections/datasource.md
     title: Datasource
-    group: Reference
+    group: Code Reference
   - path: sections/mappers.md
     title: Mappers
-    group: Reference
+    group: Code Reference
   - path: sections/type-converters.md
     title: Type Converters
-    group: Reference
+    group: Code Reference
   - path: sections/connection.md
     title: Connection
-    group: Reference
+    group: Code Reference
   - path: sections/connection.md
     title: Transaction
-    group: Reference
+    group: Code Reference
     hash: transaction
   - path: sections/command.md
     title: Command
-    group: Reference
+    group: Code Reference
   - path: sections/command.md
     title: Reader
-    group: Reference
+    group: Code Reference
     hash: reader
   - path: sections/builders.md
     title: Statements
-    group: Reference
+    group: Code Reference
   - path: sections/repositories.md
     title: Readonly repository
-    group: Reference
+    group: Code Reference
     hash: readonly-repository
   - path: sections/repositories.md
     title: CRUD repository
-    group: Reference
+    group: Code Reference
     hash: crud-repository
   - path: sections/repositories.md
     title: Enriched repository
-    group: Reference
+    group: Code Reference
     hash: enriched-repository
   - path: sections/repositories.md
     title: Bulk repository
-    group: Reference
+    group: Code Reference
     hash: bulk-repository
+  - path: cli.md
+    title: Setup
+    group: Command Line (CLI)
+    hash: setup
+  - path: cli.md
+    title: Add
+    group: Command Line (CLI)
+    hash: add
+  - path: cli.md
+    title: Remove
+    group: Command Line (CLI)
+    hash: remove
+  - path: cli.md
+    title: .env
+    group: Command Line (CLI)
+    hash: env

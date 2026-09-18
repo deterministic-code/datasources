@@ -9,7 +9,7 @@ describe("catalog", () => {
       expect(catalog[name].cargo).toMatch(/^datasources-/);
       expect(catalog[name].nuget).toMatch(/^Datasources\./);
     }
-    expect(catalog.sqlite.nugetEngine).toBe("Datasources.Sqlite.Microsoft");
+    expect(catalog.sqlite.nuget).toBe("Datasources.Sqlite");
   });
 
   it("validates provider names", () => {

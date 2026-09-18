@@ -1,0 +1,90 @@
+import { providerFromUrl } from "./providerFromUrl.ts";
+
+export type EnvMap = Record<string, string>;
+
+export const knownEnvKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] as const;
+
+const droppedEnvKeys = [
+  "DEFAULT_PROVIDER",
+  "DATASOURCE_PROVIDER",
+  "DATASOURCE_PROVIDERS",
+  "SQLITE_FILENAME",
+] as const;
+
+const installedOf = (env: EnvMap) =>
+  env.INSTALLED_PROVIDERS ||
+  env.DATASOURCE_PROVIDERS ||
+  providerFromUrl(env.DATABASE_URL ?? "") ||
+  env.DEFAULT_PROVIDER ||
+  env.DATASOURCE_PROVIDER ||
+  "";
+
+export const parseEnv = (text: string): EnvMap =>
+  Object.fromEntries(
+    text
+      .split(/\r?\n/)
+      .filter((line) => line.trim() && !line.trimStart().startsWith("#") && line.includes("="))
+      .map((line) => {
+        const i = line.indexOf("=");
+        return [line.slice(0, i).trim(), line.slice(i + 1)] as const;
+      }),
+  );
+
+export const serializeEnv = (map: EnvMap): string => {
+  const extra = Object.keys(map).filter(
+    (key) =>
+      !(knownEnvKeys as readonly string[]).includes(key) &&
+      !(droppedEnvKeys as readonly string[]).includes(key),
+  );
+  return [...knownEnvKeys.filter((key) => key in map), ...extra]
+    .map((key) => `${key}=${map[key]}`)
+    .join("\n")
+    .concat("\n");
+};
+
+export const splitProviders = (value: string): string[] => [
+  ...new Set(
+    value
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean),
+  ),
+];
+
+export const ensureProviders = (names: string[], defaultProvider: string): string[] =>
+  names.includes(defaultProvider) ? names : [...names, defaultProvider];
+
+export const updateEnvProviders = (
+  env: EnvMap,
+  add: string[],
+  remove: string[],
+): EnvMap => {
+  const current = splitProviders(installedOf(env));
+  const next = [
+    ...current.filter((name) => !remove.includes(name)),
+    ...add.filter((name) => !current.includes(name)),
+  ];
+  const fallback = providerFromUrl(env.DATABASE_URL ?? "") ?? next[0] ?? "sqlite";
+  const {
+    DEFAULT_PROVIDER: _d,
+    DATASOURCE_PROVIDER: _p,
+    DATASOURCE_PROVIDERS: _ps,
+    ...rest
+  } = env;
+  return { ...rest, INSTALLED_PROVIDERS: (next.length ? next : [fallback]).join(",") };
+};
+
+export const sqliteUrl = (filename: string): string =>
+  filename === ":memory:" || filename === ":memory" ? "sqlite:///:memory:" : `sqlite:///${filename}`;
+
+export const answersFromEnv = (env: EnvMap) => {
+  const url =
+    env.DATABASE_URL ||
+    (env.SQLITE_FILENAME ? sqliteUrl(env.SQLITE_FILENAME) : "") ||
+    (installedOf(env).includes("sqlite") || !installedOf(env) ? "sqlite:///:memory:" : "");
+  return {
+    providers: splitProviders(installedOf(env) || providerFromUrl(url) || "sqlite"),
+    url,
+    schema: env.DATABASE_SCHEMA ?? "",
+  };
+};

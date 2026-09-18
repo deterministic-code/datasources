@@ -6,7 +6,6 @@ export type Flags = {
   ecosystem?: Ecosystem;
   dryRun: boolean;
   yes: boolean;
-  engine: boolean;
 };
 
 export type Command =
@@ -17,21 +16,25 @@ export type Command =
 
 export const help = `Usage: datasources <command> [options]
 
-Commands:
-  setup                 Interactive .env and provider install
-  add <provider...>     Add provider packages
-  remove <provider...>  Remove provider packages
-
-Options:
+setup                 Interactive .env and provider install
   --cwd <dir>                 Consumer project directory (default: .)
   --ecosystem ts|rust|csharp  Required when more than one project type exists
   --dry-run                   Print package-manager commands without running them
   --yes                       Setup without prompts (defaults / existing .env)
-  --no-engine                 Skip Datasources.Sqlite.Microsoft
+
+add <provider...>     Add provider packages
+  --cwd <dir>                 Consumer project directory (default: .)
+  --ecosystem ts|rust|csharp  Required when more than one project type exists
+  --dry-run                   Print package-manager commands without running them
+
+remove <provider...>  Remove provider packages
+  --cwd <dir>                 Consumer project directory (default: .)
+  --ecosystem ts|rust|csharp  Required when more than one project type exists
+  --dry-run                   Print package-manager commands without running them
 `;
 
 export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags: Flags } => {
-  const flags: Flags = { cwd, dryRun: false, yes: false, engine: true };
+  const flags: Flags = { cwd, dryRun: false, yes: false };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -41,7 +44,6 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg.startsWith("--ecosystem=")) flags.ecosystem = ecosystem(arg.slice("--ecosystem=".length));
     else if (arg === "--dry-run") flags.dryRun = true;
     else if (arg === "--yes" || arg === "-y") flags.yes = true;
-    else if (arg === "--no-engine") flags.engine = false;
     else if (arg === "--help" || arg === "-h") return { command: { kind: "help" }, flags };
     else rest.push(arg);
   }

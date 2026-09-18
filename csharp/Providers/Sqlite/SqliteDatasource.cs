@@ -25,6 +25,7 @@ public sealed class SqliteDatasource : IDatasource, IDatasourceFactory
             : new SqliteDatasource(new SqliteConnectionOptions
             {
                 Filename = DatasourceOptions.Value(options, "filename")
+                    ?? SqlitePath.FromUrl(DatasourceOptions.Value(options, "url"))
             });
 
     SqliteConnection NewConnection() => new(_options);

@@ -11,7 +11,7 @@ fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
 
 pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
     let mut names = Vec::new();
-    let listed = get(options, "providers").or_else(|| get(options, "DATASOURCE_PROVIDERS"));
+    let listed = get(options, "providers").or_else(|| get(options, "INSTALLED_PROVIDERS"));
     if let Some(value) = listed {
         for name in value.split(',') {
             let name = name.trim();
@@ -20,10 +20,14 @@ pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
             }
         }
     }
-    if let Some(provider) = get(options, "provider").or_else(|| get(options, "DATASOURCE_PROVIDER"))
+    if let Some(provider) = get(options, "provider").map(str::to_string).or_else(|| {
+        get(options, "url")
+            .or_else(|| get(options, "DATABASE_URL"))
+            .and_then(datasources::provider_from_url)
+    })
     {
-        if !names.iter().any(|existing| existing == provider) {
-            names.push(provider.to_string());
+        if !names.iter().any(|existing| existing == &provider) {
+            names.push(provider);
         }
     }
     names
@@ -98,8 +102,8 @@ mod tests {
         );
         assert_eq!(
             provider_names(&opts(&[
-                ("DATASOURCE_PROVIDERS", "json,memory"),
-                ("DATASOURCE_PROVIDER", "json"),
+                ("INSTALLED_PROVIDERS", "json,memory"),
+                ("url", "json://"),
             ])),
             vec!["json", "memory"]
         );

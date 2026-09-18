@@ -21,18 +21,12 @@ export type ProviderPackages = {
   npm: string;
   cargo: string;
   nuget: string;
-  nugetEngine?: string;
 };
 
 export const catalog: Record<Provider, ProviderPackages> = {
   json: { npm: "@datasources/json", cargo: "datasources-json", nuget: "Datasources.Json" },
   memory: { npm: "@datasources/memory", cargo: "datasources-memory", nuget: "Datasources.Memory" },
-  sqlite: {
-    npm: "@datasources/sqlite",
-    cargo: "datasources-sqlite",
-    nuget: "Datasources.Sqlite",
-    nugetEngine: "Datasources.Sqlite.Microsoft",
-  },
+  sqlite: { npm: "@datasources/sqlite", cargo: "datasources-sqlite", nuget: "Datasources.Sqlite" },
   text: { npm: "@datasources/text", cargo: "datasources-text", nuget: "Datasources.Text" },
   xml: { npm: "@datasources/xml", cargo: "datasources-xml", nuget: "Datasources.Xml" },
   yaml: { npm: "@datasources/yaml", cargo: "datasources-yaml", nuget: "Datasources.Yaml" },

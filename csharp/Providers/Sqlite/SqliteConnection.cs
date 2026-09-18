@@ -13,7 +13,7 @@ public sealed class SqliteConnection : IConnection
     public SqliteConnection(SqliteConnectionOptions? options = null)
     {
         options ??= new SqliteConnectionOptions();
-        Filename = options.Filename ?? ":memory:";
+        Filename = options.Filename ?? SqlitePath.FromUrl(options.Url) ?? ":memory:";
         Driver = SqliteGuard.Require(options.Driver);
     }
 

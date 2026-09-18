@@ -8,6 +8,8 @@ coverage/
 *.tsbuildinfo
 target/
 bin/
+!cli/bin/
+!cli/bin/**
 obj/
 TestResults/
 *.user

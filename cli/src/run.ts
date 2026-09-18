@@ -74,7 +74,6 @@ const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
     entries,
     selected.filter((name) => !installed.includes(name)),
     installed.filter((name) => !selected.includes(name)),
-    answers.engine,
     selected,
   );
 };
@@ -95,7 +94,7 @@ const applyAddRemove = async (
   ];
   const env = await readEnvFile(deps.fs, join(flags.cwd, ".env"));
   if (env && !flags.dryRun) await writeEnv(deps.fs, flags.cwd, updateEnvProviders(env, add, remove));
-  await applyPackages(flags, deps, ecosystem, entries, add, remove, flags.engine, remaining);
+  await applyPackages(flags, deps, ecosystem, entries, add, remove, remaining);
 };
 
 const applyPackages = async (
@@ -105,12 +104,11 @@ const applyPackages = async (
   entries: string[],
   add: Provider[],
   remove: Provider[],
-  engine: boolean,
   remaining: Provider[],
 ): Promise<void> => {
   const procs: Proc[] = [
-    ...(add.length ? addCommands(ecosystem, add, engine, entries) : []),
-    ...(remove.length ? removeCommands(ecosystem, remove, engine, remaining, entries) : []),
+    ...(add.length ? addCommands(ecosystem, add, entries) : []),
+    ...(remove.length ? removeCommands(ecosystem, remove, remaining, entries) : []),
   ];
   for (const proc of procs) {
     deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);

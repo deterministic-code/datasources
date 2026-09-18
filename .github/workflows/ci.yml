@@ -12,12 +12,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: typescript/package-lock.json
+          cache-dependency-path: |
+            typescript/package-lock.json
+            cli/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
       - run: npm ci --prefix typescript
+      - run: npm ci --prefix cli
       - run: npm test
       - run: cargo test --workspace --manifest-path rust/Cargo.toml
         env:

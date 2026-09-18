@@ -20,8 +20,8 @@ describe("providerNames", () => {
     ).toEqual(["sqlite", "json", "postgres"]);
     expect(
       providerNames({
-        DATASOURCE_PROVIDERS: "json,memory",
-        DATASOURCE_PROVIDER: "json",
+        INSTALLED_PROVIDERS: "json,memory",
+        url: "json://",
       }),
     ).toEqual(["json", "memory"]);
     expect(providerNames({ provider: " sqlite " })).toEqual(["sqlite"]);
