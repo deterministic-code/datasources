@@ -276,7 +276,7 @@ public class CoreTests
         var ds = Datasource.Create();
         Assert.Equal("sqlite", ds.Provider);
         var connection = await ds.CreateConnection();
-        Assert.False(connection.Opened);
+        Assert.False(connection.IsOpen);
         Assert.Same(connection, ds.CreateCommand().Connection);
         Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>());
         Datasource.Reset();
@@ -291,7 +291,7 @@ public class CoreTests
         Assert.Equal("text", ds.Provider);
         Assert.Equal("text", ds.Create().Provider);
         var connection = await ds.CreateConnection();
-        Assert.False(connection.Opened);
+        Assert.False(connection.IsOpen);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.Open());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.Close());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.StartTransaction());
@@ -324,7 +324,7 @@ public class CoreTests
     {
         var connection = new MockConnection();
         await connection.Open();
-        Assert.True(connection.Opened);
+        Assert.True(connection.IsOpen);
         var started = await connection.StartTransaction(IsolationLevel.ReadUncommitted);
         Assert.Equal(IsolationLevel.ReadUncommitted, started.Isolation);
         await connection.Close();

@@ -79,7 +79,7 @@ impl Connection for MemoryConnection {
         "memory"
     }
 
-    fn opened(&self) -> bool {
+    fn is_open(&self) -> bool {
         *self.state.opened.lock().unwrap()
     }
 

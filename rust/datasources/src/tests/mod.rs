@@ -425,7 +425,7 @@ async fn stubs_throw() {
     let created = DatasourceFactory::create(&*ds, None);
     assert_eq!(created.provider(), "text");
     let closed = ds.create_connection().await.unwrap();
-    assert!(!closed.opened());
+        assert!(!closed.is_open());
     assert!(closed.open().await.is_err());
     assert!(ds.create_connection().await.unwrap().close().await.is_err());
     assert!(ds
@@ -478,7 +478,7 @@ async fn stubs_throw() {
 async fn published_mocks() {
     let connection = MockConnection::new();
     connection.open().await.unwrap();
-    assert!(connection.opened());
+        assert!(connection.is_open());
     assert_eq!(connection.open_calls(), 1);
     connection
         .start_transaction(Some(IsolationLevel::ReadUncommitted))

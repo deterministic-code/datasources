@@ -17,7 +17,7 @@ export class JsonConnection implements IConnection {
   collection?: string;
   fileStore: IFileStore;
   data: unknown;
-  opened = false;
+  isOpen = false;
   inTransaction = false;
   private snapshot: unknown;
   private readonly initialData?: unknown;
@@ -35,7 +35,7 @@ export class JsonConnection implements IConnection {
   createCommand = (): ICommand => new JsonCommand(this);
 
   async open(): Promise<void> {
-    if (this.opened) {
+    if (this.isOpen) {
       return;
     }
     if (this.hasInitialData) {
@@ -49,11 +49,11 @@ export class JsonConnection implements IConnection {
     if (this.collection) {
       this.getCollection();
     }
-    this.opened = true;
+    this.isOpen = true;
   }
 
   async close(): Promise<void> {
-    this.opened = false;
+    this.isOpen = false;
   }
 
   async startTransaction(
@@ -101,7 +101,7 @@ export class JsonConnection implements IConnection {
   }
 
   ensureOpen(): void {
-    if (!this.opened) throw new DatasourceError("Connection is not open");
+    if (!this.isOpen) throw new DatasourceError("Connection is not open");
   }
 
   private emptyData = (): unknown => (this.collection ? {} : []);

@@ -158,7 +158,7 @@ describe("MysqlConnection", () => {
     await connection.open();
     await connection.open();
     expect(connection.createCommand()).toBeInstanceOf(MysqlCommand);
-    expect(connection.opened).toBe(true);
+    expect(connection.isOpen).toBe(true);
     const txn = await connection.startTransaction();
     await txn.commit();
     const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);

@@ -21,23 +21,6 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 
 `ExecuteReader` / `executeReader` / `execute_reader` returns a reader over query results.
 
-## Provider types
-
-| Dialect | Provider | Command |
-| --- | --- | --- |
-| json | `json` | `JsonCommand` |
-| memory | `memory` | `MemoryCommand` |
-| sqlite | `sqlite` | `SqliteCommand` |
-| text | `text` | `TextCommand` |
-| xml | `xml` | `XmlCommand` |
-| yaml | `yaml` | `YamlCommand` |
-| mysql | `mysql` | `MysqlCommand` |
-| sqlserver | `sqlserver` | `SqlServerCommand` |
-| postgres | `postgres` | `PostgresCommand` |
-| oracle | `oracle` | `OracleCommand` |
-| mongodb | `mongodb` | `MongoDbCommand` |
-| dynamodb | `dynamodb` | `DynamoDbCommand` |
-
 ## Create and execute
 
 ::: dialects

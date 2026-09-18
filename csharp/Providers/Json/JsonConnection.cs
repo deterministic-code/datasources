@@ -11,7 +11,7 @@ public sealed class JsonConnection : IConnection
     public JsonNode Data { get; set; }
     public string Provider => "json";
     public ICommand CreateCommand() => new JsonCommand(this);
-    public bool Opened { get; private set; }
+    public bool IsOpen { get; private set; }
     public bool InTransaction { get; private set; }
     private JsonNode? _snapshot;
     private readonly JsonNode? _initial;
@@ -30,7 +30,7 @@ public sealed class JsonConnection : IConnection
 
     public async Task Open()
     {
-        if (Opened) return;
+        if (IsOpen) return;
         if (_hasInitial)
             Data = _initial?.DeepClone() ?? Empty();
         else if (!string.IsNullOrEmpty(Path) && await FileStore.Exists(Path))
@@ -39,12 +39,12 @@ public sealed class JsonConnection : IConnection
             Data = Empty();
 
         if (Collection is not null) GetCollection();
-        Opened = true;
+        IsOpen = true;
     }
 
     public Task Close()
     {
-        Opened = false;
+        IsOpen = false;
         return Task.CompletedTask;
     }
 
@@ -102,7 +102,7 @@ public sealed class JsonConnection : IConnection
 
     public void EnsureOpen()
     {
-        if (!Opened) throw new DatasourceException("Connection is not open");
+        if (!IsOpen) throw new DatasourceException("Connection is not open");
     }
 
     private JsonNode Empty() => Collection is null ? new JsonArray() : new JsonObject();

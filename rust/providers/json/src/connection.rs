@@ -100,7 +100,7 @@ impl Connection for JsonConnection {
         "json"
     }
 
-    fn opened(&self) -> bool {
+    fn is_open(&self) -> bool {
         *self.state.opened.lock().unwrap()
     }
 

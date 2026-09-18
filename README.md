@@ -554,7 +554,7 @@ A dialect adds a `TypeConverter` only when the native provider cannot map the ty
 | --- | --- | --- |
 | `IConnection` | `Connection` | `IConnection` |
 | `Provider` | `provider()` | `provider` |
-| `Opened` | `opened()` | `opened` |
+| `IsOpen` | `is_open()` | `isOpen` |
 | `CreateCommand` | `create_command` | `createCommand` |
 | `Open` | `open` | `open` |
 | `Close` | `close` | `close` |
@@ -565,23 +565,6 @@ Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFil
 ### Transaction
 
 `StartTransaction` / `startTransaction` / `start_transaction` begins a transaction on an open connection.
-
-### Provider types
-
-| Dialect | Provider | Connection |
-| --- | --- | --- |
-| json | `json` | `JsonConnection` |
-| memory | `memory` | `MemoryConnection` |
-| sqlite | `sqlite` | `SqliteConnection` |
-| text | `text` | `TextConnection` |
-| xml | `xml` | `XmlConnection` |
-| yaml | `yaml` | `YamlConnection` |
-| mysql | `mysql` | `MysqlConnection` |
-| sqlserver | `sqlserver` | `SqlServerConnection` |
-| postgres | `postgres` | `PostgresConnection` |
-| oracle | `oracle` | `OracleConnection` |
-| mongodb | `mongodb` | `MongoDbConnection` |
-| dynamodb | `dynamodb` | `DynamoDbConnection` |
 
 ### Create and open
 
@@ -631,7 +614,7 @@ Datasource.Defaults(options);
 var datasource = Datasource.Create();
 var connection = await datasource.CreateConnection();
 
-Task EnsureOpen() => connection.Opened ? Task.CompletedTask : connection.Open();
+Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();
 ```
 
 #### Rust
@@ -645,7 +628,7 @@ let datasource = create_default()?;
 let connection = datasource.create_connection().await?;
 
 async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
-    if connection.opened() {
+    if connection.is_open() {
         return Ok(());
     }
     connection.open().await
@@ -660,7 +643,7 @@ const datasource = Datasource.create();
 const connection = await datasource.createConnection();
 
 async function ensureOpen() {
-  if (!connection.opened) await connection.open();
+  if (!connection.isOpen) await connection.open();
 }
 ```
 ### Mock
@@ -673,7 +656,7 @@ Depend on `IConnection` / `Connection`. Use `MockConnection` / `MockDatasource`.
 var ds = new MockDatasource();
 var connection = await ds.CreateConnection();
 await connection.Open();
-Assert.True(((MockConnection)connection).Opened);
+Assert.True(((MockConnection)connection).IsOpen);
 
 var failing = new MockConnection { OpenError = new InvalidOperationException("open-fail") };
 ds.Connection = failing;
@@ -700,7 +683,7 @@ assert!(failing.open().await.is_err());
 const ds = new MockDatasource();
 const connection = await ds.createConnection();
 await connection.open();
-expect((connection as MockConnection).opened).toBe(true);
+expect((connection as MockConnection).isOpen).toBe(true);
 
 const failing = new MockConnection();
 failing.openError = new Error("open-fail");
@@ -730,23 +713,6 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 ### Reader
 
 `ExecuteReader` / `executeReader` / `execute_reader` returns a reader over query results.
-
-### Provider types
-
-| Dialect | Provider | Command |
-| --- | --- | --- |
-| json | `json` | `JsonCommand` |
-| memory | `memory` | `MemoryCommand` |
-| sqlite | `sqlite` | `SqliteCommand` |
-| text | `text` | `TextCommand` |
-| xml | `xml` | `XmlCommand` |
-| yaml | `yaml` | `YamlCommand` |
-| mysql | `mysql` | `MysqlCommand` |
-| sqlserver | `sqlserver` | `SqlServerCommand` |
-| postgres | `postgres` | `PostgresCommand` |
-| oracle | `oracle` | `OracleCommand` |
-| mongodb | `mongodb` | `MongoDbCommand` |
-| dynamodb | `dynamodb` | `DynamoDbCommand` |
 
 ### Create and execute
 

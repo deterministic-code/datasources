@@ -75,7 +75,7 @@ impl MockConnection {
         self.state.lock().expect("mock").open_calls
     }
 
-    pub fn opened(&self) -> bool {
+    pub fn is_open(&self) -> bool {
         self.state.lock().expect("mock").opened
     }
 
@@ -90,7 +90,7 @@ impl Connection for MockConnection {
         &self.provider
     }
 
-    fn opened(&self) -> bool {
+    fn is_open(&self) -> bool {
         self.state.lock().expect("mock").opened
     }
 

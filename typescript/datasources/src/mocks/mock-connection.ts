@@ -15,7 +15,7 @@ export class MockConnection implements IConnection {
   startTransactionError?: unknown;
   transaction: ITransaction;
   command?: ICommand;
-  opened = false;
+  isOpen = false;
 
   constructor(transaction?: ITransaction, provider = "mock") {
     this.provider = provider;
@@ -29,7 +29,7 @@ export class MockConnection implements IConnection {
     if (this.openError) {
       throw this.openError;
     }
-    this.opened = true;
+    this.isOpen = true;
   }
 
   async close(): Promise<void> {
@@ -37,7 +37,7 @@ export class MockConnection implements IConnection {
     if (this.closeError) {
       throw this.closeError;
     }
-    this.opened = false;
+    this.isOpen = false;
   }
 
   async startTransaction(isolation: Isolation = IsolationLevel.Serializable): Promise<ITransaction> {

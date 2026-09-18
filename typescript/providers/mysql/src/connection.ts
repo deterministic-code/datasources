@@ -15,7 +15,7 @@ export class MysqlConnection implements IConnection {
   readonly provider = "mysql";
   url: string;
   driver: IMysqlDriver;
-  opened = false;
+  isOpen = false;
 
   constructor(options: MysqlConnectionOptions = {}) {
     this.url = options.url ?? "";
@@ -25,14 +25,14 @@ export class MysqlConnection implements IConnection {
   createCommand = (): ICommand => new MysqlCommand(this);
 
   async open(): Promise<void> {
-    if (this.opened) return;
+    if (this.isOpen) return;
     await this.driver.open(this.url);
-    this.opened = true;
+    this.isOpen = true;
   }
 
   async close(): Promise<void> {
     await this.driver.close();
-    this.opened = false;
+    this.isOpen = false;
   }
 
   async startTransaction(
@@ -44,6 +44,6 @@ export class MysqlConnection implements IConnection {
   }
 
   ensureOpen(): void {
-    if (!this.opened) throw new DatasourceError("Connection is not open");
+    if (!this.isOpen) throw new DatasourceError("Connection is not open");
   }
 }

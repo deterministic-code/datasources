@@ -394,7 +394,7 @@ describe("Datasource registry", () => {
     const ds = Datasource.create();
     expect(ds.provider).toBe("sqlite");
     const connection = await ds.createConnection();
-    expect(connection.opened).toBe(false);
+    expect(connection.isOpen).toBe(false);
     expect(ds.createCommand().connection).toBe(connection);
     expect(ds.createRepository()).toBeInstanceOf(MockRepository);
     Datasource.reset();
@@ -409,7 +409,7 @@ describe("stubs", () => {
     expect(ds.create().provider).toBe("text");
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(StubConnection);
-    expect(connection.opened).toBe(false);
+    expect(connection.isOpen).toBe(false);
     expect(connection.createCommand()).toBeInstanceOf(StubCommand);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
     await expect(connection.close()).rejects.toThrow(ProviderNotImplementedError);
@@ -467,12 +467,12 @@ describe("published mocks", () => {
     const connection = new MockConnection();
     await connection.open();
     expect(connection.openCalls).toBe(1);
-    expect(connection.opened).toBe(true);
+    expect(connection.isOpen).toBe(true);
     const txn = await connection.startTransaction(IsolationLevel.ReadUncommitted);
     expect(txn).toBe(connection.transaction);
     expect(txn.isolation).toBe(IsolationLevel.ReadUncommitted);
     await connection.close();
-    expect(connection.opened).toBe(false);
+    expect(connection.isOpen).toBe(false);
 
     connection.openError = new Error("open-fail");
     await expect(connection.open()).rejects.toThrow("open-fail");

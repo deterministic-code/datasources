@@ -34,7 +34,7 @@ impl Connection for SqliteConnection {
         "sqlite"
     }
 
-    fn opened(&self) -> bool {
+    fn is_open(&self) -> bool {
         *self.opened.lock().unwrap()
     }
 

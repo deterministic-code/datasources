@@ -15,7 +15,7 @@ export class MemoryConnection implements IConnection {
   readonly provider = "memory";
   store: MemoryStore;
   collection: string;
-  opened = false;
+  isOpen = false;
   inTransaction = false;
   private snapshot?: Map<string, MemoryRecord[]>;
   private readonly data?: MemoryRecord[] | Record<string, MemoryRecord[]>;
@@ -29,18 +29,18 @@ export class MemoryConnection implements IConnection {
   createCommand = (): ICommand => new MemoryCommand(this);
 
   async open(): Promise<void> {
-    if (this.opened) {
+    if (this.isOpen) {
       return;
     }
     if (this.data !== undefined) {
       this.store.seed(this.data, this.collection);
     }
     this.store.getCollection(this.collection);
-    this.opened = true;
+    this.isOpen = true;
   }
 
   async close(): Promise<void> {
-    this.opened = false;
+    this.isOpen = false;
   }
 
   async startTransaction(
@@ -70,6 +70,6 @@ export class MemoryConnection implements IConnection {
   }
 
   ensureOpen(): void {
-    if (!this.opened) throw new DatasourceError("Connection is not open");
+    if (!this.isOpen) throw new DatasourceError("Connection is not open");
   }
 }

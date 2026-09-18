@@ -6,7 +6,7 @@ public sealed class MysqlConnection : IConnection
     public IMysqlDriver Driver { get; }
     public string Provider => "mysql";
     public ICommand CreateCommand() => new MysqlCommand(this);
-    public bool Opened { get; private set; }
+    public bool IsOpen { get; private set; }
 
     public MysqlConnection(MysqlConnectionOptions? options = null)
     {
@@ -17,15 +17,15 @@ public sealed class MysqlConnection : IConnection
 
     public async Task Open()
     {
-        if (Opened) return;
+        if (IsOpen) return;
         await Driver.Open(Url);
-        Opened = true;
+        IsOpen = true;
     }
 
     public async Task Close()
     {
         await Driver.Close();
-        Opened = false;
+        IsOpen = false;
     }
 
     public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
@@ -37,6 +37,6 @@ public sealed class MysqlConnection : IConnection
 
     public void EnsureOpen()
     {
-        if (!Opened) throw new DatasourceException("Connection is not open");
+        if (!IsOpen) throw new DatasourceException("Connection is not open");
     }
 }

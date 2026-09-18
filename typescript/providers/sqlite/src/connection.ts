@@ -15,7 +15,7 @@ export class SqliteConnection implements IConnection {
   readonly provider = "sqlite";
   filename: string;
   driver: ISqliteDriver;
-  opened = false;
+  isOpen = false;
 
   constructor(options: SqliteConnectionOptions = {}) {
     this.filename = options.filename ?? ":memory:";
@@ -25,16 +25,16 @@ export class SqliteConnection implements IConnection {
   createCommand = (): ICommand => new SqliteCommand(this);
 
   async open(): Promise<void> {
-    if (this.opened) {
+    if (this.isOpen) {
       return;
     }
     await this.driver.open(this.filename);
-    this.opened = true;
+    this.isOpen = true;
   }
 
   async close(): Promise<void> {
     await this.driver.close();
-    this.opened = false;
+    this.isOpen = false;
   }
 
   async startTransaction(
@@ -46,6 +46,6 @@ export class SqliteConnection implements IConnection {
   }
 
   ensureOpen(): void {
-    if (!this.opened) throw new DatasourceError("Connection is not open");
+    if (!this.isOpen) throw new DatasourceError("Connection is not open");
   }
 }
