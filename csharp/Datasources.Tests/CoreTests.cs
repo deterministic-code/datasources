@@ -256,7 +256,7 @@ public class CoreTests
     public void Registry()
     {
         Assert.Empty(Datasource.Registered());
-        Datasource.Use(new MockDatasource("json"), new MockDatasource("memory"));
+        Datasource.Register(new MockDatasource("json"), new MockDatasource("memory"));
         Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
         Assert.Equal("json", Datasource.Create("json").Provider);
         Datasource.Reset();
@@ -267,7 +267,7 @@ public class CoreTests
     public async Task Defaults()
     {
         Assert.Throws<DatasourceException>(() => Datasource.Create());
-        Datasource.Use(new MockDatasource("sqlite"));
+        Datasource.Register(new MockDatasource("sqlite"));
         Datasource.Defaults(new Dictionary<string, string?>
         {
             ["provider"] = "sqlite",

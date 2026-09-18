@@ -1,6 +1,6 @@
 # QuickStart
 
-Register a factory, then create by provider name. Install only the dialect packages you use. In Rust, `use` is a keyword, so registration is `register`.
+Register a factory, then create by provider name. Install only the dialect packages you use.
 
 Working dialects (json, memory, sqlite, mysql, postgres) accept options on create. Stub dialects return a stub datasource.
 
@@ -27,7 +27,7 @@ Optional name-based register: `Datasources.Hosting`, `datasources-register` (Car
 
 ::: dialects
 ```csharp
-Datasource.Use(
+Datasource.Register(
     JsonDatasource.Instance,
     MemoryDatasource.Instance,
     SqliteDatasource.Instance,
@@ -110,7 +110,7 @@ import { OracleDatasource } from "@datasources/oracle";
 import { MongoDbDatasource } from "@datasources/mongodb";
 import { DynamoDbDatasource } from "@datasources/dynamodb";
 
-Datasource.use(
+Datasource.register(
   JsonDatasource.instance,
   MemoryDatasource.instance,
   SqliteDatasource.instance,
@@ -159,7 +159,7 @@ Call `Datasource.defaults` / `Datasource.Defaults` / `defaults` with one diction
 
 Use `@datasources/cli` to write a local `.env` and add or remove dialect packages (and optional native engines) for npm, Cargo, or .NET. From this repo: `npm run setup` or `npm run cli -- add sqlite`. In a consumer app: `npx @datasources/cli setup`, `npx @datasources/cli add sqlite`, `npx @datasources/cli remove mysql`. Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. Core still does not read `.env`; load it in the app, then call the install helper.
 
-To register several providers without listing factories, pass the same dictionary to the optional install helper (`Datasources.Hosting` / `datasources-register` / `@datasources/register`). It calls `Use` / `register` / `use` once per name in `providers` / `DATASOURCE_PROVIDERS`, always includes `provider` / `DATASOURCE_PROVIDER`, then sets defaults.
+To register several providers without listing factories, pass the same dictionary to the optional install helper (`Datasources.Hosting` / `datasources-register` / `@datasources/register`). It calls `Register` / `register` / `register` once per name in `providers` / `DATASOURCE_PROVIDERS`, always includes `provider` / `DATASOURCE_PROVIDER`, then sets defaults.
 
 ::: dialects
 ```csharp

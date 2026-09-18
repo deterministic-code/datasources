@@ -17,7 +17,7 @@ export class Datasource {
     specified = { ...options };
   };
 
-  static use(...factories: IDatasourceFactory[]): void {
+  static register(...factories: IDatasourceFactory[]): void {
     for (const factory of factories) registry.set(factory.provider, factory);
   }
 

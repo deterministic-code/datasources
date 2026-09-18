@@ -13,7 +13,7 @@ The feature stack starts with standard data-access modules for commands, connect
 
 ## QuickStart
 
-Register a factory, then create by provider name. Install only the dialect packages you use. In Rust, `use` is a keyword, so registration is `register`.
+Register a factory, then create by provider name. Install only the dialect packages you use.
 
 Working dialects (json, memory, sqlite, mysql, postgres) accept options on create. Stub dialects return a stub datasource.
 
@@ -41,7 +41,7 @@ Optional name-based register: `Datasources.Hosting`, `datasources-register` (Car
 #### C#
 
 ```csharp
-Datasource.Use(
+Datasource.Register(
     JsonDatasource.Instance,
     MemoryDatasource.Instance,
     SqliteDatasource.Instance,
@@ -130,7 +130,7 @@ import { OracleDatasource } from "@datasources/oracle";
 import { MongoDbDatasource } from "@datasources/mongodb";
 import { DynamoDbDatasource } from "@datasources/dynamodb";
 
-Datasource.use(
+Datasource.register(
   JsonDatasource.instance,
   MemoryDatasource.instance,
   SqliteDatasource.instance,
@@ -177,7 +177,7 @@ Call `Datasource.defaults` / `Datasource.Defaults` / `defaults` with one diction
 
 Use `@datasources/cli` to write a local `.env` and add or remove dialect packages (and optional native engines) for npm, Cargo, or .NET. From this repo: `npm run setup` or `npm run cli -- add sqlite`. In a consumer app: `npx @datasources/cli setup`, `npx @datasources/cli add sqlite`, `npx @datasources/cli remove mysql`. Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. Core still does not read `.env`; load it in the app, then call the install helper.
 
-To register several providers without listing factories, pass the same dictionary to the optional install helper (`Datasources.Hosting` / `datasources-register` / `@datasources/register`). It calls `Use` / `register` / `use` once per name in `providers` / `DATASOURCE_PROVIDERS`, always includes `provider` / `DATASOURCE_PROVIDER`, then sets defaults.
+To register several providers without listing factories, pass the same dictionary to the optional install helper (`Datasources.Hosting` / `datasources-register` / `@datasources/register`). It calls `Register` / `register` / `register` once per name in `providers` / `DATASOURCE_PROVIDERS`, always includes `provider` / `DATASOURCE_PROVIDER`, then sets defaults.
 
 #### C#
 
@@ -311,8 +311,8 @@ Factory for connections, commands, and repositories. Register providers, then cr
 
 | C# | Rust | TypeScript |
 | --- | --- | --- |
-| `Datasource` | `register` / `create` / `defaults` | `Datasource` |
-| `Use` | `register` | `use` |
+| `Datasource` | `datasources` | `Datasource` |
+| `Register` | `register` | `register` |
 | `DatasourceInstall.From` (Hosting) | `register_from` (`datasources-register`) | `install` (`@datasources/register`) |
 | `Create` | `create` / `create_default` | `create` |
 | `Defaults` | `defaults` | `defaults` |
@@ -322,7 +322,7 @@ Factory for connections, commands, and repositories. Register providers, then cr
 #### C#
 
 ```csharp
-Datasource.Use(SqliteDatasource.Instance);
+Datasource.Register(SqliteDatasource.Instance);
 var ds = Datasource.Create("sqlite");
 ```
 
@@ -336,7 +336,7 @@ let ds = create("sqlite", None)?;
 #### TypeScript
 
 ```typescript
-Datasource.use(SqliteDatasource.instance);
+Datasource.register(SqliteDatasource.instance);
 const ds = Datasource.create("sqlite");
 ```
 See [QuickStart](#quickstart) for full registration and default-provider setup.
@@ -489,7 +489,7 @@ Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFil
 #### C#
 
 ```csharp
-Datasource.Use(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
+Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
 
 var json = Datasource.Create("json", new JsonConnectionOptions { Data = new JsonArray() });
 var connection = await json.CreateConnection();
@@ -515,7 +515,7 @@ connection.open().await?;
 import { Datasource } from "@datasources/core";
 import { JsonDatasource } from "@datasources/json";
 
-Datasource.use(JsonDatasource.instance);
+Datasource.register(JsonDatasource.instance);
 
 const json = Datasource.create("json", { data: [] });
 const connection = await json.createConnection();
@@ -654,7 +654,7 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 #### C#
 
 ```csharp
-Datasource.Use(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
+Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
 
 var json = Datasource.Create("json", new JsonConnectionOptions { Data = new JsonArray() });
 var connection = await json.CreateConnection();
@@ -688,7 +688,7 @@ command.execute_reader("", None).await?;
 import { Datasource } from "@datasources/core";
 import { JsonDatasource } from "@datasources/json";
 
-Datasource.use(JsonDatasource.instance);
+Datasource.register(JsonDatasource.instance);
 
 const json = Datasource.create("json", { data: [] });
 const connection = await json.createConnection();

@@ -378,7 +378,7 @@ describe("Datasource registry", () => {
   it("registers, lists, creates, and resets", () => {
     const factory = new MockDatasource("json");
     expect(Datasource.registered()).toEqual([]);
-    Datasource.use(factory, new MockDatasource("memory"));
+    Datasource.register(factory, new MockDatasource("memory"));
     expect(Datasource.registered()).toEqual(["json", "memory"]);
     const created = Datasource.create("json", { path: "x" });
     expect(created.provider).toBe("json");
@@ -389,7 +389,7 @@ describe("Datasource registry", () => {
 
   it("requires consumer defaults when provider is omitted", async () => {
     expect(() => Datasource.create()).toThrow(DatasourceError);
-    Datasource.use(new MockDatasource("sqlite"));
+    Datasource.register(new MockDatasource("sqlite"));
     Datasource.defaults({ provider: "sqlite", filename: ":memory:" });
     const ds = Datasource.create();
     expect(ds.provider).toBe("sqlite");

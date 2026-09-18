@@ -23,7 +23,7 @@ public static class DatasourceInstall
     public static void From(IReadOnlyDictionary<string, string?> options)
     {
         foreach (var name in ProviderNames.From(options))
-            Datasource.Use(Resolve(name));
+            Datasource.Register(Resolve(name));
         Datasource.Defaults(options);
     }
 

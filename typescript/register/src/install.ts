@@ -26,7 +26,7 @@ export const install = async (
     const pkg = packages[name];
     if (!pkg) throw new ProviderNotInstalledError(name);
     try {
-      Datasource.use(factoryOf(await loader(pkg), name));
+      Datasource.register(factoryOf(await loader(pkg), name));
     } catch (error) {
       throw error instanceof ProviderNotInstalledError
         ? error
