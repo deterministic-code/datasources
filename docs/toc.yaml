@@ -11,12 +11,6 @@ pages:
   - path: sections/datasource.md
     title: Datasource
     group: Code Reference
-  - path: sections/mappers.md
-    title: Mappers
-    group: Code Reference
-  - path: sections/type-converters.md
-    title: Type Converters
-    group: Code Reference
   - path: sections/connection.md
     title: Connection
     group: Code Reference
@@ -50,6 +44,12 @@ pages:
     title: Bulk repository
     group: Code Reference
     hash: bulk-repository
+  - path: sections/mappers.md
+    title: Mappers
+    group: Code Reference
+  - path: sections/type-converters.md
+    title: Type Converters
+    group: Code Reference
   - path: cli.md
     title: Setup
     group: Command Line (CLI)
