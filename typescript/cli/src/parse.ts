@@ -19,15 +19,15 @@ export const help = `Usage: datasources <command> [options]
 
 Commands:
   setup                 Interactive .env and provider install
-  add <provider...>     Add provider packages and engine dependencies
-  remove <provider...>  Remove provider packages and unused engines
+  add <provider...>     Add provider packages
+  remove <provider...>  Remove provider packages
 
 Options:
   --cwd <dir>                 Consumer project directory (default: .)
   --ecosystem ts|rust|csharp  Required when more than one project type exists
   --dry-run                   Print package-manager commands without running them
   --yes                       Setup without prompts (defaults / existing .env)
-  --no-engine                 Skip native engine packages (better-sqlite3, rusqlite, …)
+  --no-engine                 Skip Datasources.Sqlite.Microsoft
 `;
 
 export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags: Flags } => {

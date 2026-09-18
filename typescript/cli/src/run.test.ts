@@ -72,7 +72,8 @@ describe("run", () => {
     expect(files[join(cwd, ".env")]).toMatch(/DATASOURCE_PROVIDER=sqlite/);
     expect(files[join(cwd, ".env")]).toMatch(/CUSTOM=keep/);
     expect(io.ran[0]).toMatch(/npm install/);
-    expect(io.ran[0]).toMatch(/better-sqlite3/);
+    expect(io.ran[0]).toMatch(/@datasources\/sqlite/);
+    expect(io.ran[0]).not.toMatch(/better-sqlite3/);
   });
 
   it("runs interactive setup and diffs add/remove", async () => {

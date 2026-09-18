@@ -14,18 +14,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datasources/core": "*"
-  },
-  "peerDependencies": {
-    "mysql2": ">=3.0.0"
-  },
-  "peerDependenciesMeta": {
-    "mysql2": {
-      "optional": true
-    }
+    "@datasources/core": "*",
+    "mysql2": "^3.14.0"
   },
   "devDependencies": {
-    "mysql2": "^3.14.0",
     "yaml": "^2.8.0"
   }
 }

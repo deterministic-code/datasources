@@ -11,7 +11,6 @@ describe("commands", () => {
           "@datasources/core",
           "@datasources/register",
           "@datasources/sqlite",
-          "better-sqlite3",
         ],
       },
     ]);
@@ -27,7 +26,11 @@ describe("commands", () => {
     expect(addCommands("rust", ["sqlite"], true, ["Cargo.toml"])).toEqual([
       { command: "cargo", args: ["add", "datasources"] },
       { command: "cargo", args: ["add", "datasources-register", "--features", "sqlite"] },
-      { command: "cargo", args: ["add", "datasources-sqlite", "--features", "rusqlite"] },
+      { command: "cargo", args: ["add", "datasources-sqlite"] },
+    ]);
+    expect(addCommands("rust", ["sqlite"], false, ["Cargo.toml"])[2]?.args).toEqual([
+      "add",
+      "datasources-sqlite",
     ]);
     expect(addCommands("rust", ["json"], false, ["Cargo.toml"])[2]?.args).toEqual([
       "add",
@@ -52,7 +55,7 @@ describe("commands", () => {
 
   it("uninstalls unused engines and dialects", () => {
     expect(removeCommands("ts", ["sqlite"], true, ["json"], [])).toEqual([
-      { command: "npm", args: ["uninstall", "@datasources/sqlite", "better-sqlite3"] },
+      { command: "npm", args: ["uninstall", "@datasources/sqlite"] },
     ]);
     expect(removeCommands("ts", [], true, ["sqlite"], [])).toEqual([]);
     expect(removeCommands("rust", ["sqlite"], true, ["json"], [])).toEqual([

@@ -6,21 +6,16 @@ license.workspace = true
 description = "SQLite datasource provider"
 autotests = false
 
-[features]
-default = []
-rusqlite = ["dep:rusqlite"]
-
 [dependencies]
 async-trait = { workspace = true }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { workspace = true }
-rusqlite = { workspace = true, optional = true }
+rusqlite = { workspace = true }
 rust_decimal = "1"
 uuid = "1"
 
 [dev-dependencies]
 datasources-sql-specs = { path = "../../sql-specs" }
-rusqlite = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = { workspace = true }

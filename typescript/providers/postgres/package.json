@@ -14,19 +14,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datasources/core": "*"
-  },
-  "peerDependencies": {
-    "pg": ">=8.0.0"
-  },
-  "peerDependenciesMeta": {
-    "pg": {
-      "optional": true
-    }
+    "@datasources/core": "*",
+    "@types/pg": "^8.15.5",
+    "pg": "^8.16.0"
   },
   "devDependencies": {
-    "@types/pg": "^8.15.5",
-    "pg": "^8.16.0",
     "yaml": "^2.8.0"
   }
 }

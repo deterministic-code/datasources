@@ -9,11 +9,7 @@ describe("catalog", () => {
       expect(catalog[name].cargo).toMatch(/^datasources-/);
       expect(catalog[name].nuget).toMatch(/^Datasources\./);
     }
-    expect(catalog.sqlite.npmEngine).toBe("better-sqlite3");
-    expect(catalog.sqlite.cargoFeatures).toEqual(["rusqlite"]);
     expect(catalog.sqlite.nugetEngine).toBe("Datasources.Sqlite.Microsoft");
-    expect(catalog.mysql.npmEngine).toBe("mysql2");
-    expect(catalog.postgres.npmEngine).toBe("pg");
   });
 
   it("validates provider names", () => {

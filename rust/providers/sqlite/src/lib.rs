@@ -1,26 +1,20 @@
 mod command;
-#[cfg(any(test, feature = "rusqlite"))]
 mod command_driver;
 mod connection;
-#[cfg(any(test, feature = "rusqlite"))]
 mod connection_driver;
-#[cfg(any(test, feature = "rusqlite"))]
 mod connection_string;
 mod converters;
 mod datasource;
 mod driver;
-#[cfg(any(test, feature = "rusqlite"))]
 mod rusqlite_driver;
 mod statement_builder;
 mod transaction;
-#[cfg(any(test, feature = "rusqlite"))]
 mod transaction_driver;
 
 pub use command::SqliteCommand;
 pub use connection::SqliteConnection;
 pub use datasource::SqliteDatasource;
 pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
-#[cfg(any(test, feature = "rusqlite"))]
 pub use rusqlite_driver::RusqliteDriver;
 pub use statement_builder::{SqliteColumn, SqliteStatementBuilder};
 pub use transaction::SqliteTransaction;

@@ -15,60 +15,59 @@ The feature stack starts with standard data-access modules for commands, connect
 
 ### Installation
 
-```sh
-npm i @datasources/core
+#### TypeScript
+
+Install Core
+
+```typescript
+npm install @datasources/core
 ```
 
-#### sqlite
+Install Providers
 
-```sh
-npm i @datasources/sqlite better-sqlite3
+```typescript
+npm install @datasources/sqlite
+npm install @datasources/mysql
+npm install @datasources/postgres
+npm install @datasources/memory
+npm install @datasources/json
 ```
-
-#### mysql
-
-```sh
-npm i @datasources/mysql mysql2
-```
-
-#### postgres
-
-```sh
-npm i @datasources/postgres pg
-```
-
-#### memory
-
-```sh
-npm i @datasources/memory
-```
-
-#### json
-
-```sh
-npm i @datasources/json
-```
-C# and Rust:
 
 #### C#
 
+Install Core
+
 ```csharp
 dotnet add package Datasources
+```
+
+Install Providers
+
+```csharp
 dotnet add package Datasources.Sqlite
 dotnet add package Datasources.Sqlite.Microsoft
+dotnet add package Datasources.Mysql
+dotnet add package Datasources.Postgres
+dotnet add package Datasources.Memory
+dotnet add package Datasources.Json
 ```
 
 #### Rust
 
+Install Core
+
 ```rust
 cargo add datasources
-cargo add datasources-sqlite --features rusqlite
 ```
 
-#### TypeScript
+Install Providers
 
-```typescript
-npm i @datasources/core @datasources/sqlite better-sqlite3
+```rust
+cargo add datasources-sqlite
+cargo add datasources-mysql
+cargo add datasources-postgres
+cargo add datasources-memory
+cargo add datasources-json
 ```
 ### Setup
 
