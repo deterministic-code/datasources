@@ -343,18 +343,18 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 | Feature | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
-| Datasource | [✅](#datasource) | [✅](#datasource) | [✅](#datasource) |
-| Mapping | [✅](#mappers) | [✅](#mappers) | [✅](#mappers) |
-| Type Converters | [✅](#typeconverters) | [✅](#typeconverters) | [✅](#typeconverters) |
-| Connection | [✅](#connection) | [✅](#connection) | [✅](#connection) |
-| Transaction | [✅](#transaction) | [✅](#transaction) | [✅](#transaction) |
-| Command | [✅](#command) | [✅](#command) | [✅](#command) |
-| Reader | [✅](#reader) | [✅](#reader) | [✅](#reader) |
-| Statements | [✅](#statements) | [✅](#statements) | [✅](#statements) |
-| Readonly repository | [✅](#readonly-repository) | [✅](#readonly-repository) | [✅](#readonly-repository) |
-| CRUD repository | [✅](#crud-repository) | [✅](#crud-repository) | [✅](#crud-repository) |
-| Enriched repository | [✅](#enriched-repository) | [✅](#enriched-repository) | [✅](#enriched-repository) |
-| Bulk repository | [✅](#bulk-repository) | [✅](#bulk-repository) | [✅](#bulk-repository) |
+| [Datasource](#datasource) | ✅ | ✅ | ✅ |
+| [Mapping](#mappers) | ✅ | ✅ | ✅ |
+| [Type Converters](#typeconverters) | ✅ | ✅ | ✅ |
+| [Connection](#connection) | ✅ | ✅ | ✅ |
+| [Transaction](#transaction) | ✅ | ✅ | ✅ |
+| [Command](#command) | ✅ | ✅ | ✅ |
+| [Reader](#reader) | ✅ | ✅ | ✅ |
+| [Statements](#statements) | ✅ | ✅ | ✅ |
+| [Readonly repository](#readonly-repository) | ✅ | ✅ | ✅ |
+| [CRUD repository](#crud-repository) | ✅ | ✅ | ✅ |
+| [Enriched repository](#enriched-repository) | ✅ | ✅ | ✅ |
+| [Bulk repository](#bulk-repository) | ✅ | ✅ | ✅ |
 
 ### Providers
 
