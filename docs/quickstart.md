@@ -136,7 +136,7 @@ await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 :::
 
-See [Repositories](./sections/repositories.md) for readonly, CRUD, and bulk.
+See [Repository](./sections/repository.md) for readonly, CRUD, and bulk.
 
 ## Mappers
 
@@ -168,7 +168,7 @@ const back = mapper.reverseMap(flat);
 ```
 :::
 
-See [Mappers](./sections/mappers.md) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
+See [IMapper](./sections/mappers.md) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
 
 ## Type Converter
 
@@ -219,4 +219,4 @@ const item = rows.convert(row);
 ```
 :::
 
-See [TypeConverters](./sections/type-converters.md).
+See [TypeConverter](./sections/type-converters.md).
