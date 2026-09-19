@@ -30,28 +30,55 @@ pages:
   - path: sections/builders.md
     title: Statements
     group: Code Reference
-  - path: sections/repositories.md
+  - path: sections/repository.md
+    title: Repository
+    group: Code Reference
+  - path: sections/readonly-repository.md
     title: Readonly repository
     group: Code Reference
-    hash: readonly-repository
-  - path: sections/repositories.md
+    parent: Repository
+  - path: sections/crud-repository.md
     title: CRUD repository
     group: Code Reference
-    hash: crud-repository
-  - path: sections/repositories.md
+    parent: Repository
+  - path: sections/enriched-repository.md
     title: Enriched repository
     group: Code Reference
-    hash: enriched-repository
-  - path: sections/repositories.md
+    parent: Repository
+  - path: sections/bulk-repository.md
     title: Bulk repository
     group: Code Reference
-    hash: bulk-repository
+    parent: Repository
   - path: sections/mappers.md
-    title: Mappers
+    title: IMapper
     group: Code Reference
+  - path: sections/name-mapper.md
+    title: NameMapper
+    group: Code Reference
+    parent: IMapper
+  - path: sections/name-source-destination-mapper.md
+    title: NameSourceDestinationMapper
+    group: Code Reference
+    parent: IMapper
+  - path: sections/transform-mapper.md
+    title: TransformMapper
+    group: Code Reference
+    parent: IMapper
+  - path: sections/flat-to-type-mapper.md
+    title: FlatToTypeMapper
+    group: Code Reference
+    parent: IMapper
+  - path: sections/statement-mapper.md
+    title: StatementMapper
+    group: Code Reference
+    parent: IMapper
   - path: sections/type-converters.md
-    title: Type Converters
+    title: TypeConverter
     group: Code Reference
+  - path: sections/row-type-converter.md
+    title: RowTypeConverter
+    group: Code Reference
+    parent: TypeConverter
   - path: cli.md
     title: Setup
     group: Command Line (CLI)

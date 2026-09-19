@@ -90,7 +90,7 @@ createRepository<T>(connection?: IConnection): ICRUDRepository<T>
 
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
 
-**Returns** [ICRUDRepository](./repositories.md#crud-repository)`<T>`
+**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
 ##### createReadonlyRepository(connection?)
 
@@ -102,7 +102,7 @@ createReadonlyRepository<T>(connection?: IConnection): IReadonlyRepository<T>
 
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
 
-**Returns** [IReadonlyRepository](./repositories.md#readonly-repository)`<T>`
+**Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
 #### DatasourceOptions
 
@@ -209,7 +209,7 @@ ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null)
 
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
 
-**Returns** [ICRUDRepository](./repositories.md#crud-repository)`<T>`
+**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
 ##### CreateReadonlyRepository(connection)
 
@@ -221,7 +221,7 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
 
-**Returns** [IReadonlyRepository](./repositories.md#readonly-repository)`<T>`
+**Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
 #### DatasourceOptions
 
@@ -328,7 +328,7 @@ fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn 
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one
 
-**Returns** `Arc<dyn `[CRUDRepository](./repositories.md#crud-repository)`>`
+**Returns** `Arc<dyn `[CRUDRepository](./crud-repository.md)`>`
 
 ##### create_readonly_repository(connection)
 
@@ -340,7 +340,7 @@ fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) ->
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one
 
-**Returns** `Arc<dyn `[ReadonlyRepository](./repositories.md#readonly-repository)`>`
+**Returns** `Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>`
 
 #### DatasourceOptions
 

@@ -14,14 +14,24 @@ const toLink = ({ path, hash }) =>
 
 const toItem = (page) => ({ text: page.title, link: toLink(page) });
 
+const nestItems = (groupPages) =>
+  groupPages
+    .filter((page) => !page.parent)
+    .map((page) => {
+      const children = groupPages.filter((child) => child.parent === page.title);
+      return children.length
+        ? { ...toItem(page), collapsed: false, items: children.map(toItem) }
+        : toItem(page);
+    });
+
 const groups = [...new Set(pages.map((page) => page.group).filter(Boolean))].map((group) => ({
   text: group,
   collapsed: false,
-  items: pages.filter((page) => page.group === group).map(toItem),
+  items: nestItems(pages.filter((page) => page.group === group)),
 }));
 const sidebar = [
-  ...groups.filter((group) => group.text === "Code Reference"),
   ...pages.filter((page) => !page.group).map(toItem),
+  ...groups.filter((group) => group.text === "Code Reference"),
   ...groups.filter((group) => group.text !== "Code Reference"),
 ];
 

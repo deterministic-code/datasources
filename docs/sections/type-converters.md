@@ -1,21 +1,146 @@
-# TypeConverters
+# TypeConverter
 
-`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`.
+`TypeConverter` is only `Convert` / `ReverseConvert`. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
-A dialect adds a `TypeConverter` only when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
+## Classes
 
-## TypeConverter
+::: reference
+### typescript
+#### TypeConverter
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `TypeConverter<To, From>` | `TypeConverter<To, From>` | `TypeConverter` |
-| `Convert` | `convert` | `convert` |
-| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
+```typescript
+abstract class TypeConverter<To = Cells, From = Cells>
+```
 
-## RowTypeConverter
+**Methods**
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `RowTypeConverter<T>` | `RowTypeConverter` | `RowTypeConverter` |
-| `Convert` / `ReverseConvert` | `convert` / `reverse_convert` | `convert` / `reverseConvert` |
-| `Types` / `Fields` | `types` / `fields` | `types` / `fields` |
+##### convert(from)
+
+Converts `From` to `To`.
+
+```typescript
+abstract convert(from: From): To
+```
+
+- `from` — source value
+
+**Returns** `To`
+
+##### reverseConvert(to)
+
+Converts `To` back to `From`.
+
+```typescript
+abstract reverseConvert(to: To): From
+```
+
+- `to` — converted value
+
+**Returns** `From`
+
+### csharp
+#### ITypeConverter
+
+```csharp
+public interface ITypeConverter<To, From>
+```
+
+**Methods**
+
+##### Convert(from)
+
+Converts `From` to `To`.
+
+```csharp
+To Convert(From from)
+```
+
+- `from` — source value
+
+**Returns** `To`
+
+##### ReverseConvert(to)
+
+Converts `To` back to `From`.
+
+```csharp
+From ReverseConvert(To to)
+```
+
+- `to` — converted value
+
+**Returns** `From`
+
+#### TypeConverter
+
+```csharp
+public abstract class TypeConverter<To, From> : ITypeConverter<To, From>
+```
+
+**Methods**
+
+##### Convert(from)
+
+Converts `From` to `To`.
+
+```csharp
+public abstract To Convert(From from)
+```
+
+- `from` — source value
+
+**Returns** `To`
+
+##### ReverseConvert(to)
+
+Converts `To` back to `From`.
+
+```csharp
+public abstract From ReverseConvert(To to)
+```
+
+- `to` — converted value
+
+**Returns** `From`
+
+### rust
+#### TypeConverter
+
+```rust
+pub trait TypeConverter<To, From>
+```
+
+**Methods**
+
+##### convert(from)
+
+Converts `From` to `To`.
+
+```rust
+fn convert(&self, from: &From) -> Result<To>
+```
+
+- `from` — source value
+
+**Returns** `Result<To>`
+
+##### reverse_convert(to)
+
+Converts `To` back to `From`.
+
+```rust
+fn reverse_convert(&self, to: &To) -> Result<From>
+```
+
+- `to` — converted value
+
+**Returns** `Result<From>`
+:::
+
+## Remarks
+
+Repository get is convert, then map. See [IMapper](./mappers.md) and [Repository](./repository.md).
+
+## See also
+
+- [RowTypeConverter](./row-type-converter.md)

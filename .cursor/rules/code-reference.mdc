@@ -10,6 +10,8 @@ Follow [docs/formats/code-reference.md](docs/formats/code-reference.md). MSDN-st
 
 Required order: `# Title`, summary, `## Classes` + `::: reference`, `## Remarks`, optional `## Examples`.
 
+Hub pages (base type with subcategory pages) omit `## Examples` and add `## See also` with child-page links. The hub documents only the base type. Each other class is its own child page.
+
 ~~~~markdown
 # Datasource
 

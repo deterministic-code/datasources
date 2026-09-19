@@ -1,81 +1,118 @@
-# Mappers
+# IMapper
 
-Holds source/destination labels. Column names pass through as-is.
+Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository get is convert, then map.
 
-## IMapper
+## Classes
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IMapper<TFrom, TTo>` | `Mapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
+::: reference
+### typescript
+#### IMapper
 
-## ISourceDestinationMapper
+```typescript
+interface IMapper<TFrom, TTo>
+```
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `ISourceDestinationMapper` | `SourceDestinationMapper` | `ISourceDestinationMapper` |
-| `Source` | `source` | `source` |
-| `Destination` | `destination` | `destination` |
+**Methods**
 
-## NameMapper
+##### map(value)
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `NameMapper` | `NameMapper` | `NameMapper` |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
+Maps `TFrom` to `TTo`.
 
-## NameSourceDestinationMapper
+```typescript
+map(value: TFrom): TTo
+```
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `NameSourceDestinationMapper` | `NameSourceDestinationMapper` | `NameSourceDestinationMapper` |
-| constructor | `new` | constructor |
-| `Source` | `source` | `source` |
-| `Destination` | `destination` | `destination` |
+- `value` — source value
 
-## TransformMapper
+**Returns** `TTo`
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` |
-| constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
+##### reverseMap(value)
 
-## FlatToTypeMapper
+Maps `TTo` back to `TFrom`.
 
-Collapses denormalized join rows into a typed graph. Scalars map column → field; groups collect unique children by key. Nested group fields on a collection are omitted.
+```typescript
+reverseMap(value: TTo): TFrom
+```
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IFlatToTypeMapper` | `FlatToTypeMapperTrait` | `IFlatToTypeMapper<T>` |
-| `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
-| `TypeMap` | `TypeMap` | `TypeMap<T>` |
-| `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |
-| `TypeMapField` | `TypeMapField` | string or group |
-| `MappedValue` | `MappedValue` | `T` fields |
-| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
-| `Collapse` | `collapse` / `collapse_rows` | `collapse` |
+- `value` — mapped value
 
-## StatementMapper
+**Returns** `TFrom`
 
-Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.
+### csharp
+#### IMapper
 
-Apply in either or both places:
+```csharp
+public interface IMapper<TFrom, TTo>
+```
 
-1. **Builder** — `RepositoryBuilder` maps `Entity` and `Columns` into `RepositoryStatements`.
-2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` mappers rewrite the finished statement.
+**Methods**
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `StatementMapper<T>` | `StatementMapper` | `StatementMapper<T>` |
-| `Entity` | `entity` | `entity` |
-| `Columns` | `columns` | `columns` |
-| `Query` | `query` | `query` |
-| `Insert` | `insert` | `insert` |
-| `Update` | `update` | `update` |
-| `Delete` | `delete` | `delete` |
-| `Rows` | `rows` | `rows` |
-| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
+##### Map(value)
+
+Maps `TFrom` to `TTo`.
+
+```csharp
+TTo Map(TFrom value)
+```
+
+- `value` — source value
+
+**Returns** `TTo`
+
+##### ReverseMap(value)
+
+Maps `TTo` back to `TFrom`.
+
+```csharp
+TFrom ReverseMap(TTo value)
+```
+
+- `value` — mapped value
+
+**Returns** `TFrom`
+
+### rust
+#### Mapper
+
+```rust
+pub trait Mapper<TFrom, TTo>
+```
+
+**Methods**
+
+##### map(value)
+
+Maps `TFrom` to `TTo`.
+
+```rust
+fn map(&self, value: TFrom) -> TTo
+```
+
+- `value` — source value
+
+**Returns** `TTo`
+
+##### reverse_map(value)
+
+Maps `TTo` back to `TFrom`.
+
+```rust
+fn reverse_map(&self, value: TTo) -> TFrom
+```
+
+- `value` — mapped value
+
+**Returns** `TFrom`
+:::
+
+## Remarks
+
+Repository get is convert, then map. `StatementMapper.Rows` / `rows` is the get-row mapper. `Repository.Mapper` / `mapper` aliases it.
+
+## See also
+
+- [NameMapper](./name-mapper.md)
+- [NameSourceDestinationMapper](./name-source-destination-mapper.md)
+- [TransformMapper](./transform-mapper.md)
+- [FlatToTypeMapper](./flat-to-type-mapper.md)
+- [StatementMapper](./statement-mapper.md)

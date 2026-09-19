@@ -16,6 +16,9 @@ Required sections, in order:
 4. `## Classes` plus one `::: reference` block
 5. `## Remarks` — extra usage advice (always present; can be short)
 6. `## Examples` — omit the heading when there are zero samples
+7. `## See also` — hub pages only; links to subcategory pages. Hubs omit `## Examples`.
+
+A **hub** documents the base type (`IMapper`, `TypeConverter`, `IRepository`) and lists child pages. It does not include examples. A **child** is a normal spec page for one major class.
 
 Associated types belong on the same page (Transaction covers Transaction and IsolationLevel). Extra types are extra `####` headings in each dialect panel.
 
@@ -59,7 +62,7 @@ Rules:
 - Document each member once. Do not hand-write the top member tables.
 - Use `**Constructor**`, `**Properties**`, and `**Methods**` as the only group labels. Omit a group when the type has none.
 - The first paragraph under a member is the table description and the detail lead.
-- Parameter lines are `- \`name\` — description`. Link page-local and cross-page types (`[DatasourceOptions](#datasourceoptions)`, `[IDatasourceFactory](./datasource-factory.md)`).
+- Parameter lines are `- \`name\` — description`. Link page-local and cross-page types (`[DatasourceOptions](#datasourceoptions)`, `[IDatasourceFactory](../sections/datasource-factory.md)`).
 - Rust may use a module heading (`#### datasources`) for free functions when there is no registry class.
 - Omit internal hooks (`bindInstall` / `bind_install`) from the class list.
 
@@ -70,6 +73,51 @@ VitePress uses one page-level dialect selector for classes and examples. README 
 When present, one `###` heading per sample, optional prose, then `::: example`. Each fence is a pointer to unit, integration, or e2e test lines (`path#Lstart-Lend`). The transform reads that range and renders the usage body — not the test method wrapper or equality asserts. Do not paste a second fictional fence. A source icon links to the same range on GitHub. On a reference page those fences follow the page-level selector; they do not get their own tabs.
 
 `::: dialects` stays for install or CLI snippets that are not tests.
+
+## Hub pages
+
+A hub documents the base type only. After `## Remarks`, add `## See also` with one link per subcategory page. Do not add `## Examples`.
+
+~~~~markdown
+# IMapper
+
+Bidirectional `Map` / `ReverseMap`.
+
+## Classes
+
+::: reference
+### typescript
+#### IMapper
+
+```typescript
+interface IMapper<TFrom, TTo>
+```
+
+**Methods**
+
+##### map(value)
+
+Maps `TFrom` to `TTo`.
+
+```typescript
+map(value: TFrom): TTo
+```
+
+- `value` — source value
+
+**Returns** `TTo`
+:::
+
+## Remarks
+
+Repository get is convert, then map.
+
+## See also
+
+- [NameMapper](./name-mapper.md)
+- [TransformMapper](./transform-mapper.md)
+~~~~
+
 
 ~~~~markdown
 ## Examples
@@ -95,4 +143,6 @@ When present, one `###` heading per sample, optional prose, then `::: example`. 
 - [ ] Associated types and page-local argument/return types are extra `####` headings, not a second page
 - [ ] `## Remarks` is present
 - [ ] Examples use `::: example` test ranges or the Examples heading is omitted
+- [ ] Hub pages omit Examples and add `## See also` with child-page links
+- [ ] Child pages set `parent` in `docs/toc.yaml` to the hub title
 - [ ] Page is listed in `docs/toc.yaml`

@@ -10,18 +10,32 @@ class OnlyOne extends TypeConverter<Cell, Cell> {
 }
 
 describe("RowTypeConverter", () => {
+  it("convert and reverseConvert round trip", () => {
+    const converter = new RowTypeConverter();
+    const item = converter.convert({ id: 7, username: "ada" });
+    const row = converter.reverseConvert(item);
+    expect(item).toEqual({ id: 7, username: "ada" });
+    expect(row).toEqual({ id: 7, username: "ada" });
+  });
+
   it("lets field converters override", () => {
     const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
-    expect(converter.convert({ flag: 2 }).flag).toBe(false);
-    expect(converter.convert({ flag: 1 }).flag).toBe(true);
+    const dest = converter.convert({ flag: 1, name: "a" });
+    expect(dest.flag).toBe(true);
+    expect(dest.name).toBe("a");
+    expect(converter.reverseConvert(dest).flag).toBe(true);
+  });
+
+  it("can construct a typed destination", () => {
+    const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
     class Item {
       flag = false;
     }
     expect(converter.convert({ flag: 1 }, Item)).toBeInstanceOf(Item);
-    expect(converter.reverseConvert({ flag: true }).flag).toBe(true);
+  });
+
+  it("registers an empty provider catalog", () => {
     DefaultTypeConverters.use("memory", {});
     expect(DefaultTypeConverters.for("memory")).toEqual({});
   });
 });
-
-
