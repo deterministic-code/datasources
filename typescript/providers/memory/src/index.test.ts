@@ -23,6 +23,31 @@ afterEach(() => {
   DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
 });
 
+describe("DatasourceFactory", () => {
+  it("register and create", () => {
+    DatasourceFactory.reset();
+    DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
+    const ds = DatasourceFactory.create({ provider: "memory" });
+    expect(ds.provider).toBe("memory");
+  });
+});
+
+describe("Connection", () => {
+  it("open and close", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    await connection.close();
+    expect(connection.isOpen).toBe(false);
+  });
+
+  it("start a transaction", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    const txn = await connection.startTransaction();
+    expect(txn.isolation).toBe("serializable");
+  });
+});
+
 describe("filter helpers", () => {
   it("parses empty and object filters", () => {
     expect(parseFilter()).toEqual({});

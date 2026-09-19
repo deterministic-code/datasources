@@ -1,5 +1,7 @@
 #[allow(dead_code)]
+mod connection;
 mod contact;
+mod datasource_factory;
 mod items_repository;
 mod list_repository;
 mod where_match;

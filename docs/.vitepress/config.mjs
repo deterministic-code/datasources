@@ -45,6 +45,7 @@ export default defineConfig({
   themeConfig: {
     sidebar,
     outline: "deep",
+    socialLinks: [{ icon: "github", link: "https://github.com/deterministic-code/datasources" }],
   },
   markdown: {
     config(md) {

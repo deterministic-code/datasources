@@ -287,31 +287,33 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 
 ### Default from environment
 
-::: dialects
-```csharp
-var ds = DatasourceFactory.Default;
+::: example
+```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32
 ```
-```rust
-let ds = default()?;
+```rust rust/datasources/src/tests/datasource_factory.rs#L21-L33
 ```
-```typescript
-const ds = DatasourceFactory.default;
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#L33-L39
 ```
 :::
 
-### Register a factory
+### Register and Create
 
-::: dialects
-```csharp
-DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryConnection.Repository);
-var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
+::: example
+```csharp csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16
 ```
-```rust
-register("memory", MemoryConnection::from_options, MemoryConnection::repository);
-let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())])))?;
+```rust rust/providers/memory/src/lib.rs#L36-L46
 ```
-```typescript
-DatasourceFactory.register("memory", opts => new MemoryConnection(opts), MemoryConnection.repository);
-const ds = Datasource.create({ provider: "memory" });
+```typescript typescript/providers/memory/src/index.test.ts#L27-L32
+```
+:::
+
+### Missing provider
+
+::: example
+```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L34-L40
+```
+```rust rust/datasources/src/tests/datasource_factory.rs#L35-L42
+```
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#L41-L45
 ```
 :::
