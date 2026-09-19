@@ -7,7 +7,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { from, registerListed } from "./install.ts";
 import { providerNames } from "./providerNames.ts";
 
-const envKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] as const;
+const envKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "DEFAULT_PROVIDER", "DEFAULT_DATASOURCE_URL", "PROVIDER"] as const;
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 
 beforeEach(() => {
@@ -28,13 +28,13 @@ describe("providerNames", () => {
     expect(
       providerNames({
         INSTALLED_PROVIDERS: "sqlite, json, sqlite",
-        DATABASE_URL: "postgres://localhost",
+        DATASOURCE_URL: "postgres://localhost",
       }),
     ).toEqual(["sqlite", "json", "postgres"]);
     expect(
       providerNames({
         INSTALLED_PROVIDERS: "json,memory",
-        DATABASE_URL: "json://",
+        DATASOURCE_URL: "json://",
       }),
     ).toEqual(["json", "memory"]);
     expect(providerNames({ INSTALLED_PROVIDERS: " sqlite " })).toEqual(["sqlite"]);
@@ -46,7 +46,7 @@ describe("registerListed", () => {
   it("registers listed factories", () => {
     from({
       INSTALLED_PROVIDERS: "json,memory",
-      DATABASE_URL: "memory://",
+      DATASOURCE_URL: "memory://",
     });
     expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
     expect(
@@ -61,7 +61,7 @@ describe("registerListed", () => {
   it("defaults registers installed providers", () => {
     DatasourceFactory.defaults({
       INSTALLED_PROVIDERS: "json,memory",
-      DATABASE_URL: "memory://",
+      DATASOURCE_URL: "memory://",
     });
     expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
     expect(Datasource.create({ database_url: "memory://" }).provider).toBe("memory");
@@ -80,8 +80,12 @@ describe("registerListed", () => {
 
   it("create reads connection from the environment", () => {
     process.env.INSTALLED_PROVIDERS = "json,memory";
-    process.env.DATABASE_URL = "memory://";
+    process.env.DATASOURCE_URL = "memory://";
     expect(Datasource.create().provider).toBe("memory");
+    expect(DatasourceFactory.default.provider).toBe("memory");
+    process.env.DEFAULT_PROVIDER = "json";
+    process.env.DEFAULT_DATASOURCE_URL = "json://";
+    expect(DatasourceFactory.default.provider).toBe("json");
     expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
   });
 

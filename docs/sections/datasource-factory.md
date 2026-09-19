@@ -12,6 +12,18 @@ Resolves a provider from options and returns one configured datasource.
 class DatasourceFactory implements IDatasourceFactory
 ```
 
+**Properties**
+
+##### default
+
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#create-options).
+
+```typescript
+static get default(): IDatasource
+```
+
+**Returns** [IDatasource](./datasource.md#idatasource)
+
 **Methods**
 
 ##### defaults(options)
@@ -44,7 +56,7 @@ Creates one datasource. `undefined` options read process env; a dictionary is us
 static create(options?: DatasourceOptions): IDatasource
 ```
 
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
 
 **Returns** [IDatasource](./datasource.md#idatasource)
 
@@ -93,6 +105,18 @@ create(options?: DatasourceOptions): IDatasource
 public sealed class DatasourceFactory : IDatasourceFactory
 ```
 
+**Properties**
+
+##### Default
+
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [Create](#create-options).
+
+```csharp
+public static IDatasource Default { get; }
+```
+
+**Returns** [IDatasource](./datasource.md#idatasource)
+
 **Methods**
 
 ##### Defaults(options)
@@ -125,7 +149,7 @@ Creates one datasource. `null` options read process `.env`; a dictionary is used
 public static IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
 ```
 
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
 
 **Returns** [IDatasource](./datasource.md#idatasource)
 
@@ -208,13 +232,23 @@ Creates one datasource. `None` reads process env; `Some` is used as-is.
 pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datasource>>
 ```
 
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
+
+**Returns** `Result<Arc<dyn `[Datasource](./datasource.md#datasource)`>>`
+
+##### default()
+
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#create-options).
+
+```rust
+pub fn default() -> Result<Arc<dyn Datasource>>
+```
 
 **Returns** `Result<Arc<dyn `[Datasource](./datasource.md#datasource)`>>`
 
 ##### create_default()
 
-`create(None)`.
+`default()`.
 
 ```rust
 pub fn create_default() -> Result<Arc<dyn Datasource>>
@@ -243,11 +277,11 @@ pub fn registered() -> Vec<String>
 
 ## Remarks
 
-Each language registers a connection factory and a repository factory, then `Create` / `create` / `create_default` returns one [Datasource](./datasource.md). See [Datasource](./datasource.md) for the instance contract.
+Each language registers a connection factory and a repository factory, then `Default` / `default` / `DatasourceFactory.default` returns one [Datasource](./datasource.md). See [Datasource](./datasource.md) for the instance contract.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` is called with null / `undefined` / `None` options.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options.
 
 ## Examples
 
@@ -265,5 +299,19 @@ let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())])))?;
 ```typescript
 DatasourceFactory.register("memory", opts => new MemoryConnection(opts), MemoryConnection.repository);
 const ds = Datasource.create({ provider: "memory" });
+```
+:::
+
+### Default from environment
+
+::: dialects
+```csharp
+var ds = DatasourceFactory.Default;
+```
+```rust
+let ds = default()?;
+```
+```typescript
+const ds = DatasourceFactory.default;
 ```
 :::

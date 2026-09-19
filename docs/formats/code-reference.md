@@ -48,7 +48,7 @@ Creates a datasource from the registry.
 static create(options?: DatasourceOptions): IDatasource
 ```
 
-- `options` — [DatasourceOptions](#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
 
 **Returns** `IDatasource`
 :::
@@ -76,13 +76,13 @@ When present, one `###` heading per sample, optional prose, then `::: dialects`.
 
 ::: dialects
 ```csharp
-var ds = DatasourceFactory.Create();
+var ds = DatasourceFactory.Default;
 ```
 ```rust
-let ds = create_default()?;
+let ds = default()?;
 ```
 ```typescript
-const ds = Datasource.create();
+const ds = DatasourceFactory.default;
 ```
 :::
 ~~~~

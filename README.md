@@ -94,7 +94,7 @@ Start with `createCommand` and `executeReader`. The connection must be open.
 ##### C#
 
 ```csharp
-var ds = DatasourceFactory.Create();
+var ds = DatasourceFactory.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 
@@ -109,9 +109,9 @@ while (await reader.Next())
 ##### Rust
 
 ```rust
-use datasources::{create_default, Parameter};
+use datasources::{default, Parameter};
 
-let ds = create_default()?;
+let ds = default()?;
 let connection = ds.create_connection().await?;
 connection.open().await?;
 
@@ -127,9 +127,9 @@ while reader.next().await? {
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { DatasourceFactory } from "@datasources/core";
 
-const ds = Datasource.create();
+const ds = DatasourceFactory.default;
 const connection = await ds.createConnection();
 await connection.open();
 
@@ -340,7 +340,7 @@ TODO: `startTransaction`, work, then `commit` or `abort`.
 
 ## Datasource
 
-One configured datasource: provider name plus factories for connections, commands, and repositories. `Create` / `create` / `create_default` is on [DatasourceFactory](#datasourcefactory).
+One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `Create` is on [DatasourceFactory](#datasourcefactory).
 
 ### Classes
 
@@ -396,7 +396,7 @@ static create(options?: DatasourceOptions): IDatasource
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA` |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA` |
 
 **Returns**
 
@@ -914,7 +914,7 @@ Default schema.
 
 ### Remarks
 
-`DatasourceFactory.Create(null)` / `Datasource.create()` / `create(None)` reads process `DATABASE_URL` and `DATABASE_SCHEMA` (as `database_url` / `database_schema`) and registers names from process `INSTALLED_PROVIDERS`. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
+`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env` `PROVIDER` and `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
 
 Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
 
@@ -929,19 +929,19 @@ See [DatasourceFactory](#datasourcefactory) for the factory contract, and [CLI](
 ##### C#
 
 ```csharp
-var ds = DatasourceFactory.Create();
+var ds = DatasourceFactory.Default;
 ```
 
 ##### Rust
 
 ```rust
-let ds = create_default()?;
+let ds = default()?;
 ```
 
 ##### TypeScript
 
 ```typescript
-const ds = Datasource.create();
+const ds = DatasourceFactory.default;
 ```
 
 ## DatasourceFactory
@@ -958,6 +958,12 @@ Resolves a provider from options and returns one configured datasource.
 class DatasourceFactory implements IDatasourceFactory
 ```
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [default](#typescript-datasourcefactory-default) | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#typescript-create-options). |
+
 **Methods**
 
 | Name | Description |
@@ -967,6 +973,20 @@ class DatasourceFactory implements IDatasourceFactory
 | [create(options?)](#typescript-datasourcefactory-create-options) | Creates one datasource. `undefined` options read process env; a dictionary is used as-is. |
 | [reset()](#typescript-datasourcefactory-reset) | Clears the registry. Use in tests. |
 | [registered()](#typescript-datasourcefactory-registered) | Lists registered provider names. |
+
+###### default {#typescript-datasourcefactory-default}
+
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#typescript-create-options).
+
+**Definition**
+
+```typescript
+static get default(): IDatasource
+```
+
+**Returns**
+
+[IDatasource](#typescript-idatasource)
 
 ###### defaults(options) {#typescript-datasourcefactory-defaults-options}
 
@@ -1016,7 +1036,7 @@ static create(options?: DatasourceOptions): IDatasource
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA` |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA` |
 
 **Returns**
 
@@ -1086,6 +1106,12 @@ create(options?: DatasourceOptions): IDatasource
 public sealed class DatasourceFactory : IDatasourceFactory
 ```
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Default](#csharp-datasourcefactory-default) | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [Create](#csharp-create-options). |
+
 **Methods**
 
 | Name | Description |
@@ -1095,6 +1121,20 @@ public sealed class DatasourceFactory : IDatasourceFactory
 | [Create(options)](#csharp-datasourcefactory-create-options) | Creates one datasource. `null` options read process `.env`; a dictionary is used as-is. |
 | [Reset()](#csharp-datasourcefactory-reset) | Clears the registry. Use in tests. |
 | [Registered()](#csharp-datasourcefactory-registered) | Lists registered provider names. |
+
+###### Default {#csharp-datasourcefactory-default}
+
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [Create](#csharp-create-options).
+
+**Definition**
+
+```csharp
+public static IDatasource Default { get; }
+```
+
+**Returns**
+
+[IDatasource](#csharp-idatasource)
 
 ###### Defaults(options) {#csharp-datasourcefactory-defaults-options}
 
@@ -1144,7 +1184,7 @@ public static IDatasource Create(IReadOnlyDictionary<string, string?>? options =
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#csharp-datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA` |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA` |
 
 **Returns**
 
@@ -1221,7 +1261,8 @@ IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
 | [defaults(options)](#rust-datasources-defaults-options) | Registers listed provider packages. Does not apply to a `Some` `create` bag. |
 | [register(provider, connection, repository)](#rust-datasources-register-provider-connection-repository) | Registers a connection factory and a repository factory by provider name. |
 | [create(options)](#rust-datasources-create-options) | Creates one datasource. `None` reads process env; `Some` is used as-is. |
-| [create_default()](#rust-datasources-create_default) | `create(None)`. |
+| [default()](#rust-datasources-default) | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#rust-create-options). |
+| [create_default()](#rust-datasources-create_default) | `default()`. |
 | [reset()](#rust-datasources-reset) | Clears the registry. Use in tests. |
 | [registered()](#rust-datasources-registered) | Lists registered provider names. |
 
@@ -1277,7 +1318,21 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#rust-datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA` |
+| `options` | [DatasourceOptions](#rust-datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA` |
+
+**Returns**
+
+`Result<Arc<dyn `[Datasource](#rust-datasource)`>>`
+
+###### default() {#rust-datasources-default}
+
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#rust-create-options).
+
+**Definition**
+
+```rust
+pub fn default() -> Result<Arc<dyn Datasource>>
+```
 
 **Returns**
 
@@ -1285,7 +1340,7 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
 
 ###### create_default() {#rust-datasources-create_default}
 
-`create(None)`.
+`default()`.
 
 **Definition**
 
@@ -1323,11 +1378,11 @@ pub fn registered() -> Vec<String>
 
 ### Remarks
 
-Each language registers a connection factory and a repository factory, then `Create` / `create` / `create_default` returns one [Datasource](#datasource). See [Datasource](#datasource) for the instance contract.
+Each language registers a connection factory and a repository factory, then `Default` / `default` / `DatasourceFactory.default` returns one [Datasource](#datasource). See [Datasource](#datasource) for the instance contract.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` is called with null / `undefined` / `None` options.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options.
 
 ### Examples
 
@@ -1352,6 +1407,26 @@ let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())])))?;
 ```typescript
 DatasourceFactory.register("memory", opts => new MemoryConnection(opts), MemoryConnection.repository);
 const ds = Datasource.create({ provider: "memory" });
+```
+
+#### Default from environment
+
+##### C#
+
+```csharp
+var ds = DatasourceFactory.Default;
+```
+
+##### Rust
+
+```rust
+let ds = default()?;
+```
+
+##### TypeScript
+
+```typescript
+const ds = DatasourceFactory.default;
 ```
 
 ## Connection
@@ -1422,7 +1497,7 @@ Apps create the default datasource and connection at process start, then hold th
 ##### C#
 
 ```csharp
-var datasource = DatasourceFactory.Create();
+var datasource = DatasourceFactory.Default;
 var connection = await datasource.CreateConnection();
 
 Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();
@@ -1432,9 +1507,9 @@ Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();
 
 ```rust
 use std::sync::Arc;
-use datasources::{create_default, Connection, Result};
+use datasources::{default, Connection, Result};
 
-let datasource = create_default()?;
+let datasource = default()?;
 let connection = datasource.create_connection().await?;
 
 async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
@@ -1448,7 +1523,7 @@ async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
 ##### TypeScript
 
 ```typescript
-const datasource = Datasource.create();
+const datasource = DatasourceFactory.default;
 const connection = await datasource.createConnection();
 
 async function ensureOpen() {
@@ -1858,7 +1933,7 @@ A dialect adds a `TypeConverter` only when the native provider cannot map the ty
 
 ## Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. Core does not parse a `.env` file; the app loads it into the process. `Create` / `create` / `create_default` then reads `INSTALLED_PROVIDERS` and `DATABASE_URL`, registers each listed factory, and creates.
+`@datasources/cli` installs provider packages and writes a local `.env`. `Default` / `default` / `DatasourceFactory.default` reads that file for `PROVIDER` and `DATASOURCE_URL`. `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` in the process override `.env`. If neither source sets a provider or URL, create throws.
 
 ```sh
 npx @datasources/cli setup
@@ -1914,18 +1989,25 @@ npx @datasources/cli remove postgres
 
 ### .env
 
-`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. `create` / `create_default` uses the `DATABASE_URL` scheme as the default provider (`sqlite://`, `postgres://`, `mysql://`, …).
+`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. `Default` uses the `DATASOURCE_URL` scheme as the default provider (`sqlite://`, `postgres://`, `mysql://`, …) unless `PROVIDER` or `DEFAULT_PROVIDER` is set.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `INSTALLED_PROVIDERS` | scheme of `DATABASE_URL` | Comma-separated providers `Create` registers. |
-| `DATABASE_URL` | `sqlite:///:memory:` | Connection URL. The scheme is the default provider. |
+| `INSTALLED_PROVIDERS` | scheme of `DATASOURCE_URL` | Comma-separated providers `Create` registers. |
+| `DATASOURCE_URL` | `sqlite:///:memory:` | Connection URL. The scheme is the default provider. |
 | `DATABASE_SCHEMA` | *(empty)* | Schema / search path (postgres). |
 
 ```sh
 INSTALLED_PROVIDERS=sqlite,postgres
-DATABASE_URL=sqlite:///:memory:
+DATASOURCE_URL=sqlite:///:memory:
 DATABASE_SCHEMA=public
 ```
+
+Process overrides (not written by `setup`):
+
+| Key | Meaning |
+| --- | --- |
+| `DEFAULT_PROVIDER` | Overrides `.env` `PROVIDER` / inferred scheme. |
+| `DEFAULT_DATASOURCE_URL` | Overrides `.env` `DATASOURCE_URL`. |
 
 SQLAlchemy-style SQLite URLs: `sqlite:///:memory:`, `sqlite:///app.db`, `sqlite:////tmp/app.db`.

@@ -403,9 +403,29 @@ async fn console_verbose_bodies() {
 }
 
 #[test]
+fn parses_dotenv() {
+    let parsed = crate::dot_env::parse(
+        "# hi\n\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n=skip\n",
+    );
+    assert_eq!(parsed.get("PROVIDER").map(String::as_str), Some("sqlite"));
+    assert_eq!(
+        parsed.get("DATASOURCE_URL").map(String::as_str),
+        Some("sqlite:///:memory:")
+    );
+    assert!(crate::dot_env::load("missing.env").is_empty());
+}
+
+#[test]
 fn registry() {
     reset();
-    for key in ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] {
+    for key in [
+        "INSTALLED_PROVIDERS",
+        "DATASOURCE_URL",
+        "DATABASE_SCHEMA",
+        "DEFAULT_PROVIDER",
+        "DEFAULT_DATASOURCE_URL",
+        "PROVIDER",
+    ] {
         std::env::remove_var(key);
     }
     assert!(registered().is_empty());
@@ -418,12 +438,19 @@ fn registry() {
     let created = create(Some(&HashMap::from([("provider".into(), "json".into())]))).unwrap();
     assert_eq!(created.provider(), "json");
     assert!(create_default().is_err());
-    std::env::set_var("DATABASE_URL", "json://");
+    std::env::set_var("DATASOURCE_URL", "json://");
     assert_eq!(create_default().unwrap().provider(), "json");
-    std::env::remove_var("DATABASE_URL");
+    assert_eq!(default().unwrap().provider(), "json");
+    std::env::set_var("DEFAULT_PROVIDER", "json");
+    std::env::set_var("DEFAULT_DATASOURCE_URL", "json://extra");
+    assert_eq!(default().unwrap().provider(), "json");
+    std::env::remove_var("DATASOURCE_URL");
+    std::env::remove_var("DEFAULT_PROVIDER");
+    std::env::remove_var("DEFAULT_DATASOURCE_URL");
     reset();
     assert!(create(Some(&HashMap::from([("provider".into(), "json".into())]))).is_err());
     assert!(create_default().is_err());
+    assert!(default().is_err());
 }
 
 #[tokio::test]

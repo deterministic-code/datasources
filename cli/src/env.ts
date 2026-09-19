@@ -2,19 +2,22 @@ import { providerFromUrl } from "./providerFromUrl.ts";
 
 export type EnvMap = Record<string, string>;
 
-export const knownEnvKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] as const;
+export const knownEnvKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA"] as const;
 
 const droppedEnvKeys = [
+  "DATABASE_URL",
   "DEFAULT_PROVIDER",
   "DATASOURCE_PROVIDER",
   "DATASOURCE_PROVIDERS",
   "SQLITE_FILENAME",
 ] as const;
 
+const urlOf = (env: EnvMap) => env.DATASOURCE_URL || env.DATABASE_URL || "";
+
 const installedOf = (env: EnvMap) =>
   env.INSTALLED_PROVIDERS ||
   env.DATASOURCE_PROVIDERS ||
-  providerFromUrl(env.DATABASE_URL ?? "") ||
+  providerFromUrl(urlOf(env)) ||
   env.DEFAULT_PROVIDER ||
   env.DATASOURCE_PROVIDER ||
   "";
@@ -64,14 +67,19 @@ export const updateEnvProviders = (
     ...current.filter((name) => !remove.includes(name)),
     ...add.filter((name) => !current.includes(name)),
   ];
-  const fallback = providerFromUrl(env.DATABASE_URL ?? "") ?? next[0] ?? "sqlite";
+  const fallback = providerFromUrl(urlOf(env)) ?? next[0] ?? "sqlite";
   const {
+    DATABASE_URL: _u,
     DEFAULT_PROVIDER: _d,
     DATASOURCE_PROVIDER: _p,
     DATASOURCE_PROVIDERS: _ps,
     ...rest
   } = env;
-  return { ...rest, INSTALLED_PROVIDERS: (next.length ? next : [fallback]).join(",") };
+  return {
+    ...rest,
+    ...(urlOf(env) ? { DATASOURCE_URL: urlOf(env) } : {}),
+    INSTALLED_PROVIDERS: (next.length ? next : [fallback]).join(","),
+  };
 };
 
 export const sqliteUrl = (filename: string): string =>
@@ -79,7 +87,7 @@ export const sqliteUrl = (filename: string): string =>
 
 export const answersFromEnv = (env: EnvMap) => {
   const url =
-    env.DATABASE_URL ||
+    urlOf(env) ||
     (env.SQLITE_FILENAME ? sqliteUrl(env.SQLITE_FILENAME) : "") ||
     (installedOf(env).includes("sqlite") || !installedOf(env) ? "sqlite:///:memory:" : "");
   return {

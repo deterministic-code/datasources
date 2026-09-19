@@ -7,16 +7,16 @@ alwaysApply: true
 
 C# is the reference language. When public APIs or runtime behavior diverge, change Rust and TypeScript to match C#. Do not add a helper, extra call, or auto-path in one language only.
 
-`Defaults` / `Create` / `Register` mean the same thing everywhere. If env already has `INSTALLED_PROVIDERS` and `DATABASE_URL`, `Create` / `create` / `create_default` applies those defaults and registers the listed factories. Do not require `install`, `register_from`, or a hand-built defaults dictionary in one language when the others do not.
+`Defaults` / `Create` / `Register` / `Default` mean the same thing everywhere. If env already has `INSTALLED_PROVIDERS` and `DATASOURCE_URL`, `Default` / `default` / `DatasourceFactory.default` applies those defaults and registers the listed factories. Do not require `install`, `register_from`, or a hand-built defaults dictionary in one language when the others do not.
 
 ```csharp
-var ds = DatasourceFactory.Create();
+var ds = DatasourceFactory.Default;
 ```
 
 ```rust
-let ds = create_default()?;
+let ds = default()?;
 ```
 
 ```typescript
-const ds = Datasource.create();
+const ds = DatasourceFactory.default;
 ```

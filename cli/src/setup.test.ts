@@ -25,7 +25,7 @@ describe("setup", () => {
         checkbox: async ({ choices }) => choices.filter((c) => c.checked).map((c) => c.value),
         input: async ({ default: def }) => def,
       },
-      { DATABASE_URL: "sqlite:///:memory:" },
+      { DATASOURCE_URL: "sqlite:///:memory:" },
       ["ts"],
     );
     expect(answers.providers).toContain("sqlite");
@@ -52,7 +52,7 @@ describe("setup", () => {
     expect((await promptSetup(script([["memory"]]), {}, [])).ecosystem).toBeUndefined();
   });
 
-  it("defaults DATABASE_URL to sqlite when sqlite is selected", async () => {
+  it("defaults DATASOURCE_URL to sqlite when sqlite is selected", async () => {
     const answers = await promptSetup(script([["sqlite"]]), { INSTALLED_PROVIDERS: "mysql" }, ["ts"]);
     expect(answers.url).toBe("sqlite:///:memory:");
     expect(
@@ -69,12 +69,12 @@ describe("setup", () => {
       }),
     ).toEqual({
       INSTALLED_PROVIDERS: "json,sqlite",
-      DATABASE_URL: "sqlite:///:memory:",
+      DATASOURCE_URL: "sqlite:///:memory:",
       DATABASE_SCHEMA: "",
     });
     expect(envFromAnswers({ providers: ["json"], url: "", schema: "" })).toEqual({
       INSTALLED_PROVIDERS: "json",
-      DATABASE_URL: "",
+      DATASOURCE_URL: "",
       DATABASE_SCHEMA: "",
     });
     expect(envFromAnswers({ providers: [], url: "", schema: "" }).INSTALLED_PROVIDERS).toBe("sqlite");

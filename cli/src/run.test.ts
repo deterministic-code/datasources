@@ -69,7 +69,7 @@ describe("run", () => {
     const io = deps(fs);
     expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], io)).toBe(0);
     expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=sqlite/);
-    expect(files[join(cwd, ".env")]).toMatch(/DATABASE_URL=sqlite:\/\/\/:memory:/);
+    expect(files[join(cwd, ".env")]).toMatch(/DATASOURCE_URL=sqlite:\/\/\/:memory:/);
     expect(files[join(cwd, ".env")]).toMatch(/CUSTOM=keep/);
     expect(io.ran[0]).toMatch(/npm install/);
     expect(io.ran[0]).toMatch(/@datasources\/sqlite/);
@@ -81,7 +81,7 @@ describe("run", () => {
       [join(cwd, "package.json")]: JSON.stringify({
         dependencies: { "@datasources/json": "*", "@datasources/sqlite": "*" },
       }),
-      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json,sqlite\nDATABASE_URL=json://\n",
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json,sqlite\nDATASOURCE_URL=json://\n",
     });
     const io = deps(fs, {
       prompt: {
