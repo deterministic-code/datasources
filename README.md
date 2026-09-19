@@ -1471,149 +1471,742 @@ const ds = DatasourceFactory.default;
 
 `CreateConnection` / `createConnection` / `create_connection` is async so a dialect can do async work later. Today it only constructs a closed named connection. The caller opens it.
 
-### IConnection
+### Classes
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IConnection` | `Connection` | `IConnection` |
-| `Provider` | `provider()` | `provider` |
-| `IsOpen` | `is_open()` | `isOpen` |
-| `CreateCommand` | `create_command` | `createCommand` |
-| `Open` | `open` | `open` |
-| `Close` | `close` | `close` |
-| `StartTransaction` | `start_transaction` | `startTransaction` |
+##### TypeScript
 
-Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`, `ISqliteDriver` / `SqliteDriver`). Stub dialects return a named connection; open / close / start-transaction throw or return not-implemented.
+##### IConnection {#typescript-iconnection}
 
-### Transaction
+```typescript
+interface IConnection
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [provider](#typescript-iconnection-provider) | Registered provider name. |
+| [isOpen](#typescript-iconnection-isopen) | Whether the connection is open. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [createCommand()](#typescript-iconnection-createcommand) | Creates a command bound to this connection. |
+| [open()](#typescript-iconnection-open) | Opens the connection. A no-op if already open. |
+| [close()](#typescript-iconnection-close) | Closes the connection. |
+| [startTransaction(isolation?)](#typescript-iconnection-starttransaction-isolation) | Begins a transaction. The connection must be open. |
+
+###### provider {#typescript-iconnection-provider}
+
+Registered provider name.
+
+**Definition**
+
+```typescript
+readonly provider: string
+```
+
+###### isOpen {#typescript-iconnection-isopen}
+
+Whether the connection is open.
+
+**Definition**
+
+```typescript
+readonly isOpen: boolean
+```
+
+###### createCommand() {#typescript-iconnection-createcommand}
+
+Creates a command bound to this connection.
+
+**Definition**
+
+```typescript
+createCommand(): ICommand
+```
+
+**Returns**
+
+[ICommand](#command)
+
+###### open() {#typescript-iconnection-open}
+
+Opens the connection. A no-op if already open.
+
+**Definition**
+
+```typescript
+open(): Promise<void>
+```
+
+###### close() {#typescript-iconnection-close}
+
+Closes the connection.
+
+**Definition**
+
+```typescript
+close(): Promise<void>
+```
+
+###### startTransaction(isolation?) {#typescript-iconnection-starttransaction-isolation}
+
+Begins a transaction. The connection must be open.
+
+**Definition**
+
+```typescript
+startTransaction(isolation?: IsolationLevel): Promise<ITransaction>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `isolation` | [IsolationLevel](#typescript-isolationlevel); omitted uses serializable |
+
+**Returns**
+
+`Promise<[ITransaction](#typescript-itransaction)>`
+
+##### ITransaction {#typescript-itransaction}
+
+```typescript
+interface ITransaction
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [connection](#typescript-itransaction-connection) | The open [IConnection](#typescript-iconnection) that started this transaction. |
+| [isolation](#typescript-itransaction-isolation) | The isolation level for this transaction. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [commit()](#typescript-itransaction-commit) | Commits the transaction. |
+| [abort()](#typescript-itransaction-abort) | Rolls the transaction back. |
+
+###### connection {#typescript-itransaction-connection}
+
+The open [IConnection](#typescript-iconnection) that started this transaction.
+
+**Definition**
+
+```typescript
+readonly connection: IConnection
+```
+
+###### isolation {#typescript-itransaction-isolation}
+
+The isolation level for this transaction.
+
+**Definition**
+
+```typescript
+readonly isolation: IsolationLevel
+```
+
+###### commit() {#typescript-itransaction-commit}
+
+Commits the transaction.
+
+**Definition**
+
+```typescript
+commit(): Promise<void>
+```
+
+###### abort() {#typescript-itransaction-abort}
+
+Rolls the transaction back.
+
+**Definition**
+
+```typescript
+abort(): Promise<void>
+```
+
+##### IsolationLevel {#typescript-isolationlevel}
+
+```typescript
+const IsolationLevel
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [ReadUncommitted](#typescript-isolationlevel-readuncommitted) | Dirty reads are allowed. |
+| [ReadCommitted](#typescript-isolationlevel-readcommitted) | Committed data only. |
+| [RepeatableRead](#typescript-isolationlevel-repeatableread) | Repeatable reads within the transaction. |
+| [Serializable](#typescript-isolationlevel-serializable) | Full isolation. The default for [startTransaction](#typescript-starttransaction-isolation). |
+
+###### ReadUncommitted {#typescript-isolationlevel-readuncommitted}
+
+Dirty reads are allowed.
+
+**Definition**
+
+```typescript
+ReadUncommitted: "readUncommitted"
+```
+
+###### ReadCommitted {#typescript-isolationlevel-readcommitted}
+
+Committed data only.
+
+**Definition**
+
+```typescript
+ReadCommitted: "readCommitted"
+```
+
+###### RepeatableRead {#typescript-isolationlevel-repeatableread}
+
+Repeatable reads within the transaction.
+
+**Definition**
+
+```typescript
+RepeatableRead: "repeatableRead"
+```
+
+###### Serializable {#typescript-isolationlevel-serializable}
+
+Full isolation. The default for [startTransaction](#typescript-starttransaction-isolation).
+
+**Definition**
+
+```typescript
+Serializable: "serializable"
+```
+
+##### C#
+
+##### IConnection {#csharp-iconnection}
+
+```csharp
+public interface IConnection
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Provider](#csharp-iconnection-provider) | Registered provider name. |
+| [IsOpen](#csharp-iconnection-isopen) | Whether the connection is open. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [CreateCommand()](#csharp-iconnection-createcommand) | Creates a command bound to this connection. |
+| [Open()](#csharp-iconnection-open) | Opens the connection. A no-op if already open. |
+| [Close()](#csharp-iconnection-close) | Closes the connection. |
+| [StartTransaction(isolation)](#csharp-iconnection-starttransaction-isolation) | Begins a transaction. The connection must be open. |
+
+###### Provider {#csharp-iconnection-provider}
+
+Registered provider name.
+
+**Definition**
+
+```csharp
+string Provider { get; }
+```
+
+###### IsOpen {#csharp-iconnection-isopen}
+
+Whether the connection is open.
+
+**Definition**
+
+```csharp
+bool IsOpen { get; }
+```
+
+###### CreateCommand() {#csharp-iconnection-createcommand}
+
+Creates a command bound to this connection.
+
+**Definition**
+
+```csharp
+ICommand CreateCommand()
+```
+
+**Returns**
+
+[ICommand](#command)
+
+###### Open() {#csharp-iconnection-open}
+
+Opens the connection. A no-op if already open.
+
+**Definition**
+
+```csharp
+Task Open()
+```
+
+###### Close() {#csharp-iconnection-close}
+
+Closes the connection.
+
+**Definition**
+
+```csharp
+Task Close()
+```
+
+###### StartTransaction(isolation) {#csharp-iconnection-starttransaction-isolation}
+
+Begins a transaction. The connection must be open.
+
+**Definition**
+
+```csharp
+Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `isolation` | [IsolationLevel](#csharp-isolationlevel); default is serializable |
+
+**Returns**
+
+`Task<[ITransaction](#csharp-itransaction)>`
+
+##### ITransaction {#csharp-itransaction}
+
+```csharp
+public interface ITransaction
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Connection](#csharp-itransaction-connection) | The open [IConnection](#csharp-iconnection) that started this transaction. |
+| [Isolation](#csharp-itransaction-isolation) | The isolation level for this transaction. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Commit()](#csharp-itransaction-commit) | Commits the transaction. |
+| [Abort()](#csharp-itransaction-abort) | Rolls the transaction back. |
+
+###### Connection {#csharp-itransaction-connection}
+
+The open [IConnection](#csharp-iconnection) that started this transaction.
+
+**Definition**
+
+```csharp
+IConnection Connection { get; }
+```
+
+###### Isolation {#csharp-itransaction-isolation}
+
+The isolation level for this transaction.
+
+**Definition**
+
+```csharp
+IsolationLevel Isolation { get; }
+```
+
+###### Commit() {#csharp-itransaction-commit}
+
+Commits the transaction.
+
+**Definition**
+
+```csharp
+Task Commit()
+```
+
+###### Abort() {#csharp-itransaction-abort}
+
+Rolls the transaction back.
+
+**Definition**
+
+```csharp
+Task Abort()
+```
+
+##### IsolationLevel {#csharp-isolationlevel}
+
+```csharp
+public enum IsolationLevel
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [ReadUncommitted](#csharp-isolationlevel-readuncommitted) | Dirty reads are allowed. |
+| [ReadCommitted](#csharp-isolationlevel-readcommitted) | Committed data only. |
+| [RepeatableRead](#csharp-isolationlevel-repeatableread) | Repeatable reads within the transaction. |
+| [Serializable](#csharp-isolationlevel-serializable) | Full isolation. The default for [StartTransaction](#csharp-starttransaction-isolation). |
+
+###### ReadUncommitted {#csharp-isolationlevel-readuncommitted}
+
+Dirty reads are allowed.
+
+**Definition**
+
+```csharp
+ReadUncommitted
+```
+
+###### ReadCommitted {#csharp-isolationlevel-readcommitted}
+
+Committed data only.
+
+**Definition**
+
+```csharp
+ReadCommitted
+```
+
+###### RepeatableRead {#csharp-isolationlevel-repeatableread}
+
+Repeatable reads within the transaction.
+
+**Definition**
+
+```csharp
+RepeatableRead
+```
+
+###### Serializable {#csharp-isolationlevel-serializable}
+
+Full isolation. The default for [StartTransaction](#csharp-starttransaction-isolation).
+
+**Definition**
+
+```csharp
+Serializable
+```
+
+##### Rust
+
+##### Connection {#rust-connection}
+
+```rust
+pub trait Connection: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [provider()](#rust-connection-provider) | Registered provider name. |
+| [is_open()](#rust-connection-is_open) | Whether the connection is open. |
+| [create_command()](#rust-connection-create_command) | Creates a command bound to this connection. |
+| [open()](#rust-connection-open) | Opens the connection. A no-op if already open. |
+| [close()](#rust-connection-close) | Closes the connection. |
+| [start_transaction(isolation)](#rust-connection-start_transaction-isolation) | Begins a transaction. The connection must be open. |
+
+###### provider() {#rust-connection-provider}
+
+Registered provider name.
+
+**Definition**
+
+```rust
+fn provider(&self) -> &str
+```
+
+**Returns**
+
+`&str`
+
+###### is_open() {#rust-connection-is_open}
+
+Whether the connection is open.
+
+**Definition**
+
+```rust
+fn is_open(&self) -> bool
+```
+
+**Returns**
+
+`bool`
+
+###### create_command() {#rust-connection-create_command}
+
+Creates a command bound to this connection.
+
+**Definition**
+
+```rust
+fn create_command(&self) -> Arc<dyn Command>
+```
+
+**Returns**
+
+`Arc<dyn `[Command](#command)`>`
+
+###### open() {#rust-connection-open}
+
+Opens the connection. A no-op if already open.
+
+**Definition**
+
+```rust
+async fn open(&self) -> Result<()>
+```
+
+**Returns**
+
+`Result<()>`
+
+###### close() {#rust-connection-close}
+
+Closes the connection.
+
+**Definition**
+
+```rust
+async fn close(&self) -> Result<()>
+```
+
+**Returns**
+
+`Result<()>`
+
+###### start_transaction(isolation) {#rust-connection-start_transaction-isolation}
+
+Begins a transaction. The connection must be open.
+
+**Definition**
+
+```rust
+async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<Arc<dyn Transaction>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `isolation` | [IsolationLevel](#rust-isolationlevel); `None` uses serializable |
+
+**Returns**
+
+`Result<Arc<dyn `[Transaction](#rust-transaction)`>>`
+
+##### Transaction {#rust-transaction}
+
+```rust
+pub trait Transaction: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [isolation()](#rust-transaction-isolation) | The isolation level for this transaction. |
+| [commit()](#rust-transaction-commit) | Commits the transaction. |
+| [abort()](#rust-transaction-abort) | Rolls the transaction back. |
+
+###### isolation() {#rust-transaction-isolation}
+
+The isolation level for this transaction.
+
+**Definition**
+
+```rust
+fn isolation(&self) -> IsolationLevel
+```
+
+**Returns**
+
+[IsolationLevel](#rust-isolationlevel)
+
+###### commit() {#rust-transaction-commit}
+
+Commits the transaction.
+
+**Definition**
+
+```rust
+async fn commit(&self) -> Result<()>
+```
+
+**Returns**
+
+`Result<()>`
+
+###### abort() {#rust-transaction-abort}
+
+Rolls the transaction back.
+
+**Definition**
+
+```rust
+async fn abort(&self) -> Result<()>
+```
+
+**Returns**
+
+`Result<()>`
+
+##### IsolationLevel {#rust-isolationlevel}
+
+```rust
+pub enum IsolationLevel
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [ReadUncommitted](#rust-isolationlevel-readuncommitted) | Dirty reads are allowed. |
+| [ReadCommitted](#rust-isolationlevel-readcommitted) | Committed data only. |
+| [RepeatableRead](#rust-isolationlevel-repeatableread) | Repeatable reads within the transaction. |
+| [Serializable](#rust-isolationlevel-serializable) | Full isolation. The default for [start_transaction](#rust-start_transaction-isolation). |
+
+###### ReadUncommitted {#rust-isolationlevel-readuncommitted}
+
+Dirty reads are allowed.
+
+**Definition**
+
+```rust
+ReadUncommitted
+```
+
+###### ReadCommitted {#rust-isolationlevel-readcommitted}
+
+Committed data only.
+
+**Definition**
+
+```rust
+ReadCommitted
+```
+
+###### RepeatableRead {#rust-isolationlevel-repeatableread}
+
+Repeatable reads within the transaction.
+
+**Definition**
+
+```rust
+RepeatableRead
+```
+
+###### Serializable {#rust-isolationlevel-serializable}
+
+Full isolation. The default for [start_transaction](#rust-start_transaction-isolation).
+
+**Definition**
+
+```rust
+Serializable
+```
+
+### Transaction {#transaction}
 
 `StartTransaction` / `startTransaction` / `start_transaction` begins a transaction on an open connection.
 
-### Create and open
+### Remarks
 
-##### C#
+`CreateConnection` / `createConnection` / `create_connection` is async and returns a closed connection. The caller opens it. `Open` / `open` is a no-op if already open. Do not open during process bootstrap.
 
-```csharp
-DatasourceFactory.Register("json", opts => new JsonConnection(opts), JsonConnection.Repository);
+`StartTransaction` requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
 
-var json = new Datasource("json", () => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() }), JsonConnection.Repository);
-var connection = await json.CreateConnection();
-await connection.Open();
-```
+Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`, `ISqliteDriver` / `SqliteDriver`). Stub dialects throw not-implemented on open, close, and start-transaction.
 
-##### Rust
+### Examples
 
-```rust
-use datasources::{create, register};
-use datasources_json::JsonConnection;
-use std::collections::HashMap;
+#### Create from Default
 
-register("json", JsonConnection::from_options, JsonConnection::repository);
-
-let json = create(Some(&HashMap::from([("provider".into(), "json".into())])))?;
-let connection = json.create_connection().await?;
-connection.open().await?;
-```
-
-##### TypeScript
-
-```typescript
-import { Datasource, DatasourceFactory } from "@datasources/core";
-import { JsonConnection } from "@datasources/json";
-
-DatasourceFactory.register("json", opts => new JsonConnection(opts), JsonConnection.repository);
-
-const json = Datasource.create({ provider: "json" });
-const connection = await json.createConnection();
-await connection.open();
-```
-
-### Startup
-
-Apps create the default datasource and connection at process start, then hold the closed connection. Call `Open` / `open` on first use (a no-op if already open). Do not open during bootstrap.
-
-##### C#
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ConnectionTests.cs#L27-L33)
 
 ```csharp
-var datasource = DatasourceFactory.Default;
-var connection = await datasource.CreateConnection();
-
-Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();
-```
-
-##### Rust
-
-```rust
-use std::sync::Arc;
-use datasources::{default, Connection, Result};
-
-let datasource = default()?;
-let connection = datasource.create_connection().await?;
-
-async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
-    if connection.is_open() {
-        return Ok(());
-    }
-    connection.open().await
-}
-```
-
-##### TypeScript
-
-```typescript
-const datasource = DatasourceFactory.default;
-const connection = await datasource.createConnection();
-
-async function ensureOpen() {
-  if (!connection.isOpen) await connection.open();
-}
-```
-
-### Mock
-
-Depend on `IConnection` / `Connection`. Use `MockConnection` / `MockDatasource`. `CreateConnection` returns the configured mock and does not open it.
-
-##### C#
-
-```csharp
-var ds = new MockDatasource();
+var ds = DatasourceFactory.Default;
 var connection = await ds.CreateConnection();
-await connection.Open();
-Assert.True(((MockConnection)connection).IsOpen);
-
-var failing = new MockConnection { OpenError = new InvalidOperationException("open-fail") };
-ds.Connection = failing;
-await Assert.ThrowsAsync<InvalidOperationException>(() => failing.Open());
 ```
 
-##### Rust
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L25-L31)
 
 ```rust
-use datasources::{Datasource, MockConnection, MockDatasource};
-
-let ds = MockDatasource::new("mock");
-let connection = ds.create_connection().await?;
-connection.open().await?;
-
-let failing = MockConnection::new();
-failing.set_open_error("open-fail");
-assert!(failing.open().await.is_err());
+let ds = default().expect("default");
+let connection = ds.create_connection().await.expect("connection");
 ```
 
-##### TypeScript
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Connection.test.ts#L31-L35)
 
 ```typescript
-const ds = new MockDatasource();
+const ds = DatasourceFactory.default;
 const connection = await ds.createConnection();
-await connection.open();
-expect((connection as MockConnection).isOpen).toBe(true);
-
-const failing = new MockConnection();
-failing.openError = new Error("open-fail");
-await expect(failing.open()).rejects.toThrow("open-fail");
 ```
 
-Provider tests inject fakes on options (`MemoryFileStore`, `ScriptedDriver`) and then open.
+#### Open and close
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L7-L14)
+
+```csharp
+var connection = new MemoryConnection();
+await connection.Open();
+await connection.Close();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L48-L54)
+
+```rust
+let connection = MemoryConnection::from_options(None);
+connection.open().await.unwrap();
+connection.close().await.unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L36-L41)
+
+```typescript
+const connection = new MemoryConnection();
+await connection.open();
+await connection.close();
+```
+
+#### Start a transaction
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L16-L23)
+
+```csharp
+var connection = new MemoryConnection();
+await connection.Open();
+var txn = await connection.StartTransaction();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L56-L62)
+
+```rust
+let connection = MemoryConnection::from_options(None);
+connection.open().await.unwrap();
+let txn = connection.start_transaction(None).await.unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L43-L48)
+
+```typescript
+const connection = new MemoryConnection();
+await connection.open();
+const txn = await connection.startTransaction();
+```
 
 ## Command
 

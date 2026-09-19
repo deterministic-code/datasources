@@ -19,7 +19,7 @@ pub(crate) use filter::{json_to_value, matches, parse_filter};
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, CRUDRepository, Command, Connection, Parameter,
+        create, register, reset, CRUDRepository, Command, Connection, IsolationLevel, Parameter,
         ReadonlyRepository, Row, TextQuery, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
@@ -43,6 +43,22 @@ mod tests {
         );
         let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
+    }
+
+    #[tokio::test]
+    async fn open_and_close() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        connection.close().await.unwrap();
+        assert_eq!(connection.is_open(), false);
+    }
+
+    #[tokio::test]
+    async fn start_a_transaction() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        let txn = connection.start_transaction(None).await.unwrap();
+        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
     }
 
     #[tokio::test]
