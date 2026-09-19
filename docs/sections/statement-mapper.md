@@ -1,6 +1,6 @@
 # StatementMapper
 
-[IMapper](./mappers.md) for repository statements. `Map` / `ReverseMap` only touch `Rows`. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete.
+Mapper for repository statements. `Map` / `ReverseMap` only touch `Rows`. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete.
 
 ## Classes
 
@@ -84,7 +84,7 @@ readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureSt
 
 ##### rows
 
-Get-row [IMapper](./mappers.md). [map](#statementmapper-map-value) / [reverseMap](#statementmapper-reversemap-value) delegate here.
+Get-row Mapper. [map](#statementmapper-map-value) / [reverseMap](#statementmapper-reversemap-value) delegate here.
 
 ```typescript
 readonly rows: IMapper<T, T>
@@ -144,7 +144,7 @@ columns?: IMapper<string, string>
 
 ##### rows
 
-Get-row [IMapper](./mappers.md).
+Get-row Mapper.
 
 ```typescript
 rows?: IMapper<T, T>
@@ -257,7 +257,7 @@ IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure {
 
 ##### Rows
 
-Get-row [IMapper](./mappers.md). [Map](#statementmapper-map-value) / [ReverseMap](#statementmapper-reversemap-value) delegate here.
+Get-row Mapper. [Map](#statementmapper-map-value) / [ReverseMap](#statementmapper-reversemap-value) delegate here.
 
 ```csharp
 IMapper<T, T> Rows { get; init; }

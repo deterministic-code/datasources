@@ -139,7 +139,7 @@ fn reverse_convert(&self, to: &To) -> Result<From>
 
 ## Remarks
 
-Repository get is convert, then map. See [IMapper](./mappers.md) and [Repository](./repository.md).
+Repository get is convert, then map. See [TransformMapper](./transform-mapper.md) and [Repository](./repository.md).
 
 ## See also
 

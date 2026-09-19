@@ -1,6 +1,6 @@
 # TransformMapper
 
-[IMapper](./mappers.md) built from a pair of functions.
+Mapper built from a pair of functions.
 
 ## Classes
 

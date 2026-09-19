@@ -16,11 +16,10 @@ Required sections, in order:
 4. `## Classes` plus one `::: reference` block
 5. `## Remarks` — extra usage advice (always present; can be short)
 6. `## Examples` — omit the heading when there are zero samples
-7. `## See also` — hub pages only; links to subcategory pages. Hubs omit `## Examples`.
-
-A **hub** documents the base type (`IMapper`, `TypeConverter`, `IRepository`) and lists child pages. It does not include examples. A **child** is a normal spec page for one major class.
 
 Associated types belong on the same page (Transaction covers Transaction and IsolationLevel). Extra types are extra `####` headings in each dialect panel.
+
+Sidebar nesting: a child sets `parent` to an existing page title. That page is the clickable group. There are no label-only groups.
 
 After the major class and its instance type, document any **page-local** type that appears in a parameter or return and does not have its own Code Reference page (for example `DatasourceOptions` on Datasource). Language primitives (`string`, `void`, `HashMap`) are not listed as classes. Types with their own page (`IConnection`, `ICommand`, repositories, `IDatasourceFactory`) stay links. Parameter and return text links to the type. If another page uses the same type, document it once and link from the other page. C# and Rust may still use the conceptual heading when the runtime type is a dictionary.
 
@@ -74,51 +73,6 @@ When present, one `###` heading per sample, optional prose, then `::: example`. 
 
 `::: dialects` stays for install or CLI snippets that are not tests.
 
-## Hub pages
-
-A hub documents the base type only. After `## Remarks`, add `## See also` with one link per subcategory page. Do not add `## Examples`.
-
-~~~~markdown
-# IMapper
-
-Bidirectional `Map` / `ReverseMap`.
-
-## Classes
-
-::: reference
-### typescript
-#### IMapper
-
-```typescript
-interface IMapper<TFrom, TTo>
-```
-
-**Methods**
-
-##### map(value)
-
-Maps `TFrom` to `TTo`.
-
-```typescript
-map(value: TFrom): TTo
-```
-
-- `value` — source value
-
-**Returns** `TTo`
-:::
-
-## Remarks
-
-Repository get is convert, then map.
-
-## See also
-
-- [NameMapper](./name-mapper.md)
-- [TransformMapper](./transform-mapper.md)
-~~~~
-
-
 ~~~~markdown
 ## Examples
 
@@ -143,6 +97,5 @@ Repository get is convert, then map.
 - [ ] Associated types and page-local argument/return types are extra `####` headings, not a second page
 - [ ] `## Remarks` is present
 - [ ] Examples use `::: example` test ranges or the Examples heading is omitted
-- [ ] Hub pages omit Examples and add `## See also` with child-page links
-- [ ] Child pages set `parent` in `docs/toc.yaml` to the hub title
+- [ ] Nested sidebar items set `parent` in `docs/toc.yaml` to the group label
 - [ ] Page is listed in `docs/toc.yaml`

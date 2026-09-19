@@ -1,6 +1,6 @@
 # NameMapper
 
-Identity [IMapper](./mappers.md) for column or entity names. Names pass through as-is.
+Identity Mapper for column or entity names. Names pass through as-is.
 
 ## Classes
 
