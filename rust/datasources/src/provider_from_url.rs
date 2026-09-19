@@ -20,13 +20,22 @@ mod tests {
 
     #[test]
     fn reads_scheme() {
-        assert_eq!(provider_from_url("sqlite:///:memory:").as_deref(), Some("sqlite"));
+        assert_eq!(
+            provider_from_url("sqlite:///:memory:").as_deref(),
+            Some("sqlite")
+        );
         assert_eq!(
             provider_from_url("postgres://ds:ds@127.0.0.1:5432/datasources").as_deref(),
             Some("postgres")
         );
-        assert_eq!(provider_from_url("postgresql://localhost/db").as_deref(), Some("postgres"));
-        assert_eq!(provider_from_url("mysql://localhost/db").as_deref(), Some("mysql"));
+        assert_eq!(
+            provider_from_url("postgresql://localhost/db").as_deref(),
+            Some("postgres")
+        );
+        assert_eq!(
+            provider_from_url("mysql://localhost/db").as_deref(),
+            Some("mysql")
+        );
         assert_eq!(provider_from_url(""), None);
     }
 }

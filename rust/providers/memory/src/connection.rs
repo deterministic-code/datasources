@@ -1,8 +1,12 @@
 use crate::command::MemoryCommand;
+use crate::repository::MemoryRepository;
 use crate::store::{MemoryData, MemoryStore};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
-use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Row, Transaction};
+use datasources::{
+    downcast_connection, CRUDRepository, Command, Connection, DatasourceError, IsolationLevel,
+    Result, Row, Transaction,
+};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -35,6 +39,20 @@ impl MemoryConnection {
                 data,
             }),
         }
+    }
+
+    pub fn from_options(_: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+        Arc::new(MemoryConnection::new(
+            Arc::new(MemoryStore::new()),
+            "",
+            None,
+        ))
+    }
+
+    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn CRUDRepository> {
+        Arc::new(MemoryRepository::new(
+            downcast_connection(connection).expect("memory connection"),
+        ))
     }
 
     pub fn set_collection(&self, name: impl Into<String>) {
@@ -75,6 +93,10 @@ impl MemoryConnection {
 
 #[async_trait]
 impl Connection for MemoryConnection {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn provider(&self) -> &str {
         "memory"
     }

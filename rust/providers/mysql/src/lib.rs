@@ -3,7 +3,6 @@ mod command_driver;
 mod connection;
 mod connection_driver;
 mod converters;
-mod datasource;
 mod driver;
 mod mysql_async_driver;
 mod statement_builder;
@@ -12,7 +11,6 @@ mod transaction_driver;
 
 pub use command::MysqlCommand;
 pub use connection::MysqlConnection;
-pub use datasource::MysqlDatasource;
 pub use driver::{isolation_sql, require_driver, to_mysql, MysqlDriver, MysqlExecuteResult};
 pub use mysql_async_driver::MysqlAsyncDriver;
 pub use statement_builder::{MysqlColumn, MysqlStatementBuilder};
@@ -30,8 +28,8 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use datasources::{
-        create, register, reset, Command, Connection, Datasource, DatasourceFactory,
-        IsolationLevel, Result, Row, Value,
+        create, register, reset, BuiltDatasource, Command, Connection, Datasource, IsolationLevel,
+        Result, Row, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -139,33 +137,33 @@ mod tests {
         let defaulted = MysqlConnection::new(None, driver.clone());
         assert_eq!(defaulted.url, "");
         reset();
-        register(Arc::new(MysqlDatasource::new(
-            Some("mysql://db/app".into()),
-            Some(driver.clone()),
-            None,
-        )));
-        let ds = create("mysql", None).unwrap();
+        let driver_for_ds = driver.clone();
+        register(
+            "mysql",
+            move |_| {
+                Arc::new(MysqlConnection::new(
+                    Some("mysql://db/app".into()),
+                    driver_for_ds.clone(),
+                ))
+            },
+            MysqlConnection::repository,
+        );
+        let ds = create(Some(&HashMap::from([("provider".into(), "mysql".into())]))).unwrap();
         assert_eq!(ds.provider(), "mysql");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
         assert!(command.execute("DELETE FROM items", None).await.is_err());
         assert!(command.execute_reader("SELECT 1", None).await.is_err());
         ds.create_repository(None);
-        let missing = MysqlDatasource::new(None, None, None);
-        assert_eq!(Datasource::provider(&missing), "mysql");
-        assert!(missing.create_connection().await.is_err());
-        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            missing.create_command(None)
-        }))
-        .is_err());
-        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            missing.create_repository(None)
-        }))
-        .is_err());
-        let factory = MysqlDatasource::new(None, Some(driver.clone()), Some("people".into()));
+        let factory = BuiltDatasource::new(
+            "mysql",
+            {
+                let driver = driver.clone();
+                move || Arc::new(MysqlConnection::new(None, driver.clone()))
+            },
+            MysqlConnection::repository,
+        );
         factory.create_connection().await.unwrap();
-        DatasourceFactory::create(&factory, None);
-        assert_eq!(DatasourceFactory::provider(&factory), "mysql");
         let closed = Arc::new(MysqlConnection::new(None, driver));
         assert!(MysqlCommand::new(closed).execute("x", None).await.is_err());
     }

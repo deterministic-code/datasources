@@ -1,6 +1,6 @@
 use crate::datasource_error::DatasourceError;
 use crate::query::Query;
-use crate::repository::{ReadonlyRepository, CRUDRepository};
+use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;

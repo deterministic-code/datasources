@@ -11,14 +11,13 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
 import {
   bindParameters,
   loadPgDriver,
   PgDriver,
   PostgresCommand,
   PostgresConnection,
-  PostgresDatasource,
   requireDriver,
   toPostgres,
   withReturning,
@@ -60,8 +59,8 @@ function fakeDriver(url = "postgres://localhost/app", schema?: string) {
 }
 
 afterEach(() => {
-  Datasource.reset();
-  Datasource.register(PostgresDatasource.instance);
+  DatasourceFactory.reset();
+  DatasourceFactory.register("postgres", PostgresConnection.from, PostgresConnection.repository);
 });
 
 describe("requireDriver and bind", () => {
@@ -221,15 +220,19 @@ describe("PostgresCommand", () => {
   });
 });
 
-describe("PostgresDatasource", () => {
+describe("Postgres datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
-    expect(PostgresDatasource.create().provider).toBe("postgres");
-    expect(() => new PostgresDatasource().createConnection()).toThrow(
-      DatasourceError,
+    expect(() =>
+      new Datasource("postgres", () => new PostgresConnection(), PostgresConnection.repository)
+        .createConnection(),
+    ).toThrow(DatasourceError);
+    const ds = new Datasource(
+      "postgres",
+      () => new PostgresConnection({ driver }),
+      PostgresConnection.repository,
     );
-    const ds = new PostgresDatasource({ driver, table: "people" });
-    expect(ds.create({ driver }).provider).toBe("postgres");
+    expect(ds.provider).toBe("postgres");
     const connection = await ds.createConnection();
     await (connection as PostgresConnection).open();
     const command = ds.createCommand(connection);
@@ -237,7 +240,7 @@ describe("PostgresDatasource", () => {
     expect(command.connection).toBe(connection);
     await command.execute("DELETE FROM items");
     await command.executeReader("SELECT 1");
-    const implicit = new PostgresDatasource({ driver }).createCommand();
+    const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(PostgresCommand);
     expect(implicit.connection).toBeInstanceOf(PostgresConnection);
     await implicit.connection.open();
@@ -246,7 +249,16 @@ describe("PostgresDatasource", () => {
     const repo = ds.createRepository(connection);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
     expect(repo).toBeInstanceOf(Repository);
-    expect(new PostgresDatasource({ driver }).createRepository()).toBeInstanceOf(Repository);
-    expect(Datasource.create("postgres", { driver }).provider).toBe("postgres");
+    expect(
+      new Datasource(
+        "postgres",
+        () => new PostgresConnection({ driver }),
+        PostgresConnection.repository,
+      ).createRepository(),
+    ).toBeInstanceOf(Repository);
+    expect(Datasource.create({ provider: "postgres" }).provider).toBe("postgres");
+    expect(() =>
+      PostgresConnection.from({ database_url: "postgres://db/app", database_schema: "s" }),
+    ).toThrow(DatasourceError);
   });
 });

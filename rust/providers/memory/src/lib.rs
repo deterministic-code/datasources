@@ -1,7 +1,6 @@
 mod command;
 mod connection;
 mod converters;
-mod datasource;
 mod filter;
 mod repository;
 mod store;
@@ -9,7 +8,6 @@ mod transaction;
 
 pub use command::MemoryCommand;
 pub use connection::MemoryConnection;
-pub use datasource::MemoryDatasource;
 pub use repository::MemoryRepository;
 pub use store::{MemoryData, MemoryStore};
 pub use transaction::MemoryTransaction;
@@ -21,8 +19,8 @@ pub(crate) use filter::{json_to_value, matches, parse_filter};
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, DatasourceFactory, Parameter,
-        ReadonlyRepository, CRUDRepository, Row, TextQuery, TextWhere, Value,
+        create, register, reset, CRUDRepository, Command, Connection, Parameter,
+        ReadonlyRepository, Row, TextQuery, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -155,8 +153,12 @@ mod tests {
             .unwrap();
 
         reset();
-        register(MemoryDatasource::instance());
-        let ds = create("memory", None).unwrap();
+        register(
+            "memory",
+            MemoryConnection::from_options,
+            MemoryConnection::repository,
+        );
+        let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
@@ -167,10 +169,12 @@ mod tests {
         assert!(bound.execute_reader("", None).await.is_err());
         ds.create_repository(None);
         ds.create_repository(Some(ds.create_connection().await.unwrap()));
-        let factory = MemoryDatasource::default();
-        assert_eq!(DatasourceFactory::provider(&factory), "memory");
-        DatasourceFactory::create(&factory, None);
-        assert_eq!(create("memory", None).unwrap().provider(), "memory");
+        assert_eq!(
+            create(Some(&HashMap::from([("provider".into(), "memory".into())])))
+                .unwrap()
+                .provider(),
+            "memory"
+        );
 
         assert!(parse_filter(None).unwrap().is_empty());
         assert!(parse_filter(Some("   ")).unwrap().is_empty());

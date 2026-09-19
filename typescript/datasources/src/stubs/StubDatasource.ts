@@ -1,4 +1,3 @@
-import type { DatasourceOptions } from "../DatasourceOptions.ts";
 import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
@@ -12,9 +11,6 @@ export class StubDatasource implements IDatasource {
   private connection?: IConnection;
 
   constructor(readonly provider: string) {}
-
-  create = (_options?: DatasourceOptions): IDatasource =>
-    new StubDatasource(this.provider);
 
   private defaultConnection = (): IConnection =>
     (this.connection ??= new StubConnection(this.provider));

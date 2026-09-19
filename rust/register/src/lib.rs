@@ -1,6 +1,5 @@
-use datasources::{bind_install, defaults, register, DatasourceError, DatasourceFactory, Result};
+use datasources::{bind_install, defaults, register, DatasourceError, Result};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
     options
@@ -27,14 +26,15 @@ pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
     names
 }
 
-macro_rules! resolve {
-    ($name:expr, $($feat:literal => $ctor:expr),+ $(,)?) => {
+macro_rules! register_named {
+    ($name:expr, $($feat:literal => $ty:ty),+ $(,)?) => {
         match $name {
             $(
                 $feat => {
                     #[cfg(feature = $feat)]
                     {
-                        Ok($ctor as Arc<dyn DatasourceFactory>)
+                        register($feat, <$ty>::from_options, <$ty>::repository);
+                        Ok(())
                     }
                     #[cfg(not(feature = $feat))]
                     {
@@ -47,27 +47,27 @@ macro_rules! resolve {
     };
 }
 
-fn factory_for(name: &str) -> Result<Arc<dyn DatasourceFactory>> {
-    resolve!(
+fn register_named(name: &str) -> Result<()> {
+    register_named!(
         name,
-        "json" => datasources_json::JsonDatasource::instance(),
-        "memory" => datasources_memory::MemoryDatasource::instance(),
-        "sqlite" => datasources_sqlite::SqliteDatasource::instance(),
-        "text" => datasources_text::TextDatasource::instance(),
-        "xml" => datasources_xml::XmlDatasource::instance(),
-        "yaml" => datasources_yaml::YamlDatasource::instance(),
-        "mysql" => datasources_mysql::MysqlDatasource::instance(),
-        "sqlserver" => datasources_sqlserver::SqlServerDatasource::instance(),
-        "postgres" => datasources_postgres::PostgresDatasource::instance(),
-        "oracle" => datasources_oracle::OracleDatasource::instance(),
-        "mongodb" => datasources_mongodb::MongoDbDatasource::instance(),
-        "dynamodb" => datasources_dynamodb::DynamoDbDatasource::instance(),
+        "json" => datasources_json::JsonConnection,
+        "memory" => datasources_memory::MemoryConnection,
+        "sqlite" => datasources_sqlite::SqliteConnection,
+        "text" => datasources_text::TextConnection,
+        "xml" => datasources_xml::XmlConnection,
+        "yaml" => datasources_yaml::YamlConnection,
+        "mysql" => datasources_mysql::MysqlConnection,
+        "sqlserver" => datasources_sqlserver::SqlServerConnection,
+        "postgres" => datasources_postgres::PostgresConnection,
+        "oracle" => datasources_oracle::OracleConnection,
+        "mongodb" => datasources_mongodb::MongoDbConnection,
+        "dynamodb" => datasources_dynamodb::DynamoDbConnection,
     )
 }
 
 fn install_listed(options: &HashMap<String, String>) -> Result<()> {
     for name in provider_names(options) {
-        register(factory_for(&name)?);
+        register_named(&name)?;
     }
     Ok(())
 }
@@ -155,8 +155,21 @@ mod tests {
             let mut names = registered();
             names.sort();
             assert_eq!(names, vec!["json", "memory"]);
-            assert_eq!(create_default().unwrap().provider(), "memory");
-            assert_eq!(create("json", None).unwrap().provider(), "json");
+            assert_eq!(
+                create(Some(&opts(&[
+                    ("provider", "memory"),
+                    ("database_url", "memory://"),
+                ])))
+                .unwrap()
+                .provider(),
+                "memory"
+            );
+            assert_eq!(
+                create(Some(&opts(&[("provider", "json")])))
+                    .unwrap()
+                    .provider(),
+                "json"
+            );
         });
     }
 
@@ -171,7 +184,12 @@ mod tests {
             let mut names = registered();
             names.sort();
             assert_eq!(names, vec!["json", "memory"]);
-            assert_eq!(create_default().unwrap().provider(), "memory");
+            assert_eq!(
+                create(Some(&opts(&[("database_url", "memory://")])))
+                    .unwrap()
+                    .provider(),
+                "memory"
+            );
         });
     }
 

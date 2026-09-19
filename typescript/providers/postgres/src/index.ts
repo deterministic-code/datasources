@@ -1,10 +1,6 @@
 export { PostgresCommand } from "./command.ts";
 export { PostgresConnection } from "./connection.ts";
 export type { PostgresConnectionOptions } from "./connection-options.ts";
-export {
-  PostgresDatasource,
-  type PostgresDatasourceOptions,
-} from "./datasource.ts";
 export { PgDriver } from "./pg-driver.ts";
 export {
   bindParameters,
@@ -33,4 +29,4 @@ export {
   type PostgresColumn,
 } from "./postgresStatementBuilder.ts";
 export type { Cells, Scalar } from "./scalar.ts";
-export { PostgresDatasource as default } from "./datasource.ts";
+export { PostgresConnection as default } from "./connection.ts";

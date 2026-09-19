@@ -86,6 +86,10 @@ impl MockConnection {
 
 #[async_trait]
 impl Connection for MockConnection {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn provider(&self) -> &str {
         &self.provider
     }

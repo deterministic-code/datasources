@@ -1,8 +1,8 @@
 use crate::contact_lookups::ContactLookups;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Connection, DatasourceError, ReadonlyRepository, Result, Repository,
-    RepositoryBuilderOptions, Value, WhereBuilder,
+    Connection, DatasourceError, ReadonlyRepository, Repository, RepositoryBuilderOptions, Result,
+    Value, WhereBuilder,
 };
 use std::sync::Arc;
 

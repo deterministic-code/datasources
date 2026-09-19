@@ -409,16 +409,20 @@ fn registry() {
         std::env::remove_var(key);
     }
     assert!(registered().is_empty());
-    let factory = Arc::new(MockDatasource::new("json"));
-    register(factory);
+    register(
+        "json",
+        |_| MockConnection::new(),
+        |_| Arc::new(MockRepository::new()),
+    );
     assert_eq!(registered(), vec!["json".to_string()]);
-    let created = create("json", None).unwrap();
+    let created = create(Some(&HashMap::from([("provider".into(), "json".into())]))).unwrap();
     assert_eq!(created.provider(), "json");
     assert!(create_default().is_err());
-    defaults(HashMap::from([("DATABASE_URL".into(), "json://".into())])).unwrap();
+    std::env::set_var("DATABASE_URL", "json://");
     assert_eq!(create_default().unwrap().provider(), "json");
+    std::env::remove_var("DATABASE_URL");
     reset();
-    assert!(create("json", None).is_err());
+    assert!(create(Some(&HashMap::from([("provider".into(), "json".into())]))).is_err());
     assert!(create_default().is_err());
 }
 
@@ -426,10 +430,8 @@ fn registry() {
 async fn stubs_throw() {
     let ds = create_stub_datasource("text");
     assert_eq!(Datasource::provider(&*ds), "text");
-    let created = DatasourceFactory::create(&*ds, None);
-    assert_eq!(created.provider(), "text");
     let closed = ds.create_connection().await.unwrap();
-        assert!(!closed.is_open());
+    assert!(!closed.is_open());
     assert!(closed.open().await.is_err());
     assert!(ds.create_connection().await.unwrap().close().await.is_err());
     assert!(ds
@@ -482,7 +484,7 @@ async fn stubs_throw() {
 async fn published_mocks() {
     let connection = MockConnection::new();
     connection.open().await.unwrap();
-        assert!(connection.is_open());
+    assert!(connection.is_open());
     assert_eq!(connection.open_calls(), 1);
     connection
         .start_transaction(Some(IsolationLevel::ReadUncommitted))
@@ -552,7 +554,9 @@ async fn published_mocks() {
         repo.get_where(&MockWhere::new("all")).await.unwrap().len(),
         1
     );
-    repo.create(&record(&[("id", Value::Int(2))])).await.unwrap();
+    repo.create(&record(&[("id", Value::Int(2))]))
+        .await
+        .unwrap();
     repo.update(
         &record(&[("id", Value::Int(2))]),
         Some(&MockWhere::new("id=2")),
@@ -575,14 +579,12 @@ async fn published_mocks() {
 
     let ds = MockDatasource::new("mock");
     assert_eq!(Datasource::provider(&ds), "mock");
-    assert_eq!(DatasourceFactory::provider(&ds), "mock");
     ds.create_connection().await.unwrap();
     let command = ds.create_command(None);
     command.execute("", None).await.unwrap();
     command.execute_reader("", None).await.unwrap();
     ds.create_repository(None);
     ds.create_readonly_repository(None);
-    DatasourceFactory::create(&ds, None);
 
     let q = MockQuery::new("q");
     let w = MockWhere::new("w");
@@ -780,10 +782,7 @@ async fn executes_statement_helpers() {
         .execute_statement(&statement, Some(&fields))
         .await
         .unwrap();
-    assert_eq!(
-        command.execute_logs.lock().unwrap()[0].0,
-        "CALL save($id)"
-    );
+    assert_eq!(command.execute_logs.lock().unwrap()[0].0, "CALL save($id)");
     command
         .execute_reader_statement(&statement, Some(&fields))
         .await
@@ -936,7 +935,9 @@ async fn table_repository() {
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Cells>());
     let repo = Repository::new(options).unwrap();
-    repo.create(&record(&[("id", Value::Int(1))])).await.unwrap();
+    repo.create(&record(&[("id", Value::Int(1))]))
+        .await
+        .unwrap();
     repo.delete(
         &record(&[("name", Value::from("z"))]),
         Some(&WhereBuilder::equals("name", "z")),

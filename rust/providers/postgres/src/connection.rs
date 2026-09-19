@@ -1,8 +1,12 @@
 use crate::command::PostgresCommand;
-use crate::driver::PostgresDriver;
+use crate::driver::{require_driver, PostgresDriver};
 use crate::transaction::PostgresTransaction;
 use async_trait::async_trait;
-use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
+use datasources::{
+    CRUDRepository, Command, Connection, DatasourceError, IsolationLevel, Repository,
+    RepositoryBuilderOptions, Result, RowTypeConverter, Transaction,
+};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 pub struct PostgresConnection {
@@ -27,6 +31,26 @@ impl PostgresConnection {
         }
     }
 
+    pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+        let url = options.and_then(|o| o.get("url").or_else(|| o.get("database_url")).cloned());
+        let schema = options.and_then(|o| {
+            o.get("schema")
+                .or_else(|| o.get("database_schema"))
+                .cloned()
+        });
+        Arc::new(PostgresConnection::new(
+            url,
+            schema,
+            require_driver(None).expect("Postgres driver is required"),
+        ))
+    }
+
+    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn CRUDRepository> {
+        let mut options = RepositoryBuilderOptions::with_factory(connection);
+        options.mapping = Some(RowTypeConverter::new(vec![]));
+        Arc::new(Repository::new(options).expect("repository"))
+    }
+
     pub fn ensure_open(&self) -> Result<()> {
         if !*self.opened.lock().unwrap() {
             return Err(DatasourceError::message("Connection is not open"));
@@ -37,6 +61,10 @@ impl PostgresConnection {
 
 #[async_trait]
 impl Connection for PostgresConnection {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn provider(&self) -> &str {
         "postgres"
     }

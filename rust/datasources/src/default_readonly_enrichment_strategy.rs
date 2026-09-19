@@ -44,9 +44,7 @@ impl ReadonlyEnrichmentStrategy for DefaultReadonlyEnrichmentStrategy {
 
     async fn apply(&self, node: &RepositoryTreeNode, parents: &mut [Row]) -> Result<()> {
         match &node.enrichment {
-            Some(enrichment) => {
-                apply(node.value.as_ref(), enrichment, parents, &node.items).await
-            }
+            Some(enrichment) => apply(node.value.as_ref(), enrichment, parents, &node.items).await,
             None => {
                 for child in &node.items {
                     child.enrich_from(parents).await?;

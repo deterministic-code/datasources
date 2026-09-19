@@ -1,11 +1,10 @@
 import {
   Datasource,
+  DatasourceFactory,
   ProviderNotInstalledError,
 } from "@datasources/core";
-import { JsonDatasource } from "@datasources/json";
-import { MemoryDatasource } from "@datasources/memory";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { install } from "./install.ts";
+import { from, registerListed } from "./install.ts";
 import { providerNames } from "./providerNames.ts";
 
 const envKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] as const;
@@ -15,7 +14,7 @@ beforeEach(() => {
   for (const key of envKeys) delete process.env[key];
 });
 
-afterEach(() => Datasource.reset());
+afterEach(() => DatasourceFactory.reset());
 
 afterAll(() => {
   for (const key of envKeys) {
@@ -39,80 +38,59 @@ describe("providerNames", () => {
       }),
     ).toEqual(["json", "memory"]);
     expect(providerNames({ INSTALLED_PROVIDERS: " sqlite " })).toEqual(["sqlite"]);
-    expect(providerNames({ INSTALLED_PROVIDERS: {} })).toEqual([]);
     expect(providerNames({})).toEqual([]);
   });
 });
 
-describe("install", () => {
-  it("registers listed factories and sets defaults", async () => {
-    await install({
-      INSTALLED_PROVIDERS: "json,memory",
-      DATABASE_URL: "memory://",
-      filename: ":memory:",
-    });
-    expect(Datasource.registered().sort()).toEqual(["json", "memory"]);
-    expect(Datasource.create().provider).toBe("memory");
-    expect(Datasource.create("json").provider).toBe("json");
-  });
-
-  it("registers INSTALLED_PROVIDERS", async () => {
-    await install({
+describe("registerListed", () => {
+  it("registers listed factories", () => {
+    from({
       INSTALLED_PROVIDERS: "json,memory",
       DATABASE_URL: "memory://",
     });
-    expect(Datasource.registered().sort()).toEqual(["json", "memory"]);
-    expect(Datasource.create().provider).toBe("memory");
+    expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
+    expect(
+      Datasource.create({
+        provider: "memory",
+        database_url: "memory://",
+      }).provider,
+    ).toBe("memory");
+    expect(Datasource.create({ provider: "json" }).provider).toBe("json");
   });
 
-  it("creates from INSTALLED_PROVIDERS in the environment", () => {
+  it("defaults registers installed providers", () => {
+    DatasourceFactory.defaults({
+      INSTALLED_PROVIDERS: "json,memory",
+      DATABASE_URL: "memory://",
+    });
+    expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
+    expect(Datasource.create({ database_url: "memory://" }).provider).toBe("memory");
+  });
+
+  it("create does not take INSTALLED_PROVIDERS", () => {
+    registerListed({ INSTALLED_PROVIDERS: "json,memory" });
+    expect(
+      Datasource.create({
+        provider: "json",
+        database_url: "json://",
+      }).provider,
+    ).toBe("json");
+    expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
+  });
+
+  it("create reads connection from the environment", () => {
     process.env.INSTALLED_PROVIDERS = "json,memory";
     process.env.DATABASE_URL = "memory://";
     expect(Datasource.create().provider).toBe("memory");
-    expect(Datasource.registered().sort()).toEqual(["json", "memory"]);
+    expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
   });
 
-  it("throws when the env package cannot be required", () => {
-    process.env.DATABASE_URL = "sqlite:///:memory:";
-    expect(() => Datasource.create()).toThrow(ProviderNotInstalledError);
-  });
-
-  it("throws when the name is unknown", async () => {
-    await expect(install({ INSTALLED_PROVIDERS: "nope" })).rejects.toBeInstanceOf(
+  it("throws when the package is missing or the name is unknown", () => {
+    expect(() => registerListed({ INSTALLED_PROVIDERS: "sqlite" })).toThrow(
       ProviderNotInstalledError,
     );
-  });
-
-  it("throws when the package cannot be loaded", async () => {
-    await expect(
-      install({ INSTALLED_PROVIDERS: "json" }, async () => {
-        throw new Error("missing");
-      }),
-    ).rejects.toBeInstanceOf(ProviderNotInstalledError);
-  });
-
-  it("rethrows ProviderNotInstalledError from a loader", async () => {
-    await expect(
-      install({ INSTALLED_PROVIDERS: "json" }, async () => {
-        throw new ProviderNotInstalledError("json");
-      }),
-    ).rejects.toBeInstanceOf(ProviderNotInstalledError);
-  });
-
-  it("throws when the export has no factory", async () => {
-    await expect(install({ INSTALLED_PROVIDERS: "json" }, async () => ({}))).rejects.toBeInstanceOf(
+    expect(() => registerListed({ INSTALLED_PROVIDERS: "nope" })).toThrow(
       ProviderNotInstalledError,
     );
-  });
-
-  it("accepts a matching factory export", async () => {
-    await install({ INSTALLED_PROVIDERS: "json" }, async () => ({
-      JsonDatasource: { instance: JsonDatasource.instance },
-    }));
-    expect(Datasource.create("json").provider).toBe("json");
-    await install({ INSTALLED_PROVIDERS: "memory" }, async () => ({
-      MemoryDatasource: { instance: MemoryDatasource.instance },
-    }));
-    expect(Datasource.create("memory").provider).toBe("memory");
   });
 });

@@ -1,33 +1,52 @@
 mod command;
 mod connection;
 mod converters;
-mod datasource;
 
 pub use command::SqlServerCommand;
 pub use connection::SqlServerConnection;
-pub use datasource::SqlServerDatasource;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, register, reset, Datasource};
+    use datasources::{create, register, reset, BuiltDatasource, Datasource};
+    use std::collections::HashMap;
+
+    fn ds() -> BuiltDatasource {
+        BuiltDatasource::new(
+            "sqlserver",
+            || SqlServerConnection::from_options(None),
+            SqlServerConnection::repository,
+        )
+    }
 
     #[test]
     fn creates() {
         reset();
-        register(SqlServerDatasource::instance());
-        assert_eq!(create("sqlserver", None).unwrap().provider(), "sqlserver");
+        register(
+            "sqlserver",
+            SqlServerConnection::from_options,
+            SqlServerConnection::repository,
+        );
+        assert_eq!(
+            create(Some(&HashMap::from([(
+                "provider".into(),
+                "sqlserver".into()
+            )])))
+            .unwrap()
+            .provider(),
+            "sqlserver"
+        );
     }
 
     #[tokio::test]
     async fn creates_connection() {
-        let connection = SqlServerDatasource.create_connection().await.unwrap();
+        let connection = ds().create_connection().await.unwrap();
         assert!(connection.open().await.is_err());
     }
 
     #[tokio::test]
     async fn creates_command() {
-        let ds = SqlServerDatasource;
+        let ds = ds();
         let connection = ds.create_connection().await.unwrap();
         let command = ds.create_command(Some(connection));
         assert!(command.execute("", None).await.is_err());

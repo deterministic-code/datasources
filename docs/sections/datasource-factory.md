@@ -6,27 +6,77 @@ Resolves a provider from options and returns one configured datasource.
 
 ::: reference
 ### typescript
+#### DatasourceFactory
+
+```typescript
+class DatasourceFactory implements IDatasourceFactory
+```
+
+**Methods**
+
+##### defaults(options)
+
+Registers listed provider packages. Does not apply to a non-null `create` bag.
+
+```typescript
+static defaults(options: DatasourceOptions): void
+```
+
+- `options` — install keys such as `INSTALLED_PROVIDERS`; not [Create options](./datasource.md#datasourceoptions)
+
+##### register(provider, connection, repository)
+
+Registers a connection factory and a repository factory by provider name.
+
+```typescript
+static register(provider: string, connection: (options?: DatasourceOptions) => IConnection, repository: (connection: IConnection) => object): void
+```
+
+- `provider` — registry key (`sqlite`, `mysql`, …)
+- `connection` — builds an [IConnection](./connection.md) from the options bag
+- `repository` — builds a repository from an [IConnection](./connection.md)
+
+##### create(options?)
+
+Creates one datasource. `undefined` options read process env; a dictionary is used as-is.
+
+```typescript
+static create(options?: DatasourceOptions): IDatasource
+```
+
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
+
+**Returns** [IDatasource](./datasource.md#idatasource)
+
+##### reset()
+
+Clears the registry. Use in tests.
+
+```typescript
+static reset(): void
+```
+
+##### registered()
+
+Lists registered provider names.
+
+```typescript
+static registered(): string[]
+```
+
+**Returns** `string[]`
+
 #### IDatasourceFactory
 
 ```typescript
 interface IDatasourceFactory
 ```
 
-**Properties**
-
-##### provider
-
-Registry key used by `Datasource.register`.
-
-```typescript
-readonly provider: string
-```
-
 **Methods**
 
 ##### create(options?)
 
-Creates a configured datasource.
+Creates one datasource from a string dictionary.
 
 ```typescript
 create(options?: DatasourceOptions): IDatasource
@@ -118,44 +168,86 @@ IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
 **Returns** [IDatasource](./datasource.md#idatasource)
 
 ### rust
-#### DatasourceFactory
+#### datasources
 
 ```rust
-pub trait DatasourceFactory
+// datasources
 ```
 
 **Methods**
 
-##### provider()
+##### defaults(options)
 
-Registry key used by `register`.
+Registers listed provider packages. Does not apply to a `Some` `create` bag.
 
 ```rust
-fn provider(&self) -> &str
+pub fn defaults(options: HashMap<String, String>) -> Result<()>
 ```
 
-**Returns** `&str`
+- `options` — install keys such as `INSTALLED_PROVIDERS`; not [Create options](./datasource.md#datasourceoptions)
+
+**Returns** `Result<()>`
+
+##### register(provider, connection, repository)
+
+Registers a connection factory and a repository factory by provider name.
+
+```rust
+pub fn register(provider: impl Into<String>, connection: impl Fn(Option<&HashMap<String, String>>) -> Arc<dyn Connection> + Send + Sync + 'static, repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
+```
+
+- `provider` — registry key (`sqlite`, `mysql`, …)
+- `connection` — builds a [Connection](./connection.md) from the options bag
+- `repository` — builds a repository from a [Connection](./connection.md)
 
 ##### create(options)
 
-Creates a configured datasource.
+Creates one datasource. `None` reads process env; `Some` is used as-is.
 
 ```rust
-fn create(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Datasource>
+pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datasource>>
 ```
 
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions)
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
 
-**Returns** `Arc<dyn `[Datasource](./datasource.md#datasource)`>`
+**Returns** `Result<Arc<dyn `[Datasource](./datasource.md#datasource)`>>`
+
+##### create_default()
+
+`create(None)`.
+
+```rust
+pub fn create_default() -> Result<Arc<dyn Datasource>>
+```
+
+**Returns** `Result<Arc<dyn `[Datasource](./datasource.md#datasource)`>>`
+
+##### reset()
+
+Clears the registry. Use in tests.
+
+```rust
+pub fn reset()
+```
+
+##### registered()
+
+Lists registered provider names.
+
+```rust
+pub fn registered() -> Vec<String>
+```
+
+**Returns** `Vec<String>`
 :::
 
 ## Remarks
 
-C# registers a connection factory and a repository factory with `DatasourceFactory.Register`, then `Create` returns one [Datasource](./datasource.md). TypeScript and Rust still register a provider type that implements both the factory and the datasource. See [Datasource](./datasource.md) for the instance contract.
+Each language registers a connection factory and a repository factory, then `Create` / `create` / `create_default` returns one [Datasource](./datasource.md). See [Datasource](./datasource.md) for the instance contract.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting` registers each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` is called with null options. `@datasources/register` and `datasources-register` still do that when TypeScript / Rust apply defaults.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` is called with null / `undefined` / `None` options.
 
 ## Examples
 
@@ -167,11 +259,11 @@ DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryC
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 ```rust
-register(MemoryDatasource::instance());
-let ds = create("memory", None)?;
+register("memory", MemoryConnection::from_options, MemoryConnection::repository);
+let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())])))?;
 ```
 ```typescript
-Datasource.register(MemoryDatasource.instance);
-const ds = Datasource.create("memory");
+DatasourceFactory.register("memory", opts => new MemoryConnection(opts), MemoryConnection.repository);
+const ds = Datasource.create({ provider: "memory" });
 ```
 :::

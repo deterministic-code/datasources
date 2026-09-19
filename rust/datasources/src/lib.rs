@@ -10,20 +10,18 @@ mod connection;
 mod console_command_middleware;
 pub mod converters;
 mod create;
-mod provider_from_url;
 mod create_repository_builder_options;
 mod datasource;
 mod datasource_error;
-mod datasource_factory;
 mod deep_crud_repository;
 mod default_readonly_enrichment_strategy;
 mod defaults;
+mod downcast_connection;
 mod enriched;
 mod enriched_readonly_repository;
 mod enrichment;
 mod flat_to_type_readonly_enrichment_strategy;
 mod hashset_optimized_readonly_enrichment_strategy;
-mod readonly_enrichment_strategy;
 mod identity_filter;
 mod identity_where_text;
 mod isolation_level;
@@ -31,8 +29,10 @@ pub mod mappers;
 pub mod mocks;
 mod parameter;
 mod parameters_to_map;
+mod provider_from_url;
 mod query;
 mod reader;
+mod readonly_enrichment_strategy;
 mod register;
 mod registered;
 mod registry_state;
@@ -78,26 +78,24 @@ pub use converters::{
     TypeConverter,
 };
 pub use create::{create, create_default};
-pub use provider_from_url::provider_from_url;
 pub use create_repository_builder_options::create_repository_builder_options;
-pub use datasource::Datasource;
+pub use datasource::{BuiltDatasource, Datasource};
 pub use datasource_error::DatasourceError;
-pub use datasource_factory::DatasourceFactory;
 pub use deep_crud_repository::DeepCRUDRepository;
 pub use default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 pub use defaults::{bind_install, defaults};
+pub use downcast_connection::downcast_connection;
 pub use enriched::Enriched;
 pub use enriched_readonly_repository::EnrichedReadonlyRepository;
 pub use enrichment::Enrichment;
 pub use flat_to_type_readonly_enrichment_strategy::FlatToTypeReadonlyEnrichmentStrategy;
 pub use hashset_optimized_readonly_enrichment_strategy::HashsetOptimizedReadonlyEnrichmentStrategy;
-pub use readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
-    FlatToTypeMapper, FlatToTypeMapperTrait, Mapper, SourceDestinationMapper, MappedRow, MappedValue,
-    NameMapper, NameSourceDestinationMapper, RowTypeMapper, StatementMapper,
+    FlatToTypeMapper, FlatToTypeMapperTrait, MappedRow, MappedValue, Mapper, NameMapper,
+    NameSourceDestinationMapper, RowTypeMapper, SourceDestinationMapper, StatementMapper,
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
 pub use mocks::{
@@ -106,11 +104,13 @@ pub use mocks::{
 };
 pub use parameter::Parameter;
 pub use parameters_to_map::parameters_to_map;
+pub use provider_from_url::provider_from_url;
 pub use query::Query;
 pub use reader::Reader;
+pub use readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 pub use register::register;
 pub use registered::registered;
-pub use repository::{as_readonly, ReadonlyRepository, CRUDRepository};
+pub use repository::{as_readonly, CRUDRepository, ReadonlyRepository};
 pub use repository_factory::{CRUDRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory};
 pub use repository_tree::RepositoryTree;
 pub use repository_tree_node::{encode_rows, RepositoryTreeNode};

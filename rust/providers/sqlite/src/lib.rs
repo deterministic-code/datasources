@@ -4,7 +4,6 @@ mod connection;
 mod connection_driver;
 mod connection_string;
 mod converters;
-mod datasource;
 mod driver;
 mod rusqlite_driver;
 mod sqlite_path;
@@ -14,7 +13,6 @@ mod transaction_driver;
 
 pub use command::SqliteCommand;
 pub use connection::SqliteConnection;
-pub use datasource::SqliteDatasource;
 pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
 pub use rusqlite_driver::RusqliteDriver;
 pub use statement_builder::{SqliteColumn, SqliteStatementBuilder};
@@ -34,8 +32,9 @@ mod repository_spec;
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, Datasource, DatasourceFactory, IsolationLevel,
+        create, register, reset, BuiltDatasource, Command, Connection, Datasource, IsolationLevel,
     };
+    use std::collections::HashMap;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -99,41 +98,37 @@ mod tests {
         let defaulted = SqliteConnection::new(None, driver.clone());
         assert_eq!(defaulted.filename, ":memory:");
         reset();
-        assert_eq!(
-            Datasource::provider(&*SqliteDatasource::instance()),
-            "sqlite"
+        let driver_for_ds = driver.clone();
+        register(
+            "sqlite",
+            move |_| {
+                Arc::new(SqliteConnection::new(
+                    Some(":memory:".into()),
+                    driver_for_ds.clone(),
+                ))
+            },
+            SqliteConnection::repository,
         );
-        register(Arc::new(SqliteDatasource::new(
-            Some(":memory:".into()),
-            Some(driver.clone()),
-            None,
-        )));
-        let ds = create("sqlite", None).unwrap();
+        let ds = create(Some(&HashMap::from([("provider".into(), "sqlite".into())]))).unwrap();
         assert_eq!(ds.provider(), "sqlite");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
         assert!(command.execute("DELETE FROM items", None).await.is_err());
         assert!(command.execute_reader("SELECT 1", None).await.is_err());
         ds.create_repository(None);
-        let missing = SqliteDatasource::new(None, None, None);
-        assert_eq!(Datasource::provider(&missing), "sqlite");
-        assert!(missing.create_connection().await.is_err());
-        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            missing.create_command(None)
-        }))
-        .is_err());
-        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            missing.create_repository(None)
-        }))
-        .is_err());
-        let factory = SqliteDatasource::new(None, Some(driver.clone()), None);
+        let factory = BuiltDatasource::new(
+            "sqlite",
+            {
+                let driver = driver.clone();
+                move || Arc::new(SqliteConnection::new(None, driver.clone()))
+            },
+            SqliteConnection::repository,
+        );
         factory.create_connection().await.unwrap();
         let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
         assert!(bound.execute("DELETE FROM items", None).await.is_err());
         assert!(bound.execute_reader("SELECT 1", None).await.is_err());
         factory.create_repository(Some(factory.create_connection().await.unwrap()));
-        DatasourceFactory::create(&factory, None);
-        assert_eq!(DatasourceFactory::provider(&factory), "sqlite");
 
         let closed = Arc::new(SqliteConnection::new(None, driver));
         assert!(SqliteCommand::new(closed).execute("x", None).await.is_err());

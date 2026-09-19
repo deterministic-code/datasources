@@ -4,6 +4,8 @@ import {
   collectAsync,
   createStubDatasource,
   Datasource,
+  bindInstall,
+  DatasourceFactory,
   DatasourceError,
   execute,
   executeReader,
@@ -25,6 +27,7 @@ import {
   parametersToRecord,
   ProviderNotImplementedError,
   ProviderNotInstalledError,
+  providerFromUrl,
   Query,
   readerToAsyncIterable,
   StubCommand,
@@ -45,7 +48,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  Datasource.reset();
+  DatasourceFactory.reset();
+  bindInstall();
 });
 
 afterAll(() => {
@@ -388,41 +392,61 @@ describe("console middleware", () => {
   });
 });
 
+describe("providerFromUrl", () => {
+  it("reads the scheme and aliases", () => {
+    expect(providerFromUrl("")).toBeUndefined();
+    expect(providerFromUrl("not-a-url")).toBeUndefined();
+    expect(providerFromUrl("postgresql://db")).toBe("postgres");
+    expect(providerFromUrl("sqlite3://x")).toBe("sqlite");
+    expect(providerFromUrl("mssql://x")).toBe("sqlserver");
+    expect(providerFromUrl("json://")).toBe("json");
+  });
+});
+
 describe("Datasource registry", () => {
   it("registers, lists, creates, and resets", () => {
-    const factory = new MockDatasource("json");
-    expect(Datasource.registered()).toEqual([]);
-    Datasource.register(factory, new MockDatasource("memory"));
-    expect(Datasource.registered()).toEqual(["json", "memory"]);
-    const created = Datasource.create("json", { path: "x" });
+    expect(DatasourceFactory.registered()).toEqual([]);
+    DatasourceFactory.register("json", () => new MockConnection(), (c) => new MockRepository(c));
+    DatasourceFactory.register("memory", () => new MockConnection(), (c) => new MockRepository(c));
+    expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
+    const created = Datasource.create({ provider: "json", path: "x" });
     expect(created.provider).toBe("json");
-    Datasource.reset();
-    expect(Datasource.registered()).toEqual([]);
-    expect(() => Datasource.create("json")).toThrow(ProviderNotInstalledError);
-  });
-
-  it("applies env defaults through a bound installer", () => {
-    const listed: string[] = [];
-    Datasource.bindInstall((options) => {
-      listed.push(String(options.DATABASE_URL ?? ""));
-    });
-    process.env.DATABASE_URL = "memory://";
-    Datasource.register(new MockDatasource("memory"));
-    expect(Datasource.create().provider).toBe("memory");
-    expect(listed).toEqual(["memory://"]);
+    DatasourceFactory.reset();
+    expect(DatasourceFactory.registered()).toEqual([]);
+    expect(() => Datasource.create({ provider: "json" })).toThrow(ProviderNotInstalledError);
   });
 
   it("requires consumer defaults when provider is omitted", async () => {
     expect(() => Datasource.create()).toThrow(DatasourceError);
-    Datasource.register(new MockDatasource("sqlite"));
-    Datasource.defaults({ DATABASE_URL: "sqlite:///:memory:" });
-    const ds = Datasource.create();
+    DatasourceFactory.register("sqlite", () => new MockConnection(), (c) => new MockRepository(c));
+    const ds = Datasource.create({
+      provider: "sqlite",
+      database_url: "sqlite:///:memory:",
+    });
     expect(ds.provider).toBe("sqlite");
     const connection = await ds.createConnection();
     expect(connection.isOpen).toBe(false);
     expect(ds.createCommand().connection).toBe(connection);
     expect(ds.createRepository()).toBeInstanceOf(MockRepository);
-    Datasource.reset();
+    expect(ds.createReadonlyRepository()).toBeInstanceOf(MockRepository);
+    expect(new DatasourceFactory().create({
+      provider: "sqlite",
+      database_schema: "main",
+    }).provider).toBe("sqlite");
+    process.env.DATABASE_URL = "  ";
+    process.env.DATABASE_SCHEMA = "  ";
+    expect(() => Datasource.create()).toThrow(DatasourceError);
+    process.env.DATABASE_URL = "sqlite:///:memory:";
+    process.env.DATABASE_SCHEMA = "main";
+    expect(Datasource.create().provider).toBe("sqlite");
+    bindInstall((options) => {
+      if (options.INSTALLED_PROVIDERS?.includes("json"))
+        DatasourceFactory.register("json", () => new MockConnection(), (c) => new MockRepository(c));
+    });
+    DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "json" });
+    expect(DatasourceFactory.registered()).toEqual(["json", "sqlite"]);
+    DatasourceFactory.reset();
+    for (const key of envKeys) delete process.env[key];
     expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
   });
 });
@@ -431,7 +455,6 @@ describe("stubs", () => {
   it("creates stub objects that throw on IO", async () => {
     const ds = createStubDatasource("text");
     expect(ds.provider).toBe("text");
-    expect(ds.create().provider).toBe("text");
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(StubConnection);
     expect(connection.isOpen).toBe(false);
@@ -603,7 +626,7 @@ describe("published mocks", () => {
 
   it("builds commands and repositories from a mock datasource", async () => {
     const ds = new MockDatasource();
-    expect(ds.create().provider).toBe("mock");
+    expect(ds.provider).toBe("mock");
     expect(await ds.createConnection()).toBe(ds.connection);
     const mockCommand = ds.createCommand();
     expect(mockCommand).toBeInstanceOf(MockCommand);
@@ -623,7 +646,7 @@ describe("published mocks", () => {
     expect(ds.createReadonlyRepository()).toBe(ds.repository);
 
     const named = new MockDatasource("custom");
-    expect(named.create().provider).toBe("custom");
+    expect(named.provider).toBe("custom");
   });
 
   it("counts mock query and where text access", () => {

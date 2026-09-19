@@ -1,17 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, ProviderNotImplementedError } from "@datasources/core";
-import { OracleCommand, OracleConnection, OracleDatasource } from "./index.ts";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
+import { OracleCommand, OracleConnection } from "./index.ts";
 
-afterEach(() => Datasource.reset());
+afterEach(() => DatasourceFactory.reset());
 
 describe("oracle", () => {
   it("creates", () => {
-    Datasource.register(OracleDatasource.instance);
-    expect(Datasource.create("oracle").provider).toBe("oracle");
+    DatasourceFactory.register("oracle", OracleConnection.from, OracleConnection.repository);
+    expect(OracleConnection.from()).toBeInstanceOf(OracleConnection);
+    expect(Datasource.create({ provider: "oracle" }).provider).toBe("oracle");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new OracleDatasource();
+    const ds = new Datasource("oracle", () => new OracleConnection(), OracleConnection.repository);
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(OracleConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);

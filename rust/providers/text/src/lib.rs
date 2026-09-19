@@ -1,33 +1,49 @@
 mod command;
 mod connection;
 mod converters;
-mod datasource;
 
 pub use command::TextCommand;
 pub use connection::TextConnection;
-pub use datasource::TextDatasource;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, register, reset, Datasource};
+    use datasources::{create, register, reset, BuiltDatasource, Datasource};
+    use std::collections::HashMap;
+
+    fn ds() -> BuiltDatasource {
+        BuiltDatasource::new(
+            "text",
+            || TextConnection::from_options(None),
+            TextConnection::repository,
+        )
+    }
 
     #[test]
     fn creates() {
         reset();
-        register(TextDatasource::instance());
-        assert_eq!(create("text", None).unwrap().provider(), "text");
+        register(
+            "text",
+            TextConnection::from_options,
+            TextConnection::repository,
+        );
+        assert_eq!(
+            create(Some(&HashMap::from([("provider".into(), "text".into())])))
+                .unwrap()
+                .provider(),
+            "text"
+        );
     }
 
     #[tokio::test]
     async fn creates_connection() {
-        let connection = TextDatasource.create_connection().await.unwrap();
+        let connection = ds().create_connection().await.unwrap();
         assert!(connection.open().await.is_err());
     }
 
     #[tokio::test]
     async fn creates_command() {
-        let ds = TextDatasource;
+        let ds = ds();
         let connection = ds.create_connection().await.unwrap();
         let command = ds.create_command(Some(connection));
         assert!(command.execute("", None).await.is_err());

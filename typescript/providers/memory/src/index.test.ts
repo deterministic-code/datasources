@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   collectAsync,
   Datasource,
+  DatasourceFactory,
   DatasourceError,
   Query,
   Where,
@@ -11,7 +12,6 @@ import {
   matches,
   MemoryCommand,
   MemoryConnection,
-  MemoryDatasource,
   MemoryRepository,
   MemoryStore,
   parametersToObject,
@@ -19,8 +19,8 @@ import {
 } from "./index.ts";
 
 afterEach(() => {
-  Datasource.reset();
-  Datasource.register(MemoryDatasource.instance);
+  DatasourceFactory.reset();
+  DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
 });
 
 describe("filter helpers", () => {
@@ -223,13 +223,14 @@ describe("MemoryCommand and MemoryRepository", () => {
   });
 });
 
-describe("MemoryDatasource", () => {
+describe("Memory datasource", () => {
   it("registers and constructs children", async () => {
-    const created = MemoryDatasource.create();
-    expect(created.provider).toBe("memory");
-    expect(MemoryDatasource.instance.provider).toBe("memory");
-    const ds = new MemoryDatasource({ data: [{ id: 1 }] });
-    expect(ds.create({ data: [] }).provider).toBe("memory");
+    const ds = new Datasource(
+      "memory",
+      () => new MemoryConnection({ data: [{ id: 1 }] }),
+      MemoryConnection.repository,
+    );
+    expect(ds.provider).toBe("memory");
     const connection = (await ds.createConnection()) as MemoryConnection;
     await connection.open();
     expect(connection.createCommand()).toBeInstanceOf(MemoryCommand);
@@ -248,8 +249,7 @@ describe("MemoryDatasource", () => {
     expect(repo).toBeInstanceOf(MemoryRepository);
     expect(ds.createRepository()).toBeInstanceOf(MemoryRepository);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(MemoryRepository);
-
-    const fromRegistry = Datasource.create("memory", { data: [] });
-    expect(fromRegistry.provider).toBe("memory");
+    expect(MemoryConnection.from().provider).toBe("memory");
+    expect(Datasource.create({ provider: "memory" }).provider).toBe("memory");
   });
 });

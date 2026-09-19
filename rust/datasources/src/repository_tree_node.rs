@@ -1,7 +1,7 @@
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::repository::{as_readonly, ReadonlyRepository, CRUDRepository};
+use crate::repository::{as_readonly, CRUDRepository, ReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;

@@ -40,16 +40,15 @@ class Datasource
 
 **Methods**
 
-##### create(provider?, options?)
+##### create(options?)
 
 Creates a datasource from the registry.
 
 ```typescript
-static create(provider?: string, options?: DatasourceOptions): IDatasource
+static create(options?: DatasourceOptions): IDatasource
 ```
 
-- `provider` — optional; inferred from `DATABASE_URL` when omitted
-- `options` — defaults and connection settings
+- `options` — [DatasourceOptions](#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
 
 **Returns** `IDatasource`
 :::

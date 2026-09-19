@@ -1,17 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, ProviderNotImplementedError } from "@datasources/core";
-import { DynamoDbCommand, DynamoDbConnection, DynamoDbDatasource } from "./index.ts";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
+import { DynamoDbCommand, DynamoDbConnection } from "./index.ts";
 
-afterEach(() => Datasource.reset());
+afterEach(() => DatasourceFactory.reset());
 
 describe("dynamodb", () => {
   it("creates", () => {
-    Datasource.register(DynamoDbDatasource.instance);
-    expect(Datasource.create("dynamodb").provider).toBe("dynamodb");
+    DatasourceFactory.register("dynamodb", DynamoDbConnection.from, DynamoDbConnection.repository);
+    expect(DynamoDbConnection.from()).toBeInstanceOf(DynamoDbConnection);
+    expect(Datasource.create({ provider: "dynamodb" }).provider).toBe("dynamodb");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new DynamoDbDatasource();
+    const ds = new Datasource("dynamodb", () => new DynamoDbConnection(), DynamoDbConnection.repository);
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(DynamoDbConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);

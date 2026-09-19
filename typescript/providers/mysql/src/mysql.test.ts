@@ -10,14 +10,13 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
 import {
   bindParameters,
   loadMysql2Driver,
   Mysql2Driver,
   MysqlCommand,
   MysqlConnection,
-  MysqlDatasource,
   requireDriver,
   toMysql,
   type IMysqlClient,
@@ -64,8 +63,8 @@ function fakeDriver(url = "mysql://localhost/app") {
 }
 
 afterEach(() => {
-  Datasource.reset();
-  Datasource.register(MysqlDatasource.instance);
+  DatasourceFactory.reset();
+  DatasourceFactory.register("mysql", MysqlConnection.from, MysqlConnection.repository);
 });
 
 describe("requireDriver and bindParameters", () => {
@@ -204,15 +203,19 @@ describe("MysqlCommand", () => {
   });
 });
 
-describe("MysqlDatasource", () => {
+describe("Mysql datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
-    expect(MysqlDatasource.create().provider).toBe("mysql");
-    expect(() => new MysqlDatasource().createConnection()).toThrow(
-      DatasourceError,
+    expect(() =>
+      new Datasource("mysql", () => new MysqlConnection(), MysqlConnection.repository)
+        .createConnection(),
+    ).toThrow(DatasourceError);
+    const ds = new Datasource(
+      "mysql",
+      () => new MysqlConnection({ driver }),
+      MysqlConnection.repository,
     );
-    const ds = new MysqlDatasource({ driver, table: "people" });
-    expect(ds.create({ driver }).provider).toBe("mysql");
+    expect(ds.provider).toBe("mysql");
     const connection = await ds.createConnection();
     await (connection as MysqlConnection).open();
     const command = ds.createCommand(connection);
@@ -220,7 +223,7 @@ describe("MysqlDatasource", () => {
     expect(command.connection).toBe(connection);
     await command.execute("DELETE FROM items");
     await command.executeReader("SELECT 1");
-    const implicit = new MysqlDatasource({ driver }).createCommand();
+    const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(MysqlCommand);
     expect(implicit.connection).toBeInstanceOf(MysqlConnection);
     await implicit.connection.open();
@@ -229,7 +232,13 @@ describe("MysqlDatasource", () => {
     const repo = ds.createRepository(connection);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
     expect(repo).toBeInstanceOf(Repository);
-    expect(new MysqlDatasource({ driver }).createRepository()).toBeInstanceOf(Repository);
-    expect(Datasource.create("mysql", { driver }).provider).toBe("mysql");
+    expect(
+      new Datasource("mysql", () => new MysqlConnection({ driver }), MysqlConnection.repository)
+        .createRepository(),
+    ).toBeInstanceOf(Repository);
+    expect(Datasource.create({ provider: "mysql" }).provider).toBe("mysql");
+    expect(() => MysqlConnection.from({ database_url: "mysql://db/app" })).toThrow(
+      DatasourceError,
+    );
   });
 });

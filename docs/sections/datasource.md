@@ -1,6 +1,6 @@
 # Datasource
 
-Factory for connections, commands, and repositories. `Create` reads `INSTALLED_PROVIDERS` and `DATABASE_URL` from the process environment when defaults are unset, registers each listed factory, then creates.
+One configured datasource: provider name plus factories for connections, commands, and repositories. `Create` / `create` / `create_default` is on [DatasourceFactory](./datasource-factory.md).
 
 ## Classes
 
@@ -9,61 +9,36 @@ Factory for connections, commands, and repositories. `Create` reads `INSTALLED_P
 #### Datasource
 
 ```typescript
-class Datasource
+class Datasource implements IDatasource
 ```
+
+**Constructor**
+
+##### Datasource(provider, newConnection, newRepository)
+
+Builds a datasource from a connection factory and a repository factory.
+
+```typescript
+constructor(provider: string, newConnection: () => IConnection, newRepository: (connection: IConnection) => object)
+```
+
+- `provider` — registered provider name
+- `newConnection` — constructs the default [IConnection](./connection.md)
+- `newRepository` — constructs a repository from an [IConnection](./connection.md)
 
 **Methods**
 
-##### defaults(options)
+##### create(options?)
 
-Stores default options and registers listed factories.
-
-```typescript
-static defaults(options: DatasourceOptions): void
-```
-
-- `options` — [DatasourceOptions](#datasourceoptions); stored defaults; listed factories are registered
-
-##### register(...factories)
-
-Registers factories by provider name.
+Alias of [DatasourceFactory.create](./datasource-factory.md). `undefined` options read process env; a dictionary is used as-is.
 
 ```typescript
-static register(...factories: IDatasourceFactory[]): void
+static create(options?: DatasourceOptions): IDatasource
 ```
 
-- `factories` — [IDatasourceFactory](./datasource-factory.md) instances keyed by `provider`
-
-##### create(provider?, options?)
-
-Creates a datasource from the registry.
-
-```typescript
-static create(provider?: string, options?: DatasourceOptions): IDatasource
-```
-
-- `provider` — optional; inferred from `DATABASE_URL` when omitted
-- `options` — [DatasourceOptions](#datasourceoptions); omitted uses stored defaults or the environment
+- `options` — [DatasourceOptions](#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
 
 **Returns** [IDatasource](#idatasource)
-
-##### reset()
-
-Clears the registry and stored defaults. Use in tests.
-
-```typescript
-static reset(): void
-```
-
-##### registered()
-
-Lists registered provider names.
-
-```typescript
-static registered(): string[]
-```
-
-**Returns** `string[]`
 
 #### IDatasource
 
@@ -132,48 +107,40 @@ createReadonlyRepository<T>(connection?: IConnection): IReadonlyRepository<T>
 #### DatasourceOptions
 
 ```typescript
-type DatasourceOptions = Record<string, DatasourceOptionValue>
+type DatasourceOptions = Record<string, string>
 ```
 
-Well-known keys for `defaults` and `create`. Other keys are passed through to the factory.
+Well-known keys for `DatasourceFactory.create`. Other keys are passed through. `INSTALLED_PROVIDERS` is install/register only, not a Create option.
 
 **Properties**
 
-##### DatasourceOptionValue
+##### provider
 
-Allowed value for an options key.
-
-```typescript
-type DatasourceOptionValue = string | object | undefined
-```
-
-##### INSTALLED_PROVIDERS
-
-Comma-separated provider names to register.
+Which datasource to return.
 
 ```typescript
-INSTALLED_PROVIDERS?: string
+provider?: string
 ```
 
-##### DATABASE_URL
+##### database_url
 
-Connection URL. The scheme selects the default provider.
+Connection URL. The scheme selects the provider when `provider` is omitted.
 
 ```typescript
-DATABASE_URL?: string
+database_url?: string
 ```
 
-##### DATABASE_SCHEMA
+##### database_schema
 
 Default schema.
 
 ```typescript
-DATABASE_SCHEMA?: string
+database_schema?: string
 ```
 
 ##### url
 
-Alias of `DATABASE_URL` passed through to the factory.
+Alias of `database_url` passed through to the provider.
 
 ```typescript
 url?: string
@@ -181,7 +148,7 @@ url?: string
 
 ##### schema
 
-Alias of `DATABASE_SCHEMA` passed through to the factory.
+Alias of `database_schema` passed through to the provider.
 
 ```typescript
 schema?: string
@@ -323,76 +290,25 @@ Alias of `database_schema` passed through to the provider.
 ```
 
 ### rust
-#### datasources
+#### BuiltDatasource
 
 ```rust
-// datasources
+pub struct BuiltDatasource
 ```
 
-**Methods**
+**Constructor**
 
-##### defaults(options)
+##### new(provider, new_connection, new_repository)
 
-Stores default options and registers listed factories.
+Builds a datasource from a connection factory and a repository factory.
 
 ```rust
-pub fn defaults(options: HashMap<String, String>) -> Result<()>
+pub fn new(provider: impl Into<String>, new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static, new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static) -> Self
 ```
 
-- `options` — [DatasourceOptions](#datasourceoptions); stored defaults; listed factories are registered
-
-**Returns** `Result<()>`
-
-##### register(factory)
-
-Registers a factory by provider name.
-
-```rust
-pub fn register(factory: Arc<dyn DatasourceFactory>)
-```
-
-- `factory` — [DatasourceFactory](./datasource-factory.md) keyed by `provider()`
-
-##### create(provider, options)
-
-Creates a datasource from the registry. The provider name is required.
-
-```rust
-pub fn create(provider: &str, options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datasource>>
-```
-
-- `provider` — required provider name
-- `options` — [DatasourceOptions](#datasourceoptions); merged with stored defaults
-
-**Returns** `Result<Arc<dyn `[Datasource](#datasource)`>>`
-
-##### create_default()
-
-Creates a datasource using the provider inferred from `DATABASE_URL`.
-
-```rust
-pub fn create_default() -> Result<Arc<dyn Datasource>>
-```
-
-**Returns** `Result<Arc<dyn `[Datasource](#datasource)`>>`
-
-##### reset()
-
-Clears the registry and stored defaults. Use in tests.
-
-```rust
-pub fn reset()
-```
-
-##### registered()
-
-Lists registered provider names.
-
-```rust
-pub fn registered() -> Vec<String>
-```
-
-**Returns** `Vec<String>`
+- `provider` — registered provider name
+- `new_connection` — constructs the default [Connection](./connection.md)
+- `new_repository` — constructs a repository from a [Connection](./connection.md)
 
 #### Datasource
 
@@ -464,37 +380,37 @@ fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) ->
 HashMap<String, String>
 ```
 
-Well-known keys for `defaults` and `create`. Other keys are passed through to the factory.
+Well-known keys for `create`. Other keys are passed through. `INSTALLED_PROVIDERS` is install/register only, not a Create option.
 
 **Properties**
 
-##### INSTALLED_PROVIDERS
+##### provider
 
-Comma-separated provider names to register.
-
-```rust
-"INSTALLED_PROVIDERS"
-```
-
-##### DATABASE_URL
-
-Connection URL. The scheme selects the default provider.
+Which datasource to return.
 
 ```rust
-"DATABASE_URL"
+"provider"
 ```
 
-##### DATABASE_SCHEMA
+##### database_url
+
+Connection URL. The scheme selects the provider when `provider` is omitted.
+
+```rust
+"database_url"
+```
+
+##### database_schema
 
 Default schema.
 
 ```rust
-"DATABASE_SCHEMA"
+"database_schema"
 ```
 
 ##### url
 
-Alias of `DATABASE_URL` passed through to the factory.
+Alias of `database_url` passed through to the provider.
 
 ```rust
 "url"
@@ -502,7 +418,7 @@ Alias of `DATABASE_URL` passed through to the factory.
 
 ##### schema
 
-Alias of `DATABASE_SCHEMA` passed through to the factory.
+Alias of `database_schema` passed through to the provider.
 
 ```rust
 "schema"
@@ -511,11 +427,9 @@ Alias of `DATABASE_SCHEMA` passed through to the factory.
 
 ## Remarks
 
-C# `DatasourceFactory.Create(null)` reads process `DATABASE_URL` and `DATABASE_SCHEMA` (as `database_url` / `database_schema`) and registers names from process `INSTALLED_PROVIDERS`. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
+`DatasourceFactory.Create(null)` / `Datasource.create()` / `create(None)` reads process `DATABASE_URL` and `DATABASE_SCHEMA` (as `database_url` / `database_schema`) and registers names from process `INSTALLED_PROVIDERS`. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
 
-TypeScript and Rust still read `INSTALLED_PROVIDERS`, `DATABASE_URL`, and `DATABASE_SCHEMA` when defaults are unset. Listed factories are registered through `@datasources/register` or `datasources-register` when that package is present.
-
-TypeScript omits `provider` when `DATABASE_URL` can supply it. Rust uses `create_default()` for that path; `create` always takes an explicit provider.
+Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
 
 `Reset` / `reset` clears the registry. Use it in tests.
 

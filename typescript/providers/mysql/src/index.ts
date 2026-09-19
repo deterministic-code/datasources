@@ -1,10 +1,6 @@
 export { MysqlCommand } from "./command.ts";
 export { MysqlConnection } from "./connection.ts";
 export type { MysqlConnectionOptions } from "./connection-options.ts";
-export {
-  MysqlDatasource,
-  type MysqlDatasourceOptions,
-} from "./datasource.ts";
 export { Mysql2Driver } from "./mysql2-driver.ts";
 export {
   bindParameters,
@@ -33,4 +29,4 @@ export {
   type MysqlColumn,
 } from "./mysqlStatementBuilder.ts";
 export type { Cells, Scalar } from "./scalar.ts";
-export { MysqlDatasource as default } from "./datasource.ts";
+export { MysqlConnection as default } from "./connection.ts";

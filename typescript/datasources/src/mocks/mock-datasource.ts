@@ -1,4 +1,3 @@
-import type { DatasourceOptions } from "../DatasourceOptions.ts";
 import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
@@ -19,9 +18,6 @@ export class MockDatasource implements IDatasource {
   constructor(readonly provider = "mock") {
     this.connection = new MockConnection();
   }
-
-  create = (_options?: DatasourceOptions): IDatasource =>
-    new MockDatasource(this.provider);
 
   createConnection(): Promise<IConnection> {
     this.createConnectionCalls += 1;

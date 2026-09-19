@@ -1,17 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, ProviderNotImplementedError } from "@datasources/core";
-import { MongoDbCommand, MongoDbConnection, MongoDbDatasource } from "./index.ts";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
+import { MongoDbCommand, MongoDbConnection } from "./index.ts";
 
-afterEach(() => Datasource.reset());
+afterEach(() => DatasourceFactory.reset());
 
 describe("mongodb", () => {
   it("creates", () => {
-    Datasource.register(MongoDbDatasource.instance);
-    expect(Datasource.create("mongodb").provider).toBe("mongodb");
+    DatasourceFactory.register("mongodb", MongoDbConnection.from, MongoDbConnection.repository);
+    expect(MongoDbConnection.from()).toBeInstanceOf(MongoDbConnection);
+    expect(Datasource.create({ provider: "mongodb" }).provider).toBe("mongodb");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new MongoDbDatasource();
+    const ds = new Datasource("mongodb", () => new MongoDbConnection(), MongoDbConnection.repository);
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(MongoDbConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);

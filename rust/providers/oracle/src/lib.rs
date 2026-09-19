@@ -1,33 +1,49 @@
 mod command;
 mod connection;
 mod converters;
-mod datasource;
 
 pub use command::OracleCommand;
 pub use connection::OracleConnection;
-pub use datasource::OracleDatasource;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, register, reset, Datasource};
+    use datasources::{create, register, reset, BuiltDatasource, Datasource};
+    use std::collections::HashMap;
+
+    fn ds() -> BuiltDatasource {
+        BuiltDatasource::new(
+            "oracle",
+            || OracleConnection::from_options(None),
+            OracleConnection::repository,
+        )
+    }
 
     #[test]
     fn creates() {
         reset();
-        register(OracleDatasource::instance());
-        assert_eq!(create("oracle", None).unwrap().provider(), "oracle");
+        register(
+            "oracle",
+            OracleConnection::from_options,
+            OracleConnection::repository,
+        );
+        assert_eq!(
+            create(Some(&HashMap::from([("provider".into(), "oracle".into())])))
+                .unwrap()
+                .provider(),
+            "oracle"
+        );
     }
 
     #[tokio::test]
     async fn creates_connection() {
-        let connection = OracleDatasource.create_connection().await.unwrap();
+        let connection = ds().create_connection().await.unwrap();
         assert!(connection.open().await.is_err());
     }
 
     #[tokio::test]
     async fn creates_command() {
-        let ds = OracleDatasource;
+        let ds = ds();
         let connection = ds.create_connection().await.unwrap();
         let command = ds.create_command(Some(connection));
         assert!(command.execute("", None).await.is_err());

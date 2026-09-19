@@ -3,10 +3,12 @@ use crate::isolation_level::IsolationLevel;
 use crate::result::Result;
 use crate::transaction::Transaction;
 use async_trait::async_trait;
+use std::any::Any;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait Connection: Send + Sync {
+pub trait Connection: Send + Sync + Any {
+    fn as_any(&self) -> &dyn Any;
     fn provider(&self) -> &str;
     fn is_open(&self) -> bool;
     fn create_command(&self) -> Arc<dyn Command>;

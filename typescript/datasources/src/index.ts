@@ -3,10 +3,8 @@ export { execute, executeReader } from "./ICommand.ts";
 export type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
-export type {
-  DatasourceOptions,
-  DatasourceOptionValue,
-} from "./DatasourceOptions.ts";
+export type { DatasourceOptions } from "./DatasourceOptions.ts";
+export { DatasourceFactory, bindInstall } from "./DatasourceFactory.ts";
 export type { ICreateTableStatement } from "./builders/ICreateTableStatement.ts";
 export type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
 export type { IInsertStatement } from "./builders/IInsertStatement.ts";
@@ -59,6 +57,9 @@ export {
   formatElapsed,
 } from "./ConsoleCommandMiddleware.ts";
 export { Datasource } from "./Datasource.ts";
+import { Datasource } from "./Datasource.ts";
+import { DatasourceFactory } from "./DatasourceFactory.ts";
+Datasource.create = DatasourceFactory.create;
 export { providerFromUrl } from "./providerFromUrl.ts";
 export { DatasourceError } from "./DatasourceError.ts";
 export type { Cell, Cells } from "./converters/Cell.ts";
