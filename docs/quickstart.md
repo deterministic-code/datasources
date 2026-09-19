@@ -56,7 +56,7 @@ Start with `createCommand` and `executeReader`. The connection must be open.
 
 ::: dialects
 ```csharp
-var ds = DatasourceFactory.Create();
+var ds = DatasourceFactory.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 
@@ -68,9 +68,9 @@ while (await reader.Next())
     Console.WriteLine(reader.Current);
 ```
 ```rust
-use datasources::{create_default, Parameter};
+use datasources::{default, Parameter};
 
-let ds = create_default()?;
+let ds = default()?;
 let connection = ds.create_connection().await?;
 connection.open().await?;
 
@@ -83,9 +83,9 @@ while reader.next().await? {
 }
 ```
 ```typescript
-import { Datasource } from "@datasources/core";
+import { DatasourceFactory } from "@datasources/core";
 
-const ds = Datasource.create();
+const ds = DatasourceFactory.default;
 const connection = await ds.createConnection();
 await connection.open();
 

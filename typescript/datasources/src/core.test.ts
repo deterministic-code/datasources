@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ArrayReader,
@@ -39,8 +42,9 @@ import {
   Where,
   type IReader,
 } from "./index.ts";
+import { DotEnv } from "./dotEnv.ts";
 
-const envKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] as const;
+const envKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "DEFAULT_PROVIDER", "DEFAULT_DATASOURCE_URL", "PROVIDER"] as const;
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 
 beforeEach(() => {
@@ -403,6 +407,22 @@ describe("providerFromUrl", () => {
   });
 });
 
+describe("DotEnv", () => {
+  it("parses keys and skips comments", () => {
+    expect(DotEnv.parse("# hi\n\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n")).toEqual({
+      PROVIDER: "sqlite",
+      DATASOURCE_URL: "sqlite:///:memory:",
+    });
+    expect(DotEnv.parse("=skip\nKEY=value")).toEqual({ KEY: "value" });
+    expect(DotEnv.load("missing.env")).toEqual({});
+    const dir = mkdtempSync(join(tmpdir(), "ds-"));
+    const path = join(dir, ".env");
+    writeFileSync(path, "PROVIDER=sqlite\n");
+    expect(DotEnv.load(path)).toEqual({ PROVIDER: "sqlite" });
+    rmSync(dir, { recursive: true });
+  });
+});
+
 describe("Datasource registry", () => {
   it("registers, lists, creates, and resets", () => {
     expect(DatasourceFactory.registered()).toEqual([]);
@@ -433,10 +453,10 @@ describe("Datasource registry", () => {
       provider: "sqlite",
       database_schema: "main",
     }).provider).toBe("sqlite");
-    process.env.DATABASE_URL = "  ";
+    process.env.DATASOURCE_URL = "  ";
     process.env.DATABASE_SCHEMA = "  ";
     expect(() => Datasource.create()).toThrow(DatasourceError);
-    process.env.DATABASE_URL = "sqlite:///:memory:";
+    process.env.DATASOURCE_URL = "sqlite:///:memory:";
     process.env.DATABASE_SCHEMA = "main";
     expect(Datasource.create().provider).toBe("sqlite");
     bindInstall((options) => {
@@ -448,6 +468,18 @@ describe("Datasource registry", () => {
     DatasourceFactory.reset();
     for (const key of envKeys) delete process.env[key];
     expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
+    expect(() => DatasourceFactory.default).toThrow("Datasource defaults are not specified");
+    DatasourceFactory.register("sqlite", () => new MockConnection(), (c) => new MockRepository(c));
+    DatasourceFactory.register("memory", () => new MockConnection(), (c) => new MockRepository(c));
+    process.env.DATASOURCE_URL = "sqlite:///:memory:";
+    expect(DatasourceFactory.default.provider).toBe("sqlite");
+    expect(Datasource.default.provider).toBe("sqlite");
+    delete process.env.DATASOURCE_URL;
+    process.env.PROVIDER = "sqlite";
+    expect(DatasourceFactory.default.provider).toBe("sqlite");
+    process.env.DEFAULT_PROVIDER = "memory";
+    process.env.DEFAULT_DATASOURCE_URL = "memory://";
+    expect(DatasourceFactory.default.provider).toBe("memory");
   });
 });
 

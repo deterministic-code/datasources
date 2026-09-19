@@ -33,7 +33,7 @@ describe("env", () => {
     expect(
       answersFromEnv({
         INSTALLED_PROVIDERS: "mysql,json",
-        DATABASE_URL: "mysql://x",
+        DATASOURCE_URL: "mysql://x",
         DATABASE_SCHEMA: "public",
       }),
     ).toEqual({
@@ -44,7 +44,8 @@ describe("env", () => {
     expect(answersFromEnv({ DATASOURCE_PROVIDER: "postgres" }).providers).toEqual(["postgres"]);
     expect(answersFromEnv({ INSTALLED_PROVIDERS: "mysql" }).url).toBe("");
     expect(answersFromEnv({ INSTALLED_PROVIDERS: "sqlite" }).url).toBe("sqlite:///:memory:");
-    expect(answersFromEnv({ DATABASE_URL: "not-a-url" }).providers).toEqual(["sqlite"]);
+    expect(answersFromEnv({ DATASOURCE_URL: "not-a-url" }).providers).toEqual(["sqlite"]);
+    expect(answersFromEnv({ DATABASE_URL: "mysql://legacy" }).url).toBe("mysql://legacy");
     expect(answersFromEnv({ SQLITE_FILENAME: "app.db" }).url).toBe("sqlite:///app.db");
     expect(answersFromEnv({ SQLITE_FILENAME: ":memory:" }).url).toBe("sqlite:///:memory:");
     expect(answersFromEnv({ SQLITE_FILENAME: ":memory" }).url).toBe("sqlite:///:memory:");
@@ -62,6 +63,12 @@ describe("env", () => {
     expect(updateEnvProviders({}, ["mysql"], [])).toEqual({ INSTALLED_PROVIDERS: "mysql" });
     expect(updateEnvProviders({ DATASOURCE_PROVIDER: "sqlite" }, [], ["sqlite"])).toEqual({
       INSTALLED_PROVIDERS: "sqlite",
+    });
+    expect(
+      updateEnvProviders({ DATABASE_URL: "mysql://x" }, ["json"], []),
+    ).toEqual({
+      DATASOURCE_URL: "mysql://x",
+      INSTALLED_PROVIDERS: "mysql,json",
     });
   });
 });

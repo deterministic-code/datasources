@@ -18,7 +18,8 @@ pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
             }
         }
     }
-    if let Some(provider) = get(options, "DATABASE_URL").and_then(datasources::provider_from_url) {
+    if let Some(provider) = get(options, "DATASOURCE_URL").and_then(datasources::provider_from_url)
+    {
         if !names.iter().any(|existing| existing == &provider) {
             names.push(provider);
         }
@@ -95,13 +96,20 @@ static INIT: unsafe extern "C" fn() = {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_default, registered, reset};
+    use datasources::{create, create_default, default, registered, reset};
     use std::sync::Mutex;
 
     static ENV: Mutex<()> = Mutex::new(());
 
     fn clear_env() {
-        for key in ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] {
+        for key in [
+            "INSTALLED_PROVIDERS",
+            "DATASOURCE_URL",
+            "DATABASE_SCHEMA",
+            "DEFAULT_PROVIDER",
+            "DEFAULT_DATASOURCE_URL",
+            "PROVIDER",
+        ] {
             std::env::remove_var(key);
         }
     }
@@ -126,14 +134,14 @@ mod tests {
         assert_eq!(
             provider_names(&opts(&[
                 ("INSTALLED_PROVIDERS", "sqlite, json, sqlite"),
-                ("DATABASE_URL", "postgres://localhost"),
+                ("DATASOURCE_URL", "postgres://localhost"),
             ])),
             vec!["sqlite", "json", "postgres"]
         );
         assert_eq!(
             provider_names(&opts(&[
                 ("INSTALLED_PROVIDERS", "json,memory"),
-                ("DATABASE_URL", "json://"),
+                ("DATASOURCE_URL", "json://"),
             ])),
             vec!["json", "memory"]
         );
@@ -149,7 +157,7 @@ mod tests {
         isolated(|| {
             register_from(opts(&[
                 ("INSTALLED_PROVIDERS", "json,memory"),
-                ("DATABASE_URL", "memory://"),
+                ("DATASOURCE_URL", "memory://"),
             ]))
             .unwrap();
             let mut names = registered();
@@ -178,7 +186,7 @@ mod tests {
         isolated(|| {
             register_from(opts(&[
                 ("INSTALLED_PROVIDERS", "json,memory"),
-                ("DATABASE_URL", "memory://"),
+                ("DATASOURCE_URL", "memory://"),
             ]))
             .unwrap();
             let mut names = registered();
@@ -198,8 +206,12 @@ mod tests {
         isolated(|| {
             init();
             std::env::set_var("INSTALLED_PROVIDERS", "json,memory");
-            std::env::set_var("DATABASE_URL", "memory://");
+            std::env::set_var("DATASOURCE_URL", "memory://");
             assert_eq!(create_default().unwrap().provider(), "memory");
+            assert_eq!(default().unwrap().provider(), "memory");
+            std::env::set_var("DEFAULT_PROVIDER", "json");
+            std::env::set_var("DEFAULT_DATASOURCE_URL", "json://");
+            assert_eq!(default().unwrap().provider(), "json");
         });
     }
 

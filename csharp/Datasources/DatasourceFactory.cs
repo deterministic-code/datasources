@@ -6,6 +6,8 @@ public sealed class DatasourceFactory : IDatasourceFactory
 {
     static readonly Dictionary<string, (Func<IReadOnlyDictionary<string, string?>?, IConnection> Connection, Func<IConnection, object> Repository)> Factories = new();
 
+    public static IDatasource Default => Create();
+
     public static void Defaults(IReadOnlyDictionary<string, string?> options) => RegisterInstalled(options);
 
     public static void Register(
@@ -23,12 +25,14 @@ public sealed class DatasourceFactory : IDatasourceFactory
     static IDatasource Resolve(IReadOnlyDictionary<string, string?>? options)
     {
         if (options is null)
-            RegisterInstalled(InstallFromEnvironment());
-        var listed = options ?? ConnectionFromEnvironment();
-        var name = Get(listed, "provider") ?? ProviderFromUrl.From(Get(listed, "database_url"))
+        {
+            options = Merge(DotEnv.Load(), Environment.GetEnvironmentVariable);
+            RegisterInstalled(options);
+        }
+        var name = Get(options, "provider") ?? ProviderFromUrl.From(Get(options, "database_url"))
             ?? throw new DatasourceException("Datasource defaults are not specified");
         return Factories.TryGetValue(name, out var pair)
-            ? new Datasource(name, () => pair.Connection(listed), pair.Repository)
+            ? new Datasource(name, () => pair.Connection(options), pair.Repository)
             : throw new ProviderNotInstalledException(name);
     }
 
@@ -37,27 +41,32 @@ public sealed class DatasourceFactory : IDatasourceFactory
             ? value
             : null;
 
-    static IReadOnlyDictionary<string, string?> ConnectionFromEnvironment()
-    {
-        var options = new Dictionary<string, string?>();
-        var url = Environment.GetEnvironmentVariable("DATABASE_URL");
-        if (!string.IsNullOrWhiteSpace(url))
-            options["database_url"] = url;
-        var schema = Environment.GetEnvironmentVariable("DATABASE_SCHEMA");
-        if (!string.IsNullOrWhiteSpace(schema))
-            options["database_schema"] = schema;
-        return options;
-    }
+    static string? NonEmpty(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    static IReadOnlyDictionary<string, string?> InstallFromEnvironment()
+    static IReadOnlyDictionary<string, string?> Merge(
+        IReadOnlyDictionary<string, string?> file,
+        Func<string, string?> env)
     {
-        var options = new Dictionary<string, string?>();
-        foreach (var key in (string[])["INSTALLED_PROVIDERS", "DATABASE_URL"])
+        var options = file.ToDictionary(entry => entry.Key, entry => entry.Value);
+        foreach (var key in (string[])["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "PROVIDER", "provider"])
         {
-            var value = Environment.GetEnvironmentVariable(key);
-            if (!string.IsNullOrWhiteSpace(value))
+            var value = NonEmpty(env(key));
+            if (value is not null)
                 options[key] = value;
         }
+        var url = NonEmpty(env("DEFAULT_DATASOURCE_URL")) ?? Get(options, "DATASOURCE_URL");
+        var provider = NonEmpty(env("DEFAULT_PROVIDER")) ?? Get(options, "PROVIDER") ?? Get(options, "provider");
+        if (url is not null)
+        {
+            options["DATASOURCE_URL"] = url;
+            options["database_url"] = url;
+        }
+        if (provider is not null)
+            options["provider"] = provider;
+        var schema = Get(options, "DATABASE_SCHEMA");
+        if (schema is not null)
+            options["database_schema"] = schema;
         return options;
     }
 

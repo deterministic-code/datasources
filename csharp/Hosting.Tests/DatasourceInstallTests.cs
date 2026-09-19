@@ -2,7 +2,7 @@ namespace Datasources.Tests;
 
 public class DatasourceInstallTests
 {
-    static readonly string[] EnvKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"];
+    static readonly string[] EnvKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "DEFAULT_PROVIDER", "DEFAULT_DATASOURCE_URL", "PROVIDER"];
 
     public DatasourceInstallTests()
     {
@@ -19,14 +19,14 @@ public class DatasourceInstallTests
             ProviderNames.From(new Dictionary<string, string?>
             {
                 ["INSTALLED_PROVIDERS"] = "sqlite, json, sqlite",
-                ["DATABASE_URL"] = "postgres://localhost"
+                ["DATASOURCE_URL"] = "postgres://localhost"
             }));
         Assert.Equal(
             new[] { "json", "memory" },
             ProviderNames.From(new Dictionary<string, string?>
             {
                 ["INSTALLED_PROVIDERS"] = "json,memory",
-                ["DATABASE_URL"] = "json://"
+                ["DATASOURCE_URL"] = "json://"
             }));
         Assert.Equal(
             new[] { "sqlite" },
@@ -40,7 +40,7 @@ public class DatasourceInstallTests
         DatasourceInstall.From(new Dictionary<string, string?>
         {
             ["INSTALLED_PROVIDERS"] = "json,memory",
-            ["DATABASE_URL"] = "memory://",
+            ["DATASOURCE_URL"] = "memory://",
         });
         Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
         Assert.Equal(
@@ -62,7 +62,7 @@ public class DatasourceInstallTests
         DatasourceFactory.Defaults(new Dictionary<string, string?>
         {
             ["INSTALLED_PROVIDERS"] = "json,memory",
-            ["DATABASE_URL"] = "memory://"
+            ["DATASOURCE_URL"] = "memory://"
         });
         Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
         Assert.Equal(
@@ -91,16 +91,37 @@ public class DatasourceInstallTests
     public void CreateReadsConnectionFromEnvironment()
     {
         Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "json,memory");
-        Environment.SetEnvironmentVariable("DATABASE_URL", "memory://");
+        Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
         try
         {
             Assert.Equal("memory", DatasourceFactory.Create().Provider);
+            Assert.Equal("memory", DatasourceFactory.Default.Provider);
             Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
         }
         finally
         {
             Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", null);
-            Environment.SetEnvironmentVariable("DATABASE_URL", null);
+            Environment.SetEnvironmentVariable("DATASOURCE_URL", null);
+        }
+    }
+
+    [Fact]
+    public void DefaultOverridesEnv()
+    {
+        Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "json,memory");
+        Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
+        Environment.SetEnvironmentVariable("DEFAULT_PROVIDER", "json");
+        Environment.SetEnvironmentVariable("DEFAULT_DATASOURCE_URL", "json://");
+        try
+        {
+            Assert.Equal("json", DatasourceFactory.Default.Provider);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", null);
+            Environment.SetEnvironmentVariable("DATASOURCE_URL", null);
+            Environment.SetEnvironmentVariable("DEFAULT_PROVIDER", null);
+            Environment.SetEnvironmentVariable("DEFAULT_DATASOURCE_URL", null);
         }
     }
 

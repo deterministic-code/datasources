@@ -8,7 +8,7 @@ public static class ProviderNames
         foreach (var name in Split(Get(options, "INSTALLED_PROVIDERS")))
             if (!names.Contains(name))
                 names.Add(name);
-        var provider = ProviderFromUrl.From(Get(options, "DATABASE_URL"));
+        var provider = ProviderFromUrl.From(Get(options, "DATASOURCE_URL"));
         return provider is { Length: > 0 } && !names.Contains(provider)
             ? [..names, provider]
             : names;

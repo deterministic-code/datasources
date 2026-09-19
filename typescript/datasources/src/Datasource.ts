@@ -31,4 +31,8 @@ export class Datasource implements IDatasource {
   ): IReadonlyRepository<T> => this.createRepository(connection);
 
   static create: (options?: DatasourceOptions) => IDatasource;
+
+  static get default(): IDatasource {
+    return Datasource.create();
+  }
 }

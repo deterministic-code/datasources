@@ -35,14 +35,14 @@ Creates a datasource from the registry.
 static create(provider?: string, options?: DatasourceOptions): IDatasource
 ```
 
-- `provider` — optional; inferred from `DATABASE_URL` when omitted
+- `provider` — optional; inferred from `DATASOURCE_URL` when omitted
 
 **Returns** `IDatasource`
 :::
 
 ## Remarks
 
-`Create` reads `INSTALLED_PROVIDERS` and `DATABASE_URL` when defaults are unset.
+`Default` reads `INSTALLED_PROVIDERS` and `DATASOURCE_URL` when defaults are unset.
 
 ## Examples
 
@@ -50,13 +50,13 @@ static create(provider?: string, options?: DatasourceOptions): IDatasource
 
 ::: dialects
 ```csharp
-var ds = Datasource.Create();
+var ds = DatasourceFactory.Default;
 ```
 ```rust
-let ds = create_default()?;
+let ds = default()?;
 ```
 ```typescript
-const ds = Datasource.create();
+const ds = DatasourceFactory.default;
 ```
 :::
 ~~~~

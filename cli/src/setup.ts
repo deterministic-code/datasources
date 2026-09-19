@@ -51,7 +51,7 @@ export const promptSetup = async (
     })),
   });
   const url = await prompt.input({
-    message: "DATABASE_URL",
+    message: "DATASOURCE_URL",
     default:
       defaults.url || (selected.includes("sqlite") ? "sqlite:///:memory:" : ""),
   });
@@ -67,6 +67,6 @@ export const envFromAnswers = (answers: SetupAnswers): EnvMap => ({
     answers.providers,
     providerFromUrl(answers.url) ?? answers.providers[0] ?? "sqlite",
   ).join(","),
-  DATABASE_URL: answers.url,
+  DATASOURCE_URL: answers.url,
   DATABASE_SCHEMA: answers.schema,
 });

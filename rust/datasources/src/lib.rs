@@ -16,6 +16,7 @@ mod datasource_error;
 mod deep_crud_repository;
 mod default_readonly_enrichment_strategy;
 mod defaults;
+mod dot_env;
 mod downcast_connection;
 mod enriched;
 mod enriched_readonly_repository;
@@ -77,7 +78,7 @@ pub use converters::{
     RegexConverter, ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter,
     TypeConverter,
 };
-pub use create::{create, create_default};
+pub use create::{create, create_default, default};
 pub use create_repository_builder_options::create_repository_builder_options;
 pub use datasource::{BuiltDatasource, Datasource};
 pub use datasource_error::DatasourceError;

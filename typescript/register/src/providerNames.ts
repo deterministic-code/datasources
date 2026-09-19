@@ -13,6 +13,6 @@ const split = (value: string | undefined): string[] =>
 
 export const providerNames = (options: DatasourceOptions): string[] => {
   const names = [...new Set(split(text(options, "INSTALLED_PROVIDERS")))];
-  const provider = providerFromUrl(text(options, "DATABASE_URL") ?? "");
+  const provider = providerFromUrl(text(options, "DATASOURCE_URL") ?? "");
   return provider && !names.includes(provider) ? [...names, provider] : names;
 };

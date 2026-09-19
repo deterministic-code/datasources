@@ -1,6 +1,6 @@
 # Datasource
 
-One configured datasource: provider name plus factories for connections, commands, and repositories. `Create` / `create` / `create_default` is on [DatasourceFactory](./datasource-factory.md).
+One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `Create` is on [DatasourceFactory](./datasource-factory.md).
 
 ## Classes
 
@@ -36,7 +36,7 @@ Alias of [DatasourceFactory.create](./datasource-factory.md). `undefined` option
 static create(options?: DatasourceOptions): IDatasource
 ```
 
-- `options` — [DatasourceOptions](#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
 
 **Returns** [IDatasource](#idatasource)
 
@@ -379,7 +379,7 @@ Default schema.
 
 ## Remarks
 
-`DatasourceFactory.Create(null)` / `Datasource.create()` / `create(None)` reads process `DATABASE_URL` and `DATABASE_SCHEMA` (as `database_url` / `database_schema`) and registers names from process `INSTALLED_PROVIDERS`. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
+`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env` `PROVIDER` and `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
 
 Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
 
@@ -393,12 +393,12 @@ See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [
 
 ::: dialects
 ```csharp
-var ds = DatasourceFactory.Create();
+var ds = DatasourceFactory.Default;
 ```
 ```rust
-let ds = create_default()?;
+let ds = default()?;
 ```
 ```typescript
-const ds = Datasource.create();
+const ds = DatasourceFactory.default;
 ```
 :::
