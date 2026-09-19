@@ -2,3 +2,46 @@
   padding-left: 16px;
   border-left: 1px solid var(--vp-c-divider);
 }
+
+.dialect-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 1.5rem;
+}
+
+.dialect-tabs button {
+  padding: 0 12px;
+  height: 36px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.dialect-tabs button.active {
+  color: var(--vp-c-text-1);
+  border-bottom-color: var(--vp-c-brand-1);
+}
+
+.dialect-panel :first-child {
+  margin-top: 0;
+}
+
+.dialect-panel table {
+  display: table;
+  width: 100%;
+}
+
+.dialect-panel table th:first-child,
+.dialect-panel table td:first-child {
+  width: 38%;
+}
+
+.dialect-panel h5 {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--vp-c-divider);
+}

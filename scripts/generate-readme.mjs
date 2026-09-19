@@ -40,8 +40,9 @@ const generate = () => {
   const body = uniquePages(pages)
     .map(({ path }, index) => {
       const source = readFileSync(join(docsDir, path), "utf8").trim();
-      const shifted = index === 0 ? source : demoteHeadings(source);
-      return rewriteDocLinks(transformDialects(shifted, "readme"), pages);
+      const transformed = transformDialects(source, "readme");
+      const shifted = index === 0 ? transformed : demoteHeadings(transformed);
+      return rewriteDocLinks(shifted, pages);
     })
     .join("\n\n");
   return `${banner}${body}\n`;
