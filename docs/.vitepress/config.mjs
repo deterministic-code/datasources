@@ -49,8 +49,9 @@ export default defineConfig({
   },
   markdown: {
     config(md) {
-      const render = md.render.bind(md);
-      md.render = (src, env) => render(transformDialects(src, "vitepress"), env);
+      md.core.ruler.before("normalize", "dialects", (state) => {
+        state.src = transformDialects(state.src, "vitepress");
+      });
     },
   },
   vite: {

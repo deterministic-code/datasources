@@ -150,10 +150,7 @@ const toReadmeExamples = (body) =>
 const toVitePressExamplePanels = (body) =>
   resolveExamples(body)
     .map(({ lang, code, href }) =>
-      toPanel(
-        slotName(lang),
-        `<div class="example-source">\n\n${sourceLink(href)}\n\n\`\`\`${lang}\n${code}\n\`\`\`\n\n</div>`,
-      ),
+      toPanel(slotName(lang), `${sourceLink(href)}\n\n\`\`\`${lang}\n${code}\n\`\`\``),
     )
     .join("\n\n");
 

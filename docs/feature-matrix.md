@@ -11,7 +11,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | [Mappers](./sections/mappers.md#mappers) | ✅ | ✅ | ✅ |
 | [Type Converters](./sections/type-converters.md#typeconverters) | ✅ | ✅ | ✅ |
 | [Connection](./sections/connection.md) | ✅ | ✅ | ✅ |
-| [Transaction](./sections/connection.md#transaction) | ✅ | ✅ | ✅ |
+| [Transaction](./sections/transaction.md) | ✅ | ✅ | ✅ |
 | [Command](./sections/command.md) | ✅ | ✅ | ✅ |
 | [Reader](./sections/command.md#reader) | ✅ | ✅ | ✅ |
 | [Statements](./sections/builders.md) | ✅ | ✅ | ✅ |

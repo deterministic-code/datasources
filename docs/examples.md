@@ -10,6 +10,6 @@ TODO: register a provider, create a connection, `createRepository`, then `create
 
 TODO: open a connection, `createCommand`, `execute` / `executeReader`. See [Command](./sections/command.md) for the current samples.
 
-## Transaction
+## Run a transaction
 
-TODO: `startTransaction`, work, then `commit` or `abort`.
+TODO: `startTransaction`, work, then `commit` or `abort`. See [Transaction](./sections/transaction.md).
