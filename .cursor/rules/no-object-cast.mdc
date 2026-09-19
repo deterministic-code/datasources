@@ -1,0 +1,28 @@
+---
+description: Prefer dictionaries over object and cast
+alwaysApply: true
+---
+
+# No `object` and cast
+
+Do not take `object` (or `object?`) and cast it to a dictionary, options type, or domain type unless there is no other API. Model options as a dictionary. Typed connection options stay on constructors, not on factory `Create`.
+
+```csharp
+// ❌ BAD
+IDatasource Create(object? options = null) =>
+    options is SqliteConnectionOptions typed
+        ? new SqliteDatasource(typed)
+        : new SqliteDatasource(new SqliteConnectionOptions
+        {
+            Filename = DatasourceOptions.Value(options, "filename")
+        });
+
+// ✅ GOOD
+IDatasource Create(IReadOnlyDictionary<string, string?>? options = null) =>
+    new SqliteDatasource(new SqliteConnectionOptions
+    {
+        Filename = Get(options, "filename") ?? SqlitePath.FromUrl(Get(options, "url"))
+    });
+```
+
+Last resort only: a host or serializer that truly hands you `object`. Cast once at that boundary to a named dictionary or type; do not thread `object` through the public API.

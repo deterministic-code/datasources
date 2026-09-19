@@ -25,9 +25,9 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 
 ::: dialects
 ```csharp
-Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
+DatasourceFactory.Register("json", opts => new JsonConnection(opts), JsonConnection.Repository);
 
-var json = Datasource.Create("json", new JsonConnectionOptions { Data = new JsonArray() });
+var json = new Datasource("json", () => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() }), JsonConnection.Repository);
 var connection = await json.CreateConnection();
 await connection.Open();
 

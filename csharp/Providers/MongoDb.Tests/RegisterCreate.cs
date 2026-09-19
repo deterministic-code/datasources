@@ -4,12 +4,14 @@ using Datasources.MongoDb;
 public partial class RegisterCreateTests
 {
     const string Provider = "mongodb";
-    static readonly IDatasourceFactory Instance = MongoDbDatasource.Instance;
+    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new MongoDbConnection(options);
+    static object Repository(IConnection connection) => MongoDbConnection.Repository(connection);
+    static IDatasource Ds() => new Datasource(Provider, () => new MongoDbConnection(), MongoDbConnection.Repository);
 
     [Fact]
     public async Task CreatesConnection()
     {
-        var connection = await new MongoDbDatasource().CreateConnection();
+        var connection = await Ds().CreateConnection();
         Assert.IsType<MongoDbConnection>(connection);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(connection.Open);
     }
@@ -17,7 +19,7 @@ public partial class RegisterCreateTests
     [Fact]
     public async Task CreatesCommand()
     {
-        var ds = new MongoDbDatasource();
+        var ds = Ds();
         var connection = await ds.CreateConnection();
         var command = ds.CreateCommand(connection);
         Assert.IsType<MongoDbCommand>(command);

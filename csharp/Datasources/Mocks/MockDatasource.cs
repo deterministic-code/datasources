@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class MockDatasource : IDatasource, IDatasourceFactory
+public sealed class MockDatasource : IDatasource
 {
     public int CreateConnectionCalls { get; private set; }
     public IConnection Connection { get; set; }
@@ -13,8 +13,6 @@ public sealed class MockDatasource : IDatasource, IDatasourceFactory
         Provider = provider;
         Connection = new MockConnection();
     }
-
-    public IDatasource Create(object? options = null) => new MockDatasource(Provider);
 
     public Task<IConnection> CreateConnection()
     {

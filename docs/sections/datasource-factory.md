@@ -1,6 +1,6 @@
 # DatasourceFactory
 
-Provider plug-in. A factory has a provider name and creates a configured datasource.
+Resolves a provider from options and returns one configured datasource.
 
 ## Classes
 
@@ -37,30 +37,80 @@ create(options?: DatasourceOptions): IDatasource
 **Returns** [IDatasource](./datasource.md#idatasource)
 
 ### csharp
+#### DatasourceFactory
+
+```csharp
+public sealed class DatasourceFactory : IDatasourceFactory
+```
+
+**Methods**
+
+##### Defaults(options)
+
+Registers listed provider packages. Does not apply to a non-null `Create` bag.
+
+```csharp
+public static void Defaults(IReadOnlyDictionary<string, string?> options)
+```
+
+- `options` — install keys such as `INSTALLED_PROVIDERS`; not [Create options](./datasource.md#datasourceoptions)
+
+##### Register(provider, connection, repository)
+
+Registers a connection factory and a repository factory by provider name.
+
+```csharp
+public static void Register(string provider, Func<IReadOnlyDictionary<string, string?>?, IConnection> connection, Func<IConnection, object> repository)
+```
+
+- `provider` — registry key (`sqlite`, `mysql`, …)
+- `connection` — builds an [IConnection](./connection.md) from the options bag
+- `repository` — builds a repository from an [IConnection](./connection.md)
+
+##### Create(options)
+
+Creates one datasource. `null` options read process `.env`; a dictionary is used as-is.
+
+```csharp
+public static IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
+```
+
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA`
+
+**Returns** [IDatasource](./datasource.md#idatasource)
+
+##### Reset()
+
+Clears the registry. Use in tests.
+
+```csharp
+public static void Reset()
+```
+
+##### Registered()
+
+Lists registered provider names.
+
+```csharp
+public static IReadOnlyList<string> Registered()
+```
+
+**Returns** `IReadOnlyList<string>`
+
 #### IDatasourceFactory
 
 ```csharp
 public interface IDatasourceFactory
 ```
 
-**Properties**
-
-##### Provider
-
-Registry key used by `Datasource.Register`.
-
-```csharp
-string Provider { get; }
-```
-
 **Methods**
 
 ##### Create(options)
 
-Creates a configured datasource.
+Creates one datasource from a string dictionary.
 
 ```csharp
-IDatasource Create(object? options = null)
+IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
 ```
 
 - `options` — [DatasourceOptions](./datasource.md#datasourceoptions)
@@ -101,11 +151,11 @@ fn create(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Datasourc
 
 ## Remarks
 
-Providers implement the factory and the datasource. Register a factory with `Datasource.register` / `Datasource.Register` / `register`, then `Create` / `create` looks it up by name. See [Datasource](./datasource.md) for the registry methods.
+C# registers a connection factory and a repository factory with `DatasourceFactory.Register`, then `Create` returns one [Datasource](./datasource.md). TypeScript and Rust still register a provider type that implements both the factory and the datasource. See [Datasource](./datasource.md) for the instance contract.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` / `create` / `create_default` applies defaults.
+`Datasources.Hosting` registers each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` is called with null options. `@datasources/register` and `datasources-register` still do that when TypeScript / Rust apply defaults.
 
 ## Examples
 
@@ -113,8 +163,8 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 
 ::: dialects
 ```csharp
-Datasource.Register(MemoryDatasource.Instance);
-var ds = Datasource.Create("memory");
+DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryConnection.Repository);
+var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 ```rust
 register(MemoryDatasource::instance());

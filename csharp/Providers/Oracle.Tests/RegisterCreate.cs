@@ -4,12 +4,14 @@ using Datasources.Oracle;
 public partial class RegisterCreateTests
 {
     const string Provider = "oracle";
-    static readonly IDatasourceFactory Instance = OracleDatasource.Instance;
+    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new OracleConnection(options);
+    static object Repository(IConnection connection) => OracleConnection.Repository(connection);
+    static IDatasource Ds() => new Datasource(Provider, () => new OracleConnection(), OracleConnection.Repository);
 
     [Fact]
     public async Task CreatesConnection()
     {
-        var connection = await new OracleDatasource().CreateConnection();
+        var connection = await Ds().CreateConnection();
         Assert.IsType<OracleConnection>(connection);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(connection.Open);
     }
@@ -17,7 +19,7 @@ public partial class RegisterCreateTests
     [Fact]
     public async Task CreatesCommand()
     {
-        var ds = new OracleDatasource();
+        var ds = Ds();
         var connection = await ds.CreateConnection();
         var command = ds.CreateCommand(connection);
         Assert.IsType<OracleCommand>(command);

@@ -4,12 +4,14 @@ using Datasources.Text;
 public partial class RegisterCreateTests
 {
     const string Provider = "text";
-    static readonly IDatasourceFactory Instance = TextDatasource.Instance;
+    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new TextConnection(options);
+    static object Repository(IConnection connection) => TextConnection.Repository(connection);
+    static IDatasource Ds() => new Datasource(Provider, () => new TextConnection(), TextConnection.Repository);
 
     [Fact]
     public async Task CreatesConnection()
     {
-        var connection = await new TextDatasource().CreateConnection();
+        var connection = await Ds().CreateConnection();
         Assert.IsType<TextConnection>(connection);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(connection.Open);
     }
@@ -17,7 +19,7 @@ public partial class RegisterCreateTests
     [Fact]
     public async Task CreatesCommand()
     {
-        var ds = new TextDatasource();
+        var ds = Ds();
         var connection = await ds.CreateConnection();
         var command = ds.CreateCommand(connection);
         Assert.IsType<TextCommand>(command);

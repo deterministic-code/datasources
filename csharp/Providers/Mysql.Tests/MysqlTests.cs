@@ -7,8 +7,8 @@ public class MysqlTests
 {
     public MysqlTests()
     {
-        Datasource.Reset();
-        Datasource.Register(MysqlDatasource.Instance);
+        DatasourceFactory.Reset();
+        DatasourceFactory.Register("mysql", opts => new MysqlConnection(opts), MysqlConnection.Repository);
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public class MysqlTests
         var defaulted = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
         Assert.Equal("", defaulted.Url);
 
-        var ds = new MysqlDatasource(new MysqlConnectionOptions { Driver = driver }, "people");
-        Assert.Equal("mysql", ds.Create().Provider);
+        var ds = new Datasource("mysql", () => new MysqlConnection(new MysqlConnectionOptions { Driver = driver }), MysqlConnection.Repository);
+        Assert.Equal("mysql", ds.Provider);
         var created = await ds.CreateConnection();
         await ((MysqlConnection)created).Open();
         var bound = Assert.IsType<MysqlCommand>(ds.CreateCommand(created));
@@ -61,9 +61,11 @@ public class MysqlTests
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.IsType<Repository<Dictionary<string, Value>>>(repo2);
         Assert.Throws<DatasourceException>(() =>
-            new MysqlDatasource().CreateRepository<Dictionary<string, Value>>());
-        Assert.Equal("mysql", Datasource.Create("mysql").Provider);
-        await Assert.ThrowsAsync<DatasourceException>(() => new MysqlDatasource().CreateConnection());
+            new Datasource("mysql", () => new MysqlConnection(), MysqlConnection.Repository)
+                .CreateRepository<Dictionary<string, Value>>());
+        Assert.Equal("mysql", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "mysql" }).Provider);
+        await Assert.ThrowsAsync<DatasourceException>(() =>
+            new Datasource("mysql", () => new MysqlConnection(), MysqlConnection.Repository).CreateConnection());
 
         var closed = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));

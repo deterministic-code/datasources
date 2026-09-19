@@ -7,8 +7,8 @@ public class MemoryTests
 {
     public MemoryTests()
     {
-        Datasource.Reset();
-        Datasource.Register(MemoryDatasource.Instance);
+        DatasourceFactory.Reset();
+        DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryConnection.Repository);
     }
 
     [Fact]
@@ -119,9 +119,8 @@ public class MemoryTests
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Update(new Row { ["id"] = 1 }));
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Delete(new Row { ["id"] = 1 }));
 
-        var ds = new MemoryDatasource(new MemoryConnectionOptions { Data = new List<Dictionary<string, Value>>() });
-        Assert.Equal("memory", ds.Create().Provider);
-        Assert.Equal("memory", MemoryDatasource.Instance.Provider);
+        var ds = new Datasource("memory", () => new MemoryConnection(new MemoryConnectionOptions { Data = new List<Dictionary<string, Value>>() }), MemoryConnection.Repository);
+        Assert.Equal("memory", ds.Provider);
         var created = await ds.CreateConnection();
         await ((MemoryConnection)created).Open();
         var bound = Assert.IsType<MemoryCommand>(ds.CreateCommand(created));
@@ -134,7 +133,7 @@ public class MemoryTests
         await implicitCommand.ExecuteReader("");
         ds.CreateRepository<Dictionary<string, Value>>(created);
         ds.CreateRepository<Dictionary<string, Value>>();
-        Assert.Equal("memory", Datasource.Create("memory").Provider);
+        Assert.Equal("memory", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" }).Provider);
 
         var shared = new MemoryStore();
         var a = new MemoryConnection(new MemoryConnectionOptions { Store = shared, Data = new List<Dictionary<string, Value>> { new() { ["id"] = 1 } } });

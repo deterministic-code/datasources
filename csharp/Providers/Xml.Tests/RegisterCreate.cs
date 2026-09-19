@@ -4,12 +4,14 @@ using Datasources.Xml;
 public partial class RegisterCreateTests
 {
     const string Provider = "xml";
-    static readonly IDatasourceFactory Instance = XmlDatasource.Instance;
+    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new XmlConnection(options);
+    static object Repository(IConnection connection) => XmlConnection.Repository(connection);
+    static IDatasource Ds() => new Datasource(Provider, () => new XmlConnection(), XmlConnection.Repository);
 
     [Fact]
     public async Task CreatesConnection()
     {
-        var connection = await new XmlDatasource().CreateConnection();
+        var connection = await Ds().CreateConnection();
         Assert.IsType<XmlConnection>(connection);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(connection.Open);
     }
@@ -17,7 +19,7 @@ public partial class RegisterCreateTests
     [Fact]
     public async Task CreatesCommand()
     {
-        var ds = new XmlDatasource();
+        var ds = Ds();
         var connection = await ds.CreateConnection();
         var command = ds.CreateCommand(connection);
         Assert.IsType<XmlCommand>(command);

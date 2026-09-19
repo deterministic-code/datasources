@@ -191,72 +191,22 @@ schema?: string
 #### Datasource
 
 ```csharp
-public static class Datasource
+public sealed class Datasource : IDatasource
 ```
 
-**Methods**
+**Constructor**
 
-##### Defaults(options)
+##### Datasource(provider, newConnection, newRepository)
 
-Stores default options and registers listed factories.
+Builds a datasource from a connection factory and a repository factory.
 
 ```csharp
-public static void Defaults(IReadOnlyDictionary<string, string?> options)
+public Datasource(string provider, Func<IConnection> newConnection, Func<IConnection, object> newRepository)
 ```
 
-- `options` — [DatasourceOptions](#datasourceoptions); stored defaults; listed factories are registered
-
-##### Register(factory)
-
-Registers a factory by provider name.
-
-```csharp
-public static void Register(IDatasourceFactory factory)
-```
-
-- `factory` — [IDatasourceFactory](./datasource-factory.md) keyed by `Provider`
-
-##### Register(first, rest)
-
-Registers one or more factories by provider name.
-
-```csharp
-public static void Register(IDatasourceFactory first, params IDatasourceFactory[] rest)
-```
-
-- `first` — first [IDatasourceFactory](./datasource-factory.md) to register
-- `rest` — additional factories
-
-##### Create(provider, options)
-
-Creates a datasource from the registry.
-
-```csharp
-public static IDatasource Create(string? provider = null, object? options = null)
-```
-
-- `provider` — optional; inferred from `DATABASE_URL` when omitted
-- `options` — [DatasourceOptions](#datasourceoptions) dictionary, or a provider-specific object passed through to the factory
-
-**Returns** [IDatasource](#idatasource)
-
-##### Reset()
-
-Clears the registry and stored defaults. Use in tests.
-
-```csharp
-public static void Reset()
-```
-
-##### Registered()
-
-Lists registered provider names.
-
-```csharp
-public static IReadOnlyList<string> Registered()
-```
-
-**Returns** `IReadOnlyList<string>`
+- `provider` — registered provider name
+- `newConnection` — constructs the default [IConnection](./connection.md)
+- `newRepository` — constructs a repository from an [IConnection](./connection.md)
 
 #### IDatasource
 
@@ -328,37 +278,37 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 IReadOnlyDictionary<string, string?>
 ```
 
-Well-known keys for `Defaults` and `Create`. `Create` may instead pass a provider-specific `object` through to the factory. Other keys are passed through.
+Well-known keys for `DatasourceFactory.Create`. Other keys are passed through. `INSTALLED_PROVIDERS` is install/register only, not a Create option.
 
 **Properties**
 
-##### INSTALLED_PROVIDERS
+##### provider
 
-Comma-separated provider names to register.
-
-```csharp
-"INSTALLED_PROVIDERS"
-```
-
-##### DATABASE_URL
-
-Connection URL. The scheme selects the default provider.
+Which datasource to return.
 
 ```csharp
-"DATABASE_URL"
+"provider"
 ```
 
-##### DATABASE_SCHEMA
+##### database_url
+
+Connection URL. The scheme selects the provider when `provider` is omitted.
+
+```csharp
+"database_url"
+```
+
+##### database_schema
 
 Default schema.
 
 ```csharp
-"DATABASE_SCHEMA"
+"database_schema"
 ```
 
 ##### url
 
-Alias of `DATABASE_URL` passed through to the factory.
+Alias of `database_url` passed through to the provider.
 
 ```csharp
 "url"
@@ -366,7 +316,7 @@ Alias of `DATABASE_URL` passed through to the factory.
 
 ##### schema
 
-Alias of `DATABASE_SCHEMA` passed through to the factory.
+Alias of `database_schema` passed through to the provider.
 
 ```csharp
 "schema"
@@ -561,11 +511,13 @@ Alias of `DATABASE_SCHEMA` passed through to the factory.
 
 ## Remarks
 
-When defaults are unset, `Create` / `create` / `create_default` reads `INSTALLED_PROVIDERS`, `DATABASE_URL`, and `DATABASE_SCHEMA` from the process environment. Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
+C# `DatasourceFactory.Create(null)` reads process `DATABASE_URL` and `DATABASE_SCHEMA` (as `database_url` / `database_schema`) and registers names from process `INSTALLED_PROVIDERS`. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
 
-C# and TypeScript omit `provider` when `DATABASE_URL` can supply it. Rust uses `create_default()` for that path; `create` always takes an explicit provider.
+TypeScript and Rust still read `INSTALLED_PROVIDERS`, `DATABASE_URL`, and `DATABASE_SCHEMA` when defaults are unset. Listed factories are registered through `@datasources/register` or `datasources-register` when that package is present.
 
-`Reset` / `reset` clears the registry and stored defaults. Use it in tests.
+TypeScript omits `provider` when `DATABASE_URL` can supply it. Rust uses `create_default()` for that path; `create` always takes an explicit provider.
+
+`Reset` / `reset` clears the registry. Use it in tests.
 
 See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [CLI](../cli.md#command-line-cli) for `setup` and adding providers.
 
@@ -575,7 +527,7 @@ See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [
 
 ::: dialects
 ```csharp
-var ds = Datasource.Create();
+var ds = DatasourceFactory.Create();
 ```
 ```rust
 let ds = create_default()?;

@@ -56,7 +56,7 @@ Start with `createCommand` and `executeReader`. The connection must be open.
 
 ::: dialects
 ```csharp
-var ds = Datasource.Create();
+var ds = DatasourceFactory.Create();
 var connection = await ds.CreateConnection();
 await connection.Open();
 

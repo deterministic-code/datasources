@@ -2,12 +2,25 @@ namespace Datasources.Postgres;
 
 public sealed class PostgresConnection : IConnection
 {
+    static PostgresConnection() => _ = PostgresTypes.All;
+
     public string Url { get; }
     public string? Schema { get; }
     public IPostgresDriver Driver { get; }
     public string Provider => "postgres";
     public ICommand CreateCommand() => new PostgresCommand(this);
     public bool IsOpen { get; private set; }
+
+    public PostgresConnection(IReadOnlyDictionary<string, string?>? options)
+        : this(new PostgresConnectionOptions
+        {
+            Url = DatasourceOptions.Value(options, "url")
+                ?? DatasourceOptions.Value(options, "database_url"),
+            Schema = DatasourceOptions.Value(options, "schema")
+                ?? DatasourceOptions.Value(options, "database_schema")
+        })
+    {
+    }
 
     public PostgresConnection(PostgresConnectionOptions? options = null)
     {
@@ -16,6 +29,15 @@ public sealed class PostgresConnection : IConnection
         Schema = options.Schema;
         Driver = PostgresGuard.Require(options.Driver);
     }
+
+    public static object Repository(IConnection connection) =>
+        new Repository<Dictionary<string, Value>>(
+            new RepositoryBuilderOptions<Dictionary<string, Value>>
+            {
+                Connection = (PostgresConnection)connection,
+                Entity = "items",
+                Mapping = new RowTypeConverter<Dictionary<string, Value>>(),
+            });
 
     public async Task Open()
     {

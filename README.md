@@ -94,7 +94,7 @@ Start with `createCommand` and `executeReader`. The connection must be open.
 ##### C#
 
 ```csharp
-var ds = Datasource.Create();
+var ds = DatasourceFactory.Create();
 var connection = await ds.CreateConnection();
 await connection.Open();
 
@@ -626,113 +626,32 @@ schema?: string
 ##### Datasource {#csharp-datasource}
 
 ```csharp
-public static class Datasource
+public sealed class Datasource : IDatasource
 ```
 
-**Methods**
+**Constructor**
 
 | Name | Description |
 | --- | --- |
-| [Defaults(options)](#csharp-datasource-defaults-options) | Stores default options and registers listed factories. |
-| [Register(factory)](#csharp-datasource-register-factory) | Registers a factory by provider name. |
-| [Register(first, rest)](#csharp-datasource-register-first-rest) | Registers one or more factories by provider name. |
-| [Create(provider, options)](#csharp-datasource-create-provider-options) | Creates a datasource from the registry. |
-| [Reset()](#csharp-datasource-reset) | Clears the registry and stored defaults. Use in tests. |
-| [Registered()](#csharp-datasource-registered) | Lists registered provider names. |
+| [Datasource(provider, newConnection, newRepository)](#csharp-datasource-datasource-provider-newconnection-newrepository) | Builds a datasource from a connection factory and a repository factory. |
 
-###### Defaults(options) {#csharp-datasource-defaults-options}
+###### Datasource(provider, newConnection, newRepository) {#csharp-datasource-datasource-provider-newconnection-newrepository}
 
-Stores default options and registers listed factories.
+Builds a datasource from a connection factory and a repository factory.
 
 **Definition**
 
 ```csharp
-public static void Defaults(IReadOnlyDictionary<string, string?> options)
+public Datasource(string provider, Func<IConnection> newConnection, Func<IConnection, object> newRepository)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#csharp-datasourceoptions); stored defaults; listed factories are registered |
-
-###### Register(factory) {#csharp-datasource-register-factory}
-
-Registers a factory by provider name.
-
-**Definition**
-
-```csharp
-public static void Register(IDatasourceFactory factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | [IDatasourceFactory](#datasourcefactory) keyed by `Provider` |
-
-###### Register(first, rest) {#csharp-datasource-register-first-rest}
-
-Registers one or more factories by provider name.
-
-**Definition**
-
-```csharp
-public static void Register(IDatasourceFactory first, params IDatasourceFactory[] rest)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `first` | first [IDatasourceFactory](#datasourcefactory) to register |
-| `rest` | additional factories |
-
-###### Create(provider, options) {#csharp-datasource-create-provider-options}
-
-Creates a datasource from the registry.
-
-**Definition**
-
-```csharp
-public static IDatasource Create(string? provider = null, object? options = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `provider` | optional; inferred from `DATABASE_URL` when omitted |
-| `options` | [DatasourceOptions](#csharp-datasourceoptions) dictionary, or a provider-specific object passed through to the factory |
-
-**Returns**
-
-[IDatasource](#csharp-idatasource)
-
-###### Reset() {#csharp-datasource-reset}
-
-Clears the registry and stored defaults. Use in tests.
-
-**Definition**
-
-```csharp
-public static void Reset()
-```
-
-###### Registered() {#csharp-datasource-registered}
-
-Lists registered provider names.
-
-**Definition**
-
-```csharp
-public static IReadOnlyList<string> Registered()
-```
-
-**Returns**
-
-`IReadOnlyList<string>`
+| `provider` | registered provider name |
+| `newConnection` | constructs the default [IConnection](#connection) |
+| `newRepository` | constructs a repository from an [IConnection](#connection) |
 
 ##### IDatasource {#csharp-idatasource}
 
@@ -849,45 +768,45 @@ IReadOnlyDictionary<string, string?>
 
 | Name | Description |
 | --- | --- |
-| [INSTALLED_PROVIDERS](#csharp-datasourceoptions-installed_providers) | Comma-separated provider names to register. |
-| [DATABASE_URL](#csharp-datasourceoptions-database_url) | Connection URL. The scheme selects the default provider. |
-| [DATABASE_SCHEMA](#csharp-datasourceoptions-database_schema) | Default schema. |
-| [url](#csharp-datasourceoptions-url) | Alias of `DATABASE_URL` passed through to the factory. |
-| [schema](#csharp-datasourceoptions-schema) | Alias of `DATABASE_SCHEMA` passed through to the factory. |
+| [provider](#csharp-datasourceoptions-provider) | Which datasource to return. |
+| [database_url](#csharp-datasourceoptions-database_url) | Connection URL. The scheme selects the provider when `provider` is omitted. |
+| [database_schema](#csharp-datasourceoptions-database_schema) | Default schema. |
+| [url](#csharp-datasourceoptions-url) | Alias of `database_url` passed through to the provider. |
+| [schema](#csharp-datasourceoptions-schema) | Alias of `database_schema` passed through to the provider. |
 
-###### INSTALLED_PROVIDERS {#csharp-datasourceoptions-installed_providers}
+###### provider {#csharp-datasourceoptions-provider}
 
-Comma-separated provider names to register.
-
-**Definition**
-
-```csharp
-"INSTALLED_PROVIDERS"
-```
-
-###### DATABASE_URL {#csharp-datasourceoptions-database_url}
-
-Connection URL. The scheme selects the default provider.
+Which datasource to return.
 
 **Definition**
 
 ```csharp
-"DATABASE_URL"
+"provider"
 ```
 
-###### DATABASE_SCHEMA {#csharp-datasourceoptions-database_schema}
+###### database_url {#csharp-datasourceoptions-database_url}
+
+Connection URL. The scheme selects the provider when `provider` is omitted.
+
+**Definition**
+
+```csharp
+"database_url"
+```
+
+###### database_schema {#csharp-datasourceoptions-database_schema}
 
 Default schema.
 
 **Definition**
 
 ```csharp
-"DATABASE_SCHEMA"
+"database_schema"
 ```
 
 ###### url {#csharp-datasourceoptions-url}
 
-Alias of `DATABASE_URL` passed through to the factory.
+Alias of `database_url` passed through to the provider.
 
 **Definition**
 
@@ -897,7 +816,7 @@ Alias of `DATABASE_URL` passed through to the factory.
 
 ###### schema {#csharp-datasourceoptions-schema}
 
-Alias of `DATABASE_SCHEMA` passed through to the factory.
+Alias of `database_schema` passed through to the provider.
 
 **Definition**
 
@@ -1191,11 +1110,13 @@ Alias of `DATABASE_SCHEMA` passed through to the factory.
 
 ### Remarks
 
-When defaults are unset, `Create` / `create` / `create_default` reads `INSTALLED_PROVIDERS`, `DATABASE_URL`, and `DATABASE_SCHEMA` from the process environment. Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
+C# `DatasourceFactory.Create(null)` reads process `DATABASE_URL` and `DATABASE_SCHEMA` (as `database_url` / `database_schema`) and registers names from process `INSTALLED_PROVIDERS`. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
 
-C# and TypeScript omit `provider` when `DATABASE_URL` can supply it. Rust uses `create_default()` for that path; `create` always takes an explicit provider.
+TypeScript and Rust still read `INSTALLED_PROVIDERS`, `DATABASE_URL`, and `DATABASE_SCHEMA` when defaults are unset. Listed factories are registered through `@datasources/register` or `datasources-register` when that package is present.
 
-`Reset` / `reset` clears the registry and stored defaults. Use it in tests.
+TypeScript omits `provider` when `DATABASE_URL` can supply it. Rust uses `create_default()` for that path; `create` always takes an explicit provider.
+
+`Reset` / `reset` clears the registry. Use it in tests.
 
 See [DatasourceFactory](#datasourcefactory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
 
@@ -1206,7 +1127,7 @@ See [DatasourceFactory](#datasourcefactory) for the factory contract, and [CLI](
 ##### C#
 
 ```csharp
-var ds = Datasource.Create();
+var ds = DatasourceFactory.Create();
 ```
 
 ##### Rust
@@ -1223,7 +1144,7 @@ const ds = Datasource.create();
 
 ## DatasourceFactory
 
-Provider plug-in. A factory has a provider name and creates a configured datasource.
+Resolves a provider from options and returns one configured datasource.
 
 ### Classes
 
@@ -1279,42 +1200,120 @@ create(options?: DatasourceOptions): IDatasource
 
 ##### C#
 
+##### DatasourceFactory {#csharp-datasourcefactory}
+
+```csharp
+public sealed class DatasourceFactory : IDatasourceFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Defaults(options)](#csharp-datasourcefactory-defaults-options) | Registers listed provider packages. Does not apply to a non-null `Create` bag. |
+| [Register(provider, connection, repository)](#csharp-datasourcefactory-register-provider-connection-repository) | Registers a connection factory and a repository factory by provider name. |
+| [Create(options)](#csharp-datasourcefactory-create-options) | Creates one datasource. `null` options read process `.env`; a dictionary is used as-is. |
+| [Reset()](#csharp-datasourcefactory-reset) | Clears the registry. Use in tests. |
+| [Registered()](#csharp-datasourcefactory-registered) | Lists registered provider names. |
+
+###### Defaults(options) {#csharp-datasourcefactory-defaults-options}
+
+Registers listed provider packages. Does not apply to a non-null `Create` bag.
+
+**Definition**
+
+```csharp
+public static void Defaults(IReadOnlyDictionary<string, string?> options)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#csharp-datasourceoptions) |
+
+###### Register(provider, connection, repository) {#csharp-datasourcefactory-register-provider-connection-repository}
+
+Registers a connection factory and a repository factory by provider name.
+
+**Definition**
+
+```csharp
+public static void Register(string provider, Func<IReadOnlyDictionary<string, string?>?, IConnection> connection, Func<IConnection, object> repository)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `provider` | registry key (`sqlite`, `mysql`, …) |
+| `connection` | builds an [IConnection](#connection) from the options bag |
+| `repository` | builds a repository from an [IConnection](#connection) |
+
+###### Create(options) {#csharp-datasourcefactory-create-options}
+
+Creates one datasource. `null` options read process `.env`; a dictionary is used as-is.
+
+**Definition**
+
+```csharp
+public static IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions); omitted uses `DATABASE_URL` / `DATABASE_SCHEMA` |
+
+**Returns**
+
+[IDatasource](#csharp-idatasource)
+
+###### Reset() {#csharp-datasourcefactory-reset}
+
+Clears the registry. Use in tests.
+
+**Definition**
+
+```csharp
+public static void Reset()
+```
+
+###### Registered() {#csharp-datasourcefactory-registered}
+
+Lists registered provider names.
+
+**Definition**
+
+```csharp
+public static IReadOnlyList<string> Registered()
+```
+
+**Returns**
+
+`IReadOnlyList<string>`
+
 ##### IDatasourceFactory {#csharp-idatasourcefactory}
 
 ```csharp
 public interface IDatasourceFactory
 ```
 
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| [Provider](#csharp-idatasourcefactory-provider) | Registry key used by `Datasource.Register`. |
-
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Create(options)](#csharp-idatasourcefactory-create-options) | Creates a configured datasource. |
-
-###### Provider {#csharp-idatasourcefactory-provider}
-
-Registry key used by `Datasource.Register`.
-
-**Definition**
-
-```csharp
-string Provider { get; }
-```
+| [Create(options)](#csharp-idatasourcefactory-create-options) | Creates one datasource from a string dictionary. |
 
 ###### Create(options) {#csharp-idatasourcefactory-create-options}
 
-Creates a configured datasource.
+Creates one datasource from a string dictionary.
 
 **Definition**
 
 ```csharp
-IDatasource Create(object? options = null)
+IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
 ```
 
 **Parameters**
@@ -1378,11 +1377,11 @@ fn create(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Datasourc
 
 ### Remarks
 
-Providers implement the factory and the datasource. Register a factory with `Datasource.register` / `Datasource.Register` / `register`, then `Create` / `create` looks it up by name. See [Datasource](#datasource) for the registry methods.
+C# registers a connection factory and a repository factory with `DatasourceFactory.Register`, then `Create` returns one [Datasource](#datasource). TypeScript and Rust still register a provider type that implements both the factory and the datasource. See [Datasource](#datasource) for the instance contract.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` / `create` / `create_default` applies defaults.
+`Datasources.Hosting` registers each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` is called with null options. `@datasources/register` and `datasources-register` still do that when TypeScript / Rust apply defaults.
 
 ### Examples
 
@@ -1391,8 +1390,8 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 ##### C#
 
 ```csharp
-Datasource.Register(MemoryDatasource.Instance);
-var ds = Datasource.Create("memory");
+DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryConnection.Repository);
+var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 
 ##### Rust
@@ -1436,9 +1435,9 @@ Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFil
 ##### C#
 
 ```csharp
-Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
+DatasourceFactory.Register("json", opts => new JsonConnection(opts), JsonConnection.Repository);
 
-var json = Datasource.Create("json", new JsonConnectionOptions { Data = new JsonArray() });
+var json = new Datasource("json", () => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() }), JsonConnection.Repository);
 var connection = await json.CreateConnection();
 await connection.Open();
 ```
@@ -1476,7 +1475,7 @@ Apps create the default datasource and connection at process start, then hold th
 ##### C#
 
 ```csharp
-var datasource = Datasource.Create();
+var datasource = DatasourceFactory.Create();
 var connection = await datasource.CreateConnection();
 
 Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();
@@ -1584,9 +1583,9 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 ##### C#
 
 ```csharp
-Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
+DatasourceFactory.Register("json", opts => new JsonConnection(opts), JsonConnection.Repository);
 
-var json = Datasource.Create("json", new JsonConnectionOptions { Data = new JsonArray() });
+var json = new Datasource("json", () => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() }), JsonConnection.Repository);
 var connection = await json.CreateConnection();
 await connection.Open();
 

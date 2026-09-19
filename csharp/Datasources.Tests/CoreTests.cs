@@ -9,7 +9,7 @@ public class CoreTests
 
     public CoreTests()
     {
-        Datasource.Reset();
+        DatasourceFactory.Reset();
         foreach (var key in EnvKeys)
             Environment.SetEnvironmentVariable(key, null);
     }
@@ -262,31 +262,33 @@ public class CoreTests
     [Fact]
     public void Registry()
     {
-        Assert.Empty(Datasource.Registered());
-        Datasource.Register(new MockDatasource("json"), new MockDatasource("memory"));
-        Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
-        Assert.Equal("json", Datasource.Create("json").Provider);
-        Datasource.Reset();
-        Assert.Throws<ProviderNotInstalledException>(() => Datasource.Create("json"));
+        Assert.Empty(DatasourceFactory.Registered());
+        DatasourceFactory.Register("json", _ => new MockConnection(), c => new MockRepository<object>(c));
+        DatasourceFactory.Register("memory", _ => new MockConnection(), c => new MockRepository<object>(c));
+        Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
+        Assert.Equal("json", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "json" }).Provider);
+        DatasourceFactory.Reset();
+        Assert.Throws<ProviderNotInstalledException>(() =>
+            DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "json" }));
     }
 
     [Fact]
     public async Task Defaults()
     {
-        Assert.Throws<DatasourceException>(() => Datasource.Create());
-        Datasource.Register(new MockDatasource("sqlite"));
-        Datasource.Defaults(new Dictionary<string, string?>
+        Assert.Throws<DatasourceException>(() => DatasourceFactory.Create());
+        DatasourceFactory.Register("sqlite", _ => new MockConnection(), c => new MockRepository<object>(c));
+        var ds = DatasourceFactory.Create(new Dictionary<string, string?>
         {
-            ["DATABASE_URL"] = "sqlite:///:memory:"
+            ["provider"] = "sqlite",
+            ["database_url"] = "sqlite:///:memory:"
         });
-        var ds = Datasource.Create();
         Assert.Equal("sqlite", ds.Provider);
         var connection = await ds.CreateConnection();
         Assert.False(connection.IsOpen);
         Assert.Same(connection, ds.CreateCommand().Connection);
         Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>());
-        Datasource.Reset();
-        var error = Assert.Throws<DatasourceException>(() => Datasource.Create());
+        DatasourceFactory.Reset();
+        var error = Assert.Throws<DatasourceException>(() => DatasourceFactory.Create());
         Assert.Equal("Datasource defaults are not specified", error.Message);
     }
 
@@ -295,7 +297,6 @@ public class CoreTests
     {
         var ds = StubFactory.Create("text");
         Assert.Equal("text", ds.Provider);
-        Assert.Equal("text", ds.Create().Provider);
         var connection = await ds.CreateConnection();
         Assert.False(connection.IsOpen);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.Open());
@@ -403,7 +404,7 @@ public class CoreTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => repo.Delete(new Row()));
 
         var ds = new MockDatasource();
-        Assert.Equal("mock", ds.Create().Provider);
+        Assert.Equal("mock", ds.Provider);
         await ds.CreateConnection();
         var mockCommand = Assert.IsType<MockCommand>(ds.CreateCommand());
         await mockCommand.Execute("");
@@ -417,7 +418,7 @@ public class CoreTests
         Assert.Same(ds.Command, ds.CreateCommand());
         Assert.Same(ds.Repository, ds.CreateRepository<object>());
         Assert.Same(ds.Repository, ((IDatasource)ds).CreateReadonlyRepository<object>());
-        Assert.Equal("custom", new MockDatasource("custom").Create().Provider);
+        Assert.Equal("custom", new MockDatasource("custom").Provider);
 
         var q = new MockQuery("q");
         var w = new MockWhere("w");
