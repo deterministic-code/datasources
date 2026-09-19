@@ -341,7 +341,7 @@ TODO: `startTransaction`, work, then `commit` or `abort`.
 
 ## DatasourceFactory
 
-Resolves a provider from options and returns one configured datasource.
+Creates a [Datasource](#datasource) for a provider and `DATASOURCE_URL`. After [setup](#setup), use `Default` / `default` / `DatasourceFactory.default` to build that datasource from `.env`.
 
 ### Classes
 
@@ -773,13 +773,33 @@ pub fn registered() -> Vec<String>
 
 ### Remarks
 
-Each language registers a connection factory and a repository factory, then `Default` / `default` / `DatasourceFactory.default` returns one [Datasource](#datasource). See [Datasource](#datasource) for the instance contract.
+`Default` requires `.env` `PROVIDER` and `DATASOURCE_URL`, or process `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` to override them. Missing both throws `DatasourceException` / `DatasourceError`.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
 `Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options.
 
 ### Examples
+
+#### Default from environment
+
+##### C#
+
+```csharp
+var ds = DatasourceFactory.Default;
+```
+
+##### Rust
+
+```rust
+let ds = default()?;
+```
+
+##### TypeScript
+
+```typescript
+const ds = DatasourceFactory.default;
+```
 
 #### Register a factory
 
@@ -802,26 +822,6 @@ let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())])))?;
 ```typescript
 DatasourceFactory.register("memory", opts => new MemoryConnection(opts), MemoryConnection.repository);
 const ds = Datasource.create({ provider: "memory" });
-```
-
-#### Default from environment
-
-##### C#
-
-```csharp
-var ds = DatasourceFactory.Default;
-```
-
-##### Rust
-
-```rust
-let ds = default()?;
-```
-
-##### TypeScript
-
-```typescript
-const ds = DatasourceFactory.default;
 ```
 
 ## Datasource

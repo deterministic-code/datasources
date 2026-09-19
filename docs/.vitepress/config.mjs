@@ -14,13 +14,15 @@ const toLink = ({ path, hash }) =>
 
 const toItem = (page) => ({ text: page.title, link: toLink(page) });
 
+const groups = [...new Set(pages.map((page) => page.group).filter(Boolean))].map((group) => ({
+  text: group,
+  collapsed: false,
+  items: pages.filter((page) => page.group === group).map(toItem),
+}));
 const sidebar = [
+  ...groups.filter((group) => group.text === "Code Reference"),
   ...pages.filter((page) => !page.group).map(toItem),
-  ...[...new Set(pages.map((page) => page.group).filter(Boolean))].map((group) => ({
-    text: group,
-    collapsed: false,
-    items: pages.filter((page) => page.group === group).map(toItem),
-  })),
+  ...groups.filter((group) => group.text !== "Code Reference"),
 ];
 
 const watchToc = () => ({
