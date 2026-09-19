@@ -62,6 +62,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn commit() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        let txn = connection.start_transaction(None).await.unwrap();
+        txn.commit().await.unwrap();
+        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+    }
+
+    #[tokio::test]
+    async fn abort() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        let txn = connection.start_transaction(None).await.unwrap();
+        txn.abort().await.unwrap();
+        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+    }
+
+    #[tokio::test]
     async fn memory_crud_and_transactions() {
         let store = Arc::new(MemoryStore::new());
         store.seed(&MemoryData::Rows(vec![rec(1, "a")]), "");

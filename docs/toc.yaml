@@ -17,10 +17,9 @@ pages:
   - path: sections/connection.md
     title: Connection
     group: Code Reference
-  - path: sections/connection.md
+  - path: sections/transaction.md
     title: Transaction
     group: Code Reference
-    hash: transaction
   - path: sections/command.md
     title: Command
     group: Code Reference

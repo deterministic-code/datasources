@@ -1,6 +1,6 @@
 # Connection
 
-`CreateConnection` / `createConnection` / `create_connection` is async so a dialect can do async work later. Today it only constructs a closed named connection. The caller opens it.
+Connection represents a connection to a datasource and handles opening and closing. A new command or transaction can be created from an existing connection.
 
 ## Classes
 
@@ -66,91 +66,9 @@ Begins a transaction. The connection must be open.
 startTransaction(isolation?: IsolationLevel): Promise<ITransaction>
 ```
 
-- `isolation` — [IsolationLevel](#isolationlevel); omitted uses serializable
+- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); omitted uses serializable
 
-**Returns** `Promise<[ITransaction](#itransaction)>`
-
-#### ITransaction
-
-```typescript
-interface ITransaction
-```
-
-**Properties**
-
-##### connection
-
-The open [IConnection](#iconnection) that started this transaction.
-
-```typescript
-readonly connection: IConnection
-```
-
-##### isolation
-
-The isolation level for this transaction.
-
-```typescript
-readonly isolation: IsolationLevel
-```
-
-**Methods**
-
-##### commit()
-
-Commits the transaction.
-
-```typescript
-commit(): Promise<void>
-```
-
-##### abort()
-
-Rolls the transaction back.
-
-```typescript
-abort(): Promise<void>
-```
-
-#### IsolationLevel
-
-```typescript
-const IsolationLevel
-```
-
-**Properties**
-
-##### ReadUncommitted
-
-Dirty reads are allowed.
-
-```typescript
-ReadUncommitted: "readUncommitted"
-```
-
-##### ReadCommitted
-
-Committed data only.
-
-```typescript
-ReadCommitted: "readCommitted"
-```
-
-##### RepeatableRead
-
-Repeatable reads within the transaction.
-
-```typescript
-RepeatableRead: "repeatableRead"
-```
-
-##### Serializable
-
-Full isolation. The default for [startTransaction](#starttransaction-isolation).
-
-```typescript
-Serializable: "serializable"
-```
+**Returns** `Promise<[ITransaction](./transaction.md)>`
 
 ### csharp
 #### IConnection
@@ -213,91 +131,9 @@ Begins a transaction. The connection must be open.
 Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
 ```
 
-- `isolation` — [IsolationLevel](#isolationlevel); default is serializable
+- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); default is serializable
 
-**Returns** `Task<[ITransaction](#itransaction)>`
-
-#### ITransaction
-
-```csharp
-public interface ITransaction
-```
-
-**Properties**
-
-##### Connection
-
-The open [IConnection](#iconnection) that started this transaction.
-
-```csharp
-IConnection Connection { get; }
-```
-
-##### Isolation
-
-The isolation level for this transaction.
-
-```csharp
-IsolationLevel Isolation { get; }
-```
-
-**Methods**
-
-##### Commit()
-
-Commits the transaction.
-
-```csharp
-Task Commit()
-```
-
-##### Abort()
-
-Rolls the transaction back.
-
-```csharp
-Task Abort()
-```
-
-#### IsolationLevel
-
-```csharp
-public enum IsolationLevel
-```
-
-**Properties**
-
-##### ReadUncommitted
-
-Dirty reads are allowed.
-
-```csharp
-ReadUncommitted
-```
-
-##### ReadCommitted
-
-Committed data only.
-
-```csharp
-ReadCommitted
-```
-
-##### RepeatableRead
-
-Repeatable reads within the transaction.
-
-```csharp
-RepeatableRead
-```
-
-##### Serializable
-
-Full isolation. The default for [StartTransaction](#starttransaction-isolation).
-
-```csharp
-Serializable
-```
+**Returns** `Task<[ITransaction](./transaction.md)>`
 
 ### rust
 #### Connection
@@ -366,92 +202,10 @@ Begins a transaction. The connection must be open.
 async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<Arc<dyn Transaction>>
 ```
 
-- `isolation` — [IsolationLevel](#isolationlevel); `None` uses serializable
+- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); `None` uses serializable
 
-**Returns** `Result<Arc<dyn `[Transaction](#transaction)`>>`
-
-#### Transaction
-
-```rust
-pub trait Transaction: Send + Sync
-```
-
-**Methods**
-
-##### isolation()
-
-The isolation level for this transaction.
-
-```rust
-fn isolation(&self) -> IsolationLevel
-```
-
-**Returns** [IsolationLevel](#isolationlevel)
-
-##### commit()
-
-Commits the transaction.
-
-```rust
-async fn commit(&self) -> Result<()>
-```
-
-**Returns** `Result<()>`
-
-##### abort()
-
-Rolls the transaction back.
-
-```rust
-async fn abort(&self) -> Result<()>
-```
-
-**Returns** `Result<()>`
-
-#### IsolationLevel
-
-```rust
-pub enum IsolationLevel
-```
-
-**Properties**
-
-##### ReadUncommitted
-
-Dirty reads are allowed.
-
-```rust
-ReadUncommitted
-```
-
-##### ReadCommitted
-
-Committed data only.
-
-```rust
-ReadCommitted
-```
-
-##### RepeatableRead
-
-Repeatable reads within the transaction.
-
-```rust
-RepeatableRead
-```
-
-##### Serializable
-
-Full isolation. The default for [start_transaction](#start_transaction-isolation).
-
-```rust
-Serializable
-```
+**Returns** `Result<Arc<dyn `[Transaction](./transaction.md)`>>`
 :::
-
-## Transaction {#transaction}
-
-`StartTransaction` / `startTransaction` / `start_transaction` begins a transaction on an open connection.
 
 ## Remarks
 

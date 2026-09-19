@@ -48,6 +48,24 @@ describe("Connection", () => {
   });
 });
 
+describe("Transaction", () => {
+  it("commit", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    const txn = await connection.startTransaction();
+    await txn.commit();
+    expect(txn.isolation).toBe("serializable");
+  });
+
+  it("abort", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    const txn = await connection.startTransaction();
+    await txn.abort();
+    expect(txn.isolation).toBe("serializable");
+  });
+});
+
 describe("filter helpers", () => {
   it("parses empty and object filters", () => {
     expect(parseFilter()).toEqual({});
