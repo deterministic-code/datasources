@@ -8,7 +8,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | --- | :---: | :---: | :---: |
 | [DatasourceFactory](./sections/datasource-factory.md) | ✅ | ✅ | ✅ |
 | [Datasource](./sections/datasource.md) | ✅ | ✅ | ✅ |
-| [Mapper](./sections/name-mapper.md) | ✅ | ✅ | ✅ |
+| [Mapper](./sections/mappers.md) | ✅ | ✅ | ✅ |
 | [TypeConverter](./sections/type-converters.md) | ✅ | ✅ | ✅ |
 | [Connection](./sections/connection.md) | ✅ | ✅ | ✅ |
 | [Transaction](./sections/transaction.md) | ✅ | ✅ | ✅ |
@@ -16,6 +16,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | [Reader](./sections/command.md#reader) | ✅ | ✅ | ✅ |
 | [Statements](./sections/builders.md) | ✅ | ✅ | ✅ |
 | [Repository](./sections/repository.md) | ✅ | ✅ | ✅ |
+| [Readonly repository](./sections/readonly-repository.md) | ✅ | ✅ | ✅ |
 | [CRUD repository](./sections/crud-repository.md) | ✅ | ✅ | ✅ |
 | [Enriched repository](./sections/enriched-repository.md) | ✅ | ✅ | ✅ |
 | [Bulk repository](./sections/bulk-repository.md) | ✅ | ✅ | ✅ |

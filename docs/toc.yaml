@@ -33,6 +33,10 @@ pages:
   - path: sections/repository.md
     title: Repository
     group: Code Reference
+  - path: sections/readonly-repository.md
+    title: Readonly repository
+    group: Code Reference
+    parent: Repository
   - path: sections/crud-repository.md
     title: CRUD repository
     group: Code Reference
@@ -45,21 +49,29 @@ pages:
     title: Bulk repository
     group: Code Reference
     parent: Repository
+  - path: sections/mappers.md
+    title: Mapper
+    group: Code Reference
   - path: sections/name-mapper.md
     title: NameMapper
     group: Code Reference
+    parent: Mapper
   - path: sections/name-source-destination-mapper.md
     title: NameSourceDestinationMapper
     group: Code Reference
+    parent: Mapper
   - path: sections/transform-mapper.md
     title: TransformMapper
     group: Code Reference
+    parent: Mapper
   - path: sections/flat-to-type-mapper.md
     title: FlatToTypeMapper
     group: Code Reference
+    parent: Mapper
   - path: sections/statement-mapper.md
     title: StatementMapper
     group: Code Reference
+    parent: Mapper
   - path: sections/type-converters.md
     title: TypeConverter
     group: Code Reference
