@@ -13,3 +13,11 @@ TODO: open a connection, `createCommand`, `execute` / `executeReader`. See [Comm
 ## Run a transaction
 
 TODO: `startTransaction`, work, then `commit` or `abort`. See [Transaction](./sections/transaction.md).
+
+## Map a row
+
+TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [Mappers](./sections/mappers.md).
+
+## Convert a row
+
+TODO: `RowTypeConverter` convert / reverse-convert, or attach a field converter. See [TypeConverters](./sections/type-converters.md#typeconverters).

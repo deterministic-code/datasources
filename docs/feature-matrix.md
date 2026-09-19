@@ -8,7 +8,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | --- | :---: | :---: | :---: |
 | [DatasourceFactory](./sections/datasource-factory.md) | ✅ | ✅ | ✅ |
 | [Datasource](./sections/datasource.md) | ✅ | ✅ | ✅ |
-| [Mappers](./sections/mappers.md#mappers) | ✅ | ✅ | ✅ |
+| [Mappers](./sections/mappers.md) | ✅ | ✅ | ✅ |
 | [Type Converters](./sections/type-converters.md#typeconverters) | ✅ | ✅ | ✅ |
 | [Connection](./sections/connection.md) | ✅ | ✅ | ✅ |
 | [Transaction](./sections/transaction.md) | ✅ | ✅ | ✅ |

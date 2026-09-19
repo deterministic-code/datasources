@@ -339,6 +339,14 @@ TODO: open a connection, `createCommand`, `execute` / `executeReader`. See [Comm
 
 TODO: `startTransaction`, work, then `commit` or `abort`. See [Transaction](#transaction).
 
+### Map a row
+
+TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [Mappers](#mappers).
+
+### Convert a row
+
+TODO: `RowTypeConverter` convert / reverse-convert, or attach a field converter. See [TypeConverters](#typeconverters).
+
 ## DatasourceFactory
 
 Creates a [Datasource](#datasource) for a provider and `DATASOURCE_URL`. After [setup](#setup), use `Default` / `default` / `DatasourceFactory.default` to build that datasource from `.env`.
@@ -2565,107 +2573,3315 @@ TODO: fill as the generic `Repository<T>` surface settles.
 
 ## Mappers
 
-Holds source/destination labels. Column names pass through as-is.
+Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository get is convert, then map.
 
-### IMapper
+### Classes
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IMapper<TFrom, TTo>` | `Mapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
+##### TypeScript
 
-### ISourceDestinationMapper
+##### IMapper {#typescript-imapper}
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `ISourceDestinationMapper` | `SourceDestinationMapper` | `ISourceDestinationMapper` |
-| `Source` | `source` | `source` |
-| `Destination` | `destination` | `destination` |
+```typescript
+interface IMapper<TFrom, TTo>
+```
 
-### NameMapper
+**Methods**
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `NameMapper` | `NameMapper` | `NameMapper` |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-imapper-map-value) | Maps `TFrom` to `TTo`. |
+| [reverseMap(value)](#typescript-imapper-reversemap-value) | Maps `TTo` back to `TFrom`. |
 
-### NameSourceDestinationMapper
+###### map(value) {#typescript-imapper-map-value}
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `NameSourceDestinationMapper` | `NameSourceDestinationMapper` | `NameSourceDestinationMapper` |
-| constructor | `new` | constructor |
-| `Source` | `source` | `source` |
-| `Destination` | `destination` | `destination` |
+Maps `TFrom` to `TTo`.
 
-### TransformMapper
+**Definition**
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` |
-| constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
+```typescript
+map(value: TFrom): TTo
+```
 
-### FlatToTypeMapper
+**Parameters**
 
-Collapses denormalized join rows into a typed graph. Scalars map column → field; groups collect unique children by key. Nested group fields on a collection are omitted.
+| Name | Description |
+| --- | --- |
+| `value` | source value |
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IFlatToTypeMapper` | `FlatToTypeMapperTrait` | `IFlatToTypeMapper<T>` |
-| `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
-| `TypeMap` | `TypeMap` | `TypeMap<T>` |
-| `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |
-| `TypeMapField` | `TypeMapField` | string or group |
-| `MappedValue` | `MappedValue` | `T` fields |
-| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
-| `Collapse` | `collapse` / `collapse_rows` | `collapse` |
+**Returns**
 
-### StatementMapper
+`TTo`
 
-Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.
+###### reverseMap(value) {#typescript-imapper-reversemap-value}
 
-Apply in either or both places:
+Maps `TTo` back to `TFrom`.
 
-1. **Builder** — `RepositoryBuilder` maps `Entity` and `Columns` into `RepositoryStatements`.
-2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` mappers rewrite the finished statement.
+**Definition**
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `StatementMapper<T>` | `StatementMapper` | `StatementMapper<T>` |
-| `Entity` | `entity` | `entity` |
-| `Columns` | `columns` | `columns` |
-| `Query` | `query` | `query` |
-| `Insert` | `insert` | `insert` |
-| `Update` | `update` | `update` |
-| `Delete` | `delete` | `delete` |
-| `Rows` | `rows` | `rows` |
-| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
+```typescript
+reverseMap(value: TTo): TFrom
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### ISourceDestinationMapper {#typescript-isourcedestinationmapper}
+
+```typescript
+interface ISourceDestinationMapper
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [source](#typescript-isourcedestinationmapper-source) | Dialect or provider label for the source side. |
+| [destination](#typescript-isourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+
+###### source {#typescript-isourcedestinationmapper-source}
+
+Dialect or provider label for the source side.
+
+**Definition**
+
+```typescript
+readonly source: string
+```
+
+###### destination {#typescript-isourcedestinationmapper-destination}
+
+Dialect or provider label for the destination side.
+
+**Definition**
+
+```typescript
+readonly destination: string
+```
+
+##### NameMapper {#typescript-namemapper}
+
+```typescript
+abstract class NameMapper implements IMapper<string, string>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(name)](#typescript-namemapper-map-name) | Returns the name unchanged. |
+| [reverseMap(name)](#typescript-namemapper-reversemap-name) | Returns the name unchanged. |
+
+###### map(name) {#typescript-namemapper-map-name}
+
+Returns the name unchanged.
+
+**Definition**
+
+```typescript
+map(name: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`string`
+
+###### reverseMap(name) {#typescript-namemapper-reversemap-name}
+
+Returns the name unchanged.
+
+**Definition**
+
+```typescript
+reverseMap(name: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`string`
+
+##### NameSourceDestinationMapper {#typescript-namesourcedestinationmapper}
+
+```typescript
+class NameSourceDestinationMapper extends NameMapper implements ISourceDestinationMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [NameSourceDestinationMapper(source, destination)](#typescript-namesourcedestinationmapper-namesourcedestinationmapper-source-destination) | Holds source and destination labels. Names still pass through. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [source](#typescript-namesourcedestinationmapper-source) | Dialect or provider label for the source side. |
+| [destination](#typescript-namesourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+
+###### NameSourceDestinationMapper(source, destination) {#typescript-namesourcedestinationmapper-namesourcedestinationmapper-source-destination}
+
+Holds source and destination labels. Names still pass through.
+
+**Definition**
+
+```typescript
+constructor(source: string, destination: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `source` | source label |
+| `destination` | destination label |
+
+###### source {#typescript-namesourcedestinationmapper-source}
+
+Dialect or provider label for the source side.
+
+**Definition**
+
+```typescript
+readonly source: string
+```
+
+###### destination {#typescript-namesourcedestinationmapper-destination}
+
+Dialect or provider label for the destination side.
+
+**Definition**
+
+```typescript
+readonly destination: string
+```
+
+##### TransformMapper {#typescript-transformmapper}
+
+```typescript
+class TransformMapper<TFrom, TTo> implements IMapper<TFrom, TTo>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [TransformMapper(map, reverseMap)](#typescript-transformmapper-transformmapper-map-reversemap) | Builds a mapper from a pair of functions. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-transformmapper-map-value) | Runs the map function. |
+| [reverseMap(value)](#typescript-transformmapper-reversemap-value) | Runs the reverse-map function. |
+
+###### TransformMapper(map, reverseMap) {#typescript-transformmapper-transformmapper-map-reversemap}
+
+Builds a mapper from a pair of functions.
+
+**Definition**
+
+```typescript
+constructor(map: (value: TFrom) => TTo, reverseMap: (value: TTo) => TFrom)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | `TFrom` to `TTo` |
+| `reverseMap` | `TTo` to `TFrom` |
+
+###### map(value) {#typescript-transformmapper-map-value}
+
+Runs the map function.
+
+**Definition**
+
+```typescript
+map(value: TFrom): TTo
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### reverseMap(value) {#typescript-transformmapper-reversemap-value}
+
+Runs the reverse-map function.
+
+**Definition**
+
+```typescript
+reverseMap(value: TTo): TFrom
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### IFlatToTypeMapper {#typescript-iflattotypemapper}
+
+```typescript
+interface IFlatToTypeMapper<T> extends IMapper<Cells, T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [spec](#typescript-iflattotypemapper-spec) | The [TypeMap](#typescript-typemap) used to collapse join rows. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [collapse(rows)](#typescript-iflattotypemapper-collapse-rows) | Collapses denormalized join rows into unique parents with unique children. |
+
+###### spec {#typescript-iflattotypemapper-spec}
+
+The [TypeMap](#typescript-typemap) used to collapse join rows.
+
+**Definition**
+
+```typescript
+readonly spec: TypeMap<T>
+```
+
+###### collapse(rows) {#typescript-iflattotypemapper-collapse-rows}
+
+Collapses denormalized join rows into unique parents with unique children.
+
+**Definition**
+
+```typescript
+collapse(rows: Iterable<T | Cells>): T[]
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | raw `Cells` or already-mapped `T` |
+
+**Returns**
+
+`T[]`
+
+##### FlatToTypeMapper {#typescript-flattotypemapper}
+
+```typescript
+class FlatToTypeMapper<T> implements IFlatToTypeMapper<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [FlatToTypeMapper(spec)](#typescript-flattotypemapper-flattotypemapper-spec) | Builds a collapse mapper from a [TypeMap](#typescript-typemap). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [spec](#typescript-flattotypemapper-spec) | The [TypeMap](#typescript-typemap) used to collapse join rows. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(row)](#typescript-flattotypemapper-map-row) | Maps one denormalized row to `T`. Nested group fields on a collection are omitted. |
+| [reverseMap(value)](#typescript-flattotypemapper-reversemap-value) | Flattens `T` back to one row. Groups keep the first child. |
+| [collapse(rows)](#typescript-flattotypemapper-collapse-rows) | Collapses denormalized join rows into unique parents with unique children. |
+
+###### FlatToTypeMapper(spec) {#typescript-flattotypemapper-flattotypemapper-spec}
+
+Builds a collapse mapper from a [TypeMap](#typescript-typemap).
+
+**Definition**
+
+```typescript
+constructor(spec: TypeMap<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `spec` | [TypeMap](#typescript-typemap); scalars map column to field, groups collect unique children by key |
+
+###### spec {#typescript-flattotypemapper-spec}
+
+The [TypeMap](#typescript-typemap) used to collapse join rows.
+
+**Definition**
+
+```typescript
+readonly spec: TypeMap<T>
+```
+
+###### map(row) {#typescript-flattotypemapper-map-row}
+
+Maps one denormalized row to `T`. Nested group fields on a collection are omitted.
+
+**Definition**
+
+```typescript
+map(row: Cells): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | denormalized join row |
+
+**Returns**
+
+`T`
+
+###### reverseMap(value) {#typescript-flattotypemapper-reversemap-value}
+
+Flattens `T` back to one row. Groups keep the first child.
+
+**Definition**
+
+```typescript
+reverseMap(value: T): Cells
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped object |
+
+**Returns**
+
+`Cells`
+
+###### collapse(rows) {#typescript-flattotypemapper-collapse-rows}
+
+Collapses denormalized join rows into unique parents with unique children.
+
+**Definition**
+
+```typescript
+collapse(rows: Iterable<T | Cells>): T[]
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | raw `Cells` or already-mapped `T` |
+
+**Returns**
+
+`T[]`
+
+##### TypeMap {#typescript-typemap}
+
+```typescript
+type TypeMap<T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [key](#typescript-typemap-key) | Parent key column. |
+| [fields](#typescript-typemap-fields) | Column or group per destination field. |
+
+###### key {#typescript-typemap-key}
+
+Parent key column.
+
+**Definition**
+
+```typescript
+key: string
+```
+
+###### fields {#typescript-typemap-fields}
+
+Column or group per destination field.
+
+**Definition**
+
+```typescript
+fields: TypeMapFields<T>
+```
+
+##### TypeMapGroup {#typescript-typemapgroup}
+
+```typescript
+type TypeMapGroup<E>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [key](#typescript-typemapgroup-key) | Child key column used to unique children. |
+| [fields](#typescript-typemapgroup-fields) | Column names for the child. |
+
+###### key {#typescript-typemapgroup-key}
+
+Child key column used to unique children.
+
+**Definition**
+
+```typescript
+key: string
+```
+
+###### fields {#typescript-typemapgroup-fields}
+
+Column names for the child.
+
+**Definition**
+
+```typescript
+fields: TypeMapFields<E>
+```
+
+##### TypeMapFields {#typescript-typemapfields}
+
+```typescript
+type TypeMapFields<T>
+```
+
+##### StatementMapper {#typescript-statementmapper}
+
+```typescript
+class StatementMapper<T> implements IMapper<T, T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [StatementMapper(options?)](#typescript-statementmapper-statementmapper-options) | Builds a statement mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-statementmapper-rows) mapper. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [entity](#typescript-statementmapper-entity) | Maps the table or entity name when the repository is built. |
+| [columns](#typescript-statementmapper-columns) | Maps column names when the repository is built. |
+| [query](#typescript-statementmapper-query) | Rewrites a finished query. |
+| [insert](#typescript-statementmapper-insert) | Rewrites a finished insert. |
+| [update](#typescript-statementmapper-update) | Rewrites a finished update. |
+| [delete](#typescript-statementmapper-delete) | Rewrites a finished delete. |
+| [storedProcedure](#typescript-statementmapper-storedprocedure) | Rewrites a finished stored-procedure statement. |
+| [rows](#typescript-statementmapper-rows) | Get-row [IMapper](#typescript-imapper). [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-statementmapper-map-value) | Maps a row through [rows](#typescript-statementmapper-rows). |
+| [reverseMap(value)](#typescript-statementmapper-reversemap-value) | Reverse-maps a row through [rows](#typescript-statementmapper-rows). |
+
+###### StatementMapper(options?) {#typescript-statementmapper-statementmapper-options}
+
+Builds a statement mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-statementmapper-rows) mapper.
+
+**Definition**
+
+```typescript
+constructor(options?: StatementMapperOptions<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [StatementMapperOptions](#typescript-statementmapperoptions) |
+
+###### entity {#typescript-statementmapper-entity}
+
+Maps the table or entity name when the repository is built.
+
+**Definition**
+
+```typescript
+readonly entity: IMapper<string, string>
+```
+
+###### columns {#typescript-statementmapper-columns}
+
+Maps column names when the repository is built.
+
+**Definition**
+
+```typescript
+readonly columns: IMapper<string, string>
+```
+
+###### query {#typescript-statementmapper-query}
+
+Rewrites a finished query.
+
+**Definition**
+
+```typescript
+readonly query?: IMapper<IQuery, IQuery>
+```
+
+###### insert {#typescript-statementmapper-insert}
+
+Rewrites a finished insert.
+
+**Definition**
+
+```typescript
+readonly insert?: IMapper<IInsertStatement, IInsertStatement>
+```
+
+###### update {#typescript-statementmapper-update}
+
+Rewrites a finished update.
+
+**Definition**
+
+```typescript
+readonly update?: IMapper<IUpdateStatement, IUpdateStatement>
+```
+
+###### delete {#typescript-statementmapper-delete}
+
+Rewrites a finished delete.
+
+**Definition**
+
+```typescript
+readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>
+```
+
+###### storedProcedure {#typescript-statementmapper-storedprocedure}
+
+Rewrites a finished stored-procedure statement.
+
+**Definition**
+
+```typescript
+readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
+```
+
+###### rows {#typescript-statementmapper-rows}
+
+Get-row [IMapper](#typescript-imapper). [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here.
+
+**Definition**
+
+```typescript
+readonly rows: IMapper<T, T>
+```
+
+###### map(value) {#typescript-statementmapper-map-value}
+
+Maps a row through [rows](#typescript-statementmapper-rows).
+
+**Definition**
+
+```typescript
+map(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | converted row |
+
+**Returns**
+
+`T`
+
+###### reverseMap(value) {#typescript-statementmapper-reversemap-value}
+
+Reverse-maps a row through [rows](#typescript-statementmapper-rows).
+
+**Definition**
+
+```typescript
+reverseMap(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | shaped row |
+
+**Returns**
+
+`T`
+
+##### StatementMapperOptions {#typescript-statementmapperoptions}
+
+```typescript
+type StatementMapperOptions<T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [entity](#typescript-statementmapperoptions-entity) | Maps the table or entity name. |
+| [columns](#typescript-statementmapperoptions-columns) | Maps column names. |
+| [rows](#typescript-statementmapperoptions-rows) | Get-row [IMapper](#typescript-imapper). |
+| [query](#typescript-statementmapperoptions-query) | Rewrites a finished query. |
+| [insert](#typescript-statementmapperoptions-insert) | Rewrites a finished insert. |
+| [update](#typescript-statementmapperoptions-update) | Rewrites a finished update. |
+| [delete](#typescript-statementmapperoptions-delete) | Rewrites a finished delete. |
+| [storedProcedure](#typescript-statementmapperoptions-storedprocedure) | Rewrites a finished stored-procedure statement. |
+
+###### entity {#typescript-statementmapperoptions-entity}
+
+Maps the table or entity name.
+
+**Definition**
+
+```typescript
+entity?: IMapper<string, string>
+```
+
+###### columns {#typescript-statementmapperoptions-columns}
+
+Maps column names.
+
+**Definition**
+
+```typescript
+columns?: IMapper<string, string>
+```
+
+###### rows {#typescript-statementmapperoptions-rows}
+
+Get-row [IMapper](#typescript-imapper).
+
+**Definition**
+
+```typescript
+rows?: IMapper<T, T>
+```
+
+###### query {#typescript-statementmapperoptions-query}
+
+Rewrites a finished query.
+
+**Definition**
+
+```typescript
+query?: IMapper<IQuery, IQuery>
+```
+
+###### insert {#typescript-statementmapperoptions-insert}
+
+Rewrites a finished insert.
+
+**Definition**
+
+```typescript
+insert?: IMapper<IInsertStatement, IInsertStatement>
+```
+
+###### update {#typescript-statementmapperoptions-update}
+
+Rewrites a finished update.
+
+**Definition**
+
+```typescript
+update?: IMapper<IUpdateStatement, IUpdateStatement>
+```
+
+###### delete {#typescript-statementmapperoptions-delete}
+
+Rewrites a finished delete.
+
+**Definition**
+
+```typescript
+delete?: IMapper<IDeleteStatement, IDeleteStatement>
+```
+
+###### storedProcedure {#typescript-statementmapperoptions-storedprocedure}
+
+Rewrites a finished stored-procedure statement.
+
+**Definition**
+
+```typescript
+storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
+```
+
+##### C#
+
+##### IMapper {#csharp-imapper}
+
+```csharp
+public interface IMapper<TFrom, TTo>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-imapper-map-value) | Maps `TFrom` to `TTo`. |
+| [ReverseMap(value)](#csharp-imapper-reversemap-value) | Maps `TTo` back to `TFrom`. |
+
+###### Map(value) {#csharp-imapper-map-value}
+
+Maps `TFrom` to `TTo`.
+
+**Definition**
+
+```csharp
+TTo Map(TFrom value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### ReverseMap(value) {#csharp-imapper-reversemap-value}
+
+Maps `TTo` back to `TFrom`.
+
+**Definition**
+
+```csharp
+TFrom ReverseMap(TTo value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### ISourceDestinationMapper {#csharp-isourcedestinationmapper}
+
+```csharp
+public interface ISourceDestinationMapper
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Source](#csharp-isourcedestinationmapper-source) | Dialect or provider label for the source side. |
+| [Destination](#csharp-isourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+
+###### Source {#csharp-isourcedestinationmapper-source}
+
+Dialect or provider label for the source side.
+
+**Definition**
+
+```csharp
+string Source { get; }
+```
+
+###### Destination {#csharp-isourcedestinationmapper-destination}
+
+Dialect or provider label for the destination side.
+
+**Definition**
+
+```csharp
+string Destination { get; }
+```
+
+##### NameMapper {#csharp-namemapper}
+
+```csharp
+public abstract class NameMapper : IMapper<string, string>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(name)](#csharp-namemapper-map-name) | Returns the name unchanged. |
+| [ReverseMap(name)](#csharp-namemapper-reversemap-name) | Returns the name unchanged. |
+
+###### Map(name) {#csharp-namemapper-map-name}
+
+Returns the name unchanged.
+
+**Definition**
+
+```csharp
+string Map(string name)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`string`
+
+###### ReverseMap(name) {#csharp-namemapper-reversemap-name}
+
+Returns the name unchanged.
+
+**Definition**
+
+```csharp
+string ReverseMap(string name)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`string`
+
+##### NameSourceDestinationMapper {#csharp-namesourcedestinationmapper}
+
+```csharp
+public sealed class NameSourceDestinationMapper : NameMapper, ISourceDestinationMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [NameSourceDestinationMapper(source, destination)](#csharp-namesourcedestinationmapper-namesourcedestinationmapper-source-destination) | Holds source and destination labels. Names still pass through. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Source](#csharp-namesourcedestinationmapper-source) | Dialect or provider label for the source side. |
+| [Destination](#csharp-namesourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+
+###### NameSourceDestinationMapper(source, destination) {#csharp-namesourcedestinationmapper-namesourcedestinationmapper-source-destination}
+
+Holds source and destination labels. Names still pass through.
+
+**Definition**
+
+```csharp
+public NameSourceDestinationMapper(string source, string destination)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `source` | source label |
+| `destination` | destination label |
+
+###### Source {#csharp-namesourcedestinationmapper-source}
+
+Dialect or provider label for the source side.
+
+**Definition**
+
+```csharp
+string Source { get; }
+```
+
+###### Destination {#csharp-namesourcedestinationmapper-destination}
+
+Dialect or provider label for the destination side.
+
+**Definition**
+
+```csharp
+string Destination { get; }
+```
+
+##### TransformMapper {#csharp-transformmapper}
+
+```csharp
+public class TransformMapper<TFrom, TTo> : IMapper<TFrom, TTo>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [TransformMapper(map, reverseMap)](#csharp-transformmapper-transformmapper-map-reversemap) | Builds a mapper from a pair of functions. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-transformmapper-map-value) | Runs the map function. |
+| [ReverseMap(value)](#csharp-transformmapper-reversemap-value) | Runs the reverse-map function. |
+
+###### TransformMapper(map, reverseMap) {#csharp-transformmapper-transformmapper-map-reversemap}
+
+Builds a mapper from a pair of functions.
+
+**Definition**
+
+```csharp
+public TransformMapper(Func<TFrom, TTo> map, Func<TTo, TFrom> reverseMap)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | `TFrom` to `TTo` |
+| `reverseMap` | `TTo` to `TFrom` |
+
+###### Map(value) {#csharp-transformmapper-map-value}
+
+Runs the map function.
+
+**Definition**
+
+```csharp
+TTo Map(TFrom value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### ReverseMap(value) {#csharp-transformmapper-reversemap-value}
+
+Runs the reverse-map function.
+
+**Definition**
+
+```csharp
+TFrom ReverseMap(TTo value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### IFlatToTypeMapper {#csharp-iflattotypemapper}
+
+```csharp
+public interface IFlatToTypeMapper : IMapper<Row, Dictionary<string, MappedValue>>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Spec](#csharp-iflattotypemapper-spec) | The [TypeMap](#csharp-typemap) used to collapse join rows. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Collapse(rows)](#csharp-iflattotypemapper-collapse-rows) | Maps and collapses denormalized join rows. |
+| [Collapse(mapped)](#csharp-iflattotypemapper-collapse-mapped) | Collapses already-mapped rows. |
+
+###### Spec {#csharp-iflattotypemapper-spec}
+
+The [TypeMap](#csharp-typemap) used to collapse join rows.
+
+**Definition**
+
+```csharp
+TypeMap Spec { get; }
+```
+
+###### Collapse(rows) {#csharp-iflattotypemapper-collapse-rows}
+
+Maps and collapses denormalized join rows.
+
+**Definition**
+
+```csharp
+IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Row> rows)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | denormalized join rows |
+
+**Returns**
+
+`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
+
+###### Collapse(mapped) {#csharp-iflattotypemapper-collapse-mapped}
+
+Collapses already-mapped rows.
+
+**Definition**
+
+```csharp
+IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Dictionary<string, MappedValue>> rows)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `mapped` | rows already passed through [Map](#csharp-flattotypemapper-map-value) |
+
+**Returns**
+
+`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
+
+##### FlatToTypeMapper {#csharp-flattotypemapper}
+
+```csharp
+public sealed class FlatToTypeMapper : IFlatToTypeMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [FlatToTypeMapper(spec)](#csharp-flattotypemapper-flattotypemapper-spec) | Builds a collapse mapper from a [TypeMap](#csharp-typemap). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Spec](#csharp-flattotypemapper-spec) | The [TypeMap](#csharp-typemap) used to collapse join rows. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-flattotypemapper-map-value) | Maps one denormalized row. Nested group fields on a collection are omitted. |
+| [ReverseMap(value)](#csharp-flattotypemapper-reversemap-value) | Flattens a mapped row back. Groups keep the first child. |
+| [Collapse(rows)](#csharp-flattotypemapper-collapse-rows) | Maps and collapses denormalized join rows. |
+| [Collapse(mapped)](#csharp-flattotypemapper-collapse-mapped) | Collapses already-mapped rows. |
+
+###### FlatToTypeMapper(spec) {#csharp-flattotypemapper-flattotypemapper-spec}
+
+Builds a collapse mapper from a [TypeMap](#csharp-typemap).
+
+**Definition**
+
+```csharp
+public FlatToTypeMapper(TypeMap spec)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `spec` | [TypeMap](#csharp-typemap); scalars map column to field, groups collect unique children by key |
+
+###### Spec {#csharp-flattotypemapper-spec}
+
+The [TypeMap](#csharp-typemap) used to collapse join rows.
+
+**Definition**
+
+```csharp
+TypeMap Spec { get; }
+```
+
+###### Map(value) {#csharp-flattotypemapper-map-value}
+
+Maps one denormalized row. Nested group fields on a collection are omitted.
+
+**Definition**
+
+```csharp
+Dictionary<string, MappedValue> Map(Row value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | denormalized join row |
+
+**Returns**
+
+`Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>`
+
+###### ReverseMap(value) {#csharp-flattotypemapper-reversemap-value}
+
+Flattens a mapped row back. Groups keep the first child.
+
+**Definition**
+
+```csharp
+Row ReverseMap(Dictionary<string, MappedValue> value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped graph |
+
+**Returns**
+
+`Row`
+
+###### Collapse(rows) {#csharp-flattotypemapper-collapse-rows}
+
+Maps and collapses denormalized join rows.
+
+**Definition**
+
+```csharp
+IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Row> rows)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | denormalized join rows |
+
+**Returns**
+
+`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
+
+###### Collapse(mapped) {#csharp-flattotypemapper-collapse-mapped}
+
+Collapses already-mapped rows.
+
+**Definition**
+
+```csharp
+IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Dictionary<string, MappedValue>> rows)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `mapped` | rows already passed through [Map](#csharp-flattotypemapper-map-value) |
+
+**Returns**
+
+`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
+
+##### TypeMap {#csharp-typemap}
+
+```csharp
+public sealed class TypeMap
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Key](#csharp-typemap-key) | Parent key column. |
+| [Fields](#csharp-typemap-fields) | Column or group per destination field. |
+
+###### Key {#csharp-typemap-key}
+
+Parent key column.
+
+**Definition**
+
+```csharp
+required string Key { get; init; }
+```
+
+###### Fields {#csharp-typemap-fields}
+
+Column or group per destination field.
+
+**Definition**
+
+```csharp
+required IReadOnlyDictionary<string, TypeMapField> Fields { get; init; }
+```
+
+##### TypeMapGroup {#csharp-typemapgroup}
+
+```csharp
+public sealed class TypeMapGroup
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Key](#csharp-typemapgroup-key) | Child key column used to unique children. |
+| [Fields](#csharp-typemapgroup-fields) | Column or group per child field. |
+
+###### Key {#csharp-typemapgroup-key}
+
+Child key column used to unique children.
+
+**Definition**
+
+```csharp
+required string Key { get; init; }
+```
+
+###### Fields {#csharp-typemapgroup-fields}
+
+Column or group per child field.
+
+**Definition**
+
+```csharp
+required IReadOnlyDictionary<string, TypeMapField> Fields { get; init; }
+```
+
+##### TypeMapField {#csharp-typemapfield}
+
+```csharp
+public abstract record TypeMapField
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Column](#csharp-typemapfield-column) | Maps a destination field to a source column. |
+| [Group](#csharp-typemapfield-group) | Maps a destination field to a child [TypeMapGroup](#csharp-typemapgroup). |
+
+###### Column {#csharp-typemapfield-column}
+
+Maps a destination field to a source column.
+
+**Definition**
+
+```csharp
+TypeMapField.Column(string Source)
+```
+
+###### Group {#csharp-typemapfield-group}
+
+Maps a destination field to a child [TypeMapGroup](#csharp-typemapgroup).
+
+**Definition**
+
+```csharp
+TypeMapField.Group(TypeMapGroup Map)
+```
+
+##### MappedValue {#csharp-mappedvalue}
+
+```csharp
+public abstract record MappedValue
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Cell](#csharp-mappedvalue-cell) | A scalar cell. |
+| [Many](#csharp-mappedvalue-many) | A child collection. |
+
+###### Cell {#csharp-mappedvalue-cell}
+
+A scalar cell.
+
+**Definition**
+
+```csharp
+MappedValue.Cell(Value Value)
+```
+
+###### Many {#csharp-mappedvalue-many}
+
+A child collection.
+
+**Definition**
+
+```csharp
+MappedValue.Many(List<Dictionary<string, MappedValue>> Items)
+```
+
+##### StatementMapper {#csharp-statementmapper}
+
+```csharp
+public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Entity](#csharp-statementmapper-entity) | Maps the table or entity name when the repository is built. |
+| [Columns](#csharp-statementmapper-columns) | Maps column names when the repository is built. |
+| [Query](#csharp-statementmapper-query) | Rewrites a finished query. |
+| [Insert](#csharp-statementmapper-insert) | Rewrites a finished insert. |
+| [Update](#csharp-statementmapper-update) | Rewrites a finished update. |
+| [Delete](#csharp-statementmapper-delete) | Rewrites a finished delete. |
+| [StoredProcedure](#csharp-statementmapper-storedprocedure) | Rewrites a finished stored-procedure statement. |
+| [Rows](#csharp-statementmapper-rows) | Get-row [IMapper](#csharp-imapper). [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-statementmapper-map-value) | Maps a row through [Rows](#csharp-statementmapper-rows). |
+| [ReverseMap(value)](#csharp-statementmapper-reversemap-value) | Reverse-maps a row through [Rows](#csharp-statementmapper-rows). |
+
+###### Entity {#csharp-statementmapper-entity}
+
+Maps the table or entity name when the repository is built.
+
+**Definition**
+
+```csharp
+IMapper<string, string> Entity { get; init; }
+```
+
+###### Columns {#csharp-statementmapper-columns}
+
+Maps column names when the repository is built.
+
+**Definition**
+
+```csharp
+IMapper<string, string> Columns { get; init; }
+```
+
+###### Query {#csharp-statementmapper-query}
+
+Rewrites a finished query.
+
+**Definition**
+
+```csharp
+IMapper<IQuery, IQuery>? Query { get; init; }
+```
+
+###### Insert {#csharp-statementmapper-insert}
+
+Rewrites a finished insert.
+
+**Definition**
+
+```csharp
+IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
+```
+
+###### Update {#csharp-statementmapper-update}
+
+Rewrites a finished update.
+
+**Definition**
+
+```csharp
+IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
+```
+
+###### Delete {#csharp-statementmapper-delete}
+
+Rewrites a finished delete.
+
+**Definition**
+
+```csharp
+IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
+```
+
+###### StoredProcedure {#csharp-statementmapper-storedprocedure}
+
+Rewrites a finished stored-procedure statement.
+
+**Definition**
+
+```csharp
+IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure { get; init; }
+```
+
+###### Rows {#csharp-statementmapper-rows}
+
+Get-row [IMapper](#csharp-imapper). [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here.
+
+**Definition**
+
+```csharp
+IMapper<T, T> Rows { get; init; }
+```
+
+###### Map(value) {#csharp-statementmapper-map-value}
+
+Maps a row through [Rows](#csharp-statementmapper-rows).
+
+**Definition**
+
+```csharp
+T Map(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | converted row |
+
+**Returns**
+
+`T`
+
+###### ReverseMap(value) {#csharp-statementmapper-reversemap-value}
+
+Reverse-maps a row through [Rows](#csharp-statementmapper-rows).
+
+**Definition**
+
+```csharp
+T ReverseMap(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | shaped row |
+
+**Returns**
+
+`T`
+
+##### Rust
+
+##### Mapper {#rust-mapper}
+
+```rust
+pub trait Mapper<TFrom, TTo>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-mapper-map-value) | Maps `TFrom` to `TTo`. |
+| [reverse_map(value)](#rust-mapper-reverse_map-value) | Maps `TTo` back to `TFrom`. |
+
+###### map(value) {#rust-mapper-map-value}
+
+Maps `TFrom` to `TTo`.
+
+**Definition**
+
+```rust
+fn map(&self, value: TFrom) -> TTo
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### reverse_map(value) {#rust-mapper-reverse_map-value}
+
+Maps `TTo` back to `TFrom`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: TTo) -> TFrom
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### SourceDestinationMapper {#rust-sourcedestinationmapper}
+
+```rust
+pub trait SourceDestinationMapper
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [source()](#rust-sourcedestinationmapper-source) | Dialect or provider label for the source side. |
+| [destination()](#rust-sourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+
+###### source() {#rust-sourcedestinationmapper-source}
+
+Dialect or provider label for the source side.
+
+**Definition**
+
+```rust
+fn source(&self) -> &str
+```
+
+**Returns**
+
+`&str`
+
+###### destination() {#rust-sourcedestinationmapper-destination}
+
+Dialect or provider label for the destination side.
+
+**Definition**
+
+```rust
+fn destination(&self) -> &str
+```
+
+**Returns**
+
+`&str`
+
+##### NameMapper {#rust-namemapper}
+
+```rust
+pub trait NameMapper
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(name)](#rust-namemapper-map-name) | Returns the name unchanged. |
+| [reverse_map(name)](#rust-namemapper-reverse_map-name) | Returns the name unchanged. |
+
+###### map(name) {#rust-namemapper-map-name}
+
+Returns the name unchanged.
+
+**Definition**
+
+```rust
+fn map(&self, name: &str) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`String`
+
+###### reverse_map(name) {#rust-namemapper-reverse_map-name}
+
+Returns the name unchanged.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, name: &str) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`String`
+
+##### NameSourceDestinationMapper {#rust-namesourcedestinationmapper}
+
+```rust
+pub struct NameSourceDestinationMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(source, destination)](#rust-namesourcedestinationmapper-new-source-destination) | Holds source and destination labels. Names still pass through. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [source](#rust-namesourcedestinationmapper-source) | Dialect or provider label for the source side. |
+| [destination](#rust-namesourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(name)](#rust-namesourcedestinationmapper-map-name) | Returns the name unchanged. |
+| [reverse_map(name)](#rust-namesourcedestinationmapper-reverse_map-name) | Returns the name unchanged. |
+
+###### new(source, destination) {#rust-namesourcedestinationmapper-new-source-destination}
+
+Holds source and destination labels. Names still pass through.
+
+**Definition**
+
+```rust
+pub fn new(source: impl Into<String>, destination: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `source` | source label |
+| `destination` | destination label |
+
+**Returns**
+
+[NameSourceDestinationMapper](#rust-namesourcedestinationmapper)
+
+###### source {#rust-namesourcedestinationmapper-source}
+
+Dialect or provider label for the source side.
+
+**Definition**
+
+```rust
+pub source: String
+```
+
+###### destination {#rust-namesourcedestinationmapper-destination}
+
+Dialect or provider label for the destination side.
+
+**Definition**
+
+```rust
+pub destination: String
+```
+
+###### map(name) {#rust-namesourcedestinationmapper-map-name}
+
+Returns the name unchanged.
+
+**Definition**
+
+```rust
+pub fn map(&self, name: &str) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`String`
+
+###### reverse_map(name) {#rust-namesourcedestinationmapper-reverse_map-name}
+
+Returns the name unchanged.
+
+**Definition**
+
+```rust
+pub fn reverse_map(&self, name: &str) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`String`
+
+##### TransformMapper {#rust-transformmapper}
+
+```rust
+pub struct TransformMapper<TFrom, TTo>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(map, reverse_map)](#rust-transformmapper-new-map-reverse_map) | Builds a mapper from a pair of functions. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-transformmapper-map-value) | Runs the map function. |
+| [reverse_map(value)](#rust-transformmapper-reverse_map-value) | Runs the reverse-map function. |
+
+###### new(map, reverse_map) {#rust-transformmapper-new-map-reverse_map}
+
+Builds a mapper from a pair of functions.
+
+**Definition**
+
+```rust
+pub fn new(map: impl Fn(TFrom) -> TTo + Send + Sync + 'static, reverse_map: impl Fn(TTo) -> TFrom + Send + Sync + 'static) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | `TFrom` to `TTo` |
+| `reverse_map` | `TTo` to `TFrom` |
+
+**Returns**
+
+[TransformMapper](#rust-transformmapper)
+
+###### map(value) {#rust-transformmapper-map-value}
+
+Runs the map function.
+
+**Definition**
+
+```rust
+fn map(&self, value: TFrom) -> TTo
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### reverse_map(value) {#rust-transformmapper-reverse_map-value}
+
+Runs the reverse-map function.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: TTo) -> TFrom
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### FlatToTypeMapperTrait {#rust-flattotypemappertrait}
+
+```rust
+pub trait FlatToTypeMapper: Mapper<Row, MappedRow>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [spec()](#rust-flattotypemappertrait-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
+| [collapse(rows)](#rust-flattotypemappertrait-collapse-rows) | Collapses already-mapped rows. |
+| [collapse_rows(rows)](#rust-flattotypemappertrait-collapse_rows-rows) | Maps and collapses denormalized join rows. |
+
+###### spec() {#rust-flattotypemappertrait-spec}
+
+The [TypeMap](#rust-typemap) used to collapse join rows.
+
+**Definition**
+
+```rust
+fn spec(&self) -> &TypeMap
+```
+
+**Returns**
+
+`&`[TypeMap](#rust-typemap)
+
+###### collapse(rows) {#rust-flattotypemappertrait-collapse-rows}
+
+Collapses already-mapped rows.
+
+**Definition**
+
+```rust
+fn collapse(&self, rows: Vec<MappedRow>) -> Vec<MappedRow>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | rows already passed through [map](#rust-flattotypemapper-map-value) |
+
+**Returns**
+
+`Vec<`[MappedRow](#rust-mappedrow)`>`
+
+###### collapse_rows(rows) {#rust-flattotypemappertrait-collapse_rows-rows}
+
+Maps and collapses denormalized join rows.
+
+**Definition**
+
+```rust
+fn collapse_rows(&self, rows: Vec<Row>) -> Vec<MappedRow>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | denormalized join rows |
+
+**Returns**
+
+`Vec<`[MappedRow](#rust-mappedrow)`>`
+
+##### FlatToTypeMapper {#rust-flattotypemapper}
+
+```rust
+pub struct FlatToTypeMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(spec)](#rust-flattotypemapper-new-spec) | Builds a collapse mapper from a [TypeMap](#rust-typemap). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(row)](#rust-flattotypemapper-map-row) | Maps one denormalized row. Nested group fields on a collection are omitted. |
+| [reverse_map(value)](#rust-flattotypemapper-reverse_map-value) | Flattens a mapped row back. Groups keep the first child. |
+| [spec()](#rust-flattotypemapper-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
+| [collapse(rows)](#rust-flattotypemapper-collapse-rows) | Collapses already-mapped rows. |
+| [collapse_rows(rows)](#rust-flattotypemapper-collapse_rows-rows) | Maps and collapses denormalized join rows. |
+
+###### new(spec) {#rust-flattotypemapper-new-spec}
+
+Builds a collapse mapper from a [TypeMap](#rust-typemap).
+
+**Definition**
+
+```rust
+pub fn new(spec: TypeMap) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `spec` | [TypeMap](#rust-typemap); scalars map column to field, groups collect unique children by key |
+
+**Returns**
+
+[FlatToTypeMapper](#rust-flattotypemapper)
+
+###### map(row) {#rust-flattotypemapper-map-row}
+
+Maps one denormalized row. Nested group fields on a collection are omitted.
+
+**Definition**
+
+```rust
+fn map(&self, row: Row) -> MappedRow
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | denormalized join row |
+
+**Returns**
+
+[MappedRow](#rust-mappedrow)
+
+###### reverse_map(value) {#rust-flattotypemapper-reverse_map-value}
+
+Flattens a mapped row back. Groups keep the first child.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: MappedRow) -> Row
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped graph |
+
+**Returns**
+
+`Row`
+
+###### spec() {#rust-flattotypemapper-spec}
+
+The [TypeMap](#rust-typemap) used to collapse join rows.
+
+**Definition**
+
+```rust
+fn spec(&self) -> &TypeMap
+```
+
+**Returns**
+
+`&`[TypeMap](#rust-typemap)
+
+###### collapse(rows) {#rust-flattotypemapper-collapse-rows}
+
+Collapses already-mapped rows.
+
+**Definition**
+
+```rust
+fn collapse(&self, rows: Vec<MappedRow>) -> Vec<MappedRow>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | rows already passed through [map](#rust-flattotypemapper-map-value) |
+
+**Returns**
+
+`Vec<`[MappedRow](#rust-mappedrow)`>`
+
+###### collapse_rows(rows) {#rust-flattotypemapper-collapse_rows-rows}
+
+Maps and collapses denormalized join rows.
+
+**Definition**
+
+```rust
+fn collapse_rows(&self, rows: Vec<Row>) -> Vec<MappedRow>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | denormalized join rows |
+
+**Returns**
+
+`Vec<`[MappedRow](#rust-mappedrow)`>`
+
+##### TypeMap {#rust-typemap}
+
+```rust
+pub struct TypeMap
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(key, fields)](#rust-typemap-new-key-fields) | Builds a collapse spec. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [key](#rust-typemap-key) | Parent key column. |
+| [fields](#rust-typemap-fields) | Column or group per destination field. |
+
+###### new(key, fields) {#rust-typemap-new-key-fields}
+
+Builds a collapse spec.
+
+**Definition**
+
+```rust
+pub fn new(key: impl Into<String>, fields: Vec<(String, TypeMapField)>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `key` | parent key column |
+| `fields` | destination name and [TypeMapField](#rust-typemapfield) pairs |
+
+**Returns**
+
+[TypeMap](#rust-typemap)
+
+###### key {#rust-typemap-key}
+
+Parent key column.
+
+**Definition**
+
+```rust
+pub key: String
+```
+
+###### fields {#rust-typemap-fields}
+
+Column or group per destination field.
+
+**Definition**
+
+```rust
+pub fields: Vec<(String, TypeMapField)>
+```
+
+##### TypeMapGroup {#rust-typemapgroup}
+
+```rust
+pub struct TypeMapGroup
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(key, fields)](#rust-typemapgroup-new-key-fields) | Builds a child-group spec. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [key](#rust-typemapgroup-key) | Child key column used to unique children. |
+| [fields](#rust-typemapgroup-fields) | Column or group per child field. |
+
+###### new(key, fields) {#rust-typemapgroup-new-key-fields}
+
+Builds a child-group spec.
+
+**Definition**
+
+```rust
+pub fn new(key: impl Into<String>, fields: Vec<(String, TypeMapField)>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `key` | child key column |
+| `fields` | destination name and [TypeMapField](#rust-typemapfield) pairs |
+
+**Returns**
+
+[TypeMapGroup](#rust-typemapgroup)
+
+###### key {#rust-typemapgroup-key}
+
+Child key column used to unique children.
+
+**Definition**
+
+```rust
+pub key: String
+```
+
+###### fields {#rust-typemapgroup-fields}
+
+Column or group per child field.
+
+**Definition**
+
+```rust
+pub fields: Vec<(String, TypeMapField)>
+```
+
+##### TypeMapField {#rust-typemapfield}
+
+```rust
+pub enum TypeMapField
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Column](#rust-typemapfield-column) | Maps a destination field to a source column. |
+| [Group](#rust-typemapfield-group) | Maps a destination field to a child [TypeMapGroup](#rust-typemapgroup). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [column(source)](#rust-typemapfield-column-source) | Builds a [Column](#rust-typemapfield-column) field. |
+
+###### Column {#rust-typemapfield-column}
+
+Maps a destination field to a source column.
+
+**Definition**
+
+```rust
+Column(String)
+```
+
+###### Group {#rust-typemapfield-group}
+
+Maps a destination field to a child [TypeMapGroup](#rust-typemapgroup).
+
+**Definition**
+
+```rust
+Group(TypeMapGroup)
+```
+
+###### column(source) {#rust-typemapfield-column-source}
+
+Builds a [Column](#rust-typemapfield-column) field.
+
+**Definition**
+
+```rust
+pub fn column(source: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `source` | source column name |
+
+**Returns**
+
+[TypeMapField](#rust-typemapfield)
+
+##### MappedValue {#rust-mappedvalue}
+
+```rust
+pub enum MappedValue
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Cell](#rust-mappedvalue-cell) | A scalar cell. |
+| [Many](#rust-mappedvalue-many) | A child collection. |
+
+###### Cell {#rust-mappedvalue-cell}
+
+A scalar cell.
+
+**Definition**
+
+```rust
+Cell(Value)
+```
+
+###### Many {#rust-mappedvalue-many}
+
+A child collection.
+
+**Definition**
+
+```rust
+Many(Vec<MappedRow>)
+```
+
+##### MappedRow {#rust-mappedrow}
+
+```rust
+pub type MappedRow = HashMap<String, MappedValue>
+```
+
+##### StatementMapper {#rust-statementmapper}
+
+```rust
+pub struct StatementMapper
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [entity](#rust-statementmapper-entity) | Maps the table or entity name when the repository is built. |
+| [columns](#rust-statementmapper-columns) | Maps column names when the repository is built. |
+| [query](#rust-statementmapper-query) | Rewrites finished query SQL. |
+| [insert](#rust-statementmapper-insert) | Rewrites finished insert SQL. |
+| [update](#rust-statementmapper-update) | Rewrites finished update SQL. |
+| [delete](#rust-statementmapper-delete) | Rewrites finished delete SQL. |
+| [stored_procedure](#rust-statementmapper-stored_procedure) | Rewrites finished stored-procedure SQL. |
+| [rows](#rust-statementmapper-rows) | Get-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [identity(source, destination)](#rust-statementmapper-identity-source-destination) | Identity statement mapper. Source and destination labels are unused. |
+| [map_sql(mapper, text)](#rust-statementmapper-map_sql-mapper-text) | Applies an optional SQL-text mapper. |
+| [map(value)](#rust-statementmapper-map-value) | Maps a row through [rows](#rust-statementmapper-rows). |
+| [reverse_map(value)](#rust-statementmapper-reverse_map-value) | Reverse-maps a row through [rows](#rust-statementmapper-rows). |
+
+###### entity {#rust-statementmapper-entity}
+
+Maps the table or entity name when the repository is built.
+
+**Definition**
+
+```rust
+pub entity: TransformMapper<String, String>
+```
+
+###### columns {#rust-statementmapper-columns}
+
+Maps column names when the repository is built.
+
+**Definition**
+
+```rust
+pub columns: TransformMapper<String, String>
+```
+
+###### query {#rust-statementmapper-query}
+
+Rewrites finished query SQL.
+
+**Definition**
+
+```rust
+pub query: Option<Arc<TransformMapper<String, String>>>
+```
+
+###### insert {#rust-statementmapper-insert}
+
+Rewrites finished insert SQL.
+
+**Definition**
+
+```rust
+pub insert: Option<Arc<TransformMapper<String, String>>>
+```
+
+###### update {#rust-statementmapper-update}
+
+Rewrites finished update SQL.
+
+**Definition**
+
+```rust
+pub update: Option<Arc<TransformMapper<String, String>>>
+```
+
+###### delete {#rust-statementmapper-delete}
+
+Rewrites finished delete SQL.
+
+**Definition**
+
+```rust
+pub delete: Option<Arc<TransformMapper<String, String>>>
+```
+
+###### stored_procedure {#rust-statementmapper-stored_procedure}
+
+Rewrites finished stored-procedure SQL.
+
+**Definition**
+
+```rust
+pub stored_procedure: Option<Arc<TransformMapper<String, String>>>
+```
+
+###### rows {#rust-statementmapper-rows}
+
+Get-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here.
+
+**Definition**
+
+```rust
+pub rows: TransformMapper<Row, Row>
+```
+
+###### identity(source, destination) {#rust-statementmapper-identity-source-destination}
+
+Identity statement mapper. Source and destination labels are unused.
+
+**Definition**
+
+```rust
+pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `source` | unused source label |
+| `destination` | unused destination label |
+
+**Returns**
+
+[StatementMapper](#rust-statementmapper)
+
+###### map_sql(mapper, text) {#rust-statementmapper-map_sql-mapper-text}
+
+Applies an optional SQL-text mapper.
+
+**Definition**
+
+```rust
+pub fn map_sql(mapper: &Option<Arc<TransformMapper<String, String>>>, text: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `mapper` | optional SQL-text [TransformMapper](#rust-transformmapper) |
+| `text` | finished SQL |
+
+**Returns**
+
+`String`
+
+###### map(value) {#rust-statementmapper-map-value}
+
+Maps a row through [rows](#rust-statementmapper-rows).
+
+**Definition**
+
+```rust
+fn map(&self, value: Row) -> Row
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | converted row |
+
+**Returns**
+
+`Row`
+
+###### reverse_map(value) {#rust-statementmapper-reverse_map-value}
+
+Reverse-maps a row through [rows](#rust-statementmapper-rows).
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: Row) -> Row
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | shaped row |
+
+**Returns**
+
+`Row`
+
+### Remarks
+
+Repository get is convert, then map. `StatementMapper.Rows` / `rows` is the get-row mapper. `Repository.Mapper` / `mapper` aliases it.
+
+Apply statement mapping in either or both places:
+
+1. **Builder** — `RepositoryBuilder` maps `Entity` / `entity` and `Columns` / `columns` into `RepositoryStatements`.
+2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` rewrite the finished statement.
+
+C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `stored_procedure` are `TransformMapper<String, String>` over SQL text via `StatementMapper::map_sql`.
+
+`NameMapper` passes names through as-is.
+
+### Examples
+
+#### Flatten with TransformMapper
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/NameMapperTests.cs#L32-L45)
+
+```csharp
+var nested = new Nested(new User(1, "Ada"), new Contacts("ada@x.dev", "555"));
+var mapper = new TransformMapper<Nested, Flat>(
+    map: n => new Flat(n.User.Id, n.User.Name, n.Contacts.Email, n.Contacts.Phone),
+    reverseMap: f => new Nested(new User(f.UserId, f.UserName), new Contacts(f.ContactEmail, f.ContactPhone)));
+var flat = mapper.Map(nested);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L144-L180)
+
+```rust
+let nested = Nested {
+    user: User {
+        id: 1,
+        name: "Ada".into(),
+    },
+    contacts: Contacts {
+        email: "ada@x.dev".into(),
+        phone: "555".into(),
+    },
+};
+let mapper = TransformMapper::new(
+    |n: Nested| Flat {
+        user_id: n.user.id,
+        user_name: n.user.name,
+        contact_email: n.contacts.email,
+        contact_phone: n.contacts.phone,
+    },
+    |f: Flat| Nested {
+        user: User {
+            id: f.user_id,
+            name: f.user_name,
+        },
+        contacts: Contacts {
+            email: f.contact_email,
+            phone: f.contact_phone,
+        },
+    },
+);
+let flat = Mapper::map(&mapper, nested.clone());
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/nameMapper.test.ts#L41-L66)
+
+```typescript
+const nested: Nested = {
+  user: { id: 1, name: "Ada" },
+  contacts: { email: "ada@x.dev", phone: "555" },
+};
+const mapper = new TransformMapper<Nested, Flat>(
+  (n) => ({
+    userId: n.user.id,
+    userName: n.user.name,
+    contactEmail: n.contacts.email,
+    contactPhone: n.contacts.phone,
+  }),
+  (f) => ({
+    user: { id: f.userId, name: f.userName },
+    contacts: { email: f.contactEmail, phone: f.contactPhone },
+  }),
+);
+const flat = mapper.map(nested);
+```
+
+#### Pass-through names
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/NameMapperTests.cs#L15-L25)
+
+```csharp
+var mapper = new NameSourceDestinationMapper("sql", "csharp");
+ISourceDestinationMapper labels = mapper;
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L107-L116)
+
+```rust
+let mapper = NameSourceDestinationMapper::new("sql", "rust");
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/nameMapper.test.ts#L19-L27)
+
+```typescript
+const mapper = new NameSourceDestinationMapper("sql", "typescript");
+const labels: ISourceDestinationMapper = mapper;
+const mapping: IMapper<string, string> = mapper;
+```
+
+#### Rewrite a finished statement
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementMapperTests.cs#L55-L81)
+
+```csharp
+var statements = new RepositoryStatements(
+    "users",
+    ["id", "name"],
+    new TransformMapper<IQuery, IQuery>(
+        query => new Query($"{query.GetText()} LIMIT 1", query.Where),
+        query => query),
+    new TransformMapper<IInsertStatement, IInsertStatement>(
+        insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
+        insert => insert),
+    new TransformMapper<IUpdateStatement, IUpdateStatement>(
+        update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
+        update => update),
+    new TransformMapper<IDeleteStatement, IDeleteStatement>(
+        delete => new DeleteStatement($"{delete.GetText()} RETURNING id", delete.Where),
+        delete => delete));
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L794-L804)
+
+```rust
+let mut mapper = StatementMapper::identity("", "");
+mapper.stored_procedure = Some(Arc::new(TransformMapper::new(
+    |text: String| format!("{text} /* mapped */"),
+    |text| text,
+)));
+let built = StatementBuilder::create_stored_procedure("save", &[Parameter::new("id", 1_i64)]);
+let text = StatementMapper::map_sql(&mapper.stored_procedure, built.get_text());
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59)
+
+```typescript
+const mapper = new StatementMapper({
+  entity: names,
+  columns: names,
+  query: new TransformMapper(
+    (query) => new Query(`${query.getText()} LIMIT 1`, query.where),
+    (query) => query,
+  ),
+  insert: new TransformMapper(
+    (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
+    (insert) => insert,
+  ),
+  update: new TransformMapper(
+    (update) =>
+      new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
+    (update) => update,
+  ),
+  delete: new TransformMapper(
+    (remove) =>
+      new DeleteStatement(`${remove.getText()} RETURNING id`, remove.where),
+    (remove) => remove,
+  ),
+});
+const statements = statementsOf("users", ["id", "name"], mapper);
+```
 
 ## TypeConverters
 
-`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`.
+`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` holds `Types` and `Fields`. Convert uses `Fields[name]`.
+
+### Classes
+
+##### TypeScript
+
+##### TypeConverter {#typescript-typeconverter}
+
+```typescript
+abstract class TypeConverter<To = Cells, From = Cells>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [convert(from)](#typescript-typeconverter-convert-from) | Converts `From` to `To`. |
+| [reverseConvert(to)](#typescript-typeconverter-reverseconvert-to) | Converts `To` back to `From`. |
+
+###### convert(from) {#typescript-typeconverter-convert-from}
+
+Converts `From` to `To`.
+
+**Definition**
+
+```typescript
+abstract convert(from: From): To
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source value |
+
+**Returns**
+
+`To`
+
+###### reverseConvert(to) {#typescript-typeconverter-reverseconvert-to}
+
+Converts `To` back to `From`.
+
+**Definition**
+
+```typescript
+abstract reverseConvert(to: To): From
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted value |
+
+**Returns**
+
+`From`
+
+##### RowTypeConverter {#typescript-rowtypeconverter}
+
+```typescript
+class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [RowTypeConverter(types, fields)](#typescript-rowtypeconverter-rowtypeconverter-types-fields) | Builds a row converter. Convert uses [fields](#typescript-rowtypeconverter-fields), not [types](#typescript-rowtypeconverter-types). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [types](#typescript-rowtypeconverter-types) | Provider type catalog. Convert does not read this map. |
+| [fields](#typescript-rowtypeconverter-fields) | Per-column converters. Convert uses `fields[name]`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [convert(row, type?)](#typescript-rowtypeconverter-convert-row-type) | Converts each cell through [fields](#typescript-rowtypeconverter-fields). Optional `type` constructs a destination instance. |
+| [reverseConvert(row)](#typescript-rowtypeconverter-reverseconvert-row) | Reverse-converts each cell through [fields](#typescript-rowtypeconverter-fields). Skips array values. |
+
+###### RowTypeConverter(types, fields) {#typescript-rowtypeconverter-rowtypeconverter-types-fields}
+
+Builds a row converter. Convert uses [fields](#typescript-rowtypeconverter-fields), not [types](#typescript-rowtypeconverter-types).
+
+**Definition**
+
+```typescript
+constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<string, TypeConverter<Cell, Cell>>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `types` | provider catalog; unused at convert time |
+| `fields` | per-column [TypeConverter](#typescript-typeconverter) |
+
+###### types {#typescript-rowtypeconverter-types}
+
+Provider type catalog. Convert does not read this map.
+
+**Definition**
+
+```typescript
+types: Record<string, TypeConverter<Cell, Cell>>
+```
+
+###### fields {#typescript-rowtypeconverter-fields}
+
+Per-column converters. Convert uses `fields[name]`.
+
+**Definition**
+
+```typescript
+fields: Record<string, TypeConverter<Cell, Cell>>
+```
+
+###### convert(row, type?) {#typescript-rowtypeconverter-convert-row-type}
+
+Converts each cell through [fields](#typescript-rowtypeconverter-fields). Optional `type` constructs a destination instance.
+
+**Definition**
+
+```typescript
+convert(row: Cells, type?: Constructable<T>): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | source cells |
+| `type` | optional `new () => T` |
+
+**Returns**
+
+`T`
+
+###### reverseConvert(row) {#typescript-rowtypeconverter-reverseconvert-row}
+
+Reverse-converts each cell through [fields](#typescript-rowtypeconverter-fields). Skips array values.
+
+**Definition**
+
+```typescript
+reverseConvert(row: T): Cells
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | converted object |
+
+**Returns**
+
+`Cells`
+
+##### C#
+
+##### ITypeConverter {#csharp-itypeconverter}
+
+```csharp
+public interface ITypeConverter<To, From>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Convert(from)](#csharp-itypeconverter-convert-from) | Converts `From` to `To`. |
+| [ReverseConvert(to)](#csharp-itypeconverter-reverseconvert-to) | Converts `To` back to `From`. |
+
+###### Convert(from) {#csharp-itypeconverter-convert-from}
+
+Converts `From` to `To`.
+
+**Definition**
+
+```csharp
+To Convert(From from)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source value |
+
+**Returns**
+
+`To`
+
+###### ReverseConvert(to) {#csharp-itypeconverter-reverseconvert-to}
+
+Converts `To` back to `From`.
+
+**Definition**
+
+```csharp
+From ReverseConvert(To to)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted value |
+
+**Returns**
+
+`From`
+
+##### TypeConverter {#csharp-typeconverter}
+
+```csharp
+public abstract class TypeConverter<To, From> : ITypeConverter<To, From>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Convert(from)](#csharp-typeconverter-convert-from) | Converts `From` to `To`. |
+| [ReverseConvert(to)](#csharp-typeconverter-reverseconvert-to) | Converts `To` back to `From`. |
+
+###### Convert(from) {#csharp-typeconverter-convert-from}
+
+Converts `From` to `To`.
+
+**Definition**
+
+```csharp
+public abstract To Convert(From from)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source value |
+
+**Returns**
+
+`To`
+
+###### ReverseConvert(to) {#csharp-typeconverter-reverseconvert-to}
+
+Converts `To` back to `From`.
+
+**Definition**
+
+```csharp
+public abstract From ReverseConvert(To to)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted value |
+
+**Returns**
+
+`From`
+
+##### RowTypeConverter {#csharp-rowtypeconverter}
+
+```csharp
+public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [RowTypeConverter(types, fields)](#csharp-rowtypeconverter-rowtypeconverter-types-fields) | Builds a row converter. Convert uses [Fields](#csharp-rowtypeconverter-fields), not [Types](#csharp-rowtypeconverter-types). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Types](#csharp-rowtypeconverter-types) | Provider type catalog. Convert does not read this map. |
+| [Fields](#csharp-rowtypeconverter-fields) | Per-column converters. Convert uses `Fields[name]`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Convert(from)](#csharp-rowtypeconverter-convert-from) | Converts a row to `T`. Applies [Fields](#csharp-rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys). |
+| [ReverseConvert(to)](#csharp-rowtypeconverter-reverseconvert-to) | Reverse-converts `T` to a row through [Fields](#csharp-rowtypeconverter-fields). |
+
+###### RowTypeConverter(types, fields) {#csharp-rowtypeconverter-rowtypeconverter-types-fields}
+
+Builds a row converter. Convert uses [Fields](#csharp-rowtypeconverter-fields), not [Types](#csharp-rowtypeconverter-types).
+
+**Definition**
+
+```csharp
+public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `types` | provider catalog; unused at convert time |
+| `fields` | per-column [TypeConverter](#csharp-typeconverter) |
+
+###### Types {#csharp-rowtypeconverter-types}
+
+Provider type catalog. Convert does not read this map.
+
+**Definition**
+
+```csharp
+Dictionary<string, TypeConverter<Value, Value>> Types { get; set; }
+```
+
+###### Fields {#csharp-rowtypeconverter-fields}
+
+Per-column converters. Convert uses `Fields[name]`.
+
+**Definition**
+
+```csharp
+Dictionary<string, TypeConverter<Value, Value>> Fields { get; set; }
+```
+
+###### Convert(from) {#csharp-rowtypeconverter-convert-from}
+
+Converts a row to `T`. Applies [Fields](#csharp-rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys).
+
+**Definition**
+
+```csharp
+public override T Convert(Row from)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source row |
+
+**Returns**
+
+`T`
+
+###### ReverseConvert(to) {#csharp-rowtypeconverter-reverseconvert-to}
+
+Reverse-converts `T` to a row through [Fields](#csharp-rowtypeconverter-fields).
+
+**Definition**
+
+```csharp
+public override Row ReverseConvert(T to)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted object |
+
+**Returns**
+
+`Row`
+
+##### Rust
+
+##### TypeConverter {#rust-typeconverter}
+
+```rust
+pub trait TypeConverter<To, From>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [convert(from)](#rust-typeconverter-convert-from) | Converts `From` to `To`. |
+| [reverse_convert(to)](#rust-typeconverter-reverse_convert-to) | Converts `To` back to `From`. |
+
+###### convert(from) {#rust-typeconverter-convert-from}
+
+Converts `From` to `To`.
+
+**Definition**
+
+```rust
+fn convert(&self, from: &From) -> Result<To>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source value |
+
+**Returns**
+
+`Result<To>`
+
+###### reverse_convert(to) {#rust-typeconverter-reverse_convert-to}
+
+Converts `To` back to `From`.
+
+**Definition**
+
+```rust
+fn reverse_convert(&self, to: &To) -> Result<From>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted value |
+
+**Returns**
+
+`Result<From>`
+
+##### RowTypeConverter {#rust-rowtypeconverter}
+
+```rust
+pub struct RowTypeConverter
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(columns)](#rust-rowtypeconverter-new-columns) | Builds a row converter for the given columns. |
+| [of()](#rust-rowtypeconverter-of) | Builds a converter from `T: ConvertSchema`. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [types](#rust-rowtypeconverter-types) | Provider type catalog. Convert does not read this map. |
+| [fields](#rust-rowtypeconverter-fields) | Per-column converters. Convert uses `fields[name]`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [with_types(types)](#rust-rowtypeconverter-with_types-types) | Merges a provider catalog into [types](#rust-rowtypeconverter-types). |
+| [with_fields(fields)](#rust-rowtypeconverter-with_fields-fields) | Merges per-column converters into [fields](#rust-rowtypeconverter-fields). |
+| [convert(row)](#rust-rowtypeconverter-convert-row) | Converts each cell through [fields](#rust-rowtypeconverter-fields). |
+| [reverse_convert(row)](#rust-rowtypeconverter-reverse_convert-row) | Reverse-converts each cell through [fields](#rust-rowtypeconverter-fields). |
+
+###### new(columns) {#rust-rowtypeconverter-new-columns}
+
+Builds a row converter for the given columns.
+
+**Definition**
+
+```rust
+pub fn new(columns: Vec<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `columns` | column names |
+
+**Returns**
+
+[RowTypeConverter](#rust-rowtypeconverter)
+
+###### of() {#rust-rowtypeconverter-of}
+
+Builds a converter from `T: ConvertSchema`.
+
+**Definition**
+
+```rust
+pub fn of<T: ConvertSchema>() -> Self
+```
+
+**Returns**
+
+[RowTypeConverter](#rust-rowtypeconverter)
+
+###### types {#rust-rowtypeconverter-types}
+
+Provider type catalog. Convert does not read this map.
+
+**Definition**
+
+```rust
+pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+```
+
+###### fields {#rust-rowtypeconverter-fields}
+
+Per-column converters. Convert uses `fields[name]`.
+
+**Definition**
+
+```rust
+pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+```
+
+###### with_types(types) {#rust-rowtypeconverter-with_types-types}
+
+Merges a provider catalog into [types](#rust-rowtypeconverter-types).
+
+**Definition**
+
+```rust
+pub fn with_types(self, types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `types` | provider catalog; unused at convert time |
+
+**Returns**
+
+[RowTypeConverter](#rust-rowtypeconverter)
+
+###### with_fields(fields) {#rust-rowtypeconverter-with_fields-fields}
+
+Merges per-column converters into [fields](#rust-rowtypeconverter-fields).
+
+**Definition**
+
+```rust
+pub fn with_fields(self, fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `fields` | per-column [TypeConverter](#rust-typeconverter) |
+
+**Returns**
+
+[RowTypeConverter](#rust-rowtypeconverter)
+
+###### convert(row) {#rust-rowtypeconverter-convert-row}
+
+Converts each cell through [fields](#rust-rowtypeconverter-fields).
+
+**Definition**
+
+```rust
+pub fn convert(&self, row: &Row) -> Result<Row>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | source row |
+
+**Returns**
+
+`Result<Row>`
+
+###### reverse_convert(row) {#rust-rowtypeconverter-reverse_convert-row}
+
+Reverse-converts each cell through [fields](#rust-rowtypeconverter-fields).
+
+**Definition**
+
+```rust
+pub fn reverse_convert(&self, row: &Row) -> Result<Row>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | converted row |
+
+**Returns**
+
+`Result<Row>`
+
+### Remarks
 
 A dialect adds a `TypeConverter` only when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
-### TypeConverter
+`Types` / `types` is the provider catalog merge. Convert and reverse-convert only consult `Fields` / `fields`.
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `TypeConverter<To, From>` | `TypeConverter<To, From>` | `TypeConverter` |
-| `Convert` | `convert` | `convert` |
-| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
+Repository get is convert, then map. See [Mappers](#mappers) and [Repositories](#readonly-repository).
 
-### RowTypeConverter
+### Examples
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `RowTypeConverter<T>` | `RowTypeConverter` | `RowTypeConverter` |
-| `Convert` / `ReverseConvert` | `convert` / `reverse_convert` | `convert` / `reverseConvert` |
-| `Types` / `Fields` | `types` / `fields` | `types` / `fields` |
+#### Convert a row
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L28-L46)
+
+```csharp
+var converter = new RowTypeConverter<User>();
+var user = converter.Convert(new Row
+{
+    ["Id"] = 7,
+    ["Username"] = "ada",
+    ["IsEnabled"] = 1,
+    ["Created"] = "2020-01-02T03:04:05.000Z"
+});
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L101-L108)
+
+```rust
+let converter = RowTypeConverter::new(vec!["id".into(), "name".into()]);
+let row = record(&[("id", Value::Int(7)), ("name", Value::from("ada"))]);
+let dest = converter.convert(&row).unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L13-L19)
+
+```typescript
+const converter = new RowTypeConverter();
+const item = converter.convert({ id: 7, username: "ada" });
+const row = converter.reverseConvert(item);
+```
+
+#### Field converter
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L91-L102)
+
+```csharp
+var converter = new RowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
+{
+    ["flag"] = new OnlyOne()
+});
+var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L125-L143)
+
+```rust
+let converter =
+    RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([(
+        "is_enabled".into(),
+        Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+    )]));
+let row = record(&[("is_enabled", Value::Int(2))]);
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L21-L27)
+
+```typescript
+const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
+const dest = converter.convert({ flag: 1, name: "a" });
+```
 
 ## Command Line (CLI)
 
