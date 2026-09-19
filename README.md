@@ -520,8 +520,6 @@ type DatasourceOptions = Record<string, string>
 | [provider](#typescript-datasourceoptions-provider) | Which datasource to return. |
 | [database_url](#typescript-datasourceoptions-database_url) | Connection URL. The scheme selects the provider when `provider` is omitted. |
 | [database_schema](#typescript-datasourceoptions-database_schema) | Default schema. |
-| [url](#typescript-datasourceoptions-url) | Alias of `database_url` passed through to the provider. |
-| [schema](#typescript-datasourceoptions-schema) | Alias of `database_schema` passed through to the provider. |
 
 ###### provider {#typescript-datasourceoptions-provider}
 
@@ -551,26 +549,6 @@ Default schema.
 
 ```typescript
 database_schema?: string
-```
-
-###### url {#typescript-datasourceoptions-url}
-
-Alias of `database_url` passed through to the provider.
-
-**Definition**
-
-```typescript
-url?: string
-```
-
-###### schema {#typescript-datasourceoptions-schema}
-
-Alias of `database_schema` passed through to the provider.
-
-**Definition**
-
-```typescript
-schema?: string
 ```
 
 ##### C#
@@ -723,8 +701,6 @@ IReadOnlyDictionary<string, string?>
 | [provider](#csharp-datasourceoptions-provider) | Which datasource to return. |
 | [database_url](#csharp-datasourceoptions-database_url) | Connection URL. The scheme selects the provider when `provider` is omitted. |
 | [database_schema](#csharp-datasourceoptions-database_schema) | Default schema. |
-| [url](#csharp-datasourceoptions-url) | Alias of `database_url` passed through to the provider. |
-| [schema](#csharp-datasourceoptions-schema) | Alias of `database_schema` passed through to the provider. |
 
 ###### provider {#csharp-datasourceoptions-provider}
 
@@ -754,26 +730,6 @@ Default schema.
 
 ```csharp
 "database_schema"
-```
-
-###### url {#csharp-datasourceoptions-url}
-
-Alias of `database_url` passed through to the provider.
-
-**Definition**
-
-```csharp
-"url"
-```
-
-###### schema {#csharp-datasourceoptions-schema}
-
-Alias of `database_schema` passed through to the provider.
-
-**Definition**
-
-```csharp
-"schema"
 ```
 
 ##### Rust
@@ -925,8 +881,6 @@ HashMap<String, String>
 | [provider](#rust-datasourceoptions-provider) | Which datasource to return. |
 | [database_url](#rust-datasourceoptions-database_url) | Connection URL. The scheme selects the provider when `provider` is omitted. |
 | [database_schema](#rust-datasourceoptions-database_schema) | Default schema. |
-| [url](#rust-datasourceoptions-url) | Alias of `database_url` passed through to the provider. |
-| [schema](#rust-datasourceoptions-schema) | Alias of `database_schema` passed through to the provider. |
 
 ###### provider {#rust-datasourceoptions-provider}
 
@@ -956,26 +910,6 @@ Default schema.
 
 ```rust
 "database_schema"
-```
-
-###### url {#rust-datasourceoptions-url}
-
-Alias of `database_url` passed through to the provider.
-
-**Definition**
-
-```rust
-"url"
-```
-
-###### schema {#rust-datasourceoptions-schema}
-
-Alias of `database_schema` passed through to the provider.
-
-**Definition**
-
-```rust
-"schema"
 ```
 
 ### Remarks

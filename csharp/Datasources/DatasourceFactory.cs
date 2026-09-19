@@ -28,7 +28,7 @@ public sealed class DatasourceFactory : IDatasourceFactory
         var name = Get(listed, "provider") ?? ProviderFromUrl.From(Get(listed, "database_url"))
             ?? throw new DatasourceException("Datasource defaults are not specified");
         return Factories.TryGetValue(name, out var pair)
-            ? new Datasource(name, () => pair.Connection(ForFactory(listed)), pair.Repository)
+            ? new Datasource(name, () => pair.Connection(listed), pair.Repository)
             : throw new ProviderNotInstalledException(name);
     }
 
@@ -36,14 +36,6 @@ public sealed class DatasourceFactory : IDatasourceFactory
         options is not null && options.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
             ? value
             : null;
-
-    static Dictionary<string, string?> ForFactory(IReadOnlyDictionary<string, string?> options)
-    {
-        var copy = new Dictionary<string, string?>(options);
-        copy.TryAdd("url", Get(options, "database_url"));
-        copy.TryAdd("schema", Get(options, "database_schema"));
-        return copy;
-    }
 
     static IReadOnlyDictionary<string, string?> ConnectionFromEnvironment()
     {

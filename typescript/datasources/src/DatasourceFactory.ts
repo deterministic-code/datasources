@@ -26,15 +26,6 @@ const get = (options: DatasourceOptions | undefined, key: string): string | unde
   return value && value.trim() ? value.trim() : undefined;
 };
 
-const forFactory = (options: DatasourceOptions): DatasourceOptions => {
-  const copy = { ...options };
-  copy.url ??= get(options, "database_url") ?? "";
-  if (!copy.url) delete copy.url;
-  copy.schema ??= get(options, "database_schema") ?? "";
-  if (!copy.schema) delete copy.schema;
-  return copy;
-};
-
 const connectionFromEnvironment = (): DatasourceOptions => {
   const options: DatasourceOptions = {};
   const url = process.env.DATABASE_URL;
@@ -62,8 +53,7 @@ const resolve = (options?: DatasourceOptions): IDatasource => {
     ?? (() => { throw new DatasourceError("Datasource defaults are not specified"); })();
   const pair = factories.get(name);
   if (!pair) throw new ProviderNotInstalledError(name);
-  const bound = forFactory(listed);
-  return new Datasource(name, () => pair.connection(bound), pair.repository);
+  return new Datasource(name, () => pair.connection(listed), pair.repository);
 };
 
 export class DatasourceFactory implements IDatasourceFactory {
