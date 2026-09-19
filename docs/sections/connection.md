@@ -24,9 +24,9 @@ Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFil
 
 ::: dialects
 ```csharp
-Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
+DatasourceFactory.Register("json", opts => new JsonConnection(opts), JsonConnection.Repository);
 
-var json = Datasource.Create("json", new JsonConnectionOptions { Data = new JsonArray() });
+var json = new Datasource("json", () => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() }), JsonConnection.Repository);
 var connection = await json.CreateConnection();
 await connection.Open();
 ```
@@ -58,7 +58,7 @@ Apps create the default datasource and connection at process start, then hold th
 
 ::: dialects
 ```csharp
-var datasource = Datasource.Create();
+var datasource = DatasourceFactory.Create();
 var connection = await datasource.CreateConnection();
 
 Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();

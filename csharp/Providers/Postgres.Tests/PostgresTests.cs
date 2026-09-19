@@ -7,8 +7,8 @@ public class PostgresTests
 {
     public PostgresTests()
     {
-        Datasource.Reset();
-        Datasource.Register(PostgresDatasource.Instance);
+        DatasourceFactory.Reset();
+        DatasourceFactory.Register("postgres", opts => new PostgresConnection(opts), PostgresConnection.Repository);
     }
 
     [Fact]
@@ -57,8 +57,8 @@ public class PostgresTests
         var defaulted = new PostgresConnection(new PostgresConnectionOptions { Driver = driver });
         Assert.Equal("", defaulted.Url);
 
-        var ds = new PostgresDatasource(new PostgresConnectionOptions { Driver = driver }, "people");
-        Assert.Equal("postgres", ds.Create().Provider);
+        var ds = new Datasource("postgres", () => new PostgresConnection(new PostgresConnectionOptions { Driver = driver }), PostgresConnection.Repository);
+        Assert.Equal("postgres", ds.Provider);
         var created = await ds.CreateConnection();
         await ((PostgresConnection)created).Open();
         var bound = Assert.IsType<PostgresCommand>(ds.CreateCommand(created));
@@ -72,9 +72,11 @@ public class PostgresTests
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.IsType<Repository<Dictionary<string, Value>>>(repo2);
         Assert.Throws<DatasourceException>(() =>
-            new PostgresDatasource().CreateRepository<Dictionary<string, Value>>());
-        Assert.Equal("postgres", Datasource.Create("postgres").Provider);
-        await Assert.ThrowsAsync<DatasourceException>(() => new PostgresDatasource().CreateConnection());
+            new Datasource("postgres", () => new PostgresConnection(), PostgresConnection.Repository)
+                .CreateRepository<Dictionary<string, Value>>());
+        Assert.Equal("postgres", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "postgres" }).Provider);
+        await Assert.ThrowsAsync<DatasourceException>(() =>
+            new Datasource("postgres", () => new PostgresConnection(), PostgresConnection.Repository).CreateConnection());
 
         var closed = new PostgresConnection(new PostgresConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute("x"));

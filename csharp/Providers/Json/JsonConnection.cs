@@ -17,6 +17,11 @@ public sealed class JsonConnection : IConnection
     private readonly JsonNode? _initial;
     private readonly bool _hasInitial;
 
+    public JsonConnection(IReadOnlyDictionary<string, string?>? options)
+        : this(new JsonConnectionOptions { Path = DatasourceOptions.Value(options, "path") ?? "" })
+    {
+    }
+
     public JsonConnection(JsonConnectionOptions? options = null)
     {
         options ??= new JsonConnectionOptions();
@@ -27,6 +32,9 @@ public sealed class JsonConnection : IConnection
         _initial = options.Data;
         Data = Empty();
     }
+
+    public static object Repository(IConnection connection) =>
+        new JsonRepository((JsonConnection)connection);
 
     public async Task Open()
     {

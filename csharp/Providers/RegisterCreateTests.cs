@@ -2,12 +2,14 @@ using Datasources;
 
 public partial class RegisterCreateTests
 {
-    public RegisterCreateTests() => Datasource.Reset();
+    public RegisterCreateTests() => DatasourceFactory.Reset();
 
     [Fact]
     public void Creates()
     {
-        Datasource.Register(Instance);
-        Assert.Equal(Provider, Datasource.Create(Provider).Provider);
+        DatasourceFactory.Register(Provider, Connection, Repository);
+        Assert.Equal(
+            Provider,
+            DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = Provider }).Provider);
     }
 }

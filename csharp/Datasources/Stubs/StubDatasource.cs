@@ -1,11 +1,10 @@
 namespace Datasources;
 
-public sealed class StubDatasource : IDatasource, IDatasourceFactory
+public sealed class StubDatasource : IDatasource
 {
     IConnection? _connection;
     public StubDatasource(string provider) => Provider = provider;
     public string Provider { get; }
-    public IDatasource Create(object? options = null) => new StubDatasource(Provider);
     IConnection DefaultConnection() => _connection ??= new StubConnection(Provider);
     public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>

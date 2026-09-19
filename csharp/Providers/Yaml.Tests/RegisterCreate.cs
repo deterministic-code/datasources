@@ -4,12 +4,14 @@ using Datasources.Yaml;
 public partial class RegisterCreateTests
 {
     const string Provider = "yaml";
-    static readonly IDatasourceFactory Instance = YamlDatasource.Instance;
+    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new YamlConnection(options);
+    static object Repository(IConnection connection) => YamlConnection.Repository(connection);
+    static IDatasource Ds() => new Datasource(Provider, () => new YamlConnection(), YamlConnection.Repository);
 
     [Fact]
     public async Task CreatesConnection()
     {
-        var connection = await new YamlDatasource().CreateConnection();
+        var connection = await Ds().CreateConnection();
         Assert.IsType<YamlConnection>(connection);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(connection.Open);
     }
@@ -17,7 +19,7 @@ public partial class RegisterCreateTests
     [Fact]
     public async Task CreatesCommand()
     {
-        var ds = new YamlDatasource();
+        var ds = Ds();
         var connection = await ds.CreateConnection();
         var command = ds.CreateCommand(connection);
         Assert.IsType<YamlCommand>(command);

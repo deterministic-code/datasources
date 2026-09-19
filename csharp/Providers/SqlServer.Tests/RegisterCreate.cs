@@ -4,12 +4,14 @@ using Datasources.SqlServer;
 public partial class RegisterCreateTests
 {
     const string Provider = "sqlserver";
-    static readonly IDatasourceFactory Instance = SqlServerDatasource.Instance;
+    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new SqlServerConnection(options);
+    static object Repository(IConnection connection) => SqlServerConnection.Repository(connection);
+    static IDatasource Ds() => new Datasource(Provider, () => new SqlServerConnection(), SqlServerConnection.Repository);
 
     [Fact]
     public async Task CreatesConnection()
     {
-        var connection = await new SqlServerDatasource().CreateConnection();
+        var connection = await Ds().CreateConnection();
         Assert.IsType<SqlServerConnection>(connection);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(connection.Open);
     }
@@ -17,7 +19,7 @@ public partial class RegisterCreateTests
     [Fact]
     public async Task CreatesCommand()
     {
-        var ds = new SqlServerDatasource();
+        var ds = Ds();
         var connection = await ds.CreateConnection();
         var command = ds.CreateCommand(connection);
         Assert.IsType<SqlServerCommand>(command);

@@ -6,7 +6,7 @@ public class DatasourceInstallTests
 
     public DatasourceInstallTests()
     {
-        Datasource.Reset();
+        DatasourceFactory.Reset();
         foreach (var key in EnvKeys)
             Environment.SetEnvironmentVariable(key, null);
     }
@@ -35,51 +35,67 @@ public class DatasourceInstallTests
     }
 
     [Fact]
-    public void InstallsListedFactoriesAndDefaults()
+    public void InstallsListedFactories()
     {
         DatasourceInstall.From(new Dictionary<string, string?>
         {
             ["INSTALLED_PROVIDERS"] = "json,memory",
             ["DATABASE_URL"] = "memory://",
-            ["filename"] = ":memory:"
         });
-        Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
-        Assert.Equal("memory", Datasource.Create().Provider);
-        Assert.Equal("json", Datasource.Create("json").Provider);
+        Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
+        Assert.Equal(
+            "memory",
+            DatasourceFactory.Create(new Dictionary<string, string?>
+            {
+                ["provider"] = "memory",
+                ["database_url"] = "memory://",
+                ["filename"] = ":memory:"
+            }).Provider);
+        Assert.Equal(
+            "json",
+            DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "json" }).Provider);
     }
 
     [Fact]
     public void DefaultsRegistersInstalledProviders()
     {
-        Datasource.Defaults(new Dictionary<string, string?>
+        DatasourceFactory.Defaults(new Dictionary<string, string?>
         {
             ["INSTALLED_PROVIDERS"] = "json,memory",
             ["DATABASE_URL"] = "memory://"
         });
-        Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
-        Assert.Equal("memory", Datasource.Create().Provider);
+        Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
+        Assert.Equal(
+            "memory",
+            DatasourceFactory.Create(new Dictionary<string, string?> { ["database_url"] = "memory://" }).Provider);
     }
 
     [Fact]
-    public void CreateRegistersInstalledProviders()
+    public void CreateDoesNotTakeInstalledProviders()
     {
-        Assert.Equal("json", Datasource.Create(null, new Dictionary<string, string?>
+        DatasourceInstall.From(new Dictionary<string, string?>
         {
-            ["INSTALLED_PROVIDERS"] = "json,memory",
-            ["DATABASE_URL"] = "json://"
-        }).Provider);
-        Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
+            ["INSTALLED_PROVIDERS"] = "json,memory"
+        });
+        Assert.Equal(
+            "json",
+            DatasourceFactory.Create(new Dictionary<string, string?>
+            {
+                ["provider"] = "json",
+                ["database_url"] = "json://"
+            }).Provider);
+        Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
     }
 
     [Fact]
-    public void CreateReadsInstalledProvidersFromEnvironment()
+    public void CreateReadsConnectionFromEnvironment()
     {
         Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "json,memory");
         Environment.SetEnvironmentVariable("DATABASE_URL", "memory://");
         try
         {
-            Assert.Equal("memory", Datasource.Create().Provider);
-            Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
+            Assert.Equal("memory", DatasourceFactory.Create().Provider);
+            Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
         }
         finally
         {

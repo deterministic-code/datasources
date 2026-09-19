@@ -13,6 +13,11 @@ public sealed class MemoryConnection : IConnection
     private readonly object? _data;
     private Dictionary<string, List<Row>>? _snapshot;
 
+    public MemoryConnection(IReadOnlyDictionary<string, string?>? _)
+        : this(new MemoryConnectionOptions())
+    {
+    }
+
     public MemoryConnection(MemoryConnectionOptions? options = null)
     {
         options ??= new MemoryConnectionOptions();
@@ -20,6 +25,9 @@ public sealed class MemoryConnection : IConnection
         Collection = options.Collection ?? "";
         _data = options.Data;
     }
+
+    public static object Repository(IConnection connection) =>
+        new MemoryRepository((MemoryConnection)connection);
 
     public Task Open()
     {

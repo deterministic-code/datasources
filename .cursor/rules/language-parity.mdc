@@ -1,0 +1,22 @@
+---
+description: Keep C#, Rust, and TypeScript public APIs and runtime behavior in parity
+alwaysApply: true
+---
+
+# Language parity
+
+Same public workflow in C#, Rust, and TypeScript. Do not add a helper, extra call, or auto-path in one language only.
+
+`Defaults` / `Create` / `Register` mean the same thing everywhere. If env already has `INSTALLED_PROVIDERS` and `DATABASE_URL`, `Create` / `create` / `create_default` applies those defaults and registers the listed factories. Do not require `install`, `register_from`, or a hand-built defaults dictionary in one language when the others do not.
+
+```csharp
+var ds = DatasourceFactory.Create();
+```
+
+```rust
+let ds = create_default()?;
+```
+
+```typescript
+const ds = Datasource.create();
+```

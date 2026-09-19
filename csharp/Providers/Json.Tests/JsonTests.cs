@@ -8,8 +8,8 @@ public class JsonTests
 {
     public JsonTests()
     {
-        Datasource.Reset();
-        Datasource.Register(JsonDatasource.Instance);
+        DatasourceFactory.Reset();
+        DatasourceFactory.Register("json", opts => new JsonConnection(opts), JsonConnection.Repository);
     }
 
     [Fact]
@@ -114,8 +114,8 @@ public class JsonTests
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Update(new Row { ["id"] = 1 }));
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Delete(new Row { ["id"] = 1 }));
 
-        var ds = new JsonDatasource(new JsonConnectionOptions { Data = new JsonArray() });
-        Assert.Equal("json", ds.Create().Provider);
+        var ds = new Datasource("json", () => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() }), JsonConnection.Repository);
+        Assert.Equal("json", ds.Provider);
         var created = await ds.CreateConnection();
         await ((JsonConnection)created).Open();
         var bound = Assert.IsType<JsonCommand>(ds.CreateCommand(created));
@@ -128,7 +128,7 @@ public class JsonTests
         await implicitCommand.ExecuteReader("");
         ds.CreateRepository<Dictionary<string, Value>>(created);
         ds.CreateRepository<Dictionary<string, Value>>();
-        Assert.Equal("json", Datasource.Create("json").Provider);
+        Assert.Equal("json", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "json" }).Provider);
 
         var fromFile = new JsonConnection(new JsonConnectionOptions
         {

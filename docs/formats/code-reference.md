@@ -77,7 +77,7 @@ When present, one `###` heading per sample, optional prose, then `::: dialects`.
 
 ::: dialects
 ```csharp
-var ds = Datasource.Create();
+var ds = DatasourceFactory.Create();
 ```
 ```rust
 let ds = create_default()?;

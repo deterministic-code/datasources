@@ -4,12 +4,14 @@ using Datasources.DynamoDb;
 public partial class RegisterCreateTests
 {
     const string Provider = "dynamodb";
-    static readonly IDatasourceFactory Instance = DynamoDbDatasource.Instance;
+    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new DynamoDbConnection(options);
+    static object Repository(IConnection connection) => DynamoDbConnection.Repository(connection);
+    static IDatasource Ds() => new Datasource(Provider, () => new DynamoDbConnection(), DynamoDbConnection.Repository);
 
     [Fact]
     public async Task CreatesConnection()
     {
-        var connection = await new DynamoDbDatasource().CreateConnection();
+        var connection = await Ds().CreateConnection();
         Assert.IsType<DynamoDbConnection>(connection);
         await Assert.ThrowsAsync<ProviderNotImplementedException>(connection.Open);
     }
@@ -17,7 +19,7 @@ public partial class RegisterCreateTests
     [Fact]
     public async Task CreatesCommand()
     {
-        var ds = new DynamoDbDatasource();
+        var ds = Ds();
         var connection = await ds.CreateConnection();
         var command = ds.CreateCommand(connection);
         Assert.IsType<DynamoDbCommand>(command);

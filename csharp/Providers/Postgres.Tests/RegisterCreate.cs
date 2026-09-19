@@ -4,5 +4,6 @@ using Datasources.Postgres;
 public partial class RegisterCreateTests
 {
     const string Provider = "postgres";
-    static readonly IDatasourceFactory Instance = PostgresDatasource.Instance;
+    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new PostgresConnection(options);
+    static object Repository(IConnection connection) => PostgresConnection.Repository(connection);
 }
