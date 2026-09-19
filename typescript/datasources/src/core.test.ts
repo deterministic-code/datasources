@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ArrayReader,
   collectAsync,
@@ -37,8 +37,29 @@ import {
   type IReader,
 } from "./index.ts";
 
+const envKeys = [
+  "INSTALLED_PROVIDERS",
+  "providers",
+  "DATABASE_URL",
+  "url",
+  "DATABASE_SCHEMA",
+  "provider",
+] as const;
+const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+
+beforeEach(() => {
+  for (const key of envKeys) delete process.env[key];
+});
+
 afterEach(() => {
   Datasource.reset();
+});
+
+afterAll(() => {
+  for (const key of envKeys) {
+    if (savedEnv[key] === undefined) delete process.env[key];
+    else process.env[key] = savedEnv[key];
+  }
 });
 
 describe("isolation", () => {
@@ -385,6 +406,17 @@ describe("Datasource registry", () => {
     Datasource.reset();
     expect(Datasource.registered()).toEqual([]);
     expect(() => Datasource.create("json")).toThrow(ProviderNotInstalledError);
+  });
+
+  it("applies env defaults through a bound installer", () => {
+    const listed: string[] = [];
+    Datasource.bindInstall((options) => {
+      listed.push(String(options.provider ?? ""));
+    });
+    process.env.provider = "memory";
+    Datasource.register(new MockDatasource("memory"));
+    expect(Datasource.create().provider).toBe("memory");
+    expect(listed).toEqual(["memory"]);
   });
 
   it("requires consumer defaults when provider is omitted", async () => {

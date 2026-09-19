@@ -5,7 +5,15 @@ namespace Datasources.Tests;
 
 public class CoreTests
 {
-    public CoreTests() => Datasource.Reset();
+    static readonly string[] EnvKeys =
+        ["INSTALLED_PROVIDERS", "providers", "DATABASE_URL", "url", "DATABASE_SCHEMA", "provider"];
+
+    public CoreTests()
+    {
+        Datasource.Reset();
+        foreach (var key in EnvKeys)
+            Environment.SetEnvironmentVariable(key, null);
+    }
 
     [Fact]
     public void Errors()

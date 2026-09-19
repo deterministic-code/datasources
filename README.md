@@ -8,10 +8,10 @@ It is designed for AI agents. The motivation is that current AI-generated data-a
 
 The feature stack starts with standard data-access modules for commands, connections, and object mapping. Higher up, the API is more opinionated and adds time-saving features for CRUD repositories, enriched repositories, and bulk repositories.
 
-- [Quick Start](#quickstart)
+- [Quick Start](#quick-start)
 - [Feature Matrix](#feature-matrix)
 
-## QuickStart
+## Quick Start
 
 ### Installation
 
@@ -26,6 +26,7 @@ npm install @datasources/core
 Install Providers
 
 ```typescript
+npm install @datasources/register
 npm install @datasources/sqlite
 npm install @datasources/mysql
 npm install @datasources/postgres
@@ -44,6 +45,7 @@ dotnet add package Datasources
 Install Providers
 
 ```csharp
+dotnet add package Datasources.Hosting
 dotnet add package Datasources.Sqlite
 dotnet add package Datasources.Sqlite.Microsoft
 dotnet add package Datasources.Mysql
@@ -63,70 +65,27 @@ cargo add datasources
 Install Providers
 
 ```rust
+cargo add datasources-register --features sqlite
 cargo add datasources-sqlite
 cargo add datasources-mysql
 cargo add datasources-postgres
 cargo add datasources-memory
 cargo add datasources-json
 ```
+
 ### Setup
 
-Add dialect packages and write a local `.env` with [`@datasources/cli`](#setup). Core does not read `.env`; the app loads it, then registers providers and defaults.
+Run interactive setup.
+
+```sh
+npx @datasources/cli setup
+```
+
+Add a new datasource provider.
 
 ```sh
 npx @datasources/cli add sqlite
 ```
-
-Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
-
-The optional install helper (`Datasources.Hosting` / `datasources-register` / `@datasources/register`) registers each name in `providers` / `INSTALLED_PROVIDERS`, always includes the `DATABASE_URL` scheme, then sets defaults. Connections are constructed **closed**; open on first use.
-
-#### C#
-
-```csharp
-var options = new Dictionary<string, string?>
-{
-    ["providers"] = Environment.GetEnvironmentVariable("INSTALLED_PROVIDERS"),
-    ["url"] = Environment.GetEnvironmentVariable("DATABASE_URL") ?? "sqlite:///:memory:"
-};
-DatasourceInstall.From(options);
-
-var datasource = Datasource.Create();
-var connection = await datasource.CreateConnection();
-```
-
-#### Rust
-
-```rust
-use std::collections::HashMap;
-use datasources::create_default;
-use datasources_register::register_from;
-
-let options = HashMap::from([
-    ("providers".into(), std::env::var("INSTALLED_PROVIDERS").unwrap_or_default()),
-    ("url".into(), std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:///:memory:".into())),
-]);
-register_from(options)?;
-
-let datasource = create_default()?;
-let connection = datasource.create_connection().await?;
-```
-
-#### TypeScript
-
-```typescript
-import { Datasource } from "@datasources/core";
-import { install } from "@datasources/register";
-
-await install({
-  providers: process.env.INSTALLED_PROVIDERS,
-  url: process.env.DATABASE_URL ?? "sqlite:///:memory:",
-});
-
-const datasource = Datasource.create();
-const connection = await datasource.createConnection();
-```
-Do not commit URLs with credentials. Production uses the real environment or a secrets manager.
 
 ### Readonly command
 
@@ -135,9 +94,7 @@ Start with `createCommand` and `executeReader`. The connection must be open.
 #### C#
 
 ```csharp
-Datasource.Register(SqliteDatasource.Instance);
-
-var ds = Datasource.Create("sqlite", new SqliteConnectionOptions { Filename = ":memory:" });
+var ds = Datasource.Create();
 var connection = await ds.CreateConnection();
 await connection.Open();
 
@@ -152,12 +109,9 @@ while (await reader.Next())
 #### Rust
 
 ```rust
-use datasources::{create, register, Parameter};
-use datasources_sqlite::SqliteDatasource;
+use datasources::{create_default, Parameter};
 
-register(SqliteDatasource::instance());
-
-let ds = create("sqlite", None)?;
+let ds = create_default()?;
 let connection = ds.create_connection().await?;
 connection.open().await?;
 
@@ -174,11 +128,8 @@ while reader.next().await? {
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import { SqliteDatasource } from "@datasources/sqlite";
 
-Datasource.register(SqliteDatasource.instance);
-
-const ds = Datasource.create("sqlite", { filename: ":memory:" });
+const ds = Datasource.create();
 const connection = await ds.createConnection();
 await connection.open();
 
@@ -188,6 +139,7 @@ const reader = await command.executeReader("SELECT id, name FROM item WHERE id =
 ]);
 while (await reader.next()) console.log(reader.current);
 ```
+
 See [Command](#command) for middleware and `execute`.
 
 ### Enriched CRUD repository
@@ -232,6 +184,7 @@ contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true
 const loaded = await contacts.getSingle(WhereBuilder.equals("id", 10));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
+
 See [Repositories](#readonly-repository) for readonly, CRUD, and bulk.
 
 ### Mappers
@@ -269,6 +222,7 @@ const mapper = new TransformMapper<Nested, Flat>(
 const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
+
 See [Mappers](#mappers) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
 
 ### Type Converter
@@ -325,6 +279,7 @@ class FlagConverter extends TypeConverter {
 const rows = new RowTypeConverter({}, { flag: new FlagConverter() });
 const item = rows.convert(row);
 ```
+
 See [TypeConverters](#type-converters).
 
 ## Feature Matrix
@@ -365,7 +320,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | mongodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | dynamodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 
-Package names per language are on [QuickStart](#installation).
+Package names per language are on [Quick Start](#installation).
 
 ## Examples
 
@@ -385,7 +340,7 @@ TODO: `startTransaction`, work, then `commit` or `abort`.
 
 ## Datasource
 
-Factory for connections, commands, and repositories. Register providers, then create by name. The library does not auto-register providers.
+Factory for connections, commands, and repositories. `Create` reads `INSTALLED_PROVIDERS` and `DATABASE_URL` from the process environment when defaults are unset, registers each listed factory, then creates.
 
 ### IDatasource
 
@@ -413,128 +368,22 @@ Factory for connections, commands, and repositories. Register providers, then cr
 #### C#
 
 ```csharp
-Datasource.Register(SqliteDatasource.Instance);
-var ds = Datasource.Create("sqlite");
+var ds = Datasource.Create();
 ```
 
 #### Rust
 
 ```rust
-register(SqliteDatasource::instance());
-let ds = create("sqlite", None)?;
+let ds = create_default()?;
 ```
 
 #### TypeScript
 
 ```typescript
-Datasource.register(SqliteDatasource.instance);
-const ds = Datasource.create("sqlite");
+const ds = Datasource.create();
 ```
-See [QuickStart](#quickstart) for full registration and default-provider setup.
 
-## Mappers
-
-Holds source/destination labels. Column names pass through as-is.
-
-### IMapper
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IMapper<TFrom, TTo>` | `Mapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
-
-### ISourceDestinationMapper
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `ISourceDestinationMapper` | `SourceDestinationMapper` | `ISourceDestinationMapper` |
-| `Source` | `source` | `source` |
-| `Destination` | `destination` | `destination` |
-
-### NameMapper
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `NameMapper` | `NameMapper` | `NameMapper` |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
-
-### NameSourceDestinationMapper
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `NameSourceDestinationMapper` | `NameSourceDestinationMapper` | `NameSourceDestinationMapper` |
-| constructor | `new` | constructor |
-| `Source` | `source` | `source` |
-| `Destination` | `destination` | `destination` |
-
-### TransformMapper
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` |
-| constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
-| `Map` | `map` | `map` |
-| `ReverseMap` | `reverse_map` | `reverseMap` |
-
-### FlatToTypeMapper
-
-Collapses denormalized join rows into a typed graph. Scalars map column → field; groups collect unique children by key. Nested group fields on a collection are omitted.
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IFlatToTypeMapper` | `FlatToTypeMapperTrait` | `IFlatToTypeMapper<T>` |
-| `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
-| `TypeMap` | `TypeMap` | `TypeMap<T>` |
-| `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |
-| `TypeMapField` | `TypeMapField` | string or group |
-| `MappedValue` | `MappedValue` | `T` fields |
-| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
-| `Collapse` | `collapse` / `collapse_rows` | `collapse` |
-
-### StatementMapper
-
-Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.
-
-Apply in either or both places:
-
-1. **Builder** — `RepositoryBuilder` maps `Entity` and `Columns` into `RepositoryStatements`.
-2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` mappers rewrite the finished statement.
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `StatementMapper<T>` | `StatementMapper` | `StatementMapper<T>` |
-| `Entity` | `entity` | `entity` |
-| `Columns` | `columns` | `columns` |
-| `Query` | `query` | `query` |
-| `Insert` | `insert` | `insert` |
-| `Update` | `update` | `update` |
-| `Delete` | `delete` | `delete` |
-| `Rows` | `rows` | `rows` |
-| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
-
-## TypeConverters
-
-`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`.
-
-A dialect adds a `TypeConverter` only when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
-
-### TypeConverter
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `TypeConverter<To, From>` | `TypeConverter<To, From>` | `TypeConverter` |
-| `Convert` | `convert` | `convert` |
-| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
-
-### RowTypeConverter
-
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `RowTypeConverter<T>` | `RowTypeConverter` | `RowTypeConverter` |
-| `Convert` / `ReverseConvert` | `convert` / `reverse_convert` | `convert` / `reverseConvert` |
-| `Types` / `Fields` | `types` / `fields` | `types` / `fields` |
+See [CLI](#command-line-cli) for `setup` and adding providers.
 
 ## Connection
 
@@ -595,6 +444,7 @@ const json = Datasource.create("json", { data: [] });
 const connection = await json.createConnection();
 await connection.open();
 ```
+
 ### Startup
 
 Apps create the default datasource and connection at process start, then hold the closed connection. Call `Open` / `open` on first use (a no-op if already open). Do not open during bootstrap.
@@ -602,7 +452,6 @@ Apps create the default datasource and connection at process start, then hold th
 #### C#
 
 ```csharp
-Datasource.Defaults(options);
 var datasource = Datasource.Create();
 var connection = await datasource.CreateConnection();
 
@@ -613,9 +462,8 @@ Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();
 
 ```rust
 use std::sync::Arc;
-use datasources::{create_default, defaults, Connection, Result};
+use datasources::{create_default, Connection, Result};
 
-defaults(options);
 let datasource = create_default()?;
 let connection = datasource.create_connection().await?;
 
@@ -630,7 +478,6 @@ async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
 #### TypeScript
 
 ```typescript
-Datasource.defaults(options);
 const datasource = Datasource.create();
 const connection = await datasource.createConnection();
 
@@ -638,6 +485,7 @@ async function ensureOpen() {
   if (!connection.isOpen) await connection.open();
 }
 ```
+
 ### Mock
 
 Depend on `IConnection` / `Connection`. Use `MockConnection` / `MockDatasource`. `CreateConnection` returns the configured mock and does not open it.
@@ -681,6 +529,7 @@ const failing = new MockConnection();
 failing.openError = new Error("open-fail");
 await expect(failing.open()).rejects.toThrow("open-fail");
 ```
+
 Provider tests inject fakes on options (`MemoryFileStore`, `ScriptedDriver`) and then open.
 
 ## Command
@@ -755,6 +604,7 @@ const command = json.createCommand(connection);
 await command.execute("insert", [{ name: "id", value: 1 }]);
 await command.executeReader("");
 ```
+
 ### Mock
 
 Depend on `ICommand` / `Command`. Use `MockCommand` / `MockDatasource`.
@@ -799,6 +649,7 @@ const failing = new MockCommand(ds.connection);
 failing.executeError = new Error("exec-fail");
 await expect(failing.execute("")).rejects.toThrow("exec-fail");
 ```
+
 Provider tests inject fakes on options (`MemoryFileStore`, `ScriptedDriver`) and then execute / execute-reader.
 
 ## Statements
@@ -930,9 +781,113 @@ Nest only on walkable objects (`many: true` or a whole related row). A `select` 
 
 TODO: fill as the generic `Repository<T>` surface settles.
 
+## Mappers
+
+Holds source/destination labels. Column names pass through as-is.
+
+### IMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `IMapper<TFrom, TTo>` | `Mapper<TFrom, TTo>` | `IMapper<TFrom, TTo>` |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
+
+### ISourceDestinationMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `ISourceDestinationMapper` | `SourceDestinationMapper` | `ISourceDestinationMapper` |
+| `Source` | `source` | `source` |
+| `Destination` | `destination` | `destination` |
+
+### NameMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `NameMapper` | `NameMapper` | `NameMapper` |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
+
+### NameSourceDestinationMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `NameSourceDestinationMapper` | `NameSourceDestinationMapper` | `NameSourceDestinationMapper` |
+| constructor | `new` | constructor |
+| `Source` | `source` | `source` |
+| `Destination` | `destination` | `destination` |
+
+### TransformMapper
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` | `TransformMapper<TFrom, TTo>` |
+| constructor(`map`, `reverseMap`) | `new(map, reverse_map)` | constructor(`map`, `reverseMap`) |
+| `Map` | `map` | `map` |
+| `ReverseMap` | `reverse_map` | `reverseMap` |
+
+### FlatToTypeMapper
+
+Collapses denormalized join rows into a typed graph. Scalars map column → field; groups collect unique children by key. Nested group fields on a collection are omitted.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `IFlatToTypeMapper` | `FlatToTypeMapperTrait` | `IFlatToTypeMapper<T>` |
+| `FlatToTypeMapper` | `FlatToTypeMapper` | `FlatToTypeMapper<T>` |
+| `TypeMap` | `TypeMap` | `TypeMap<T>` |
+| `TypeMapGroup` | `TypeMapGroup` | `TypeMapGroup<E>` |
+| `TypeMapField` | `TypeMapField` | string or group |
+| `MappedValue` | `MappedValue` | `T` fields |
+| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
+| `Collapse` | `collapse` / `collapse_rows` | `collapse` |
+
+### StatementMapper
+
+Maps entity and column names when the repository is built, and can map each finished statement. `Rows` is the get-row `IMapper<T, T>`. `Repository` only convert-then-maps rows.
+
+Apply in either or both places:
+
+1. **Builder** — `RepositoryBuilder` maps `Entity` and `Columns` into `RepositoryStatements`.
+2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` mappers rewrite the finished statement.
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `StatementMapper<T>` | `StatementMapper` | `StatementMapper<T>` |
+| `Entity` | `entity` | `entity` |
+| `Columns` | `columns` | `columns` |
+| `Query` | `query` | `query` |
+| `Insert` | `insert` | `insert` |
+| `Update` | `update` | `update` |
+| `Delete` | `delete` | `delete` |
+| `Rows` | `rows` | `rows` |
+| `Map` / `ReverseMap` | `map` / `reverse_map` | `map` / `reverseMap` |
+
+## TypeConverters
+
+`TypeConverter` is only `Convert` / `ReverseConvert`. `RowTypeConverter` has `Types` and `Fields`. Convert uses `Fields[name]`.
+
+A dialect adds a `TypeConverter` only when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
+
+### TypeConverter
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `TypeConverter<To, From>` | `TypeConverter<To, From>` | `TypeConverter` |
+| `Convert` | `convert` | `convert` |
+| `ReverseConvert` | `reverse_convert` | `reverseConvert` |
+
+### RowTypeConverter
+
+| C# | Rust | TypeScript |
+| --- | --- | --- |
+| `RowTypeConverter<T>` | `RowTypeConverter` | `RowTypeConverter` |
+| `Convert` / `ReverseConvert` | `convert` / `reverse_convert` | `convert` / `reverseConvert` |
+| `Types` / `Fields` | `types` / `fields` | `types` / `fields` |
+
 ## Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. Core does not read `.env`; the app loads it, then registers providers and defaults.
+`@datasources/cli` installs provider packages and writes a local `.env`. Core does not parse a `.env` file; the app loads it into the process. `Create` / `create` / `create_default` then reads `INSTALLED_PROVIDERS` and `DATABASE_URL`, registers each listed factory, and creates.
 
 ```sh
 npx @datasources/cli setup
@@ -992,7 +947,7 @@ npx @datasources/cli remove postgres
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `INSTALLED_PROVIDERS` | scheme of `DATABASE_URL` | Comma-separated providers to install and register. |
+| `INSTALLED_PROVIDERS` | scheme of `DATABASE_URL` | Comma-separated providers `Create` registers. |
 | `DATABASE_URL` | `sqlite:///:memory:` | Connection URL. The scheme is the default provider. |
 | `DATABASE_SCHEMA` | *(empty)* | Schema / search path (postgres). |
 

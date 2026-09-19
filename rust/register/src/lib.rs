@@ -1,4 +1,4 @@
-use datasources::{defaults, register, DatasourceError, DatasourceFactory, Result};
+use datasources::{bind_install, defaults, register, DatasourceError, DatasourceFactory, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -24,8 +24,7 @@ pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
         get(options, "url")
             .or_else(|| get(options, "DATABASE_URL"))
             .and_then(datasources::provider_from_url)
-    })
-    {
+    }) {
         if !names.iter().any(|existing| existing == &provider) {
             names.push(provider);
         }
@@ -71,18 +70,50 @@ fn factory_for(name: &str) -> Result<Arc<dyn DatasourceFactory>> {
     )
 }
 
-pub fn register_from(options: HashMap<String, String>) -> Result<()> {
-    for name in provider_names(&options) {
+fn install_listed(options: &HashMap<String, String>) -> Result<()> {
+    for name in provider_names(options) {
         register(factory_for(&name)?);
     }
-    defaults(options);
     Ok(())
 }
+
+pub fn init() {
+    bind_install(install_listed);
+}
+
+pub fn register_from(options: HashMap<String, String>) -> Result<()> {
+    init();
+    defaults(options)
+}
+
+#[used]
+#[cfg_attr(target_os = "linux", link_section = ".init_array")]
+#[cfg_attr(target_os = "macos", link_section = "__DATA,__mod_init_func")]
+#[cfg_attr(windows, link_section = ".CRT$XCU")]
+static INIT: unsafe extern "C" fn() = {
+    unsafe extern "C" fn init_ctor() {
+        init();
+    }
+    init_ctor
+};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, create_default, registered, reset};
+
+    fn clear_env() {
+        for key in [
+            "INSTALLED_PROVIDERS",
+            "providers",
+            "DATABASE_URL",
+            "url",
+            "DATABASE_SCHEMA",
+            "provider",
+        ] {
+            std::env::remove_var(key);
+        }
+    }
 
     fn opts(pairs: &[(&str, &str)]) -> HashMap<String, String> {
         pairs
@@ -117,6 +148,7 @@ mod tests {
     #[test]
     fn registers_listed_factories_and_defaults() {
         reset();
+        clear_env();
         register_from(opts(&[
             ("providers", "json,memory"),
             ("provider", "memory"),
@@ -130,8 +162,36 @@ mod tests {
     }
 
     #[test]
+    fn registers_installed_providers() {
+        reset();
+        clear_env();
+        register_from(opts(&[
+            ("INSTALLED_PROVIDERS", "json,memory"),
+            ("provider", "memory"),
+        ]))
+        .unwrap();
+        let mut names = registered();
+        names.sort();
+        assert_eq!(names, vec!["json", "memory"]);
+        assert_eq!(create_default().unwrap().provider(), "memory");
+    }
+
+    #[test]
+    fn create_default_reads_env() {
+        reset();
+        clear_env();
+        init();
+        std::env::set_var("INSTALLED_PROVIDERS", "json,memory");
+        std::env::set_var("provider", "memory");
+        let result = create_default();
+        clear_env();
+        assert_eq!(result.unwrap().provider(), "memory");
+    }
+
+    #[test]
     fn missing_feature_or_unknown_name() {
         reset();
+        clear_env();
         assert!(matches!(
             register_from(opts(&[("provider", "nope")])),
             Err(DatasourceError::ProviderNotInstalled(_))

@@ -1,6 +1,6 @@
 # Datasource
 
-Factory for connections, commands, and repositories. Register providers, then create by name. The library does not auto-register providers.
+Factory for connections, commands, and repositories. `Create` reads `INSTALLED_PROVIDERS` and `DATABASE_URL` from the process environment when defaults are unset, registers each listed factory, then creates.
 
 ## IDatasource
 
@@ -27,17 +27,14 @@ Factory for connections, commands, and repositories. Register providers, then cr
 
 ::: dialects
 ```csharp
-Datasource.Register(SqliteDatasource.Instance);
-var ds = Datasource.Create("sqlite");
+var ds = Datasource.Create();
 ```
 ```rust
-register(SqliteDatasource::instance());
-let ds = create("sqlite", None)?;
+let ds = create_default()?;
 ```
 ```typescript
-Datasource.register(SqliteDatasource.instance);
-const ds = Datasource.create("sqlite");
+const ds = Datasource.create();
 ```
 :::
 
-See [QuickStart](../quickstart.md) for full registration and default-provider setup.
+See [CLI](../cli.md#command-line-cli) for `setup` and adding providers.
