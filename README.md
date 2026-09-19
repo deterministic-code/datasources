@@ -15,7 +15,7 @@ The feature stack starts with standard data-access modules for commands, connect
 
 ### Installation
 
-#### TypeScript
+##### TypeScript
 
 Install Core
 
@@ -34,7 +34,7 @@ npm install @datasources/memory
 npm install @datasources/json
 ```
 
-#### C#
+##### C#
 
 Install Core
 
@@ -54,7 +54,7 @@ dotnet add package Datasources.Memory
 dotnet add package Datasources.Json
 ```
 
-#### Rust
+##### Rust
 
 Install Core
 
@@ -91,7 +91,7 @@ npx @datasources/cli add sqlite
 
 Start with `createCommand` and `executeReader`. The connection must be open.
 
-#### C#
+##### C#
 
 ```csharp
 var ds = Datasource.Create();
@@ -106,7 +106,7 @@ while (await reader.Next())
     Console.WriteLine(reader.Current);
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 use datasources::{create_default, Parameter};
@@ -124,7 +124,7 @@ while reader.next().await? {
 }
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 import { Datasource } from "@datasources/core";
@@ -146,7 +146,7 @@ See [Command](#command) for middleware and `execute`.
 
 A `DeepCRUDRepository` wraps a CRUD repository, fills related fields after `get`, and writes nested `many` children on create / update / delete.
 
-#### C#
+##### C#
 
 ```csharp
 var contacts = new DeepCRUDRepository<Contact>(contactRepo);
@@ -158,7 +158,7 @@ var loaded = await contacts.GetSingle(WhereBuilder.Equals("id", 10));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 let mut contacts = DeepCRUDRepository::new(contact_repo);
@@ -172,7 +172,7 @@ let loaded = contacts.get_single_where(&WhereBuilder::equals("id", 10)).await?;
 contacts.create(contact).await?;
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 const contacts = new DeepCRUDRepository(contactRepo);
@@ -191,7 +191,7 @@ See [Repositories](#readonly-repository) for readonly, CRUD, and bulk.
 
 `TransformMapper` reshapes an already-converted object. Repository get is convert, then map.
 
-#### C#
+##### C#
 
 ```csharp
 var mapper = new TransformMapper<Nested, Flat>(
@@ -201,7 +201,7 @@ var flat = mapper.Map(nested);
 var back = mapper.ReverseMap(flat);
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 let mapper = TransformMapper::new(
@@ -212,7 +212,7 @@ let flat = mapper.map(nested);
 let back = mapper.reverse_map(flat);
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 const mapper = new TransformMapper<Nested, Flat>(
@@ -229,7 +229,7 @@ See [Mappers](#mappers) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapp
 
 `TypeConverter` is only `Convert` / `ReverseConvert`. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
 
-#### C#
+##### C#
 
 ```csharp
 sealed class FlagConverter : TypeConverter<Value, Value>
@@ -245,7 +245,7 @@ var rows = new RowTypeConverter<Item>(fields: new Dictionary<string, TypeConvert
 var item = rows.Convert(row);
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 struct FlagConverter;
@@ -268,7 +268,7 @@ let rows = RowTypeConverter::new(vec!["flag".into()]).with_fields(HashMap::from(
 let item = rows.convert(&row)?;
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 class FlagConverter extends TypeConverter {
@@ -342,48 +342,1072 @@ TODO: `startTransaction`, work, then `commit` or `abort`.
 
 Factory for connections, commands, and repositories. `Create` reads `INSTALLED_PROVIDERS` and `DATABASE_URL` from the process environment when defaults are unset, registers each listed factory, then creates.
 
-### IDatasource
+### Classes
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `IDatasource` | `Datasource` trait | `IDatasource` |
-| `Provider` | `provider()` | `provider` |
-| `CreateConnection` | `create_connection` | `createConnection` |
-| `CreateCommand` | `create_command` | `createCommand` |
-| `CreateRepository<T>` | `create_repository` | `createRepository` |
-| `CreateReadonlyRepository<T>` | `create_readonly_repository` | `createReadonlyRepository` |
+##### TypeScript
 
-### Registry
+##### Datasource {#typescript-datasource}
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `Datasource` | `datasources` | `Datasource` |
-| `Register` | `register` | `register` |
-| `DatasourceInstall.From` (Hosting) | `register_from` (`datasources-register`) | `install` (`@datasources/register`) |
-| `Create` | `create` / `create_default` | `create` |
-| `Defaults` | `defaults` | `defaults` |
-| `Registered` | `registered` | `registered` |
-| `Reset` | `reset` | `reset` |
+```typescript
+class Datasource
+```
 
-#### C#
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [defaults(options)](#typescript-datasource-defaults-options) | Stores default options and registers listed factories. |
+| [register(...factories)](#typescript-datasource-register-factories) | Registers factories by provider name. |
+| [create(provider?, options?)](#typescript-datasource-create-provider-options) | Creates a datasource from the registry. |
+| [reset()](#typescript-datasource-reset) | Clears the registry and stored defaults. Use in tests. |
+| [registered()](#typescript-datasource-registered) | Lists registered provider names. |
+
+###### defaults(options) {#typescript-datasource-defaults-options}
+
+Stores default options and registers listed factories.
+
+**Definition**
+
+```typescript
+static defaults(options: DatasourceOptions): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions); stored defaults; listed factories are registered |
+
+###### register(...factories) {#typescript-datasource-register-factories}
+
+Registers factories by provider name.
+
+**Definition**
+
+```typescript
+static register(...factories: IDatasourceFactory[]): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `factories` | [IDatasourceFactory](#datasourcefactory) instances keyed by `provider` |
+
+###### create(provider?, options?) {#typescript-datasource-create-provider-options}
+
+Creates a datasource from the registry.
+
+**Definition**
+
+```typescript
+static create(provider?: string, options?: DatasourceOptions): IDatasource
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `provider` | optional; inferred from `DATABASE_URL` when omitted |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted uses stored defaults or the environment |
+
+**Returns**
+
+[IDatasource](#typescript-idatasource)
+
+###### reset() {#typescript-datasource-reset}
+
+Clears the registry and stored defaults. Use in tests.
+
+**Definition**
+
+```typescript
+static reset(): void
+```
+
+###### registered() {#typescript-datasource-registered}
+
+Lists registered provider names.
+
+**Definition**
+
+```typescript
+static registered(): string[]
+```
+
+**Returns**
+
+`string[]`
+
+##### IDatasource {#typescript-idatasource}
+
+```typescript
+interface IDatasource
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [provider](#typescript-idatasource-provider) | Registered provider name. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [createConnection()](#typescript-idatasource-createconnection) | Creates a closed connection. The caller opens it. |
+| [createCommand(connection?)](#typescript-idatasource-createcommand-connection) | Creates a command bound to an optional open connection. |
+| [createRepository(connection?)](#typescript-idatasource-createrepository-connection) | Creates a CRUD repository bound to an optional open connection. |
+| [createReadonlyRepository(connection?)](#typescript-idatasource-createreadonlyrepository-connection) | Creates a read-only repository bound to an optional open connection. |
+
+###### provider {#typescript-idatasource-provider}
+
+Registered provider name.
+
+**Definition**
+
+```typescript
+readonly provider: string
+```
+
+###### createConnection() {#typescript-idatasource-createconnection}
+
+Creates a closed connection. The caller opens it.
+
+**Definition**
+
+```typescript
+createConnection(): Promise<IConnection>
+```
+
+**Returns**
+
+`Promise<[IConnection](#connection)>`
+
+###### createCommand(connection?) {#typescript-idatasource-createcommand-connection}
+
+Creates a command bound to an optional open connection.
+
+**Definition**
+
+```typescript
+createCommand(connection?: IConnection): ICommand
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [IConnection](#connection); omitted constructs one |
+
+**Returns**
+
+[ICommand](#command)
+
+###### createRepository(connection?) {#typescript-idatasource-createrepository-connection}
+
+Creates a CRUD repository bound to an optional open connection.
+
+**Definition**
+
+```typescript
+createRepository<T>(connection?: IConnection): ICRUDRepository<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [IConnection](#connection); omitted constructs one |
+
+**Returns**
+
+[ICRUDRepository](#typescript-crud-repository)`<T>`
+
+###### createReadonlyRepository(connection?) {#typescript-idatasource-createreadonlyrepository-connection}
+
+Creates a read-only repository bound to an optional open connection.
+
+**Definition**
+
+```typescript
+createReadonlyRepository<T>(connection?: IConnection): IReadonlyRepository<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [IConnection](#connection); omitted constructs one |
+
+**Returns**
+
+[IReadonlyRepository](#typescript-readonly-repository)`<T>`
+
+##### DatasourceOptions {#typescript-datasourceoptions}
+
+```typescript
+type DatasourceOptions = Record<string, DatasourceOptionValue>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [DatasourceOptionValue](#typescript-datasourceoptions-datasourceoptionvalue) | Allowed value for an options key. |
+| [INSTALLED_PROVIDERS](#typescript-datasourceoptions-installed_providers) | Comma-separated provider names to register. |
+| [DATABASE_URL](#typescript-datasourceoptions-database_url) | Connection URL. The scheme selects the default provider. |
+| [DATABASE_SCHEMA](#typescript-datasourceoptions-database_schema) | Default schema. |
+| [url](#typescript-datasourceoptions-url) | Alias of `DATABASE_URL` passed through to the factory. |
+| [schema](#typescript-datasourceoptions-schema) | Alias of `DATABASE_SCHEMA` passed through to the factory. |
+
+###### DatasourceOptionValue {#typescript-datasourceoptions-datasourceoptionvalue}
+
+Allowed value for an options key.
+
+**Definition**
+
+```typescript
+type DatasourceOptionValue = string | object | undefined
+```
+
+###### INSTALLED_PROVIDERS {#typescript-datasourceoptions-installed_providers}
+
+Comma-separated provider names to register.
+
+**Definition**
+
+```typescript
+INSTALLED_PROVIDERS?: string
+```
+
+###### DATABASE_URL {#typescript-datasourceoptions-database_url}
+
+Connection URL. The scheme selects the default provider.
+
+**Definition**
+
+```typescript
+DATABASE_URL?: string
+```
+
+###### DATABASE_SCHEMA {#typescript-datasourceoptions-database_schema}
+
+Default schema.
+
+**Definition**
+
+```typescript
+DATABASE_SCHEMA?: string
+```
+
+###### url {#typescript-datasourceoptions-url}
+
+Alias of `DATABASE_URL` passed through to the factory.
+
+**Definition**
+
+```typescript
+url?: string
+```
+
+###### schema {#typescript-datasourceoptions-schema}
+
+Alias of `DATABASE_SCHEMA` passed through to the factory.
+
+**Definition**
+
+```typescript
+schema?: string
+```
+
+##### C#
+
+##### Datasource {#csharp-datasource}
+
+```csharp
+public static class Datasource
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Defaults(options)](#csharp-datasource-defaults-options) | Stores default options and registers listed factories. |
+| [Register(factory)](#csharp-datasource-register-factory) | Registers a factory by provider name. |
+| [Register(first, rest)](#csharp-datasource-register-first-rest) | Registers one or more factories by provider name. |
+| [Create(provider, options)](#csharp-datasource-create-provider-options) | Creates a datasource from the registry. |
+| [Reset()](#csharp-datasource-reset) | Clears the registry and stored defaults. Use in tests. |
+| [Registered()](#csharp-datasource-registered) | Lists registered provider names. |
+
+###### Defaults(options) {#csharp-datasource-defaults-options}
+
+Stores default options and registers listed factories.
+
+**Definition**
+
+```csharp
+public static void Defaults(IReadOnlyDictionary<string, string?> options)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions); stored defaults; listed factories are registered |
+
+###### Register(factory) {#csharp-datasource-register-factory}
+
+Registers a factory by provider name.
+
+**Definition**
+
+```csharp
+public static void Register(IDatasourceFactory factory)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `factory` | [IDatasourceFactory](#datasourcefactory) keyed by `Provider` |
+
+###### Register(first, rest) {#csharp-datasource-register-first-rest}
+
+Registers one or more factories by provider name.
+
+**Definition**
+
+```csharp
+public static void Register(IDatasourceFactory first, params IDatasourceFactory[] rest)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `first` | first [IDatasourceFactory](#datasourcefactory) to register |
+| `rest` | additional factories |
+
+###### Create(provider, options) {#csharp-datasource-create-provider-options}
+
+Creates a datasource from the registry.
+
+**Definition**
+
+```csharp
+public static IDatasource Create(string? provider = null, object? options = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `provider` | optional; inferred from `DATABASE_URL` when omitted |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions) dictionary, or a provider-specific object passed through to the factory |
+
+**Returns**
+
+[IDatasource](#csharp-idatasource)
+
+###### Reset() {#csharp-datasource-reset}
+
+Clears the registry and stored defaults. Use in tests.
+
+**Definition**
+
+```csharp
+public static void Reset()
+```
+
+###### Registered() {#csharp-datasource-registered}
+
+Lists registered provider names.
+
+**Definition**
+
+```csharp
+public static IReadOnlyList<string> Registered()
+```
+
+**Returns**
+
+`IReadOnlyList<string>`
+
+##### IDatasource {#csharp-idatasource}
+
+```csharp
+public interface IDatasource
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Provider](#csharp-idatasource-provider) | Registered provider name. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [CreateConnection()](#csharp-idatasource-createconnection) | Creates a closed connection. The caller opens it. |
+| [CreateCommand(connection)](#csharp-idatasource-createcommand-connection) | Creates a command bound to an optional open connection. |
+| [CreateRepository(connection)](#csharp-idatasource-createrepository-connection) | Creates a CRUD repository bound to an optional open connection. |
+| [CreateReadonlyRepository(connection)](#csharp-idatasource-createreadonlyrepository-connection) | Creates a read-only repository bound to an optional open connection. Defaults to `CreateRepository`. |
+
+###### Provider {#csharp-idatasource-provider}
+
+Registered provider name.
+
+**Definition**
+
+```csharp
+string Provider { get; }
+```
+
+###### CreateConnection() {#csharp-idatasource-createconnection}
+
+Creates a closed connection. The caller opens it.
+
+**Definition**
+
+```csharp
+Task<IConnection> CreateConnection()
+```
+
+**Returns**
+
+`Task<[IConnection](#connection)>`
+
+###### CreateCommand(connection) {#csharp-idatasource-createcommand-connection}
+
+Creates a command bound to an optional open connection.
+
+**Definition**
+
+```csharp
+ICommand CreateCommand(IConnection? connection = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [IConnection](#connection); omitted constructs one |
+
+**Returns**
+
+[ICommand](#command)
+
+###### CreateRepository(connection) {#csharp-idatasource-createrepository-connection}
+
+Creates a CRUD repository bound to an optional open connection.
+
+**Definition**
+
+```csharp
+ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [IConnection](#connection); omitted constructs one |
+
+**Returns**
+
+[ICRUDRepository](#csharp-crud-repository)`<T>`
+
+###### CreateReadonlyRepository(connection) {#csharp-idatasource-createreadonlyrepository-connection}
+
+Creates a read-only repository bound to an optional open connection. Defaults to `CreateRepository`.
+
+**Definition**
+
+```csharp
+IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [IConnection](#connection); omitted constructs one |
+
+**Returns**
+
+[IReadonlyRepository](#csharp-readonly-repository)`<T>`
+
+##### DatasourceOptions {#csharp-datasourceoptions}
+
+```csharp
+IReadOnlyDictionary<string, string?>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [INSTALLED_PROVIDERS](#csharp-datasourceoptions-installed_providers) | Comma-separated provider names to register. |
+| [DATABASE_URL](#csharp-datasourceoptions-database_url) | Connection URL. The scheme selects the default provider. |
+| [DATABASE_SCHEMA](#csharp-datasourceoptions-database_schema) | Default schema. |
+| [url](#csharp-datasourceoptions-url) | Alias of `DATABASE_URL` passed through to the factory. |
+| [schema](#csharp-datasourceoptions-schema) | Alias of `DATABASE_SCHEMA` passed through to the factory. |
+
+###### INSTALLED_PROVIDERS {#csharp-datasourceoptions-installed_providers}
+
+Comma-separated provider names to register.
+
+**Definition**
+
+```csharp
+"INSTALLED_PROVIDERS"
+```
+
+###### DATABASE_URL {#csharp-datasourceoptions-database_url}
+
+Connection URL. The scheme selects the default provider.
+
+**Definition**
+
+```csharp
+"DATABASE_URL"
+```
+
+###### DATABASE_SCHEMA {#csharp-datasourceoptions-database_schema}
+
+Default schema.
+
+**Definition**
+
+```csharp
+"DATABASE_SCHEMA"
+```
+
+###### url {#csharp-datasourceoptions-url}
+
+Alias of `DATABASE_URL` passed through to the factory.
+
+**Definition**
+
+```csharp
+"url"
+```
+
+###### schema {#csharp-datasourceoptions-schema}
+
+Alias of `DATABASE_SCHEMA` passed through to the factory.
+
+**Definition**
+
+```csharp
+"schema"
+```
+
+##### Rust
+
+##### datasources {#rust-datasources}
+
+```rust
+// datasources
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [defaults(options)](#rust-datasources-defaults-options) | Stores default options and registers listed factories. |
+| [register(factory)](#rust-datasources-register-factory) | Registers a factory by provider name. |
+| [create(provider, options)](#rust-datasources-create-provider-options) | Creates a datasource from the registry. The provider name is required. |
+| [create_default()](#rust-datasources-create_default) | Creates a datasource using the provider inferred from `DATABASE_URL`. |
+| [reset()](#rust-datasources-reset) | Clears the registry and stored defaults. Use in tests. |
+| [registered()](#rust-datasources-registered) | Lists registered provider names. |
+
+###### defaults(options) {#rust-datasources-defaults-options}
+
+Stores default options and registers listed factories.
+
+**Definition**
+
+```rust
+pub fn defaults(options: HashMap<String, String>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#rust-datasourceoptions); stored defaults; listed factories are registered |
+
+**Returns**
+
+`Result<()>`
+
+###### register(factory) {#rust-datasources-register-factory}
+
+Registers a factory by provider name.
+
+**Definition**
+
+```rust
+pub fn register(factory: Arc<dyn DatasourceFactory>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `factory` | [DatasourceFactory](#datasourcefactory) keyed by `provider()` |
+
+###### create(provider, options) {#rust-datasources-create-provider-options}
+
+Creates a datasource from the registry. The provider name is required.
+
+**Definition**
+
+```rust
+pub fn create(provider: &str, options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datasource>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `provider` | required provider name |
+| `options` | [DatasourceOptions](#rust-datasourceoptions); merged with stored defaults |
+
+**Returns**
+
+`Result<Arc<dyn `[Datasource](#rust-datasource)`>>`
+
+###### create_default() {#rust-datasources-create_default}
+
+Creates a datasource using the provider inferred from `DATABASE_URL`.
+
+**Definition**
+
+```rust
+pub fn create_default() -> Result<Arc<dyn Datasource>>
+```
+
+**Returns**
+
+`Result<Arc<dyn `[Datasource](#rust-datasource)`>>`
+
+###### reset() {#rust-datasources-reset}
+
+Clears the registry and stored defaults. Use in tests.
+
+**Definition**
+
+```rust
+pub fn reset()
+```
+
+###### registered() {#rust-datasources-registered}
+
+Lists registered provider names.
+
+**Definition**
+
+```rust
+pub fn registered() -> Vec<String>
+```
+
+**Returns**
+
+`Vec<String>`
+
+##### Datasource {#rust-datasource}
+
+```rust
+pub trait Datasource
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [provider()](#rust-datasource-provider) | Registered provider name. |
+| [create_connection()](#rust-datasource-create_connection) | Creates a closed connection. The caller opens it. |
+| [create_command(connection)](#rust-datasource-create_command-connection) | Creates a command bound to an optional open connection. |
+| [create_repository(connection)](#rust-datasource-create_repository-connection) | Creates a CRUD repository bound to an optional open connection. |
+| [create_readonly_repository(connection)](#rust-datasource-create_readonly_repository-connection) | Creates a read-only repository bound to an optional open connection. Defaults to `create_repository`. |
+
+###### provider() {#rust-datasource-provider}
+
+Registered provider name.
+
+**Definition**
+
+```rust
+fn provider(&self) -> &str
+```
+
+**Returns**
+
+`&str`
+
+###### create_connection() {#rust-datasource-create_connection}
+
+Creates a closed connection. The caller opens it.
+
+**Definition**
+
+```rust
+async fn create_connection(&self) -> Result<Arc<dyn Connection>>
+```
+
+**Returns**
+
+`Result<Arc<dyn `[Connection](#connection)`>>`
+
+###### create_command(connection) {#rust-datasource-create_command-connection}
+
+Creates a command bound to an optional open connection.
+
+**Definition**
+
+```rust
+fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [Connection](#connection); omitted constructs one |
+
+**Returns**
+
+`Arc<dyn `[Command](#command)`>`
+
+###### create_repository(connection) {#rust-datasource-create_repository-connection}
+
+Creates a CRUD repository bound to an optional open connection.
+
+**Definition**
+
+```rust
+fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [Connection](#connection); omitted constructs one |
+
+**Returns**
+
+`Arc<dyn `[CRUDRepository](#rust-crud-repository)`>`
+
+###### create_readonly_repository(connection) {#rust-datasource-create_readonly_repository-connection}
+
+Creates a read-only repository bound to an optional open connection. Defaults to `create_repository`.
+
+**Definition**
+
+```rust
+fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [Connection](#connection); omitted constructs one |
+
+**Returns**
+
+`Arc<dyn `[ReadonlyRepository](#rust-readonly-repository)`>`
+
+##### DatasourceOptions {#rust-datasourceoptions}
+
+```rust
+HashMap<String, String>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [INSTALLED_PROVIDERS](#rust-datasourceoptions-installed_providers) | Comma-separated provider names to register. |
+| [DATABASE_URL](#rust-datasourceoptions-database_url) | Connection URL. The scheme selects the default provider. |
+| [DATABASE_SCHEMA](#rust-datasourceoptions-database_schema) | Default schema. |
+| [url](#rust-datasourceoptions-url) | Alias of `DATABASE_URL` passed through to the factory. |
+| [schema](#rust-datasourceoptions-schema) | Alias of `DATABASE_SCHEMA` passed through to the factory. |
+
+###### INSTALLED_PROVIDERS {#rust-datasourceoptions-installed_providers}
+
+Comma-separated provider names to register.
+
+**Definition**
+
+```rust
+"INSTALLED_PROVIDERS"
+```
+
+###### DATABASE_URL {#rust-datasourceoptions-database_url}
+
+Connection URL. The scheme selects the default provider.
+
+**Definition**
+
+```rust
+"DATABASE_URL"
+```
+
+###### DATABASE_SCHEMA {#rust-datasourceoptions-database_schema}
+
+Default schema.
+
+**Definition**
+
+```rust
+"DATABASE_SCHEMA"
+```
+
+###### url {#rust-datasourceoptions-url}
+
+Alias of `DATABASE_URL` passed through to the factory.
+
+**Definition**
+
+```rust
+"url"
+```
+
+###### schema {#rust-datasourceoptions-schema}
+
+Alias of `DATABASE_SCHEMA` passed through to the factory.
+
+**Definition**
+
+```rust
+"schema"
+```
+
+### Remarks
+
+When defaults are unset, `Create` / `create` / `create_default` reads `INSTALLED_PROVIDERS`, `DATABASE_URL`, and `DATABASE_SCHEMA` from the process environment. Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
+
+C# and TypeScript omit `provider` when `DATABASE_URL` can supply it. Rust uses `create_default()` for that path; `create` always takes an explicit provider.
+
+`Reset` / `reset` clears the registry and stored defaults. Use it in tests.
+
+See [DatasourceFactory](#datasourcefactory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
+
+### Examples
+
+#### Create from environment
+
+##### C#
 
 ```csharp
 var ds = Datasource.Create();
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 let ds = create_default()?;
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 const ds = Datasource.create();
 ```
 
-See [CLI](#command-line-cli) for `setup` and adding providers.
+## DatasourceFactory
+
+Provider plug-in. A factory has a provider name and creates a configured datasource.
+
+### Classes
+
+##### TypeScript
+
+##### IDatasourceFactory {#typescript-idatasourcefactory}
+
+```typescript
+interface IDatasourceFactory
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [provider](#typescript-idatasourcefactory-provider) | Registry key used by `Datasource.register`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(options?)](#typescript-idatasourcefactory-create-options) | Creates a configured datasource. |
+
+###### provider {#typescript-idatasourcefactory-provider}
+
+Registry key used by `Datasource.register`.
+
+**Definition**
+
+```typescript
+readonly provider: string
+```
+
+###### create(options?) {#typescript-idatasourcefactory-create-options}
+
+Creates a configured datasource.
+
+**Definition**
+
+```typescript
+create(options?: DatasourceOptions): IDatasource
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions) |
+
+**Returns**
+
+[IDatasource](#typescript-idatasource)
+
+##### C#
+
+##### IDatasourceFactory {#csharp-idatasourcefactory}
+
+```csharp
+public interface IDatasourceFactory
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Provider](#csharp-idatasourcefactory-provider) | Registry key used by `Datasource.Register`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(options)](#csharp-idatasourcefactory-create-options) | Creates a configured datasource. |
+
+###### Provider {#csharp-idatasourcefactory-provider}
+
+Registry key used by `Datasource.Register`.
+
+**Definition**
+
+```csharp
+string Provider { get; }
+```
+
+###### Create(options) {#csharp-idatasourcefactory-create-options}
+
+Creates a configured datasource.
+
+**Definition**
+
+```csharp
+IDatasource Create(object? options = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions) |
+
+**Returns**
+
+[IDatasource](#csharp-idatasource)
+
+##### Rust
+
+##### DatasourceFactory {#rust-datasourcefactory}
+
+```rust
+pub trait DatasourceFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [provider()](#rust-datasourcefactory-provider) | Registry key used by `register`. |
+| [create(options)](#rust-datasourcefactory-create-options) | Creates a configured datasource. |
+
+###### provider() {#rust-datasourcefactory-provider}
+
+Registry key used by `register`.
+
+**Definition**
+
+```rust
+fn provider(&self) -> &str
+```
+
+**Returns**
+
+`&str`
+
+###### create(options) {#rust-datasourcefactory-create-options}
+
+Creates a configured datasource.
+
+**Definition**
+
+```rust
+fn create(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Datasource>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#rust-datasourceoptions) |
+
+**Returns**
+
+`Arc<dyn `[Datasource](#rust-datasource)`>`
+
+### Remarks
+
+Providers implement the factory and the datasource. Register a factory with `Datasource.register` / `Datasource.Register` / `register`, then `Create` / `create` looks it up by name. See [Datasource](#datasource) for the registry methods.
+
+A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
+
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATABASE_URL`) when `Create` / `create` / `create_default` applies defaults.
+
+### Examples
+
+#### Register a factory
+
+##### C#
+
+```csharp
+Datasource.Register(MemoryDatasource.Instance);
+var ds = Datasource.Create("memory");
+```
+
+##### Rust
+
+```rust
+register(MemoryDatasource::instance());
+let ds = create("memory", None)?;
+```
+
+##### TypeScript
+
+```typescript
+Datasource.register(MemoryDatasource.instance);
+const ds = Datasource.create("memory");
+```
 
 ## Connection
 
@@ -409,7 +1433,7 @@ Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFil
 
 ### Create and open
 
-#### C#
+##### C#
 
 ```csharp
 Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
@@ -419,7 +1443,7 @@ var connection = await json.CreateConnection();
 await connection.Open();
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 use datasources::{create, register};
@@ -432,7 +1456,7 @@ let connection = json.create_connection().await?;
 connection.open().await?;
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 import { Datasource } from "@datasources/core";
@@ -449,7 +1473,7 @@ await connection.open();
 
 Apps create the default datasource and connection at process start, then hold the closed connection. Call `Open` / `open` on first use (a no-op if already open). Do not open during bootstrap.
 
-#### C#
+##### C#
 
 ```csharp
 var datasource = Datasource.Create();
@@ -458,7 +1482,7 @@ var connection = await datasource.CreateConnection();
 Task EnsureOpen() => connection.IsOpen ? Task.CompletedTask : connection.Open();
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 use std::sync::Arc;
@@ -475,7 +1499,7 @@ async fn ensure_open(connection: &Arc<dyn Connection>) -> Result<()> {
 }
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 const datasource = Datasource.create();
@@ -490,7 +1514,7 @@ async function ensureOpen() {
 
 Depend on `IConnection` / `Connection`. Use `MockConnection` / `MockDatasource`. `CreateConnection` returns the configured mock and does not open it.
 
-#### C#
+##### C#
 
 ```csharp
 var ds = new MockDatasource();
@@ -503,7 +1527,7 @@ ds.Connection = failing;
 await Assert.ThrowsAsync<InvalidOperationException>(() => failing.Open());
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 use datasources::{Datasource, MockConnection, MockDatasource};
@@ -517,7 +1541,7 @@ failing.set_open_error("open-fail");
 assert!(failing.open().await.is_err());
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 const ds = new MockDatasource();
@@ -557,7 +1581,7 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 
 ### Create and execute
 
-#### C#
+##### C#
 
 ```csharp
 Datasource.Register(JsonDatasource.Instance, MemoryDatasource.Instance, SqliteDatasource.Instance);
@@ -571,7 +1595,7 @@ await command.Execute("insert", new[] { new Parameter("id", 1) });
 await command.ExecuteReader("");
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 use datasources::{create, register};
@@ -588,7 +1612,7 @@ command.execute("insert", None).await?;
 command.execute_reader("", None).await?;
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 import { Datasource } from "@datasources/core";
@@ -609,7 +1633,7 @@ await command.executeReader("");
 
 Depend on `ICommand` / `Command`. Use `MockCommand` / `MockDatasource`.
 
-#### C#
+##### C#
 
 ```csharp
 var ds = new MockDatasource();
@@ -622,7 +1646,7 @@ ds.Command = failing;
 await Assert.ThrowsAsync<InvalidOperationException>(() => failing.Execute(""));
 ```
 
-#### Rust
+##### Rust
 
 ```rust
 use datasources::{Datasource, MockCommand, MockDatasource};
@@ -637,7 +1661,7 @@ failing.set_execute_error("exec-fail");
 assert!(failing.execute("", None).await.is_err());
 ```
 
-#### TypeScript
+##### TypeScript
 
 ```typescript
 const ds = new MockDatasource();

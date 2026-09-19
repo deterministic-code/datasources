@@ -1,3 +1,5 @@
+import { renderClassReference } from "./reference.mjs";
+
 /** @typedef {{ lang: string, label?: string, code: string }} DialectFence */
 
 const LABELS = {
@@ -13,7 +15,9 @@ const LABELS = {
 
 const DIALECT_BLOCK = /^::: dialects\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::[ \t]*$/gm;
+const REFERENCE_BLOCK = /^::: reference\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
+const PANEL_ORDER = ["typescript", "csharp", "rust"];
 
 export const labelFor = (lang) => LABELS[lang.toLowerCase()] ?? lang;
 
@@ -69,12 +73,60 @@ export const toVitePressDialects = (body) => {
 export const toReadmePackages = (body) => toReadme(body, ({ lang, label }) => label ?? lang);
 export const toVitePressPackages = (body) => toGroup(body, ({ lang, label }) => label ?? lang);
 
+export const parseReferencePanels = (body) => {
+  const marker = /^#{3,4}[ \t]+(typescript|ts|csharp|cs|rust|rs)[ \t]*$/gim;
+  return [...body.matchAll(marker)].map((match, i, matches) => {
+    const start = match.index + match[0].length;
+    const end = i + 1 < matches.length ? matches[i + 1].index : body.length;
+    return { lang: slotName(match[1]), content: body.slice(start, end).trim() };
+  });
+};
+
+const orderedPanels = (body) => {
+  const panels = parseReferencePanels(body);
+  return PANEL_ORDER.map((id) => panels.find((panel) => panel.lang === id)).filter(Boolean);
+};
+
+const toPanel = (name, content) => `<DialectPanel name="${name}">\n\n${content}\n\n</DialectPanel>`;
+
+export const toVitePressReference = (body) =>
+  orderedPanels(body)
+    .map(({ lang, content }) => toPanel(lang, renderClassReference(content, lang)))
+    .join("\n\n");
+
+export const toVitePressDialectPanels = (body) => {
+  const fences = parseFences(body);
+  return fences
+    .map(({ lang, code }) => {
+      const boxes = boxesOf(code).map(
+        (box, i) =>
+          `${BOX_SEP.test(code) ? `<p class="dialect-box-title">${titleOf(i)}</p>\n\n` : ""}\`\`\`${lang}\n${box}\n\`\`\``,
+      );
+      return toPanel(slotName(lang), boxes.join("\n\n"));
+    })
+    .join("\n\n");
+};
+
+export const toReadmeReference = (body) =>
+  orderedPanels(body)
+    .map(({ lang, content }) => `#### ${labelFor(lang)}\n\n${renderClassReference(content, lang)}`)
+    .join("\n\n");
+
+const hasReference = (markdown) => /^::: reference\r?\n/m.test(markdown);
+
 export const transformDialects = (markdown, style) => {
-  const dialects = style === "vitepress" ? toVitePressDialects : toReadmeDialects;
+  const page = hasReference(markdown);
+  const dialects =
+    style === "vitepress" ? (page ? toVitePressDialectPanels : toVitePressDialects) : toReadmeDialects;
   const packages = style === "vitepress" ? toVitePressPackages : toReadmePackages;
-  return markdown
+  const reference = style === "vitepress" ? toVitePressReference : toReadmeReference;
+  const next = markdown
     .replace(DIALECT_BLOCK, (_, body) => dialects(body))
-    .replace(PACKAGES_BLOCK, (_, body) => packages(body));
+    .replace(PACKAGES_BLOCK, (_, body) => packages(body))
+    .replace(REFERENCE_BLOCK, (_, body) => reference(body));
+  return style === "vitepress" && page
+    ? next.replace(/^## Classes/m, "<DialectSelector />\n\n## Classes")
+    : next;
 };
 
 export const dialectsVitePlugin = () => ({

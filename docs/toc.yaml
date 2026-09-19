@@ -11,6 +11,9 @@ pages:
   - path: sections/datasource.md
     title: Datasource
     group: Code Reference
+  - path: sections/datasource-factory.md
+    title: DatasourceFactory
+    group: Code Reference
   - path: sections/connection.md
     title: Connection
     group: Code Reference
