@@ -1,6 +1,7 @@
 import {
   DatasourceError,
   IsolationLevel,
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IsolationLevelName,
@@ -9,6 +10,7 @@ import {
 import { JsonCommand } from "./command.ts";
 import type { JsonConnectionOptions } from "./connection-options.ts";
 import { MemoryFileStore, type IFileStore } from "./file-store.ts";
+import { JsonRepository } from "./repository.ts";
 import { JsonTransaction } from "./transaction.ts";
 
 export class JsonConnection implements IConnection {
@@ -22,6 +24,12 @@ export class JsonConnection implements IConnection {
   private snapshot: unknown;
   private readonly initialData?: unknown;
   private readonly hasInitialData: boolean;
+
+  static from = (options?: DatasourceOptions): JsonConnection =>
+    new JsonConnection({ path: options?.path ?? "" });
+
+  static repository = (connection: IConnection) =>
+    new JsonRepository(connection as JsonConnection);
 
   constructor(options: JsonConnectionOptions = {}) {
     this.path = options.path ?? "";

@@ -1,8 +1,12 @@
 use crate::command::MysqlCommand;
-use crate::driver::MysqlDriver;
+use crate::driver::{require_driver, MysqlDriver};
 use crate::transaction::MysqlTransaction;
 use async_trait::async_trait;
-use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
+use datasources::{
+    CRUDRepository, Command, Connection, DatasourceError, IsolationLevel, Repository,
+    RepositoryBuilderOptions, Result, RowTypeConverter, Transaction,
+};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 pub struct MysqlConnection {
@@ -13,11 +17,26 @@ pub struct MysqlConnection {
 
 impl MysqlConnection {
     pub fn new(url: Option<String>, driver: Arc<dyn MysqlDriver>) -> Self {
+        crate::converters::register();
         Self {
             url: url.unwrap_or_default(),
             driver,
             opened: Arc::new(Mutex::new(false)),
         }
+    }
+
+    pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+        let url = options.and_then(|o| o.get("url").or_else(|| o.get("database_url")).cloned());
+        Arc::new(MysqlConnection::new(
+            url,
+            require_driver(None).expect("MySQL driver is required"),
+        ))
+    }
+
+    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn CRUDRepository> {
+        let mut options = RepositoryBuilderOptions::with_factory(connection);
+        options.mapping = Some(RowTypeConverter::new(vec![]));
+        Arc::new(Repository::new(options).expect("repository"))
     }
 
     pub fn ensure_open(&self) -> Result<()> {
@@ -30,6 +49,10 @@ impl MysqlConnection {
 
 #[async_trait]
 impl Connection for MysqlConnection {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn provider(&self) -> &str {
         "mysql"
     }

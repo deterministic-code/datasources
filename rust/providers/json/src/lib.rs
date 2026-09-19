@@ -1,7 +1,6 @@
 mod command;
 mod connection;
 mod converters;
-mod datasource;
 mod file_store;
 mod filter;
 mod repository;
@@ -9,7 +8,6 @@ mod transaction;
 
 pub use command::JsonCommand;
 pub use connection::JsonConnection;
-pub use datasource::JsonDatasource;
 pub use file_store::{FileStore, MemoryFileStore};
 pub use repository::JsonRepository;
 pub use transaction::JsonTransaction;
@@ -21,10 +19,11 @@ pub(crate) use filter::{json_from_record, json_to_value, matches, parse_filter, 
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, DatasourceFactory, Parameter,
-        ReadonlyRepository, CRUDRepository, Row, TextQuery, TextWhere, Value,
+        create, register, reset, CRUDRepository, Command, Connection, Parameter,
+        ReadonlyRepository, Row, TextQuery, TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
+    use std::collections::HashMap;
     use std::sync::Arc;
 
     fn rec(id: i64, name: &str) -> Row {
@@ -133,8 +132,12 @@ mod tests {
         txn.commit().await.unwrap();
 
         reset();
-        register(JsonDatasource::instance());
-        let ds = create("json", None).unwrap();
+        register(
+            "json",
+            JsonConnection::from_options,
+            JsonConnection::repository,
+        );
+        let ds = create(Some(&HashMap::from([("provider".into(), "json".into())]))).unwrap();
         assert_eq!(ds.provider(), "json");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
@@ -145,9 +148,6 @@ mod tests {
         assert!(bound.execute_reader("", None).await.is_err());
         ds.create_repository(None);
         ds.create_repository(Some(ds.create_connection().await.unwrap()));
-        let factory = JsonDatasource::new("", None, Arc::new(MemoryFileStore::new()), None);
-        assert_eq!(DatasourceFactory::provider(&factory), "json");
-        DatasourceFactory::create(&factory, None);
 
         let missing = MemoryFileStore::new();
         assert!(!missing.exists("x"));

@@ -1,7 +1,7 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    as_readonly, CommandMiddleware, Connection, DeepCRUDRepository, DefaultTypeConverters,
-    CRUDRepository, Repository, RepositoryBuilderOptions, TypeConverter, Value,
+    as_readonly, CRUDRepository, CommandMiddleware, Connection, DeepCRUDRepository,
+    DefaultTypeConverters, Repository, RepositoryBuilderOptions, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;

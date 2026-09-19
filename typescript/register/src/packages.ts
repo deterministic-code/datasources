@@ -12,18 +12,3 @@ export const packages: Record<string, string> = {
   mongodb: "@datasources/mongodb",
   dynamodb: "@datasources/dynamodb",
 };
-
-export const typeNames: Record<string, string> = {
-  json: "JsonDatasource",
-  memory: "MemoryDatasource",
-  sqlite: "SqliteDatasource",
-  text: "TextDatasource",
-  xml: "XmlDatasource",
-  yaml: "YamlDatasource",
-  mysql: "MysqlDatasource",
-  sqlserver: "SqlServerDatasource",
-  postgres: "PostgresDatasource",
-  oracle: "OracleDatasource",
-  mongodb: "MongoDbDatasource",
-  dynamodb: "DynamoDbDatasource",
-};

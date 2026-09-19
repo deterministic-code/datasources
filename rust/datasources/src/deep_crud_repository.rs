@@ -3,10 +3,10 @@ use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enriched::Enriched;
 use crate::enriched_readonly_repository::EnrichedReadonlyRepository;
-use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::query::Query;
-use crate::repository::{as_readonly, ReadonlyRepository, CRUDRepository};
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
+use crate::repository::{as_readonly, CRUDRepository, ReadonlyRepository};
 use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
 use crate::result::Result;
@@ -42,7 +42,10 @@ impl DeepCRUDRepository {
         strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
     ) -> Self {
         Self {
-            enriched: EnrichedReadonlyRepository::with_strategy(as_readonly(inner.clone()), strategy),
+            enriched: EnrichedReadonlyRepository::with_strategy(
+                as_readonly(inner.clone()),
+                strategy,
+            ),
             inner,
         }
     }
@@ -287,7 +290,11 @@ fn id_key(id: Value) -> String {
     id.wire_text()
 }
 
-async fn load(writer: &dyn CRUDRepository, enrichment: &Enrichment, parent: &Row) -> Result<Vec<Row>> {
+async fn load(
+    writer: &dyn CRUDRepository,
+    enrichment: &Enrichment,
+    parent: &Row,
+) -> Result<Vec<Row>> {
     let Some(key) = parent.get(&enrichment.from).cloned() else {
         return Ok(Vec::new());
     };

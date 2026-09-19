@@ -3,7 +3,6 @@ mod command_driver;
 mod connection;
 mod connection_driver;
 mod converters;
-mod datasource;
 mod driver;
 mod pg_value;
 mod statement_builder;
@@ -13,7 +12,6 @@ mod transaction_driver;
 
 pub use command::PostgresCommand;
 pub use connection::PostgresConnection;
-pub use datasource::PostgresDatasource;
 pub use driver::{
     isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver,
     PostgresExecuteResult,
@@ -37,8 +35,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use datasources::{
-        create, register, reset, Command, Connection, Datasource, DatasourceFactory,
-        IsolationLevel, Result, Row, Value,
+        create, register, reset, Command, Connection, IsolationLevel, Result, Row, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -147,13 +144,23 @@ mod tests {
         let defaulted = PostgresConnection::new(None, None, driver.clone());
         assert_eq!(defaulted.url, "");
         reset();
-        register(Arc::new(PostgresDatasource::new(
-            Some("postgres://db/app".into()),
-            None,
-            Some(driver.clone()),
-            None,
-        )));
-        let ds = create("postgres", None).unwrap();
+        let driver_for_ds = driver.clone();
+        register(
+            "postgres",
+            move |_| {
+                Arc::new(PostgresConnection::new(
+                    Some("postgres://db/app".into()),
+                    None,
+                    driver_for_ds.clone(),
+                ))
+            },
+            PostgresConnection::repository,
+        );
+        let ds = create(Some(&HashMap::from([(
+            "provider".into(),
+            "postgres".into(),
+        )])))
+        .unwrap();
         assert_eq!(ds.provider(), "postgres");
         assert!(ds
             .create_command(None)
@@ -161,17 +168,6 @@ mod tests {
             .await
             .is_err());
         ds.create_repository(None);
-        let missing = PostgresDatasource::new(None, None, None, None);
-        assert_eq!(Datasource::provider(&missing), "postgres");
-        assert!(missing.create_connection().await.is_err());
-        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            missing.create_command(None)
-        }))
-        .is_err());
-        let factory =
-            PostgresDatasource::new(None, None, Some(driver.clone()), Some("people".into()));
-        DatasourceFactory::create(&factory, None);
-        assert_eq!(DatasourceFactory::provider(&factory), "postgres");
         let closed = Arc::new(PostgresConnection::new(None, None, driver));
         assert!(PostgresCommand::new(closed)
             .execute("x", None)

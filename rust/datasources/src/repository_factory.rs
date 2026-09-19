@@ -1,6 +1,6 @@
 use crate::connection::Connection;
 use crate::datasource_error::DatasourceError;
-use crate::repository::{as_readonly, ReadonlyRepository, CRUDRepository};
+use crate::repository::{as_readonly, CRUDRepository, ReadonlyRepository};
 use crate::result::Result;
 use std::any::TypeId;
 use std::collections::HashMap;

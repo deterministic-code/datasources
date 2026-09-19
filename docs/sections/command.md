@@ -37,11 +37,12 @@ await command.ExecuteReader("");
 ```
 ```rust
 use datasources::{create, register};
-use datasources_json::JsonDatasource;
+use datasources_json::JsonConnection;
+use std::collections::HashMap;
 
-register(JsonDatasource::instance());
+register("json", JsonConnection::from_options, JsonConnection::repository);
 
-let json = create("json", None)?;
+let json = create(Some(&HashMap::from([("provider".into(), "json".into())])))?;
 let connection = json.create_connection().await?;
 connection.open().await?;
 
@@ -50,12 +51,12 @@ command.execute("insert", None).await?;
 command.execute_reader("", None).await?;
 ```
 ```typescript
-import { Datasource } from "@datasources/core";
-import { JsonDatasource } from "@datasources/json";
+import { Datasource, DatasourceFactory } from "@datasources/core";
+import { JsonConnection } from "@datasources/json";
 
-Datasource.register(JsonDatasource.instance);
+DatasourceFactory.register("json", opts => new JsonConnection(opts), JsonConnection.repository);
 
-const json = Datasource.create("json", { data: [] });
+const json = Datasource.create({ provider: "json" });
 const connection = await json.createConnection();
 await connection.open();
 

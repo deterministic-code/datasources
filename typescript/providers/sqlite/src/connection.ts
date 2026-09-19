@@ -1,11 +1,15 @@
 import {
   DatasourceError,
   IsolationLevel,
+  Repository,
+  RowTypeConverter,
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
+import "./converters/SqliteTypes.ts";
 import { SqliteCommand } from "./command.ts";
 import type { SqliteConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type ISqliteDriver } from "./driver.ts";
@@ -17,6 +21,19 @@ export class SqliteConnection implements IConnection {
   filename: string;
   driver: ISqliteDriver;
   isOpen = false;
+
+  static from = (options?: DatasourceOptions): SqliteConnection =>
+    new SqliteConnection({
+      filename: options?.filename,
+      url: options?.url ?? options?.database_url,
+    });
+
+  static repository = (connection: IConnection) =>
+    new Repository({
+      connection: connection as SqliteConnection,
+      entity: "items",
+      mapping: new RowTypeConverter(),
+    });
 
   constructor(options: SqliteConnectionOptions = {}) {
     this.filename = filenameOf(options);

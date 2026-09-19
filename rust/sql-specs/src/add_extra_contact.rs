@@ -1,8 +1,8 @@
 use crate::contact_lookups::ContactLookups;
 use chrono::{DateTime, Utc};
 use datasources::{
-    encode_rows, DatasourceError, DeepCRUDRepository, ReadonlyRepository, CRUDRepository, Result, Row,
-    Value, WhereBuilder,
+    encode_rows, CRUDRepository, DatasourceError, DeepCRUDRepository, ReadonlyRepository, Result,
+    Row, Value, WhereBuilder,
 };
 use uuid::Uuid;
 

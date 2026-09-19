@@ -22,6 +22,10 @@ impl StubConnection {
 
 #[async_trait]
 impl Connection for StubConnection {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn provider(&self) -> &str {
         &self.provider
     }
@@ -63,10 +67,25 @@ macro_rules! named_stub_connection {
                     inner: $crate::StubConnection::new($provider),
                 }
             }
+
+            pub fn from_options(
+                _: Option<&std::collections::HashMap<String, String>>,
+            ) -> std::sync::Arc<dyn $crate::Connection> {
+                std::sync::Arc::new(Self::new())
+            }
+
+            pub fn repository(
+                connection: std::sync::Arc<dyn $crate::Connection>,
+            ) -> std::sync::Arc<dyn $crate::CRUDRepository> {
+                std::sync::Arc::new($crate::StubRepository::new(connection.provider()))
+            }
         }
 
         #[async_trait::async_trait]
         impl $crate::Connection for $name {
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
             fn provider(&self) -> &str {
                 self.inner.provider()
             }

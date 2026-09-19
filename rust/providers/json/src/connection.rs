@@ -1,9 +1,14 @@
 use crate::command::JsonCommand;
-use crate::file_store::FileStore;
+use crate::file_store::{FileStore, MemoryFileStore};
+use crate::repository::JsonRepository;
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
-use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
+use datasources::{
+    downcast_connection, CRUDRepository, Command, Connection, DatasourceError, IsolationLevel,
+    Result, Transaction,
+};
 use serde_json::{Map, Value as JsonValue};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 pub(crate) struct JsonState {
@@ -40,6 +45,25 @@ impl JsonConnection {
                 initial,
             }),
         }
+    }
+
+    pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+        let path = options
+            .and_then(|o| o.get("path"))
+            .cloned()
+            .unwrap_or_default();
+        Arc::new(JsonConnection::new(
+            path,
+            None,
+            Arc::new(MemoryFileStore::new()),
+            None,
+        ))
+    }
+
+    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn CRUDRepository> {
+        Arc::new(JsonRepository::new(
+            downcast_connection(connection).expect("json connection"),
+        ))
     }
 
     pub fn path(&self) -> &str {
@@ -96,6 +120,10 @@ impl JsonConnection {
 
 #[async_trait]
 impl Connection for JsonConnection {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
     fn provider(&self) -> &str {
         "json"
     }

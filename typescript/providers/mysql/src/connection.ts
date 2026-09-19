@@ -1,11 +1,15 @@
 import {
   DatasourceError,
   IsolationLevel,
+  Repository,
+  RowTypeConverter,
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
+import "./converters/MysqlTypes.ts";
 import { MysqlCommand } from "./command.ts";
 import type { MysqlConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type IMysqlDriver } from "./driver.ts";
@@ -16,6 +20,18 @@ export class MysqlConnection implements IConnection {
   url: string;
   driver: IMysqlDriver;
   isOpen = false;
+
+  static from = (options?: DatasourceOptions): MysqlConnection =>
+    new MysqlConnection({
+      url: options?.url ?? options?.database_url,
+    });
+
+  static repository = (connection: IConnection) =>
+    new Repository({
+      connection: connection as MysqlConnection,
+      entity: "items",
+      mapping: new RowTypeConverter(),
+    });
 
   constructor(options: MysqlConnectionOptions = {}) {
     this.url = options.url ?? "";

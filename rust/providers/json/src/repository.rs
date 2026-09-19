@@ -3,7 +3,7 @@ use crate::connection::JsonConnection;
 use crate::filter::{json_from_record, matches, parse_filter, value_to_json};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, Command, Query, ReadonlyRepository, CRUDRepository, Response, Result, Row,
+    identity_filter, CRUDRepository, Command, Query, ReadonlyRepository, Response, Result, Row,
     TextQuery, Value, Where,
 };
 use serde_json::Value as JsonValue;

@@ -1,3 +1,1 @@
-export type DatasourceOptionValue = string | object | undefined;
-
-export type DatasourceOptions = Record<string, DatasourceOptionValue>;
+export type DatasourceOptions = Record<string, string>;

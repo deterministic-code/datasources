@@ -1,33 +1,52 @@
 mod command;
 mod connection;
 mod converters;
-mod datasource;
 
 pub use command::MongoDbCommand;
 pub use connection::MongoDbConnection;
-pub use datasource::MongoDbDatasource;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, register, reset, Datasource};
+    use datasources::{create, register, reset, BuiltDatasource, Datasource};
+    use std::collections::HashMap;
+
+    fn ds() -> BuiltDatasource {
+        BuiltDatasource::new(
+            "mongodb",
+            || MongoDbConnection::from_options(None),
+            MongoDbConnection::repository,
+        )
+    }
 
     #[test]
     fn creates() {
         reset();
-        register(MongoDbDatasource::instance());
-        assert_eq!(create("mongodb", None).unwrap().provider(), "mongodb");
+        register(
+            "mongodb",
+            MongoDbConnection::from_options,
+            MongoDbConnection::repository,
+        );
+        assert_eq!(
+            create(Some(&HashMap::from([(
+                "provider".into(),
+                "mongodb".into()
+            )])))
+            .unwrap()
+            .provider(),
+            "mongodb"
+        );
     }
 
     #[tokio::test]
     async fn creates_connection() {
-        let connection = MongoDbDatasource.create_connection().await.unwrap();
+        let connection = ds().create_connection().await.unwrap();
         assert!(connection.open().await.is_err());
     }
 
     #[tokio::test]
     async fn creates_command() {
-        let ds = MongoDbDatasource;
+        let ds = ds();
         let connection = ds.create_connection().await.unwrap();
         let command = ds.create_command(Some(connection));
         assert!(command.execute("", None).await.is_err());

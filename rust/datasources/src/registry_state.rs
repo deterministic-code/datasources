@@ -1,10 +1,19 @@
-use crate::datasource_factory::DatasourceFactory;
+use crate::connection::Connection;
+use crate::repository::CRUDRepository;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-static REGISTRY: Mutex<Option<HashMap<String, Arc<dyn DatasourceFactory>>>> = Mutex::new(None);
+pub type ConnectionFn =
+    Arc<dyn Fn(Option<&HashMap<String, String>>) -> Arc<dyn Connection> + Send + Sync>;
+pub type RepositoryFn = Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync>;
 
-pub(crate) fn registry() -> MutexGuard<'static, Option<HashMap<String, Arc<dyn DatasourceFactory>>>>
-{
+pub struct FactoryPair {
+    pub connection: ConnectionFn,
+    pub repository: RepositoryFn,
+}
+
+static REGISTRY: Mutex<Option<HashMap<String, FactoryPair>>> = Mutex::new(None);
+
+pub(crate) fn registry() -> MutexGuard<'static, Option<HashMap<String, FactoryPair>>> {
     REGISTRY.lock().expect("registry")
 }

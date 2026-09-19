@@ -12,6 +12,7 @@ vi.mock("node:fs/promises", () => ({
 import {
   collectAsync,
   Datasource,
+  DatasourceFactory,
   DatasourceError,
   Query,
   Where,
@@ -20,7 +21,6 @@ import {
   asRecord,
   JsonCommand,
   JsonConnection,
-  JsonDatasource,
   JsonRepository,
   matches,
   MemoryFileStore,
@@ -31,8 +31,8 @@ import {
 } from "./index.ts";
 
 afterEach(() => {
-  Datasource.reset();
-  Datasource.register(JsonDatasource.instance);
+  DatasourceFactory.reset();
+  DatasourceFactory.register("json", JsonConnection.from, JsonConnection.repository);
 });
 
 describe("filter helpers", () => {
@@ -314,12 +314,14 @@ describe("JsonCommand and JsonRepository", () => {
   });
 });
 
-describe("JsonDatasource", () => {
+describe("Json datasource", () => {
   it("registers and constructs children", async () => {
-    const created = JsonDatasource.create();
-    expect(created.provider).toBe("json");
-    const ds = new JsonDatasource({ data: [{ id: 1 }] });
-    expect(ds.create({ data: [] }).provider).toBe("json");
+    const ds = new Datasource(
+      "json",
+      () => new JsonConnection({ data: [{ id: 1 }] }),
+      JsonConnection.repository,
+    );
+    expect(ds.provider).toBe("json");
     const connection = (await ds.createConnection()) as JsonConnection;
     await connection.open();
     expect(connection.createCommand()).toBeInstanceOf(JsonCommand);
@@ -338,9 +340,9 @@ describe("JsonDatasource", () => {
     expect(repo).toBeInstanceOf(JsonRepository);
     expect(ds.createRepository()).toBeInstanceOf(JsonRepository);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(JsonRepository);
-
-    const fromRegistry = Datasource.create("json", { data: [] });
-    expect(fromRegistry.provider).toBe("json");
+    expect(JsonConnection.from().path).toBe("");
+    expect(JsonConnection.from({ path: "db.json" }).path).toBe("db.json");
+    expect(Datasource.create({ provider: "json" }).provider).toBe("json");
   });
 });
 

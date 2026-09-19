@@ -1,33 +1,49 @@
 mod command;
 mod connection;
 mod converters;
-mod datasource;
 
 pub use command::XmlCommand;
 pub use connection::XmlConnection;
-pub use datasource::XmlDatasource;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, register, reset, Datasource};
+    use datasources::{create, register, reset, BuiltDatasource, Datasource};
+    use std::collections::HashMap;
+
+    fn ds() -> BuiltDatasource {
+        BuiltDatasource::new(
+            "xml",
+            || XmlConnection::from_options(None),
+            XmlConnection::repository,
+        )
+    }
 
     #[test]
     fn creates() {
         reset();
-        register(XmlDatasource::instance());
-        assert_eq!(create("xml", None).unwrap().provider(), "xml");
+        register(
+            "xml",
+            XmlConnection::from_options,
+            XmlConnection::repository,
+        );
+        assert_eq!(
+            create(Some(&HashMap::from([("provider".into(), "xml".into())])))
+                .unwrap()
+                .provider(),
+            "xml"
+        );
     }
 
     #[tokio::test]
     async fn creates_connection() {
-        let connection = XmlDatasource.create_connection().await.unwrap();
+        let connection = ds().create_connection().await.unwrap();
         assert!(connection.open().await.is_err());
     }
 
     #[tokio::test]
     async fn creates_command() {
-        let ds = XmlDatasource;
+        let ds = ds();
         let connection = ds.create_connection().await.unwrap();
         let command = ds.create_command(Some(connection));
         assert!(command.execute("", None).await.is_err());

@@ -1,11 +1,15 @@
 import {
   DatasourceError,
   IsolationLevel,
+  Repository,
+  RowTypeConverter,
+  type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
+import "./converters/PostgresTypes.ts";
 import { PostgresCommand } from "./command.ts";
 import type { PostgresConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type IPostgresDriver } from "./driver.ts";
@@ -17,6 +21,19 @@ export class PostgresConnection implements IConnection {
   schema?: string;
   driver: IPostgresDriver;
   isOpen = false;
+
+  static from = (options?: DatasourceOptions): PostgresConnection =>
+    new PostgresConnection({
+      url: options?.url ?? options?.database_url,
+      schema: options?.schema ?? options?.database_schema,
+    });
+
+  static repository = (connection: IConnection) =>
+    new Repository({
+      connection: connection as PostgresConnection,
+      entity: "items",
+      mapping: new RowTypeConverter(),
+    });
 
   constructor(options: PostgresConnectionOptions = {}) {
     this.url = options.url ?? "";

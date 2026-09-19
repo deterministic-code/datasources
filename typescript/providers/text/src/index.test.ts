@@ -1,17 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, ProviderNotImplementedError } from "@datasources/core";
-import { TextCommand, TextConnection, TextDatasource } from "./index.ts";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
+import { TextCommand, TextConnection } from "./index.ts";
 
-afterEach(() => Datasource.reset());
+afterEach(() => DatasourceFactory.reset());
 
 describe("text", () => {
   it("creates", () => {
-    Datasource.register(TextDatasource.instance);
-    expect(Datasource.create("text").provider).toBe("text");
+    DatasourceFactory.register("text", TextConnection.from, TextConnection.repository);
+    expect(TextConnection.from()).toBeInstanceOf(TextConnection);
+    expect(Datasource.create({ provider: "text" }).provider).toBe("text");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new TextDatasource();
+    const ds = new Datasource("text", () => new TextConnection(), TextConnection.repository);
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(TextConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);

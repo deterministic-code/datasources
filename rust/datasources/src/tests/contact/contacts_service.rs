@@ -1,6 +1,6 @@
 use crate::deep_crud_repository::DeepCRUDRepository;
 use crate::query::Query;
-use crate::repository::{ReadonlyRepository, CRUDRepository};
+use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;

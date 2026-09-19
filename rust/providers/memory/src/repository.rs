@@ -3,7 +3,7 @@ use crate::connection::MemoryConnection;
 use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, Command, Query, ReadonlyRepository, CRUDRepository, Response, Result, Row,
+    identity_filter, CRUDRepository, Command, Query, ReadonlyRepository, Response, Result, Row,
     TextQuery, Value, Where,
 };
 use std::sync::Arc;

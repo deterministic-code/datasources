@@ -14,7 +14,7 @@ vi.mock("better-sqlite3", () => {
   }
   return { default: Database };
 });
-import { Datasource, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
 import {
   BetterSqliteDriver,
   bindParameters,
@@ -22,9 +22,9 @@ import {
   requireDriver,
   SqliteCommand,
   SqliteConnection,
-  SqliteDatasource,
   type SqliteDatabase,
 } from "./index.ts";
+import { filenameOf, sqliteFilename } from "./sqlitePath.ts";
 
 class FakeStatement {
   constructor(
@@ -80,8 +80,22 @@ function fakeDriver(filename = ":memory:") {
 }
 
 afterEach(() => {
-  Datasource.reset();
-  Datasource.register(SqliteDatasource.instance);
+  DatasourceFactory.reset();
+  DatasourceFactory.register("sqlite", SqliteConnection.from, SqliteConnection.repository);
+});
+
+describe("sqlitePath", () => {
+  it("parses sqlite URLs and filenames", () => {
+    expect(sqliteFilename("mysql://x")).toBeUndefined();
+    expect(sqliteFilename("sqlite:")).toBe(":memory:");
+    expect(sqliteFilename("sqlite:///:memory")).toBe(":memory:");
+    expect(sqliteFilename("sqlite:///:memory:")).toBe(":memory:");
+    expect(sqliteFilename("sqlite:///tmp/db.sqlite")).toBe("tmp/db.sqlite");
+    expect(filenameOf({})).toBe(":memory:");
+    expect(filenameOf({ filename: "x.db" })).toBe("x.db");
+    expect(filenameOf({ url: "sqlite:///tmp/db.sqlite" })).toBe("tmp/db.sqlite");
+    expect(filenameOf({ url: "mysql://x" })).toBe(":memory:");
+  });
 });
 
 describe("requireDriver and bindParameters", () => {
@@ -248,15 +262,19 @@ describe("SqliteCommand and Repository", () => {
   });
 });
 
-describe("SqliteDatasource", () => {
+describe("Sqlite datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
-    expect(SqliteDatasource.create().provider).toBe("sqlite");
-    expect(() => new SqliteDatasource().createConnection()).toThrow(
-      DatasourceError,
+    expect(() =>
+      new Datasource("sqlite", () => new SqliteConnection(), SqliteConnection.repository)
+        .createConnection(),
+    ).toThrow(DatasourceError);
+    const ds = new Datasource(
+      "sqlite",
+      () => new SqliteConnection({ driver }),
+      SqliteConnection.repository,
     );
-    const ds = new SqliteDatasource({ driver, table: "people" });
-    expect(ds.create({ driver }).provider).toBe("sqlite");
+    expect(ds.provider).toBe("sqlite");
     const connection = await ds.createConnection();
     await (connection as SqliteConnection).open();
     expect(connection.createCommand()).toBeInstanceOf(SqliteCommand);
@@ -265,7 +283,7 @@ describe("SqliteDatasource", () => {
     expect(command.connection).toBe(connection);
     await command.execute("DELETE FROM items");
     await command.executeReader("SELECT 1");
-    const implicit = new SqliteDatasource({ driver }).createCommand();
+    const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(SqliteCommand);
     expect(implicit.connection).toBeInstanceOf(SqliteConnection);
     await implicit.connection.open();
@@ -274,7 +292,14 @@ describe("SqliteDatasource", () => {
     const repo = ds.createRepository(connection);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
     expect(repo).toBeInstanceOf(Repository);
-    expect(new SqliteDatasource({ driver }).createRepository()).toBeInstanceOf(Repository);
-    expect(Datasource.create("sqlite", { driver }).provider).toBe("sqlite");
+    expect(
+      new Datasource("sqlite", () => new SqliteConnection({ driver }), SqliteConnection.repository)
+        .createRepository(),
+    ).toBeInstanceOf(Repository);
+    expect(Datasource.create({ provider: "sqlite" }).provider).toBe("sqlite");
+    expect(() => SqliteConnection.from({ filename: ":memory:" })).toThrow(DatasourceError);
+    expect(() =>
+      SqliteConnection.from({ database_url: "sqlite:///:memory:" }),
+    ).toThrow(DatasourceError);
   });
 });
