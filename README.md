@@ -783,45 +783,82 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 
 #### Default from environment
 
-##### C#
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32)
 
 ```csharp
+DatasourceFactory.Register("sqlite", _ => new MockConnection(), c => new MockRepository<object>(c));
+Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
+Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
 var ds = DatasourceFactory.Default;
 ```
 
-##### Rust
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L21-L33)
 
 ```rust
-let ds = default()?;
+register(
+    "sqlite",
+    |_| MockConnection::new(),
+    |_| Arc::new(MockRepository::new()),
+);
+std::env::set_var("PROVIDER", "sqlite");
+std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
+let ds = default().expect("default");
 ```
 
-##### TypeScript
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L33-L39)
 
 ```typescript
+DatasourceFactory.register("sqlite", () => new MockConnection(), (c) => new MockRepository(c));
+process.env.PROVIDER = "sqlite";
+process.env.DATASOURCE_URL = "sqlite:///:memory:";
 const ds = DatasourceFactory.default;
 ```
 
-#### Register a factory
+#### Register and Create
 
-##### C#
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
 
 ```csharp
 DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryConnection.Repository);
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 
-##### Rust
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L36-L46)
 
 ```rust
-register("memory", MemoryConnection::from_options, MemoryConnection::repository);
-let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())])))?;
+register(
+    "memory",
+    MemoryConnection::from_options,
+    MemoryConnection::repository,
+);
+let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
 ```
 
-##### TypeScript
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L27-L32)
 
 ```typescript
-DatasourceFactory.register("memory", opts => new MemoryConnection(opts), MemoryConnection.repository);
-const ds = Datasource.create({ provider: "memory" });
+DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
+const ds = DatasourceFactory.create({ provider: "memory" });
+```
+
+#### Missing provider
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L34-L40)
+
+```csharp
+DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L35-L42)
+
+```rust
+create(Some(&HashMap::from([("provider".into(), "missing".into())])));
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L41-L45)
+
+```typescript
+DatasourceFactory.create({ provider: "missing" });
 ```
 
 ## Datasource

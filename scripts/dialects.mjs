@@ -1,3 +1,4 @@
+import { blobUrl, readRange, SOURCE_ICON } from "./example.mjs";
 import { renderClassReference } from "./reference.mjs";
 
 /** @typedef {{ lang: string, label?: string, code: string }} DialectFence */
@@ -14,9 +15,12 @@ const LABELS = {
 };
 
 const DIALECT_BLOCK = /^::: dialects\r?\n([\s\S]*?)^:::[ \t]*$/gm;
+const EXAMPLE_BLOCK = /^::: example\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const REFERENCE_BLOCK = /^::: reference\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
+const EXAMPLE_FENCE = /^```([a-zA-Z0-9_+-]+)[ \t]+(\S+#L\d+-L\d+)\s*\r?\n([\s\S]*?)^```\s*$/gm;
+const DOC_FENCE = /(^~~~~[\s\S]*?^~~~~)/m;
 const PANEL_ORDER = ["typescript", "csharp", "rust"];
 
 export const labelFor = (lang) => LABELS[lang.toLowerCase()] ?? lang;
@@ -28,6 +32,27 @@ export const parseFences = (body) => {
   }
   return fences;
 };
+
+export const parseExampleFences = (body) => {
+  EXAMPLE_FENCE.lastIndex = 0;
+  const fences = [...body.matchAll(EXAMPLE_FENCE)].map((match) => {
+    if (match[3].trim()) throw new Error(`Example fence for ${match[2]} must not contain inline code`);
+    return { lang: match[1], spec: match[2] };
+  });
+  if (!fences.length) throw new Error("::: example has no test ranges");
+  return fences;
+};
+
+const resolveExamples = (body) =>
+  parseExampleFences(body).map(({ lang, spec }) => {
+    const snippet = readRange(spec);
+    return { lang, code: snippet.code, href: blobUrl(snippet) };
+  });
+
+const sourceLink = (href) => `<ExampleSource href="${href}" />`;
+
+const transformOutsideDocFences = (markdown, fn) =>
+  markdown.split(DOC_FENCE).map((chunk) => (chunk.startsWith("~~~~") ? chunk : fn(chunk))).join("");
 
 const BOX_SEP = /\n---\n/;
 const slotName = (lang) =>
@@ -114,16 +139,48 @@ export const toReadmeReference = (body) =>
 
 const hasReference = (markdown) => /^::: reference\r?\n/m.test(markdown);
 
+const toReadmeExamples = (body) =>
+  resolveExamples(body)
+    .map(
+      ({ lang, code, href }) =>
+        `#### ${labelFor(lang)} [${SOURCE_ICON}](${href})\n\n\`\`\`${lang}\n${code}\n\`\`\``,
+    )
+    .join("\n\n");
+
+const toVitePressExamplePanels = (body) =>
+  resolveExamples(body)
+    .map(({ lang, code, href }) =>
+      toPanel(
+        slotName(lang),
+        `<div class="example-source">\n\n${sourceLink(href)}\n\n\`\`\`${lang}\n${code}\n\`\`\`\n\n</div>`,
+      ),
+    )
+    .join("\n\n");
+
+const toVitePressExamples = (body) => {
+  const resolved = resolveExamples(body);
+  const group = resolved
+    .map(({ lang, code }) => `\`\`\`${lang} [${labelFor(lang)}]\n${code}\n\`\`\``)
+    .join("\n\n");
+  const links = resolved.map(({ href }) => sourceLink(href)).join("\n");
+  return `${links}\n\n::: code-group\n\n${group}\n\n:::`;
+};
+
 export const transformDialects = (markdown, style) => {
   const page = hasReference(markdown);
   const dialects =
     style === "vitepress" ? (page ? toVitePressDialectPanels : toVitePressDialects) : toReadmeDialects;
+  const examples =
+    style === "vitepress" ? (page ? toVitePressExamplePanels : toVitePressExamples) : toReadmeExamples;
   const packages = style === "vitepress" ? toVitePressPackages : toReadmePackages;
   const reference = style === "vitepress" ? toVitePressReference : toReadmeReference;
-  const next = markdown
-    .replace(DIALECT_BLOCK, (_, body) => dialects(body))
-    .replace(PACKAGES_BLOCK, (_, body) => packages(body))
-    .replace(REFERENCE_BLOCK, (_, body) => reference(body));
+  const next = transformOutsideDocFences(markdown, (chunk) =>
+    chunk
+      .replace(EXAMPLE_BLOCK, (_, body) => examples(body))
+      .replace(DIALECT_BLOCK, (_, body) => dialects(body))
+      .replace(PACKAGES_BLOCK, (_, body) => packages(body))
+      .replace(REFERENCE_BLOCK, (_, body) => reference(body)),
+  );
   return style === "vitepress" && page
     ? next.replace(/^## Classes/m, "<DialectSelector />\n\n## Classes")
     : next;

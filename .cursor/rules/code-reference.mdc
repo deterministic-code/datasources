@@ -48,15 +48,12 @@ static create(provider?: string, options?: DatasourceOptions): IDatasource
 
 ### Create from environment
 
-::: dialects
-```csharp
-var ds = DatasourceFactory.Default;
+::: example
+```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32
 ```
-```rust
-let ds = default()?;
+```rust rust/datasources/src/tests/datasource_factory.rs#L21-L33
 ```
-```typescript
-const ds = DatasourceFactory.default;
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#L33-L39
 ```
 :::
 ~~~~
@@ -67,4 +64,5 @@ const ds = DatasourceFactory.default;
 - Use `**Constructor**` / `**Properties**` / `**Methods**`.
 - Rust may use `#### datasources` for free functions.
 - Omit `bindInstall` / `bind_install`.
-- The page-level selector switches both the class list and `::: dialects` examples.
+- The page-level selector switches both the class list and `::: example` samples.
+- Under `## Examples`, use `::: example` pointing at unit, integration, or e2e test line ranges in all three languages. The transform extracts the usage body (not the test wrapper or equality asserts); do not paste fictional fences.

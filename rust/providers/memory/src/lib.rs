@@ -33,6 +33,18 @@ mod tests {
         r
     }
 
+    #[test]
+    fn register_and_create() {
+        reset();
+        register(
+            "memory",
+            MemoryConnection::from_options,
+            MemoryConnection::repository,
+        );
+        let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+        assert_eq!(ds.provider(), "memory");
+    }
+
     #[tokio::test]
     async fn memory_crud_and_transactions() {
         let store = Arc::new(MemoryStore::new());

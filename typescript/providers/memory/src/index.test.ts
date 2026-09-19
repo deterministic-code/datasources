@@ -23,6 +23,15 @@ afterEach(() => {
   DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
 });
 
+describe("DatasourceFactory", () => {
+  it("register and create", () => {
+    DatasourceFactory.reset();
+    DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
+    const ds = DatasourceFactory.create({ provider: "memory" });
+    expect(ds.provider).toBe("memory");
+  });
+});
+
 describe("filter helpers", () => {
   it("parses empty and object filters", () => {
     expect(parseFilter()).toEqual({});

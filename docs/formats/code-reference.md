@@ -1,6 +1,6 @@
 # Code reference format
 
-Authoring contract for Code Reference pages. Pages live under `docs/sections/` and generate both the VitePress site and `README.md`. Integrity against source is a later pass; keep this structure parseable.
+Authoring contract for Code Reference pages. Pages live under `docs/sections/` and generate both the VitePress site and `README.md`. Examples are extracted from test line ranges; keep this structure parseable.
 
 Not published in the sidebar (`toc.yaml`).
 
@@ -67,22 +67,21 @@ VitePress uses one page-level dialect selector for classes and examples. README 
 
 ## Examples
 
-When present, one `###` heading per sample, optional prose, then `::: dialects`. On a reference page those fences follow the page-level selector; they do not get their own tabs.
+When present, one `###` heading per sample, optional prose, then `::: example`. Each fence is a pointer to unit, integration, or e2e test lines (`path#Lstart-Lend`). The transform reads that range and renders the usage body — not the test method wrapper or equality asserts. Do not paste a second fictional fence. A source icon links to the same range on GitHub. On a reference page those fences follow the page-level selector; they do not get their own tabs.
+
+`::: dialects` stays for install or CLI snippets that are not tests.
 
 ~~~~markdown
 ## Examples
 
 ### Create from environment
 
-::: dialects
-```csharp
-var ds = DatasourceFactory.Default;
+::: example
+```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32
 ```
-```rust
-let ds = default()?;
+```rust rust/datasources/src/tests/datasource_factory.rs#L21-L33
 ```
-```typescript
-const ds = DatasourceFactory.default;
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#L33-L39
 ```
 :::
 ~~~~
@@ -95,5 +94,5 @@ const ds = DatasourceFactory.default;
 - [ ] Each member has a description, definition, and parameters
 - [ ] Associated types and page-local argument/return types are extra `####` headings, not a second page
 - [ ] `## Remarks` is present
-- [ ] Examples use `::: dialects` or the Examples heading is omitted
+- [ ] Examples use `::: example` test ranges or the Examples heading is omitted
 - [ ] Page is listed in `docs/toc.yaml`
