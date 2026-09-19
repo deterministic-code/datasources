@@ -223,7 +223,7 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [IMapper](#imapper) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
+See [NameMapper](#namemapper), [FlatToTypeMapper](#flattotypemapper), and [StatementMapper](#statementmapper).
 
 ### Type Converter
 
@@ -280,7 +280,7 @@ const rows = new RowTypeConverter({}, { flag: new FlagConverter() });
 const item = rows.convert(row);
 ```
 
-See [TypeConverter](#typeconverter).
+See [RowTypeConverter](#rowtypeconverter).
 
 ## Feature Matrix
 
@@ -292,14 +292,14 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | --- | :---: | :---: | :---: |
 | [DatasourceFactory](#datasourcefactory) | ✅ | ✅ | ✅ |
 | [Datasource](#datasource) | ✅ | ✅ | ✅ |
-| [IMapper](#imapper) | ✅ | ✅ | ✅ |
+| [Mapper](#namemapper) | ✅ | ✅ | ✅ |
 | [TypeConverter](#typeconverter) | ✅ | ✅ | ✅ |
 | [Connection](#connection) | ✅ | ✅ | ✅ |
 | [Transaction](#transaction) | ✅ | ✅ | ✅ |
 | [Command](#command) | ✅ | ✅ | ✅ |
 | [Reader](#reader) | ✅ | ✅ | ✅ |
 | [Statements](#statements) | ✅ | ✅ | ✅ |
-| [Readonly repository](#readonly-repository) | ✅ | ✅ | ✅ |
+| [Repository](#repository) | ✅ | ✅ | ✅ |
 | [CRUD repository](#crud-repository) | ✅ | ✅ | ✅ |
 | [Enriched repository](#enriched-repository) | ✅ | ✅ | ✅ |
 | [Bulk repository](#bulk-repository) | ✅ | ✅ | ✅ |
@@ -341,7 +341,7 @@ TODO: `startTransaction`, work, then `commit` or `abort`. See [Transaction](#tra
 
 ### Map a row
 
-TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [IMapper](#imapper).
+TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [TransformMapper](#transformmapper).
 
 ### Convert a row
 
@@ -1036,7 +1036,7 @@ createReadonlyRepository<T>(connection?: IConnection): IReadonlyRepository<T>
 
 **Returns**
 
-[IReadonlyRepository](#readonly-repository)`<T>`
+[IReadonlyRepository](#repository)`<T>`
 
 ##### DatasourceOptions {#typescript-datasourceoptions}
 
@@ -1217,7 +1217,7 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 
 **Returns**
 
-[IReadonlyRepository](#readonly-repository)`<T>`
+[IReadonlyRepository](#repository)`<T>`
 
 ##### DatasourceOptions {#csharp-datasourceoptions}
 
@@ -1397,7 +1397,7 @@ fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) ->
 
 **Returns**
 
-`Arc<dyn `[ReadonlyRepository](#readonly-repository)`>`
+`Arc<dyn `[ReadonlyRepository](#repository)`>`
 
 ##### DatasourceOptions {#rust-datasourceoptions}
 
@@ -2472,1160 +2472,6 @@ TODO: query / insert / where samples as the builder API is documented.
 
 ## Repository
 
-Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a builder, then create by entity type name or by type. The callback receives an optional connection.
-
-Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
-
-### Classes
-
-##### TypeScript
-
-##### IRepository {#typescript-irepository}
-
-```typescript
-interface IRepository<T = unknown>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| [type](#typescript-irepository-type) | Item constructor the repository exposes. |
-
-###### type {#typescript-irepository-type}
-
-Item constructor the repository exposes.
-
-**Definition**
-
-```typescript
-readonly type: Constructable<T>
-```
-
-##### IRepositoryFactory {#typescript-irepositoryfactory}
-
-```typescript
-interface IRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(typeOrName, factory)](#typescript-irepositoryfactory-register-typeorname-factory) | Registers a readonly factory by constructor or entity type name. |
-| [create(typeOrName, connection?)](#typescript-irepositoryfactory-create-typeorname-connection) | Creates a readonly repository. |
-
-###### register(typeOrName, factory) {#typescript-irepositoryfactory-register-typeorname-factory}
-
-Registers a readonly factory by constructor or entity type name.
-
-**Definition**
-
-```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => IReadonlyRepository): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `factory` | builds an [IReadonlyRepository](#readonly-repository) from an optional [IConnection](#connection) |
-
-###### create(typeOrName, connection?) {#typescript-irepositoryfactory-create-typeorname-connection}
-
-Creates a readonly repository.
-
-**Definition**
-
-```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): IReadonlyRepository
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[IReadonlyRepository](#readonly-repository)
-
-##### ICRUDRepositoryFactory {#typescript-icrudrepositoryfactory}
-
-```typescript
-interface ICRUDRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(typeOrName, factory)](#typescript-icrudrepositoryfactory-register-typeorname-factory) | Registers a CRUD factory by constructor or entity type name. |
-| [create(typeOrName, connection?)](#typescript-icrudrepositoryfactory-create-typeorname-connection) | Creates a CRUD repository. |
-
-###### register(typeOrName, factory) {#typescript-icrudrepositoryfactory-register-typeorname-factory}
-
-Registers a CRUD factory by constructor or entity type name.
-
-**Definition**
-
-```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => ICRUDRepository): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `factory` | builds an [ICRUDRepository](#crud-repository) from an optional [IConnection](#connection) |
-
-###### create(typeOrName, connection?) {#typescript-icrudrepositoryfactory-create-typeorname-connection}
-
-Creates a CRUD repository.
-
-**Definition**
-
-```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): ICRUDRepository
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[ICRUDRepository](#crud-repository)
-
-##### RepositoryFactory {#typescript-repositoryfactory}
-
-```typescript
-class RepositoryFactory implements ICRUDRepositoryFactory
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| [asReadonly](#typescript-repositoryfactory-asreadonly) | Readonly factory view. `register` / `create` call [registerReadonly](#typescript-repositoryfactory-registerreadonly-typeorname-factory) / [createReadonly](#typescript-repositoryfactory-createreadonly-typeorname-connection). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(typeOrName, factory)](#typescript-repositoryfactory-register-typeorname-factory) | Registers CRUD and readonly for the same factory. |
-| [registerReadonly(typeOrName, factory)](#typescript-repositoryfactory-registerreadonly-typeorname-factory) | Registers readonly only. CRUD [create](#typescript-repositoryfactory-create-typeorname-connection) throws. |
-| [create(typeOrName, connection?)](#typescript-repositoryfactory-create-typeorname-connection) | Creates a CRUD repository. |
-| [createReadonly(typeOrName, connection?)](#typescript-repositoryfactory-createreadonly-typeorname-connection) | Creates a readonly repository. |
-
-###### asReadonly {#typescript-repositoryfactory-asreadonly}
-
-Readonly factory view. `register` / `create` call [registerReadonly](#typescript-repositoryfactory-registerreadonly-typeorname-factory) / [createReadonly](#typescript-repositoryfactory-createreadonly-typeorname-connection).
-
-**Definition**
-
-```typescript
-readonly asReadonly: IRepositoryFactory
-```
-
-###### register(typeOrName, factory) {#typescript-repositoryfactory-register-typeorname-factory}
-
-Registers CRUD and readonly for the same factory.
-
-**Definition**
-
-```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => unknown): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### registerReadonly(typeOrName, factory) {#typescript-repositoryfactory-registerreadonly-typeorname-factory}
-
-Registers readonly only. CRUD [create](#typescript-repositoryfactory-create-typeorname-connection) throws.
-
-**Definition**
-
-```typescript
-registerReadonly(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => unknown): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `factory` | builds a readonly repository from an optional [IConnection](#connection) |
-
-###### create(typeOrName, connection?) {#typescript-repositoryfactory-create-typeorname-connection}
-
-Creates a CRUD repository.
-
-**Definition**
-
-```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): ICRUDRepository
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[ICRUDRepository](#crud-repository)
-
-###### createReadonly(typeOrName, connection?) {#typescript-repositoryfactory-createreadonly-typeorname-connection}
-
-Creates a readonly repository.
-
-**Definition**
-
-```typescript
-createReadonly(typeOrName: Constructable<unknown> | string, connection?: IConnection): IReadonlyRepository
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[IReadonlyRepository](#readonly-repository)
-
-##### RepositoryNotRegisteredError {#typescript-repositorynotregisterederror}
-
-```typescript
-class RepositoryNotRegisteredError extends Error
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [RepositoryNotRegisteredError(entityTypeName)](#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename) | Thrown when [create](#typescript-repositoryfactory-create-typeorname-connection) cannot find a factory. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| [entityTypeName](#typescript-repositorynotregisterederror-entitytypename) | Missing entity type name. |
-
-###### RepositoryNotRegisteredError(entityTypeName) {#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename}
-
-Thrown when [create](#typescript-repositoryfactory-create-typeorname-connection) cannot find a factory.
-
-**Definition**
-
-```typescript
-constructor(entityTypeName: string)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | missing entity type name |
-
-###### entityTypeName {#typescript-repositorynotregisterederror-entitytypename}
-
-Missing entity type name.
-
-**Definition**
-
-```typescript
-readonly entityTypeName: string
-```
-
-##### C#
-
-##### IRepository {#csharp-irepository}
-
-```csharp
-public interface IRepository
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| [Type](#csharp-irepository-type) | Item CLR type the repository exposes. |
-
-###### Type {#csharp-irepository-type}
-
-Item CLR type the repository exposes.
-
-**Definition**
-
-```csharp
-Type Type { get; }
-```
-
-##### IRepositoryFactory {#csharp-irepositoryfactory}
-
-```csharp
-public interface IRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Register(factory)](#csharp-irepositoryfactory-register-factory) | Registers a readonly factory by `T`. |
-| [Register(entityTypeName, factory)](#csharp-irepositoryfactory-register-entitytypename-factory) | Registers a readonly factory by entity type name. |
-| [Register(type, factory)](#csharp-irepositoryfactory-register-type-factory) | Registers a readonly factory by CLR type. |
-| [Create()](#csharp-irepositoryfactory-create) | Creates a readonly repository by `T`. |
-| [Create(entityTypeName, connection)](#csharp-irepositoryfactory-create-entitytypename-connection) | Creates a readonly repository by entity type name. |
-| [Create(type, connection)](#csharp-irepositoryfactory-create-type-connection) | Creates a readonly repository by CLR type. |
-
-###### Register(factory) {#csharp-irepositoryfactory-register-factory}
-
-Registers a readonly factory by `T`.
-
-**Definition**
-
-```csharp
-void Register<T>(Func<IConnection?, IReadonlyRepository<T>> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds an [IReadonlyRepository](#readonly-repository) from an optional [IConnection](#connection) |
-
-###### Register(entityTypeName, factory) {#csharp-irepositoryfactory-register-entitytypename-factory}
-
-Registers a readonly factory by entity type name.
-
-**Definition**
-
-```csharp
-void Register(string entityTypeName, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Register(type, factory) {#csharp-irepositoryfactory-register-type-factory}
-
-Registers a readonly factory by CLR type.
-
-**Definition**
-
-```csharp
-void Register(Type type, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Create() {#csharp-irepositoryfactory-create}
-
-Creates a readonly repository by `T`.
-
-**Definition**
-
-```csharp
-IReadonlyRepository<T> Create<T>(IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[IReadonlyRepository](#readonly-repository)`<T>`
-
-###### Create(entityTypeName, connection) {#csharp-irepositoryfactory-create-entitytypename-connection}
-
-Creates a readonly repository by entity type name.
-
-**Definition**
-
-```csharp
-object Create(string entityTypeName, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-###### Create(type, connection) {#csharp-irepositoryfactory-create-type-connection}
-
-Creates a readonly repository by CLR type.
-
-**Definition**
-
-```csharp
-object Create(Type type, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-##### ICRUDRepositoryFactory {#csharp-icrudrepositoryfactory}
-
-```csharp
-public interface ICRUDRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Register(factory)](#csharp-icrudrepositoryfactory-register-factory) | Registers a CRUD factory by `T`. |
-| [Register(entityTypeName, factory)](#csharp-icrudrepositoryfactory-register-entitytypename-factory) | Registers a CRUD factory by entity type name. |
-| [Register(type, factory)](#csharp-icrudrepositoryfactory-register-type-factory) | Registers a CRUD factory by CLR type. |
-| [Create()](#csharp-icrudrepositoryfactory-create) | Creates a CRUD repository by `T`. |
-| [Create(entityTypeName, connection)](#csharp-icrudrepositoryfactory-create-entitytypename-connection) | Creates a CRUD repository by entity type name. |
-| [Create(type, connection)](#csharp-icrudrepositoryfactory-create-type-connection) | Creates a CRUD repository by CLR type. |
-
-###### Register(factory) {#csharp-icrudrepositoryfactory-register-factory}
-
-Registers a CRUD factory by `T`.
-
-**Definition**
-
-```csharp
-void Register<T>(Func<IConnection?, ICRUDRepository<T>> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds an [ICRUDRepository](#crud-repository) from an optional [IConnection](#connection) |
-
-###### Register(entityTypeName, factory) {#csharp-icrudrepositoryfactory-register-entitytypename-factory}
-
-Registers a CRUD factory by entity type name.
-
-**Definition**
-
-```csharp
-void Register(string entityTypeName, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Register(type, factory) {#csharp-icrudrepositoryfactory-register-type-factory}
-
-Registers a CRUD factory by CLR type.
-
-**Definition**
-
-```csharp
-void Register(Type type, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Create() {#csharp-icrudrepositoryfactory-create}
-
-Creates a CRUD repository by `T`.
-
-**Definition**
-
-```csharp
-ICRUDRepository<T> Create<T>(IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[ICRUDRepository](#crud-repository)`<T>`
-
-###### Create(entityTypeName, connection) {#csharp-icrudrepositoryfactory-create-entitytypename-connection}
-
-Creates a CRUD repository by entity type name.
-
-**Definition**
-
-```csharp
-object Create(string entityTypeName, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-###### Create(type, connection) {#csharp-icrudrepositoryfactory-create-type-connection}
-
-Creates a CRUD repository by CLR type.
-
-**Definition**
-
-```csharp
-object Create(Type type, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-##### RepositoryFactory {#csharp-repositoryfactory}
-
-```csharp
-public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Register(factory)](#csharp-repositoryfactory-register-factory) | Registers CRUD and readonly for `T`. |
-| [Register(entityTypeName, factory)](#csharp-repositoryfactory-register-entitytypename-factory) | Registers CRUD and readonly by entity type name. |
-| [Register(type, factory)](#csharp-repositoryfactory-register-type-factory) | Registers CRUD and readonly by CLR type. |
-| [Create()](#csharp-repositoryfactory-create) | Creates a CRUD repository by `T`. |
-| [Create(entityTypeName, connection)](#csharp-repositoryfactory-create-entitytypename-connection) | Creates a readonly repository by entity type name. Use [ICRUDRepositoryFactory](#csharp-icrudrepositoryfactory) for the CRUD map. |
-| [Create(type, connection)](#csharp-repositoryfactory-create-type-connection) | Creates a readonly repository by CLR type. Use [ICRUDRepositoryFactory](#csharp-icrudrepositoryfactory) for the CRUD map. |
-
-###### Register(factory) {#csharp-repositoryfactory-register-factory}
-
-Registers CRUD and readonly for `T`.
-
-**Definition**
-
-```csharp
-public void Register<T>(Func<IConnection?, ICRUDRepository<T>> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds an [ICRUDRepository](#crud-repository) from an optional [IConnection](#connection) |
-
-###### Register(entityTypeName, factory) {#csharp-repositoryfactory-register-entitytypename-factory}
-
-Registers CRUD and readonly by entity type name.
-
-**Definition**
-
-```csharp
-public void Register(string entityTypeName, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Register(type, factory) {#csharp-repositoryfactory-register-type-factory}
-
-Registers CRUD and readonly by CLR type.
-
-**Definition**
-
-```csharp
-public void Register(Type type, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Create() {#csharp-repositoryfactory-create}
-
-Creates a CRUD repository by `T`.
-
-**Definition**
-
-```csharp
-public ICRUDRepository<T> Create<T>(IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[ICRUDRepository](#crud-repository)`<T>`
-
-###### Create(entityTypeName, connection) {#csharp-repositoryfactory-create-entitytypename-connection}
-
-Creates a readonly repository by entity type name. Use [ICRUDRepositoryFactory](#csharp-icrudrepositoryfactory) for the CRUD map.
-
-**Definition**
-
-```csharp
-public object Create(string entityTypeName, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-###### Create(type, connection) {#csharp-repositoryfactory-create-type-connection}
-
-Creates a readonly repository by CLR type. Use [ICRUDRepositoryFactory](#csharp-icrudrepositoryfactory) for the CRUD map.
-
-**Definition**
-
-```csharp
-public object Create(Type type, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-##### RepositoryNotRegisteredException {#csharp-repositorynotregisteredexception}
-
-```csharp
-public sealed class RepositoryNotRegisteredException : DatasourceException
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [RepositoryNotRegisteredException(entityTypeName)](#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename) | Thrown when [Create](#csharp-repositoryfactory-create) cannot find a factory. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| [EntityTypeName](#csharp-repositorynotregisteredexception-entitytypename) | Missing entity type name. |
-
-###### RepositoryNotRegisteredException(entityTypeName) {#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename}
-
-Thrown when [Create](#csharp-repositoryfactory-create) cannot find a factory.
-
-**Definition**
-
-```csharp
-public RepositoryNotRegisteredException(string entityTypeName)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | missing entity type name |
-
-###### EntityTypeName {#csharp-repositorynotregisteredexception-entitytypename}
-
-Missing entity type name.
-
-**Definition**
-
-```csharp
-string EntityTypeName { get; }
-```
-
-##### Rust
-
-##### datasources {#rust-datasources}
-
-```rust
-pub fn as_readonly(repo: Arc<dyn CRUDRepository>) -> Arc<dyn ReadonlyRepository>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [as_readonly(repo)](#rust-datasources-as_readonly-repo) | Views a [CRUDRepository](#crud-repository) as a [ReadonlyRepository](#readonly-repository). |
-
-###### as_readonly(repo) {#rust-datasources-as_readonly-repo}
-
-Views a [CRUDRepository](#crud-repository) as a [ReadonlyRepository](#readonly-repository).
-
-**Definition**
-
-```rust
-pub fn as_readonly(repo: Arc<dyn CRUDRepository>) -> Arc<dyn ReadonlyRepository>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repo` | [CRUDRepository](#crud-repository) |
-
-**Returns**
-
-`Arc<dyn `[ReadonlyRepository](#readonly-repository)`>`
-
-##### ReadonlyRepositoryFactory {#rust-readonlyrepositoryfactory}
-
-```rust
-pub trait ReadonlyRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(name, factory)](#rust-readonlyrepositoryfactory-register-name-factory) | Registers a readonly factory by entity type name. |
-| [register_type(factory)](#rust-readonlyrepositoryfactory-register_type-factory) | Registers a readonly factory by `T`. |
-| [create(name, connection)](#rust-readonlyrepositoryfactory-create-name-connection) | Creates a readonly repository by entity type name. |
-| [create_type(connection)](#rust-readonlyrepositoryfactory-create_type-connection) | Creates a readonly repository by `T`. |
-
-###### register(name, factory) {#rust-readonlyrepositoryfactory-register-name-factory}
-
-Registers a readonly factory by entity type name.
-
-**Definition**
-
-```rust
-fn register(&self, name: &str, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `factory` | builds a [ReadonlyRepository](#readonly-repository) from an optional [Connection](#connection) |
-
-###### register_type(factory) {#rust-readonlyrepositoryfactory-register_type-factory}
-
-Registers a readonly factory by `T`.
-
-**Definition**
-
-```rust
-fn register_type<T: 'static>(&self, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds a [ReadonlyRepository](#readonly-repository) from an optional [Connection](#connection) |
-
-###### create(name, connection) {#rust-readonlyrepositoryfactory-create-name-connection}
-
-Creates a readonly repository by entity type name.
-
-**Definition**
-
-```rust
-fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[ReadonlyRepository](#readonly-repository)`>>`
-
-###### create_type(connection) {#rust-readonlyrepositoryfactory-create_type-connection}
-
-Creates a readonly repository by `T`.
-
-**Definition**
-
-```rust
-fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[ReadonlyRepository](#readonly-repository)`>>`
-
-##### CRUDRepositoryFactory {#rust-crudrepositoryfactory}
-
-```rust
-pub trait CRUDRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(name, factory)](#rust-crudrepositoryfactory-register-name-factory) | Registers a CRUD factory by entity type name. |
-| [register_type(factory)](#rust-crudrepositoryfactory-register_type-factory) | Registers a CRUD factory by `T`. |
-| [create(name, connection)](#rust-crudrepositoryfactory-create-name-connection) | Creates a CRUD repository by entity type name. |
-| [create_type(connection)](#rust-crudrepositoryfactory-create_type-connection) | Creates a CRUD repository by `T`. |
-
-###### register(name, factory) {#rust-crudrepositoryfactory-register-name-factory}
-
-Registers a CRUD factory by entity type name.
-
-**Definition**
-
-```rust
-fn register(&self, name: &str, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `factory` | builds a [CRUDRepository](#crud-repository) from an optional [Connection](#connection) |
-
-###### register_type(factory) {#rust-crudrepositoryfactory-register_type-factory}
-
-Registers a CRUD factory by `T`.
-
-**Definition**
-
-```rust
-fn register_type<T: 'static>(&self, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds a [CRUDRepository](#crud-repository) from an optional [Connection](#connection) |
-
-###### create(name, connection) {#rust-crudrepositoryfactory-create-name-connection}
-
-Creates a CRUD repository by entity type name.
-
-**Definition**
-
-```rust
-fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
-
-###### create_type(connection) {#rust-crudrepositoryfactory-create_type-connection}
-
-Creates a CRUD repository by `T`.
-
-**Definition**
-
-```rust
-fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
-
-##### RepositoryFactory {#rust-repositoryfactory}
-
-```rust
-pub struct RepositoryFactory
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new()](#rust-repositoryfactory-new) | Empty registry. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(name, factory)](#rust-repositoryfactory-register-name-factory) | Registers CRUD and readonly by entity type name. |
-| [register_type(factory)](#rust-repositoryfactory-register_type-factory) | Registers CRUD and readonly by `T`. |
-| [register_readonly(name, factory)](#rust-repositoryfactory-register_readonly-name-factory) | Registers readonly only. CRUD [create](#rust-repositoryfactory-create-name-connection) fails. |
-| [register_readonly_type(factory)](#rust-repositoryfactory-register_readonly_type-factory) | Registers readonly only by `T`. |
-| [create(name, connection)](#rust-repositoryfactory-create-name-connection) | Creates a CRUD repository by entity type name. |
-| [create_type(connection)](#rust-repositoryfactory-create_type-connection) | Creates a CRUD repository by `T`. |
-| [create_readonly(name, connection)](#rust-repositoryfactory-create_readonly-name-connection) | Creates a readonly repository by entity type name. |
-| [create_readonly_type(connection)](#rust-repositoryfactory-create_readonly_type-connection) | Creates a readonly repository by `T`. |
-
-###### new() {#rust-repositoryfactory-new}
-
-Empty registry.
-
-**Definition**
-
-```rust
-pub fn new() -> Self
-```
-
-**Returns**
-
-[RepositoryFactory](#rust-repositoryfactory)
-
-###### register(name, factory) {#rust-repositoryfactory-register-name-factory}
-
-Registers CRUD and readonly by entity type name.
-
-**Definition**
-
-```rust
-pub fn register(&self, name: &str, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `factory` | builds a [CRUDRepository](#crud-repository) from an optional [Connection](#connection) |
-
-###### register_type(factory) {#rust-repositoryfactory-register_type-factory}
-
-Registers CRUD and readonly by `T`.
-
-**Definition**
-
-```rust
-pub fn register_type<T: 'static>(&self, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds a [CRUDRepository](#crud-repository) from an optional [Connection](#connection) |
-
-###### register_readonly(name, factory) {#rust-repositoryfactory-register_readonly-name-factory}
-
-Registers readonly only. CRUD [create](#rust-repositoryfactory-create-name-connection) fails.
-
-**Definition**
-
-```rust
-pub fn register_readonly(&self, name: &str, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync + 'static)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `factory` | builds a [ReadonlyRepository](#readonly-repository) from an optional [Connection](#connection) |
-
-###### register_readonly_type(factory) {#rust-repositoryfactory-register_readonly_type-factory}
-
-Registers readonly only by `T`.
-
-**Definition**
-
-```rust
-pub fn register_readonly_type<T: 'static>(&self, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync + 'static)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds a [ReadonlyRepository](#readonly-repository) from an optional [Connection](#connection) |
-
-###### create(name, connection) {#rust-repositoryfactory-create-name-connection}
-
-Creates a CRUD repository by entity type name.
-
-**Definition**
-
-```rust
-pub fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
-
-###### create_type(connection) {#rust-repositoryfactory-create_type-connection}
-
-Creates a CRUD repository by `T`.
-
-**Definition**
-
-```rust
-pub fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
-
-###### create_readonly(name, connection) {#rust-repositoryfactory-create_readonly-name-connection}
-
-Creates a readonly repository by entity type name.
-
-**Definition**
-
-```rust
-pub fn create_readonly(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[ReadonlyRepository](#readonly-repository)`>>`
-
-###### create_readonly_type(connection) {#rust-repositoryfactory-create_readonly_type-connection}
-
-Creates a readonly repository by `T`.
-
-**Definition**
-
-```rust
-pub fn create_readonly_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[ReadonlyRepository](#readonly-repository)`>>`
-
-### Remarks
-
-Rust has no `IRepository` marker. `entity_type` lives on [ReadonlyRepository](#readonly-repository) and defaults to `Row`. SQL provider generic casts may report the row or dictionary type.
-
-A missing factory throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
-
-See [Datasource](#datasource) for `CreateRepository` / `createRepository`.
-
-### See also
-
-- [Readonly repository](#readonly-repository)
-- [CRUD repository](#crud-repository)
-- [Enriched repository](#enriched-repository)
-- [Bulk repository](#bulk-repository)
-
-## Readonly repository
-
 Get-only typed read over a connection. `GetSingle` / `getSingle` / `get_single` returns the first row or none. `Get` / `get` yields every row.
 
 ### Classes
@@ -3724,7 +2570,7 @@ constructor(type: Constructable<T>)
 
 | Name | Description |
 | --- | --- |
-| `type` | item constructor ([IRepository.type](#typescript-irepository-type)) |
+| `type` | item constructor ([type](#typescript-readonlyrepository-type)) |
 
 ###### type {#typescript-readonlyrepository-type}
 
@@ -4014,7 +2860,7 @@ async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>
 
 ### Remarks
 
-Repository get is convert, then map. See [TypeConverter](#typeconverter) and [IMapper](#imapper).
+Repository get is convert, then map. See [RowTypeConverter](#rowtypeconverter) and [TransformMapper](#transformmapper).
 
 C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits where into `get_where` / `get_single_where`.
 
@@ -4054,7 +2900,7 @@ for await (const row of repo.get()) rows.push(row);
 
 ## CRUD repository
 
-[Readonly repository](#readonly-repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](#rowtypeconverter).
+[Repository](#repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](#rowtypeconverter).
 
 Get is convert, then map. Writes reverse-map, then reverse-convert.
 
@@ -4156,9 +3002,9 @@ class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDReposi
 
 | Name | Description |
 | --- | --- |
-| [rowConverter](#typescript-repository-rowconverter) | Row [TypeConverter](#typeconverter). Convert uses this, then [mapper](#typescript-repository-mapper). |
+| [rowConverter](#typescript-repository-rowconverter) | Row TypeConverter. Convert uses this, then [mapper](#typescript-repository-mapper). |
 | [statementsMapper](#typescript-repository-statementsmapper) | Statement [StatementMapper](#statementmapper). |
-| [mapper](#typescript-repository-mapper) | Get-row [IMapper](#imapper). Alias of `statementsMapper.rows`. |
+| [mapper](#typescript-repository-mapper) | Get-row Mapper. Alias of `statementsMapper.rows`. |
 | [statements](#typescript-repository-statements) | SQL fragments for query / insert / update / delete. |
 
 **Methods**
@@ -4222,7 +3068,7 @@ constructor(built: BuiltRepository<T>)
 
 ###### rowConverter {#typescript-repository-rowconverter}
 
-Row [TypeConverter](#typeconverter). Convert uses this, then [mapper](#typescript-repository-mapper).
+Row TypeConverter. Convert uses this, then [mapper](#typescript-repository-mapper).
 
 **Definition**
 
@@ -4242,7 +3088,7 @@ readonly statementsMapper: StatementMapper<T>
 
 ###### mapper {#typescript-repository-mapper}
 
-Get-row [IMapper](#imapper). Alias of `statementsMapper.rows`.
+Get-row Mapper. Alias of `statementsMapper.rows`.
 
 **Definition**
 
@@ -4376,8 +3222,8 @@ type RepositoryBuilderOptions<T = Cells>
 | [ids](#typescript-repositorybuilderoptions-ids) | Id column names. Default `["id"]`. |
 | [assignIdentityOnCreate](#typescript-repositorybuilderoptions-assignidentityoncreate) | When true, omit id columns on insert so the provider can generate them. Default `true`. |
 | [entity](#typescript-repositorybuilderoptions-entity) | Table or entity name. |
-| [mapping](#typescript-repositorybuilderoptions-mapping) | Row [TypeConverter](#typeconverter). |
-| [mapper](#typescript-repositorybuilderoptions-mapper) | Get-row [IMapper](#imapper). |
+| [mapping](#typescript-repositorybuilderoptions-mapping) | Row TypeConverter. |
+| [mapper](#typescript-repositorybuilderoptions-mapper) | Get-row Mapper. |
 | [statementMapper](#typescript-repositorybuilderoptions-statementmapper) | [StatementMapper](#statementmapper). |
 | [columns](#typescript-repositorybuilderoptions-columns) | Column names when mapping is omitted. |
 
@@ -4423,7 +3269,7 @@ entity?: string
 
 ###### mapping {#typescript-repositorybuilderoptions-mapping}
 
-Row [TypeConverter](#typeconverter).
+Row TypeConverter.
 
 **Definition**
 
@@ -4433,7 +3279,7 @@ mapping?: TypeConverter<T, Cells>
 
 ###### mapper {#typescript-repositorybuilderoptions-mapper}
 
-Get-row [IMapper](#imapper).
+Get-row Mapper.
 
 **Definition**
 
@@ -4472,7 +3318,7 @@ type BuiltRepository<T = Cells>
 | Name | Description |
 | --- | --- |
 | [connection](#typescript-builtrepository-connection) | Open [IConnection](#connection). |
-| [rowConverter](#typescript-builtrepository-rowconverter) | Row [TypeConverter](#typeconverter). |
+| [rowConverter](#typescript-builtrepository-rowconverter) | Row TypeConverter. |
 | [statementMapper](#typescript-builtrepository-statementmapper) | [StatementMapper](#statementmapper). |
 | [statements](#typescript-builtrepository-statements) | SQL fragments. |
 | [ids](#typescript-builtrepository-ids) | Id column names. |
@@ -4491,7 +3337,7 @@ connection: IConnection
 
 ###### rowConverter {#typescript-builtrepository-rowconverter}
 
-Row [TypeConverter](#typeconverter).
+Row TypeConverter.
 
 **Definition**
 
@@ -4646,7 +3492,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
 | Name | Description |
 | --- | --- |
 | [StatementsMapper](#csharp-repository-statementsmapper) | Statement [StatementMapper](#statementmapper). |
-| [Mapper](#csharp-repository-mapper) | Get-row [IMapper](#imapper). Alias of `StatementsMapper.Rows`. |
+| [Mapper](#csharp-repository-mapper) | Get-row Mapper. Alias of `StatementsMapper.Rows`. |
 
 **Methods**
 
@@ -4718,7 +3564,7 @@ StatementMapper<T> StatementsMapper { get; }
 
 ###### Mapper {#csharp-repository-mapper}
 
-Get-row [IMapper](#imapper). Alias of `StatementsMapper.Rows`.
+Get-row Mapper. Alias of `StatementsMapper.Rows`.
 
 **Definition**
 
@@ -4842,8 +3688,8 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
 | [Ids](#csharp-repositorybuilderoptions-ids) | Id column names. Default `["id"]`. |
 | [AssignIdentityOnCreate](#csharp-repositorybuilderoptions-assignidentityoncreate) | When true, omit id columns on insert so the provider can generate them. Default `true`. |
 | [Entity](#csharp-repositorybuilderoptions-entity) | Table or entity name. |
-| [Mapping](#csharp-repositorybuilderoptions-mapping) | Row [TypeConverter](#typeconverter). |
-| [Mapper](#csharp-repositorybuilderoptions-mapper) | Get-row [IMapper](#imapper). |
+| [Mapping](#csharp-repositorybuilderoptions-mapping) | Row TypeConverter. |
+| [Mapper](#csharp-repositorybuilderoptions-mapper) | Get-row Mapper. |
 | [StatementMapper](#csharp-repositorybuilderoptions-statementmapper) | [StatementMapper](#statementmapper). |
 | [Columns](#csharp-repositorybuilderoptions-columns) | Column names when mapping is omitted. |
 
@@ -4889,7 +3735,7 @@ string? Entity { get; init; }
 
 ###### Mapping {#csharp-repositorybuilderoptions-mapping}
 
-Row [TypeConverter](#typeconverter).
+Row TypeConverter.
 
 **Definition**
 
@@ -4899,7 +3745,7 @@ TypeConverter<T, Row>? Mapping { get; init; }
 
 ###### Mapper {#csharp-repositorybuilderoptions-mapper}
 
-Get-row [IMapper](#imapper).
+Get-row Mapper.
 
 **Definition**
 
@@ -4938,7 +3784,7 @@ public sealed record BuiltRepository<T> where T : new()
 | Name | Description |
 | --- | --- |
 | [Connection](#csharp-builtrepository-connection) | Open [IConnection](#connection). |
-| [RowConverter](#csharp-builtrepository-rowconverter) | Row [TypeConverter](#typeconverter). |
+| [RowConverter](#csharp-builtrepository-rowconverter) | Row TypeConverter. |
 | [StatementMapper](#csharp-builtrepository-statementmapper) | [StatementMapper](#statementmapper). |
 | [Statements](#csharp-builtrepository-statements) | SQL fragments. |
 | [Ids](#csharp-builtrepository-ids) | Id column names. |
@@ -4956,7 +3802,7 @@ IConnection Connection { get; init; }
 
 ###### RowConverter {#csharp-builtrepository-rowconverter}
 
-Row [TypeConverter](#typeconverter).
+Row TypeConverter.
 
 **Definition**
 
@@ -5448,7 +4294,7 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 | --- | --- |
 | `into` | destination property on `T` |
 | `from` | key on the parent |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `via` | related [IReadonlyRepository](#repository) |
 | `by` | key on the related item |
 | `select` | optional related property to copy; omitted copies the whole row |
 | `many` | collect a list; default `false` |
@@ -5488,7 +4334,7 @@ class EnrichedReadonlyRepository<T extends object> extends ReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [EnrichedReadonlyRepository(inner, strategy?)](#typescript-enrichedreadonlyrepository-enrichedreadonlyrepository-inner-strategy) | Wraps an inner [IReadonlyRepository](#readonly-repository). Omitted strategy uses the default. |
+| [EnrichedReadonlyRepository(inner, strategy?)](#typescript-enrichedreadonlyrepository-enrichedreadonlyrepository-inner-strategy) | Wraps an inner [IReadonlyRepository](#repository). Omitted strategy uses the default. |
 
 **Properties**
 
@@ -5506,7 +4352,7 @@ class EnrichedReadonlyRepository<T extends object> extends ReadonlyRepository<T>
 
 ###### EnrichedReadonlyRepository(inner, strategy?) {#typescript-enrichedreadonlyrepository-enrichedreadonlyrepository-inner-strategy}
 
-Wraps an inner [IReadonlyRepository](#readonly-repository). Omitted strategy uses the default.
+Wraps an inner [IReadonlyRepository](#repository). Omitted strategy uses the default.
 
 **Definition**
 
@@ -5518,7 +4364,7 @@ constructor(inner: IReadonlyRepository<T>, strategy?: IReadonlyEnrichmentStrateg
 
 | Name | Description |
 | --- | --- |
-| `inner` | [IReadonlyRepository](#readonly-repository) |
+| `inner` | [IReadonlyRepository](#repository) |
 | `strategy` | optional [IReadonlyEnrichmentStrategy](#typescript-ireadonlyenrichmentstrategy) |
 
 ###### tree {#typescript-enrichedreadonlyrepository-tree}
@@ -5547,7 +4393,7 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 | --- | --- |
 | `into` | destination property on `T` |
 | `from` | key on the parent |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `via` | related [IReadonlyRepository](#repository) |
 | `by` | key on the related item |
 | `select` | optional related property to copy |
 | `many` | collect a list |
@@ -5805,7 +4651,7 @@ include<TRelated extends object>(via: IReadonlyRepository<TRelated>, into: strin
 
 | Name | Description |
 | --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `via` | related [IReadonlyRepository](#repository) |
 | `into` | destination property |
 | `from` | parent key |
 | `by` | related key |
@@ -5925,7 +4771,7 @@ get(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWher
 
 | Name | Description |
 | --- | --- |
-| `inner` | [IReadonlyRepository](#readonly-repository) |
+| `inner` | [IReadonlyRepository](#repository) |
 | `tree` | [IRepositoryTree](#typescript-irepositorytree) |
 | `query` | optional query or where |
 
@@ -5981,7 +4827,7 @@ IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository
 | --- | --- |
 | `into` | destination property on `T` |
 | `from` | key on the parent |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `via` | related [IReadonlyRepository](#repository) |
 | `by` | key on the related item |
 | `select` | optional related property to copy; omitted copies the whole row |
 | `many` | collect a list |
@@ -6017,7 +4863,7 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
 
 | Name | Description |
 | --- | --- |
-| [EnrichedReadonlyRepository(inner, strategy)](#csharp-enrichedreadonlyrepository-enrichedreadonlyrepository-inner-strategy) | Wraps an inner [IReadonlyRepository](#readonly-repository). Omitted strategy uses the default. |
+| [EnrichedReadonlyRepository(inner, strategy)](#csharp-enrichedreadonlyrepository-enrichedreadonlyrepository-inner-strategy) | Wraps an inner [IReadonlyRepository](#repository). Omitted strategy uses the default. |
 
 **Properties**
 
@@ -6035,7 +4881,7 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
 
 ###### EnrichedReadonlyRepository(inner, strategy) {#csharp-enrichedreadonlyrepository-enrichedreadonlyrepository-inner-strategy}
 
-Wraps an inner [IReadonlyRepository](#readonly-repository). Omitted strategy uses the default.
+Wraps an inner [IReadonlyRepository](#repository). Omitted strategy uses the default.
 
 **Definition**
 
@@ -6047,7 +4893,7 @@ public EnrichedReadonlyRepository(IReadonlyRepository<T> inner, IReadonlyEnrichm
 
 | Name | Description |
 | --- | --- |
-| `inner` | [IReadonlyRepository](#readonly-repository) |
+| `inner` | [IReadonlyRepository](#repository) |
 | `strategy` | optional [IReadonlyEnrichmentStrategy](#csharp-ireadonlyenrichmentstrategy) |
 
 ###### Tree {#csharp-enrichedreadonlyrepository-tree}
@@ -6076,7 +4922,7 @@ public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRep
 | --- | --- |
 | `into` | destination property on `T` |
 | `from` | key on the parent |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `via` | related [IReadonlyRepository](#repository) |
 | `by` | key on the related item |
 | `select` | optional related property to copy |
 | `many` | collect a list |
@@ -6330,7 +5176,7 @@ IRepositoryTreeNode Include<TRelated>(IReadonlyRepository<TRelated> via, string 
 
 | Name | Description |
 | --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `via` | related [IReadonlyRepository](#repository) |
 | `into` | destination property |
 | `from` | parent key |
 | `by` | related key |
@@ -6450,7 +5296,7 @@ IAsyncEnumerable<T> Get(IReadonlyRepository<T> inner, IRepositoryTree tree, ISta
 
 | Name | Description |
 | --- | --- |
-| `inner` | [IReadonlyRepository](#readonly-repository) |
+| `inner` | [IReadonlyRepository](#repository) |
 | `tree` | [IRepositoryTree](#csharp-irepositorytree) |
 | `query` | optional statement or where |
 
@@ -6519,7 +5365,7 @@ pub struct EnrichedReadonlyRepository
 
 | Name | Description |
 | --- | --- |
-| [new(inner)](#rust-enrichedreadonlyrepository-new-inner) | Wraps an inner [ReadonlyRepository](#readonly-repository). Uses the default strategy. |
+| [new(inner)](#rust-enrichedreadonlyrepository-new-inner) | Wraps an inner [ReadonlyRepository](#repository). Uses the default strategy. |
 | [with_strategy(inner, strategy)](#rust-enrichedreadonlyrepository-with_strategy-inner-strategy) | Wraps an inner repository with a [ReadonlyEnrichmentStrategy](#rust-readonlyenrichmentstrategy). |
 
 **Properties**
@@ -6539,7 +5385,7 @@ pub struct EnrichedReadonlyRepository
 
 ###### new(inner) {#rust-enrichedreadonlyrepository-new-inner}
 
-Wraps an inner [ReadonlyRepository](#readonly-repository). Uses the default strategy.
+Wraps an inner [ReadonlyRepository](#repository). Uses the default strategy.
 
 **Definition**
 
@@ -6551,7 +5397,7 @@ pub fn new(inner: Arc<dyn ReadonlyRepository>) -> Self
 
 | Name | Description |
 | --- | --- |
-| `inner` | [ReadonlyRepository](#readonly-repository) |
+| `inner` | [ReadonlyRepository](#repository) |
 
 **Returns**
 
@@ -6571,7 +5417,7 @@ pub fn with_strategy(inner: Arc<dyn ReadonlyRepository>, strategy: Arc<dyn Reado
 
 | Name | Description |
 | --- | --- |
-| `inner` | [ReadonlyRepository](#readonly-repository) |
+| `inner` | [ReadonlyRepository](#repository) |
 | `strategy` | [ReadonlyEnrichmentStrategy](#rust-readonlyenrichmentstrategy) |
 
 **Returns**
@@ -6604,7 +5450,7 @@ pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>,
 | --- | --- |
 | `into` | destination field |
 | `from` | key on the parent |
-| `via` | related [ReadonlyRepository](#readonly-repository) |
+| `via` | related [ReadonlyRepository](#repository) |
 | `by` | key on the related row |
 | `select` | optional related field to copy |
 | `many` | collect a list |
@@ -6629,7 +5475,7 @@ pub fn add_enriched_with(&mut self, into: impl Into<String>, from: impl Into<Str
 | --- | --- |
 | `into` | destination field |
 | `from` | key on the parent |
-| `via` | related [ReadonlyRepository](#readonly-repository) |
+| `via` | related [ReadonlyRepository](#repository) |
 | `by` | key on the related row |
 | `select` | optional related field to copy |
 | `many` | collect a list |
@@ -6786,7 +5632,7 @@ pub struct RepositoryTreeNode
 
 | Name | Description |
 | --- | --- |
-| [value](#rust-repositorytreenode-value) | Related [ReadonlyRepository](#readonly-repository). |
+| [value](#rust-repositorytreenode-value) | Related [ReadonlyRepository](#repository). |
 | [property_name](#rust-repositorytreenode-property_name) | Destination field name. |
 | [items](#rust-repositorytreenode-items) | Child nodes. |
 | [enrichment](#rust-repositorytreenode-enrichment) | [Enrichment](#rust-enrichment) for this node. |
@@ -6800,7 +5646,7 @@ pub struct RepositoryTreeNode
 
 ###### value {#rust-repositorytreenode-value}
 
-Related [ReadonlyRepository](#readonly-repository).
+Related [ReadonlyRepository](#repository).
 
 **Definition**
 
@@ -6852,7 +5698,7 @@ pub fn include(&mut self, via: Arc<dyn ReadonlyRepository>, into: impl Into<Stri
 
 | Name | Description |
 | --- | --- |
-| `via` | related [ReadonlyRepository](#readonly-repository) |
+| `via` | related [ReadonlyRepository](#repository) |
 | `into` | destination field |
 | `from` | parent key |
 | `by` | related key |
@@ -7011,7 +5857,7 @@ async fn get(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query
 
 | Name | Description |
 | --- | --- |
-| `inner` | [ReadonlyRepository](#readonly-repository) |
+| `inner` | [ReadonlyRepository](#repository) |
 | `tree` | [RepositoryTree](#rust-repositorytree) |
 | `query` | optional query |
 
@@ -7538,192 +6384,9 @@ it("creates parents and children", async () => {
   ]);
 ```
 
-## IMapper
-
-Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository get is convert, then map.
-
-### Classes
-
-##### TypeScript
-
-##### IMapper {#typescript-imapper}
-
-```typescript
-interface IMapper<TFrom, TTo>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#typescript-imapper-map-value) | Maps `TFrom` to `TTo`. |
-| [reverseMap(value)](#typescript-imapper-reversemap-value) | Maps `TTo` back to `TFrom`. |
-
-###### map(value) {#typescript-imapper-map-value}
-
-Maps `TFrom` to `TTo`.
-
-**Definition**
-
-```typescript
-map(value: TFrom): TTo
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### reverseMap(value) {#typescript-imapper-reversemap-value}
-
-Maps `TTo` back to `TFrom`.
-
-**Definition**
-
-```typescript
-reverseMap(value: TTo): TFrom
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-##### C#
-
-##### IMapper {#csharp-imapper}
-
-```csharp
-public interface IMapper<TFrom, TTo>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(value)](#csharp-imapper-map-value) | Maps `TFrom` to `TTo`. |
-| [ReverseMap(value)](#csharp-imapper-reversemap-value) | Maps `TTo` back to `TFrom`. |
-
-###### Map(value) {#csharp-imapper-map-value}
-
-Maps `TFrom` to `TTo`.
-
-**Definition**
-
-```csharp
-TTo Map(TFrom value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### ReverseMap(value) {#csharp-imapper-reversemap-value}
-
-Maps `TTo` back to `TFrom`.
-
-**Definition**
-
-```csharp
-TFrom ReverseMap(TTo value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-##### Rust
-
-##### Mapper {#rust-mapper}
-
-```rust
-pub trait Mapper<TFrom, TTo>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#rust-mapper-map-value) | Maps `TFrom` to `TTo`. |
-| [reverse_map(value)](#rust-mapper-reverse_map-value) | Maps `TTo` back to `TFrom`. |
-
-###### map(value) {#rust-mapper-map-value}
-
-Maps `TFrom` to `TTo`.
-
-**Definition**
-
-```rust
-fn map(&self, value: TFrom) -> TTo
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### reverse_map(value) {#rust-mapper-reverse_map-value}
-
-Maps `TTo` back to `TFrom`.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, value: TTo) -> TFrom
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-### Remarks
-
-Repository get is convert, then map. `StatementMapper.Rows` / `rows` is the get-row mapper. `Repository.Mapper` / `mapper` aliases it.
-
-### See also
-
-- [NameMapper](#namemapper)
-- [NameSourceDestinationMapper](#namesourcedestinationmapper)
-- [TransformMapper](#transformmapper)
-- [FlatToTypeMapper](#flattotypemapper)
-- [StatementMapper](#statementmapper)
-
 ## NameMapper
 
-Identity [IMapper](#imapper) for column or entity names. Names pass through as-is.
+Identity Mapper for column or entity names. Names pass through as-is.
 
 ### Classes
 
@@ -8265,7 +6928,7 @@ Labels are metadata. [NameMapper](#namemapper) still returns names unchanged.
 
 ## TransformMapper
 
-[IMapper](#imapper) built from a pair of functions.
+Mapper built from a pair of functions.
 
 ### Classes
 
@@ -9589,7 +8252,7 @@ This is a collapse mapper, not enrichment. Related fills after get use [Enriched
 
 ## StatementMapper
 
-[IMapper](#imapper) for repository statements. `Map` / `ReverseMap` only touch `Rows`. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete.
+Mapper for repository statements. `Map` / `ReverseMap` only touch `Rows`. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete.
 
 ### Classes
 
@@ -9618,7 +8281,7 @@ class StatementMapper<T> implements IMapper<T, T>
 | [update](#typescript-statementmapper-update) | Rewrites a finished update. |
 | [delete](#typescript-statementmapper-delete) | Rewrites a finished delete. |
 | [storedProcedure](#typescript-statementmapper-storedprocedure) | Rewrites a finished stored-procedure statement. |
-| [rows](#typescript-statementmapper-rows) | Get-row [IMapper](#imapper). [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
+| [rows](#typescript-statementmapper-rows) | Get-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
 
 **Methods**
 
@@ -9715,7 +8378,7 @@ readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureSt
 
 ###### rows {#typescript-statementmapper-rows}
 
-Get-row [IMapper](#imapper). [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here.
+Get-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here.
 
 **Definition**
 
@@ -9775,7 +8438,7 @@ type StatementMapperOptions<T>
 | --- | --- |
 | [entity](#typescript-statementmapperoptions-entity) | Maps the table or entity name. |
 | [columns](#typescript-statementmapperoptions-columns) | Maps column names. |
-| [rows](#typescript-statementmapperoptions-rows) | Get-row [IMapper](#imapper). |
+| [rows](#typescript-statementmapperoptions-rows) | Get-row Mapper. |
 | [query](#typescript-statementmapperoptions-query) | Rewrites a finished query. |
 | [insert](#typescript-statementmapperoptions-insert) | Rewrites a finished insert. |
 | [update](#typescript-statementmapperoptions-update) | Rewrites a finished update. |
@@ -9804,7 +8467,7 @@ columns?: IMapper<string, string>
 
 ###### rows {#typescript-statementmapperoptions-rows}
 
-Get-row [IMapper](#imapper).
+Get-row Mapper.
 
 **Definition**
 
@@ -9881,7 +8544,7 @@ public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
 | [Update](#csharp-statementmapper-update) | Rewrites a finished update. |
 | [Delete](#csharp-statementmapper-delete) | Rewrites a finished delete. |
 | [StoredProcedure](#csharp-statementmapper-storedprocedure) | Rewrites a finished stored-procedure statement. |
-| [Rows](#csharp-statementmapper-rows) | Get-row [IMapper](#imapper). [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
+| [Rows](#csharp-statementmapper-rows) | Get-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
 
 **Methods**
 
@@ -9962,7 +8625,7 @@ IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure {
 
 ###### Rows {#csharp-statementmapper-rows}
 
-Get-row [IMapper](#imapper). [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here.
+Get-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here.
 
 **Definition**
 
@@ -10503,7 +9166,7 @@ fn reverse_convert(&self, to: &To) -> Result<From>
 
 ### Remarks
 
-Repository get is convert, then map. See [IMapper](#imapper) and [Repository](#repository).
+Repository get is convert, then map. See [TransformMapper](#transformmapper) and [Repository](#repository).
 
 ### See also
 
@@ -10511,7 +9174,7 @@ Repository get is convert, then map. See [IMapper](#imapper) and [Repository](#r
 
 ## RowTypeConverter
 
-[TypeConverter](#typeconverter) for a row. Holds `Types` / `types` and `Fields` / `fields`. Convert uses `Fields[name]`. `Types` is the provider catalog merge and is unused at convert time.
+TypeConverter for a row. Holds `Types` / `types` and `Fields` / `fields`. Convert uses `Fields[name]`. `Types` is the provider catalog merge and is unused at convert time.
 
 ### Classes
 
@@ -10558,7 +9221,7 @@ constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<s
 | Name | Description |
 | --- | --- |
 | `types` | provider catalog; unused at convert time |
-| `fields` | per-column [TypeConverter](#typeconverter) |
+| `fields` | per-column TypeConverter |
 
 ###### types {#typescript-rowtypeconverter-types}
 
@@ -10664,7 +9327,7 @@ public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>
 | Name | Description |
 | --- | --- |
 | `types` | provider catalog; unused at convert time |
-| `fields` | per-column [TypeConverter](#typeconverter) |
+| `fields` | per-column TypeConverter |
 
 ###### Types {#csharp-rowtypeconverter-types}
 
@@ -10845,7 +9508,7 @@ pub fn with_fields(self, fields: HashMap<String, Box<dyn TypeConverter<Value, Va
 
 | Name | Description |
 | --- | --- |
-| `fields` | per-column [TypeConverter](#typeconverter) |
+| `fields` | per-column TypeConverter |
 
 **Returns**
 
@@ -10895,7 +9558,7 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 `Types` / `types` is the provider catalog merge. Convert and reverse-convert only consult `Fields` / `fields`.
 
-Repository get is convert, then map. See [IMapper](#imapper) and [CRUD repository](#crud-repository).
+Repository get is convert, then map. See [TransformMapper](#transformmapper) and [CRUD repository](#crud-repository).
 
 ### Examples
 

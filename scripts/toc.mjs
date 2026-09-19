@@ -17,3 +17,16 @@ export const uniquePages = (pages) => {
   const seen = new Set();
   return pages.filter(({ path }) => (seen.has(path) ? false : (seen.add(path), true)));
 };
+
+export const nestSidebar = (pages, toItem) => {
+  const kids = new Map();
+  for (const page of pages) {
+    if (!page.parent) continue;
+    kids.set(page.parent, [...(kids.get(page.parent) ?? []), page]);
+  }
+  return pages.flatMap((page) => {
+    if (page.parent) return [];
+    const items = kids.get(page.title);
+    return items ? [{ ...toItem(page), items: items.map(toItem) }] : [toItem(page)];
+  });
+};

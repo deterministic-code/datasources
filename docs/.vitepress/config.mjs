@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
 import { dialectsVitePlugin, transformDialects } from "../../scripts/dialects.mjs";
-import { parseToc } from "../../scripts/toc.mjs";
+import { nestSidebar, parseToc } from "../../scripts/toc.mjs";
 
 const docsDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const tocPath = join(docsDir, "toc.yaml");
@@ -14,20 +14,13 @@ const toLink = ({ path, hash }) =>
 
 const toItem = (page) => ({ text: page.title, link: toLink(page) });
 
-const nestItems = (groupPages) =>
-  groupPages
-    .filter((page) => !page.parent)
-    .map((page) => {
-      const children = groupPages.filter((child) => child.parent === page.title);
-      return children.length
-        ? { ...toItem(page), collapsed: false, items: children.map(toItem) }
-        : toItem(page);
-    });
-
 const groups = [...new Set(pages.map((page) => page.group).filter(Boolean))].map((group) => ({
   text: group,
   collapsed: false,
-  items: nestItems(pages.filter((page) => page.group === group)),
+  items: nestSidebar(
+    pages.filter((page) => page.group === group),
+    toItem,
+  ),
 }));
 const sidebar = [
   ...pages.filter((page) => !page.group).map(toItem),

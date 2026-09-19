@@ -1,6 +1,6 @@
 # RowTypeConverter
 
-[TypeConverter](./type-converters.md) for a row. Holds `Types` / `types` and `Fields` / `fields`. Convert uses `Fields[name]`. `Types` is the provider catalog merge and is unused at convert time.
+TypeConverter for a row. Holds `Types` / `types` and `Fields` / `fields`. Convert uses `Fields[name]`. `Types` is the provider catalog merge and is unused at convert time.
 
 ## Classes
 
@@ -23,7 +23,7 @@ constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<s
 ```
 
 - `types` — provider catalog; unused at convert time
-- `fields` — per-column [TypeConverter](./type-converters.md)
+- `fields` — per-column TypeConverter
 
 **Properties**
 
@@ -88,7 +88,7 @@ public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>
 ```
 
 - `types` — provider catalog; unused at convert time
-- `fields` — per-column [TypeConverter](./type-converters.md)
+- `fields` — per-column TypeConverter
 
 **Properties**
 
@@ -205,7 +205,7 @@ Merges per-column converters into [fields](#rowtypeconverter-fields).
 pub fn with_fields(self, fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
 ```
 
-- `fields` — per-column [TypeConverter](./type-converters.md)
+- `fields` — per-column TypeConverter
 
 **Returns** [RowTypeConverter](#rowtypeconverter)
 
@@ -238,7 +238,7 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 `Types` / `types` is the provider catalog merge. Convert and reverse-convert only consult `Fields` / `fields`.
 
-Repository get is convert, then map. See [IMapper](./mappers.md) and [CRUD repository](./crud-repository.md).
+Repository get is convert, then map. See [TransformMapper](./transform-mapper.md) and [CRUD repository](./crud-repository.md).
 
 ## Examples
 
