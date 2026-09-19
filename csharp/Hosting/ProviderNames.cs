@@ -5,11 +5,10 @@ public static class ProviderNames
     public static IReadOnlyList<string> From(IReadOnlyDictionary<string, string?> options)
     {
         var names = new List<string>();
-        foreach (var name in Split(Get(options, "providers") ?? Get(options, "INSTALLED_PROVIDERS")))
+        foreach (var name in Split(Get(options, "INSTALLED_PROVIDERS")))
             if (!names.Contains(name))
                 names.Add(name);
-        var provider = Get(options, "provider")
-            ?? ProviderFromUrl.From(Get(options, "url") ?? Get(options, "DATABASE_URL"));
+        var provider = ProviderFromUrl.From(Get(options, "DATABASE_URL"));
         return provider is { Length: > 0 } && !names.Contains(provider)
             ? [..names, provider]
             : names;

@@ -37,14 +37,7 @@ import {
   type IReader,
 } from "./index.ts";
 
-const envKeys = [
-  "INSTALLED_PROVIDERS",
-  "providers",
-  "DATABASE_URL",
-  "url",
-  "DATABASE_SCHEMA",
-  "provider",
-] as const;
+const envKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] as const;
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 
 beforeEach(() => {
@@ -411,18 +404,18 @@ describe("Datasource registry", () => {
   it("applies env defaults through a bound installer", () => {
     const listed: string[] = [];
     Datasource.bindInstall((options) => {
-      listed.push(String(options.provider ?? ""));
+      listed.push(String(options.DATABASE_URL ?? ""));
     });
-    process.env.provider = "memory";
+    process.env.DATABASE_URL = "memory://";
     Datasource.register(new MockDatasource("memory"));
     expect(Datasource.create().provider).toBe("memory");
-    expect(listed).toEqual(["memory"]);
+    expect(listed).toEqual(["memory://"]);
   });
 
   it("requires consumer defaults when provider is omitted", async () => {
     expect(() => Datasource.create()).toThrow(DatasourceError);
     Datasource.register(new MockDatasource("sqlite"));
-    Datasource.defaults({ url: "sqlite:///:memory:" });
+    Datasource.defaults({ DATABASE_URL: "sqlite:///:memory:" });
     const ds = Datasource.create();
     expect(ds.provider).toBe("sqlite");
     const connection = await ds.createConnection();

@@ -7,14 +7,7 @@ type Install = fn(&HashMap<String, String>) -> Result<()>;
 static DEFAULTS: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 static INSTALL: OnceLock<Install> = OnceLock::new();
 
-const ENV_KEYS: [&str; 6] = [
-    "INSTALLED_PROVIDERS",
-    "providers",
-    "DATABASE_URL",
-    "url",
-    "DATABASE_SCHEMA",
-    "provider",
-];
+const ENV_KEYS: [&str; 3] = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"];
 
 pub fn bind_install(install: Install) {
     let _ = INSTALL.set(install);

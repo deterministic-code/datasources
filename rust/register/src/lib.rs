@@ -11,8 +11,7 @@ fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
 
 pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
     let mut names = Vec::new();
-    let listed = get(options, "providers").or_else(|| get(options, "INSTALLED_PROVIDERS"));
-    if let Some(value) = listed {
+    if let Some(value) = get(options, "INSTALLED_PROVIDERS") {
         for name in value.split(',') {
             let name = name.trim();
             if !name.is_empty() && !names.iter().any(|existing| existing == name) {
@@ -20,11 +19,7 @@ pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
             }
         }
     }
-    if let Some(provider) = get(options, "provider").map(str::to_string).or_else(|| {
-        get(options, "url")
-            .or_else(|| get(options, "DATABASE_URL"))
-            .and_then(datasources::provider_from_url)
-    }) {
+    if let Some(provider) = get(options, "DATABASE_URL").and_then(datasources::provider_from_url) {
         if !names.iter().any(|existing| existing == &provider) {
             names.push(provider);
         }
@@ -101,18 +96,22 @@ static INIT: unsafe extern "C" fn() = {
 mod tests {
     use super::*;
     use datasources::{create, create_default, registered, reset};
+    use std::sync::Mutex;
+
+    static ENV: Mutex<()> = Mutex::new(());
 
     fn clear_env() {
-        for key in [
-            "INSTALLED_PROVIDERS",
-            "providers",
-            "DATABASE_URL",
-            "url",
-            "DATABASE_SCHEMA",
-            "provider",
-        ] {
+        for key in ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] {
             std::env::remove_var(key);
         }
+    }
+
+    fn isolated(test: impl FnOnce()) {
+        let _lock = ENV.lock().expect("env");
+        reset();
+        clear_env();
+        test();
+        clear_env();
     }
 
     fn opts(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -126,20 +125,20 @@ mod tests {
     fn names_from_list_and_default() {
         assert_eq!(
             provider_names(&opts(&[
-                ("providers", "sqlite, json, sqlite"),
-                ("provider", "postgres"),
+                ("INSTALLED_PROVIDERS", "sqlite, json, sqlite"),
+                ("DATABASE_URL", "postgres://localhost"),
             ])),
             vec!["sqlite", "json", "postgres"]
         );
         assert_eq!(
             provider_names(&opts(&[
                 ("INSTALLED_PROVIDERS", "json,memory"),
-                ("url", "json://"),
+                ("DATABASE_URL", "json://"),
             ])),
             vec!["json", "memory"]
         );
         assert_eq!(
-            provider_names(&opts(&[("provider", " sqlite ")])),
+            provider_names(&opts(&[("INSTALLED_PROVIDERS", " sqlite ")])),
             vec!["sqlite"]
         );
         assert!(provider_names(&HashMap::new()).is_empty());
@@ -147,59 +146,57 @@ mod tests {
 
     #[test]
     fn registers_listed_factories_and_defaults() {
-        reset();
-        clear_env();
-        register_from(opts(&[
-            ("providers", "json,memory"),
-            ("provider", "memory"),
-        ]))
-        .unwrap();
-        let mut names = registered();
-        names.sort();
-        assert_eq!(names, vec!["json", "memory"]);
-        assert_eq!(create_default().unwrap().provider(), "memory");
-        assert_eq!(create("json", None).unwrap().provider(), "json");
+        isolated(|| {
+            register_from(opts(&[
+                ("INSTALLED_PROVIDERS", "json,memory"),
+                ("DATABASE_URL", "memory://"),
+            ]))
+            .unwrap();
+            let mut names = registered();
+            names.sort();
+            assert_eq!(names, vec!["json", "memory"]);
+            assert_eq!(create_default().unwrap().provider(), "memory");
+            assert_eq!(create("json", None).unwrap().provider(), "json");
+        });
     }
 
     #[test]
     fn registers_installed_providers() {
-        reset();
-        clear_env();
-        register_from(opts(&[
-            ("INSTALLED_PROVIDERS", "json,memory"),
-            ("provider", "memory"),
-        ]))
-        .unwrap();
-        let mut names = registered();
-        names.sort();
-        assert_eq!(names, vec!["json", "memory"]);
-        assert_eq!(create_default().unwrap().provider(), "memory");
+        isolated(|| {
+            register_from(opts(&[
+                ("INSTALLED_PROVIDERS", "json,memory"),
+                ("DATABASE_URL", "memory://"),
+            ]))
+            .unwrap();
+            let mut names = registered();
+            names.sort();
+            assert_eq!(names, vec!["json", "memory"]);
+            assert_eq!(create_default().unwrap().provider(), "memory");
+        });
     }
 
     #[test]
     fn create_default_reads_env() {
-        reset();
-        clear_env();
-        init();
-        std::env::set_var("INSTALLED_PROVIDERS", "json,memory");
-        std::env::set_var("provider", "memory");
-        let result = create_default();
-        clear_env();
-        assert_eq!(result.unwrap().provider(), "memory");
+        isolated(|| {
+            init();
+            std::env::set_var("INSTALLED_PROVIDERS", "json,memory");
+            std::env::set_var("DATABASE_URL", "memory://");
+            assert_eq!(create_default().unwrap().provider(), "memory");
+        });
     }
 
     #[test]
     fn missing_feature_or_unknown_name() {
-        reset();
-        clear_env();
-        assert!(matches!(
-            register_from(opts(&[("provider", "nope")])),
-            Err(DatasourceError::ProviderNotInstalled(_))
-        ));
-        reset();
-        assert!(matches!(
-            register_from(opts(&[("provider", "sqlite")])),
-            Err(DatasourceError::ProviderNotInstalled(_))
-        ));
+        isolated(|| {
+            assert!(matches!(
+                register_from(opts(&[("INSTALLED_PROVIDERS", "nope")])),
+                Err(DatasourceError::ProviderNotInstalled(_))
+            ));
+            reset();
+            assert!(matches!(
+                register_from(opts(&[("INSTALLED_PROVIDERS", "sqlite")])),
+                Err(DatasourceError::ProviderNotInstalled(_))
+            ));
+        });
     }
 }
