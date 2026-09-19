@@ -16,7 +16,6 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
         .and_then(|value| (!value.is_empty()).then_some(value.to_string()))
         .or_else(|| get(&listed, "database_url").and_then(provider_from_url))
         .ok_or_else(|| DatasourceError::message("Datasource defaults are not specified"))?;
-    let bound = for_factory(&listed);
     let guard = registry();
     let pair = guard
         .as_ref()
@@ -27,7 +26,7 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
     drop(guard);
     Ok(Arc::new(BuiltDatasource::new(
         name,
-        move || connection(Some(&bound)),
+        move || connection(Some(&listed)),
         move |conn| repository(conn),
     )))
 }
@@ -41,21 +40,6 @@ fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
         .get(key)
         .map(|value| value.trim())
         .filter(|value| !value.is_empty())
-}
-
-fn for_factory(options: &HashMap<String, String>) -> HashMap<String, String> {
-    let mut copy = options.clone();
-    if !copy.contains_key("url") {
-        if let Some(url) = get(options, "database_url") {
-            copy.insert("url".into(), url.into());
-        }
-    }
-    if !copy.contains_key("schema") {
-        if let Some(schema) = get(options, "database_schema") {
-            copy.insert("schema".into(), schema.into());
-        }
-    }
-    copy
 }
 
 fn connection_from_environment() -> HashMap<String, String> {

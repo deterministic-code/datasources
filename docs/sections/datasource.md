@@ -138,22 +138,6 @@ Default schema.
 database_schema?: string
 ```
 
-##### url
-
-Alias of `database_url` passed through to the provider.
-
-```typescript
-url?: string
-```
-
-##### schema
-
-Alias of `database_schema` passed through to the provider.
-
-```typescript
-schema?: string
-```
-
 ### csharp
 #### Datasource
 
@@ -273,22 +257,6 @@ Default schema.
 "database_schema"
 ```
 
-##### url
-
-Alias of `database_url` passed through to the provider.
-
-```csharp
-"url"
-```
-
-##### schema
-
-Alias of `database_schema` passed through to the provider.
-
-```csharp
-"schema"
-```
-
 ### rust
 #### BuiltDatasource
 
@@ -406,22 +374,6 @@ Default schema.
 
 ```rust
 "database_schema"
-```
-
-##### url
-
-Alias of `database_url` passed through to the provider.
-
-```rust
-"url"
-```
-
-##### schema
-
-Alias of `database_schema` passed through to the provider.
-
-```rust
-"schema"
 ```
 :::
 
