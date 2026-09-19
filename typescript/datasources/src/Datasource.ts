@@ -10,22 +10,12 @@ const registry = new Map<string, IDatasourceFactory>();
 let specified: DatasourceOptions | undefined;
 let installListed: ((options: DatasourceOptions) => void) | undefined;
 
-const envKeys = [
-  "INSTALLED_PROVIDERS",
-  "providers",
-  "DATABASE_URL",
-  "url",
-  "DATABASE_SCHEMA",
-  "provider",
-] as const;
+const envKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"] as const;
 
 const text = (options: DatasourceOptions | undefined, key: string): string | undefined => {
   const value = options?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 };
-
-const providerName = (options?: DatasourceOptions) =>
-  text(options, "provider") ?? providerFromUrl(text(options, "url") ?? text(options, "DATABASE_URL") ?? "");
 
 const fromEnv = (): DatasourceOptions => {
   const options: DatasourceOptions = {};
@@ -35,6 +25,12 @@ const fromEnv = (): DatasourceOptions => {
   }
   return options;
 };
+
+const forFactory = (options: DatasourceOptions): DatasourceOptions => ({
+  ...options,
+  url: text(options, "url") ?? text(options, "DATABASE_URL"),
+  schema: text(options, "schema") ?? text(options, "DATABASE_SCHEMA"),
+});
 
 const bindRegister = (): void => {
   if (installListed) return;
@@ -66,11 +62,11 @@ export class Datasource {
     if (!specified && !options && Object.keys(listed).length > 0) Datasource.defaults(listed);
     else installListed?.(listed);
     const merged = { ...specified, ...options };
-    const name = provider ?? providerName(merged);
+    const name = provider ?? providerFromUrl(text(merged, "DATABASE_URL") ?? "");
     if (!name) throw new DatasourceError("Datasource defaults are not specified");
     const factory = registry.get(name);
     if (!factory) throw new ProviderNotInstalledError(name);
-    return factory.create(merged);
+    return factory.create(forFactory(merged));
   }
 
   static reset(): void {

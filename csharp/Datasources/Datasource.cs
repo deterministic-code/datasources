@@ -4,8 +4,7 @@ namespace Datasources;
 
 public static class Datasource
 {
-    static readonly string[] EnvKeys =
-        ["INSTALLED_PROVIDERS", "providers", "DATABASE_URL", "url", "DATABASE_SCHEMA", "provider"];
+    static readonly string[] EnvKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"];
     private static readonly Dictionary<string, IDatasourceFactory> Factories = new();
     private static IReadOnlyDictionary<string, string?>? Specified;
 
@@ -31,16 +30,23 @@ public static class Datasource
             Defaults(listed);
         else
             RegisterInstalled(listed);
-        var name = provider ?? Get(listed, "provider")
-            ?? ProviderFromUrl.From(Get(listed, "url") ?? Get(listed, "DATABASE_URL"))
+        var name = provider ?? ProviderFromUrl.From(Get(listed, "DATABASE_URL"))
             ?? throw new DatasourceException("Datasource defaults are not specified");
         return Factories.TryGetValue(name, out var factory)
-            ? factory.Create(options ?? Specified)
+            ? factory.Create(options is IReadOnlyDictionary<string, string?> or null ? ForFactory(listed) : options)
             : throw new ProviderNotInstalledException(name);
     }
 
     static string? Get(IReadOnlyDictionary<string, string?>? options, string key) =>
         options is not null && options.TryGetValue(key, out var value) ? value : null;
+
+    static Dictionary<string, string?> ForFactory(IReadOnlyDictionary<string, string?> options)
+    {
+        var copy = new Dictionary<string, string?>(options);
+        copy.TryAdd("url", Get(options, "DATABASE_URL"));
+        copy.TryAdd("schema", Get(options, "DATABASE_SCHEMA"));
+        return copy;
+    }
 
     static IReadOnlyDictionary<string, string?> FromEnvironment()
     {

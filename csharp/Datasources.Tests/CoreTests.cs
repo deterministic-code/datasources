@@ -5,8 +5,7 @@ namespace Datasources.Tests;
 
 public class CoreTests
 {
-    static readonly string[] EnvKeys =
-        ["INSTALLED_PROVIDERS", "providers", "DATABASE_URL", "url", "DATABASE_SCHEMA", "provider"];
+    static readonly string[] EnvKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"];
 
     public CoreTests()
     {
@@ -278,7 +277,7 @@ public class CoreTests
         Datasource.Register(new MockDatasource("sqlite"));
         Datasource.Defaults(new Dictionary<string, string?>
         {
-            ["url"] = "sqlite:///:memory:"
+            ["DATABASE_URL"] = "sqlite:///:memory:"
         });
         var ds = Datasource.Create();
         Assert.Equal("sqlite", ds.Provider);

@@ -16,6 +16,7 @@ pub fn create(
         merged.extend(extra.iter().map(|(k, v)| (k.clone(), v.clone())));
     }
     defaults::register_listed(&merged)?;
+    with_factory_keys(&mut merged);
     let opts = (!merged.is_empty()).then_some(&merged);
     let guard = registry();
     match guard.as_ref().and_then(|map| map.get(provider)).cloned() {
@@ -29,14 +30,21 @@ pub fn create_default() -> Result<Arc<dyn Datasource>> {
     let merged = defaults::snapshot()
         .ok_or_else(|| DatasourceError::message("Datasource defaults are not specified"))?;
     let provider = merged
-        .get("provider")
-        .cloned()
-        .or_else(|| {
-            merged
-                .get("url")
-                .or_else(|| merged.get("DATABASE_URL"))
-                .and_then(|url| crate::provider_from_url::provider_from_url(url))
-        })
+        .get("DATABASE_URL")
+        .and_then(|url| crate::provider_from_url::provider_from_url(url))
         .ok_or_else(|| DatasourceError::message("Datasource defaults are not specified"))?;
     create(&provider, Some(&merged))
+}
+
+fn with_factory_keys(merged: &mut HashMap<String, String>) {
+    if !merged.contains_key("url") {
+        if let Some(url) = merged.get("DATABASE_URL").cloned() {
+            merged.insert("url".into(), url);
+        }
+    }
+    if !merged.contains_key("schema") {
+        if let Some(schema) = merged.get("DATABASE_SCHEMA").cloned() {
+            merged.insert("schema".into(), schema);
+        }
+    }
 }

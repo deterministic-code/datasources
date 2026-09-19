@@ -2,8 +2,7 @@ namespace Datasources.Tests;
 
 public class DatasourceInstallTests
 {
-    static readonly string[] EnvKeys =
-        ["INSTALLED_PROVIDERS", "providers", "DATABASE_URL", "url", "DATABASE_SCHEMA", "provider"];
+    static readonly string[] EnvKeys = ["INSTALLED_PROVIDERS", "DATABASE_URL", "DATABASE_SCHEMA"];
 
     public DatasourceInstallTests()
     {
@@ -19,19 +18,19 @@ public class DatasourceInstallTests
             new[] { "sqlite", "json", "postgres" },
             ProviderNames.From(new Dictionary<string, string?>
             {
-                ["providers"] = "sqlite, json, sqlite",
-                ["provider"] = "postgres"
+                ["INSTALLED_PROVIDERS"] = "sqlite, json, sqlite",
+                ["DATABASE_URL"] = "postgres://localhost"
             }));
         Assert.Equal(
             new[] { "json", "memory" },
             ProviderNames.From(new Dictionary<string, string?>
             {
                 ["INSTALLED_PROVIDERS"] = "json,memory",
-                ["url"] = "json://"
+                ["DATABASE_URL"] = "json://"
             }));
         Assert.Equal(
             new[] { "sqlite" },
-            ProviderNames.From(new Dictionary<string, string?> { ["provider"] = " sqlite " }));
+            ProviderNames.From(new Dictionary<string, string?> { ["INSTALLED_PROVIDERS"] = " sqlite " }));
         Assert.Empty(ProviderNames.From(new Dictionary<string, string?>()));
     }
 
@@ -40,8 +39,8 @@ public class DatasourceInstallTests
     {
         DatasourceInstall.From(new Dictionary<string, string?>
         {
-            ["providers"] = "json,memory",
-            ["provider"] = "memory",
+            ["INSTALLED_PROVIDERS"] = "json,memory",
+            ["DATABASE_URL"] = "memory://",
             ["filename"] = ":memory:"
         });
         Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
@@ -55,7 +54,7 @@ public class DatasourceInstallTests
         Datasource.Defaults(new Dictionary<string, string?>
         {
             ["INSTALLED_PROVIDERS"] = "json,memory",
-            ["provider"] = "memory"
+            ["DATABASE_URL"] = "memory://"
         });
         Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
         Assert.Equal("memory", Datasource.Create().Provider);
@@ -67,7 +66,7 @@ public class DatasourceInstallTests
         Assert.Equal("json", Datasource.Create(null, new Dictionary<string, string?>
         {
             ["INSTALLED_PROVIDERS"] = "json,memory",
-            ["provider"] = "json"
+            ["DATABASE_URL"] = "json://"
         }).Provider);
         Assert.Equal(new[] { "json", "memory" }, Datasource.Registered());
     }
@@ -76,7 +75,7 @@ public class DatasourceInstallTests
     public void CreateReadsInstalledProvidersFromEnvironment()
     {
         Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "json,memory");
-        Environment.SetEnvironmentVariable("provider", "memory");
+        Environment.SetEnvironmentVariable("DATABASE_URL", "memory://");
         try
         {
             Assert.Equal("memory", Datasource.Create().Provider);
@@ -85,7 +84,7 @@ public class DatasourceInstallTests
         finally
         {
             Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", null);
-            Environment.SetEnvironmentVariable("provider", null);
+            Environment.SetEnvironmentVariable("DATABASE_URL", null);
         }
     }
 
@@ -93,8 +92,8 @@ public class DatasourceInstallTests
     public void MissingPackageOrUnknownName()
     {
         Assert.Throws<ProviderNotInstalledException>(() =>
-            DatasourceInstall.From(new Dictionary<string, string?> { ["provider"] = "sqlite" }));
+            DatasourceInstall.From(new Dictionary<string, string?> { ["INSTALLED_PROVIDERS"] = "sqlite" }));
         Assert.Throws<ProviderNotInstalledException>(() =>
-            DatasourceInstall.From(new Dictionary<string, string?> { ["provider"] = "nope" }));
+            DatasourceInstall.From(new Dictionary<string, string?> { ["INSTALLED_PROVIDERS"] = "nope" }));
     }
 }
