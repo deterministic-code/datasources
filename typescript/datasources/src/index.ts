@@ -78,8 +78,6 @@ export type { IFlatToNestedMapper } from "./mappers/IFlatToNestedMapper.ts";
 export type { TypeMap, TypeMapFields } from "./mappers/TypeMap.ts";
 export type { TypeMapGroup } from "./mappers/TypeMapGroup.ts";
 export { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";
-export type { INameMapper } from "./mappers/INameMapper.ts";
-export { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 export { StatementMapper, type StatementMapperOptions } from "./mappers/StatementMapper.ts";
 export { TransformMapper } from "./mappers/TransformMapper.ts";
 export { TransformConverterMapper } from "./mappers/TransformConverterMapper.ts";

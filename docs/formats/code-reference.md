@@ -94,7 +94,7 @@ Optional `output` fences after the test ranges become titled textboxes under the
 ::: example
 ```csharp csharp/Datasources.Tests/TransformMapperTests.cs#L13-L24
 ```
-```rust rust/datasources/src/mappers/mod.rs#L122-L157
+```rust rust/datasources/src/mappers/mod.rs#L59-L94
 ```
 ```typescript typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40
 ```

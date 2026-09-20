@@ -4,7 +4,6 @@ import type { Constructable } from "./converters/Constructable.ts";
 import { untyped } from "./ReadonlyRepository.ts";
 import { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { NameSourceDestinationMapper } from "./mappers/NameSourceDestinationMapper.ts";
 import { StatementMapper } from "./mappers/StatementMapper.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
 import { createRepositoryBuilderOptions, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
@@ -26,7 +25,7 @@ export const parts = <T>(
     options.mapping ?? new RowTypeConverter<T>(types, options.fields);
   if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
     Object.assign(rowConverter.types, types);
-  const names = new NameSourceDestinationMapper(options.connection.provider, "typescript");
+  const names = new TransformMapper<string, string>((name) => name, (name) => name);
   const statementMapper =
     options.statementMapper ??
     new StatementMapper({

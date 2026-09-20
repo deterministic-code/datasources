@@ -50,7 +50,6 @@ export default defineConfig({
         "src/converters/Cell.ts",
         "src/converters/Constructable.ts",
         "src/mappers/IMapper.ts",
-        "src/mappers/INameMapper.ts",
       ],
       thresholds: {
         lines: 100,

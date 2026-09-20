@@ -168,7 +168,7 @@ const back = mapper.reverseMap(flat);
 ```
 :::
 
-See [Mapper](./sections/mappers.md) for `INameMapper`, `FlatToNestedMapper`, and `StatementMapper`.
+See [Mapper](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`, and `StatementMapper`.
 
 ## Type Converter
 

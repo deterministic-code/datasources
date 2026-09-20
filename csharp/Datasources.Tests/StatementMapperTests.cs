@@ -11,19 +11,15 @@ public class StatementMapperTests
         public string name { get; set; } = "";
     }
 
-    sealed class TestNameMapper : INameMapper
-    {
-        public string Map(string name) => name switch
+    static IMapper<string, string> Names() => new TransformMapper<string, string>(
+        static name => name switch
         {
             "users" => "people",
             "id" => "user_id",
             "name" => "full_name",
             _ => name
-        };
-        public string ReverseMap(string name) => name;
-    }
-
-    static INameMapper Names() => new TestNameMapper();
+        },
+        static name => name);
 
     static (Repository<UserRow> Repo, MockCommand Command) Create(StatementMapper<UserRow> mapper)
     {

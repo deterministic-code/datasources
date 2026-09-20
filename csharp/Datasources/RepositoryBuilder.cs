@@ -12,7 +12,7 @@ public static class RepositoryBuilder<T> where T : new()
         if (rowConverter is RowTypeConverter<T> row && row.Types.Count == 0)
             foreach (var (key, converter) in types)
                 row.Types[key] = converter;
-        var names = new NameSourceDestinationMapper(options.Connection.Provider, "csharp");
+        var names = new TransformMapper<string, string>(static name => name, static name => name);
         var statementMapper = options.StatementMapper ?? new StatementMapper<T>
         {
             Entity = names,

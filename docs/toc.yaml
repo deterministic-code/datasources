@@ -60,14 +60,6 @@ pages:
   - path: sections/mappers.md
     title: Mapper
     group: Code Reference
-  - path: sections/i-name-mapper.md
-    title: INameMapper
-    group: Code Reference
-    parent: Mapper
-  - path: sections/name-source-destination-mapper.md
-    title: Name Source Destination Mapper
-    group: Code Reference
-    parent: Mapper
   - path: sections/transform-mapper.md
     title: Transform Mapper
     group: Code Reference
