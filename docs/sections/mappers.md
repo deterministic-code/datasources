@@ -111,8 +111,6 @@ Repository read is convert, then map. `StatementMapper.Rows` / `rows` is the rea
 
 ## See also
 
-- [INameMapper](./i-name-mapper.md)
-- [NameSourceDestinationMapper](./name-source-destination-mapper.md)
 - [TransformMapper](./transform-mapper.md)
 - [FlatToNestedMapper](./flat-to-nested-mapper.md)
 - [StatementMapper](./statement-mapper.md)

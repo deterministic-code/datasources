@@ -25,72 +25,9 @@ pub trait Mapper<TFrom, TTo> {
     fn reverse_map(&self, value: TTo) -> TFrom;
 }
 
-pub trait NameMapper: Mapper<String, String> {}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NameSourceDestinationMapper {
-    pub source: String,
-    pub destination: String,
-}
-
-impl NameSourceDestinationMapper {
-    pub fn new(source: impl Into<String>, destination: impl Into<String>) -> Self {
-        Self {
-            source: source.into(),
-            destination: destination.into(),
-        }
-    }
-
-    pub fn map(&self, name: &str) -> String {
-        name.to_string()
-    }
-
-    pub fn reverse_map(&self, name: &str) -> String {
-        name.to_string()
-    }
-}
-
-impl Mapper<String, String> for NameSourceDestinationMapper {
-    fn map(&self, name: String) -> String {
-        name
-    }
-
-    fn reverse_map(&self, name: String) -> String {
-        name
-    }
-}
-
-impl NameMapper for NameSourceDestinationMapper {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn map_and_reverse_map_are_the_name() {
-        let mapper = NameSourceDestinationMapper::new("sql", "rust");
-        assert_eq!(mapper.map("user_accounts"), "user_accounts");
-        assert_eq!(mapper.reverse_map("UserAccounts"), "UserAccounts");
-        assert_eq!(
-            Mapper::map(&mapper, "user_accounts".into()),
-            "user_accounts"
-        );
-        assert_eq!(
-            Mapper::reverse_map(&mapper, "UserAccounts".into()),
-            "UserAccounts"
-        );
-    }
-
-    #[test]
-    fn source_and_destination() {
-        let mapper = NameSourceDestinationMapper::new("sql", "rust");
-        assert_eq!(mapper.source, "sql");
-        assert_eq!(mapper.destination, "rust");
-        assert_eq!(mapper.map("user_accounts"), "user_accounts");
-        assert_eq!(mapper.reverse_map("UserAccounts"), "UserAccounts");
-        assert_eq!(mapper, mapper);
-        assert!(format!("{:?}", mapper).contains("sql"));
-    }
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     struct User {

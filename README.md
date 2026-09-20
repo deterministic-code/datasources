@@ -223,7 +223,7 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [Mapper](#mapper) for `INameMapper`, `FlatToNestedMapper`, and `StatementMapper`.
+See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and `StatementMapper`.
 
 ### Type Converter
 
@@ -10126,366 +10126,9 @@ Repository read is convert, then map. `StatementMapper.Rows` / `rows` is the rea
 
 ### See also
 
-- [INameMapper](#inamemapper)
-- [NameSourceDestinationMapper](#name-source-destination-mapper)
 - [TransformMapper](#transform-mapper)
 - [FlatToNestedMapper](#flat-to-nested-mapper)
 - [StatementMapper](#statement-mapper)
-
-## INameMapper
-
-[IMapper](#mapper) for entity and column names.
-
-### Classes
-
-##### TypeScript
-
-##### INameMapper {#typescript-inamemapper}
-
-```typescript
-interface INameMapper extends IMapper<string, string>
-```
-
-##### C#
-
-##### INameMapper {#csharp-inamemapper}
-
-```csharp
-public interface INameMapper : IMapper<string, string>
-```
-
-##### Rust
-
-##### NameMapper {#rust-namemapper}
-
-```rust
-pub trait NameMapper: Mapper<String, String> {}
-```
-
-### Remarks
-
-Use [NameSourceDestinationMapper](#name-source-destination-mapper) when the mapper also holds source and destination labels.
-
-### Examples
-
-#### Pass-through names
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/NameMapperTests.cs#L8-L13)
-
-```csharp
-INameMapper mapping = new NameSourceDestinationMapper("sql", "csharp");
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L70-L81)
-
-```rust
-fn map_and_reverse_map_are_the_name() {
-    let mapper = NameSourceDestinationMapper::new("sql", "rust");
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/nameMapper.test.ts#L6-L13)
-
-```typescript
-const mapping: INameMapper = new NameSourceDestinationMapper(
-  "sql",
-  "typescript",
-);
-```
-
-## NameSourceDestinationMapper
-
-[INameMapper](#inamemapper) that holds source and destination labels for type and field name differences. Names still pass through.
-
-### Classes
-
-##### TypeScript
-
-##### NameSourceDestinationMapper {#typescript-namesourcedestinationmapper}
-
-```typescript
-class NameSourceDestinationMapper implements INameMapper
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [NameSourceDestinationMapper(source, destination)](#typescript-namesourcedestinationmapper-namesourcedestinationmapper-source-destination) | Holds source and destination labels. Names still pass through. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| source | Dialect or provider label for the source side. |
-| destination | Dialect or provider label for the destination side. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(name)](#typescript-namesourcedestinationmapper-map-name) | Returns the name unchanged. |
-| [reverseMap(name)](#typescript-namesourcedestinationmapper-reversemap-name) | Returns the name unchanged. |
-
-###### NameSourceDestinationMapper(source, destination) {#typescript-namesourcedestinationmapper-namesourcedestinationmapper-source-destination}
-
-Holds source and destination labels. Names still pass through.
-
-**Definition**
-
-```typescript
-constructor(source: string, destination: string)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `source` | source label |
-| `destination` | destination label |
-
-###### map(name) {#typescript-namesourcedestinationmapper-map-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```typescript
-map(name: string): string
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`string`
-
-###### reverseMap(name) {#typescript-namesourcedestinationmapper-reversemap-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```typescript
-reverseMap(name: string): string
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`string`
-
-##### C#
-
-##### NameSourceDestinationMapper {#csharp-namesourcedestinationmapper}
-
-```csharp
-public sealed class NameSourceDestinationMapper : INameMapper
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [NameSourceDestinationMapper(source, destination)](#csharp-namesourcedestinationmapper-namesourcedestinationmapper-source-destination) | Holds source and destination labels. Names still pass through. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Source | Dialect or provider label for the source side. |
-| Destination | Dialect or provider label for the destination side. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(name)](#csharp-namesourcedestinationmapper-map-name) | Returns the name unchanged. |
-| [ReverseMap(name)](#csharp-namesourcedestinationmapper-reversemap-name) | Returns the name unchanged. |
-
-###### NameSourceDestinationMapper(source, destination) {#csharp-namesourcedestinationmapper-namesourcedestinationmapper-source-destination}
-
-Holds source and destination labels. Names still pass through.
-
-**Definition**
-
-```csharp
-public NameSourceDestinationMapper(string source, string destination)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `source` | source label |
-| `destination` | destination label |
-
-###### Map(name) {#csharp-namesourcedestinationmapper-map-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```csharp
-string Map(string name)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`string`
-
-###### ReverseMap(name) {#csharp-namesourcedestinationmapper-reversemap-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```csharp
-string ReverseMap(string name)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`string`
-
-##### Rust
-
-##### NameSourceDestinationMapper {#rust-namesourcedestinationmapper}
-
-```rust
-pub struct NameSourceDestinationMapper
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(source, destination)](#rust-namesourcedestinationmapper-new-source-destination) | Holds source and destination labels. Names still pass through. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| source | Dialect or provider label for the source side. |
-| destination | Dialect or provider label for the destination side. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(name)](#rust-namesourcedestinationmapper-map-name) | Returns the name unchanged. |
-| [reverse_map(name)](#rust-namesourcedestinationmapper-reverse_map-name) | Returns the name unchanged. |
-
-###### new(source, destination) {#rust-namesourcedestinationmapper-new-source-destination}
-
-Holds source and destination labels. Names still pass through.
-
-**Definition**
-
-```rust
-pub fn new(source: impl Into<String>, destination: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `source` | source label |
-| `destination` | destination label |
-
-**Returns**
-
-[NameSourceDestinationMapper](#rust-namesourcedestinationmapper)
-
-###### map(name) {#rust-namesourcedestinationmapper-map-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```rust
-pub fn map(&self, name: &str) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`String`
-
-###### reverse_map(name) {#rust-namesourcedestinationmapper-reverse_map-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```rust
-pub fn reverse_map(&self, name: &str) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`String`
-
-### Remarks
-
-Labels are metadata. [INameMapper](#inamemapper) still returns names unchanged.
-
-### Examples
-
-#### Source and destination labels
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/NameMapperTests.cs#L16-L23)
-
-```csharp
-public void SourceAndDestination()
-{
-    var mapper = new NameSourceDestinationMapper("sql", "csharp");
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L85-L90)
-
-```rust
-fn source_and_destination() {
-    let mapper = NameSourceDestinationMapper::new("sql", "rust");
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/nameMapper.test.ts#L18-L24)
-
-```typescript
-const mapper = new NameSourceDestinationMapper("sql", "typescript");
-const mapping: INameMapper = mapper;
-```
 
 ## TransformMapper
 
@@ -10733,7 +10376,7 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. Name and statement mappers wrap this for their specific shapes.
+Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. StatementMapper uses this for entity, column, and row mapping.
 
 ### Examples
 
@@ -10771,7 +10414,7 @@ public void FlattensAndUnflattensUserAndContacts()
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L122-L157)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L59-L94)
 
 ```rust
 let nested = Nested {
@@ -12083,7 +11726,21 @@ C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `i
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementMapperTests.cs#L55-L81)
 
 ```csharp
-
+var statements = new RepositoryStatements(
+    "users",
+    ["id", "name"],
+    new TransformMapper<IQuery, IQuery>(
+        query => new Query($"{query.GetText()} LIMIT 1", query.Where),
+        query => query),
+    new TransformMapper<IInsertStatement, IInsertStatement>(
+        insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
+        insert => insert),
+    new TransformMapper<IUpdateStatement, IUpdateStatement>(
+        update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
+        update => update),
+    new TransformMapper<IDeleteStatement, IDeleteStatement>(
+        delete => new DeleteStatement($"{delete.GetText()} RETURNING id", delete.Where),
+        delete => delete));
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L794-L804)
@@ -12103,29 +11760,32 @@ fn stored_procedure_mapper_rewrites_finished_sql() {
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59)
 
 ```typescript
-const mapper = new StatementMapper({
-  entity: names,
-  columns: names,
-  query: new TransformMapper(
-    (query) => new Query(`${query.getText()} LIMIT 1`, query.where),
-    (query) => query,
-  ),
-  insert: new TransformMapper(
-    (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
-    (insert) => insert,
-  ),
-  update: new TransformMapper(
-    (update) =>
-      new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
-    (update) => update,
-  ),
-  delete: new TransformMapper(
-    (remove) =>
-      new DeleteStatement(`${remove.getText()} RETURNING id`, remove.where),
-    (remove) => remove,
-  ),
 });
-const statements = statementsOf("users", ["id", "name"], mapper);
+
+it("rewrites each finished statement", () => {
+  const mapper = new StatementMapper({
+    entity: names,
+    columns: names,
+    query: new TransformMapper(
+      (query) => new Query(`${query.getText()} LIMIT 1`, query.where),
+      (query) => query,
+    ),
+    insert: new TransformMapper(
+      (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
+      (insert) => insert,
+    ),
+    update: new TransformMapper(
+      (update) =>
+        new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
+      (update) => update,
+    ),
+    delete: new TransformMapper(
+      (remove) =>
+        new DeleteStatement(`${remove.getText()} RETURNING id`, remove.where),
+      (remove) => remove,
+    ),
+  });
+  const statements = statementsOf("users", ["id", "name"], mapper);
 ```
 
 ## TypeConverter

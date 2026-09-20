@@ -31,7 +31,7 @@ constructor(options?: StatementMapperOptions<T>)
 Maps the table or entity name when the repository is built.
 
 ```typescript
-readonly entity: INameMapper
+readonly entity: IMapper<string, string>
 ```
 
 ##### columns
@@ -39,7 +39,7 @@ readonly entity: INameMapper
 Maps column names when the repository is built.
 
 ```typescript
-readonly columns: INameMapper
+readonly columns: IMapper<string, string>
 ```
 
 ##### query
@@ -131,7 +131,7 @@ Constructor bag for [StatementMapper](#statementmapper).
 Maps the table or entity name.
 
 ```typescript
-entity?: INameMapper
+entity?: IMapper<string, string>
 ```
 
 ##### columns
@@ -139,7 +139,7 @@ entity?: INameMapper
 Maps column names.
 
 ```typescript
-columns?: INameMapper
+columns?: IMapper<string, string>
 ```
 
 ##### rows

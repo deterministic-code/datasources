@@ -3,9 +3,9 @@ namespace Datasources;
 public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
 {
     public IMapper<string, string> Entity { get; init; } =
-        new NameSourceDestinationMapper("", "");
+        new TransformMapper<string, string>(static name => name, static name => name);
     public IMapper<string, string> Columns { get; init; } =
-        new NameSourceDestinationMapper("", "");
+        new TransformMapper<string, string>(static name => name, static name => name);
     public IMapper<IQuery, IQuery>? Query { get; init; }
     public IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
     public IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }

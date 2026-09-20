@@ -21,6 +21,8 @@ describe("StatementMapper", () => {
     expect(mapper.map("x")).toBe("x");
     expect(mapper.reverseMap("x")).toBe("x");
     expect(mapper.entity.map("id")).toBe("id");
+    expect(mapper.entity.reverseMap("id")).toBe("id");
+    expect(mapper.columns.map("id")).toBe("id");
     expect(mapper.columns.reverseMap("id")).toBe("id");
   });
 

@@ -148,7 +148,7 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ## Remarks
 
-Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. Name and statement mappers wrap this for their specific shapes.
+Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. StatementMapper uses this for entity, column, and row mapping.
 
 ## Examples
 
@@ -157,7 +157,7 @@ Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. 
 ::: example
 ```csharp csharp/Datasources.Tests/TransformMapperTests.cs#L13-L24
 ```
-```rust rust/datasources/src/mappers/mod.rs#L122-L157
+```rust rust/datasources/src/mappers/mod.rs#L59-L94
 ```
 ```typescript typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40
 ```
