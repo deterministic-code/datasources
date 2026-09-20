@@ -181,21 +181,21 @@ describe("readers", () => {
 });
 
 describe("middleware", () => {
-  it("rewrites the query and runs afterQuery", async () => {
+  it("rewrites the text and runs afterCommand", async () => {
     const host = new CommandMiddlewareHost();
     const seen: string[] = [];
     let used = "";
     host.addMiddleware({
-      beforeQuery: (query) => {
-        seen.push(`before:${query}`);
-        return { query: "SELECT 2" };
+      beforeCommand: (text) => {
+        seen.push(`before:${text}`);
+        return { text: "SELECT 2" };
       },
-      afterQuery: (query, _params, results, elapsedMs) => {
-        seen.push(`after:${query}:${results.length}:${elapsedMs >= 0}`);
+      afterCommand: (text, _params, results, elapsedMs) => {
+        seen.push(`after:${text}:${results.length}:${elapsedMs >= 0}`);
       },
     });
-    const result = await host.run("SELECT 1", undefined, async (query) => {
-      used = query;
+    const result = await host.run("SELECT 1", undefined, async (text) => {
+      used = text;
       seen.push("op");
       return { value: 7, rows: [{ id: 1 }] };
     });
@@ -213,14 +213,14 @@ describe("middleware", () => {
     );
   });
 
-  it("skips the query when beforeQuery throws", async () => {
+  it("skips the command when beforeCommand throws", async () => {
     const host = new CommandMiddlewareHost();
     let ran = false;
     host.addMiddleware({
-      beforeQuery: () => {
+      beforeCommand: () => {
         throw new Error("blocked");
       },
-      afterQuery: () => {
+      afterCommand: () => {
         ran = true;
       },
     });
@@ -233,12 +233,12 @@ describe("middleware", () => {
     expect(ran).toBe(false);
   });
 
-  it("runs afterQuery with error when the query fails", async () => {
+  it("runs afterCommand with error when the command fails", async () => {
     const host = new CommandMiddlewareHost();
     let captured: Error | undefined;
     host.addMiddleware({
-      beforeQuery: () => undefined,
-      afterQuery: (_q, _p, _r, _e, error) => {
+      beforeCommand: () => undefined,
+      afterCommand: (_q, _p, _r, _e, error) => {
         captured = error;
       },
     });
@@ -250,12 +250,12 @@ describe("middleware", () => {
     expect(captured?.message).toBe("fail-op");
   });
 
-  it("wraps a non-Error throw for afterQuery", async () => {
+  it("wraps a non-Error throw for afterCommand", async () => {
     const host = new CommandMiddlewareHost();
     let captured: Error | undefined;
     host.addMiddleware({
-      beforeQuery: () => undefined,
-      afterQuery: (_q, _p, _r, _e, error) => {
+      beforeCommand: () => undefined,
+      afterCommand: (_q, _p, _r, _e, error) => {
         captured = error;
       },
     });
@@ -306,8 +306,8 @@ describe("console middleware", () => {
       logged.push(args[0]);
     });
     const middleware = new ConsoleCommandMiddleware();
-    middleware.beforeQuery("SELECT 1");
-    middleware.afterQuery("SELECT 1", undefined, [], 2);
+    middleware.beforeCommand("SELECT 1");
+    middleware.afterCommand("SELECT 1", undefined, [], 2);
     expect(String(logged[0])).toMatch(
       /^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]-\[datasource\]\[Start\]-\[SELECT 1\]$/,
     );
@@ -323,7 +323,7 @@ describe("console middleware", () => {
     expect(lines[0].replace(/^\[[^\]]+\]-/, "")).toBe("[datasource][Start]-[SELECT 1]");
   });
 
-  it("logs Request and Response when isVerbose", async () => {
+  it("logs Request and AfterCommand when isVerbose", async () => {
     const lines: string[] = [];
     const stamps = [
       new Date("2026-08-28T01:54:12.101Z"),
@@ -349,14 +349,14 @@ describe("console middleware", () => {
     expect(lines[2]).toMatch(
       /^\[2026-08-28T01:54:12.103Z\]-\[datasource\]\[Finish\]-\[SELECT 1\] \d+(ms|μs)$/,
     );
-    expect(lines[3]).toBe("[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{id: 1}]");
+    expect(lines[3]).toBe("[2026-08-28T01:54:12.104Z]-[datasource][AfterCommand]-[{id: 1}]");
     lines.length = 0;
     await host.run("DELETE FROM user", [{ name: "id", value: 2 }], async () => ({
       value: { result: null, rowsAffected: 1 },
       rows: [],
     }));
     expect(lines[3]).toBe(
-      "[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{result: null, rowsAffected: 1}]",
+      "[2026-08-28T01:54:12.104Z]-[datasource][AfterCommand]-[{result: null, rowsAffected: 1}]",
     );
   });
 
@@ -367,15 +367,15 @@ describe("console middleware", () => {
       () => new Date("2026-08-28T01:54:12.101Z"),
       { isVerbose: "1" },
     );
-    middleware.beforeQuery("SELECT 1");
+    middleware.beforeCommand("SELECT 1");
     expect(lines[1]).toBe("[2026-08-28T01:54:12.101Z]-[datasource][Request]-[{}]");
     lines.length = 0;
-    middleware.beforeQuery("SELECT 1", [
+    middleware.beforeCommand("SELECT 1", [
       { name: "when", value: new Date("2026-08-28T01:54:12.000Z") },
       { name: "blob", value: new Uint8Array([1, 2, 3]) },
       { name: "n", value: 1n },
     ]);
-    middleware.afterQuery(
+    middleware.afterCommand(
       "SELECT 1",
       undefined,
       [
@@ -391,7 +391,7 @@ describe("console middleware", () => {
       "[2026-08-28T01:54:12.101Z]-[datasource][Request]-[{when: 2026-08-28T01:54:12.000Z, blob: AQID, n: 1}]",
     );
     expect(lines[3]).toBe(
-      "[2026-08-28T01:54:12.101Z]-[datasource][Response]-[{when: 2026-08-28T01:54:12.000Z, blob: AQID, n: 1}]",
+      "[2026-08-28T01:54:12.101Z]-[datasource][AfterCommand]-[{when: 2026-08-28T01:54:12.000Z, blob: AQID, n: 1}]",
     );
   });
 });
@@ -695,11 +695,11 @@ describe("published mocks", () => {
     const command = new MockCommand(connection);
     const seen: string[] = [];
     command.addMiddleware({
-      beforeQuery: (query) => {
-        seen.push(`before:${query}`);
+      beforeCommand: (text) => {
+        seen.push(`before:${text}`);
       },
-      afterQuery: (query) => {
-        seen.push(`after:${query}`);
+      afterCommand: (text) => {
+        seen.push(`after:${text}`);
       },
     });
     await command.execute("insert");

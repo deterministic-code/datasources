@@ -13,18 +13,18 @@ public class CommandMiddlewareHost
     }
 
     public async Task<T> Run<T>(
-        string query,
+        string text,
         IReadOnlyList<Parameter>? parameters,
         Func<string, IReadOnlyList<Parameter>?, Task<(T Value, IReadOnlyList<Row> Rows)>> action)
     {
-        var q = query.Trim();
+        var q = text.Trim();
         var p = parameters;
         foreach (var middleware in _middlewares)
         {
-            var rewritten = await middleware.BeforeQuery(q, p);
+            var rewritten = await middleware.BeforeCommand(q, p);
             if (rewritten is { } next)
             {
-                q = next.Query;
+                q = next.Text;
                 p = next.Parameters;
             }
         }
@@ -35,14 +35,14 @@ public class CommandMiddlewareHost
             var (value, rows) = await action(q, p);
             clock.Stop();
             foreach (var middleware in _middlewares)
-                await middleware.AfterQuery(q, p, Logged(value, rows), clock.Elapsed.TotalMilliseconds);
+                await middleware.AfterCommand(q, p, Logged(value, rows), clock.Elapsed.TotalMilliseconds);
             return value;
         }
         catch (Exception ex)
         {
             clock.Stop();
             foreach (var middleware in _middlewares)
-                await middleware.AfterQuery(q, p, [], clock.Elapsed.TotalMilliseconds, ex);
+                await middleware.AfterCommand(q, p, [], clock.Elapsed.TotalMilliseconds, ex);
             throw;
         }
     }

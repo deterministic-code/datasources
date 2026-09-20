@@ -250,13 +250,13 @@ public class CoreTests
         Assert.Equal("[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT 1]", lines[0]);
         Assert.Equal("[2026-08-28T01:54:12.102Z]-[datasource][Request]-[{id: 1}]", lines[1]);
         Assert.StartsWith("[2026-08-28T01:54:12.103Z]-[datasource][Finish]-[SELECT 1] ", lines[2]);
-        Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{id: 1}]", lines[3]);
+        Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][AfterCommand]-[{id: 1}]", lines[3]);
         lines.Clear();
         await host.Run(
             "DELETE FROM user",
             [new Parameter("id", 2L)],
             (_, _) => Task.FromResult((new Response(Value.Null.Instance, 1), EmptyRows())));
-        Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{result: null, rowsAffected: 1}]", lines[3]);
+        Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][AfterCommand]-[{result: null, rowsAffected: 1}]", lines[3]);
     }
 
     [Fact]
@@ -462,26 +462,26 @@ public class CoreTests
 
     private sealed class DelegateMiddleware : ICommandMiddleware
     {
-        private readonly Func<string, IReadOnlyList<Parameter>?, Task<(string Query, IReadOnlyList<Parameter>? Parameters)?>> _before;
+        private readonly Func<string, IReadOnlyList<Parameter>?, Task<(string Text, IReadOnlyList<Parameter>? Parameters)?>> _before;
         private readonly Func<string, IReadOnlyList<Parameter>?, IReadOnlyList<Row>, double, Exception?, Task> _after;
 
         public DelegateMiddleware(
-            Func<string, IReadOnlyList<Parameter>?, Task<(string Query, IReadOnlyList<Parameter>? Parameters)?>> before,
+            Func<string, IReadOnlyList<Parameter>?, Task<(string Text, IReadOnlyList<Parameter>? Parameters)?>> before,
             Func<string, IReadOnlyList<Parameter>?, IReadOnlyList<Row>, double, Exception?, Task> after)
         {
             _before = before;
             _after = after;
         }
 
-        public Task<(string Query, IReadOnlyList<Parameter>? Parameters)?> BeforeQuery(string query, IReadOnlyList<Parameter>? parameters) =>
-            _before(query, parameters);
+        public Task<(string Text, IReadOnlyList<Parameter>? Parameters)?> BeforeCommand(string text, IReadOnlyList<Parameter>? parameters) =>
+            _before(text, parameters);
 
-        public Task AfterQuery(
-            string query,
+        public Task AfterCommand(
+            string text,
             IReadOnlyList<Parameter>? parameters,
             IReadOnlyList<Row> results,
             double elapsedMs,
             Exception? error = null) =>
-            _after(query, parameters, results, elapsedMs, error);
+            _after(text, parameters, results, elapsedMs, error);
     }
 }

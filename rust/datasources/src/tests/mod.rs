@@ -1,4 +1,5 @@
 #[allow(dead_code)]
+mod command;
 mod connection;
 mod contact;
 mod datasource_factory;
@@ -159,23 +160,23 @@ struct RecordingMiddleware {
 
 #[async_trait]
 impl CommandMiddleware for RecordingMiddleware {
-    async fn before_query(
+    async fn before_command(
         &self,
-        query: &str,
+        text: &str,
         _params: Option<&[Parameter]>,
     ) -> Result<Option<(String, Option<Vec<Parameter>>)>> {
-        (self.before)(query)
+        (self.before)(text)
     }
 
-    async fn after_query(
+    async fn after_command(
         &self,
-        query: &str,
+        text: &str,
         _params: Option<&[Parameter]>,
         _results: &[Row],
         _elapsed_ms: f64,
         error: Option<&DatasourceError>,
     ) -> Result<()> {
-        (self.after)(query, error)
+        (self.after)(text, error)
     }
 }
 
@@ -383,7 +384,7 @@ async fn console_verbose_bodies() {
     assert!(logged[2].starts_with("[2026-08-28T01:54:12.103Z]-[datasource][Finish]-[SELECT 1] "));
     assert_eq!(
         logged[3],
-        "[2026-08-28T01:54:12.104Z]-[datasource][Response]-[{id: 1}]"
+        "[2026-08-28T01:54:12.104Z]-[datasource][AfterCommand]-[{id: 1}]"
     );
     lines.lock().unwrap().clear();
     stamps.lock().unwrap().extend([
@@ -400,7 +401,7 @@ async fn console_verbose_bodies() {
     .await
     .unwrap();
     let deleted = lines.lock().unwrap()[3].clone();
-    assert!(deleted.contains("[Response]-[{"));
+    assert!(deleted.contains("[AfterCommand]-[{"));
     assert!(deleted.contains("rowsAffected: 1"));
     assert!(deleted.contains("result: null"));
 }

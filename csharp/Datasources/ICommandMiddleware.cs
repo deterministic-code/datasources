@@ -2,12 +2,12 @@ namespace Datasources;
 
 public interface ICommandMiddleware
 {
-    Task<(string Query, IReadOnlyList<Parameter>? Parameters)?> BeforeQuery(
-        string query,
+    Task<(string Text, IReadOnlyList<Parameter>? Parameters)?> BeforeCommand(
+        string text,
         IReadOnlyList<Parameter>? parameters);
 
-    Task AfterQuery(
-        string query,
+    Task AfterCommand(
+        string text,
         IReadOnlyList<Parameter>? parameters,
         IReadOnlyList<Row> results,
         double elapsedMs,

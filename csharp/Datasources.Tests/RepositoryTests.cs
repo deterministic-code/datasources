@@ -293,12 +293,12 @@ public class RepositoryTests
 
     sealed class PassMiddleware : ICommandMiddleware
     {
-        public Task<(string Query, IReadOnlyList<Parameter>? Parameters)?> BeforeQuery(
-            string query, IReadOnlyList<Parameter>? parameters) =>
-            Task.FromResult<(string Query, IReadOnlyList<Parameter>? Parameters)?>((query, parameters));
+        public Task<(string Text, IReadOnlyList<Parameter>? Parameters)?> BeforeCommand(
+            string text, IReadOnlyList<Parameter>? parameters) =>
+            Task.FromResult<(string Text, IReadOnlyList<Parameter>? Parameters)?>((text, parameters));
 
-        public Task AfterQuery(
-            string query, IReadOnlyList<Parameter>? parameters, IReadOnlyList<Row> results,
+        public Task AfterCommand(
+            string text, IReadOnlyList<Parameter>? parameters, IReadOnlyList<Row> results,
             double elapsedMs, Exception? error = null) =>
             Task.CompletedTask;
     }

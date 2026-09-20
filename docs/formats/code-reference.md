@@ -71,6 +71,8 @@ VitePress uses one page-level dialect selector for classes and examples. README 
 
 When present, one `###` heading per sample, optional prose, then `::: example`. Each fence is a pointer to unit, integration, or e2e test lines (`path#Lstart-Lend`). The transform reads that range and renders the usage body — not the test method wrapper or equality asserts. Do not paste a second fictional fence. A source icon links to the same range on GitHub. On a reference page those fences follow the page-level selector; they do not get their own tabs.
 
+Optional `output` fences after the test ranges become titled textboxes under the sample. Use a shared fence for every dialect, or `output:typescript` / `output:csharp` / `output:rust` to replace a same-title box for one language.
+
 `::: dialects` stays for install or CLI snippets that are not tests.
 
 ~~~~markdown
@@ -84,6 +86,33 @@ When present, one `###` heading per sample, optional prose, then `::: example`. 
 ```rust rust/datasources/src/tests/datasource_factory.rs#L21-L33
 ```
 ```typescript typescript/datasources/src/DatasourceFactory.test.ts#L33-L39
+```
+:::
+~~~~
+
+~~~~markdown
+::: example
+```csharp csharp/Datasources.Tests/TransformMapperTests.cs#L13-L24
+```
+```rust rust/datasources/src/mappers/mod.rs#L122-L157
+```
+```typescript typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40
+```
+
+```output [Before: nested value]
+{
+  user: { id: 1, name: 'Ada' },
+  contacts: { email: 'ada@x.dev', phone: '555' }
+}
+```
+
+```output [After: flat value]
+{
+  userId: 1,
+  userName: 'Ada',
+  contactEmail: 'ada@x.dev',
+  contactPhone: '555'
+}
 ```
 :::
 ~~~~

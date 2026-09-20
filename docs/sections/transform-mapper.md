@@ -161,4 +161,20 @@ Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. 
 ```
 ```typescript typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40
 ```
+
+```output [Before: nested value]
+{
+  user: { id: 1, name: 'Ada' },
+  contacts: { email: 'ada@x.dev', phone: '555' }
+}
+```
+
+```output [After: flat value]
+{
+  userId: 1,
+  userName: 'Ada',
+  contactEmail: 'ada@x.dev',
+  contactPhone: '555'
+}
+```
 :::
