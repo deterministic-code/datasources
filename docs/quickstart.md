@@ -168,7 +168,7 @@ const back = mapper.reverseMap(flat);
 ```
 :::
 
-See [NameMapper](./sections/name-mapper.md), [FlatToTypeMapper](./sections/flat-to-type-mapper.md), and [StatementMapper](./sections/statement-mapper.md).
+See [Mapper](./sections/mappers.md) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
 
 ## Type Converter
 
@@ -219,4 +219,4 @@ const item = rows.convert(row);
 ```
 :::
 
-See [RowTypeConverter](./sections/row-type-converter.md).
+See [TypeConverter](./sections/type-converters.md).

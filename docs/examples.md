@@ -16,7 +16,7 @@ TODO: `startTransaction`, work, then `commit` or `abort`. See [Transaction](./se
 
 ## Map a row
 
-TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [TransformMapper](./sections/transform-mapper.md).
+TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [Mapper](./sections/mappers.md).
 
 ## Convert a row
 

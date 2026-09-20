@@ -102,7 +102,7 @@ createReadonlyRepository<T>(connection?: IConnection): IReadonlyRepository<T>
 
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
 
-**Returns** [IReadonlyRepository](./repository.md)`<T>`
+**Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
 #### DatasourceOptions
 
@@ -221,7 +221,7 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
 
-**Returns** [IReadonlyRepository](./repository.md)`<T>`
+**Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
 #### DatasourceOptions
 
@@ -340,7 +340,7 @@ fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) ->
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one
 
-**Returns** `Arc<dyn `[ReadonlyRepository](./repository.md)`>`
+**Returns** `Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>`
 
 #### DatasourceOptions
 

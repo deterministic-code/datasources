@@ -9,7 +9,7 @@ pages:
   - path: examples.md
     title: Examples
   - path: sections/datasource-factory.md
-    title: DatasourceFactory
+    title: Datasource Factory
     group: Code Reference
   - path: sections/datasource.md
     title: Datasource
@@ -33,40 +33,52 @@ pages:
   - path: sections/repository.md
     title: Repository
     group: Code Reference
+  - path: sections/readonly-repository.md
+    title: Readonly Repository
+    group: Code Reference
+    parent: Repository
   - path: sections/crud-repository.md
-    title: CRUD repository
+    title: CRUD Repository
     group: Code Reference
     parent: Repository
   - path: sections/enriched-repository.md
-    title: Enriched repository
+    title: Enriched Repository
     group: Code Reference
     parent: Repository
   - path: sections/bulk-repository.md
-    title: Bulk repository
+    title: Bulk Repository
     group: Code Reference
     parent: Repository
+  - path: sections/mappers.md
+    title: Mapper
+    group: Code Reference
   - path: sections/name-mapper.md
-    title: NameMapper
+    title: Name Mapper
     group: Code Reference
+    parent: Mapper
   - path: sections/name-source-destination-mapper.md
-    title: NameSourceDestinationMapper
+    title: Name Source Destination Mapper
     group: Code Reference
+    parent: Mapper
   - path: sections/transform-mapper.md
-    title: TransformMapper
+    title: Transform Mapper
     group: Code Reference
+    parent: Mapper
   - path: sections/flat-to-type-mapper.md
-    title: FlatToTypeMapper
+    title: Flat To Type Mapper
     group: Code Reference
+    parent: Mapper
   - path: sections/statement-mapper.md
-    title: StatementMapper
+    title: Statement Mapper
     group: Code Reference
+    parent: Mapper
   - path: sections/type-converters.md
-    title: TypeConverter
+    title: Type Converter
     group: Code Reference
   - path: sections/row-type-converter.md
-    title: RowTypeConverter
+    title: Row Type Converter
     group: Code Reference
-    parent: TypeConverter
+    parent: Type Converter
   - path: cli.md
     title: Setup
     group: Command Line (CLI)

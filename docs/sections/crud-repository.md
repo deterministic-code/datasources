@@ -1,6 +1,6 @@
 # CRUD repository
 
-[Repository](./repository.md) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](./row-type-converter.md).
+[Readonly repository](./readonly-repository.md) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](./row-type-converter.md).
 
 Get is convert, then map. Writes reverse-map, then reverse-convert.
 
@@ -97,7 +97,7 @@ constructor(built: BuiltRepository<T>)
 
 ##### rowConverter
 
-Row TypeConverter. Convert uses this, then [mapper](#repository-mapper).
+Row [TypeConverter](./type-converters.md). Convert uses this, then [mapper](#repository-mapper).
 
 ```typescript
 readonly rowConverter: TypeConverter<T, Cells>
@@ -113,7 +113,7 @@ readonly statementsMapper: StatementMapper<T>
 
 ##### mapper
 
-Get-row Mapper. Alias of `statementsMapper.rows`.
+Get-row [Mapper](./mappers.md). Alias of `statementsMapper.rows`.
 
 ```typescript
 readonly mapper: IMapper<T, T>
@@ -235,7 +235,7 @@ entity?: string
 
 ##### mapping
 
-Row TypeConverter.
+Row [TypeConverter](./type-converters.md).
 
 ```typescript
 mapping?: TypeConverter<T, Cells>
@@ -243,7 +243,7 @@ mapping?: TypeConverter<T, Cells>
 
 ##### mapper
 
-Get-row Mapper.
+Get-row [Mapper](./mappers.md).
 
 ```typescript
 mapper?: IMapper<T, T>
@@ -285,7 +285,7 @@ connection: IConnection
 
 ##### rowConverter
 
-Row TypeConverter.
+Row [TypeConverter](./type-converters.md).
 
 ```typescript
 rowConverter: TypeConverter<T, Cells>
@@ -428,7 +428,7 @@ StatementMapper<T> StatementsMapper { get; }
 
 ##### Mapper
 
-Get-row Mapper. Alias of `StatementsMapper.Rows`.
+Get-row [Mapper](./mappers.md). Alias of `StatementsMapper.Rows`.
 
 ```csharp
 IMapper<T, T> Mapper { get; }
@@ -542,7 +542,7 @@ string? Entity { get; init; }
 
 ##### Mapping
 
-Row TypeConverter.
+Row [TypeConverter](./type-converters.md).
 
 ```csharp
 TypeConverter<T, Row>? Mapping { get; init; }
@@ -550,7 +550,7 @@ TypeConverter<T, Row>? Mapping { get; init; }
 
 ##### Mapper
 
-Get-row Mapper.
+Get-row [Mapper](./mappers.md).
 
 ```csharp
 IMapper<T, T>? Mapper { get; init; }
@@ -592,7 +592,7 @@ IConnection Connection { get; init; }
 
 ##### RowConverter
 
-Row TypeConverter.
+Row [TypeConverter](./type-converters.md).
 
 ```csharp
 TypeConverter<T, Row> RowConverter { get; init; }

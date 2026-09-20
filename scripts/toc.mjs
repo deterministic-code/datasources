@@ -18,6 +18,11 @@ export const uniquePages = (pages) => {
   return pages.filter(({ path }) => (seen.has(path) ? false : (seen.add(path), true)));
 };
 
+export const sidebarTitle = (title) =>
+  title
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+
 export const nestSidebar = (pages, toItem) => {
   const kids = new Map();
   for (const page of pages) {

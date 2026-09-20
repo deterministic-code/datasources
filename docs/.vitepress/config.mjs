@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
 import { dialectsVitePlugin, transformDialects } from "../../scripts/dialects.mjs";
-import { nestSidebar, parseToc } from "../../scripts/toc.mjs";
+import { nestSidebar, parseToc, sidebarTitle } from "../../scripts/toc.mjs";
 
 const docsDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const tocPath = join(docsDir, "toc.yaml");
@@ -12,7 +12,7 @@ const { pages } = parseToc(readFileSync(tocPath, "utf8"));
 const toLink = ({ path, hash }) =>
   `${path === "introduction.md" ? "/" : `/${path.replace(/\.md$/, "")}`}${hash ? `#${hash}` : ""}`;
 
-const toItem = (page) => ({ text: page.title, link: toLink(page) });
+const toItem = (page) => ({ text: sidebarTitle(page.title), link: toLink(page) });
 
 const groups = [...new Set(pages.map((page) => page.group).filter(Boolean))].map((group) => ({
   text: group,

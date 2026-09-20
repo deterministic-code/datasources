@@ -34,7 +34,7 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 
 - `into` — destination property on `T`
 - `from` — key on the parent
-- `via` — related [IReadonlyRepository](./repository.md)
+- `via` — related [IReadonlyRepository](./readonly-repository.md)
 - `by` — key on the related item
 - `select` — optional related property to copy; omitted copies the whole row
 - `many` — collect a list; default `false`
@@ -64,13 +64,13 @@ class EnrichedReadonlyRepository<T extends object> extends ReadonlyRepository<T>
 
 ##### EnrichedReadonlyRepository(inner, strategy?)
 
-Wraps an inner [IReadonlyRepository](./repository.md). Omitted strategy uses the default.
+Wraps an inner [IReadonlyRepository](./readonly-repository.md). Omitted strategy uses the default.
 
 ```typescript
 constructor(inner: IReadonlyRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
 ```
 
-- `inner` — [IReadonlyRepository](./repository.md)
+- `inner` — [IReadonlyRepository](./readonly-repository.md)
 - `strategy` — optional [IReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy)
 
 **Properties**
@@ -95,7 +95,7 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 
 - `into` — destination property on `T`
 - `from` — key on the parent
-- `via` — related [IReadonlyRepository](./repository.md)
+- `via` — related [IReadonlyRepository](./readonly-repository.md)
 - `by` — key on the related item
 - `select` — optional related property to copy
 - `many` — collect a list
@@ -260,7 +260,7 @@ Adds a child node.
 include<TRelated extends object>(via: IReadonlyRepository<TRelated>, into: string, from: string, by: string, select?: string, many?: boolean): IRepositoryTreeNode
 ```
 
-- `via` — related [IReadonlyRepository](./repository.md)
+- `via` — related [IReadonlyRepository](./readonly-repository.md)
 - `into` — destination property
 - `from` — parent key
 - `by` — related key
@@ -345,7 +345,7 @@ Reads through `inner`, then enriches.
 get(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
-- `inner` — [IReadonlyRepository](./repository.md)
+- `inner` — [IReadonlyRepository](./readonly-repository.md)
 - `tree` — [IRepositoryTree](#irepositorytree)
 - `query` — optional query or where
 
@@ -381,7 +381,7 @@ IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository
 
 - `into` — destination property on `T`
 - `from` — key on the parent
-- `via` — related [IReadonlyRepository](./repository.md)
+- `via` — related [IReadonlyRepository](./readonly-repository.md)
 - `by` — key on the related item
 - `select` — optional related property to copy; omitted copies the whole row
 - `many` — collect a list
@@ -409,13 +409,13 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
 
 ##### EnrichedReadonlyRepository(inner, strategy)
 
-Wraps an inner [IReadonlyRepository](./repository.md). Omitted strategy uses the default.
+Wraps an inner [IReadonlyRepository](./readonly-repository.md). Omitted strategy uses the default.
 
 ```csharp
 public EnrichedReadonlyRepository(IReadonlyRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
-- `inner` — [IReadonlyRepository](./repository.md)
+- `inner` — [IReadonlyRepository](./readonly-repository.md)
 - `strategy` — optional [IReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy)
 
 **Properties**
@@ -440,7 +440,7 @@ public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRep
 
 - `into` — destination property on `T`
 - `from` — key on the parent
-- `via` — related [IReadonlyRepository](./repository.md)
+- `via` — related [IReadonlyRepository](./readonly-repository.md)
 - `by` — key on the related item
 - `select` — optional related property to copy
 - `many` — collect a list
@@ -603,7 +603,7 @@ Adds a child node.
 IRepositoryTreeNode Include<TRelated>(IReadonlyRepository<TRelated> via, string into, string from, string by, string? select = null, bool many = false)
 ```
 
-- `via` — related [IReadonlyRepository](./repository.md)
+- `via` — related [IReadonlyRepository](./readonly-repository.md)
 - `into` — destination property
 - `from` — parent key
 - `by` — related key
@@ -688,7 +688,7 @@ Reads through `inner`, then enriches.
 IAsyncEnumerable<T> Get(IReadonlyRepository<T> inner, IRepositoryTree tree, IStatement? query)
 ```
 
-- `inner` — [IReadonlyRepository](./repository.md)
+- `inner` — [IReadonlyRepository](./readonly-repository.md)
 - `tree` — [IRepositoryTree](#irepositorytree)
 - `query` — optional statement or where
 
@@ -736,13 +736,13 @@ pub struct EnrichedReadonlyRepository
 
 ##### new(inner)
 
-Wraps an inner [ReadonlyRepository](./repository.md). Uses the default strategy.
+Wraps an inner [ReadonlyRepository](./readonly-repository.md). Uses the default strategy.
 
 ```rust
 pub fn new(inner: Arc<dyn ReadonlyRepository>) -> Self
 ```
 
-- `inner` — [ReadonlyRepository](./repository.md)
+- `inner` — [ReadonlyRepository](./readonly-repository.md)
 
 **Returns** [EnrichedReadonlyRepository](#enrichedreadonlyrepository)
 
@@ -754,7 +754,7 @@ Wraps an inner repository with a [ReadonlyEnrichmentStrategy](#readonlyenrichmen
 pub fn with_strategy(inner: Arc<dyn ReadonlyRepository>, strategy: Arc<dyn ReadonlyEnrichmentStrategy>) -> Self
 ```
 
-- `inner` — [ReadonlyRepository](./repository.md)
+- `inner` — [ReadonlyRepository](./readonly-repository.md)
 - `strategy` — [ReadonlyEnrichmentStrategy](#readonlyenrichmentstrategy)
 
 **Returns** [EnrichedReadonlyRepository](#enrichedreadonlyrepository)
@@ -781,7 +781,7 @@ pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>,
 
 - `into` — destination field
 - `from` — key on the parent
-- `via` — related [ReadonlyRepository](./repository.md)
+- `via` — related [ReadonlyRepository](./readonly-repository.md)
 - `by` — key on the related row
 - `select` — optional related field to copy
 - `many` — collect a list
@@ -798,7 +798,7 @@ pub fn add_enriched_with(&mut self, into: impl Into<String>, from: impl Into<Str
 
 - `into` — destination field
 - `from` — key on the parent
-- `via` — related [ReadonlyRepository](./repository.md)
+- `via` — related [ReadonlyRepository](./readonly-repository.md)
 - `by` — key on the related row
 - `select` — optional related field to copy
 - `many` — collect a list
@@ -906,7 +906,7 @@ pub struct RepositoryTreeNode
 
 ##### value
 
-Related [ReadonlyRepository](./repository.md).
+Related [ReadonlyRepository](./readonly-repository.md).
 
 ```rust
 pub value: Arc<dyn ReadonlyRepository>
@@ -946,7 +946,7 @@ Adds a child node.
 pub fn include(&mut self, via: Arc<dyn ReadonlyRepository>, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
 ```
 
-- `via` — related [ReadonlyRepository](./repository.md)
+- `via` — related [ReadonlyRepository](./readonly-repository.md)
 - `into` — destination field
 - `from` — parent key
 - `by` — related key
@@ -1056,7 +1056,7 @@ Reads through `inner`, then enriches.
 async fn get(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn Query>) -> Result<Vec<Row>>
 ```
 
-- `inner` — [ReadonlyRepository](./repository.md)
+- `inner` — [ReadonlyRepository](./readonly-repository.md)
 - `tree` — [RepositoryTree](#repositorytree)
 - `query` — optional query
 
