@@ -1,11 +1,12 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, utimesSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
 import { dialectsVitePlugin, transformDialects } from "../../scripts/dialects.mjs";
 import { nestSidebar, parseToc, sidebarTitle } from "../../scripts/toc.mjs";
 
-const docsDir = join(dirname(fileURLToPath(import.meta.url)), "..");
+const configPath = fileURLToPath(import.meta.url);
+const docsDir = join(dirname(configPath), "..");
 const tocPath = join(docsDir, "toc.yaml");
 const { pages } = parseToc(readFileSync(tocPath, "utf8"));
 
@@ -28,12 +29,25 @@ const sidebar = [
   ...groups.filter((group) => group.text !== "Code Reference"),
 ];
 
+const redirects = {
+  "/sections/flat-to-type-mapper": "/sections/flat-to-nested-mapper",
+};
+
 const watchToc = () => ({
   name: "watch-toc",
   configureServer(server) {
     server.watcher.add(tocPath);
     server.watcher.on("change", (file) => {
-      if (file === tocPath) server.restart();
+      if (file === tocPath || file.endsWith("toc.yaml"))
+        utimesSync(configPath, new Date(), new Date());
+    });
+    server.middlewares.use((req, res, next) => {
+      const path = req.url?.split("?")[0]?.replace(/\/$/, "") ?? "";
+      const to = redirects[path];
+      if (!to) return next();
+      res.statusCode = 301;
+      res.setHeader("Location", to);
+      res.end();
     });
   },
 });

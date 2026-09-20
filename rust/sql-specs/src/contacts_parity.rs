@@ -7,7 +7,7 @@ use crate::from_mapped_contacts::from_mapped_contacts;
 use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Command, Connection, ConsoleCommandMiddleware, FlatToTypeMapper, FlatToTypeMapperTrait,
+    Command, Connection, ConsoleCommandMiddleware, FlatToNestedMapper, Mapper,
     ReadonlyRepository, Repository, RepositoryBuilderOptions,
 };
 use std::collections::HashMap;
@@ -53,7 +53,10 @@ pub async fn contacts_parity(
     join_repo.add_middleware(middleware.clone());
     let query = contacts_join_query();
     let eager = from_mapped_contacts(
-        &FlatToTypeMapper::new(contacts_view()).collapse_rows(join_repo.read(Some(&query)).await?),
+        &Mapper::map(
+            &FlatToNestedMapper::new(contacts_view()),
+            join_repo.read(Some(&query)).await?,
+        ),
     );
     let enriched = from_enriched_contacts(
         &contacts_service_of(connection, verbose.then_some(middleware))

@@ -21,7 +21,7 @@ mod downcast_connection;
 mod enriched;
 mod enriched_readonly_repository;
 mod enrichment;
-mod flat_to_type_readonly_enrichment_strategy;
+mod flat_to_nested_readonly_enrichment_strategy;
 mod hashset_optimized_readonly_enrichment_strategy;
 mod identity_filter;
 mod identity_where_text;
@@ -89,13 +89,13 @@ pub use downcast_connection::downcast_connection;
 pub use enriched::Enriched;
 pub use enriched_readonly_repository::EnrichedReadonlyRepository;
 pub use enrichment::Enrichment;
-pub use flat_to_type_readonly_enrichment_strategy::FlatToTypeReadonlyEnrichmentStrategy;
+pub use flat_to_nested_readonly_enrichment_strategy::FlatToNestedReadonlyEnrichmentStrategy;
 pub use hashset_optimized_readonly_enrichment_strategy::HashsetOptimizedReadonlyEnrichmentStrategy;
 pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
-    FlatToTypeMapper, FlatToTypeMapperTrait, MappedRow, MappedValue, Mapper, NameMapper,
+    FlatToNestedMapper, FlatToNestedMapperTrait, MappedRow, MappedValue, Mapper, NameMapper,
     NameSourceDestinationMapper, RowTypeMapper, StatementMapper,
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };

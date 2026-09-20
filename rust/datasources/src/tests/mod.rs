@@ -1416,19 +1416,19 @@ async fn hashset_uses_one_read_per_edge() {
 }
 
 #[tokio::test]
-async fn flat_to_type_collapses_join_rows() {
+async fn flat_to_nested_collapses_join_rows() {
     let source = Arc::new(items_repository::ItemsRepository::new(vec![
         record(&[("id", Value::Int(1)), ("type_name", Value::from("person"))]),
         record(&[("id", Value::Int(2)), ("type_name", Value::from("org"))]),
     ]));
-    let mapper = FlatToTypeMapper::new(TypeMap::new(
+    let mapper = FlatToNestedMapper::new(TypeMap::new(
         "id",
         vec![
             ("id".into(), TypeMapField::column("id")),
             ("type_name".into(), TypeMapField::column("type_name")),
         ],
     ));
-    let strategy = FlatToTypeReadonlyEnrichmentStrategy::new(
+    let strategy = FlatToNestedReadonlyEnrichmentStrategy::new(
         source,
         mapper,
         |mapped| {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { collectAsync } from "./collectAsync.ts";
 import { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
-import { FlatToTypeMapper } from "./mappers/FlatToTypeMapper.ts";
-import { FlatToTypeReadonlyEnrichmentStrategy } from "./FlatToTypeReadonlyEnrichmentStrategy.ts";
+import { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";
+import { FlatToNestedReadonlyEnrichmentStrategy } from "./FlatToNestedReadonlyEnrichmentStrategy.ts";
 import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
@@ -318,13 +318,13 @@ describe("EnrichedReadonlyRepository", () => {
     );
   });
 
-  it("collapses join rows with FlatToType", async () => {
-    const strategy = new FlatToTypeReadonlyEnrichmentStrategy(
+  it("collapses join rows with FlatToNested", async () => {
+    const strategy = new FlatToNestedReadonlyEnrichmentStrategy(
       new ListReadonlyRepository([
         { id: 1, type_name: "person" },
         { id: 2, type_name: "org" },
       ]),
-      new FlatToTypeMapper({
+      new FlatToNestedMapper({
         key: "id",
         fields: { id: "id", type_name: "type_name" },
       }),

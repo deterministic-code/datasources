@@ -1,8 +1,8 @@
 namespace Datasources;
 
-public sealed class FlatToTypeReadonlyEnrichmentStrategy<T>(
+public sealed class FlatToNestedReadonlyEnrichmentStrategy<T>(
     IReadonlyRepository<Row> source,
-    IFlatToTypeMapper mapper,
+    IFlatToNestedMapper mapper,
     IMapper<Dictionary<string, MappedValue>, T> hydrate,
     IStatement? command = null) : IReadonlyEnrichmentStrategy<T>
 {
@@ -16,7 +16,7 @@ public sealed class FlatToTypeReadonlyEnrichmentStrategy<T>(
         var rows = new List<Row>();
         await foreach (var row in source.Read(command ?? query))
             rows.Add(row);
-        foreach (var item in mapper.Collapse(rows).Select(hydrate.Map))
+        foreach (var item in mapper.Map(rows).Select(hydrate.Map))
             yield return item;
     }
 

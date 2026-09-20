@@ -1,5 +1,5 @@
-mod flat_to_type_mapper;
-mod i_flat_to_type_mapper;
+mod flat_to_nested_mapper;
+mod i_flat_to_nested_mapper;
 mod mapped_value;
 mod row_type_mapper;
 mod statement_mapper;
@@ -9,8 +9,8 @@ mod type_map;
 mod type_map_field;
 mod type_map_group;
 
-pub use flat_to_type_mapper::FlatToTypeMapper;
-pub use i_flat_to_type_mapper::FlatToTypeMapper as FlatToTypeMapperTrait;
+pub use flat_to_nested_mapper::FlatToNestedMapper;
+pub use i_flat_to_nested_mapper::FlatToNestedMapper as FlatToNestedMapperTrait;
 pub use mapped_value::{MappedRow, MappedValue};
 pub use row_type_mapper::RowTypeMapper;
 pub use statement_mapper::StatementMapper;

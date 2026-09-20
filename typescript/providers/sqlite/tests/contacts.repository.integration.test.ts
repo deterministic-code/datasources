@@ -2,8 +2,11 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { collectAsync } from "../../../datasources/src/collectAsync.ts";
 import { asContactsView } from "../../../datasources/src/tests/contact/asContactsView.ts";
+import { contactsJoinQuery } from "../../../datasources/src/tests/contact/contactsJoinQuery.ts";
 import { contactsParity } from "../../../datasources/src/tests/contact/contactsParity.ts";
+import { contactsView } from "../../../datasources/src/tests/contact/contactsView.ts";
 import { contactLookupIds } from "../../../datasources/src/tests/contact/contactLookupIds.ts";
 import { contactWith, expectContactsView } from "../../../datasources/src/tests/contact/expectContactsView.ts";
 import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
@@ -11,6 +14,8 @@ import { addExtraContact } from "../../../datasources/src/tests/contact/extraCon
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { specVerbose } from "../../../sql-spec-runner.ts";
+import { FlatToNestedMapper, Repository } from "../../../datasources/src/index.ts";
+import type { Cells } from "../../../datasources/src/converters/Cell.ts";
 import {
   loadBetterSqlite3Driver,
   SqliteCommand,
@@ -29,7 +34,7 @@ const statementsOf = (sql: string) =>
     .filter(Boolean);
 
 describe("contacts readonly repository", () => {
-  it("matches enriched ContactsService to FlatToTypeMapper on the same seed", async () => {
+  it("matches enriched ContactsService to FlatToNestedMapper on the same seed", async () => {
     const connection = new SqliteConnection({
       filename: ":memory:",
       driver: await loadBetterSqlite3Driver(":memory:"),
@@ -62,5 +67,25 @@ describe("contacts readonly repository", () => {
     expect(extra.phones[0]?.contact_id).toBe(extra.id);
     expect(extra.addresses[0]?.address_type_name).toBe("Home");
     expect(extra.phones[0]?.phone_type_name).toBe("Mobile");
+  });
+
+  it("maps join rows to nested contacts", async () => {
+    const connection = new SqliteConnection({
+      filename: ":memory:",
+      driver: await loadBetterSqlite3Driver(":memory:"),
+    });
+    await connection.open();
+    const command = new SqliteCommand(connection);
+    for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql()])
+      await command.execute(sql);
+
+    const contacts = new FlatToNestedMapper(contactsView).map(
+      await collectAsync(
+        new Repository<Cells>({ connection, entity: "contacts_base" }).read(contactsJoinQuery()),
+      ),
+    );
+    const mapped = contactWith(contacts, 2, 1);
+    expect(mapped.addresses).toHaveLength(2);
+    expect(mapped.contact_source_name).toBeTruthy();
   });
 });

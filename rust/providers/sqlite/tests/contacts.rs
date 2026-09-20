@@ -1,11 +1,16 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use super::rusqlite_driver::RusqliteDriver;
-use datasources::Connection;
+use datasources::converters::RowTypeConverter;
+use datasources::{
+    Connection, FlatToNestedMapper, Mapper, ReadonlyRepository, Repository,
+    RepositoryBuilderOptions,
+};
 use datasources_sql_specs::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
-    contact_with, contacts_parity, contacts_service_of, expect_contacts_view, seed_contacts_sql,
-    statements_of, SEED_CONTACT_COUNT,
+    contact_with, contacts_join_query, contacts_parity, contacts_service_of, contacts_view,
+    expect_contacts_view, from_mapped_contacts, seed_contacts_sql, statements_of,
+    SEED_CONTACT_COUNT,
 };
 use std::sync::Arc;
 
@@ -50,4 +55,34 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     assert!(extra["phones"]
         .wire_text()
         .contains("phone_type_name=Mobile"));
+}
+
+#[tokio::test]
+async fn maps_join_rows_to_nested_contacts() {
+    let conn = Arc::new(SqliteConnection::new(
+        Some(":memory:".into()),
+        Arc::new(RusqliteDriver::new()),
+    ));
+    conn.open().await.unwrap();
+    let command = SqliteCommand::new(conn.clone());
+    let mut sql = statements_of(&contact_schema("sqlite"));
+    sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
+    apply_sql(&command, &sql).await.unwrap();
+
+    let mut cells = RepositoryBuilderOptions::with_factory(conn);
+    cells.entity = "contacts_base".into();
+    cells.mapping = Some(RowTypeConverter::new(Vec::new()));
+    let join_repo = Repository::new(cells).expect("join repo");
+    let contacts = from_mapped_contacts(
+        &Mapper::map(
+            &FlatToNestedMapper::new(contacts_view()),
+            join_repo
+                .read(Some(&contacts_join_query()))
+                .await
+                .unwrap(),
+        ),
+    );
+    let mapped = contact_with(&contacts, 2, 1);
+    assert_eq!(mapped.addresses.len(), 2);
+    assert!(!mapped.contact_source_name.is_empty());
 }

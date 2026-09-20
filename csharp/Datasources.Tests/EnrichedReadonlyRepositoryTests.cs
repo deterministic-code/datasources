@@ -143,16 +143,16 @@ public class EnrichedReadonlyRepositoryTests
     }
 
     [Fact]
-    public async Task FlatToTypeCollapsesJoinRows()
+    public async Task FlatToNestedCollapsesJoinRows()
     {
         var source = new ListReadonlyRepository<Row>(
             new Row { ["id"] = 1, ["type_name"] = "person" },
             new Row { ["id"] = 2, ["type_name"] = "org" });
         var repo = new EnrichedReadonlyRepository<Parent>(
             new ListReadonlyRepository<Parent>(),
-            new FlatToTypeReadonlyEnrichmentStrategy<Parent>(
+            new FlatToNestedReadonlyEnrichmentStrategy<Parent>(
                 source,
-                new FlatToTypeMapper(new TypeMap
+                new FlatToNestedMapper(new TypeMap
                 {
                     Key = "id",
                     Fields = new Dictionary<string, TypeMapField>

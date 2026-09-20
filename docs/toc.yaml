@@ -64,8 +64,8 @@ pages:
     title: Transform Mapper
     group: Code Reference
     parent: Mapper
-  - path: sections/flat-to-type-mapper.md
-    title: Flat To Type Mapper
+  - path: sections/flat-to-nested-mapper.md
+    title: Flat To Nested Mapper
     group: Code Reference
     parent: Mapper
   - path: sections/statement-mapper.md

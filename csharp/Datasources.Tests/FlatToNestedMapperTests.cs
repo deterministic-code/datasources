@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-public class FlatToTypeMapperTests
+public class FlatToNestedMapperTests
 {
     static readonly TypeMap ContactsView = new()
     {
@@ -81,7 +81,7 @@ public class FlatToTypeMapperTests
         new("phone_type_name", "Work"),
     ]);
 
-    static readonly FlatToTypeMapper Mapper = new(ContactsView);
+    static readonly FlatToNestedMapper Mapper = new(ContactsView);
 
     static Value Cell(Dictionary<string, MappedValue> row, string name) =>
         row.TryGetValue(name, out var mapped) && mapped is MappedValue.Cell(var value)
@@ -99,9 +99,74 @@ public class FlatToTypeMapperTests
     }
 
     [Fact]
+    public void MapsJoinRowsToANestedContact()
+    {
+        var mapper = new FlatToNestedMapper(new TypeMap
+        {
+            Key = "id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "id",
+                ["first_name"] = "first_name",
+                ["last_name"] = "last_name",
+                ["email"] = "email",
+                ["contact_source_name"] = "contact_source_name",
+                ["contact_type_name"] = "contact_type_name",
+                ["addresses"] = new TypeMapGroup
+                {
+                    Key = "address_id",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["id"] = "address_id",
+                        ["line1"] = "address_line1",
+                        ["city"] = "address_city",
+                        ["address_type_name"] = "address_type_name",
+                    },
+                },
+                ["phones"] = new TypeMapGroup
+                {
+                    Key = "phone_id",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["id"] = "phone_id",
+                        ["number"] = "phone_number",
+                        ["phone_type_name"] = "phone_type_name",
+                    },
+                },
+            },
+        });
+        var adaHome = new Row(
+        [
+            new("id", 7),
+            new("first_name", "Ada"),
+            new("last_name", "Lovelace"),
+            new("email", "ada@ex.com"),
+            new("contact_source_name", "Web"),
+            new("contact_type_name", "Person"),
+            new("address_id", 101),
+            new("address_line1", "10 Downing St"),
+            new("address_city", "London"),
+            new("address_type_name", "Home"),
+            new("phone_id", 201),
+            new("phone_number", "+44"),
+            new("phone_type_name", "Mobile"),
+        ]);
+        var adaWork = new Row(adaHome)
+        {
+            ["address_id"] = 102,
+            ["address_line1"] = "1 Parliament Sq"
+        };
+        var nested = mapper.Map([adaHome, adaWork]);
+        var flat = mapper.ReverseMap(nested);
+        Assert.Equal(2, Many(nested[0], "addresses").Count);
+        Assert.Single(Many(nested[0], "phones"));
+        Assert.Equal(2, flat.Count);
+    }
+
+    [Fact]
     public void MapsOneDenormalizedRowIntoAContactWith01Children()
     {
-        var home = Mapper.Map(AdaHome());
+        var home = Mapper.Map([AdaHome()])[0];
         Assert.Equal(new Value.Int(7), Cell(home, "id"));
         Assert.Equal(new Value.Text("Ada"), Cell(home, "first_name"));
         Assert.Equal(new Value.Text("Lovelace"), Cell(home, "last_name"));
@@ -117,7 +182,7 @@ public class FlatToTypeMapperTests
         Assert.Equal(new Value.Int(201), Cell(Many(home, "phones")[0], "id"));
         Assert.Equal(new Value.Text("+44"), Cell(Many(home, "phones")[0], "number"));
         Assert.Equal(new Value.Text("Mobile"), Cell(Many(home, "phones")[0], "phone_type_name"));
-        var missing = Mapper.Map(NoAddress());
+        var missing = Mapper.Map([NoAddress()])[0];
         Assert.Empty(Many(missing, "addresses"));
         Assert.Single(Many(missing, "phones"));
         Assert.Equal(new Value.Text("555"), Cell(Many(missing, "phones")[0], "number"));
@@ -126,14 +191,14 @@ public class FlatToTypeMapperTests
     [Fact]
     public void ReverseMapsTheFirstChildOfEachGroup()
     {
-        AssertRow(AdaHome(), Mapper.ReverseMap(Mapper.Map(AdaHome())));
-        AssertRow(NoAddress(), Mapper.ReverseMap(Mapper.Map(NoAddress())));
+        AssertRow(AdaHome(), Mapper.ReverseMap(Mapper.Map([AdaHome()]))[0]);
+        AssertRow(NoAddress(), Mapper.ReverseMap(Mapper.Map([NoAddress()]))[0]);
     }
 
     [Fact]
     public void CollapsesDuplicateJoinRowsIntoOneContactWithUniqueChildren()
     {
-        var rows = Mapper.Collapse([AdaHome(), AdaWork(), AdaHome(), NoAddress()]);
+        var rows = Mapper.Map([AdaHome(), AdaWork(), AdaHome(), NoAddress()]);
         Assert.Equal(2, rows.Count);
         var ada = rows[0];
         Assert.Equal(new Value.Int(7), Cell(ada, "id"));
@@ -150,7 +215,7 @@ public class FlatToTypeMapperTests
     [Fact]
     public void CollapsesAlreadyMappedRows()
     {
-        var rows = Mapper.Collapse([Mapper.Map(AdaHome()), Mapper.Map(AdaWork())]);
+        var rows = Mapper.Map([Mapper.Map([AdaHome()])[0], Mapper.Map([AdaWork()])[0]]);
         Assert.Equal(2, Many(rows[0], "addresses").Count);
         Assert.Single(Many(rows[0], "phones"));
     }
@@ -159,7 +224,7 @@ public class FlatToTypeMapperTests
     public void SkipsRowsWithoutAParentKeyAndChildrenWithoutAGroupKey()
     {
         var orphan = new Row(AdaHome()) { ["id"] = Value.Null.Instance };
-        var mapped = Mapper.Map(AdaHome());
+        var mapped = Mapper.Map([AdaHome()])[0];
         mapped["addresses"] = new MappedValue.Many(
         [
             new()
@@ -174,7 +239,7 @@ public class FlatToTypeMapperTests
                 ["city"] = new MappedValue.Cell("London"),
             },
         ]);
-        var extra = Mapper.Map(AdaWork());
+        var extra = Mapper.Map([AdaWork()])[0];
         extra["addresses"] = new MappedValue.Many(
         [
             new()
@@ -183,7 +248,8 @@ public class FlatToTypeMapperTests
                 ["city"] = new MappedValue.Cell("None"),
             },
         ]);
-        var ada = Mapper.Collapse([Mapper.Map(orphan), mapped, extra])[0];
+        Assert.Empty(Mapper.Map([orphan]));
+        var ada = Mapper.Map([mapped, extra])[0];
         Assert.Equal(
             ["x", "dup"],
             Many(ada, "addresses").Select(address => ((MappedValue.Cell)address["line1"]).Value));
@@ -192,12 +258,12 @@ public class FlatToTypeMapperTests
     [Fact]
     public void FallsBackToTheSpecKeyWhenItIsNotAMappedDestField()
     {
-        var names = new FlatToTypeMapper(new TypeMap
+        var names = new FlatToNestedMapper(new TypeMap
         {
             Key = "id",
             Fields = new Dictionary<string, TypeMapField> { ["name"] = "name" },
         });
-        var rows = names.Collapse([new Row([new("id", 1), new("name", "ada")])]);
+        var rows = names.Map([new Row([new("id", 1), new("name", "ada")])]);
         Assert.Equal(new Value.Int(1), Cell(rows[0], "id"));
         Assert.Equal(new Value.Text("ada"), Cell(rows[0], "name"));
     }
@@ -205,7 +271,7 @@ public class FlatToTypeMapperTests
     [Fact]
     public void OmitsNestedGroupFieldsWhenCompilingACollection()
     {
-        var nested = new FlatToTypeMapper(new TypeMap
+        var nested = new FlatToNestedMapper(new TypeMap
         {
             Key = "id",
             Fields = new Dictionary<string, TypeMapField>
@@ -227,14 +293,14 @@ public class FlatToTypeMapperTests
                 },
             },
         });
-        var mapped = nested.Map(new Row([new("id", 1), new("item_id", 2)]));
+        var mapped = nested.Map([new Row([new("id", 1), new("item_id", 2)])])[0];
         Assert.Equal(new Value.Int(1), Cell(mapped, "id"));
         Assert.Single(Many(mapped, "items"));
         Assert.Equal(new Value.Int(2), Cell(Many(mapped, "items")[0], "id"));
         Assert.Equal(Value.Null.Instance, Cell(Many(mapped, "items")[0], "title"));
         Assert.False(Many(mapped, "items")[0].ContainsKey("kids"));
-        Assert.Equal(Value.Null.Instance, Cell(nested.Map(new Row()), "id"));
-        var reversed = nested.ReverseMap([]);
+        Assert.Empty(nested.Map([new Row()]));
+        var reversed = nested.ReverseMap([[]])[0];
         Assert.Equal(Value.Null.Instance, reversed["id"]);
         Assert.Equal(Value.Null.Instance, reversed["item_id"]);
         Assert.Equal(Value.Null.Instance, reversed["item_title"]);

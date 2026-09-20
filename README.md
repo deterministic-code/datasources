@@ -223,7 +223,7 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [Mapper](#mapper) for `INameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
+See [Mapper](#mapper) for `INameMapper`, `FlatToNestedMapper`, and `StatementMapper`.
 
 ### Type Converter
 
@@ -2478,45 +2478,45 @@ interface ICommandMiddleware
 
 | Name | Description |
 | --- | --- |
-| [beforeQuery(query, params?)](#typescript-icommandmiddleware-beforequery-query-params) | Runs before the query. A thrown error skips the query. A `{ query, params }` return rewrites it. |
-| [afterQuery(query, params, results, elapsedMs, error?)](#typescript-icommandmiddleware-afterquery-query-params-results-elapsedms-error) | Runs after the query, including when the query failed. |
+| [beforeCommand(text, params?)](#typescript-icommandmiddleware-beforecommand-text-params) | Runs before the command. A thrown error skips the command. A `{ text, params }` return rewrites it. |
+| [afterCommand(text, params, results, elapsedMs, error?)](#typescript-icommandmiddleware-aftercommand-text-params-results-elapsedms-error) | Runs after the command, including when the command failed. |
 
-###### beforeQuery(query, params?) {#typescript-icommandmiddleware-beforequery-query-params}
+###### beforeCommand(text, params?) {#typescript-icommandmiddleware-beforecommand-text-params}
 
-Runs before the query. A thrown error skips the query. A `{ query, params }` return rewrites it.
+Runs before the command. A thrown error skips the command. A `{ text, params }` return rewrites it.
 
 **Definition**
 
 ```typescript
-beforeQuery(query: string, params?: ReadonlyArray<Parameter>): void | { query: string; params?: ReadonlyArray<Parameter> } | Promise<void | { query: string; params?: ReadonlyArray<Parameter> }>
+beforeCommand(text: string, params?: ReadonlyArray<Parameter>): void | { text: string; params?: ReadonlyArray<Parameter> } | Promise<void | { text: string; params?: ReadonlyArray<Parameter> }>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | command text |
+| `text` | command text |
 | `params` | optional [Parameter](#typescript-parameter) list |
 
-###### afterQuery(query, params, results, elapsedMs, error?) {#typescript-icommandmiddleware-afterquery-query-params-results-elapsedms-error}
+###### afterCommand(text, params, results, elapsedMs, error?) {#typescript-icommandmiddleware-aftercommand-text-params-results-elapsedms-error}
 
-Runs after the query, including when the query failed.
+Runs after the command, including when the command failed.
 
 **Definition**
 
 ```typescript
-afterQuery(query: string, params: ReadonlyArray<Parameter> | undefined, results: ReadonlyArray<Row>, elapsedMs: number, error?: Error): void | Promise<void>
+afterCommand(text: string, params: ReadonlyArray<Parameter> | undefined, results: ReadonlyArray<Row>, elapsedMs: number, error?: Error): void | Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | command text |
+| `text` | command text |
 | `params` | [Parameter](#typescript-parameter) list used |
 | `results` | rows produced |
 | `elapsedMs` | elapsed milliseconds |
-| `error` | query error when the command failed |
+| `error` | command error when the command failed |
 
 ##### Parameter {#typescript-parameter}
 
@@ -2774,49 +2774,49 @@ public interface ICommandMiddleware
 
 | Name | Description |
 | --- | --- |
-| [BeforeQuery(query, parameters)](#csharp-icommandmiddleware-beforequery-query-parameters) | Runs before the query. A thrown error skips the query. A non-null return rewrites it. |
-| [AfterQuery(query, parameters, results, elapsedMs, error)](#csharp-icommandmiddleware-afterquery-query-parameters-results-elapsedms-error) | Runs after the query, including when the query failed. |
+| [BeforeCommand(text, parameters)](#csharp-icommandmiddleware-beforecommand-text-parameters) | Runs before the command. A thrown error skips the command. A non-null return rewrites it. |
+| [AfterCommand(text, parameters, results, elapsedMs, error)](#csharp-icommandmiddleware-aftercommand-text-parameters-results-elapsedms-error) | Runs after the command, including when the command failed. |
 
-###### BeforeQuery(query, parameters) {#csharp-icommandmiddleware-beforequery-query-parameters}
+###### BeforeCommand(text, parameters) {#csharp-icommandmiddleware-beforecommand-text-parameters}
 
-Runs before the query. A thrown error skips the query. A non-null return rewrites it.
+Runs before the command. A thrown error skips the command. A non-null return rewrites it.
 
 **Definition**
 
 ```csharp
-Task<(string Query, IReadOnlyList<Parameter>? Parameters)?> BeforeQuery(string query, IReadOnlyList<Parameter>? parameters)
+Task<(string Text, IReadOnlyList<Parameter>? Parameters)?> BeforeCommand(string text, IReadOnlyList<Parameter>? parameters)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | command text |
+| `text` | command text |
 | `parameters` | optional [Parameter](#csharp-parameter) list |
 
 **Returns**
 
-`Task<(string Query, IReadOnlyList<Parameter>? Parameters)?>`
+`Task<(string Text, IReadOnlyList<Parameter>? Parameters)?>`
 
-###### AfterQuery(query, parameters, results, elapsedMs, error) {#csharp-icommandmiddleware-afterquery-query-parameters-results-elapsedms-error}
+###### AfterCommand(text, parameters, results, elapsedMs, error) {#csharp-icommandmiddleware-aftercommand-text-parameters-results-elapsedms-error}
 
-Runs after the query, including when the query failed.
+Runs after the command, including when the command failed.
 
 **Definition**
 
 ```csharp
-Task AfterQuery(string query, IReadOnlyList<Parameter>? parameters, IReadOnlyList<Row> results, double elapsedMs, Exception? error = null)
+Task AfterCommand(string text, IReadOnlyList<Parameter>? parameters, IReadOnlyList<Row> results, double elapsedMs, Exception? error = null)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | command text |
+| `text` | command text |
 | `parameters` | [Parameter](#csharp-parameter) list used |
 | `results` | rows produced |
 | `elapsedMs` | elapsed milliseconds |
-| `error` | query error when the command failed |
+| `error` | command error when the command failed |
 
 ##### Parameter {#csharp-parameter}
 
@@ -3054,49 +3054,49 @@ pub trait CommandMiddleware: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [before_query(query, params)](#rust-commandmiddleware-before_query-query-params) | Runs before the query. An `Err` skips the query. `Some` rewrites it. |
-| [after_query(query, params, results, elapsed_ms, error)](#rust-commandmiddleware-after_query-query-params-results-elapsed_ms-error) | Runs after the query, including when the query failed. |
+| [before_command(text, params)](#rust-commandmiddleware-before_command-text-params) | Runs before the command. An `Err` skips the command. `Some` rewrites it. |
+| [after_command(text, params, results, elapsed_ms, error)](#rust-commandmiddleware-after_command-text-params-results-elapsed_ms-error) | Runs after the command, including when the command failed. |
 
-###### before_query(query, params) {#rust-commandmiddleware-before_query-query-params}
+###### before_command(text, params) {#rust-commandmiddleware-before_command-text-params}
 
-Runs before the query. An `Err` skips the query. `Some` rewrites it.
+Runs before the command. An `Err` skips the command. `Some` rewrites it.
 
 **Definition**
 
 ```rust
-async fn before_query(&self, query: &str, params: Option<&[Parameter]>) -> Result<Option<(String, Option<Vec<Parameter>>)>>
+async fn before_command(&self, text: &str, params: Option<&[Parameter]>) -> Result<Option<(String, Option<Vec<Parameter>>)>>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | command text |
+| `text` | command text |
 | `params` | optional [Parameter](#rust-parameter) slice |
 
 **Returns**
 
 `Result<Option<(String, Option<Vec<Parameter>>)>>`
 
-###### after_query(query, params, results, elapsed_ms, error) {#rust-commandmiddleware-after_query-query-params-results-elapsed_ms-error}
+###### after_command(text, params, results, elapsed_ms, error) {#rust-commandmiddleware-after_command-text-params-results-elapsed_ms-error}
 
-Runs after the query, including when the query failed.
+Runs after the command, including when the command failed.
 
 **Definition**
 
 ```rust
-async fn after_query(&self, query: &str, params: Option<&[Parameter]>, results: &[Row], elapsed_ms: f64, error: Option<&DatasourceError>) -> Result<()>
+async fn after_command(&self, text: &str, params: Option<&[Parameter]>, results: &[Row], elapsed_ms: f64, error: Option<&DatasourceError>) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | command text |
+| `text` | command text |
 | `params` | [Parameter](#rust-parameter) slice used |
 | `results` | rows produced |
 | `elapsed_ms` | elapsed milliseconds |
-| `error` | query error when the command failed |
+| `error` | command error when the command failed |
 
 **Returns**
 
@@ -3213,7 +3213,7 @@ async fn next(&self) -> Result<bool>
 
 The connection must be open before `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader`.
 
-`AddMiddleware` / `addMiddleware` / `add_middleware` runs `BeforeQuery` / `beforeQuery` / `before_query` then the command, then `AfterQuery` / `afterQuery` / `after_query`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
+`AddMiddleware` / `addMiddleware` / `add_middleware` runs `BeforeCommand` / `beforeCommand` / `before_command` then the command, then `AfterCommand` / `afterCommand` / `after_command`. A `beforeCommand` error skips the command. A command error still runs `afterCommand` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console. Verbose logs use AfterCommand for the result body.
 
 Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
 
@@ -5006,7 +5006,7 @@ let rows = repo.read(None).await.unwrap();
 
 ```typescript
 const { repo, command } = create();
-repo.addMiddleware({ beforeQuery() {}, afterQuery() {} });
+repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
 command.reader = new MockReader([
   { id: 1, name: "a" },
 ]);
@@ -8681,7 +8681,7 @@ Repository read is convert, then map. `StatementMapper.Rows` / `rows` is the rea
 - [INameMapper](#inamemapper)
 - [NameSourceDestinationMapper](#name-source-destination-mapper)
 - [TransformMapper](#transform-mapper)
-- [FlatToTypeMapper](#flat-to-type-mapper)
+- [FlatToNestedMapper](#flat-to-nested-mapper)
 - [StatementMapper](#statement-mapper)
 
 ## INameMapper
@@ -9479,7 +9479,7 @@ const flat = mapper.map(nested);
 }
 ```
 
-## FlatToTypeMapper
+## FlatToNestedMapper
 
 Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key.
 
@@ -9487,25 +9487,19 @@ Collapses denormalized join rows into unique parents with unique children. Scala
 
 ##### TypeScript
 
-##### IFlatToTypeMapper {#typescript-iflattotypemapper}
+##### IFlatToNestedMapper {#typescript-iflattonestedmapper}
 
 ```typescript
-interface IFlatToTypeMapper<T> extends IMapper<Cells, T>
+interface IFlatToNestedMapper<T> extends IMapper<Iterable<T | Cells>, T[]>
 ```
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| [spec](#typescript-iflattotypemapper-spec) | The [TypeMap](#typescript-typemap) used to collapse join rows. |
+| [spec](#typescript-iflattonestedmapper-spec) | The [TypeMap](#typescript-typemap) used to collapse join rows. |
 
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [collapse(rows)](#typescript-iflattotypemapper-collapse-rows) | Collapses denormalized join rows into unique parents with unique children. |
-
-###### spec {#typescript-iflattotypemapper-spec}
+###### spec {#typescript-iflattonestedmapper-spec}
 
 The [TypeMap](#typescript-typemap) used to collapse join rows.
 
@@ -9515,53 +9509,32 @@ The [TypeMap](#typescript-typemap) used to collapse join rows.
 readonly spec: TypeMap<T>
 ```
 
-###### collapse(rows) {#typescript-iflattotypemapper-collapse-rows}
-
-Collapses denormalized join rows into unique parents with unique children.
-
-**Definition**
+##### FlatToNestedMapper {#typescript-flattonestedmapper}
 
 ```typescript
-collapse(rows: Iterable<T | Cells>): T[]
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | raw `Cells` or already-mapped `T` |
-
-**Returns**
-
-`T[]`
-
-##### FlatToTypeMapper {#typescript-flattotypemapper}
-
-```typescript
-class FlatToTypeMapper<T> implements IFlatToTypeMapper<T>
+class FlatToNestedMapper<T> implements IFlatToNestedMapper<T>
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [FlatToTypeMapper(spec)](#typescript-flattotypemapper-flattotypemapper-spec) | Builds a collapse mapper from a [TypeMap](#typescript-typemap). |
+| [FlatToNestedMapper(spec)](#typescript-flattonestedmapper-flattonestedmapper-spec) | Builds a collapse mapper from a [TypeMap](#typescript-typemap). |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| [spec](#typescript-flattotypemapper-spec) | The [TypeMap](#typescript-typemap) used to collapse join rows. |
+| [spec](#typescript-flattonestedmapper-spec) | The [TypeMap](#typescript-typemap) used to collapse join rows. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [map(row)](#typescript-flattotypemapper-map-row) | Maps one denormalized row to `T`. Nested group fields on a collection are omitted. |
-| [reverseMap(value)](#typescript-flattotypemapper-reversemap-value) | Flattens `T` back to one row. Groups keep the first child. |
-| [collapse(rows)](#typescript-flattotypemapper-collapse-rows) | Collapses denormalized join rows into unique parents with unique children. |
+| [map(rows)](#typescript-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
+| [reverseMap(values)](#typescript-flattonestedmapper-reversemap-values) | Flattens nested parents back to denormalized join rows. |
 
-###### FlatToTypeMapper(spec) {#typescript-flattotypemapper-flattotypemapper-spec}
+###### FlatToNestedMapper(spec) {#typescript-flattonestedmapper-flattonestedmapper-spec}
 
 Builds a collapse mapper from a [TypeMap](#typescript-typemap).
 
@@ -9577,7 +9550,7 @@ constructor(spec: TypeMap<T>)
 | --- | --- |
 | `spec` | [TypeMap](#typescript-typemap); scalars map column to field, groups collect unique children by key |
 
-###### spec {#typescript-flattotypemapper-spec}
+###### spec {#typescript-flattonestedmapper-spec}
 
 The [TypeMap](#typescript-typemap) used to collapse join rows.
 
@@ -9587,65 +9560,45 @@ The [TypeMap](#typescript-typemap) used to collapse join rows.
 readonly spec: TypeMap<T>
 ```
 
-###### map(row) {#typescript-flattotypemapper-map-row}
+###### map(rows) {#typescript-flattonestedmapper-map-rows}
 
-Maps one denormalized row to `T`. Nested group fields on a collection are omitted.
+Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
 
 **Definition**
 
 ```typescript
-map(row: Cells): T
+map(rows: Iterable<T | Cells>): T[]
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `row` | denormalized join row |
-
-**Returns**
-
-`T`
-
-###### reverseMap(value) {#typescript-flattotypemapper-reversemap-value}
-
-Flattens `T` back to one row. Groups keep the first child.
-
-**Definition**
-
-```typescript
-reverseMap(value: T): Cells
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped object |
-
-**Returns**
-
-`Cells`
-
-###### collapse(rows) {#typescript-flattotypemapper-collapse-rows}
-
-Collapses denormalized join rows into unique parents with unique children.
-
-**Definition**
-
-```typescript
-collapse(rows: Iterable<T | Cells>): T[]
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | raw `Cells` or already-mapped `T` |
+| `rows` | denormalized join rows, or already-mapped `T` |
 
 **Returns**
 
 `T[]`
+
+###### reverseMap(values) {#typescript-flattonestedmapper-reversemap-values}
+
+Flattens nested parents back to denormalized join rows.
+
+**Definition**
+
+```typescript
+reverseMap(values: T[]): Cells[]
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `values` | nested parents |
+
+**Returns**
+
+`Cells[]`
 
 ##### TypeMap {#typescript-typemap}
 
@@ -9721,26 +9674,19 @@ type TypeMapFields<T>
 
 ##### C#
 
-##### IFlatToTypeMapper {#csharp-iflattotypemapper}
+##### IFlatToNestedMapper {#csharp-iflattonestedmapper}
 
 ```csharp
-public interface IFlatToTypeMapper : IMapper<Row, Dictionary<string, MappedValue>>
+public interface IFlatToNestedMapper : IMapper<IEnumerable<Row>, IReadOnlyList<Dictionary<string, MappedValue>>>
 ```
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| [Spec](#csharp-iflattotypemapper-spec) | The [TypeMap](#csharp-typemap) used to collapse join rows. |
+| [Spec](#csharp-iflattonestedmapper-spec) | The [TypeMap](#csharp-typemap) used to collapse join rows. |
 
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Collapse(rows)](#csharp-iflattotypemapper-collapse-rows) | Maps and collapses denormalized join rows. |
-| [Collapse(mapped)](#csharp-iflattotypemapper-collapse-mapped) | Collapses already-mapped rows. |
-
-###### Spec {#csharp-iflattotypemapper-spec}
+###### Spec {#csharp-iflattonestedmapper-spec}
 
 The [TypeMap](#csharp-typemap) used to collapse join rows.
 
@@ -9750,81 +9696,39 @@ The [TypeMap](#csharp-typemap) used to collapse join rows.
 TypeMap Spec { get; }
 ```
 
-###### Collapse(rows) {#csharp-iflattotypemapper-collapse-rows}
-
-Maps and collapses denormalized join rows.
-
-**Definition**
+##### FlatToNestedMapper {#csharp-flattonestedmapper}
 
 ```csharp
-IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Row> rows)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | denormalized join rows |
-
-**Returns**
-
-`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
-
-###### Collapse(mapped) {#csharp-iflattotypemapper-collapse-mapped}
-
-Collapses already-mapped rows.
-
-**Definition**
-
-```csharp
-IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Dictionary<string, MappedValue>> rows)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `mapped` | rows already passed through [Map](#csharp-flattotypemapper-map-value) |
-
-**Returns**
-
-`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
-
-##### FlatToTypeMapper {#csharp-flattotypemapper}
-
-```csharp
-public sealed class FlatToTypeMapper : IFlatToTypeMapper
+public sealed class FlatToNestedMapper : IFlatToNestedMapper
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [FlatToTypeMapper(spec)](#csharp-flattotypemapper-flattotypemapper-spec) | Builds a collapse mapper from a [TypeMap](#csharp-typemap). |
+| [FlatToNestedMapper(spec)](#csharp-flattonestedmapper-flattonestedmapper-spec) | Builds a collapse mapper from a [TypeMap](#csharp-typemap). |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| [Spec](#csharp-flattotypemapper-spec) | The [TypeMap](#csharp-typemap) used to collapse join rows. |
+| [Spec](#csharp-flattonestedmapper-spec) | The [TypeMap](#csharp-typemap) used to collapse join rows. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Map(value)](#csharp-flattotypemapper-map-value) | Maps one denormalized row. Nested group fields on a collection are omitted. |
-| [ReverseMap(value)](#csharp-flattotypemapper-reversemap-value) | Flattens a mapped row back. Groups keep the first child. |
-| [Collapse(rows)](#csharp-flattotypemapper-collapse-rows) | Maps and collapses denormalized join rows. |
-| [Collapse(mapped)](#csharp-flattotypemapper-collapse-mapped) | Collapses already-mapped rows. |
+| [Map(rows)](#csharp-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
+| [ReverseMap(values)](#csharp-flattonestedmapper-reversemap-values) | Flattens nested parents back to denormalized join rows. |
 
-###### FlatToTypeMapper(spec) {#csharp-flattotypemapper-flattotypemapper-spec}
+###### FlatToNestedMapper(spec) {#csharp-flattonestedmapper-flattonestedmapper-spec}
 
 Builds a collapse mapper from a [TypeMap](#csharp-typemap).
 
 **Definition**
 
 ```csharp
-public FlatToTypeMapper(TypeMap spec)
+public FlatToNestedMapper(TypeMap spec)
 ```
 
 **Parameters**
@@ -9833,7 +9737,7 @@ public FlatToTypeMapper(TypeMap spec)
 | --- | --- |
 | `spec` | [TypeMap](#csharp-typemap); scalars map column to field, groups collect unique children by key |
 
-###### Spec {#csharp-flattotypemapper-spec}
+###### Spec {#csharp-flattonestedmapper-spec}
 
 The [TypeMap](#csharp-typemap) used to collapse join rows.
 
@@ -9843,54 +9747,14 @@ The [TypeMap](#csharp-typemap) used to collapse join rows.
 TypeMap Spec { get; }
 ```
 
-###### Map(value) {#csharp-flattotypemapper-map-value}
+###### Map(rows) {#csharp-flattonestedmapper-map-rows}
 
-Maps one denormalized row. Nested group fields on a collection are omitted.
-
-**Definition**
-
-```csharp
-Dictionary<string, MappedValue> Map(Row value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | denormalized join row |
-
-**Returns**
-
-`Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>`
-
-###### ReverseMap(value) {#csharp-flattotypemapper-reversemap-value}
-
-Flattens a mapped row back. Groups keep the first child.
+Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
 
 **Definition**
 
 ```csharp
-Row ReverseMap(Dictionary<string, MappedValue> value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped graph |
-
-**Returns**
-
-`Row`
-
-###### Collapse(rows) {#csharp-flattotypemapper-collapse-rows}
-
-Maps and collapses denormalized join rows.
-
-**Definition**
-
-```csharp
-IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Row> rows)
+IReadOnlyList<Dictionary<string, MappedValue>> Map(IEnumerable<Row> rows)
 ```
 
 **Parameters**
@@ -9903,25 +9767,25 @@ IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Row> rows)
 
 `IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
 
-###### Collapse(mapped) {#csharp-flattotypemapper-collapse-mapped}
+###### ReverseMap(values) {#csharp-flattonestedmapper-reversemap-values}
 
-Collapses already-mapped rows.
+Flattens nested parents back to denormalized join rows.
 
 **Definition**
 
 ```csharp
-IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Dictionary<string, MappedValue>> rows)
+IReadOnlyList<Row> ReverseMap(IReadOnlyList<Dictionary<string, MappedValue>> values)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `mapped` | rows already passed through [Map](#csharp-flattotypemapper-map-value) |
+| `values` | nested parents |
 
 **Returns**
 
-`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
+`IReadOnlyList<`[Row](#repository)`>`
 
 ##### TypeMap {#csharp-typemap}
 
@@ -10057,21 +9921,19 @@ MappedValue.Many(List<Dictionary<string, MappedValue>> Items)
 
 ##### Rust
 
-##### FlatToTypeMapperTrait {#rust-flattotypemappertrait}
+##### FlatToNestedMapperTrait {#rust-flattonestedmappertrait}
 
 ```rust
-pub trait FlatToTypeMapper: Mapper<Row, MappedRow>
+pub trait FlatToNestedMapper: Mapper<Vec<Row>, Vec<MappedRow>>
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [spec()](#rust-flattotypemappertrait-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
-| [collapse(rows)](#rust-flattotypemappertrait-collapse-rows) | Collapses already-mapped rows. |
-| [collapse_rows(rows)](#rust-flattotypemappertrait-collapse_rows-rows) | Maps and collapses denormalized join rows. |
+| [spec()](#rust-flattonestedmappertrait-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
 
-###### spec() {#rust-flattotypemappertrait-spec}
+###### spec() {#rust-flattonestedmappertrait-spec}
 
 The [TypeMap](#rust-typemap) used to collapse join rows.
 
@@ -10085,69 +9947,27 @@ fn spec(&self) -> &TypeMap
 
 `&`[TypeMap](#rust-typemap)
 
-###### collapse(rows) {#rust-flattotypemappertrait-collapse-rows}
-
-Collapses already-mapped rows.
-
-**Definition**
+##### FlatToNestedMapper {#rust-flattonestedmapper}
 
 ```rust
-fn collapse(&self, rows: Vec<MappedRow>) -> Vec<MappedRow>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | rows already passed through [map](#rust-flattotypemapper-map-row) |
-
-**Returns**
-
-`Vec<`[MappedRow](#rust-mappedrow)`>`
-
-###### collapse_rows(rows) {#rust-flattotypemappertrait-collapse_rows-rows}
-
-Maps and collapses denormalized join rows.
-
-**Definition**
-
-```rust
-fn collapse_rows(&self, rows: Vec<Row>) -> Vec<MappedRow>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | denormalized join rows |
-
-**Returns**
-
-`Vec<`[MappedRow](#rust-mappedrow)`>`
-
-##### FlatToTypeMapper {#rust-flattotypemapper}
-
-```rust
-pub struct FlatToTypeMapper
+pub struct FlatToNestedMapper
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(spec)](#rust-flattotypemapper-new-spec) | Builds a collapse mapper from a [TypeMap](#rust-typemap). |
+| [new(spec)](#rust-flattonestedmapper-new-spec) | Builds a collapse mapper from a [TypeMap](#rust-typemap). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [map(row)](#rust-flattotypemapper-map-row) | Maps one denormalized row. Nested group fields on a collection are omitted. |
-| [reverse_map(value)](#rust-flattotypemapper-reverse_map-value) | Flattens a mapped row back. Groups keep the first child. |
-| [spec()](#rust-flattotypemapper-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
-| [collapse(rows)](#rust-flattotypemapper-collapse-rows) | Collapses already-mapped rows. |
-| [collapse_rows(rows)](#rust-flattotypemapper-collapse_rows-rows) | Maps and collapses denormalized join rows. |
+| [map(rows)](#rust-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
+| [reverse_map(values)](#rust-flattonestedmapper-reverse_map-values) | Flattens nested parents back to denormalized join rows. |
+| [spec()](#rust-flattonestedmapper-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
 
-###### new(spec) {#rust-flattotypemapper-new-spec}
+###### new(spec) {#rust-flattonestedmapper-new-spec}
 
 Builds a collapse mapper from a [TypeMap](#rust-typemap).
 
@@ -10165,49 +9985,49 @@ pub fn new(spec: TypeMap) -> Self
 
 **Returns**
 
-[FlatToTypeMapper](#rust-flattotypemapper)
+[FlatToNestedMapper](#rust-flattonestedmapper)
 
-###### map(row) {#rust-flattotypemapper-map-row}
+###### map(rows) {#rust-flattonestedmapper-map-rows}
 
-Maps one denormalized row. Nested group fields on a collection are omitted.
+Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
 
 **Definition**
 
 ```rust
-fn map(&self, row: Row) -> MappedRow
+fn map(&self, rows: Vec<Row>) -> Vec<MappedRow>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `row` | denormalized join row |
+| `rows` | denormalized join rows |
 
 **Returns**
 
-[MappedRow](#rust-mappedrow)
+`Vec<`[MappedRow](#rust-mappedrow)`>`
 
-###### reverse_map(value) {#rust-flattotypemapper-reverse_map-value}
+###### reverse_map(values) {#rust-flattonestedmapper-reverse_map-values}
 
-Flattens a mapped row back. Groups keep the first child.
+Flattens nested parents back to denormalized join rows.
 
 **Definition**
 
 ```rust
-fn reverse_map(&self, value: MappedRow) -> Row
+fn reverse_map(&self, values: Vec<MappedRow>) -> Vec<Row>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `value` | mapped graph |
+| `values` | nested parents |
 
 **Returns**
 
-`Row`
+`Vec<Row>`
 
-###### spec() {#rust-flattotypemapper-spec}
+###### spec() {#rust-flattonestedmapper-spec}
 
 The [TypeMap](#rust-typemap) used to collapse join rows.
 
@@ -10220,46 +10040,6 @@ fn spec(&self) -> &TypeMap
 **Returns**
 
 `&`[TypeMap](#rust-typemap)
-
-###### collapse(rows) {#rust-flattotypemapper-collapse-rows}
-
-Collapses already-mapped rows.
-
-**Definition**
-
-```rust
-fn collapse(&self, rows: Vec<MappedRow>) -> Vec<MappedRow>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | rows already passed through [map](#rust-flattotypemapper-map-row) |
-
-**Returns**
-
-`Vec<`[MappedRow](#rust-mappedrow)`>`
-
-###### collapse_rows(rows) {#rust-flattotypemapper-collapse_rows-rows}
-
-Maps and collapses denormalized join rows.
-
-**Definition**
-
-```rust
-fn collapse_rows(&self, rows: Vec<Row>) -> Vec<MappedRow>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | denormalized join rows |
-
-**Returns**
-
-`Vec<`[MappedRow](#rust-mappedrow)`>`
 
 ##### TypeMap {#rust-typemap}
 
@@ -10484,6 +10264,363 @@ pub type MappedRow = HashMap<String, MappedValue>
 C# and Rust map to a [MappedValue](#mappedvalue) graph. TypeScript maps to generic `T`. Nested group fields on a collection are omitted.
 
 This is a collapse mapper, not enrichment. Related fills after read use [Enriched repository](#enriched-repository).
+
+### Examples
+
+#### Map join rows to a nested contact
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L101-L164)
+
+```csharp
+var mapper = new FlatToNestedMapper(new TypeMap
+{
+    Key = "id",
+    Fields = new Dictionary<string, TypeMapField>
+    {
+        ["id"] = "id",
+        ["first_name"] = "first_name",
+        ["last_name"] = "last_name",
+        ["email"] = "email",
+        ["contact_source_name"] = "contact_source_name",
+        ["contact_type_name"] = "contact_type_name",
+        ["addresses"] = new TypeMapGroup
+        {
+            Key = "address_id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "address_id",
+                ["line1"] = "address_line1",
+                ["city"] = "address_city",
+                ["address_type_name"] = "address_type_name",
+            },
+        },
+        ["phones"] = new TypeMapGroup
+        {
+            Key = "phone_id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "phone_id",
+                ["number"] = "phone_number",
+                ["phone_type_name"] = "phone_type_name",
+            },
+        },
+    },
+});
+var adaHome = new Row(
+[
+    new("id", 7),
+    new("first_name", "Ada"),
+    new("last_name", "Lovelace"),
+    new("email", "ada@ex.com"),
+    new("contact_source_name", "Web"),
+    new("contact_type_name", "Person"),
+    new("address_id", 101),
+    new("address_line1", "10 Downing St"),
+    new("address_city", "London"),
+    new("address_type_name", "Home"),
+    new("phone_id", 201),
+    new("phone_number", "+44"),
+    new("phone_type_name", "Mobile"),
+]);
+var adaWork = new Row(adaHome)
+{
+    ["address_id"] = 102,
+    ["address_line1"] = "1 Parliament Sq"
+};
+var nested = mapper.Map([adaHome, adaWork]);
+var flat = mapper.ReverseMap(nested);
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L383-L453)
+
+```rust
+let mapper = FlatToNestedMapper::new(TypeMap::new(
+    "id",
+    vec![
+        ("id".into(), TypeMapField::column("id")),
+        ("first_name".into(), TypeMapField::column("first_name")),
+        ("last_name".into(), TypeMapField::column("last_name")),
+        ("email".into(), TypeMapField::column("email")),
+        (
+            "contact_source_name".into(),
+            TypeMapField::column("contact_source_name"),
+        ),
+        (
+            "contact_type_name".into(),
+            TypeMapField::column("contact_type_name"),
+        ),
+        (
+            "addresses".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "address_id",
+                vec![
+                    ("id".into(), TypeMapField::column("address_id")),
+                    ("line1".into(), TypeMapField::column("address_line1")),
+                    ("city".into(), TypeMapField::column("address_city")),
+                    (
+                        "address_type_name".into(),
+                        TypeMapField::column("address_type_name"),
+                    ),
+                ],
+            )),
+        ),
+        (
+            "phones".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "phone_id",
+                vec![
+                    ("id".into(), TypeMapField::column("phone_id")),
+                    ("number".into(), TypeMapField::column("phone_number")),
+                    (
+                        "phone_type_name".into(),
+                        TypeMapField::column("phone_type_name"),
+                    ),
+                ],
+            )),
+        ),
+    ],
+));
+let ada_home = cell(&[
+    ("id", Value::Int(7)),
+    ("first_name", Value::from("Ada")),
+    ("last_name", Value::from("Lovelace")),
+    ("email", Value::from("ada@ex.com")),
+    ("contact_source_name", Value::from("Web")),
+    ("contact_type_name", Value::from("Person")),
+    ("address_id", Value::Int(101)),
+    ("address_line1", Value::from("10 Downing St")),
+    ("address_city", Value::from("London")),
+    ("address_type_name", Value::from("Home")),
+    ("phone_id", Value::Int(201)),
+    ("phone_number", Value::from("+44")),
+    ("phone_type_name", Value::from("Mobile")),
+]);
+let mut ada_work = ada_home.clone();
+ada_work.insert("address_id".into(), Value::Int(102));
+ada_work.insert("address_line1".into(), Value::from("1 Parliament Sq"));
+let nested = Mapper::map(&mapper, vec![ada_home.clone(), ada_work.clone()]);
+let flat = Mapper::reverse_map(&mapper, nested.clone());
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/FlatToNestedMapper.test.ts#L90-L155)
+
+```typescript
+const mapper = new FlatToNestedMapper<Contact>({
+  key: "id",
+  fields: {
+    id: "id",
+    first_name: "first_name",
+    last_name: "last_name",
+    email: "email",
+    contact_source_name: "contact_source_name",
+    contact_type_name: "contact_type_name",
+    addresses: {
+      key: "address_id",
+      fields: {
+        id: "address_id",
+        line1: "address_line1",
+        city: "address_city",
+        address_type_name: "address_type_name",
+      },
+    },
+    phones: {
+      key: "phone_id",
+      fields: {
+        id: "phone_id",
+        number: "phone_number",
+        phone_type_name: "phone_type_name",
+      },
+    },
+  },
+});
+const adaHome: Cells = {
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  address_id: 101,
+  address_line1: "10 Downing St",
+  address_city: "London",
+  address_type_name: "Home",
+  phone_id: 201,
+  phone_number: "+44",
+  phone_type_name: "Mobile",
+};
+const adaWork = {
+  ...adaHome,
+  address_id: 102,
+  address_line1: "1 Parliament Sq",
+};
+const nested = mapper.map([adaHome, adaWork]);
+const flat = mapper.reverseMap(nested);
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
 
 ## StatementMapper
 
