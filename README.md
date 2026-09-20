@@ -280,7 +280,7 @@ const rows = new RowTypeConverter({}, { flag: new FlagConverter() });
 const item = rows.convert(row);
 ```
 
-See [TypeConverter](#typeconverter).
+See [TypeConverter](#type-converter).
 
 ## Feature Matrix
 
@@ -290,20 +290,20 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 | Feature | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
-| [DatasourceFactory](#datasourcefactory) | ✅ | ✅ | ✅ |
+| [Datasource Factory](#datasource-factory) | ✅ | ✅ | ✅ |
 | [Datasource](#datasource) | ✅ | ✅ | ✅ |
 | [Mapper](#mapper) | ✅ | ✅ | ✅ |
-| [TypeConverter](#typeconverter) | ✅ | ✅ | ✅ |
+| [Type Converter](#type-converter) | ✅ | ✅ | ✅ |
 | [Connection](#connection) | ✅ | ✅ | ✅ |
 | [Transaction](#transaction) | ✅ | ✅ | ✅ |
 | [Command](#command) | ✅ | ✅ | ✅ |
 | [Reader](#reader) | ✅ | ✅ | ✅ |
 | [Statements](#statements) | ✅ | ✅ | ✅ |
 | [Repository](#repository) | ✅ | ✅ | ✅ |
-| [Readonly repository](#readonly-repository) | ✅ | ✅ | ✅ |
-| [CRUD repository](#crud-repository) | ✅ | ✅ | ✅ |
-| [Enriched repository](#enriched-repository) | ✅ | ✅ | ✅ |
-| [Bulk repository](#bulk-repository) | ✅ | ✅ | ✅ |
+| [Readonly Repository](#readonly-repository) | ✅ | ✅ | ✅ |
+| [CRUD Repository](#crud-repository) | ✅ | ✅ | ✅ |
+| [Enriched Repository](#enriched-repository) | ✅ | ✅ | ✅ |
+| [Bulk Repository](#bulk-repository) | ✅ | ✅ | ✅ |
 
 ### Providers
 
@@ -346,7 +346,7 @@ TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See
 
 ### Convert a row
 
-TODO: `RowTypeConverter` convert / reverse-convert, or attach a field converter. See [RowTypeConverter](#rowtypeconverter).
+TODO: `RowTypeConverter` convert / reverse-convert, or attach a field converter. See [RowTypeConverter](#row-type-converter).
 
 ## DatasourceFactory
 
@@ -872,7 +872,7 @@ DatasourceFactory.create({ provider: "missing" });
 
 ## Datasource
 
-One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `Create` is on [DatasourceFactory](#datasourcefactory).
+One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `Create` is on [DatasourceFactory](#datasource-factory).
 
 ### Classes
 
@@ -894,7 +894,7 @@ class Datasource implements IDatasource
 
 | Name | Description |
 | --- | --- |
-| [create(options?)](#typescript-datasource-create-options) | Alias of [DatasourceFactory.create](#datasourcefactory). `undefined` options read process env; a dictionary is used as-is. |
+| [create(options?)](#typescript-datasource-create-options) | Alias of [DatasourceFactory.create](#datasource-factory). `undefined` options read process env; a dictionary is used as-is. |
 
 ###### Datasource(provider, newConnection, newRepository) {#typescript-datasource-datasource-provider-newconnection-newrepository}
 
@@ -916,7 +916,7 @@ constructor(provider: string, newConnection: () => IConnection, newRepository: (
 
 ###### create(options?) {#typescript-datasource-create-options}
 
-Alias of [DatasourceFactory.create](#datasourcefactory). `undefined` options read process env; a dictionary is used as-is.
+Alias of [DatasourceFactory.create](#datasource-factory). `undefined` options read process env; a dictionary is used as-is.
 
 **Definition**
 
@@ -1452,7 +1452,7 @@ Listed factories are registered through `Datasources.Hosting`, `@datasources/reg
 
 `Reset` / `reset` clears the registry. Use it in tests.
 
-See [DatasourceFactory](#datasourcefactory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
+See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
 
 ### Examples
 
@@ -4015,7 +4015,7 @@ async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>
 
 ### Remarks
 
-Repository get is convert, then map. See [TypeConverter](#typeconverter) and [Mapper](#mapper).
+Repository get is convert, then map. See [TypeConverter](#type-converter) and [Mapper](#mapper).
 
 C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits where into `get_where` / `get_single_where`.
 
@@ -4055,7 +4055,7 @@ for await (const row of repo.get()) rows.push(row);
 
 ## CRUD repository
 
-[Readonly repository](#readonly-repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](#rowtypeconverter).
+[Readonly repository](#readonly-repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](#row-type-converter).
 
 Get is convert, then map. Writes reverse-map, then reverse-convert.
 
@@ -4157,8 +4157,8 @@ class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDReposi
 
 | Name | Description |
 | --- | --- |
-| [rowConverter](#typescript-repository-rowconverter) | Row [TypeConverter](#typeconverter). Convert uses this, then [mapper](#typescript-repository-mapper). |
-| [statementsMapper](#typescript-repository-statementsmapper) | Statement [StatementMapper](#statementmapper). |
+| [rowConverter](#typescript-repository-rowconverter) | Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper). |
+| [statementsMapper](#typescript-repository-statementsmapper) | Statement [StatementMapper](#statement-mapper). |
 | [mapper](#typescript-repository-mapper) | Get-row [Mapper](#mapper). Alias of `statementsMapper.rows`. |
 | [statements](#typescript-repository-statements) | SQL fragments for query / insert / update / delete. |
 
@@ -4223,7 +4223,7 @@ constructor(built: BuiltRepository<T>)
 
 ###### rowConverter {#typescript-repository-rowconverter}
 
-Row [TypeConverter](#typeconverter). Convert uses this, then [mapper](#typescript-repository-mapper).
+Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper).
 
 **Definition**
 
@@ -4233,7 +4233,7 @@ readonly rowConverter: TypeConverter<T, Cells>
 
 ###### statementsMapper {#typescript-repository-statementsmapper}
 
-Statement [StatementMapper](#statementmapper).
+Statement [StatementMapper](#statement-mapper).
 
 **Definition**
 
@@ -4377,9 +4377,9 @@ type RepositoryBuilderOptions<T = Cells>
 | [ids](#typescript-repositorybuilderoptions-ids) | Id column names. Default `["id"]`. |
 | [assignIdentityOnCreate](#typescript-repositorybuilderoptions-assignidentityoncreate) | When true, omit id columns on insert so the provider can generate them. Default `true`. |
 | [entity](#typescript-repositorybuilderoptions-entity) | Table or entity name. |
-| [mapping](#typescript-repositorybuilderoptions-mapping) | Row [TypeConverter](#typeconverter). |
+| [mapping](#typescript-repositorybuilderoptions-mapping) | Row [TypeConverter](#type-converter). |
 | [mapper](#typescript-repositorybuilderoptions-mapper) | Get-row [Mapper](#mapper). |
-| [statementMapper](#typescript-repositorybuilderoptions-statementmapper) | [StatementMapper](#statementmapper). |
+| [statementMapper](#typescript-repositorybuilderoptions-statementmapper) | [StatementMapper](#statement-mapper). |
 | [columns](#typescript-repositorybuilderoptions-columns) | Column names when mapping is omitted. |
 
 ###### connection {#typescript-repositorybuilderoptions-connection}
@@ -4424,7 +4424,7 @@ entity?: string
 
 ###### mapping {#typescript-repositorybuilderoptions-mapping}
 
-Row [TypeConverter](#typeconverter).
+Row [TypeConverter](#type-converter).
 
 **Definition**
 
@@ -4444,7 +4444,7 @@ mapper?: IMapper<T, T>
 
 ###### statementMapper {#typescript-repositorybuilderoptions-statementmapper}
 
-[StatementMapper](#statementmapper).
+[StatementMapper](#statement-mapper).
 
 **Definition**
 
@@ -4473,8 +4473,8 @@ type BuiltRepository<T = Cells>
 | Name | Description |
 | --- | --- |
 | [connection](#typescript-builtrepository-connection) | Open [IConnection](#connection). |
-| [rowConverter](#typescript-builtrepository-rowconverter) | Row [TypeConverter](#typeconverter). |
-| [statementMapper](#typescript-builtrepository-statementmapper) | [StatementMapper](#statementmapper). |
+| [rowConverter](#typescript-builtrepository-rowconverter) | Row [TypeConverter](#type-converter). |
+| [statementMapper](#typescript-builtrepository-statementmapper) | [StatementMapper](#statement-mapper). |
 | [statements](#typescript-builtrepository-statements) | SQL fragments. |
 | [ids](#typescript-builtrepository-ids) | Id column names. |
 | [assignIdentityOnCreate](#typescript-builtrepository-assignidentityoncreate) | When true, omit id columns on insert. |
@@ -4492,7 +4492,7 @@ connection: IConnection
 
 ###### rowConverter {#typescript-builtrepository-rowconverter}
 
-Row [TypeConverter](#typeconverter).
+Row [TypeConverter](#type-converter).
 
 **Definition**
 
@@ -4502,7 +4502,7 @@ rowConverter: TypeConverter<T, Cells>
 
 ###### statementMapper {#typescript-builtrepository-statementmapper}
 
-[StatementMapper](#statementmapper).
+[StatementMapper](#statement-mapper).
 
 **Definition**
 
@@ -4646,7 +4646,7 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
 
 | Name | Description |
 | --- | --- |
-| [StatementsMapper](#csharp-repository-statementsmapper) | Statement [StatementMapper](#statementmapper). |
+| [StatementsMapper](#csharp-repository-statementsmapper) | Statement [StatementMapper](#statement-mapper). |
 | [Mapper](#csharp-repository-mapper) | Get-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`. |
 
 **Methods**
@@ -4709,7 +4709,7 @@ public Repository(BuiltRepository<T> built)
 
 ###### StatementsMapper {#csharp-repository-statementsmapper}
 
-Statement [StatementMapper](#statementmapper).
+Statement [StatementMapper](#statement-mapper).
 
 **Definition**
 
@@ -4843,9 +4843,9 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
 | [Ids](#csharp-repositorybuilderoptions-ids) | Id column names. Default `["id"]`. |
 | [AssignIdentityOnCreate](#csharp-repositorybuilderoptions-assignidentityoncreate) | When true, omit id columns on insert so the provider can generate them. Default `true`. |
 | [Entity](#csharp-repositorybuilderoptions-entity) | Table or entity name. |
-| [Mapping](#csharp-repositorybuilderoptions-mapping) | Row [TypeConverter](#typeconverter). |
+| [Mapping](#csharp-repositorybuilderoptions-mapping) | Row [TypeConverter](#type-converter). |
 | [Mapper](#csharp-repositorybuilderoptions-mapper) | Get-row [Mapper](#mapper). |
-| [StatementMapper](#csharp-repositorybuilderoptions-statementmapper) | [StatementMapper](#statementmapper). |
+| [StatementMapper](#csharp-repositorybuilderoptions-statementmapper) | [StatementMapper](#statement-mapper). |
 | [Columns](#csharp-repositorybuilderoptions-columns) | Column names when mapping is omitted. |
 
 ###### Connection {#csharp-repositorybuilderoptions-connection}
@@ -4890,7 +4890,7 @@ string? Entity { get; init; }
 
 ###### Mapping {#csharp-repositorybuilderoptions-mapping}
 
-Row [TypeConverter](#typeconverter).
+Row [TypeConverter](#type-converter).
 
 **Definition**
 
@@ -4910,7 +4910,7 @@ IMapper<T, T>? Mapper { get; init; }
 
 ###### StatementMapper {#csharp-repositorybuilderoptions-statementmapper}
 
-[StatementMapper](#statementmapper).
+[StatementMapper](#statement-mapper).
 
 **Definition**
 
@@ -4939,8 +4939,8 @@ public sealed record BuiltRepository<T> where T : new()
 | Name | Description |
 | --- | --- |
 | [Connection](#csharp-builtrepository-connection) | Open [IConnection](#connection). |
-| [RowConverter](#csharp-builtrepository-rowconverter) | Row [TypeConverter](#typeconverter). |
-| [StatementMapper](#csharp-builtrepository-statementmapper) | [StatementMapper](#statementmapper). |
+| [RowConverter](#csharp-builtrepository-rowconverter) | Row [TypeConverter](#type-converter). |
+| [StatementMapper](#csharp-builtrepository-statementmapper) | [StatementMapper](#statement-mapper). |
 | [Statements](#csharp-builtrepository-statements) | SQL fragments. |
 | [Ids](#csharp-builtrepository-ids) | Id column names. |
 | [AssignIdentityOnCreate](#csharp-builtrepository-assignidentityoncreate) | When true, omit id columns on insert. |
@@ -4957,7 +4957,7 @@ IConnection Connection { get; init; }
 
 ###### RowConverter {#csharp-builtrepository-rowconverter}
 
-Row [TypeConverter](#typeconverter).
+Row [TypeConverter](#type-converter).
 
 **Definition**
 
@@ -4967,7 +4967,7 @@ TypeConverter<T, Row> RowConverter { get; init; }
 
 ###### StatementMapper {#csharp-builtrepository-statementmapper}
 
-[StatementMapper](#statementmapper).
+[StatementMapper](#statement-mapper).
 
 **Definition**
 
@@ -5199,9 +5199,9 @@ pub struct RepositoryBuilderOptions
 | [ids](#rust-repositorybuilderoptions-ids) | Id column names. |
 | [assign_identity_on_create](#rust-repositorybuilderoptions-assign_identity_on_create) | When true, omit id columns on insert. |
 | [entity](#rust-repositorybuilderoptions-entity) | Table or entity name. |
-| [mapping](#rust-repositorybuilderoptions-mapping) | Row [RowTypeConverter](#rowtypeconverter). |
-| [mapper](#rust-repositorybuilderoptions-mapper) | Get-row [TransformMapper](#transformmapper). |
-| [statement_mapper](#rust-repositorybuilderoptions-statement_mapper) | [StatementMapper](#statementmapper). |
+| [mapping](#rust-repositorybuilderoptions-mapping) | Row [RowTypeConverter](#row-type-converter). |
+| [mapper](#rust-repositorybuilderoptions-mapper) | Get-row [TransformMapper](#transform-mapper). |
+| [statement_mapper](#rust-repositorybuilderoptions-statement_mapper) | [StatementMapper](#statement-mapper). |
 
 ###### with_factory(connection) {#rust-repositorybuilderoptions-with_factory-connection}
 
@@ -5265,7 +5265,7 @@ pub entity: String
 
 ###### mapping {#rust-repositorybuilderoptions-mapping}
 
-Row [RowTypeConverter](#rowtypeconverter).
+Row [RowTypeConverter](#row-type-converter).
 
 **Definition**
 
@@ -5275,7 +5275,7 @@ pub mapping: Option<RowTypeConverter>
 
 ###### mapper {#rust-repositorybuilderoptions-mapper}
 
-Get-row [TransformMapper](#transformmapper).
+Get-row [TransformMapper](#transform-mapper).
 
 **Definition**
 
@@ -5285,7 +5285,7 @@ pub mapper: Option<TransformMapper<Row, Row>>
 
 ###### statement_mapper {#rust-repositorybuilderoptions-statement_mapper}
 
-[StatementMapper](#statementmapper).
+[StatementMapper](#statement-mapper).
 
 **Definition**
 
@@ -5304,8 +5304,8 @@ pub struct BuiltRepository
 | Name | Description |
 | --- | --- |
 | [connection](#rust-builtrepository-connection) | [Connection](#connection). |
-| [row_converter](#rust-builtrepository-row_converter) | [RowTypeConverter](#rowtypeconverter). |
-| [statement_mapper](#rust-builtrepository-statement_mapper) | [StatementMapper](#statementmapper). |
+| [row_converter](#rust-builtrepository-row_converter) | [RowTypeConverter](#row-type-converter). |
+| [statement_mapper](#rust-builtrepository-statement_mapper) | [StatementMapper](#statement-mapper). |
 | [statements](#rust-builtrepository-statements) | SQL fragments. |
 | [ids](#rust-builtrepository-ids) | Id column names. |
 | [assign_identity_on_create](#rust-builtrepository-assign_identity_on_create) | When true, omit id columns on insert. |
@@ -5322,7 +5322,7 @@ pub connection: Arc<dyn Connection>
 
 ###### row_converter {#rust-builtrepository-row_converter}
 
-[RowTypeConverter](#rowtypeconverter).
+[RowTypeConverter](#row-type-converter).
 
 **Definition**
 
@@ -5332,7 +5332,7 @@ pub row_converter: RowTypeConverter
 
 ###### statement_mapper {#rust-builtrepository-statement_mapper}
 
-[StatementMapper](#statementmapper).
+[StatementMapper](#statement-mapper).
 
 **Definition**
 
@@ -5374,7 +5374,7 @@ pub assign_identity_on_create: bool
 
 Update requires at least one non-id field. Missing id values throw.
 
-`Mapper` / `mapper` aliases `StatementMapper.Rows` / `rows`. See [StatementMapper](#statementmapper).
+`Mapper` / `mapper` aliases `StatementMapper.Rows` / `rows`. See [StatementMapper](#statement-mapper).
 
 ### Examples
 
@@ -7716,11 +7716,11 @@ Repository get is convert, then map. `StatementMapper.Rows` / `rows` is the get-
 
 ### See also
 
-- [NameMapper](#namemapper)
-- [NameSourceDestinationMapper](#namesourcedestinationmapper)
-- [TransformMapper](#transformmapper)
-- [FlatToTypeMapper](#flattotypemapper)
-- [StatementMapper](#statementmapper)
+- [NameMapper](#name-mapper)
+- [NameSourceDestinationMapper](#name-source-destination-mapper)
+- [TransformMapper](#transform-mapper)
+- [FlatToTypeMapper](#flat-to-type-mapper)
+- [StatementMapper](#statement-mapper)
 
 ## NameMapper
 
@@ -7895,7 +7895,7 @@ fn reverse_map(&self, name: &str) -> String
 
 ### Remarks
 
-Use [NameSourceDestinationMapper](#namesourcedestinationmapper) when the mapper also holds source and destination labels.
+Use [NameSourceDestinationMapper](#name-source-destination-mapper) when the mapper also holds source and destination labels.
 
 ### Examples
 
@@ -7924,7 +7924,7 @@ const mapping: IMapper<string, string> = mapper;
 
 ## NameSourceDestinationMapper
 
-[NameMapper](#namemapper) that also holds source and destination labels. Names still pass through.
+[NameMapper](#name-mapper) that also holds source and destination labels. Names still pass through.
 
 ### Classes
 
@@ -8262,7 +8262,7 @@ fn destination(&self) -> &str
 
 ### Remarks
 
-Labels are metadata. [NameMapper](#namemapper) still returns names unchanged.
+Labels are metadata. [NameMapper](#name-mapper) still returns names unchanged.
 
 ## TransformMapper
 
@@ -10156,7 +10156,7 @@ pub fn map_sql(mapper: &Option<Arc<TransformMapper<String, String>>>, text: Stri
 
 | Name | Description |
 | --- | --- |
-| `mapper` | optional SQL-text [TransformMapper](#transformmapper) |
+| `mapper` | optional SQL-text [TransformMapper](#transform-mapper) |
 | `text` | finished SQL |
 
 **Returns**
@@ -10210,7 +10210,7 @@ Apply statement mapping in either or both places:
 1. **Builder** — `RepositoryBuilder` maps `Entity` / `entity` and `Columns` / `columns` into `RepositoryStatements`.
 2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` rewrite the finished statement.
 
-C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `stored_procedure` are [TransformMapper](#transformmapper)`<String, String>` over SQL text via `StatementMapper::map_sql`.
+C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `stored_procedure` are [TransformMapper](#transform-mapper)`<String, String>` over SQL text via `StatementMapper::map_sql`.
 
 `Repository.Mapper` / `mapper` aliases `Rows` / `rows`.
 
@@ -10504,11 +10504,11 @@ fn reverse_convert(&self, to: &To) -> Result<From>
 
 ### Remarks
 
-Repository get is convert, then map. See [TransformMapper](#transformmapper) and [Repository](#repository).
+Repository get is convert, then map. See [TransformMapper](#transform-mapper) and [Repository](#repository).
 
 ### See also
 
-- [RowTypeConverter](#rowtypeconverter)
+- [RowTypeConverter](#row-type-converter)
 
 ## RowTypeConverter
 
@@ -10896,7 +10896,7 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 `Types` / `types` is the provider catalog merge. Convert and reverse-convert only consult `Fields` / `fields`.
 
-Repository get is convert, then map. See [TransformMapper](#transformmapper) and [CRUD repository](#crud-repository).
+Repository get is convert, then map. See [TransformMapper](#transform-mapper) and [CRUD repository](#crud-repository).
 
 ### Examples
 

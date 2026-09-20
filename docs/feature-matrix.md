@@ -6,20 +6,20 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 | Feature | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
-| [DatasourceFactory](./sections/datasource-factory.md) | ✅ | ✅ | ✅ |
+| [Datasource Factory](./sections/datasource-factory.md) | ✅ | ✅ | ✅ |
 | [Datasource](./sections/datasource.md) | ✅ | ✅ | ✅ |
 | [Mapper](./sections/mappers.md) | ✅ | ✅ | ✅ |
-| [TypeConverter](./sections/type-converters.md) | ✅ | ✅ | ✅ |
+| [Type Converter](./sections/type-converters.md) | ✅ | ✅ | ✅ |
 | [Connection](./sections/connection.md) | ✅ | ✅ | ✅ |
 | [Transaction](./sections/transaction.md) | ✅ | ✅ | ✅ |
 | [Command](./sections/command.md) | ✅ | ✅ | ✅ |
 | [Reader](./sections/command.md#reader) | ✅ | ✅ | ✅ |
 | [Statements](./sections/builders.md) | ✅ | ✅ | ✅ |
 | [Repository](./sections/repository.md) | ✅ | ✅ | ✅ |
-| [Readonly repository](./sections/readonly-repository.md) | ✅ | ✅ | ✅ |
-| [CRUD repository](./sections/crud-repository.md) | ✅ | ✅ | ✅ |
-| [Enriched repository](./sections/enriched-repository.md) | ✅ | ✅ | ✅ |
-| [Bulk repository](./sections/bulk-repository.md) | ✅ | ✅ | ✅ |
+| [Readonly Repository](./sections/readonly-repository.md) | ✅ | ✅ | ✅ |
+| [CRUD Repository](./sections/crud-repository.md) | ✅ | ✅ | ✅ |
+| [Enriched Repository](./sections/enriched-repository.md) | ✅ | ✅ | ✅ |
+| [Bulk Repository](./sections/bulk-repository.md) | ✅ | ✅ | ✅ |
 
 ## Providers
 
