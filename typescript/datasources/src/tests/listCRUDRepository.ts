@@ -61,7 +61,7 @@ export class ListCRUDRepository<T extends object>
       }, 0) + 1;
   }
 
-  async *get(query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
     for (const item of this.items) if (matches(item, query)) yield item;
   }
 

@@ -25,20 +25,7 @@ pub trait Mapper<TFrom, TTo> {
     fn reverse_map(&self, value: TTo) -> TFrom;
 }
 
-pub trait SourceDestinationMapper {
-    fn source(&self) -> &str;
-    fn destination(&self) -> &str;
-}
-
-pub trait NameMapper {
-    fn map(&self, name: &str) -> String {
-        name.to_string()
-    }
-
-    fn reverse_map(&self, name: &str) -> String {
-        name.to_string()
-    }
-}
+pub trait NameMapper: Mapper<String, String> {}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NameSourceDestinationMapper {
@@ -63,8 +50,6 @@ impl NameSourceDestinationMapper {
     }
 }
 
-impl NameMapper for NameSourceDestinationMapper {}
-
 impl Mapper<String, String> for NameSourceDestinationMapper {
     fn map(&self, name: String) -> String {
         name
@@ -75,15 +60,7 @@ impl Mapper<String, String> for NameSourceDestinationMapper {
     }
 }
 
-impl SourceDestinationMapper for NameSourceDestinationMapper {
-    fn source(&self) -> &str {
-        &self.source
-    }
-
-    fn destination(&self) -> &str {
-        &self.destination
-    }
-}
+impl NameMapper for NameSourceDestinationMapper {}
 
 #[cfg(test)]
 mod tests {
@@ -107,8 +84,8 @@ mod tests {
     #[test]
     fn source_and_destination() {
         let mapper = NameSourceDestinationMapper::new("sql", "rust");
-        assert_eq!(mapper.source(), "sql");
-        assert_eq!(mapper.destination(), "rust");
+        assert_eq!(mapper.source, "sql");
+        assert_eq!(mapper.destination, "rust");
         assert_eq!(mapper.map("user_accounts"), "user_accounts");
         assert_eq!(mapper.reverse_map("UserAccounts"), "UserAccounts");
         assert_eq!(mapper, mapper);

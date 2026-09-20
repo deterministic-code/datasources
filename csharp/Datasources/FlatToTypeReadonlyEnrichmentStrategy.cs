@@ -6,7 +6,7 @@ public sealed class FlatToTypeReadonlyEnrichmentStrategy<T>(
     IMapper<Dictionary<string, MappedValue>, T> hydrate,
     IStatement? command = null) : IReadonlyEnrichmentStrategy<T>
 {
-    public async IAsyncEnumerable<T> Get(
+    public async IAsyncEnumerable<T> Read(
         IReadonlyRepository<T> inner,
         IRepositoryTree tree,
         IStatement? query)
@@ -14,7 +14,7 @@ public sealed class FlatToTypeReadonlyEnrichmentStrategy<T>(
         _ = inner;
         _ = tree;
         var rows = new List<Row>();
-        await foreach (var row in source.Get(command ?? query))
+        await foreach (var row in source.Read(command ?? query))
             rows.Add(row);
         foreach (var item in mapper.Collapse(rows).Select(hydrate.Map))
             yield return item;

@@ -3,13 +3,14 @@ import type { IInsertStatement } from "../builders/IInsertStatement.ts";
 import type { IStoredProcedureStatement } from "../builders/IStoredProcedureStatement.ts";
 import type { IUpdateStatement } from "../builders/IUpdateStatement.ts";
 import type { IQuery } from "../IQuery.ts";
+import type { INameMapper } from "./INameMapper.ts";
 import { NameSourceDestinationMapper } from "./NameSourceDestinationMapper.ts";
 import { TransformMapper } from "./TransformMapper.ts";
 import type { IMapper } from "./IMapper.ts";
 
 export type StatementMapperOptions<T> = {
-  entity?: IMapper<string, string>;
-  columns?: IMapper<string, string>;
+  entity?: INameMapper;
+  columns?: INameMapper;
   rows?: IMapper<T, T>;
   query?: IMapper<IQuery, IQuery>;
   insert?: IMapper<IInsertStatement, IInsertStatement>;
@@ -19,8 +20,8 @@ export type StatementMapperOptions<T> = {
 };
 
 export class StatementMapper<T> implements IMapper<T, T> {
-  readonly entity: IMapper<string, string>;
-  readonly columns: IMapper<string, string>;
+  readonly entity: INameMapper;
+  readonly columns: INameMapper;
   readonly rows: IMapper<T, T>;
   readonly query?: IMapper<IQuery, IQuery>;
   readonly insert?: IMapper<IInsertStatement, IInsertStatement>;

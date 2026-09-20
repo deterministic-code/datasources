@@ -156,7 +156,7 @@ public class DeepCRUDRepositoryTests
         var types = new ListCRUDRepository<TypeRow>(new TypeRow { id = 10, name = "org" });
         var children = new ListCRUDRepository<Child>(new Child { parent_id = 1, label = "a" });
         var repo = Repo(parents, types, children);
-        var item = await repo.GetSingle();
+        var item = await repo.ReadSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal("a", Assert.Single(item.children).label);
     }

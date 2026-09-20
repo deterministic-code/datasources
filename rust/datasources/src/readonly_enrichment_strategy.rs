@@ -9,14 +9,14 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait ReadonlyEnrichmentStrategy: Send + Sync {
-    async fn get(
+    async fn read(
         &self,
         inner: &dyn ReadonlyRepository,
         tree: &RepositoryTree,
         query: Option<&dyn Query>,
     ) -> Result<Vec<Row>>;
 
-    async fn get_where(
+    async fn read_where(
         &self,
         inner: &dyn ReadonlyRepository,
         tree: &RepositoryTree,

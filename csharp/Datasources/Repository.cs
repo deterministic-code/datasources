@@ -35,14 +35,14 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
         return this;
     }
 
-    public override async IAsyncEnumerable<T> Get(IStatement? query = null)
+    public override async IAsyncEnumerable<T> Read(IStatement? query = null)
     {
         var statement = query switch
         {
             IQuery q => q,
             IWhere w => statements.Query(w),
             null => statements.Query(),
-            _ => throw new DatasourceException("Get requires IQuery or IWhere")
+            _ => throw new DatasourceException("Read requires IQuery or IWhere")
         };
         var reader = await Command().ExecuteReader(
             statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);

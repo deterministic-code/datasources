@@ -7,7 +7,7 @@ public sealed class MemoryRepository : ReadonlyRepository<Dictionary<string, Val
     readonly MemoryConnection connection;
     public MemoryRepository(MemoryConnection connection) => this.connection = connection;
 
-    public override async IAsyncEnumerable<Dictionary<string, Value>> Get(IStatement? query = null)
+    public override async IAsyncEnumerable<Dictionary<string, Value>> Read(IStatement? query = null)
     {
         var reader = await new MemoryCommand(connection).ExecuteReader(query?.GetText() ?? "");
         while (await reader.Next())

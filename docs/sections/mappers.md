@@ -1,6 +1,6 @@
 # Mapper
 
-Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository get is convert, then map.
+Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
 
 ## Classes
 
@@ -107,11 +107,11 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ## Remarks
 
-Repository get is convert, then map. `StatementMapper.Rows` / `rows` is the get-row mapper. `Repository.Mapper` / `mapper` aliases it.
+Repository read is convert, then map. `StatementMapper.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
 
 ## See also
 
-- [NameMapper](./name-mapper.md)
+- [INameMapper](./i-name-mapper.md)
 - [NameSourceDestinationMapper](./name-source-destination-mapper.md)
 - [TransformMapper](./transform-mapper.md)
 - [FlatToTypeMapper](./flat-to-type-mapper.md)

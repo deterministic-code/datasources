@@ -36,9 +36,9 @@ export type AffectedExpect = { rowsAffected: number };
 
 export type RepositoryStep = {
   CREATE?: { row: RepositoryRow };
-  GET?: { id: Scalar; expect?: RepositoryRow | null };
+  READ?: { id: Scalar; expect?: RepositoryRow | null };
   QUERY?: { where?: RepositoryRow; expect?: RepositoryRow[] };
-  GETBY?: { where: RepositoryRow; expect?: RepositoryRow | null };
+  READBY?: { where: RepositoryRow; expect?: RepositoryRow | null };
   UPDATE?: { row: RepositoryRow; expect?: AffectedExpect };
   UPDATEBY?: { row: RepositoryRow; where: RepositoryRow; expect?: AffectedExpect };
   DELETE?: { id: Scalar; expect?: AffectedExpect };
@@ -108,9 +108,9 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
       );
       return withStatementSql(StatementBuilder.createInsert(table, fields).getText(), true, type);
     }
-    if (step.GET)
+    if (step.READ)
       return withStatementSql(
-        StatementBuilder.createQuery(table, columns, idWhere(type, step.GET.id)).getText(),
+        StatementBuilder.createQuery(table, columns, idWhere(type, step.READ.id)).getText(),
         false,
         type,
       );
@@ -124,9 +124,9 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
         false,
         type,
       );
-    if (step.GETBY)
+    if (step.READBY)
       return withStatementSql(
-        StatementBuilder.createQuery(table, columns, whereOf(step.GETBY.where)).getText(),
+        StatementBuilder.createQuery(table, columns, whereOf(step.READBY.where)).getText(),
         false,
         type,
       );

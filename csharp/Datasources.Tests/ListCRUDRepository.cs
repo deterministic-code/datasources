@@ -11,7 +11,7 @@ internal sealed class ListCRUDRepository<T> : ReadonlyRepository<T>, ICRUDReposi
         nextId = items.Select(IdInt).DefaultIfEmpty(0).Max() + 1;
     }
 
-    public override async IAsyncEnumerable<T> Get(IStatement? query = null)
+    public override async IAsyncEnumerable<T> Read(IStatement? query = null)
     {
         await Task.Yield();
         foreach (var item in Items)

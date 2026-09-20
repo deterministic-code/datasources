@@ -48,12 +48,12 @@ describe("EnrichedReadonlyRepository", () => {
       "id",
       "name",
     );
-    const items = await collectAsync(repo.get());
+    const items = await collectAsync(repo.read());
     expect(items[0]?.type_name).toBe("person");
     expect(items[1]?.type_name).toBe("");
   });
 
-  it("fills lists and getSingle is enriched", async () => {
+  it("fills lists and readSingle is enriched", async () => {
     const repo = new EnrichedReadonlyRepository(
       new ListReadonlyRepository([parent(1, 10)]),
     );
@@ -78,7 +78,7 @@ describe("EnrichedReadonlyRepository", () => {
       undefined,
       true,
     );
-    const item = await repo.getSingle();
+    const item = await repo.readSingle();
     expect(item?.type_name).toBe("org");
     expect(item?.children.map((child) => child.label)).toEqual(["a", "b"]);
   });
@@ -117,7 +117,7 @@ describe("EnrichedReadonlyRepository", () => {
           "name",
         ),
     );
-    const item = await repo.getSingle();
+    const item = await repo.readSingle();
     expect(item?.type_name).toBe("org");
     expect(item?.children[0]?.type_name).toBe("home");
     expect(item?.children[1]?.type_name).toBe("");
@@ -145,14 +145,14 @@ describe("EnrichedReadonlyRepository", () => {
       undefined,
       true,
     );
-    const items = await collectAsync(repo.get());
+    const items = await collectAsync(repo.read());
     expect(items[0]?.type_name).toBe("");
     expect(items[1]?.children).toBeUndefined();
   });
 
-  it("getSingle is undefined when empty", async () => {
+  it("readSingle is undefined when empty", async () => {
     const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository<Parent>([]));
-    expect(await repo.getSingle()).toBeUndefined();
+    expect(await repo.readSingle()).toBeUndefined();
   });
 
   it("enrich returns the same items", async () => {
@@ -188,7 +188,7 @@ describe("EnrichedReadonlyRepository", () => {
           "name",
         ),
     );
-    const items = await collectAsync(repo.get());
+    const items = await collectAsync(repo.read());
     expect(items[0]?.child).toBe("skip");
     expect((items[1] as Parent & { child?: Child }).child?.type_name).toBe("home");
   });
@@ -204,10 +204,10 @@ describe("EnrichedReadonlyRepository", () => {
       "id",
       "name",
     );
-    await expect(collectAsync(repo.get())).rejects.toThrow(/scalar/);
+    await expect(collectAsync(repo.read())).rejects.toThrow(/scalar/);
   });
 
-  it("hashset uses one get per edge", async () => {
+  it("hashset uses one read per edge", async () => {
     const types = counting(
       new ListReadonlyRepository([
         Object.assign(new TypeRow(), { id: 10, name: "person" }),
@@ -226,11 +226,11 @@ describe("EnrichedReadonlyRepository", () => {
     );
     repo.addEnriched("type_name", "type_id", types, "id", "name");
     repo.addEnriched("children", "id", children, "parent_id", undefined, true);
-    await collectAsync(repo.get());
-    expect(types.gets).toBe(1);
-    expect(types.getSingles).toBe(0);
-    expect(children.gets).toBe(1);
-    expect(children.getSingles).toBe(0);
+    await collectAsync(repo.read());
+    expect(types.reads).toBe(1);
+    expect(types.readSingles).toBe(0);
+    expect(children.reads).toBe(1);
+    expect(children.readSingles).toBe(0);
   });
 
   it("hashset assigns the related row when select is omitted", async () => {
@@ -246,7 +246,7 @@ describe("EnrichedReadonlyRepository", () => {
       ]),
       "id",
     );
-    const items = await collectAsync(repo.get());
+    const items = await collectAsync(repo.read());
     expect(items[0]).toMatchObject({
       type: { id: 10, name: "person" },
     });
@@ -279,7 +279,7 @@ describe("EnrichedReadonlyRepository", () => {
       undefined,
       true,
     );
-    const items = await collectAsync(repo.get());
+    const items = await collectAsync(repo.read());
     expect(items[0]?.type_name).toBe("person");
     expect(items[0]?.children.map((child) => child.label)).toEqual(["a", "b"]);
     expect(items[1]?.type_name).toBe("");
@@ -295,8 +295,8 @@ describe("EnrichedReadonlyRepository", () => {
     await strategy.apply(
       {
         type: Object,
-        getSingle: async () => undefined,
-        async *get() {},
+        readSingle: async () => undefined,
+        async *read() {},
       },
       { into: "children", from: "id", by: "parent_id", many: true },
       [{}],
@@ -304,8 +304,8 @@ describe("EnrichedReadonlyRepository", () => {
     await strategy.apply(
       {
         type: Object,
-        getSingle: async () => undefined,
-        async *get() {
+        readSingle: async () => undefined,
+        async *read() {
           yield { label: "missing" };
           yield { parent_id: null, label: "n" };
           yield { parent_id: undefined, label: "u" };
@@ -337,7 +337,7 @@ describe("EnrichedReadonlyRepository", () => {
       new ListReadonlyRepository<Parent>([]),
       strategy,
     );
-    const items = await collectAsync(repo.get());
+    const items = await collectAsync(repo.read());
     expect(items.map((item) => item.id)).toEqual([1, 2]);
     expect(items.map((item) => item.type_name)).toEqual(["person", "org"]);
     await strategy.enrich(repo.tree, items);
@@ -351,23 +351,23 @@ describe("EnrichedReadonlyRepository", () => {
 
 const counting = <T extends object>(
   inner: IReadonlyRepository<T>,
-): IReadonlyRepository<T> & { gets: number; getSingles: number } => {
-  const state = { gets: 0, getSingles: 0 };
+): IReadonlyRepository<T> & { reads: number; readSingles: number } => {
+  const state = { reads: 0, readSingles: 0 };
   return {
     type: inner.type,
-    get gets() {
-      return state.gets;
+    get reads() {
+      return state.reads;
     },
-    get getSingles() {
-      return state.getSingles;
+    get readSingles() {
+      return state.readSingles;
     },
-    getSingle: async (query?: IQuery | IWhere) => {
-      state.getSingles += 1;
-      return inner.getSingle(query);
+    readSingle: async (query?: IQuery | IWhere) => {
+      state.readSingles += 1;
+      return inner.readSingle(query);
     },
-    async *get(query?: IQuery | IWhere) {
-      state.gets += 1;
-      yield* inner.get(query);
+    async *read(query?: IQuery | IWhere) {
+      state.reads += 1;
+      yield* inner.read(query);
     },
   };
 };

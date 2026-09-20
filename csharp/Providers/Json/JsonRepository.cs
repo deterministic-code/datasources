@@ -7,7 +7,7 @@ public sealed class JsonRepository : ReadonlyRepository<Dictionary<string, Value
     readonly JsonConnection connection;
     public JsonRepository(JsonConnection connection) => this.connection = connection;
 
-    public override async IAsyncEnumerable<Dictionary<string, Value>> Get(IStatement? query = null)
+    public override async IAsyncEnumerable<Dictionary<string, Value>> Read(IStatement? query = null)
     {
         var reader = await new JsonCommand(connection).ExecuteReader(query?.GetText() ?? "");
         while (await reader.Next())

@@ -18,13 +18,13 @@ export class FlatToTypeReadonlyEnrichmentStrategy<T extends object>
     private readonly command?: IQuery | IWhere,
   ) {}
 
-  async *get(
+  async *read(
     _inner: IReadonlyRepository<T>,
     _tree: IRepositoryTree,
     query?: IQuery | IWhere,
   ): AsyncIterable<T> {
     const rows: Cells[] = [];
-    for await (const row of this.source.get(this.command ?? query)) rows.push(row);
+    for await (const row of this.source.read(this.command ?? query)) rows.push(row);
     for (const item of this.mapper.collapse(rows).map(this.hydrate.map))
       yield item;
   }

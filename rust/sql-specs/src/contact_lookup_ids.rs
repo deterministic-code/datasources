@@ -12,7 +12,7 @@ async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> 
     options.mapping = Some(RowTypeConverter::new(vec!["id".into(), "name".into()]));
     let repo = Repository::new(options)?;
     let row = repo
-        .get_single_where(&WhereBuilder::equals("name", Value::from(name)))
+        .read_single_where(&WhereBuilder::equals("name", Value::from(name)))
         .await?
         .ok_or_else(|| DatasourceError::message(format!("{entity} '{name}' missing")))?;
     match row.get("id") {

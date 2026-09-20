@@ -16,7 +16,7 @@ export class StubRepository<T = unknown> extends ReadonlyRepository<T> implement
     super(type);
   }
 
-  async *get(_query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(_query?: IQuery | IWhere): AsyncIterable<T> {
     notImplemented(this.provider);
   }
 

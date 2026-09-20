@@ -4,13 +4,13 @@ namespace Datasources;
 
 public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T>
 {
-    public async IAsyncEnumerable<T> Get(
+    public async IAsyncEnumerable<T> Read(
         IReadonlyRepository<T> inner,
         IRepositoryTree tree,
         IStatement? query)
     {
         var items = new List<T>();
-        await foreach (var item in inner.Get(query))
+        await foreach (var item in inner.Read(query))
             items.Add(item);
         await Enrich(tree, items);
         foreach (var item in items)
@@ -39,7 +39,7 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
             var cacheKey = RepositoryTreeNode.KeyOf(key);
             if (!cache.TryGetValue(cacheKey, out var related))
             {
-                related = await via.GetSingle(WhereBuilder.Equals(enrichment.By, Value.From(key)));
+                related = await via.ReadSingle(WhereBuilder.Equals(enrichment.By, Value.From(key)));
                 cache[cacheKey] = related;
             }
             if (related is null) continue;
@@ -60,7 +60,7 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
             var key = RepositoryTreeNode.Get(parent, enrichment.From);
             if (key is null) continue;
             var related = new List<TRelated>();
-            await foreach (var item in via.Get(WhereBuilder.Equals(enrichment.By, Value.From(key))))
+            await foreach (var item in via.Read(WhereBuilder.Equals(enrichment.By, Value.From(key))))
                 related.Add(item);
             RepositoryTreeNode.Set(parent, enrichment.Into, related);
         }

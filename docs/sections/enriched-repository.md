@@ -1,10 +1,10 @@
 # Enriched repository
 
-A read-only wrapper fills properties already on `T` from related repositories. This is a post-Get step (after convert-then-map). It does not join or collapse rows.
+A read-only wrapper fills properties already on `T` from related repositories. This is a post-Read step (after convert-then-map). It does not join or collapse rows.
 
-Lookups use `GetSingle` / `get_single_where` (cached per distinct key). Lists use `Get` / `get_where`. Missing lookups leave the destination default.
+Lookups use `ReadSingle` / `read_single_where` (cached per distinct key). Lists use `Read` / `read_where`. Missing lookups leave the destination default.
 
-`DeepCRUDRepository` is the write side of the same tree. `Get` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
+`DeepCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
 
 - **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
@@ -115,12 +115,12 @@ enrich(items: T[]): Promise<T[]>
 
 **Returns** `Promise<T[]>`
 
-##### get(query?)
+##### read(query?)
 
 Reads through the inner repository, then enriches.
 
 ```typescript
-get(query?: IQuery | IWhere): AsyncIterable<T>
+read(query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
 - `query` — optional query or where
@@ -337,12 +337,12 @@ interface IReadonlyEnrichmentStrategy<T extends object> extends IReadonlyEnrichm
 
 **Methods**
 
-##### get(inner, tree, query?)
+##### read(inner, tree, query?)
 
 Reads through `inner`, then enriches.
 
 ```typescript
-get(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere): AsyncIterable<T>
+read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
 - `inner` — [IReadonlyRepository](./readonly-repository.md)
@@ -458,12 +458,12 @@ public Task Enrich(IList<T> items)
 
 - `items` — parents to fill
 
-##### Get(query)
+##### Read(query)
 
 Reads through the inner repository, then enriches.
 
 ```csharp
-public override IAsyncEnumerable<T> Get(IStatement? query = null)
+public override IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
 - `query` — optional statement or where
@@ -680,12 +680,12 @@ public interface IReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentBinder
 
 **Methods**
 
-##### Get(inner, tree, query)
+##### Read(inner, tree, query)
 
 Reads through `inner`, then enriches.
 
 ```csharp
-IAsyncEnumerable<T> Get(IReadonlyRepository<T> inner, IRepositoryTree tree, IStatement? query)
+IAsyncEnumerable<T> Read(IReadonlyRepository<T> inner, IRepositoryTree tree, IStatement? query)
 ```
 
 - `inner` — [IReadonlyRepository](./readonly-repository.md)
@@ -1048,12 +1048,12 @@ pub trait ReadonlyEnrichmentStrategy
 
 **Methods**
 
-##### get(inner, tree, query)
+##### read(inner, tree, query)
 
 Reads through `inner`, then enriches.
 
 ```rust
-async fn get(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn Query>) -> Result<Vec<Row>>
+async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn Query>) -> Result<Vec<Row>>
 ```
 
 - `inner` — [ReadonlyRepository](./readonly-repository.md)

@@ -1,14 +1,11 @@
-import type { ISourceDestinationMapper } from "./ISourceDestinationMapper.ts";
-import { NameMapper } from "./NameMapper.ts";
+import type { INameMapper } from "./INameMapper.ts";
 
-export class NameSourceDestinationMapper
-  extends NameMapper
-  implements ISourceDestinationMapper
-{
+export class NameSourceDestinationMapper implements INameMapper {
   constructor(
     readonly source: string,
     readonly destination: string,
-  ) {
-    super();
-  }
+  ) {}
+
+  map = (name: string) => name;
+  reverseMap = (name: string) => name;
 }

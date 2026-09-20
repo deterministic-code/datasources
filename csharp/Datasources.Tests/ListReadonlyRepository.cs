@@ -7,7 +7,7 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T>
     readonly IReadOnlyList<T> items;
     public ListReadonlyRepository(params T[] items) => this.items = items;
 
-    public override async IAsyncEnumerable<T> Get(IStatement? query = null)
+    public override async IAsyncEnumerable<T> Read(IStatement? query = null)
     {
         await Task.Yield();
         foreach (var item in items)

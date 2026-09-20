@@ -144,7 +144,7 @@ See [Command](#command) for middleware and `execute`.
 
 ### Enriched CRUD repository
 
-A `DeepCRUDRepository` wraps a CRUD repository, fills related fields after `get`, and writes nested `many` children on create / update / delete.
+A `DeepCRUDRepository` wraps a CRUD repository, fills related fields after `read`, and writes nested `many` children on create / update / delete.
 
 ##### C#
 
@@ -154,7 +154,7 @@ contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name"
 contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
     nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
 
-var loaded = await contacts.GetSingle(WhereBuilder.Equals("id", 10));
+var loaded = await contacts.ReadSingle(WhereBuilder.Equals("id", 10));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
 ```
 
@@ -168,7 +168,7 @@ contacts
         node.include(address_types, "address_type_name", "address_type_id", "id", Some("name".into()), false);
     });
 
-let loaded = contacts.get_single_where(&WhereBuilder::equals("id", 10)).await?;
+let loaded = contacts.read_single_where(&WhereBuilder::equals("id", 10)).await?;
 contacts.create(contact).await?;
 ```
 
@@ -181,7 +181,7 @@ contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true
   node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
 );
 
-const loaded = await contacts.getSingle(WhereBuilder.equals("id", 10));
+const loaded = await contacts.readSingle(WhereBuilder.equals("id", 10));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 
@@ -189,7 +189,7 @@ See [Repository](#repository) for readonly, CRUD, and bulk.
 
 ### Mappers
 
-`TransformMapper` reshapes an already-converted object. Repository get is convert, then map.
+`TransformMapper` reshapes an already-converted object. Repository read is convert, then map.
 
 ##### C#
 
@@ -223,7 +223,7 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [Mapper](#mapper) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
+See [Mapper](#mapper) for `INameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
 
 ### Type Converter
 
@@ -330,7 +330,7 @@ Short recipes for the usual paths. Add samples here as Repository and related ty
 
 ### Create a repository
 
-TODO: register a provider, create a connection, `createRepository`, then `create` / `get` / `update` / `delete`.
+TODO: register a provider, create a connection, `createRepository`, then `create` / `read` / `update` / `delete`.
 
 ### Run a command
 
@@ -3627,7 +3627,7 @@ See [Datasource](#datasource) for `CreateRepository` / `createRepository`.
 
 ## Readonly repository
 
-Get-only typed read over a connection. `GetSingle` / `getSingle` / `get_single` returns the first row or none. `Get` / `get` yields every row.
+Read-only typed read over a connection. `ReadSingle` / `readSingle` / `read_single` returns the first row or none. `Read` / `read` yields every row.
 
 ### Classes
 
@@ -3643,17 +3643,17 @@ interface IReadonlyRepository<T = unknown> extends IRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [getSingle(query?)](#typescript-ireadonlyrepository-getsingle-query) | Returns the first item, or `undefined` when the result is empty. |
-| [get(query?)](#typescript-ireadonlyrepository-get-query) | Yields every item. |
+| [readSingle(query?)](#typescript-ireadonlyrepository-readsingle-query) | Returns the first item, or `undefined` when the result is empty. |
+| [read(query?)](#typescript-ireadonlyrepository-read-query) | Yields every item. |
 
-###### getSingle(query?) {#typescript-ireadonlyrepository-getsingle-query}
+###### readSingle(query?) {#typescript-ireadonlyrepository-readsingle-query}
 
 Returns the first item, or `undefined` when the result is empty.
 
 **Definition**
 
 ```typescript
-getSingle(query?: IQuery | IWhere): Promise<T | undefined>
+readSingle(query?: IQuery | IWhere): Promise<T | undefined>
 ```
 
 **Parameters**
@@ -3666,14 +3666,14 @@ getSingle(query?: IQuery | IWhere): Promise<T | undefined>
 
 `Promise<T | undefined>`
 
-###### get(query?) {#typescript-ireadonlyrepository-get-query}
+###### read(query?) {#typescript-ireadonlyrepository-read-query}
 
 Yields every item.
 
 **Definition**
 
 ```typescript
-get(query?: IQuery | IWhere): AsyncIterable<T>
+read(query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -3708,8 +3708,8 @@ abstract class ReadonlyRepository<T> implements IReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [get(query?)](#typescript-readonlyrepository-get-query) | Yields every item. Implement in a subclass. |
-| [getSingle(query?)](#typescript-readonlyrepository-getsingle-query) | Returns the first item from [get](#typescript-readonlyrepository-get-query), or `undefined`. |
+| [read(query?)](#typescript-readonlyrepository-read-query) | Yields every item. Implement in a subclass. |
+| [readSingle(query?)](#typescript-readonlyrepository-readsingle-query) | Returns the first item from [read](#typescript-readonlyrepository-read-query), or `undefined`. |
 
 ###### ReadonlyRepository(type) {#typescript-readonlyrepository-readonlyrepository-type}
 
@@ -3737,14 +3737,14 @@ Item constructor the repository exposes.
 readonly type: Constructable<T>
 ```
 
-###### get(query?) {#typescript-readonlyrepository-get-query}
+###### read(query?) {#typescript-readonlyrepository-read-query}
 
 Yields every item. Implement in a subclass.
 
 **Definition**
 
 ```typescript
-abstract get(query?: IQuery | IWhere): AsyncIterable<T>
+abstract read(query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -3757,14 +3757,14 @@ abstract get(query?: IQuery | IWhere): AsyncIterable<T>
 
 `AsyncIterable<T>`
 
-###### getSingle(query?) {#typescript-readonlyrepository-getsingle-query}
+###### readSingle(query?) {#typescript-readonlyrepository-readsingle-query}
 
-Returns the first item from [get](#typescript-readonlyrepository-get-query), or `undefined`.
+Returns the first item from [read](#typescript-readonlyrepository-read-query), or `undefined`.
 
 **Definition**
 
 ```typescript
-getSingle(query?: IQuery | IWhere): Promise<T | undefined>
+readSingle(query?: IQuery | IWhere): Promise<T | undefined>
 ```
 
 **Parameters**
@@ -3789,17 +3789,17 @@ public interface IReadonlyRepository<T> : IRepository
 
 | Name | Description |
 | --- | --- |
-| [GetSingle(query)](#csharp-ireadonlyrepository-getsingle-query) | Returns the first item, or `default` when the result is empty. |
-| [Get(query)](#csharp-ireadonlyrepository-get-query) | Yields every item. |
+| [ReadSingle(query)](#csharp-ireadonlyrepository-readsingle-query) | Returns the first item, or `default` when the result is empty. |
+| [Read(query)](#csharp-ireadonlyrepository-read-query) | Yields every item. |
 
-###### GetSingle(query) {#csharp-ireadonlyrepository-getsingle-query}
+###### ReadSingle(query) {#csharp-ireadonlyrepository-readsingle-query}
 
 Returns the first item, or `default` when the result is empty.
 
 **Definition**
 
 ```csharp
-Task<T?> GetSingle(IStatement? query = null)
+Task<T?> ReadSingle(IStatement? query = null)
 ```
 
 **Parameters**
@@ -3812,14 +3812,14 @@ Task<T?> GetSingle(IStatement? query = null)
 
 `Task<T?>`
 
-###### Get(query) {#csharp-ireadonlyrepository-get-query}
+###### Read(query) {#csharp-ireadonlyrepository-read-query}
 
 Yields every item.
 
 **Definition**
 
 ```csharp
-IAsyncEnumerable<T> Get(IStatement? query = null)
+IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
 **Parameters**
@@ -3848,8 +3848,8 @@ public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [Get(query)](#csharp-readonlyrepository-get-query) | Yields every item. Implement in a subclass. |
-| [GetSingle(query)](#csharp-readonlyrepository-getsingle-query) | Returns the first item from [Get](#csharp-readonlyrepository-get-query), or `default`. |
+| [Read(query)](#csharp-readonlyrepository-read-query) | Yields every item. Implement in a subclass. |
+| [ReadSingle(query)](#csharp-readonlyrepository-readsingle-query) | Returns the first item from [Read](#csharp-readonlyrepository-read-query), or `default`. |
 
 ###### Type {#csharp-readonlyrepository-type}
 
@@ -3861,14 +3861,14 @@ Item CLR type. `typeof(T)`.
 Type Type { get; }
 ```
 
-###### Get(query) {#csharp-readonlyrepository-get-query}
+###### Read(query) {#csharp-readonlyrepository-read-query}
 
 Yields every item. Implement in a subclass.
 
 **Definition**
 
 ```csharp
-public abstract IAsyncEnumerable<T> Get(IStatement? query = null)
+public abstract IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
 **Parameters**
@@ -3881,14 +3881,14 @@ public abstract IAsyncEnumerable<T> Get(IStatement? query = null)
 
 `IAsyncEnumerable<T>`
 
-###### GetSingle(query) {#csharp-readonlyrepository-getsingle-query}
+###### ReadSingle(query) {#csharp-readonlyrepository-readsingle-query}
 
-Returns the first item from [Get](#csharp-readonlyrepository-get-query), or `default`.
+Returns the first item from [Read](#csharp-readonlyrepository-read-query), or `default`.
 
 **Definition**
 
 ```csharp
-public virtual Task<T?> GetSingle(IStatement? query = null)
+public virtual Task<T?> ReadSingle(IStatement? query = null)
 ```
 
 **Parameters**
@@ -3914,10 +3914,10 @@ pub trait ReadonlyRepository
 | Name | Description |
 | --- | --- |
 | [entity_type()](#rust-readonlyrepository-entity_type) | Item `TypeId`. Defaults to `Row`. |
-| [get_single(query)](#rust-readonlyrepository-get_single-query) | Returns the first row, or `None` when the result is empty. |
-| [get(query)](#rust-readonlyrepository-get-query) | Returns every row. |
-| [get_single_where(where_clause)](#rust-readonlyrepository-get_single_where-where_clause) | Returns the first row matching a where. |
-| [get_where(where_clause)](#rust-readonlyrepository-get_where-where_clause) | Returns every row matching a where. |
+| [read_single(query)](#rust-readonlyrepository-read_single-query) | Returns the first row, or `None` when the result is empty. |
+| [read(query)](#rust-readonlyrepository-read-query) | Returns every row. |
+| [read_single_where(where_clause)](#rust-readonlyrepository-read_single_where-where_clause) | Returns the first row matching a where. |
+| [read_where(where_clause)](#rust-readonlyrepository-read_where-where_clause) | Returns every row matching a where. |
 
 ###### entity_type() {#rust-readonlyrepository-entity_type}
 
@@ -3933,14 +3933,14 @@ fn entity_type(&self) -> TypeId
 
 `TypeId`
 
-###### get_single(query) {#rust-readonlyrepository-get_single-query}
+###### read_single(query) {#rust-readonlyrepository-read_single-query}
 
 Returns the first row, or `None` when the result is empty.
 
 **Definition**
 
 ```rust
-async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>
+async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>
 ```
 
 **Parameters**
@@ -3953,14 +3953,14 @@ async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>
 
 `Result<Option<Row>>`
 
-###### get(query) {#rust-readonlyrepository-get-query}
+###### read(query) {#rust-readonlyrepository-read-query}
 
 Returns every row.
 
 **Definition**
 
 ```rust
-async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>
+async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>
 ```
 
 **Parameters**
@@ -3973,14 +3973,14 @@ async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>
 
 `Result<Vec<Row>>`
 
-###### get_single_where(where_clause) {#rust-readonlyrepository-get_single_where-where_clause}
+###### read_single_where(where_clause) {#rust-readonlyrepository-read_single_where-where_clause}
 
 Returns the first row matching a where.
 
 **Definition**
 
 ```rust
-async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>>
+async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>>
 ```
 
 **Parameters**
@@ -3993,14 +3993,14 @@ async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>
 
 `Result<Option<Row>>`
 
-###### get_where(where_clause) {#rust-readonlyrepository-get_where-where_clause}
+###### read_where(where_clause) {#rust-readonlyrepository-read_where-where_clause}
 
 Returns every row matching a where.
 
 **Definition**
 
 ```rust
-async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>
+async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>
 ```
 
 **Parameters**
@@ -4015,13 +4015,13 @@ async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>
 
 ### Remarks
 
-Repository get is convert, then map. See [TypeConverter](#type-converter) and [Mapper](#mapper).
+Repository read is convert, then map. See [TypeConverter](#type-converter) and [Mapper](#mapper).
 
-C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits where into `get_where` / `get_single_where`.
+C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits where into `read_where` / `read_single_where`.
 
 ### Examples
 
-#### Get and get single
+#### Read and read single
 
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L62-L72)
 
@@ -4030,7 +4030,7 @@ var (repo, command) = Create();
 repo.AddMiddleware(new PassMiddleware());
 command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
 var rows = new List<UserRow>();
-await foreach (var row in repo.Get())
+await foreach (var row in repo.Read())
     rows.Add(row);
 Assert.Single(rows);
 ```
@@ -4038,7 +4038,7 @@ Assert.Single(rows);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L845-L851)
 
 ```rust
-let rows = repo.get(None).await.unwrap();
+let rows = repo.read(None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
@@ -4050,14 +4050,14 @@ command.reader = new MockReader([
   { id: 1, name: "a" },
 ]);
 const rows: Cells[] = [];
-for await (const row of repo.get()) rows.push(row);
+for await (const row of repo.read()) rows.push(row);
 ```
 
 ## CRUD repository
 
 [Readonly repository](#readonly-repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](#row-type-converter).
 
-Get is convert, then map. Writes reverse-map, then reverse-convert.
+Read is convert, then map. Writes reverse-map, then reverse-convert.
 
 ### Classes
 
@@ -4159,7 +4159,7 @@ class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDReposi
 | --- | --- |
 | [rowConverter](#typescript-repository-rowconverter) | Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper). |
 | [statementsMapper](#typescript-repository-statementsmapper) | Statement [StatementMapper](#statement-mapper). |
-| [mapper](#typescript-repository-mapper) | Get-row [Mapper](#mapper). Alias of `statementsMapper.rows`. |
+| [mapper](#typescript-repository-mapper) | Read-row [Mapper](#mapper). Alias of `statementsMapper.rows`. |
 | [statements](#typescript-repository-statements) | SQL fragments for query / insert / update / delete. |
 
 **Methods**
@@ -4167,7 +4167,7 @@ class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDReposi
 | Name | Description |
 | --- | --- |
 | [addMiddleware(middleware)](#typescript-repository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
-| [get(query?)](#typescript-repository-get-query) | Reads rows through [rowConverter](#typescript-repository-rowconverter) then [mapper](#typescript-repository-mapper). |
+| [read(query?)](#typescript-repository-read-query) | Reads rows through [rowConverter](#typescript-repository-rowconverter) then [mapper](#typescript-repository-mapper). |
 | [create(item)](#typescript-repository-create-item) | Inserts one item. |
 | [update(item, byWhere?)](#typescript-repository-update-item-bywhere) | Updates one item. |
 | [delete(item, byWhere?)](#typescript-repository-delete-item-bywhere) | Deletes one item. |
@@ -4243,7 +4243,7 @@ readonly statementsMapper: StatementMapper<T>
 
 ###### mapper {#typescript-repository-mapper}
 
-Get-row [Mapper](#mapper). Alias of `statementsMapper.rows`.
+Read-row [Mapper](#mapper). Alias of `statementsMapper.rows`.
 
 **Definition**
 
@@ -4281,14 +4281,14 @@ addMiddleware(middleware: ICommandMiddleware): this
 
 `this`
 
-###### get(query?) {#typescript-repository-get-query}
+###### read(query?) {#typescript-repository-read-query}
 
 Reads rows through [rowConverter](#typescript-repository-rowconverter) then [mapper](#typescript-repository-mapper).
 
 **Definition**
 
 ```typescript
-get(query?: IQuery | IWhere): AsyncIterable<T>
+read(query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -4378,7 +4378,7 @@ type RepositoryBuilderOptions<T = Cells>
 | [assignIdentityOnCreate](#typescript-repositorybuilderoptions-assignidentityoncreate) | When true, omit id columns on insert so the provider can generate them. Default `true`. |
 | [entity](#typescript-repositorybuilderoptions-entity) | Table or entity name. |
 | [mapping](#typescript-repositorybuilderoptions-mapping) | Row [TypeConverter](#type-converter). |
-| [mapper](#typescript-repositorybuilderoptions-mapper) | Get-row [Mapper](#mapper). |
+| [mapper](#typescript-repositorybuilderoptions-mapper) | Read-row [Mapper](#mapper). |
 | [statementMapper](#typescript-repositorybuilderoptions-statementmapper) | [StatementMapper](#statement-mapper). |
 | [columns](#typescript-repositorybuilderoptions-columns) | Column names when mapping is omitted. |
 
@@ -4434,7 +4434,7 @@ mapping?: TypeConverter<T, Cells>
 
 ###### mapper {#typescript-repositorybuilderoptions-mapper}
 
-Get-row [Mapper](#mapper).
+Read-row [Mapper](#mapper).
 
 **Definition**
 
@@ -4647,14 +4647,14 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
 | Name | Description |
 | --- | --- |
 | [StatementsMapper](#csharp-repository-statementsmapper) | Statement [StatementMapper](#statement-mapper). |
-| [Mapper](#csharp-repository-mapper) | Get-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`. |
+| [Mapper](#csharp-repository-mapper) | Read-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
 | [AddMiddleware(middleware)](#csharp-repository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
-| [Get(query)](#csharp-repository-get-query) | Reads rows through the row converter then [Mapper](#csharp-repository-mapper). |
+| [Read(query)](#csharp-repository-read-query) | Reads rows through the row converter then [Mapper](#csharp-repository-mapper). |
 | [Create(item)](#csharp-repository-create-item) | Inserts one item. |
 | [Update(item, byWhere)](#csharp-repository-update-item-bywhere) | Updates one item. |
 | [Delete(item, byWhere)](#csharp-repository-delete-item-bywhere) | Deletes one item. |
@@ -4719,7 +4719,7 @@ StatementMapper<T> StatementsMapper { get; }
 
 ###### Mapper {#csharp-repository-mapper}
 
-Get-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`.
+Read-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`.
 
 **Definition**
 
@@ -4747,14 +4747,14 @@ public Repository<T> AddMiddleware(ICommandMiddleware middleware)
 
 [Repository](#csharp-repository)`<T>`
 
-###### Get(query) {#csharp-repository-get-query}
+###### Read(query) {#csharp-repository-read-query}
 
 Reads rows through the row converter then [Mapper](#csharp-repository-mapper).
 
 **Definition**
 
 ```csharp
-public override IAsyncEnumerable<T> Get(IStatement? query = null)
+public override IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
 **Parameters**
@@ -4844,7 +4844,7 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
 | [AssignIdentityOnCreate](#csharp-repositorybuilderoptions-assignidentityoncreate) | When true, omit id columns on insert so the provider can generate them. Default `true`. |
 | [Entity](#csharp-repositorybuilderoptions-entity) | Table or entity name. |
 | [Mapping](#csharp-repositorybuilderoptions-mapping) | Row [TypeConverter](#type-converter). |
-| [Mapper](#csharp-repositorybuilderoptions-mapper) | Get-row [Mapper](#mapper). |
+| [Mapper](#csharp-repositorybuilderoptions-mapper) | Read-row [Mapper](#mapper). |
 | [StatementMapper](#csharp-repositorybuilderoptions-statementmapper) | [StatementMapper](#statement-mapper). |
 | [Columns](#csharp-repositorybuilderoptions-columns) | Column names when mapping is omitted. |
 
@@ -4900,7 +4900,7 @@ TypeConverter<T, Row>? Mapping { get; init; }
 
 ###### Mapper {#csharp-repositorybuilderoptions-mapper}
 
-Get-row [Mapper](#mapper).
+Read-row [Mapper](#mapper).
 
 **Definition**
 
@@ -5200,7 +5200,7 @@ pub struct RepositoryBuilderOptions
 | [assign_identity_on_create](#rust-repositorybuilderoptions-assign_identity_on_create) | When true, omit id columns on insert. |
 | [entity](#rust-repositorybuilderoptions-entity) | Table or entity name. |
 | [mapping](#rust-repositorybuilderoptions-mapping) | Row [RowTypeConverter](#row-type-converter). |
-| [mapper](#rust-repositorybuilderoptions-mapper) | Get-row [TransformMapper](#transform-mapper). |
+| [mapper](#rust-repositorybuilderoptions-mapper) | Read-row [TransformMapper](#transform-mapper). |
 | [statement_mapper](#rust-repositorybuilderoptions-statement_mapper) | [StatementMapper](#statement-mapper). |
 
 ###### with_factory(connection) {#rust-repositorybuilderoptions-with_factory-connection}
@@ -5275,7 +5275,7 @@ pub mapping: Option<RowTypeConverter>
 
 ###### mapper {#rust-repositorybuilderoptions-mapper}
 
-Get-row [TransformMapper](#transform-mapper).
+Read-row [TransformMapper](#transform-mapper).
 
 **Definition**
 
@@ -5404,11 +5404,11 @@ await repo.create(obj);
 
 ## Enriched repository
 
-A read-only wrapper fills properties already on `T` from related repositories. This is a post-Get step (after convert-then-map). It does not join or collapse rows.
+A read-only wrapper fills properties already on `T` from related repositories. This is a post-Read step (after convert-then-map). It does not join or collapse rows.
 
-Lookups use `GetSingle` / `get_single_where` (cached per distinct key). Lists use `Get` / `get_where`. Missing lookups leave the destination default.
+Lookups use `ReadSingle` / `read_single_where` (cached per distinct key). Lists use `Read` / `read_where`. Missing lookups leave the destination default.
 
-`DeepCRUDRepository` is the write side of the same tree. `Get` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
+`DeepCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
 
 - **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
@@ -5503,7 +5503,7 @@ class EnrichedReadonlyRepository<T extends object> extends ReadonlyRepository<T>
 | --- | --- |
 | [addEnriched(into, from, via, by, select?, many?, nest?)](#typescript-enrichedreadonlyrepository-addenriched-into-from-via-by-select-many-nest) | Adds a related fill. |
 | [enrich(items)](#typescript-enrichedreadonlyrepository-enrich-items) | Fills `items` in place from the tree. |
-| [get(query?)](#typescript-enrichedreadonlyrepository-get-query) | Reads through the inner repository, then enriches. |
+| [read(query?)](#typescript-enrichedreadonlyrepository-read-query) | Reads through the inner repository, then enriches. |
 
 ###### EnrichedReadonlyRepository(inner, strategy?) {#typescript-enrichedreadonlyrepository-enrichedreadonlyrepository-inner-strategy}
 
@@ -5578,14 +5578,14 @@ enrich(items: T[]): Promise<T[]>
 
 `Promise<T[]>`
 
-###### get(query?) {#typescript-enrichedreadonlyrepository-get-query}
+###### read(query?) {#typescript-enrichedreadonlyrepository-read-query}
 
 Reads through the inner repository, then enriches.
 
 **Definition**
 
 ```typescript
-get(query?: IQuery | IWhere): AsyncIterable<T>
+read(query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -5909,17 +5909,17 @@ interface IReadonlyEnrichmentStrategy<T extends object> extends IReadonlyEnrichm
 
 | Name | Description |
 | --- | --- |
-| [get(inner, tree, query?)](#typescript-ireadonlyenrichmentstrategy-get-inner-tree-query) | Reads through `inner`, then enriches. |
+| [read(inner, tree, query?)](#typescript-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
 | [enrich(tree, items)](#typescript-ireadonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
 
-###### get(inner, tree, query?) {#typescript-ireadonlyenrichmentstrategy-get-inner-tree-query}
+###### read(inner, tree, query?) {#typescript-ireadonlyenrichmentstrategy-read-inner-tree-query}
 
 Reads through `inner`, then enriches.
 
 **Definition**
 
 ```typescript
-get(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere): AsyncIterable<T>
+read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -6032,7 +6032,7 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
 | --- | --- |
 | [AddEnriched(into, from, via, by, select, many, nest)](#csharp-enrichedreadonlyrepository-addenriched-into-from-via-by-select-many-nest) | Adds a related fill. |
 | [Enrich(items)](#csharp-enrichedreadonlyrepository-enrich-items) | Fills `items` in place from the tree. |
-| [Get(query)](#csharp-enrichedreadonlyrepository-get-query) | Reads through the inner repository, then enriches. |
+| [Read(query)](#csharp-enrichedreadonlyrepository-read-query) | Reads through the inner repository, then enriches. |
 
 ###### EnrichedReadonlyRepository(inner, strategy) {#csharp-enrichedreadonlyrepository-enrichedreadonlyrepository-inner-strategy}
 
@@ -6103,14 +6103,14 @@ public Task Enrich(IList<T> items)
 | --- | --- |
 | `items` | parents to fill |
 
-###### Get(query) {#csharp-enrichedreadonlyrepository-get-query}
+###### Read(query) {#csharp-enrichedreadonlyrepository-read-query}
 
 Reads through the inner repository, then enriches.
 
 **Definition**
 
 ```csharp
-public override IAsyncEnumerable<T> Get(IStatement? query = null)
+public override IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
 **Parameters**
@@ -6434,17 +6434,17 @@ public interface IReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentBinder
 
 | Name | Description |
 | --- | --- |
-| [Get(inner, tree, query)](#csharp-ireadonlyenrichmentstrategy-get-inner-tree-query) | Reads through `inner`, then enriches. |
+| [Read(inner, tree, query)](#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
 | [Enrich(tree, items)](#csharp-ireadonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
 
-###### Get(inner, tree, query) {#csharp-ireadonlyenrichmentstrategy-get-inner-tree-query}
+###### Read(inner, tree, query) {#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query}
 
 Reads through `inner`, then enriches.
 
 **Definition**
 
 ```csharp
-IAsyncEnumerable<T> Get(IReadonlyRepository<T> inner, IRepositoryTree tree, IStatement? query)
+IAsyncEnumerable<T> Read(IReadonlyRepository<T> inner, IRepositoryTree tree, IStatement? query)
 ```
 
 **Parameters**
@@ -6995,17 +6995,17 @@ pub trait ReadonlyEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [get(inner, tree, query)](#rust-readonlyenrichmentstrategy-get-inner-tree-query) | Reads through `inner`, then enriches. |
+| [read(inner, tree, query)](#rust-readonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
 | [enrich(tree, items)](#rust-readonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
 
-###### get(inner, tree, query) {#rust-readonlyenrichmentstrategy-get-inner-tree-query}
+###### read(inner, tree, query) {#rust-readonlyenrichmentstrategy-read-inner-tree-query}
 
 Reads through `inner`, then enriches.
 
 **Definition**
 
 ```rust
-async fn get(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn Query>) -> Result<Vec<Row>>
+async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn Query>) -> Result<Vec<Row>>
 ```
 
 **Parameters**
@@ -7062,7 +7062,7 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
 repo.AddEnriched("type_name", "type_id", types, "id", "name");
 var items = new List<Parent>();
-await foreach (var item in repo.Get())
+await foreach (var item in repo.Read())
     items.Add(item);
 ```
 
@@ -7078,7 +7078,7 @@ repo.add_enriched(
     Some("name".into()),
     false,
 );
-let items = repo.get(None).await.unwrap();
+let items = repo.read(None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -7096,7 +7096,7 @@ repo.addEnriched(
   "id",
   "name",
 );
-const items = await collectAsync(repo.get());
+const items = await collectAsync(repo.read());
 ```
 
 ## Bulk repository
@@ -7541,7 +7541,7 @@ it("creates parents and children", async () => {
 
 ## Mapper
 
-Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository get is convert, then map.
+Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
 
 ### Classes
 
@@ -7712,186 +7712,45 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Repository get is convert, then map. `StatementMapper.Rows` / `rows` is the get-row mapper. `Repository.Mapper` / `mapper` aliases it.
+Repository read is convert, then map. `StatementMapper.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
 
 ### See also
 
-- [NameMapper](#name-mapper)
+- [INameMapper](#inamemapper)
 - [NameSourceDestinationMapper](#name-source-destination-mapper)
 - [TransformMapper](#transform-mapper)
 - [FlatToTypeMapper](#flat-to-type-mapper)
 - [StatementMapper](#statement-mapper)
 
-## NameMapper
+## INameMapper
 
-Identity Mapper for column or entity names. Names pass through as-is.
+[IMapper](#mapper) for entity and column names.
 
 ### Classes
 
 ##### TypeScript
 
-##### NameMapper {#typescript-namemapper}
+##### INameMapper {#typescript-inamemapper}
 
 ```typescript
-abstract class NameMapper implements IMapper<string, string>
+interface INameMapper extends IMapper<string, string>
 ```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(name)](#typescript-namemapper-map-name) | Returns the name unchanged. |
-| [reverseMap(name)](#typescript-namemapper-reversemap-name) | Returns the name unchanged. |
-
-###### map(name) {#typescript-namemapper-map-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```typescript
-map(name: string): string
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`string`
-
-###### reverseMap(name) {#typescript-namemapper-reversemap-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```typescript
-reverseMap(name: string): string
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`string`
 
 ##### C#
 
-##### NameMapper {#csharp-namemapper}
+##### INameMapper {#csharp-inamemapper}
 
 ```csharp
-public abstract class NameMapper : IMapper<string, string>
+public interface INameMapper : IMapper<string, string>
 ```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(name)](#csharp-namemapper-map-name) | Returns the name unchanged. |
-| [ReverseMap(name)](#csharp-namemapper-reversemap-name) | Returns the name unchanged. |
-
-###### Map(name) {#csharp-namemapper-map-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```csharp
-string Map(string name)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`string`
-
-###### ReverseMap(name) {#csharp-namemapper-reversemap-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```csharp
-string ReverseMap(string name)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`string`
 
 ##### Rust
 
 ##### NameMapper {#rust-namemapper}
 
 ```rust
-pub trait NameMapper
+pub trait NameMapper: Mapper<String, String> {}
 ```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(name)](#rust-namemapper-map-name) | Returns the name unchanged. |
-| [reverse_map(name)](#rust-namemapper-reverse_map-name) | Returns the name unchanged. |
-
-###### map(name) {#rust-namemapper-map-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```rust
-fn map(&self, name: &str) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`String`
-
-###### reverse_map(name) {#rust-namemapper-reverse_map-name}
-
-Returns the name unchanged.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, name: &str) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column or entity name |
-
-**Returns**
-
-`String`
 
 ### Remarks
 
@@ -7901,30 +7760,31 @@ Use [NameSourceDestinationMapper](#name-source-destination-mapper) when the mapp
 
 #### Pass-through names
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/NameMapperTests.cs#L15-L25)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/NameMapperTests.cs#L8-L13)
 
 ```csharp
-var mapper = new NameSourceDestinationMapper("sql", "csharp");
-ISourceDestinationMapper labels = mapper;
+INameMapper mapping = new NameSourceDestinationMapper("sql", "csharp");
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L107-L116)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L70-L81)
 
 ```rust
-let mapper = NameSourceDestinationMapper::new("sql", "rust");
+fn map_and_reverse_map_are_the_name() {
+    let mapper = NameSourceDestinationMapper::new("sql", "rust");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/nameMapper.test.ts#L19-L27)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/nameMapper.test.ts#L6-L13)
 
 ```typescript
-const mapper = new NameSourceDestinationMapper("sql", "typescript");
-const labels: ISourceDestinationMapper = mapper;
-const mapping: IMapper<string, string> = mapper;
+const mapping: INameMapper = new NameSourceDestinationMapper(
+  "sql",
+  "typescript",
+);
 ```
 
 ## NameSourceDestinationMapper
 
-[NameMapper](#name-mapper) that also holds source and destination labels. Names still pass through.
+[INameMapper](#inamemapper) that holds source and destination labels for type and field name differences. Names still pass through.
 
 ### Classes
 
@@ -7933,7 +7793,7 @@ const mapping: IMapper<string, string> = mapper;
 ##### NameSourceDestinationMapper {#typescript-namesourcedestinationmapper}
 
 ```typescript
-class NameSourceDestinationMapper extends NameMapper implements ISourceDestinationMapper
+class NameSourceDestinationMapper implements INameMapper
 ```
 
 **Constructor**
@@ -7948,6 +7808,13 @@ class NameSourceDestinationMapper extends NameMapper implements ISourceDestinati
 | --- | --- |
 | [source](#typescript-namesourcedestinationmapper-source) | Dialect or provider label for the source side. |
 | [destination](#typescript-namesourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(name)](#typescript-namesourcedestinationmapper-map-name) | Returns the name unchanged. |
+| [reverseMap(name)](#typescript-namesourcedestinationmapper-reversemap-name) | Returns the name unchanged. |
 
 ###### NameSourceDestinationMapper(source, destination) {#typescript-namesourcedestinationmapper-namesourcedestinationmapper-source-destination}
 
@@ -7986,45 +7853,52 @@ Dialect or provider label for the destination side.
 readonly destination: string
 ```
 
-##### ISourceDestinationMapper {#typescript-isourcedestinationmapper}
+###### map(name) {#typescript-namesourcedestinationmapper-map-name}
+
+Returns the name unchanged.
+
+**Definition**
 
 ```typescript
-interface ISourceDestinationMapper
+map(name: string): string
 ```
 
-**Properties**
+**Parameters**
 
 | Name | Description |
 | --- | --- |
-| [source](#typescript-isourcedestinationmapper-source) | Dialect or provider label for the source side. |
-| [destination](#typescript-isourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+| `name` | column or entity name |
 
-###### source {#typescript-isourcedestinationmapper-source}
+**Returns**
 
-Dialect or provider label for the source side.
+`string`
 
-**Definition**
+###### reverseMap(name) {#typescript-namesourcedestinationmapper-reversemap-name}
 
-```typescript
-readonly source: string
-```
-
-###### destination {#typescript-isourcedestinationmapper-destination}
-
-Dialect or provider label for the destination side.
+Returns the name unchanged.
 
 **Definition**
 
 ```typescript
-readonly destination: string
+reverseMap(name: string): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`string`
 
 ##### C#
 
 ##### NameSourceDestinationMapper {#csharp-namesourcedestinationmapper}
 
 ```csharp
-public sealed class NameSourceDestinationMapper : NameMapper, ISourceDestinationMapper
+public sealed class NameSourceDestinationMapper : INameMapper
 ```
 
 **Constructor**
@@ -8039,6 +7913,13 @@ public sealed class NameSourceDestinationMapper : NameMapper, ISourceDestination
 | --- | --- |
 | [Source](#csharp-namesourcedestinationmapper-source) | Dialect or provider label for the source side. |
 | [Destination](#csharp-namesourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(name)](#csharp-namesourcedestinationmapper-map-name) | Returns the name unchanged. |
+| [ReverseMap(name)](#csharp-namesourcedestinationmapper-reversemap-name) | Returns the name unchanged. |
 
 ###### NameSourceDestinationMapper(source, destination) {#csharp-namesourcedestinationmapper-namesourcedestinationmapper-source-destination}
 
@@ -8077,38 +7958,45 @@ Dialect or provider label for the destination side.
 string Destination { get; }
 ```
 
-##### ISourceDestinationMapper {#csharp-isourcedestinationmapper}
+###### Map(name) {#csharp-namesourcedestinationmapper-map-name}
+
+Returns the name unchanged.
+
+**Definition**
 
 ```csharp
-public interface ISourceDestinationMapper
+string Map(string name)
 ```
 
-**Properties**
+**Parameters**
 
 | Name | Description |
 | --- | --- |
-| [Source](#csharp-isourcedestinationmapper-source) | Dialect or provider label for the source side. |
-| [Destination](#csharp-isourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+| `name` | column or entity name |
 
-###### Source {#csharp-isourcedestinationmapper-source}
+**Returns**
 
-Dialect or provider label for the source side.
+`string`
 
-**Definition**
+###### ReverseMap(name) {#csharp-namesourcedestinationmapper-reversemap-name}
 
-```csharp
-string Source { get; }
-```
-
-###### Destination {#csharp-isourcedestinationmapper-destination}
-
-Dialect or provider label for the destination side.
+Returns the name unchanged.
 
 **Definition**
 
 ```csharp
-string Destination { get; }
+string ReverseMap(string name)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column or entity name |
+
+**Returns**
+
+`string`
 
 ##### Rust
 
@@ -8219,50 +8107,35 @@ pub fn reverse_map(&self, name: &str) -> String
 
 `String`
 
-##### SourceDestinationMapper {#rust-sourcedestinationmapper}
-
-```rust
-pub trait SourceDestinationMapper
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [source()](#rust-sourcedestinationmapper-source) | Dialect or provider label for the source side. |
-| [destination()](#rust-sourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
-
-###### source() {#rust-sourcedestinationmapper-source}
-
-Dialect or provider label for the source side.
-
-**Definition**
-
-```rust
-fn source(&self) -> &str
-```
-
-**Returns**
-
-`&str`
-
-###### destination() {#rust-sourcedestinationmapper-destination}
-
-Dialect or provider label for the destination side.
-
-**Definition**
-
-```rust
-fn destination(&self) -> &str
-```
-
-**Returns**
-
-`&str`
-
 ### Remarks
 
-Labels are metadata. [NameMapper](#name-mapper) still returns names unchanged.
+Labels are metadata. [INameMapper](#inamemapper) still returns names unchanged.
+
+### Examples
+
+#### Source and destination labels
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/NameMapperTests.cs#L16-L23)
+
+```csharp
+public void SourceAndDestination()
+{
+    var mapper = new NameSourceDestinationMapper("sql", "csharp");
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L85-L90)
+
+```rust
+fn source_and_destination() {
+    let mapper = NameSourceDestinationMapper::new("sql", "rust");
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/nameMapper.test.ts#L18-L24)
+
+```typescript
+const mapper = new NameSourceDestinationMapper("sql", "typescript");
+const mapping: INameMapper = mapper;
+```
 
 ## TransformMapper
 
@@ -8516,17 +8389,19 @@ Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. 
 
 #### Flatten with TransformMapper
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/NameMapperTests.cs#L32-L45)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransformMapperTests.cs#L13-L24)
 
 ```csharp
-var nested = new Nested(new User(1, "Ada"), new Contacts("ada@x.dev", "555"));
-var mapper = new TransformMapper<Nested, Flat>(
-    map: n => new Flat(n.User.Id, n.User.Name, n.Contacts.Email, n.Contacts.Phone),
-    reverseMap: f => new Nested(new User(f.UserId, f.UserName), new Contacts(f.ContactEmail, f.ContactPhone)));
-var flat = mapper.Map(nested);
+public void FlattensAndUnflattensUserAndContacts()
+{
+    var nested = new Nested(new User(1, "Ada"), new Contacts("ada@x.dev", "555"));
+    var mapper = new TransformMapper<Nested, Flat>(
+        map: n => new Flat(n.User.Id, n.User.Name, n.Contacts.Email, n.Contacts.Phone),
+        reverseMap: f => new Nested(new User(f.UserId, f.UserName), new Contacts(f.ContactEmail, f.ContactPhone)));
+    var flat = mapper.Map(nested);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L144-L180)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L122-L157)
 
 ```rust
 let nested = Nested {
@@ -8560,7 +8435,7 @@ let mapper = TransformMapper::new(
 let flat = Mapper::map(&mapper, nested.clone());
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/nameMapper.test.ts#L41-L66)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40)
 
 ```typescript
 const nested: Nested = {
@@ -9586,7 +9461,7 @@ pub type MappedRow = HashMap<String, MappedValue>
 
 C# and Rust map to a [MappedValue](#mappedvalue) graph. TypeScript maps to generic `T`. Nested group fields on a collection are omitted.
 
-This is a collapse mapper, not enrichment. Related fills after get use [Enriched repository](#enriched-repository).
+This is a collapse mapper, not enrichment. Related fills after read use [Enriched repository](#enriched-repository).
 
 ## StatementMapper
 
@@ -9619,7 +9494,7 @@ class StatementMapper<T> implements IMapper<T, T>
 | [update](#typescript-statementmapper-update) | Rewrites a finished update. |
 | [delete](#typescript-statementmapper-delete) | Rewrites a finished delete. |
 | [storedProcedure](#typescript-statementmapper-storedprocedure) | Rewrites a finished stored-procedure statement. |
-| [rows](#typescript-statementmapper-rows) | Get-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
+| [rows](#typescript-statementmapper-rows) | Read-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
 
 **Methods**
 
@@ -9651,7 +9526,7 @@ Maps the table or entity name when the repository is built.
 **Definition**
 
 ```typescript
-readonly entity: IMapper<string, string>
+readonly entity: INameMapper
 ```
 
 ###### columns {#typescript-statementmapper-columns}
@@ -9661,7 +9536,7 @@ Maps column names when the repository is built.
 **Definition**
 
 ```typescript
-readonly columns: IMapper<string, string>
+readonly columns: INameMapper
 ```
 
 ###### query {#typescript-statementmapper-query}
@@ -9716,7 +9591,7 @@ readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureSt
 
 ###### rows {#typescript-statementmapper-rows}
 
-Get-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here.
+Read-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here.
 
 **Definition**
 
@@ -9776,7 +9651,7 @@ type StatementMapperOptions<T>
 | --- | --- |
 | [entity](#typescript-statementmapperoptions-entity) | Maps the table or entity name. |
 | [columns](#typescript-statementmapperoptions-columns) | Maps column names. |
-| [rows](#typescript-statementmapperoptions-rows) | Get-row Mapper. |
+| [rows](#typescript-statementmapperoptions-rows) | Read-row Mapper. |
 | [query](#typescript-statementmapperoptions-query) | Rewrites a finished query. |
 | [insert](#typescript-statementmapperoptions-insert) | Rewrites a finished insert. |
 | [update](#typescript-statementmapperoptions-update) | Rewrites a finished update. |
@@ -9790,7 +9665,7 @@ Maps the table or entity name.
 **Definition**
 
 ```typescript
-entity?: IMapper<string, string>
+entity?: INameMapper
 ```
 
 ###### columns {#typescript-statementmapperoptions-columns}
@@ -9800,12 +9675,12 @@ Maps column names.
 **Definition**
 
 ```typescript
-columns?: IMapper<string, string>
+columns?: INameMapper
 ```
 
 ###### rows {#typescript-statementmapperoptions-rows}
 
-Get-row Mapper.
+Read-row Mapper.
 
 **Definition**
 
@@ -9882,7 +9757,7 @@ public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
 | [Update](#csharp-statementmapper-update) | Rewrites a finished update. |
 | [Delete](#csharp-statementmapper-delete) | Rewrites a finished delete. |
 | [StoredProcedure](#csharp-statementmapper-storedprocedure) | Rewrites a finished stored-procedure statement. |
-| [Rows](#csharp-statementmapper-rows) | Get-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
+| [Rows](#csharp-statementmapper-rows) | Read-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
 
 **Methods**
 
@@ -9963,7 +9838,7 @@ IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure {
 
 ###### Rows {#csharp-statementmapper-rows}
 
-Get-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here.
+Read-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here.
 
 **Definition**
 
@@ -10030,7 +9905,7 @@ pub struct StatementMapper
 | [update](#rust-statementmapper-update) | Rewrites finished update SQL. |
 | [delete](#rust-statementmapper-delete) | Rewrites finished delete SQL. |
 | [stored_procedure](#rust-statementmapper-stored_procedure) | Rewrites finished stored-procedure SQL. |
-| [rows](#rust-statementmapper-rows) | Get-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here. |
+| [rows](#rust-statementmapper-rows) | Read-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here. |
 
 **Methods**
 
@@ -10113,7 +9988,7 @@ pub stored_procedure: Option<Arc<TransformMapper<String, String>>>
 
 ###### rows {#rust-statementmapper-rows}
 
-Get-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here.
+Read-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here.
 
 **Definition**
 
@@ -10221,21 +10096,7 @@ C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `i
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementMapperTests.cs#L55-L81)
 
 ```csharp
-var statements = new RepositoryStatements(
-    "users",
-    ["id", "name"],
-    new TransformMapper<IQuery, IQuery>(
-        query => new Query($"{query.GetText()} LIMIT 1", query.Where),
-        query => query),
-    new TransformMapper<IInsertStatement, IInsertStatement>(
-        insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
-        insert => insert),
-    new TransformMapper<IUpdateStatement, IUpdateStatement>(
-        update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
-        update => update),
-    new TransformMapper<IDeleteStatement, IDeleteStatement>(
-        delete => new DeleteStatement($"{delete.GetText()} RETURNING id", delete.Where),
-        delete => delete));
+
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L794-L804)
@@ -10504,7 +10365,7 @@ fn reverse_convert(&self, to: &To) -> Result<From>
 
 ### Remarks
 
-Repository get is convert, then map. See [TransformMapper](#transform-mapper) and [Repository](#repository).
+Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [Repository](#repository).
 
 ### See also
 
@@ -10896,7 +10757,7 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 `Types` / `types` is the provider catalog merge. Convert and reverse-convert only consult `Fields` / `fields`.
 
-Repository get is convert, then map. See [TransformMapper](#transform-mapper) and [CRUD repository](#crud-repository).
+Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [CRUD repository](#crud-repository).
 
 ### Examples
 

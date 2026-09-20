@@ -14,7 +14,7 @@ export class ListReadonlyRepository<T extends object> extends ReadonlyRepository
     super(type);
   }
 
-  async *get(query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
     for (const item of this.items) if (matches(item, query)) yield item;
   }
 }

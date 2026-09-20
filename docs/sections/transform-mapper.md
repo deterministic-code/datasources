@@ -155,10 +155,10 @@ Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. 
 ### Flatten with TransformMapper
 
 ::: example
-```csharp csharp/Datasources.Tests/NameMapperTests.cs#L32-L45
+```csharp csharp/Datasources.Tests/TransformMapperTests.cs#L13-L24
 ```
-```rust rust/datasources/src/mappers/mod.rs#L144-L180
+```rust rust/datasources/src/mappers/mod.rs#L122-L157
 ```
-```typescript typescript/datasources/src/mappers/nameMapper.test.ts#L41-L66
+```typescript typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40
 ```
 :::

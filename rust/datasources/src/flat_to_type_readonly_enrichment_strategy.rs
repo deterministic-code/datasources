@@ -35,15 +35,15 @@ impl FlatToTypeReadonlyEnrichmentStrategy {
 
 #[async_trait]
 impl ReadonlyEnrichmentStrategy for FlatToTypeReadonlyEnrichmentStrategy {
-    async fn get(
+    async fn read(
         &self,
         _inner: &dyn ReadonlyRepository,
         _tree: &RepositoryTree,
         query: Option<&dyn Query>,
     ) -> Result<Vec<Row>> {
         let rows = match &self.command {
-            Some(command) => self.source.get(Some(command.as_ref())).await?,
-            None => self.source.get(query).await?,
+            Some(command) => self.source.read(Some(command.as_ref())).await?,
+            None => self.source.read(query).await?,
         };
         Ok(self
             .mapper
@@ -53,15 +53,15 @@ impl ReadonlyEnrichmentStrategy for FlatToTypeReadonlyEnrichmentStrategy {
             .collect())
     }
 
-    async fn get_where(
+    async fn read_where(
         &self,
         _inner: &dyn ReadonlyRepository,
         _tree: &RepositoryTree,
         where_clause: &dyn Where,
     ) -> Result<Vec<Row>> {
         let rows = match &self.command {
-            Some(command) => self.source.get(Some(command.as_ref())).await?,
-            None => self.source.get_where(where_clause).await?,
+            Some(command) => self.source.read(Some(command.as_ref())).await?,
+            None => self.source.read_where(where_clause).await?,
         };
         Ok(self
             .mapper

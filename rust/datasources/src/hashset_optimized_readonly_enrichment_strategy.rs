@@ -16,24 +16,24 @@ pub struct HashsetOptimizedReadonlyEnrichmentStrategy;
 
 #[async_trait]
 impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
-    async fn get(
+    async fn read(
         &self,
         inner: &dyn ReadonlyRepository,
         tree: &RepositoryTree,
         query: Option<&dyn Query>,
     ) -> Result<Vec<Row>> {
-        let mut items = inner.get(query).await?;
+        let mut items = inner.read(query).await?;
         self.enrich(tree, &mut items).await?;
         Ok(items)
     }
 
-    async fn get_where(
+    async fn read_where(
         &self,
         inner: &dyn ReadonlyRepository,
         tree: &RepositoryTree,
         where_clause: &dyn Where,
     ) -> Result<Vec<Row>> {
-        let mut items = inner.get_where(where_clause).await?;
+        let mut items = inner.read_where(where_clause).await?;
         self.enrich(tree, &mut items).await?;
         Ok(items)
     }
@@ -89,7 +89,7 @@ async fn apply_lookup(
         return Ok(());
     }
     let loaded = via
-        .get_where(&WhereBuilder::in_list(enrichment.by.clone(), values))
+        .read_where(&WhereBuilder::in_list(enrichment.by.clone(), values))
         .await?;
     let mut index = HashMap::new();
     for mut related in loaded {
@@ -130,7 +130,7 @@ async fn apply_many(
         return Ok(());
     }
     let loaded = via
-        .get_where(&WhereBuilder::in_list(enrichment.by.clone(), values))
+        .read_where(&WhereBuilder::in_list(enrichment.by.clone(), values))
         .await?;
     let mut index: HashMap<String, Vec<Row>> = HashMap::new();
     for row in loaded {

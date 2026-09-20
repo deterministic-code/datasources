@@ -53,7 +53,7 @@ describe("ContactsService", () => {
         phones: [Object.assign(new Phone(), { number: "555", phone_type_id: 2 })],
       }),
     );
-    const contact = (await collectAsync(service.get()))[0];
+    const contact = (await collectAsync(service.read()))[0];
     expect(contact?.contact_type_name).toBe("person");
     expect(contact?.contact_source_name).toBe("import");
     expect(contact?.addresses).toHaveLength(1);

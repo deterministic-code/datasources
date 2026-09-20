@@ -17,7 +17,7 @@ export class JsonRepository<T = unknown> implements ICRUDRepository<T> {
     readonly type: Constructable<T> = Object as never as Constructable<T>,
   ) {}
 
-  async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
+  async readSingle(query?: IQuery | IWhere): Promise<T | undefined> {
     const reader = await new JsonCommand(this.connection).executeReader(
       query?.getText() ?? "",
     );
@@ -27,7 +27,7 @@ export class JsonRepository<T = unknown> implements ICRUDRepository<T> {
     return undefined;
   }
 
-  get(query?: IQuery | IWhere): AsyncIterable<T> {
+  read(query?: IQuery | IWhere): AsyncIterable<T> {
     const command = new JsonCommand(this.connection);
     const text = query?.getText() ?? "";
     return {

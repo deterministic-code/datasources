@@ -2,7 +2,7 @@
 
 [Readonly repository](./readonly-repository.md) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](./row-type-converter.md).
 
-Get is convert, then map. Writes reverse-map, then reverse-convert.
+Read is convert, then map. Writes reverse-map, then reverse-convert.
 
 ## Classes
 
@@ -113,7 +113,7 @@ readonly statementsMapper: StatementMapper<T>
 
 ##### mapper
 
-Get-row [Mapper](./mappers.md). Alias of `statementsMapper.rows`.
+Read-row [Mapper](./mappers.md). Alias of `statementsMapper.rows`.
 
 ```typescript
 readonly mapper: IMapper<T, T>
@@ -141,12 +141,12 @@ addMiddleware(middleware: ICommandMiddleware): this
 
 **Returns** `this`
 
-##### get(query?)
+##### read(query?)
 
 Reads rows through [rowConverter](#repository-rowconverter) then [mapper](#repository-mapper).
 
 ```typescript
-get(query?: IQuery | IWhere): AsyncIterable<T>
+read(query?: IQuery | IWhere): AsyncIterable<T>
 ```
 
 - `query` — optional query or where; omitted uses the default select
@@ -243,7 +243,7 @@ mapping?: TypeConverter<T, Cells>
 
 ##### mapper
 
-Get-row [Mapper](./mappers.md).
+Read-row [Mapper](./mappers.md).
 
 ```typescript
 mapper?: IMapper<T, T>
@@ -428,7 +428,7 @@ StatementMapper<T> StatementsMapper { get; }
 
 ##### Mapper
 
-Get-row [Mapper](./mappers.md). Alias of `StatementsMapper.Rows`.
+Read-row [Mapper](./mappers.md). Alias of `StatementsMapper.Rows`.
 
 ```csharp
 IMapper<T, T> Mapper { get; }
@@ -448,12 +448,12 @@ public Repository<T> AddMiddleware(ICommandMiddleware middleware)
 
 **Returns** [Repository](#repository)`<T>`
 
-##### Get(query)
+##### Read(query)
 
 Reads rows through the row converter then [Mapper](#repository-mapper).
 
 ```csharp
-public override IAsyncEnumerable<T> Get(IStatement? query = null)
+public override IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
 - `query` — optional statement or where; omitted uses the default select
@@ -550,7 +550,7 @@ TypeConverter<T, Row>? Mapping { get; init; }
 
 ##### Mapper
 
-Get-row [Mapper](./mappers.md).
+Read-row [Mapper](./mappers.md).
 
 ```csharp
 IMapper<T, T>? Mapper { get; init; }
@@ -799,7 +799,7 @@ pub mapping: Option<RowTypeConverter>
 
 ##### mapper
 
-Get-row [TransformMapper](./transform-mapper.md).
+Read-row [TransformMapper](./transform-mapper.md).
 
 ```rust
 pub mapper: Option<TransformMapper<Row, Row>>

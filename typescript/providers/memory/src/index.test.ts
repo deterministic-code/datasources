@@ -228,18 +228,18 @@ describe("MemoryCommand and MemoryRepository", () => {
     });
     await expect(command.execute("nope")).rejects.toThrow("Unsupported Memory");
     await expect(command.execute("")).rejects.toThrow("Unsupported Memory");
-    expect(await collectAsync(repo.get())).toEqual([]);
+    expect(await collectAsync(repo.read())).toEqual([]);
   });
 
   it("performs repository CRUD", async () => {
     const { repo } = await openRepo([{ id: 1, name: "a" }]);
-    expect(await repo.getSingle()).toEqual({ id: 1, name: "a" });
-    expect(await repo.getSingle(new Query('{"id":9}'))).toBeUndefined();
-    expect(await collectAsync(repo.get(new Query('{"id":1}')))).toEqual([
+    expect(await repo.readSingle()).toEqual({ id: 1, name: "a" });
+    expect(await repo.readSingle(new Query('{"id":9}'))).toBeUndefined();
+    expect(await collectAsync(repo.read(new Query('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
-    expect(await repo.getSingle(new Where('{"id":1}'))).toEqual({ id: 1, name: "a" });
-    expect(await collectAsync(repo.get(new Where('{"id":1}')))).toEqual([
+    expect(await repo.readSingle(new Where('{"id":1}'))).toEqual({ id: 1, name: "a" });
+    expect(await collectAsync(repo.read(new Where('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
     expect((await repo.create({ id: 2, name: "b" })).rowsAffected).toBe(1);
@@ -251,7 +251,7 @@ describe("MemoryCommand and MemoryRepository", () => {
     expect(
       (await repo.delete({ id: 2 }, new Where('{"id":2}'))).rowsAffected,
     ).toBe(1);
-    expect(await collectAsync(repo.get())).toEqual([]);
+    expect(await collectAsync(repo.read())).toEqual([]);
   });
 
   it("rejects command and repository IO when closed", async () => {

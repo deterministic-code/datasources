@@ -3,6 +3,6 @@ import type { IRepository } from "./IRepository.ts";
 import type { IWhere } from "./IWhere.ts";
 
 export interface IReadonlyRepository<T = unknown> extends IRepository<T> {
-  getSingle(query?: IQuery | IWhere): Promise<T | undefined>;
-  get(query?: IQuery | IWhere): AsyncIterable<T>;
+  readSingle(query?: IQuery | IWhere): Promise<T | undefined>;
+  read(query?: IQuery | IWhere): AsyncIterable<T>;
 }

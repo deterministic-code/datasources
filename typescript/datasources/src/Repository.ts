@@ -71,7 +71,7 @@ export class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRU
     return this;
   };
 
-  async *get(query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
     const statement = this.readQuery(query);
     const reader = await this.command().executeReader(
       statement.getText(),

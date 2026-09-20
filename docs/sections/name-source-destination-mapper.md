@@ -1,6 +1,6 @@
 # NameSourceDestinationMapper
 
-[NameMapper](./name-mapper.md) that also holds source and destination labels. Names still pass through.
+[INameMapper](./i-name-mapper.md) that holds source and destination labels for type and field name differences. Names still pass through.
 
 ## Classes
 
@@ -9,7 +9,7 @@
 #### NameSourceDestinationMapper
 
 ```typescript
-class NameSourceDestinationMapper extends NameMapper implements ISourceDestinationMapper
+class NameSourceDestinationMapper implements INameMapper
 ```
 
 **Constructor**
@@ -43,35 +43,37 @@ Dialect or provider label for the destination side.
 readonly destination: string
 ```
 
-#### ISourceDestinationMapper
+**Methods**
+
+##### map(name)
+
+Returns the name unchanged.
 
 ```typescript
-interface ISourceDestinationMapper
+map(name: string): string
 ```
 
-**Properties**
+- `name` — column or entity name
 
-##### source
+**Returns** `string`
 
-Dialect or provider label for the source side.
+##### reverseMap(name)
+
+Returns the name unchanged.
 
 ```typescript
-readonly source: string
+reverseMap(name: string): string
 ```
 
-##### destination
+- `name` — column or entity name
 
-Dialect or provider label for the destination side.
-
-```typescript
-readonly destination: string
-```
+**Returns** `string`
 
 ### csharp
 #### NameSourceDestinationMapper
 
 ```csharp
-public sealed class NameSourceDestinationMapper : NameMapper, ISourceDestinationMapper
+public sealed class NameSourceDestinationMapper : INameMapper
 ```
 
 **Constructor**
@@ -105,29 +107,31 @@ Dialect or provider label for the destination side.
 string Destination { get; }
 ```
 
-#### ISourceDestinationMapper
+**Methods**
+
+##### Map(name)
+
+Returns the name unchanged.
 
 ```csharp
-public interface ISourceDestinationMapper
+string Map(string name)
 ```
 
-**Properties**
+- `name` — column or entity name
 
-##### Source
+**Returns** `string`
 
-Dialect or provider label for the source side.
+##### ReverseMap(name)
+
+Returns the name unchanged.
 
 ```csharp
-string Source { get; }
+string ReverseMap(string name)
 ```
 
-##### Destination
+- `name` — column or entity name
 
-Dialect or provider label for the destination side.
-
-```csharp
-string Destination { get; }
-```
+**Returns** `string`
 
 ### rust
 #### NameSourceDestinationMapper
@@ -194,36 +198,21 @@ pub fn reverse_map(&self, name: &str) -> String
 - `name` — column or entity name
 
 **Returns** `String`
-
-#### SourceDestinationMapper
-
-```rust
-pub trait SourceDestinationMapper
-```
-
-**Methods**
-
-##### source()
-
-Dialect or provider label for the source side.
-
-```rust
-fn source(&self) -> &str
-```
-
-**Returns** `&str`
-
-##### destination()
-
-Dialect or provider label for the destination side.
-
-```rust
-fn destination(&self) -> &str
-```
-
-**Returns** `&str`
 :::
 
 ## Remarks
 
-Labels are metadata. [NameMapper](./name-mapper.md) still returns names unchanged.
+Labels are metadata. [INameMapper](./i-name-mapper.md) still returns names unchanged.
+
+## Examples
+
+### Source and destination labels
+
+::: example
+```csharp csharp/Datasources.Tests/NameMapperTests.cs#L16-L23
+```
+```rust rust/datasources/src/mappers/mod.rs#L85-L90
+```
+```typescript typescript/datasources/src/mappers/nameMapper.test.ts#L18-L24
+```
+:::

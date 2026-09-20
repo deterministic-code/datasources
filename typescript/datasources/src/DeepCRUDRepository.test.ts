@@ -228,7 +228,7 @@ describe("DeepCRUDRepository", () => {
     const children = new ListCRUDRepository([
       assign(Child, { parent_id: 1, label: "a" }),
     ]);
-    const item = await repoOf(parents, types, children).getSingle();
+    const item = await repoOf(parents, types, children).readSingle();
     expect(item?.type_name).toBe("org");
     expect(item?.children.map((child) => child.label)).toEqual(["a"]);
   });

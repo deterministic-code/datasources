@@ -52,8 +52,8 @@ pages:
   - path: sections/mappers.md
     title: Mapper
     group: Code Reference
-  - path: sections/name-mapper.md
-    title: Name Mapper
+  - path: sections/i-name-mapper.md
+    title: INameMapper
     group: Code Reference
     parent: Mapper
   - path: sections/name-source-destination-mapper.md

@@ -14,7 +14,7 @@ const of = async <T extends { id: number; name: string }>(
   entity: string,
   name: string,
 ): Promise<number> => {
-  const row = await new Repository({ type, entity, connection, columns: ["id", "name"] }).getSingle(
+  const row = await new Repository({ type, entity, connection, columns: ["id", "name"] }).readSingle(
     WhereBuilder.equals("name", name),
   );
   if (!row) throw new Error(`${entity} '${name}' missing`);

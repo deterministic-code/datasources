@@ -2,7 +2,7 @@ namespace Datasources;
 
 public interface IReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentBinder
 {
-    IAsyncEnumerable<T> Get(
+    IAsyncEnumerable<T> Read(
         IReadonlyRepository<T> inner,
         IRepositoryTree tree,
         IStatement? query);

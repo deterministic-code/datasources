@@ -66,11 +66,11 @@ describe("Repository", () => {
       { id: 1, name: "a" },
     ]);
     const rows: Cells[] = [];
-    for await (const row of repo.get()) rows.push(row);
+    for await (const row of repo.read()) rows.push(row);
     expect(rows).toEqual([{ id: 1, name: "a" }]);
     expect(command.executeReaderCalls[0]?.text).toBe("SELECT id, name FROM users");
     command.reader = new MockReader([{ id: 1, name: "a" }]);
-    expect(await repo.getSingle()).toEqual({ id: 1, name: "a" });
+    expect(await repo.readSingle()).toEqual({ id: 1, name: "a" });
   });
 
   it("uses caller query and returns empty", async () => {
@@ -78,7 +78,7 @@ describe("Repository", () => {
     command.reader = new MockReader([]);
     const where = WhereBuilder.equals("id", 9);
     expect(
-      await repo.getSingle(StatementBuilder.createQuery("users", ["id"], where)),
+      await repo.readSingle(StatementBuilder.createQuery("users", ["id"], where)),
     ).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id FROM users WHERE id = $id",
@@ -89,7 +89,7 @@ describe("Repository", () => {
   it("attaches where to the default select", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([]);
-    expect(await repo.getSingle(WhereBuilder.equals("id", 9))).toBeUndefined();
+    expect(await repo.readSingle(WhereBuilder.equals("id", 9))).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id, name FROM users WHERE id = $id",
     );
@@ -133,7 +133,7 @@ describe("Repository", () => {
     const { repo, command: query } = create();
     query.reader = { current: undefined, next: async () => true };
     await expect(async () => {
-      for await (const _ of repo.get()) {
+      for await (const _ of repo.read()) {
         /* consume */
       }
     }).rejects.toThrow("Reader current must be a row");
@@ -142,7 +142,7 @@ describe("Repository", () => {
     await expect(repo.update({ id: 1 })).rejects.toThrow("non-Id field");
     query.reader = { current: undefined, next: async () => true };
     await expect(async () => {
-      for await (const _ of repo.get()) {
+      for await (const _ of repo.read()) {
         /* consume */
       }
     }).rejects.toThrow("Reader current must be a row");
@@ -196,7 +196,7 @@ describe("Repository", () => {
       ),
     });
     command.reader = new MockReader([{ id: 1, name: "a" }]);
-    expect(await repo.getSingle()).toEqual({ id: 1, name: "A" });
+    expect(await repo.readSingle()).toEqual({ id: 1, name: "A" });
   });
 
   it("maps a flat row into nested user contacts", async () => {
@@ -218,7 +218,7 @@ describe("Repository", () => {
       contact_name2: "roberta",
     };
     command.reader = new MockReader([flat]);
-    const user = await repo.getSingle();
+    const user = await repo.readSingle();
     expect(user?.username).toBe("bobby");
     expect(user?.email).toBe("bob@asdf.com");
     expect(user?.contacts.map((contact) => contact.name)).toEqual(["bob", "roberta"]);
@@ -313,7 +313,7 @@ describe("Repository", () => {
       }),
     });
     command.reader = new MockReader([]);
-    await repo.getSingle();
+    await repo.readSingle();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT full_name, user_id FROM people LIMIT 1",
     );

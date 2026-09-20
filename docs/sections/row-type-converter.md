@@ -238,7 +238,7 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 `Types` / `types` is the provider catalog merge. Convert and reverse-convert only consult `Fields` / `fields`.
 
-Repository get is convert, then map. See [TransformMapper](./transform-mapper.md) and [CRUD repository](./crud-repository.md).
+Repository read is convert, then map. See [TransformMapper](./transform-mapper.md) and [CRUD repository](./crud-repository.md).
 
 ## Examples
 

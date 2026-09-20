@@ -30,7 +30,7 @@ public class ContactsServiceTests
             phones = [new Phone { number = "555", phone_type_id = 2 }]
         });
         var items = new List<Contact>();
-        await foreach (var item in service.Get())
+        await foreach (var item in service.Read())
             items.Add(item);
         var contact = Assert.Single(items);
         Assert.Equal("person", contact.contact_type_name);

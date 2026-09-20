@@ -13,10 +13,10 @@ pub trait ReadonlyRepository: Send + Sync {
         TypeId::of::<Row>()
     }
 
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>;
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>;
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>>;
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>;
+    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>;
+    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>;
+    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>>;
+    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>;
 }
 
 #[async_trait]
@@ -34,20 +34,20 @@ impl ReadonlyRepository for AsReadonly {
         self.0.entity_type()
     }
 
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
-        self.0.get_single(query).await
+    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+        self.0.read_single(query).await
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
-        self.0.get(query).await
+    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+        self.0.read(query).await
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.0.get_single_where(where_clause).await
+    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
+        self.0.read_single_where(where_clause).await
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.0.get_where(where_clause).await
+    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
+        self.0.read_where(where_clause).await
     }
 }
 

@@ -112,23 +112,23 @@ impl ReadonlyRepository for EnrichedReadonlyRepository {
         self.inner.entity_type()
     }
 
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
-        Ok(self.get(query).await?.into_iter().next())
+    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+        Ok(self.read(query).await?.into_iter().next())
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
         self.strategy
-            .get(self.inner.as_ref(), &self.tree, query)
+            .read(self.inner.as_ref(), &self.tree, query)
             .await
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        Ok(self.get_where(where_clause).await?.into_iter().next())
+    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
+        Ok(self.read_where(where_clause).await?.into_iter().next())
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
+    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
         self.strategy
-            .get_where(self.inner.as_ref(), &self.tree, where_clause)
+            .read_where(self.inner.as_ref(), &self.tree, where_clause)
             .await
     }
 }
