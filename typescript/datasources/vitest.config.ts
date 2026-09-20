@@ -29,7 +29,7 @@ export default defineConfig({
         "src/IRepositoryTree.ts",
         "src/IRepositoryTreeNode.ts",
         "src/Enrichment.ts",
-        "src/mappers/IFlatToTypeMapper.ts",
+        "src/mappers/IFlatToNestedMapper.ts",
         "src/mappers/TypeMap.ts",
         "src/mappers/TypeMapGroup.ts",
         "src/ICRUDRepository.ts",

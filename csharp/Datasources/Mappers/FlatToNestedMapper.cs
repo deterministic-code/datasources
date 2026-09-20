@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Datasources;
 
-public sealed class FlatToTypeMapper : IFlatToTypeMapper
+public sealed class FlatToNestedMapper : IFlatToNestedMapper
 {
     readonly record struct GroupPlan(string Key, IReadOnlyDictionary<string, string> Fields, string DestKey);
 
@@ -12,7 +12,7 @@ public sealed class FlatToTypeMapper : IFlatToTypeMapper
 
     public TypeMap Spec { get; }
 
-    public FlatToTypeMapper(TypeMap spec)
+    public FlatToNestedMapper(TypeMap spec)
     {
         Spec = spec;
         foreach (var (name, field) in spec.Fields)
@@ -25,7 +25,21 @@ public sealed class FlatToTypeMapper : IFlatToTypeMapper
         parentDest = DestOf(scalars, spec.Key);
     }
 
-    public Dictionary<string, MappedValue> Map(Row value)
+    public IReadOnlyList<Dictionary<string, MappedValue>> Map(IEnumerable<Row> rows) =>
+        Collapse(rows.Select(row => groups.Count == 0 ? Passthrough(row) : MapRow(row)));
+
+    public IReadOnlyList<Dictionary<string, MappedValue>> Map(
+        IEnumerable<Dictionary<string, MappedValue>> rows) =>
+        Collapse(rows);
+
+    public IReadOnlyList<Row> ReverseMap(IReadOnlyList<Dictionary<string, MappedValue>> values) =>
+        [.. values.SelectMany(Explode)];
+
+    IEnumerable<Row> IMapper<IEnumerable<Row>, IReadOnlyList<Dictionary<string, MappedValue>>>.ReverseMap(
+        IReadOnlyList<Dictionary<string, MappedValue>> values) =>
+        ReverseMap(values);
+
+    Dictionary<string, MappedValue> MapRow(Row value)
     {
         var dest = new Dictionary<string, MappedValue>();
         foreach (var (name, column) in scalars)
@@ -40,32 +54,7 @@ public sealed class FlatToTypeMapper : IFlatToTypeMapper
         return dest;
     }
 
-    public Row ReverseMap(Dictionary<string, MappedValue> value)
-    {
-        var row = new Row();
-        foreach (var (name, column) in scalars)
-            row[column] = value.TryGetValue(name, out var mapped) && mapped is MappedValue.Cell(var cell)
-                ? cell
-                : Value.Null.Instance;
-        foreach (var (name, group) in groups)
-        {
-            var child = value.TryGetValue(name, out var mapped) && mapped is MappedValue.Many(var items)
-                ? items.ElementAtOrDefault(0)
-                : null;
-            foreach (var (field, column) in group.Fields)
-                row[column] = child is not null
-                    && child.TryGetValue(field, out var item)
-                    && item is MappedValue.Cell(var itemCell)
-                    ? itemCell
-                    : Value.Null.Instance;
-        }
-        return row;
-    }
-
-    public IReadOnlyList<Dictionary<string, MappedValue>> Collapse(IEnumerable<Row> rows) =>
-        Collapse(rows.Select(row => groups.Count == 0 ? Passthrough(row) : Map(row)));
-
-    public IReadOnlyList<Dictionary<string, MappedValue>> Collapse(
+    IReadOnlyList<Dictionary<string, MappedValue>> Collapse(
         IEnumerable<Dictionary<string, MappedValue>> rows)
     {
         var byParent = new Dictionary<string, Dictionary<string, MappedValue>>();
@@ -82,6 +71,41 @@ public sealed class FlatToTypeMapper : IFlatToTypeMapper
             Merge(byParent[parent], item, parent, seen);
         }
         return [.. byParent.Values];
+    }
+
+    IEnumerable<Row> Explode(Dictionary<string, MappedValue> value)
+    {
+        IEnumerable<Row> rows = [Scalars(value)];
+        foreach (var (name, group) in groups)
+        {
+            var children = value.GetValueOrDefault(name) is MappedValue.Many { Items.Count: > 0 } many
+                ? many.Items
+                : [new Dictionary<string, MappedValue>()];
+            rows = rows.SelectMany(row => children.Select(child => With(row, group, child)));
+        }
+        return rows;
+    }
+
+    Row Scalars(Dictionary<string, MappedValue> value)
+    {
+        var row = new Row();
+        foreach (var (name, column) in scalars)
+            row[column] = value.TryGetValue(name, out var mapped) && mapped is MappedValue.Cell(var cell)
+                ? cell
+                : Value.Null.Instance;
+        return row;
+    }
+
+    static Row With(Row row, GroupPlan group, Dictionary<string, MappedValue> child)
+    {
+        var next = new Row(row);
+        foreach (var (field, column) in group.Fields)
+            next[column] = child is not null
+                && child.TryGetValue(field, out var item)
+                && item is MappedValue.Cell(var cell)
+                ? cell
+                : Value.Null.Instance;
+        return next;
     }
 
     void Mark(HashSet<string> seen, string parent, Dictionary<string, MappedValue> item)

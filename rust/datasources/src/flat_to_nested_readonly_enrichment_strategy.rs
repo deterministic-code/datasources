@@ -1,4 +1,4 @@
-use crate::mappers::{FlatToTypeMapper, FlatToTypeMapperTrait, MappedRow};
+use crate::mappers::{FlatToNestedMapper, MappedRow, Mapper};
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::ReadonlyRepository;
@@ -10,17 +10,17 @@ use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::sync::Arc;
 
-pub struct FlatToTypeReadonlyEnrichmentStrategy {
+pub struct FlatToNestedReadonlyEnrichmentStrategy {
     source: Arc<dyn ReadonlyRepository>,
-    mapper: FlatToTypeMapper,
+    mapper: FlatToNestedMapper,
     hydrate: Arc<dyn Fn(MappedRow) -> Row + Send + Sync>,
     command: Option<Arc<dyn Query>>,
 }
 
-impl FlatToTypeReadonlyEnrichmentStrategy {
+impl FlatToNestedReadonlyEnrichmentStrategy {
     pub fn new(
         source: Arc<dyn ReadonlyRepository>,
-        mapper: FlatToTypeMapper,
+        mapper: FlatToNestedMapper,
         hydrate: impl Fn(MappedRow) -> Row + Send + Sync + 'static,
         command: Option<Arc<dyn Query>>,
     ) -> Self {
@@ -34,7 +34,7 @@ impl FlatToTypeReadonlyEnrichmentStrategy {
 }
 
 #[async_trait]
-impl ReadonlyEnrichmentStrategy for FlatToTypeReadonlyEnrichmentStrategy {
+impl ReadonlyEnrichmentStrategy for FlatToNestedReadonlyEnrichmentStrategy {
     async fn read(
         &self,
         _inner: &dyn ReadonlyRepository,
@@ -47,7 +47,7 @@ impl ReadonlyEnrichmentStrategy for FlatToTypeReadonlyEnrichmentStrategy {
         };
         Ok(self
             .mapper
-            .collapse_rows(rows)
+            .map(rows)
             .into_iter()
             .map(|row| (self.hydrate)(row))
             .collect())
@@ -65,7 +65,7 @@ impl ReadonlyEnrichmentStrategy for FlatToTypeReadonlyEnrichmentStrategy {
         };
         Ok(self
             .mapper
-            .collapse_rows(rows)
+            .map(rows)
             .into_iter()
             .map(|row| (self.hydrate)(row))
             .collect())

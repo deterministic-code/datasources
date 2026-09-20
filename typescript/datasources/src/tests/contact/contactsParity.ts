@@ -1,7 +1,7 @@
 import { collectAsync } from "../../collectAsync.ts";
 import { ConsoleCommandMiddleware } from "../../ConsoleCommandMiddleware.ts";
 import type { Cells } from "../../converters/Cell.ts";
-import { FlatToTypeMapper } from "../../mappers/FlatToTypeMapper.ts";
+import { FlatToNestedMapper } from "../../mappers/FlatToNestedMapper.ts";
 import type { IConnection } from "../../IConnection.ts";
 import { Repository } from "../../Repository.ts";
 import type { ContactsView } from "./asContactsView.ts";
@@ -16,7 +16,7 @@ export const contactsParity = async (
   const middleware = new ConsoleCommandMiddleware(undefined, undefined, {
     isVerbose: verbose ? "true" : "false",
   });
-  const eager = new FlatToTypeMapper(contactsView).collapse(
+  const eager = new FlatToNestedMapper(contactsView).map(
     await collectAsync(
       new Repository<Cells>({ connection, entity: "contacts_base" })
         .addMiddleware(middleware)

@@ -46,6 +46,32 @@ public class ContactsRepositoryTests
         Assert.Equal("Mobile", extra.phones[0].phone_type_name);
     }
 
+    [Fact]
+    public async Task MapsJoinRowsToNestedContacts()
+    {
+        var conn = new SqliteConnection(new SqliteConnectionOptions
+        {
+            Filename = ":memory:",
+            Driver = new SqliteDriver()
+        });
+        await conn.Open();
+        var command = new SqliteCommand(conn);
+        foreach (var sql in StatementsOf(File.ReadAllText(SchemaPath())).Concat(SeedContacts.Sql()))
+            await command.Execute(sql);
+
+        var rows = new List<Row>();
+        await foreach (var row in new Repository<Row>(new RepositoryBuilderOptions<Row>
+        {
+            Connection = conn,
+            Entity = "contacts_base"
+        }).Read(ContactsJoinQuery.Create()))
+            rows.Add(row);
+        var contacts = AsContactsView.FromMapped(new FlatToNestedMapper(ContactsView.TypeMap).Map(rows));
+        var mapped = ExpectContactsView.With(contacts, 2, 1);
+        Assert.Equal(2, mapped.addresses.Length);
+        Assert.False(string.IsNullOrEmpty(mapped.contact_source_name));
+    }
+
     static string SchemaPath()
     {
         var root = Directory.GetParent(SqlSpec.SpecsDir())?.FullName

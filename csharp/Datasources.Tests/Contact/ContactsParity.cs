@@ -21,7 +21,7 @@ internal static class ContactsParity
             join.AddMiddleware(middleware);
         await foreach (var row in join.Read(ContactsJoinQuery.Create()))
             rows.Add(row);
-        var eager = AsContactsView.FromMapped(new FlatToTypeMapper(ContactsView.TypeMap).Collapse(rows));
+        var eager = AsContactsView.FromMapped(new FlatToNestedMapper(ContactsView.TypeMap).Map(rows));
         var items = new List<Contact>();
         await foreach (var item in ContactsServiceOf.Create(connection, middleware).Read())
             items.Add(item);

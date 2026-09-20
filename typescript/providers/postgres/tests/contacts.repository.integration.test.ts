@@ -55,7 +55,7 @@ const isolate = async (base: string) => {
 };
 
 describe("contacts readonly repository", () => {
-  it("matches enriched ContactsService to FlatToTypeMapper on the same seed", async () => {
+  it("matches enriched ContactsService to FlatToNestedMapper on the same seed", async () => {
     const isolated = await isolate(url);
     try {
       const connection = new PostgresConnection({
