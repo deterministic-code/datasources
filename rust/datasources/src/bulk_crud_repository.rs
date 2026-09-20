@@ -1,5 +1,6 @@
 use crate::enriched::Enriched;
 use crate::query::Query;
+use crate::i_repository::IRepository;
 use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
@@ -123,12 +124,14 @@ impl Enriched for BulkCRUDRepository {
     }
 }
 
-#[async_trait]
-impl ReadonlyRepository for BulkCRUDRepository {
+impl IRepository for BulkCRUDRepository {
     fn entity_type(&self) -> TypeId {
         self.inner.entity_type()
     }
+}
 
+#[async_trait]
+impl ReadonlyRepository for BulkCRUDRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }

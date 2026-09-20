@@ -6,6 +6,7 @@ use crate::enriched_readonly_repository::EnrichedReadonlyRepository;
 use crate::enrichment::Enrichment;
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
+use crate::i_repository::IRepository;
 use crate::repository::{as_readonly, CRUDRepository, ReadonlyRepository};
 use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
@@ -337,12 +338,14 @@ impl Enriched for DeepCRUDRepository {
     }
 }
 
-#[async_trait]
-impl ReadonlyRepository for DeepCRUDRepository {
+impl IRepository for DeepCRUDRepository {
     fn entity_type(&self) -> TypeId {
         self.inner.entity_type()
     }
+}
 
+#[async_trait]
+impl ReadonlyRepository for DeepCRUDRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.enriched.read_single(query).await
     }

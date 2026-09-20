@@ -4173,6 +4173,32 @@ string EntityTypeName { get; }
 
 ##### Rust
 
+##### IRepository {#rust-irepository}
+
+```rust
+pub trait IRepository
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [entity_type()](#rust-irepository-entity_type) | Item `TypeId` the repository exposes. Defaults to `Row`. |
+
+###### entity_type() {#rust-irepository-entity_type}
+
+Item `TypeId` the repository exposes. Defaults to `Row`.
+
+**Definition**
+
+```rust
+fn entity_type(&self) -> TypeId
+```
+
+**Returns**
+
+`TypeId`
+
 ##### datasources {#rust-datasources}
 
 ```rust
@@ -4572,7 +4598,7 @@ pub fn create_readonly_type<T: 'static>(&self, connection: Option<Arc<dyn Connec
 
 ### Remarks
 
-Rust has no `IRepository` marker. `entity_type` lives on [ReadonlyRepository](#readonly-repository) and defaults to `Row`. SQL provider generic casts may report the row or dictionary type.
+SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
 
 A missing factory throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
 
@@ -4866,32 +4892,17 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 ##### ReadonlyRepository {#rust-readonlyrepository}
 
 ```rust
-pub trait ReadonlyRepository
+pub trait ReadonlyRepository: IRepository
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [entity_type()](#rust-readonlyrepository-entity_type) | Item `TypeId`. Defaults to `Row`. |
 | [read_single(query)](#rust-readonlyrepository-read_single-query) | Returns the first row, or `None` when the result is empty. |
 | [read(query)](#rust-readonlyrepository-read-query) | Returns every row. |
 | [read_single_where(where_clause)](#rust-readonlyrepository-read_single_where-where_clause) | Returns the first row matching a where. |
 | [read_where(where_clause)](#rust-readonlyrepository-read_where-where_clause) | Returns every row matching a where. |
-
-###### entity_type() {#rust-readonlyrepository-entity_type}
-
-Item `TypeId`. Defaults to `Row`.
-
-**Definition**
-
-```rust
-fn entity_type(&self) -> TypeId
-```
-
-**Returns**
-
-`TypeId`
 
 ###### read_single(query) {#rust-readonlyrepository-read_single-query}
 
@@ -8031,16 +8042,16 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1235-L1244)
 
 ```rust
-])]));
-let mut repo = EnrichedReadonlyRepository::new(parents);
-repo.add_enriched(
-    "type_name",
-    "type_id",
-    types,
-    "id",
-    Some("name".into()),
-    false,
-);
+async fn enriched_fills_lookup_select_and_leaves_missing_default() {
+    let parents = Arc::new(items_repository::ItemsRepository::new(vec![
+        record(&[("id", Value::Int(1)), ("type_id", Value::Int(10))]),
+        record(&[("id", Value::Int(2)), ("type_id", Value::Int(99))]),
+    ]));
+    let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(10)),
+        ("name", Value::from("person")),
+    ])]));
+    let mut repo = EnrichedReadonlyRepository::new(parents);
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -8467,24 +8478,11 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-async fn bulk_create_writes_parents_and_children() {
-    let parents = Arc::new(list_repository::ListRepository::new(vec![]));
-    let children = Arc::new(list_repository::ListRepository::new(vec![]));
-    let mut repo = BulkCRUDRepository::new(parents.clone());
-    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
-    let response = repo
-        .create_bulk(&[
-            record(&[(
-                "children",
-                encode_rows(&[record(&[("label", Value::from("a"))])]),
-            )]),
-            record(&[(
-                "children",
-                encode_rows(&[
-                    record(&[("label", Value::from("b"))]),
-                    record(&[("label", Value::from("c"))]),
-                ]),
-            )]),
+    Some("name".into()),
+    false,
+)
+.add_enriched_repo("children", "id", children, "parent_id", None, true);
+let item = repo.read_single(None).await.unwrap().unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)

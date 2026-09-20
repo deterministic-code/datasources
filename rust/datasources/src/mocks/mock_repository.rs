@@ -1,4 +1,5 @@
 use crate::datasource_error::DatasourceError;
+use crate::i_repository::IRepository;
 use crate::query::Query;
 use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::response::Response;
@@ -50,6 +51,8 @@ impl MockRepository {
         *self.delete_error.lock().expect("mock") = Some(message.into());
     }
 }
+
+impl IRepository for MockRepository {}
 
 #[async_trait]
 impl ReadonlyRepository for MockRepository {

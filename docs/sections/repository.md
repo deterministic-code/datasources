@@ -462,6 +462,24 @@ string EntityTypeName { get; }
 ```
 
 ### rust
+#### IRepository
+
+```rust
+pub trait IRepository
+```
+
+**Methods**
+
+##### entity_type()
+
+Item `TypeId` the repository exposes. Defaults to `Row`.
+
+```rust
+fn entity_type(&self) -> TypeId
+```
+
+**Returns** `TypeId`
+
 #### datasources
 
 ```rust
@@ -705,7 +723,7 @@ pub fn create_readonly_type<T: 'static>(&self, connection: Option<Arc<dyn Connec
 
 ## Remarks
 
-Rust has no `IRepository` marker. `entity_type` lives on [ReadonlyRepository](./readonly-repository.md) and defaults to `Row`. SQL provider generic casts may report the row or dictionary type.
+SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
 
 A missing factory throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
 

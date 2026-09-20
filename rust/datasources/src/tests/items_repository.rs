@@ -1,3 +1,4 @@
+use crate::i_repository::IRepository;
 use crate::query::Query;
 use crate::repository::ReadonlyRepository;
 use crate::result::Result;
@@ -26,6 +27,8 @@ impl ItemsRepository {
         }
     }
 }
+
+impl IRepository for ItemsRepository {}
 
 #[async_trait]
 impl ReadonlyRepository for ItemsRepository {

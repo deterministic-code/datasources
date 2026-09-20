@@ -171,20 +171,10 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 #### ReadonlyRepository
 
 ```rust
-pub trait ReadonlyRepository
+pub trait ReadonlyRepository: IRepository
 ```
 
 **Methods**
-
-##### entity_type()
-
-Item `TypeId`. Defaults to `Row`.
-
-```rust
-fn entity_type(&self) -> TypeId
-```
-
-**Returns** `TypeId`
 
 ##### read_single(query)
 

@@ -1,3 +1,4 @@
+use crate::i_repository::IRepository;
 use crate::query::Query;
 use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::response::Response;
@@ -46,6 +47,8 @@ impl ListRepository {
         }
     }
 }
+
+impl IRepository for ListRepository {}
 
 #[async_trait]
 impl ReadonlyRepository for ListRepository {
