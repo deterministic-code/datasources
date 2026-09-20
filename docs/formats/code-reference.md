@@ -4,7 +4,7 @@ Authoring contract for Code Reference pages. Pages live under `docs/sections/` a
 
 Not published in the sidebar (`toc.yaml`).
 
-Layout follows MSDN-style API pages: title, summary, language selector, member tables, then a definition and parameters for each member.
+Layout follows MSDN-style API pages: title, summary, language selector, member tables, then a definition and parameters for each Constructor and Methods member. Properties render as a table only.
 
 ## Page shape
 
@@ -27,7 +27,7 @@ After the major class and its instance type, document any **page-local** type th
 
 Reserved panel markers (stripped by the transform): `### typescript`, `### csharp`, `### rust`. Aliases: `ts`, `cs`, `rs`.
 
-Each class has an optional definition fence, then `**Constructor**` / `**Properties**` / `**Methods**` groups. Each member is a `#####` heading: short description, definition fence, parameter list, optional `**Returns**`. The transform builds the Name / Description tables from those members.
+Each class has an optional definition fence, then `**Constructor**` / `**Properties**` / `**Methods**` groups. Each member is a `#####` heading: short description, definition fence, parameter list, optional `**Returns**`. The transform builds the Name / Description tables from those members. Properties stay as that table; Constructor and Methods also get a definition and parameters.
 
 ~~~~markdown
 ## Classes
@@ -60,7 +60,7 @@ Rules:
 
 - Document each member once. Do not hand-write the top member tables.
 - Use `**Constructor**`, `**Properties**`, and `**Methods**` as the only group labels. Omit a group when the type has none.
-- The first paragraph under a member is the table description and the detail lead.
+- The first paragraph under a member is the table description. Constructor and Methods also use it as the detail lead.
 - Parameter lines are `- \`name\` — description`. Link page-local and cross-page types (`[DatasourceOptions](#datasourceoptions)`, `[IDatasourceFactory](../sections/datasource-factory.md)`).
 - Rust may use a module heading (`#### datasources`) for free functions when there is no registry class.
 - Omit internal hooks (`bindInstall` / `bind_install`) from the class list.
@@ -122,7 +122,7 @@ Optional `output` fences after the test ranges become titled textboxes under the
 - [ ] Title is the major class name
 - [ ] Summary is dialect-neutral
 - [ ] `## Classes` wraps one `::: reference` with all three panels
-- [ ] Each member has a description, definition, and parameters
+- [ ] Each member has a description; Constructor and Methods also have a definition and parameters (Properties render as a table only)
 - [ ] Associated types and page-local argument/return types are extra `####` headings, not a second page
 - [ ] `## Remarks` is present
 - [ ] Examples use `::: example` test ranges or the Examples heading is omitted

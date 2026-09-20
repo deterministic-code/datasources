@@ -366,7 +366,7 @@ class DatasourceFactory implements IDatasourceFactory
 
 | Name | Description |
 | --- | --- |
-| [default](#typescript-datasourcefactory-default) | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#typescript-create-options). |
+| default | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#typescript-create-options). |
 
 **Methods**
 
@@ -377,20 +377,6 @@ class DatasourceFactory implements IDatasourceFactory
 | [create(options?)](#typescript-datasourcefactory-create-options) | Creates one datasource. `undefined` options read process env; a dictionary is used as-is. |
 | [reset()](#typescript-datasourcefactory-reset) | Clears the registry. Use in tests. |
 | [registered()](#typescript-datasourcefactory-registered) | Lists registered provider names. |
-
-###### default {#typescript-datasourcefactory-default}
-
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#typescript-create-options).
-
-**Definition**
-
-```typescript
-static get default(): IDatasource
-```
-
-**Returns**
-
-[IDatasource](#typescript-idatasource)
 
 ###### defaults(options) {#typescript-datasourcefactory-defaults-options}
 
@@ -514,7 +500,7 @@ public sealed class DatasourceFactory : IDatasourceFactory
 
 | Name | Description |
 | --- | --- |
-| [Default](#csharp-datasourcefactory-default) | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [Create](#csharp-create-options). |
+| Default | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [Create](#csharp-create-options). |
 
 **Methods**
 
@@ -525,20 +511,6 @@ public sealed class DatasourceFactory : IDatasourceFactory
 | [Create(options)](#csharp-datasourcefactory-create-options) | Creates one datasource. `null` options read process `.env`; a dictionary is used as-is. |
 | [Reset()](#csharp-datasourcefactory-reset) | Clears the registry. Use in tests. |
 | [Registered()](#csharp-datasourcefactory-registered) | Lists registered provider names. |
-
-###### Default {#csharp-datasourcefactory-default}
-
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [Create](#csharp-create-options).
-
-**Definition**
-
-```csharp
-public static IDatasource Default { get; }
-```
-
-**Returns**
-
-[IDatasource](#csharp-idatasource)
 
 ###### Defaults(options) {#csharp-datasourcefactory-defaults-options}
 
@@ -944,7 +916,7 @@ interface IDatasource
 
 | Name | Description |
 | --- | --- |
-| [provider](#typescript-idatasource-provider) | Registered provider name. |
+| provider | Registered provider name. |
 
 **Methods**
 
@@ -954,16 +926,6 @@ interface IDatasource
 | [createCommand(connection?)](#typescript-idatasource-createcommand-connection) | Creates a command bound to an optional open connection. |
 | [createRepository(connection?)](#typescript-idatasource-createrepository-connection) | Creates a CRUD repository bound to an optional open connection. |
 | [createReadonlyRepository(connection?)](#typescript-idatasource-createreadonlyrepository-connection) | Creates a read-only repository bound to an optional open connection. |
-
-###### provider {#typescript-idatasource-provider}
-
-Registered provider name.
-
-**Definition**
-
-```typescript
-readonly provider: string
-```
 
 ###### createConnection() {#typescript-idatasource-createconnection}
 
@@ -1049,39 +1011,9 @@ type DatasourceOptions = Record<string, string>
 
 | Name | Description |
 | --- | --- |
-| [provider](#typescript-datasourceoptions-provider) | Which datasource to return. |
-| [database_url](#typescript-datasourceoptions-database_url) | Connection URL. The scheme selects the provider when `provider` is omitted. |
-| [database_schema](#typescript-datasourceoptions-database_schema) | Default schema. |
-
-###### provider {#typescript-datasourceoptions-provider}
-
-Which datasource to return.
-
-**Definition**
-
-```typescript
-provider?: string
-```
-
-###### database_url {#typescript-datasourceoptions-database_url}
-
-Connection URL. The scheme selects the provider when `provider` is omitted.
-
-**Definition**
-
-```typescript
-database_url?: string
-```
-
-###### database_schema {#typescript-datasourceoptions-database_schema}
-
-Default schema.
-
-**Definition**
-
-```typescript
-database_schema?: string
-```
+| provider | Which datasource to return. |
+| database_url | Connection URL. The scheme selects the provider when `provider` is omitted. |
+| database_schema | Default schema. |
 
 ##### C#
 
@@ -1125,7 +1057,7 @@ public interface IDatasource
 
 | Name | Description |
 | --- | --- |
-| [Provider](#csharp-idatasource-provider) | Registered provider name. |
+| Provider | Registered provider name. |
 
 **Methods**
 
@@ -1135,16 +1067,6 @@ public interface IDatasource
 | [CreateCommand(connection)](#csharp-idatasource-createcommand-connection) | Creates a command bound to an optional open connection. |
 | [CreateRepository(connection)](#csharp-idatasource-createrepository-connection) | Creates a CRUD repository bound to an optional open connection. |
 | [CreateReadonlyRepository(connection)](#csharp-idatasource-createreadonlyrepository-connection) | Creates a read-only repository bound to an optional open connection. Defaults to `CreateRepository`. |
-
-###### Provider {#csharp-idatasource-provider}
-
-Registered provider name.
-
-**Definition**
-
-```csharp
-string Provider { get; }
-```
 
 ###### CreateConnection() {#csharp-idatasource-createconnection}
 
@@ -1230,39 +1152,9 @@ IReadOnlyDictionary<string, string?>
 
 | Name | Description |
 | --- | --- |
-| [provider](#csharp-datasourceoptions-provider) | Which datasource to return. |
-| [database_url](#csharp-datasourceoptions-database_url) | Connection URL. The scheme selects the provider when `provider` is omitted. |
-| [database_schema](#csharp-datasourceoptions-database_schema) | Default schema. |
-
-###### provider {#csharp-datasourceoptions-provider}
-
-Which datasource to return.
-
-**Definition**
-
-```csharp
-"provider"
-```
-
-###### database_url {#csharp-datasourceoptions-database_url}
-
-Connection URL. The scheme selects the provider when `provider` is omitted.
-
-**Definition**
-
-```csharp
-"database_url"
-```
-
-###### database_schema {#csharp-datasourceoptions-database_schema}
-
-Default schema.
-
-**Definition**
-
-```csharp
-"database_schema"
-```
+| provider | Which datasource to return. |
+| database_url | Connection URL. The scheme selects the provider when `provider` is omitted. |
+| database_schema | Default schema. |
 
 ##### Rust
 
@@ -1410,39 +1302,9 @@ HashMap<String, String>
 
 | Name | Description |
 | --- | --- |
-| [provider](#rust-datasourceoptions-provider) | Which datasource to return. |
-| [database_url](#rust-datasourceoptions-database_url) | Connection URL. The scheme selects the provider when `provider` is omitted. |
-| [database_schema](#rust-datasourceoptions-database_schema) | Default schema. |
-
-###### provider {#rust-datasourceoptions-provider}
-
-Which datasource to return.
-
-**Definition**
-
-```rust
-"provider"
-```
-
-###### database_url {#rust-datasourceoptions-database_url}
-
-Connection URL. The scheme selects the provider when `provider` is omitted.
-
-**Definition**
-
-```rust
-"database_url"
-```
-
-###### database_schema {#rust-datasourceoptions-database_schema}
-
-Default schema.
-
-**Definition**
-
-```rust
-"database_schema"
-```
+| provider | Which datasource to return. |
+| database_url | Connection URL. The scheme selects the provider when `provider` is omitted. |
+| database_schema | Default schema. |
 
 ### Remarks
 
@@ -1494,8 +1356,8 @@ interface IConnection
 
 | Name | Description |
 | --- | --- |
-| [provider](#typescript-iconnection-provider) | Registered provider name. |
-| [isOpen](#typescript-iconnection-isopen) | Whether the connection is open. |
+| provider | Registered provider name. |
+| isOpen | Whether the connection is open. |
 
 **Methods**
 
@@ -1505,26 +1367,6 @@ interface IConnection
 | [open()](#typescript-iconnection-open) | Opens the connection. A no-op if already open. |
 | [close()](#typescript-iconnection-close) | Closes the connection. |
 | [startTransaction(isolation?)](#typescript-iconnection-starttransaction-isolation) | Begins a transaction. The connection must be open. |
-
-###### provider {#typescript-iconnection-provider}
-
-Registered provider name.
-
-**Definition**
-
-```typescript
-readonly provider: string
-```
-
-###### isOpen {#typescript-iconnection-isopen}
-
-Whether the connection is open.
-
-**Definition**
-
-```typescript
-readonly isOpen: boolean
-```
 
 ###### createCommand() {#typescript-iconnection-createcommand}
 
@@ -1592,8 +1434,8 @@ public interface IConnection
 
 | Name | Description |
 | --- | --- |
-| [Provider](#csharp-iconnection-provider) | Registered provider name. |
-| [IsOpen](#csharp-iconnection-isopen) | Whether the connection is open. |
+| Provider | Registered provider name. |
+| IsOpen | Whether the connection is open. |
 
 **Methods**
 
@@ -1603,26 +1445,6 @@ public interface IConnection
 | [Open()](#csharp-iconnection-open) | Opens the connection. A no-op if already open. |
 | [Close()](#csharp-iconnection-close) | Closes the connection. |
 | [StartTransaction(isolation)](#csharp-iconnection-starttransaction-isolation) | Begins a transaction. The connection must be open. |
-
-###### Provider {#csharp-iconnection-provider}
-
-Registered provider name.
-
-**Definition**
-
-```csharp
-string Provider { get; }
-```
-
-###### IsOpen {#csharp-iconnection-isopen}
-
-Whether the connection is open.
-
-**Definition**
-
-```csharp
-bool IsOpen { get; }
-```
 
 ###### CreateCommand() {#csharp-iconnection-createcommand}
 
@@ -1890,8 +1712,8 @@ interface ITransaction
 
 | Name | Description |
 | --- | --- |
-| [connection](#typescript-itransaction-connection) | The open [IConnection](#connection) that started this transaction. |
-| [isolation](#typescript-itransaction-isolation) | The isolation level for this transaction. |
+| connection | The open [IConnection](#connection) that started this transaction. |
+| isolation | The isolation level for this transaction. |
 
 **Methods**
 
@@ -1899,26 +1721,6 @@ interface ITransaction
 | --- | --- |
 | [commit()](#typescript-itransaction-commit) | Commits the transaction. |
 | [abort()](#typescript-itransaction-abort) | Rolls the transaction back. |
-
-###### connection {#typescript-itransaction-connection}
-
-The open [IConnection](#connection) that started this transaction.
-
-**Definition**
-
-```typescript
-readonly connection: IConnection
-```
-
-###### isolation {#typescript-itransaction-isolation}
-
-The isolation level for this transaction.
-
-**Definition**
-
-```typescript
-readonly isolation: IsolationLevel
-```
 
 ###### commit() {#typescript-itransaction-commit}
 
@@ -1950,50 +1752,10 @@ const IsolationLevel
 
 | Name | Description |
 | --- | --- |
-| [ReadUncommitted](#typescript-isolationlevel-readuncommitted) | Dirty reads are allowed. |
-| [ReadCommitted](#typescript-isolationlevel-readcommitted) | Committed data only. |
-| [RepeatableRead](#typescript-isolationlevel-repeatableread) | Repeatable reads within the transaction. |
-| [Serializable](#typescript-isolationlevel-serializable) | Full isolation. The default for [startTransaction](#typescript-iconnection-starttransaction-isolation). |
-
-###### ReadUncommitted {#typescript-isolationlevel-readuncommitted}
-
-Dirty reads are allowed.
-
-**Definition**
-
-```typescript
-ReadUncommitted: "readUncommitted"
-```
-
-###### ReadCommitted {#typescript-isolationlevel-readcommitted}
-
-Committed data only.
-
-**Definition**
-
-```typescript
-ReadCommitted: "readCommitted"
-```
-
-###### RepeatableRead {#typescript-isolationlevel-repeatableread}
-
-Repeatable reads within the transaction.
-
-**Definition**
-
-```typescript
-RepeatableRead: "repeatableRead"
-```
-
-###### Serializable {#typescript-isolationlevel-serializable}
-
-Full isolation. The default for [startTransaction](#typescript-iconnection-starttransaction-isolation).
-
-**Definition**
-
-```typescript
-Serializable: "serializable"
-```
+| ReadUncommitted | Dirty reads are allowed. |
+| ReadCommitted | Committed data only. |
+| RepeatableRead | Repeatable reads within the transaction. |
+| Serializable | Full isolation. The default for [startTransaction](#typescript-iconnection-starttransaction-isolation). |
 
 ##### C#
 
@@ -2007,8 +1769,8 @@ public interface ITransaction
 
 | Name | Description |
 | --- | --- |
-| [Connection](#csharp-itransaction-connection) | The open [IConnection](#connection) that started this transaction. |
-| [Isolation](#csharp-itransaction-isolation) | The isolation level for this transaction. |
+| Connection | The open [IConnection](#connection) that started this transaction. |
+| Isolation | The isolation level for this transaction. |
 
 **Methods**
 
@@ -2016,26 +1778,6 @@ public interface ITransaction
 | --- | --- |
 | [Commit()](#csharp-itransaction-commit) | Commits the transaction. |
 | [Abort()](#csharp-itransaction-abort) | Rolls the transaction back. |
-
-###### Connection {#csharp-itransaction-connection}
-
-The open [IConnection](#connection) that started this transaction.
-
-**Definition**
-
-```csharp
-IConnection Connection { get; }
-```
-
-###### Isolation {#csharp-itransaction-isolation}
-
-The isolation level for this transaction.
-
-**Definition**
-
-```csharp
-IsolationLevel Isolation { get; }
-```
 
 ###### Commit() {#csharp-itransaction-commit}
 
@@ -2067,50 +1809,10 @@ public enum IsolationLevel
 
 | Name | Description |
 | --- | --- |
-| [ReadUncommitted](#csharp-isolationlevel-readuncommitted) | Dirty reads are allowed. |
-| [ReadCommitted](#csharp-isolationlevel-readcommitted) | Committed data only. |
-| [RepeatableRead](#csharp-isolationlevel-repeatableread) | Repeatable reads within the transaction. |
-| [Serializable](#csharp-isolationlevel-serializable) | Full isolation. The default for [StartTransaction](#csharp-iconnection-starttransaction-isolation). |
-
-###### ReadUncommitted {#csharp-isolationlevel-readuncommitted}
-
-Dirty reads are allowed.
-
-**Definition**
-
-```csharp
-ReadUncommitted
-```
-
-###### ReadCommitted {#csharp-isolationlevel-readcommitted}
-
-Committed data only.
-
-**Definition**
-
-```csharp
-ReadCommitted
-```
-
-###### RepeatableRead {#csharp-isolationlevel-repeatableread}
-
-Repeatable reads within the transaction.
-
-**Definition**
-
-```csharp
-RepeatableRead
-```
-
-###### Serializable {#csharp-isolationlevel-serializable}
-
-Full isolation. The default for [StartTransaction](#csharp-iconnection-starttransaction-isolation).
-
-**Definition**
-
-```csharp
-Serializable
-```
+| ReadUncommitted | Dirty reads are allowed. |
+| ReadCommitted | Committed data only. |
+| RepeatableRead | Repeatable reads within the transaction. |
+| Serializable | Full isolation. The default for [StartTransaction](#csharp-iconnection-starttransaction-isolation). |
 
 ##### Rust
 
@@ -2180,50 +1882,10 @@ pub enum IsolationLevel
 
 | Name | Description |
 | --- | --- |
-| [ReadUncommitted](#rust-isolationlevel-readuncommitted) | Dirty reads are allowed. |
-| [ReadCommitted](#rust-isolationlevel-readcommitted) | Committed data only. |
-| [RepeatableRead](#rust-isolationlevel-repeatableread) | Repeatable reads within the transaction. |
-| [Serializable](#rust-isolationlevel-serializable) | Full isolation. The default for [start_transaction](#rust-connection-start_transaction-isolation). |
-
-###### ReadUncommitted {#rust-isolationlevel-readuncommitted}
-
-Dirty reads are allowed.
-
-**Definition**
-
-```rust
-ReadUncommitted
-```
-
-###### ReadCommitted {#rust-isolationlevel-readcommitted}
-
-Committed data only.
-
-**Definition**
-
-```rust
-ReadCommitted
-```
-
-###### RepeatableRead {#rust-isolationlevel-repeatableread}
-
-Repeatable reads within the transaction.
-
-**Definition**
-
-```rust
-RepeatableRead
-```
-
-###### Serializable {#rust-isolationlevel-serializable}
-
-Full isolation. The default for [start_transaction](#rust-connection-start_transaction-isolation).
-
-**Definition**
-
-```rust
-Serializable
-```
+| ReadUncommitted | Dirty reads are allowed. |
+| ReadCommitted | Committed data only. |
+| RepeatableRead | Repeatable reads within the transaction. |
+| Serializable | Full isolation. The default for [start_transaction](#rust-connection-start_transaction-isolation). |
 
 ### Remarks
 
@@ -2340,7 +2002,7 @@ interface ICommand
 
 | Name | Description |
 | --- | --- |
-| [connection](#typescript-icommand-connection) | The [IConnection](#connection) this command is bound to. |
+| connection | The [IConnection](#connection) this command is bound to. |
 
 **Methods**
 
@@ -2351,16 +2013,6 @@ interface ICommand
 | [execute(text, parameters?)](#typescript-icommand-execute-text-parameters) | Runs a non-query command. |
 | [execute(command, statement, parameters?)](#typescript-icommand-execute-command-statement-parameters) | Runs [execute](#typescript-icommand-execute-text-parameters) with `statement.getText()`. |
 | [executeReader(command, statement, parameters?)](#typescript-icommand-executereader-command-statement-parameters) | Runs [executeReader](#typescript-icommand-executereader-text-parameters) with `statement.getText()`. |
-
-###### connection {#typescript-icommand-connection}
-
-The [IConnection](#connection) this command is bound to.
-
-**Definition**
-
-```typescript
-readonly connection: IConnection
-```
 
 ###### addMiddleware(middleware) {#typescript-icommand-addmiddleware-middleware}
 
@@ -2528,28 +2180,8 @@ interface Parameter<T = unknown>
 
 | Name | Description |
 | --- | --- |
-| [name](#typescript-parameter-name) | Parameter name. |
-| [value](#typescript-parameter-value) | Parameter value. |
-
-###### name {#typescript-parameter-name}
-
-Parameter name.
-
-**Definition**
-
-```typescript
-name: string
-```
-
-###### value {#typescript-parameter-value}
-
-Parameter value.
-
-**Definition**
-
-```typescript
-value: T
-```
+| name | Parameter name. |
+| value | Parameter value. |
 
 ##### Response {#typescript-response}
 
@@ -2561,28 +2193,8 @@ interface Response
 
 | Name | Description |
 | --- | --- |
-| [result](#typescript-response-result) | Scalar or row result from the command. |
-| [rowsAffected](#typescript-response-rowsaffected) | Rows inserted, updated, or deleted. |
-
-###### result {#typescript-response-result}
-
-Scalar or row result from the command.
-
-**Definition**
-
-```typescript
-result: unknown
-```
-
-###### rowsAffected {#typescript-response-rowsaffected}
-
-Rows inserted, updated, or deleted.
-
-**Definition**
-
-```typescript
-rowsAffected: number
-```
+| result | Scalar or row result from the command. |
+| rowsAffected | Rows inserted, updated, or deleted. |
 
 ##### IReader {#reader} {#typescript-ireader-reader}
 
@@ -2594,23 +2206,13 @@ interface IReader<T>
 
 | Name | Description |
 | --- | --- |
-| [current](#typescript-ireader-reader-current) | The row from the last successful [next](#typescript-ireader-next). |
+| current | The row from the last successful [next](#typescript-ireader-next). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
 | [next()](#typescript-ireader-reader-next) | Advances to the next row. |
-
-###### current {#typescript-ireader-reader-current}
-
-The row from the last successful [next](#typescript-ireader-next).
-
-**Definition**
-
-```typescript
-readonly current: T | undefined
-```
 
 ###### next() {#typescript-ireader-reader-next}
 
@@ -2638,7 +2240,7 @@ public interface ICommand
 
 | Name | Description |
 | --- | --- |
-| [Connection](#csharp-icommand-connection) | The [IConnection](#connection) this command is bound to. |
+| Connection | The [IConnection](#connection) this command is bound to. |
 
 **Methods**
 
@@ -2649,16 +2251,6 @@ public interface ICommand
 | [Execute(text, parameters)](#csharp-icommand-execute-text-parameters) | Runs a non-query command. |
 | [ExecuteReader(statement, parameters)](#csharp-icommand-executereader-statement-parameters) | Runs [ExecuteReader](#csharp-icommand-executereader-text-parameters) with `statement.GetText()`. |
 | [Execute(statement, parameters)](#csharp-icommand-execute-statement-parameters) | Runs [Execute](#csharp-icommand-execute-text-parameters) with `statement.GetText()`. |
-
-###### Connection {#csharp-icommand-connection}
-
-The [IConnection](#connection) this command is bound to.
-
-**Definition**
-
-```csharp
-IConnection Connection { get; }
-```
 
 ###### AddMiddleware(middleware) {#csharp-icommand-addmiddleware-middleware}
 
@@ -2828,28 +2420,8 @@ public sealed record Parameter(string Name, Value Value)
 
 | Name | Description |
 | --- | --- |
-| [Name](#csharp-parameter-name) | Parameter name. |
-| [Value](#csharp-parameter-value) | Parameter value. |
-
-###### Name {#csharp-parameter-name}
-
-Parameter name.
-
-**Definition**
-
-```csharp
-string Name { get; }
-```
-
-###### Value {#csharp-parameter-value}
-
-Parameter value.
-
-**Definition**
-
-```csharp
-Value Value { get; }
-```
+| Name | Parameter name. |
+| Value | Parameter value. |
 
 ##### Response {#csharp-response}
 
@@ -2861,28 +2433,8 @@ public sealed record Response(Value Result, int RowsAffected)
 
 | Name | Description |
 | --- | --- |
-| [Result](#csharp-response-result) | Scalar or row result from the command. |
-| [RowsAffected](#csharp-response-rowsaffected) | Rows inserted, updated, or deleted. |
-
-###### Result {#csharp-response-result}
-
-Scalar or row result from the command.
-
-**Definition**
-
-```csharp
-Value Result { get; }
-```
-
-###### RowsAffected {#csharp-response-rowsaffected}
-
-Rows inserted, updated, or deleted.
-
-**Definition**
-
-```csharp
-int RowsAffected { get; }
-```
+| Result | Scalar or row result from the command. |
+| RowsAffected | Rows inserted, updated, or deleted. |
 
 ##### IReader {#reader} {#csharp-ireader-reader}
 
@@ -2894,23 +2446,13 @@ public interface IReader<out T>
 
 | Name | Description |
 | --- | --- |
-| [Current](#csharp-ireader-reader-current) | The row from the last successful [Next](#csharp-ireader-next). |
+| Current | The row from the last successful [Next](#csharp-ireader-next). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
 | [Next()](#csharp-ireader-reader-next) | Advances to the next row. |
-
-###### Current {#csharp-ireader-reader-current}
-
-The row from the last successful [Next](#csharp-ireader-next).
-
-**Definition**
-
-```csharp
-T? Current { get; }
-```
 
 ###### Next() {#csharp-ireader-reader-next}
 
@@ -3112,28 +2654,8 @@ pub struct Parameter<T = Value>
 
 | Name | Description |
 | --- | --- |
-| [name](#rust-parameter-name) | Parameter name. |
-| [value](#rust-parameter-value) | Parameter value. |
-
-###### name {#rust-parameter-name}
-
-Parameter name.
-
-**Definition**
-
-```rust
-pub name: String
-```
-
-###### value {#rust-parameter-value}
-
-Parameter value.
-
-**Definition**
-
-```rust
-pub value: T
-```
+| name | Parameter name. |
+| value | Parameter value. |
 
 ##### Response {#rust-response}
 
@@ -3145,28 +2667,8 @@ pub struct Response
 
 | Name | Description |
 | --- | --- |
-| [result](#rust-response-result) | Scalar or row result from the command. |
-| [rows_affected](#rust-response-rows_affected) | Rows inserted, updated, or deleted. |
-
-###### result {#rust-response-result}
-
-Scalar or row result from the command.
-
-**Definition**
-
-```rust
-pub result: Value
-```
-
-###### rows_affected {#rust-response-rows_affected}
-
-Rows inserted, updated, or deleted.
-
-**Definition**
-
-```rust
-pub rows_affected: i64
-```
+| result | Scalar or row result from the command. |
+| rows_affected | Rows inserted, updated, or deleted. |
 
 ##### Reader {#reader} {#rust-reader-reader}
 
@@ -3447,17 +2949,7 @@ interface IQuery extends IStatement
 
 | Name | Description |
 | --- | --- |
-| [where](#typescript-iquery-where) | Optional [IWhere](#typescript-iwhere) used to build this query. |
-
-###### where {#typescript-iquery-where}
-
-Optional [IWhere](#typescript-iwhere) used to build this query.
-
-**Definition**
-
-```typescript
-readonly where?: IWhere
-```
+| where | Optional [IWhere](#typescript-iwhere) used to build this query. |
 
 ##### Query {#typescript-query}
 
@@ -3475,7 +2967,7 @@ class Query implements IQuery
 
 | Name | Description |
 | --- | --- |
-| [where](#typescript-query-where) | Optional [IWhere](#typescript-iwhere) used to build this query. |
+| where | Optional [IWhere](#typescript-iwhere) used to build this query. |
 
 **Methods**
 
@@ -3499,16 +2991,6 @@ constructor(text: string, where?: IWhere)
 | --- | --- |
 | `text` | command text |
 | `where` | optional [IWhere](#typescript-iwhere) |
-
-###### where {#typescript-query-where}
-
-Optional [IWhere](#typescript-iwhere) used to build this query.
-
-**Definition**
-
-```typescript
-readonly where?: IWhere
-```
 
 ###### getText() {#typescript-query-gettext}
 
@@ -3642,17 +3124,7 @@ interface IUpdateStatement extends IStatement
 
 | Name | Description |
 | --- | --- |
-| [where](#typescript-iupdatestatement-where) | Optional [IWhere](#typescript-iwhere) used to build this update. |
-
-###### where {#typescript-iupdatestatement-where}
-
-Optional [IWhere](#typescript-iwhere) used to build this update.
-
-**Definition**
-
-```typescript
-readonly where?: IWhere
-```
+| where | Optional [IWhere](#typescript-iwhere) used to build this update. |
 
 ##### UpdateStatement {#typescript-updatestatement}
 
@@ -3670,7 +3142,7 @@ class UpdateStatement implements IUpdateStatement
 
 | Name | Description |
 | --- | --- |
-| [where](#typescript-updatestatement-where) | Optional [IWhere](#typescript-iwhere) used to build this update. |
+| where | Optional [IWhere](#typescript-iwhere) used to build this update. |
 
 **Methods**
 
@@ -3694,16 +3166,6 @@ constructor(text: string, where?: IWhere)
 | --- | --- |
 | `text` | command text |
 | `where` | optional [IWhere](#typescript-iwhere) |
-
-###### where {#typescript-updatestatement-where}
-
-Optional [IWhere](#typescript-iwhere) used to build this update.
-
-**Definition**
-
-```typescript
-readonly where?: IWhere
-```
 
 ###### getText() {#typescript-updatestatement-gettext}
 
@@ -3729,17 +3191,7 @@ interface IDeleteStatement extends IStatement
 
 | Name | Description |
 | --- | --- |
-| [where](#typescript-ideletestatement-where) | Optional [IWhere](#typescript-iwhere) used to build this delete. |
-
-###### where {#typescript-ideletestatement-where}
-
-Optional [IWhere](#typescript-iwhere) used to build this delete.
-
-**Definition**
-
-```typescript
-readonly where?: IWhere
-```
+| where | Optional [IWhere](#typescript-iwhere) used to build this delete. |
 
 ##### DeleteStatement {#typescript-deletestatement}
 
@@ -3757,7 +3209,7 @@ class DeleteStatement implements IDeleteStatement
 
 | Name | Description |
 | --- | --- |
-| [where](#typescript-deletestatement-where) | Optional [IWhere](#typescript-iwhere) used to build this delete. |
+| where | Optional [IWhere](#typescript-iwhere) used to build this delete. |
 
 **Methods**
 
@@ -3781,16 +3233,6 @@ constructor(text: string, where?: IWhere)
 | --- | --- |
 | `text` | command text |
 | `where` | optional [IWhere](#typescript-iwhere) |
-
-###### where {#typescript-deletestatement-where}
-
-Optional [IWhere](#typescript-iwhere) used to build this delete.
-
-**Definition**
-
-```typescript
-readonly where?: IWhere
-```
 
 ###### getText() {#typescript-deletestatement-gettext}
 
@@ -3952,17 +3394,7 @@ public interface IQuery : IStatement
 
 | Name | Description |
 | --- | --- |
-| [Where](#csharp-iquery-where) | Optional [IWhere](#csharp-iwhere) used to build this query. |
-
-###### Where {#csharp-iquery-where}
-
-Optional [IWhere](#csharp-iwhere) used to build this query.
-
-**Definition**
-
-```csharp
-IWhere? Where { get; }
-```
+| Where | Optional [IWhere](#csharp-iwhere) used to build this query. |
 
 ##### Query {#csharp-query}
 
@@ -3980,7 +3412,7 @@ public sealed class Query : IQuery
 
 | Name | Description |
 | --- | --- |
-| [Where](#csharp-query-where) | Optional [IWhere](#csharp-iwhere) used to build this query. |
+| Where | Optional [IWhere](#csharp-iwhere) used to build this query. |
 
 **Methods**
 
@@ -4004,16 +3436,6 @@ public Query(string text, IWhere? where = null)
 | --- | --- |
 | `text` | command text |
 | `where` | optional [IWhere](#csharp-iwhere) |
-
-###### Where {#csharp-query-where}
-
-Optional [IWhere](#csharp-iwhere) used to build this query.
-
-**Definition**
-
-```csharp
-IWhere? Where { get; }
-```
 
 ###### GetText() {#csharp-query-gettext}
 
@@ -4147,17 +3569,7 @@ public interface IUpdateStatement : IStatement
 
 | Name | Description |
 | --- | --- |
-| [Where](#csharp-iupdatestatement-where) | Optional [IWhere](#csharp-iwhere) used to build this update. |
-
-###### Where {#csharp-iupdatestatement-where}
-
-Optional [IWhere](#csharp-iwhere) used to build this update.
-
-**Definition**
-
-```csharp
-IWhere? Where { get; }
-```
+| Where | Optional [IWhere](#csharp-iwhere) used to build this update. |
 
 ##### UpdateStatement {#csharp-updatestatement}
 
@@ -4175,7 +3587,7 @@ public sealed class UpdateStatement : IUpdateStatement
 
 | Name | Description |
 | --- | --- |
-| [Where](#csharp-updatestatement-where) | Optional [IWhere](#csharp-iwhere) used to build this update. |
+| Where | Optional [IWhere](#csharp-iwhere) used to build this update. |
 
 **Methods**
 
@@ -4199,16 +3611,6 @@ public UpdateStatement(string text, IWhere? where = null)
 | --- | --- |
 | `text` | command text |
 | `where` | optional [IWhere](#csharp-iwhere) |
-
-###### Where {#csharp-updatestatement-where}
-
-Optional [IWhere](#csharp-iwhere) used to build this update.
-
-**Definition**
-
-```csharp
-IWhere? Where { get; }
-```
 
 ###### GetText() {#csharp-updatestatement-gettext}
 
@@ -4234,17 +3636,7 @@ public interface IDeleteStatement : IStatement
 
 | Name | Description |
 | --- | --- |
-| [Where](#csharp-ideletestatement-where) | Optional [IWhere](#csharp-iwhere) used to build this delete. |
-
-###### Where {#csharp-ideletestatement-where}
-
-Optional [IWhere](#csharp-iwhere) used to build this delete.
-
-**Definition**
-
-```csharp
-IWhere? Where { get; }
-```
+| Where | Optional [IWhere](#csharp-iwhere) used to build this delete. |
 
 ##### DeleteStatement {#csharp-deletestatement}
 
@@ -4262,7 +3654,7 @@ public sealed class DeleteStatement : IDeleteStatement
 
 | Name | Description |
 | --- | --- |
-| [Where](#csharp-deletestatement-where) | Optional [IWhere](#csharp-iwhere) used to build this delete. |
+| Where | Optional [IWhere](#csharp-iwhere) used to build this delete. |
 
 **Methods**
 
@@ -4286,16 +3678,6 @@ public DeleteStatement(string text, IWhere? where = null)
 | --- | --- |
 | `text` | command text |
 | `where` | optional [IWhere](#csharp-iwhere) |
-
-###### Where {#csharp-deletestatement-where}
-
-Optional [IWhere](#csharp-iwhere) used to build this delete.
-
-**Definition**
-
-```csharp
-IWhere? Where { get; }
-```
 
 ###### GetText() {#csharp-deletestatement-gettext}
 
@@ -5183,28 +4565,8 @@ interface Column
 
 | Name | Description |
 | --- | --- |
-| [name](#typescript-column-name) | Column name. |
-| [type](#typescript-column-type) | SQL type text. |
-
-###### name {#typescript-column-name}
-
-Column name.
-
-**Definition**
-
-```typescript
-name: string
-```
-
-###### type {#typescript-column-type}
-
-SQL type text.
-
-**Definition**
-
-```typescript
-type: string
-```
+| name | Column name. |
+| type | SQL type text. |
 
 ##### Field {#typescript-field}
 
@@ -5216,28 +4578,8 @@ interface Field
 
 | Name | Description |
 | --- | --- |
-| [name](#typescript-field-name) | Field name. |
-| [value](#typescript-field-value) | Field [Scalar](#typescript-scalar). |
-
-###### name {#typescript-field-name}
-
-Field name.
-
-**Definition**
-
-```typescript
-name: string
-```
-
-###### value {#typescript-field-value}
-
-Field [Scalar](#typescript-scalar).
-
-**Definition**
-
-```typescript
-value: Scalar
-```
+| name | Field name. |
+| value | Field [Scalar](#typescript-scalar). |
 
 ##### JoinKind {#typescript-joinkind}
 
@@ -5255,10 +4597,10 @@ type Join
 
 | Name | Description |
 | --- | --- |
-| [kind](#typescript-join-kind) | [JoinKind](#typescript-joinkind). |
-| [table](#typescript-join-table) | Joined table. |
-| [left](#typescript-join-left) | Left-hand join column. |
-| [right](#typescript-join-right) | Right-hand join column. |
+| kind | [JoinKind](#typescript-joinkind). |
+| table | Joined table. |
+| left | Left-hand join column. |
+| right | Right-hand join column. |
 
 **Methods**
 
@@ -5267,46 +4609,6 @@ type Join
 | [inner(table, left, right)](#typescript-join-inner-table-left-right) | Builds an inner [Join](#typescript-join). |
 | [left(table, left, right)](#typescript-join-left-table-left-right) | Builds a left [Join](#typescript-join). |
 | [right(table, left, right)](#typescript-join-right-table-left-right) | Builds a right [Join](#typescript-join). |
-
-###### kind {#typescript-join-kind}
-
-[JoinKind](#typescript-joinkind).
-
-**Definition**
-
-```typescript
-kind: JoinKind
-```
-
-###### table {#typescript-join-table}
-
-Joined table.
-
-**Definition**
-
-```typescript
-table: string
-```
-
-###### left {#typescript-join-left}
-
-Left-hand join column.
-
-**Definition**
-
-```typescript
-left: string
-```
-
-###### right {#typescript-join-right}
-
-Right-hand join column.
-
-**Definition**
-
-```typescript
-right: string
-```
 
 ###### inner(table, left, right) {#typescript-join-inner-table-left-right}
 
@@ -5532,28 +4834,8 @@ public sealed record Column(string Name, string Type)
 
 | Name | Description |
 | --- | --- |
-| [Name](#csharp-column-name) | Column name. |
-| [Type](#csharp-column-type) | SQL type text. |
-
-###### Name {#csharp-column-name}
-
-Column name.
-
-**Definition**
-
-```csharp
-string Name { get; }
-```
-
-###### Type {#csharp-column-type}
-
-SQL type text.
-
-**Definition**
-
-```csharp
-string Type { get; }
-```
+| Name | Column name. |
+| Type | SQL type text. |
 
 ##### JoinKind {#csharp-joinkind}
 
@@ -5565,39 +4847,9 @@ public enum JoinKind
 
 | Name | Description |
 | --- | --- |
-| [Inner](#csharp-joinkind-inner) | Inner join. |
-| [Left](#csharp-joinkind-left) | Left join. |
-| [Right](#csharp-joinkind-right) | Right join. |
-
-###### Inner {#csharp-joinkind-inner}
-
-Inner join.
-
-**Definition**
-
-```csharp
-Inner
-```
-
-###### Left {#csharp-joinkind-left}
-
-Left join.
-
-**Definition**
-
-```csharp
-Left
-```
-
-###### Right {#csharp-joinkind-right}
-
-Right join.
-
-**Definition**
-
-```csharp
-Right
-```
+| Inner | Inner join. |
+| Left | Left join. |
+| Right | Right join. |
 
 ##### Join {#csharp-join}
 
@@ -5609,10 +4861,10 @@ public sealed record Join(JoinKind Kind, string Table, string LeftColumn, string
 
 | Name | Description |
 | --- | --- |
-| [Kind](#csharp-join-kind) | [JoinKind](#csharp-joinkind). |
-| [Table](#csharp-join-table) | Joined table. |
-| [LeftColumn](#csharp-join-leftcolumn) | Left-hand join column. |
-| [RightColumn](#csharp-join-rightcolumn) | Right-hand join column. |
+| Kind | [JoinKind](#csharp-joinkind). |
+| Table | Joined table. |
+| LeftColumn | Left-hand join column. |
+| RightColumn | Right-hand join column. |
 
 **Methods**
 
@@ -5621,46 +4873,6 @@ public sealed record Join(JoinKind Kind, string Table, string LeftColumn, string
 | [Inner(table, left, right)](#csharp-join-inner-table-left-right) | Builds an inner [Join](#csharp-join). |
 | [Left(table, left, right)](#csharp-join-left-table-left-right) | Builds a left [Join](#csharp-join). |
 | [Right(table, left, right)](#csharp-join-right-table-left-right) | Builds a right [Join](#csharp-join). |
-
-###### Kind {#csharp-join-kind}
-
-[JoinKind](#csharp-joinkind).
-
-**Definition**
-
-```csharp
-JoinKind Kind { get; }
-```
-
-###### Table {#csharp-join-table}
-
-Joined table.
-
-**Definition**
-
-```csharp
-string Table { get; }
-```
-
-###### LeftColumn {#csharp-join-leftcolumn}
-
-Left-hand join column.
-
-**Definition**
-
-```csharp
-string LeftColumn { get; }
-```
-
-###### RightColumn {#csharp-join-rightcolumn}
-
-Right-hand join column.
-
-**Definition**
-
-```csharp
-string RightColumn { get; }
-```
 
 ###### Inner(table, left, right) {#csharp-join-inner-table-left-right}
 
@@ -5892,8 +5104,8 @@ pub struct Column
 
 | Name | Description |
 | --- | --- |
-| [name](#rust-column-name) | Column name. |
-| [type_name](#rust-column-type_name) | SQL type text. |
+| name | Column name. |
+| type_name | SQL type text. |
 
 ###### new(name, type_name) {#rust-column-new-name-type_name}
 
@@ -5916,26 +5128,6 @@ pub fn new(name: impl Into<String>, type_name: impl Into<String>) -> Self
 
 [Column](#rust-column)
 
-###### name {#rust-column-name}
-
-Column name.
-
-**Definition**
-
-```rust
-pub name: String
-```
-
-###### type_name {#rust-column-type_name}
-
-SQL type text.
-
-**Definition**
-
-```rust
-pub type_name: String
-```
-
 ##### JoinKind {#rust-joinkind}
 
 ```rust
@@ -5946,39 +5138,9 @@ pub enum JoinKind
 
 | Name | Description |
 | --- | --- |
-| [Inner](#rust-joinkind-inner) | Inner join. |
-| [Left](#rust-joinkind-left) | Left join. |
-| [Right](#rust-joinkind-right) | Right join. |
-
-###### Inner {#rust-joinkind-inner}
-
-Inner join.
-
-**Definition**
-
-```rust
-Inner
-```
-
-###### Left {#rust-joinkind-left}
-
-Left join.
-
-**Definition**
-
-```rust
-Left
-```
-
-###### Right {#rust-joinkind-right}
-
-Right join.
-
-**Definition**
-
-```rust
-Right
-```
+| Inner | Inner join. |
+| Left | Left join. |
+| Right | Right join. |
 
 ##### Join {#rust-join}
 
@@ -5990,10 +5152,10 @@ pub struct Join
 
 | Name | Description |
 | --- | --- |
-| [kind](#rust-join-kind) | [JoinKind](#rust-joinkind). |
-| [table](#rust-join-table) | Joined table. |
-| [left](#rust-join-left) | Left-hand join column. |
-| [right](#rust-join-right) | Right-hand join column. |
+| kind | [JoinKind](#rust-joinkind). |
+| table | Joined table. |
+| left | Left-hand join column. |
+| right | Right-hand join column. |
 
 **Methods**
 
@@ -6002,46 +5164,6 @@ pub struct Join
 | [inner(table, left, right)](#rust-join-inner-table-left-right) | Builds an inner [Join](#rust-join). |
 | [left(table, left, right)](#rust-join-left-table-left-right) | Builds a left [Join](#rust-join). |
 | [right(table, left, right)](#rust-join-right-table-left-right) | Builds a right [Join](#rust-join). |
-
-###### kind {#rust-join-kind}
-
-[JoinKind](#rust-joinkind).
-
-**Definition**
-
-```rust
-pub kind: JoinKind
-```
-
-###### table {#rust-join-table}
-
-Joined table.
-
-**Definition**
-
-```rust
-pub table: String
-```
-
-###### left {#rust-join-left}
-
-Left-hand join column.
-
-**Definition**
-
-```rust
-pub left: String
-```
-
-###### right {#rust-join-right}
-
-Right-hand join column.
-
-**Definition**
-
-```rust
-pub right: String
-```
 
 ###### inner(table, left, right) {#rust-join-inner-table-left-right}
 
@@ -6319,7 +5441,7 @@ class WhereBuilder implements IWhere
 
 | Name | Description |
 | --- | --- |
-| [parameters](#typescript-wherebuilder-parameters) | Bound [Parameter](#typescript-parameter) list. |
+| parameters | Bound [Parameter](#typescript-parameter) list. |
 
 **Methods**
 
@@ -6336,16 +5458,6 @@ class WhereBuilder implements IWhere
 | [not(child)](#typescript-wherebuilder-not-child) | `NOT (child)`. |
 | [in(field, values)](#typescript-wherebuilder-in-field-values) | `field IN ($field_0, …)`. Empty is `1 = 0`. |
 | [getText()](#typescript-wherebuilder-gettext) | Predicate text. |
-
-###### parameters {#typescript-wherebuilder-parameters}
-
-Bound [Parameter](#typescript-parameter) list.
-
-**Definition**
-
-```typescript
-get parameters(): Parameter[]
-```
 
 ###### equals(field, value) {#typescript-wherebuilder-equals-field-value}
 
@@ -6586,7 +5698,7 @@ public sealed class WhereBuilder : IWhere
 
 | Name | Description |
 | --- | --- |
-| [Parameters](#csharp-wherebuilder-parameters) | Bound [Parameter](#csharp-parameter) list. |
+| Parameters | Bound [Parameter](#csharp-parameter) list. |
 
 **Methods**
 
@@ -6603,16 +5715,6 @@ public sealed class WhereBuilder : IWhere
 | [Not(child)](#csharp-wherebuilder-not-child) | `NOT (child)`. |
 | [In(field, values)](#csharp-wherebuilder-in-field-values) | `field IN ($field_0, …)`. Empty is `1 = 0`. |
 | [GetText()](#csharp-wherebuilder-gettext) | Predicate text. |
-
-###### Parameters {#csharp-wherebuilder-parameters}
-
-Bound [Parameter](#csharp-parameter) list.
-
-**Definition**
-
-```csharp
-public IReadOnlyList<Parameter> Parameters { get; }
-```
 
 ###### Equals(field, value) {#csharp-wherebuilder-equals-field-value}
 
@@ -7183,17 +6285,7 @@ interface IRepository<T = unknown>
 
 | Name | Description |
 | --- | --- |
-| [type](#typescript-irepository-type) | Item constructor the repository exposes. |
-
-###### type {#typescript-irepository-type}
-
-Item constructor the repository exposes.
-
-**Definition**
-
-```typescript
-readonly type: Constructable<T>
-```
+| type | Item constructor the repository exposes. |
 
 ##### IRepositoryFactory {#typescript-irepositoryfactory}
 
@@ -7303,7 +6395,7 @@ class RepositoryFactory implements ICRUDRepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [asReadonly](#typescript-repositoryfactory-asreadonly) | Readonly factory view. `register` / `create` call [IRepositoryFactory](#typescript-irepositoryfactory). |
+| asReadonly | Readonly factory view. `register` / `create` call [IRepositoryFactory](#typescript-irepositoryfactory). |
 
 **Methods**
 
@@ -7311,16 +6403,6 @@ class RepositoryFactory implements ICRUDRepositoryFactory
 | --- | --- |
 | [register(repository)](#typescript-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
 | [create(type)](#typescript-repositoryfactory-create-type) | Creates a CRUD repository. |
-
-###### asReadonly {#typescript-repositoryfactory-asreadonly}
-
-Readonly factory view. `register` / `create` call [IRepositoryFactory](#typescript-irepositoryfactory).
-
-**Definition**
-
-```typescript
-readonly asReadonly: IRepositoryFactory
-```
 
 ###### register(repository) {#typescript-repositoryfactory-register-repository}
 
@@ -7374,7 +6456,7 @@ class RepositoryNotRegisteredError extends Error
 
 | Name | Description |
 | --- | --- |
-| [entityTypeName](#typescript-repositorynotregisterederror-entitytypename) | Missing entity type name. |
+| entityTypeName | Missing entity type name. |
 
 ###### RepositoryNotRegisteredError(entityTypeName) {#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename}
 
@@ -7392,16 +6474,6 @@ constructor(entityTypeName: string)
 | --- | --- |
 | `entityTypeName` | missing entity type name |
 
-###### entityTypeName {#typescript-repositorynotregisterederror-entitytypename}
-
-Missing entity type name.
-
-**Definition**
-
-```typescript
-readonly entityTypeName: string
-```
-
 ##### C#
 
 ##### IRepository {#csharp-irepository}
@@ -7414,17 +6486,7 @@ public interface IRepository
 
 | Name | Description |
 | --- | --- |
-| [Type](#csharp-irepository-type) | Item CLR type the repository exposes. |
-
-###### Type {#csharp-irepository-type}
-
-Item CLR type the repository exposes.
-
-**Definition**
-
-```csharp
-Type Type { get; }
-```
+| Type | Item CLR type the repository exposes. |
 
 ##### IRepositoryFactory {#csharp-irepositoryfactory}
 
@@ -7577,7 +6639,7 @@ public sealed class RepositoryNotRegisteredException : DatasourceException
 
 | Name | Description |
 | --- | --- |
-| [EntityTypeName](#csharp-repositorynotregisteredexception-entitytypename) | Missing entity type name. |
+| EntityTypeName | Missing entity type name. |
 
 ###### RepositoryNotRegisteredException(entityTypeName) {#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename}
 
@@ -7594,16 +6656,6 @@ public RepositoryNotRegisteredException(string entityTypeName)
 | Name | Description |
 | --- | --- |
 | `entityTypeName` | missing entity type name |
-
-###### EntityTypeName {#csharp-repositorynotregisteredexception-entitytypename}
-
-Missing entity type name.
-
-**Definition**
-
-```csharp
-string EntityTypeName { get; }
-```
 
 ##### Rust
 
@@ -7936,7 +6988,7 @@ abstract class ReadonlyRepository<T> implements IReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [type](#typescript-readonlyrepository-type) | Item constructor the repository exposes. |
+| type | Item constructor the repository exposes. |
 
 **Methods**
 
@@ -7960,16 +7012,6 @@ constructor(type: Constructable<T>)
 | Name | Description |
 | --- | --- |
 | `type` | item constructor ([IRepository.type](#typescript-irepository-type)) |
-
-###### type {#typescript-readonlyrepository-type}
-
-Item constructor the repository exposes.
-
-**Definition**
-
-```typescript
-readonly type: Constructable<T>
-```
 
 ###### read(query?) {#typescript-readonlyrepository-read-query}
 
@@ -8076,7 +7118,7 @@ public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [Type](#csharp-readonlyrepository-type) | Item CLR type. `typeof(T)`. |
+| Type | Item CLR type. `typeof(T)`. |
 
 **Methods**
 
@@ -8084,16 +7126,6 @@ public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
 | --- | --- |
 | [Read(query)](#csharp-readonlyrepository-read-query) | Yields every item. Implement in a subclass. |
 | [ReadSingle(query)](#csharp-readonlyrepository-readsingle-query) | Returns the first item from [Read](#csharp-readonlyrepository-read-query), or `default`. |
-
-###### Type {#csharp-readonlyrepository-type}
-
-Item CLR type. `typeof(T)`.
-
-**Definition**
-
-```csharp
-Type Type { get; }
-```
 
 ###### Read(query) {#csharp-readonlyrepository-read-query}
 
@@ -8377,10 +7409,10 @@ class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDReposi
 
 | Name | Description |
 | --- | --- |
-| [rowConverter](#typescript-repository-rowconverter) | Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper). |
-| [statementsMapper](#typescript-repository-statementsmapper) | Statement [StatementMapper](#statement-mapper). |
-| [mapper](#typescript-repository-mapper) | Read-row [Mapper](#mapper). Alias of `statementsMapper.rows`. |
-| [statements](#typescript-repository-statements) | SQL fragments for query / insert / update / delete. |
+| rowConverter | Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper). |
+| statementsMapper | Statement [StatementMapper](#statement-mapper). |
+| mapper | Read-row [Mapper](#mapper). Alias of `statementsMapper.rows`. |
+| statements | SQL fragments for query / insert / update / delete. |
 
 **Methods**
 
@@ -8440,46 +7472,6 @@ constructor(built: BuiltRepository<T>)
 | Name | Description |
 | --- | --- |
 | `built` | [BuiltRepository](#typescript-builtrepository) |
-
-###### rowConverter {#typescript-repository-rowconverter}
-
-Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper).
-
-**Definition**
-
-```typescript
-readonly rowConverter: TypeConverter<T, Cells>
-```
-
-###### statementsMapper {#typescript-repository-statementsmapper}
-
-Statement [StatementMapper](#statement-mapper).
-
-**Definition**
-
-```typescript
-readonly statementsMapper: StatementMapper<T>
-```
-
-###### mapper {#typescript-repository-mapper}
-
-Read-row [Mapper](#mapper). Alias of `statementsMapper.rows`.
-
-**Definition**
-
-```typescript
-readonly mapper: IMapper<T, T>
-```
-
-###### statements {#typescript-repository-statements}
-
-SQL fragments for query / insert / update / delete.
-
-**Definition**
-
-```typescript
-readonly statements: RepositoryStatements
-```
 
 ###### addMiddleware(middleware) {#typescript-repository-addmiddleware-middleware}
 
@@ -8593,94 +7585,14 @@ type RepositoryBuilderOptions<T = Cells>
 
 | Name | Description |
 | --- | --- |
-| [connection](#typescript-repositorybuilderoptions-connection) | Open [IConnection](#connection). |
-| [ids](#typescript-repositorybuilderoptions-ids) | Id column names. Default `["id"]`. |
-| [assignIdentityOnCreate](#typescript-repositorybuilderoptions-assignidentityoncreate) | When true, omit id columns on insert so the provider can generate them. Default `true`. |
-| [entity](#typescript-repositorybuilderoptions-entity) | Table or entity name. |
-| [mapping](#typescript-repositorybuilderoptions-mapping) | Row [TypeConverter](#type-converter). |
-| [mapper](#typescript-repositorybuilderoptions-mapper) | Read-row [Mapper](#mapper). |
-| [statementMapper](#typescript-repositorybuilderoptions-statementmapper) | [StatementMapper](#statement-mapper). |
-| [columns](#typescript-repositorybuilderoptions-columns) | Column names when mapping is omitted. |
-
-###### connection {#typescript-repositorybuilderoptions-connection}
-
-Open [IConnection](#connection).
-
-**Definition**
-
-```typescript
-connection: IConnection
-```
-
-###### ids {#typescript-repositorybuilderoptions-ids}
-
-Id column names. Default `["id"]`.
-
-**Definition**
-
-```typescript
-ids?: string[]
-```
-
-###### assignIdentityOnCreate {#typescript-repositorybuilderoptions-assignidentityoncreate}
-
-When true, omit id columns on insert so the provider can generate them. Default `true`.
-
-**Definition**
-
-```typescript
-assignIdentityOnCreate?: boolean
-```
-
-###### entity {#typescript-repositorybuilderoptions-entity}
-
-Table or entity name.
-
-**Definition**
-
-```typescript
-entity?: string
-```
-
-###### mapping {#typescript-repositorybuilderoptions-mapping}
-
-Row [TypeConverter](#type-converter).
-
-**Definition**
-
-```typescript
-mapping?: TypeConverter<T, Cells>
-```
-
-###### mapper {#typescript-repositorybuilderoptions-mapper}
-
-Read-row [Mapper](#mapper).
-
-**Definition**
-
-```typescript
-mapper?: IMapper<T, T>
-```
-
-###### statementMapper {#typescript-repositorybuilderoptions-statementmapper}
-
-[StatementMapper](#statement-mapper).
-
-**Definition**
-
-```typescript
-statementMapper?: StatementMapper<T>
-```
-
-###### columns {#typescript-repositorybuilderoptions-columns}
-
-Column names when mapping is omitted.
-
-**Definition**
-
-```typescript
-columns?: string[]
-```
+| connection | Open [IConnection](#connection). |
+| ids | Id column names. Default `["id"]`. |
+| assignIdentityOnCreate | When true, omit id columns on insert so the provider can generate them. Default `true`. |
+| entity | Table or entity name. |
+| mapping | Row [TypeConverter](#type-converter). |
+| mapper | Read-row [Mapper](#mapper). |
+| statementMapper | [StatementMapper](#statement-mapper). |
+| columns | Column names when mapping is omitted. |
 
 ##### BuiltRepository {#typescript-builtrepository}
 
@@ -8692,83 +7604,13 @@ type BuiltRepository<T = Cells>
 
 | Name | Description |
 | --- | --- |
-| [connection](#typescript-builtrepository-connection) | Open [IConnection](#connection). |
-| [rowConverter](#typescript-builtrepository-rowconverter) | Row [TypeConverter](#type-converter). |
-| [statementMapper](#typescript-builtrepository-statementmapper) | [StatementMapper](#statement-mapper). |
-| [statements](#typescript-builtrepository-statements) | SQL fragments. |
-| [ids](#typescript-builtrepository-ids) | Id column names. |
-| [assignIdentityOnCreate](#typescript-builtrepository-assignidentityoncreate) | When true, omit id columns on insert. |
-| [type](#typescript-builtrepository-type) | Item constructor. |
-
-###### connection {#typescript-builtrepository-connection}
-
-Open [IConnection](#connection).
-
-**Definition**
-
-```typescript
-connection: IConnection
-```
-
-###### rowConverter {#typescript-builtrepository-rowconverter}
-
-Row [TypeConverter](#type-converter).
-
-**Definition**
-
-```typescript
-rowConverter: TypeConverter<T, Cells>
-```
-
-###### statementMapper {#typescript-builtrepository-statementmapper}
-
-[StatementMapper](#statement-mapper).
-
-**Definition**
-
-```typescript
-statementMapper: StatementMapper<T>
-```
-
-###### statements {#typescript-builtrepository-statements}
-
-SQL fragments.
-
-**Definition**
-
-```typescript
-statements: RepositoryStatements
-```
-
-###### ids {#typescript-builtrepository-ids}
-
-Id column names.
-
-**Definition**
-
-```typescript
-ids: string[]
-```
-
-###### assignIdentityOnCreate {#typescript-builtrepository-assignidentityoncreate}
-
-When true, omit id columns on insert.
-
-**Definition**
-
-```typescript
-assignIdentityOnCreate: boolean
-```
-
-###### type {#typescript-builtrepository-type}
-
-Item constructor.
-
-**Definition**
-
-```typescript
-type: Constructable<T>
-```
+| connection | Open [IConnection](#connection). |
+| rowConverter | Row [TypeConverter](#type-converter). |
+| statementMapper | [StatementMapper](#statement-mapper). |
+| statements | SQL fragments. |
+| ids | Id column names. |
+| assignIdentityOnCreate | When true, omit id columns on insert. |
+| type | Item constructor. |
 
 ##### C#
 
@@ -8866,8 +7708,8 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
 
 | Name | Description |
 | --- | --- |
-| [StatementsMapper](#csharp-repository-statementsmapper) | Statement [StatementMapper](#statement-mapper). |
-| [Mapper](#csharp-repository-mapper) | Read-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`. |
+| StatementsMapper | Statement [StatementMapper](#statement-mapper). |
+| Mapper | Read-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`. |
 
 **Methods**
 
@@ -8926,26 +7768,6 @@ public Repository(BuiltRepository<T> built)
 | Name | Description |
 | --- | --- |
 | `built` | [BuiltRepository](#csharp-builtrepository) |
-
-###### StatementsMapper {#csharp-repository-statementsmapper}
-
-Statement [StatementMapper](#statement-mapper).
-
-**Definition**
-
-```csharp
-StatementMapper<T> StatementsMapper { get; }
-```
-
-###### Mapper {#csharp-repository-mapper}
-
-Read-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`.
-
-**Definition**
-
-```csharp
-IMapper<T, T> Mapper { get; }
-```
 
 ###### AddMiddleware(middleware) {#csharp-repository-addmiddleware-middleware}
 
@@ -9059,94 +7881,14 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
 
 | Name | Description |
 | --- | --- |
-| [Connection](#csharp-repositorybuilderoptions-connection) | Open [IConnection](#connection). |
-| [Ids](#csharp-repositorybuilderoptions-ids) | Id column names. Default `["id"]`. |
-| [AssignIdentityOnCreate](#csharp-repositorybuilderoptions-assignidentityoncreate) | When true, omit id columns on insert so the provider can generate them. Default `true`. |
-| [Entity](#csharp-repositorybuilderoptions-entity) | Table or entity name. |
-| [Mapping](#csharp-repositorybuilderoptions-mapping) | Row [TypeConverter](#type-converter). |
-| [Mapper](#csharp-repositorybuilderoptions-mapper) | Read-row [Mapper](#mapper). |
-| [StatementMapper](#csharp-repositorybuilderoptions-statementmapper) | [StatementMapper](#statement-mapper). |
-| [Columns](#csharp-repositorybuilderoptions-columns) | Column names when mapping is omitted. |
-
-###### Connection {#csharp-repositorybuilderoptions-connection}
-
-Open [IConnection](#connection).
-
-**Definition**
-
-```csharp
-required IConnection Connection { get; init; }
-```
-
-###### Ids {#csharp-repositorybuilderoptions-ids}
-
-Id column names. Default `["id"]`.
-
-**Definition**
-
-```csharp
-IReadOnlyList<string> Ids { get; init; }
-```
-
-###### AssignIdentityOnCreate {#csharp-repositorybuilderoptions-assignidentityoncreate}
-
-When true, omit id columns on insert so the provider can generate them. Default `true`.
-
-**Definition**
-
-```csharp
-bool AssignIdentityOnCreate { get; init; }
-```
-
-###### Entity {#csharp-repositorybuilderoptions-entity}
-
-Table or entity name.
-
-**Definition**
-
-```csharp
-string? Entity { get; init; }
-```
-
-###### Mapping {#csharp-repositorybuilderoptions-mapping}
-
-Row [TypeConverter](#type-converter).
-
-**Definition**
-
-```csharp
-TypeConverter<T, Row>? Mapping { get; init; }
-```
-
-###### Mapper {#csharp-repositorybuilderoptions-mapper}
-
-Read-row [Mapper](#mapper).
-
-**Definition**
-
-```csharp
-IMapper<T, T>? Mapper { get; init; }
-```
-
-###### StatementMapper {#csharp-repositorybuilderoptions-statementmapper}
-
-[StatementMapper](#statement-mapper).
-
-**Definition**
-
-```csharp
-StatementMapper<T>? StatementMapper { get; init; }
-```
-
-###### Columns {#csharp-repositorybuilderoptions-columns}
-
-Column names when mapping is omitted.
-
-**Definition**
-
-```csharp
-IReadOnlyList<string>? Columns { get; init; }
-```
+| Connection | Open [IConnection](#connection). |
+| Ids | Id column names. Default `["id"]`. |
+| AssignIdentityOnCreate | When true, omit id columns on insert so the provider can generate them. Default `true`. |
+| Entity | Table or entity name. |
+| Mapping | Row [TypeConverter](#type-converter). |
+| Mapper | Read-row [Mapper](#mapper). |
+| StatementMapper | [StatementMapper](#statement-mapper). |
+| Columns | Column names when mapping is omitted. |
 
 ##### BuiltRepository {#csharp-builtrepository}
 
@@ -9158,72 +7900,12 @@ public sealed record BuiltRepository<T> where T : new()
 
 | Name | Description |
 | --- | --- |
-| [Connection](#csharp-builtrepository-connection) | Open [IConnection](#connection). |
-| [RowConverter](#csharp-builtrepository-rowconverter) | Row [TypeConverter](#type-converter). |
-| [StatementMapper](#csharp-builtrepository-statementmapper) | [StatementMapper](#statement-mapper). |
-| [Statements](#csharp-builtrepository-statements) | SQL fragments. |
-| [Ids](#csharp-builtrepository-ids) | Id column names. |
-| [AssignIdentityOnCreate](#csharp-builtrepository-assignidentityoncreate) | When true, omit id columns on insert. |
-
-###### Connection {#csharp-builtrepository-connection}
-
-Open [IConnection](#connection).
-
-**Definition**
-
-```csharp
-IConnection Connection { get; init; }
-```
-
-###### RowConverter {#csharp-builtrepository-rowconverter}
-
-Row [TypeConverter](#type-converter).
-
-**Definition**
-
-```csharp
-TypeConverter<T, Row> RowConverter { get; init; }
-```
-
-###### StatementMapper {#csharp-builtrepository-statementmapper}
-
-[StatementMapper](#statement-mapper).
-
-**Definition**
-
-```csharp
-StatementMapper<T> StatementMapper { get; init; }
-```
-
-###### Statements {#csharp-builtrepository-statements}
-
-SQL fragments.
-
-**Definition**
-
-```csharp
-RepositoryStatements Statements { get; init; }
-```
-
-###### Ids {#csharp-builtrepository-ids}
-
-Id column names.
-
-**Definition**
-
-```csharp
-IReadOnlyList<string> Ids { get; init; }
-```
-
-###### AssignIdentityOnCreate {#csharp-builtrepository-assignidentityoncreate}
-
-When true, omit id columns on insert.
-
-**Definition**
-
-```csharp
-bool AssignIdentityOnCreate { get; init; }
-```
+| Connection | Open [IConnection](#connection). |
+| RowConverter | Row [TypeConverter](#type-converter). |
+| StatementMapper | [StatementMapper](#statement-mapper). |
+| Statements | SQL fragments. |
+| Ids | Id column names. |
+| AssignIdentityOnCreate | When true, omit id columns on insert. |
 
 ##### Rust
 
@@ -9415,13 +8097,13 @@ pub struct RepositoryBuilderOptions
 
 | Name | Description |
 | --- | --- |
-| [connection](#rust-repositorybuilderoptions-connection) | [Connection](#connection). |
-| [ids](#rust-repositorybuilderoptions-ids) | Id column names. |
-| [assign_identity_on_create](#rust-repositorybuilderoptions-assign_identity_on_create) | When true, omit id columns on insert. |
-| [entity](#rust-repositorybuilderoptions-entity) | Table or entity name. |
-| [mapping](#rust-repositorybuilderoptions-mapping) | Row [RowTypeConverter](#row-type-converter). |
-| [mapper](#rust-repositorybuilderoptions-mapper) | Read-row [TransformMapper](#transform-mapper). |
-| [statement_mapper](#rust-repositorybuilderoptions-statement_mapper) | [StatementMapper](#statement-mapper). |
+| connection | [Connection](#connection). |
+| ids | Id column names. |
+| assign_identity_on_create | When true, omit id columns on insert. |
+| entity | Table or entity name. |
+| mapping | Row [RowTypeConverter](#row-type-converter). |
+| mapper | Read-row [TransformMapper](#transform-mapper). |
+| statement_mapper | [StatementMapper](#statement-mapper). |
 
 ###### with_factory(connection) {#rust-repositorybuilderoptions-with_factory-connection}
 
@@ -9443,76 +8125,6 @@ pub fn with_factory(connection: Arc<dyn Connection>) -> Self
 
 [RepositoryBuilderOptions](#rust-repositorybuilderoptions)
 
-###### connection {#rust-repositorybuilderoptions-connection}
-
-[Connection](#connection).
-
-**Definition**
-
-```rust
-pub connection: Arc<dyn Connection>
-```
-
-###### ids {#rust-repositorybuilderoptions-ids}
-
-Id column names.
-
-**Definition**
-
-```rust
-pub ids: Vec<String>
-```
-
-###### assign_identity_on_create {#rust-repositorybuilderoptions-assign_identity_on_create}
-
-When true, omit id columns on insert.
-
-**Definition**
-
-```rust
-pub assign_identity_on_create: bool
-```
-
-###### entity {#rust-repositorybuilderoptions-entity}
-
-Table or entity name.
-
-**Definition**
-
-```rust
-pub entity: String
-```
-
-###### mapping {#rust-repositorybuilderoptions-mapping}
-
-Row [RowTypeConverter](#row-type-converter).
-
-**Definition**
-
-```rust
-pub mapping: Option<RowTypeConverter>
-```
-
-###### mapper {#rust-repositorybuilderoptions-mapper}
-
-Read-row [TransformMapper](#transform-mapper).
-
-**Definition**
-
-```rust
-pub mapper: Option<TransformMapper<Row, Row>>
-```
-
-###### statement_mapper {#rust-repositorybuilderoptions-statement_mapper}
-
-[StatementMapper](#statement-mapper).
-
-**Definition**
-
-```rust
-pub statement_mapper: Option<StatementMapper>
-```
-
 ##### BuiltRepository {#rust-builtrepository}
 
 ```rust
@@ -9523,72 +8135,12 @@ pub struct BuiltRepository
 
 | Name | Description |
 | --- | --- |
-| [connection](#rust-builtrepository-connection) | [Connection](#connection). |
-| [row_converter](#rust-builtrepository-row_converter) | [RowTypeConverter](#row-type-converter). |
-| [statement_mapper](#rust-builtrepository-statement_mapper) | [StatementMapper](#statement-mapper). |
-| [statements](#rust-builtrepository-statements) | SQL fragments. |
-| [ids](#rust-builtrepository-ids) | Id column names. |
-| [assign_identity_on_create](#rust-builtrepository-assign_identity_on_create) | When true, omit id columns on insert. |
-
-###### connection {#rust-builtrepository-connection}
-
-[Connection](#connection).
-
-**Definition**
-
-```rust
-pub connection: Arc<dyn Connection>
-```
-
-###### row_converter {#rust-builtrepository-row_converter}
-
-[RowTypeConverter](#row-type-converter).
-
-**Definition**
-
-```rust
-pub row_converter: RowTypeConverter
-```
-
-###### statement_mapper {#rust-builtrepository-statement_mapper}
-
-[StatementMapper](#statement-mapper).
-
-**Definition**
-
-```rust
-pub statement_mapper: Arc<StatementMapper>
-```
-
-###### statements {#rust-builtrepository-statements}
-
-SQL fragments.
-
-**Definition**
-
-```rust
-pub statements: RepositoryStatements
-```
-
-###### ids {#rust-builtrepository-ids}
-
-Id column names.
-
-**Definition**
-
-```rust
-pub ids: Vec<String>
-```
-
-###### assign_identity_on_create {#rust-builtrepository-assign_identity_on_create}
-
-When true, omit id columns on insert.
-
-**Definition**
-
-```rust
-pub assign_identity_on_create: bool
-```
+| connection | [Connection](#connection). |
+| row_converter | [RowTypeConverter](#row-type-converter). |
+| statement_mapper | [StatementMapper](#statement-mapper). |
+| statements | SQL fragments. |
+| ids | Id column names. |
+| assign_identity_on_create | When true, omit id columns on insert. |
 
 ### Remarks
 
@@ -9716,7 +8268,7 @@ class EnrichedReadonlyRepository<T extends object> extends ReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [tree](#typescript-enrichedreadonlyrepository-tree) | Enrichment [IRepositoryTree](#typescript-irepositorytree). |
+| tree | Enrichment [IRepositoryTree](#typescript-irepositorytree). |
 
 **Methods**
 
@@ -9742,16 +8294,6 @@ constructor(inner: IReadonlyRepository<T>, strategy?: IReadonlyEnrichmentStrateg
 | --- | --- |
 | `inner` | [IReadonlyRepository](#readonly-repository) |
 | `strategy` | optional [IReadonlyEnrichmentStrategy](#typescript-ireadonlyenrichmentstrategy) |
-
-###### tree {#typescript-enrichedreadonlyrepository-tree}
-
-Enrichment [IRepositoryTree](#typescript-irepositorytree).
-
-**Definition**
-
-```typescript
-readonly tree: IRepositoryTree
-```
 
 ###### addEnriched(into, from, via, by, select?, many?, nest?) {#typescript-enrichedreadonlyrepository-addenriched-into-from-via-by-select-many-nest}
 
@@ -9928,17 +8470,7 @@ interface IRepositoryTree
 
 | Name | Description |
 | --- | --- |
-| [parent](#typescript-irepositorytree-parent) | Root [IRepositoryTreeNode](#typescript-irepositorytreenode). |
-
-###### parent {#typescript-irepositorytree-parent}
-
-Root [IRepositoryTreeNode](#typescript-irepositorytreenode).
-
-**Definition**
-
-```typescript
-readonly parent: IRepositoryTreeNode
-```
+| parent | Root [IRepositoryTreeNode](#typescript-irepositorytreenode). |
 
 ##### IRepositoryTreeNode {#typescript-irepositorytreenode}
 
@@ -9950,11 +8482,11 @@ interface IRepositoryTreeNode
 
 | Name | Description |
 | --- | --- |
-| [value](#typescript-irepositorytreenode-value) | Related repository. |
-| [propertyName](#typescript-irepositorytreenode-propertyname) | Destination property name. |
-| [parent](#typescript-irepositorytreenode-parent) | Parent node, if any. |
-| [items](#typescript-irepositorytreenode-items) | Child nodes. |
-| [enrichment](#typescript-irepositorytreenode-enrichment) | [Enrichment](#typescript-enrichment) for this node. |
+| value | Related repository. |
+| propertyName | Destination property name. |
+| parent | Parent node, if any. |
+| items | Child nodes. |
+| enrichment | [Enrichment](#typescript-enrichment) for this node. |
 
 **Methods**
 
@@ -9962,56 +8494,6 @@ interface IRepositoryTreeNode
 | --- | --- |
 | [include(via, into, from, by, select?, many?)](#typescript-irepositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
 | [enrichFrom(parents)](#typescript-irepositorytreenode-enrichfrom-parents) | Fills `parents` from this node. |
-
-###### value {#typescript-irepositorytreenode-value}
-
-Related repository.
-
-**Definition**
-
-```typescript
-readonly value: object
-```
-
-###### propertyName {#typescript-irepositorytreenode-propertyname}
-
-Destination property name.
-
-**Definition**
-
-```typescript
-readonly propertyName: string
-```
-
-###### parent {#typescript-irepositorytreenode-parent}
-
-Parent node, if any.
-
-**Definition**
-
-```typescript
-readonly parent?: IRepositoryTreeNode
-```
-
-###### items {#typescript-irepositorytreenode-items}
-
-Child nodes.
-
-**Definition**
-
-```typescript
-readonly items: IRepositoryTreeNode[]
-```
-
-###### enrichment {#typescript-irepositorytreenode-enrichment}
-
-[Enrichment](#typescript-enrichment) for this node.
-
-**Definition**
-
-```typescript
-readonly enrichment?: Enrichment
-```
 
 ###### include(via, into, from, by, select?, many?) {#typescript-irepositorytreenode-include-via-into-from-by-select-many}
 
@@ -10064,61 +8546,11 @@ type Enrichment
 
 | Name | Description |
 | --- | --- |
-| [into](#typescript-enrichment-into) | Destination property. |
-| [from](#typescript-enrichment-from) | Parent key. |
-| [by](#typescript-enrichment-by) | Related key. |
-| [select](#typescript-enrichment-select) | Optional related property to copy. |
-| [many](#typescript-enrichment-many) | Collect a list. |
-
-###### into {#typescript-enrichment-into}
-
-Destination property.
-
-**Definition**
-
-```typescript
-into: string
-```
-
-###### from {#typescript-enrichment-from}
-
-Parent key.
-
-**Definition**
-
-```typescript
-from: string
-```
-
-###### by {#typescript-enrichment-by}
-
-Related key.
-
-**Definition**
-
-```typescript
-by: string
-```
-
-###### select {#typescript-enrichment-select}
-
-Optional related property to copy.
-
-**Definition**
-
-```typescript
-select?: string
-```
-
-###### many {#typescript-enrichment-many}
-
-Collect a list.
-
-**Definition**
-
-```typescript
-many?: boolean
-```
+| into | Destination property. |
+| from | Parent key. |
+| by | Related key. |
+| select | Optional related property to copy. |
+| many | Collect a list. |
 
 ##### IReadonlyEnrichmentStrategy {#typescript-ireadonlyenrichmentstrategy}
 
@@ -10245,7 +8677,7 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
 
 | Name | Description |
 | --- | --- |
-| [Tree](#csharp-enrichedreadonlyrepository-tree) | Enrichment [IRepositoryTree](#csharp-irepositorytree). |
+| Tree | Enrichment [IRepositoryTree](#csharp-irepositorytree). |
 
 **Methods**
 
@@ -10271,16 +8703,6 @@ public EnrichedReadonlyRepository(IReadonlyRepository<T> inner, IReadonlyEnrichm
 | --- | --- |
 | `inner` | [IReadonlyRepository](#readonly-repository) |
 | `strategy` | optional [IReadonlyEnrichmentStrategy](#csharp-ireadonlyenrichmentstrategy) |
-
-###### Tree {#csharp-enrichedreadonlyrepository-tree}
-
-Enrichment [IRepositoryTree](#csharp-irepositorytree).
-
-**Definition**
-
-```csharp
-IRepositoryTree Tree { get; }
-```
 
 ###### AddEnriched(into, from, via, by, select, many, nest) {#csharp-enrichedreadonlyrepository-addenriched-into-from-via-by-select-many-nest}
 
@@ -10453,17 +8875,7 @@ public interface IRepositoryTree
 
 | Name | Description |
 | --- | --- |
-| [Parent](#csharp-irepositorytree-parent) | Root [IRepositoryTreeNode](#csharp-irepositorytreenode). |
-
-###### Parent {#csharp-irepositorytree-parent}
-
-Root [IRepositoryTreeNode](#csharp-irepositorytreenode).
-
-**Definition**
-
-```csharp
-IRepositoryTreeNode Parent { get; }
-```
+| Parent | Root [IRepositoryTreeNode](#csharp-irepositorytreenode). |
 
 ##### IRepositoryTreeNode {#csharp-irepositorytreenode}
 
@@ -10475,11 +8887,11 @@ public interface IRepositoryTreeNode
 
 | Name | Description |
 | --- | --- |
-| [Value](#csharp-irepositorytreenode-value) | Related repository. |
-| [PropertyName](#csharp-irepositorytreenode-propertyname) | Destination property name. |
-| [Parent](#csharp-irepositorytreenode-parent) | Parent node, if any. |
-| [Items](#csharp-irepositorytreenode-items) | Child nodes. |
-| [Enrichment](#csharp-irepositorytreenode-enrichment) | [Enrichment](#csharp-enrichment) for this node. |
+| Value | Related repository. |
+| PropertyName | Destination property name. |
+| Parent | Parent node, if any. |
+| Items | Child nodes. |
+| Enrichment | [Enrichment](#csharp-enrichment) for this node. |
 
 **Methods**
 
@@ -10487,56 +8899,6 @@ public interface IRepositoryTreeNode
 | --- | --- |
 | [Include(via, into, from, by, select, many)](#csharp-irepositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
 | [EnrichFrom(parents)](#csharp-irepositorytreenode-enrichfrom-parents) | Fills `parents` from this node. |
-
-###### Value {#csharp-irepositorytreenode-value}
-
-Related repository.
-
-**Definition**
-
-```csharp
-object Value { get; }
-```
-
-###### PropertyName {#csharp-irepositorytreenode-propertyname}
-
-Destination property name.
-
-**Definition**
-
-```csharp
-string PropertyName { get; }
-```
-
-###### Parent {#csharp-irepositorytreenode-parent}
-
-Parent node, if any.
-
-**Definition**
-
-```csharp
-IRepositoryTreeNode? Parent { get; }
-```
-
-###### Items {#csharp-irepositorytreenode-items}
-
-Child nodes.
-
-**Definition**
-
-```csharp
-IReadOnlyList<IRepositoryTreeNode> Items { get; }
-```
-
-###### Enrichment {#csharp-irepositorytreenode-enrichment}
-
-[Enrichment](#csharp-enrichment) for this node.
-
-**Definition**
-
-```csharp
-Enrichment? Enrichment { get; }
-```
 
 ###### Include(via, into, from, by, select, many) {#csharp-irepositorytreenode-include-via-into-from-by-select-many}
 
@@ -10589,61 +8951,11 @@ public sealed record Enrichment
 
 | Name | Description |
 | --- | --- |
-| [Into](#csharp-enrichment-into) | Destination property. |
-| [From](#csharp-enrichment-from) | Parent key. |
-| [By](#csharp-enrichment-by) | Related key. |
-| [Select](#csharp-enrichment-select) | Optional related property to copy. |
-| [Many](#csharp-enrichment-many) | Collect a list. |
-
-###### Into {#csharp-enrichment-into}
-
-Destination property.
-
-**Definition**
-
-```csharp
-string Into { get; }
-```
-
-###### From {#csharp-enrichment-from}
-
-Parent key.
-
-**Definition**
-
-```csharp
-string From { get; }
-```
-
-###### By {#csharp-enrichment-by}
-
-Related key.
-
-**Definition**
-
-```csharp
-string By { get; }
-```
-
-###### Select {#csharp-enrichment-select}
-
-Optional related property to copy.
-
-**Definition**
-
-```csharp
-string? Select { get; }
-```
-
-###### Many {#csharp-enrichment-many}
-
-Collect a list.
-
-**Definition**
-
-```csharp
-bool Many { get; }
-```
+| Into | Destination property. |
+| From | Parent key. |
+| By | Related key. |
+| Select | Optional related property to copy. |
+| Many | Collect a list. |
 
 ##### IReadonlyEnrichmentStrategy {#csharp-ireadonlyenrichmentstrategy}
 
@@ -10748,7 +9060,7 @@ pub struct EnrichedReadonlyRepository
 
 | Name | Description |
 | --- | --- |
-| [tree](#rust-enrichedreadonlyrepository-tree) | Enrichment [RepositoryTree](#rust-repositorytree). |
+| tree | Enrichment [RepositoryTree](#rust-repositorytree). |
 
 **Methods**
 
@@ -10799,16 +9111,6 @@ pub fn with_strategy(inner: Arc<dyn ReadonlyRepository>, strategy: Arc<dyn Reado
 **Returns**
 
 [EnrichedReadonlyRepository](#rust-enrichedreadonlyrepository)
-
-###### tree {#rust-enrichedreadonlyrepository-tree}
-
-Enrichment [RepositoryTree](#rust-repositorytree).
-
-**Definition**
-
-```rust
-pub tree: RepositoryTree
-```
 
 ###### add_enriched(into, from, via, by, select, many) {#rust-enrichedreadonlyrepository-add_enriched-into-from-via-by-select-many}
 
@@ -10986,17 +9288,7 @@ pub struct RepositoryTree
 
 | Name | Description |
 | --- | --- |
-| [parent](#rust-repositorytree-parent) | Root [RepositoryTreeNode](#rust-repositorytreenode). |
-
-###### parent {#rust-repositorytree-parent}
-
-Root [RepositoryTreeNode](#rust-repositorytreenode).
-
-**Definition**
-
-```rust
-pub parent: RepositoryTreeNode
-```
+| parent | Root [RepositoryTreeNode](#rust-repositorytreenode). |
 
 ##### RepositoryTreeNode {#rust-repositorytreenode}
 
@@ -11008,10 +9300,10 @@ pub struct RepositoryTreeNode
 
 | Name | Description |
 | --- | --- |
-| [value](#rust-repositorytreenode-value) | Related [ReadonlyRepository](#readonly-repository). |
-| [property_name](#rust-repositorytreenode-property_name) | Destination field name. |
-| [items](#rust-repositorytreenode-items) | Child nodes. |
-| [enrichment](#rust-repositorytreenode-enrichment) | [Enrichment](#rust-enrichment) for this node. |
+| value | Related [ReadonlyRepository](#readonly-repository). |
+| property_name | Destination field name. |
+| items | Child nodes. |
+| enrichment | [Enrichment](#rust-enrichment) for this node. |
 
 **Methods**
 
@@ -11019,46 +9311,6 @@ pub struct RepositoryTreeNode
 | --- | --- |
 | [include(via, into, from, by, select, many)](#rust-repositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
 | [include_repo(via, into, from, by, select, many)](#rust-repositorytreenode-include_repo-via-into-from-by-select-many) | Adds a child whose `via` is a [CRUDRepository](#crud-repository). |
-
-###### value {#rust-repositorytreenode-value}
-
-Related [ReadonlyRepository](#readonly-repository).
-
-**Definition**
-
-```rust
-pub value: Arc<dyn ReadonlyRepository>
-```
-
-###### property_name {#rust-repositorytreenode-property_name}
-
-Destination field name.
-
-**Definition**
-
-```rust
-pub property_name: String
-```
-
-###### items {#rust-repositorytreenode-items}
-
-Child nodes.
-
-**Definition**
-
-```rust
-pub items: Vec<RepositoryTreeNode>
-```
-
-###### enrichment {#rust-repositorytreenode-enrichment}
-
-[Enrichment](#rust-enrichment) for this node.
-
-**Definition**
-
-```rust
-pub enrichment: Option<Enrichment>
-```
 
 ###### include(via, into, from, by, select, many) {#rust-repositorytreenode-include-via-into-from-by-select-many}
 
@@ -11126,11 +9378,11 @@ pub struct Enrichment
 
 | Name | Description |
 | --- | --- |
-| [into](#rust-enrichment-into) | Destination field. |
-| [from](#rust-enrichment-from) | Parent key. |
-| [by](#rust-enrichment-by) | Related key. |
-| [select](#rust-enrichment-select) | Optional related field to copy. |
-| [many](#rust-enrichment-many) | Collect a list. |
+| into | Destination field. |
+| from | Parent key. |
+| by | Related key. |
+| select | Optional related field to copy. |
+| many | Collect a list. |
 
 ###### new(into, from, by, select, many) {#rust-enrichment-new-into-from-by-select-many}
 
@@ -11155,56 +9407,6 @@ pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<Strin
 **Returns**
 
 [Enrichment](#rust-enrichment)
-
-###### into {#rust-enrichment-into}
-
-Destination field.
-
-**Definition**
-
-```rust
-pub into: String
-```
-
-###### from {#rust-enrichment-from}
-
-Parent key.
-
-**Definition**
-
-```rust
-pub from: String
-```
-
-###### by {#rust-enrichment-by}
-
-Related key.
-
-**Definition**
-
-```rust
-pub by: String
-```
-
-###### select {#rust-enrichment-select}
-
-Optional related field to copy.
-
-**Definition**
-
-```rust
-pub select: Option<String>
-```
-
-###### many {#rust-enrichment-many}
-
-Collect a list.
-
-**Definition**
-
-```rust
-pub many: bool
-```
 
 ##### ReadonlyEnrichmentStrategy {#rust-readonlyenrichmentstrategy}
 
@@ -12014,8 +10216,8 @@ class NameSourceDestinationMapper implements INameMapper
 
 | Name | Description |
 | --- | --- |
-| [source](#typescript-namesourcedestinationmapper-source) | Dialect or provider label for the source side. |
-| [destination](#typescript-namesourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+| source | Dialect or provider label for the source side. |
+| destination | Dialect or provider label for the destination side. |
 
 **Methods**
 
@@ -12040,26 +10242,6 @@ constructor(source: string, destination: string)
 | --- | --- |
 | `source` | source label |
 | `destination` | destination label |
-
-###### source {#typescript-namesourcedestinationmapper-source}
-
-Dialect or provider label for the source side.
-
-**Definition**
-
-```typescript
-readonly source: string
-```
-
-###### destination {#typescript-namesourcedestinationmapper-destination}
-
-Dialect or provider label for the destination side.
-
-**Definition**
-
-```typescript
-readonly destination: string
-```
 
 ###### map(name) {#typescript-namesourcedestinationmapper-map-name}
 
@@ -12119,8 +10301,8 @@ public sealed class NameSourceDestinationMapper : INameMapper
 
 | Name | Description |
 | --- | --- |
-| [Source](#csharp-namesourcedestinationmapper-source) | Dialect or provider label for the source side. |
-| [Destination](#csharp-namesourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+| Source | Dialect or provider label for the source side. |
+| Destination | Dialect or provider label for the destination side. |
 
 **Methods**
 
@@ -12145,26 +10327,6 @@ public NameSourceDestinationMapper(string source, string destination)
 | --- | --- |
 | `source` | source label |
 | `destination` | destination label |
-
-###### Source {#csharp-namesourcedestinationmapper-source}
-
-Dialect or provider label for the source side.
-
-**Definition**
-
-```csharp
-string Source { get; }
-```
-
-###### Destination {#csharp-namesourcedestinationmapper-destination}
-
-Dialect or provider label for the destination side.
-
-**Definition**
-
-```csharp
-string Destination { get; }
-```
 
 ###### Map(name) {#csharp-namesourcedestinationmapper-map-name}
 
@@ -12224,8 +10386,8 @@ pub struct NameSourceDestinationMapper
 
 | Name | Description |
 | --- | --- |
-| [source](#rust-namesourcedestinationmapper-source) | Dialect or provider label for the source side. |
-| [destination](#rust-namesourcedestinationmapper-destination) | Dialect or provider label for the destination side. |
+| source | Dialect or provider label for the source side. |
+| destination | Dialect or provider label for the destination side. |
 
 **Methods**
 
@@ -12254,26 +10416,6 @@ pub fn new(source: impl Into<String>, destination: impl Into<String>) -> Self
 **Returns**
 
 [NameSourceDestinationMapper](#rust-namesourcedestinationmapper)
-
-###### source {#rust-namesourcedestinationmapper-source}
-
-Dialect or provider label for the source side.
-
-**Definition**
-
-```rust
-pub source: String
-```
-
-###### destination {#rust-namesourcedestinationmapper-destination}
-
-Dialect or provider label for the destination side.
-
-**Definition**
-
-```rust
-pub destination: String
-```
 
 ###### map(name) {#rust-namesourcedestinationmapper-map-name}
 
@@ -12743,17 +10885,7 @@ interface IFlatToNestedMapper<T> extends IMapper<Iterable<T | Cells>, T[]>
 
 | Name | Description |
 | --- | --- |
-| [spec](#typescript-iflattonestedmapper-spec) | The [TypeMap](#typescript-typemap) used to collapse join rows. |
-
-###### spec {#typescript-iflattonestedmapper-spec}
-
-The [TypeMap](#typescript-typemap) used to collapse join rows.
-
-**Definition**
-
-```typescript
-readonly spec: TypeMap<T>
-```
+| spec | The [TypeMap](#typescript-typemap) used to collapse join rows. |
 
 ##### FlatToNestedMapper {#typescript-flattonestedmapper}
 
@@ -12771,7 +10903,7 @@ class FlatToNestedMapper<T> implements IFlatToNestedMapper<T>
 
 | Name | Description |
 | --- | --- |
-| [spec](#typescript-flattonestedmapper-spec) | The [TypeMap](#typescript-typemap) used to collapse join rows. |
+| spec | The [TypeMap](#typescript-typemap) used to collapse join rows. |
 
 **Methods**
 
@@ -12795,16 +10927,6 @@ constructor(spec: TypeMap<T>)
 | Name | Description |
 | --- | --- |
 | `spec` | [TypeMap](#typescript-typemap); scalars map column to field, groups collect unique children by key |
-
-###### spec {#typescript-flattonestedmapper-spec}
-
-The [TypeMap](#typescript-typemap) used to collapse join rows.
-
-**Definition**
-
-```typescript
-readonly spec: TypeMap<T>
-```
 
 ###### map(rows) {#typescript-flattonestedmapper-map-rows}
 
@@ -12856,28 +10978,8 @@ type TypeMap<T>
 
 | Name | Description |
 | --- | --- |
-| [key](#typescript-typemap-key) | Parent key column. |
-| [fields](#typescript-typemap-fields) | Column or group per destination field. |
-
-###### key {#typescript-typemap-key}
-
-Parent key column.
-
-**Definition**
-
-```typescript
-key: string
-```
-
-###### fields {#typescript-typemap-fields}
-
-Column or group per destination field.
-
-**Definition**
-
-```typescript
-fields: TypeMapFields<T>
-```
+| key | Parent key column. |
+| fields | Column or group per destination field. |
 
 ##### TypeMapGroup {#typescript-typemapgroup}
 
@@ -12889,28 +10991,8 @@ type TypeMapGroup<E>
 
 | Name | Description |
 | --- | --- |
-| [key](#typescript-typemapgroup-key) | Child key column used to unique children. |
-| [fields](#typescript-typemapgroup-fields) | Column names for the child. |
-
-###### key {#typescript-typemapgroup-key}
-
-Child key column used to unique children.
-
-**Definition**
-
-```typescript
-key: string
-```
-
-###### fields {#typescript-typemapgroup-fields}
-
-Column names for the child.
-
-**Definition**
-
-```typescript
-fields: TypeMapFields<E>
-```
+| key | Child key column used to unique children. |
+| fields | Column names for the child. |
 
 ##### TypeMapFields {#typescript-typemapfields}
 
@@ -12930,17 +11012,7 @@ public interface IFlatToNestedMapper : IMapper<IEnumerable<Row>, IReadOnlyList<D
 
 | Name | Description |
 | --- | --- |
-| [Spec](#csharp-iflattonestedmapper-spec) | The [TypeMap](#csharp-typemap) used to collapse join rows. |
-
-###### Spec {#csharp-iflattonestedmapper-spec}
-
-The [TypeMap](#csharp-typemap) used to collapse join rows.
-
-**Definition**
-
-```csharp
-TypeMap Spec { get; }
-```
+| Spec | The [TypeMap](#csharp-typemap) used to collapse join rows. |
 
 ##### FlatToNestedMapper {#csharp-flattonestedmapper}
 
@@ -12958,7 +11030,7 @@ public sealed class FlatToNestedMapper : IFlatToNestedMapper
 
 | Name | Description |
 | --- | --- |
-| [Spec](#csharp-flattonestedmapper-spec) | The [TypeMap](#csharp-typemap) used to collapse join rows. |
+| Spec | The [TypeMap](#csharp-typemap) used to collapse join rows. |
 
 **Methods**
 
@@ -12982,16 +11054,6 @@ public FlatToNestedMapper(TypeMap spec)
 | Name | Description |
 | --- | --- |
 | `spec` | [TypeMap](#csharp-typemap); scalars map column to field, groups collect unique children by key |
-
-###### Spec {#csharp-flattonestedmapper-spec}
-
-The [TypeMap](#csharp-typemap) used to collapse join rows.
-
-**Definition**
-
-```csharp
-TypeMap Spec { get; }
-```
 
 ###### Map(rows) {#csharp-flattonestedmapper-map-rows}
 
@@ -13043,28 +11105,8 @@ public sealed class TypeMap
 
 | Name | Description |
 | --- | --- |
-| [Key](#csharp-typemap-key) | Parent key column. |
-| [Fields](#csharp-typemap-fields) | Column or group per destination field. |
-
-###### Key {#csharp-typemap-key}
-
-Parent key column.
-
-**Definition**
-
-```csharp
-required string Key { get; init; }
-```
-
-###### Fields {#csharp-typemap-fields}
-
-Column or group per destination field.
-
-**Definition**
-
-```csharp
-required IReadOnlyDictionary<string, TypeMapField> Fields { get; init; }
-```
+| Key | Parent key column. |
+| Fields | Column or group per destination field. |
 
 ##### TypeMapGroup {#csharp-typemapgroup}
 
@@ -13076,28 +11118,8 @@ public sealed class TypeMapGroup
 
 | Name | Description |
 | --- | --- |
-| [Key](#csharp-typemapgroup-key) | Child key column used to unique children. |
-| [Fields](#csharp-typemapgroup-fields) | Column or group per child field. |
-
-###### Key {#csharp-typemapgroup-key}
-
-Child key column used to unique children.
-
-**Definition**
-
-```csharp
-required string Key { get; init; }
-```
-
-###### Fields {#csharp-typemapgroup-fields}
-
-Column or group per child field.
-
-**Definition**
-
-```csharp
-required IReadOnlyDictionary<string, TypeMapField> Fields { get; init; }
-```
+| Key | Child key column used to unique children. |
+| Fields | Column or group per child field. |
 
 ##### TypeMapField {#csharp-typemapfield}
 
@@ -13109,28 +11131,8 @@ public abstract record TypeMapField
 
 | Name | Description |
 | --- | --- |
-| [Column](#csharp-typemapfield-column) | Maps a destination field to a source column. |
-| [Group](#csharp-typemapfield-group) | Maps a destination field to a child [TypeMapGroup](#csharp-typemapgroup). |
-
-###### Column {#csharp-typemapfield-column}
-
-Maps a destination field to a source column.
-
-**Definition**
-
-```csharp
-TypeMapField.Column(string Source)
-```
-
-###### Group {#csharp-typemapfield-group}
-
-Maps a destination field to a child [TypeMapGroup](#csharp-typemapgroup).
-
-**Definition**
-
-```csharp
-TypeMapField.Group(TypeMapGroup Map)
-```
+| Column | Maps a destination field to a source column. |
+| Group | Maps a destination field to a child [TypeMapGroup](#csharp-typemapgroup). |
 
 ##### MappedValue {#csharp-mappedvalue}
 
@@ -13142,28 +11144,8 @@ public abstract record MappedValue
 
 | Name | Description |
 | --- | --- |
-| [Cell](#csharp-mappedvalue-cell) | A scalar cell. |
-| [Many](#csharp-mappedvalue-many) | A child collection. |
-
-###### Cell {#csharp-mappedvalue-cell}
-
-A scalar cell.
-
-**Definition**
-
-```csharp
-MappedValue.Cell(Value Value)
-```
-
-###### Many {#csharp-mappedvalue-many}
-
-A child collection.
-
-**Definition**
-
-```csharp
-MappedValue.Many(List<Dictionary<string, MappedValue>> Items)
-```
+| Cell | A scalar cell. |
+| Many | A child collection. |
 
 ##### Rust
 
@@ -13303,8 +11285,8 @@ pub struct TypeMap
 
 | Name | Description |
 | --- | --- |
-| [key](#rust-typemap-key) | Parent key column. |
-| [fields](#rust-typemap-fields) | Column or group per destination field. |
+| key | Parent key column. |
+| fields | Column or group per destination field. |
 
 ###### new(key, fields) {#rust-typemap-new-key-fields}
 
@@ -13327,26 +11309,6 @@ pub fn new(key: impl Into<String>, fields: Vec<(String, TypeMapField)>) -> Self
 
 [TypeMap](#rust-typemap)
 
-###### key {#rust-typemap-key}
-
-Parent key column.
-
-**Definition**
-
-```rust
-pub key: String
-```
-
-###### fields {#rust-typemap-fields}
-
-Column or group per destination field.
-
-**Definition**
-
-```rust
-pub fields: Vec<(String, TypeMapField)>
-```
-
 ##### TypeMapGroup {#rust-typemapgroup}
 
 ```rust
@@ -13363,8 +11325,8 @@ pub struct TypeMapGroup
 
 | Name | Description |
 | --- | --- |
-| [key](#rust-typemapgroup-key) | Child key column used to unique children. |
-| [fields](#rust-typemapgroup-fields) | Column or group per child field. |
+| key | Child key column used to unique children. |
+| fields | Column or group per child field. |
 
 ###### new(key, fields) {#rust-typemapgroup-new-key-fields}
 
@@ -13387,26 +11349,6 @@ pub fn new(key: impl Into<String>, fields: Vec<(String, TypeMapField)>) -> Self
 
 [TypeMapGroup](#rust-typemapgroup)
 
-###### key {#rust-typemapgroup-key}
-
-Child key column used to unique children.
-
-**Definition**
-
-```rust
-pub key: String
-```
-
-###### fields {#rust-typemapgroup-fields}
-
-Column or group per child field.
-
-**Definition**
-
-```rust
-pub fields: Vec<(String, TypeMapField)>
-```
-
 ##### TypeMapField {#rust-typemapfield}
 
 ```rust
@@ -13417,34 +11359,14 @@ pub enum TypeMapField
 
 | Name | Description |
 | --- | --- |
-| [Column](#rust-typemapfield-column) | Maps a destination field to a source column. |
-| [Group](#rust-typemapfield-group) | Maps a destination field to a child [TypeMapGroup](#rust-typemapgroup). |
+| Column | Maps a destination field to a source column. |
+| Group | Maps a destination field to a child [TypeMapGroup](#rust-typemapgroup). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
 | [column(source)](#rust-typemapfield-column-source) | Builds a [Column](#rust-typemapfield-column) field. |
-
-###### Column {#rust-typemapfield-column}
-
-Maps a destination field to a source column.
-
-**Definition**
-
-```rust
-Column(String)
-```
-
-###### Group {#rust-typemapfield-group}
-
-Maps a destination field to a child [TypeMapGroup](#rust-typemapgroup).
-
-**Definition**
-
-```rust
-Group(TypeMapGroup)
-```
 
 ###### column(source) {#rust-typemapfield-column-source}
 
@@ -13476,28 +11398,8 @@ pub enum MappedValue
 
 | Name | Description |
 | --- | --- |
-| [Cell](#rust-mappedvalue-cell) | A scalar cell. |
-| [Many](#rust-mappedvalue-many) | A child collection. |
-
-###### Cell {#rust-mappedvalue-cell}
-
-A scalar cell.
-
-**Definition**
-
-```rust
-Cell(Value)
-```
-
-###### Many {#rust-mappedvalue-many}
-
-A child collection.
-
-**Definition**
-
-```rust
-Many(Vec<MappedRow>)
-```
+| Cell | A scalar cell. |
+| Many | A child collection. |
 
 ##### MappedRow {#rust-mappedrow}
 
@@ -13892,14 +11794,14 @@ class StatementMapper<T> implements IMapper<T, T>
 
 | Name | Description |
 | --- | --- |
-| [entity](#typescript-statementmapper-entity) | Maps the table or entity name when the repository is built. |
-| [columns](#typescript-statementmapper-columns) | Maps column names when the repository is built. |
-| [query](#typescript-statementmapper-query) | Rewrites a finished [IQuery](#typescript-iquery). |
-| [insert](#typescript-statementmapper-insert) | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
-| [update](#typescript-statementmapper-update) | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
-| [delete](#typescript-statementmapper-delete) | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
-| [storedProcedure](#typescript-statementmapper-storedprocedure) | Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement). |
-| [rows](#typescript-statementmapper-rows) | Read-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
+| entity | Maps the table or entity name when the repository is built. |
+| columns | Maps column names when the repository is built. |
+| query | Rewrites a finished [IQuery](#typescript-iquery). |
+| insert | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
+| update | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
+| delete | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
+| storedProcedure | Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement). |
+| rows | Read-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
 
 **Methods**
 
@@ -13923,86 +11825,6 @@ constructor(options?: StatementMapperOptions<T>)
 | Name | Description |
 | --- | --- |
 | `options` | [StatementMapperOptions](#typescript-statementmapperoptions) |
-
-###### entity {#typescript-statementmapper-entity}
-
-Maps the table or entity name when the repository is built.
-
-**Definition**
-
-```typescript
-readonly entity: INameMapper
-```
-
-###### columns {#typescript-statementmapper-columns}
-
-Maps column names when the repository is built.
-
-**Definition**
-
-```typescript
-readonly columns: INameMapper
-```
-
-###### query {#typescript-statementmapper-query}
-
-Rewrites a finished [IQuery](#typescript-iquery).
-
-**Definition**
-
-```typescript
-readonly query?: IMapper<IQuery, IQuery>
-```
-
-###### insert {#typescript-statementmapper-insert}
-
-Rewrites a finished [IInsertStatement](#typescript-iinsertstatement).
-
-**Definition**
-
-```typescript
-readonly insert?: IMapper<IInsertStatement, IInsertStatement>
-```
-
-###### update {#typescript-statementmapper-update}
-
-Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement).
-
-**Definition**
-
-```typescript
-readonly update?: IMapper<IUpdateStatement, IUpdateStatement>
-```
-
-###### delete {#typescript-statementmapper-delete}
-
-Rewrites a finished [IDeleteStatement](#typescript-ideletestatement).
-
-**Definition**
-
-```typescript
-readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>
-```
-
-###### storedProcedure {#typescript-statementmapper-storedprocedure}
-
-Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement).
-
-**Definition**
-
-```typescript
-readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
-```
-
-###### rows {#typescript-statementmapper-rows}
-
-Read-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here.
-
-**Definition**
-
-```typescript
-readonly rows: IMapper<T, T>
-```
 
 ###### map(value) {#typescript-statementmapper-map-value}
 
@@ -14054,94 +11876,14 @@ type StatementMapperOptions<T>
 
 | Name | Description |
 | --- | --- |
-| [entity](#typescript-statementmapperoptions-entity) | Maps the table or entity name. |
-| [columns](#typescript-statementmapperoptions-columns) | Maps column names. |
-| [rows](#typescript-statementmapperoptions-rows) | Read-row Mapper. |
-| [query](#typescript-statementmapperoptions-query) | Rewrites a finished [IQuery](#typescript-iquery). |
-| [insert](#typescript-statementmapperoptions-insert) | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
-| [update](#typescript-statementmapperoptions-update) | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
-| [delete](#typescript-statementmapperoptions-delete) | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
-| [storedProcedure](#typescript-statementmapperoptions-storedprocedure) | Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement). |
-
-###### entity {#typescript-statementmapperoptions-entity}
-
-Maps the table or entity name.
-
-**Definition**
-
-```typescript
-entity?: INameMapper
-```
-
-###### columns {#typescript-statementmapperoptions-columns}
-
-Maps column names.
-
-**Definition**
-
-```typescript
-columns?: INameMapper
-```
-
-###### rows {#typescript-statementmapperoptions-rows}
-
-Read-row Mapper.
-
-**Definition**
-
-```typescript
-rows?: IMapper<T, T>
-```
-
-###### query {#typescript-statementmapperoptions-query}
-
-Rewrites a finished [IQuery](#typescript-iquery).
-
-**Definition**
-
-```typescript
-query?: IMapper<IQuery, IQuery>
-```
-
-###### insert {#typescript-statementmapperoptions-insert}
-
-Rewrites a finished [IInsertStatement](#typescript-iinsertstatement).
-
-**Definition**
-
-```typescript
-insert?: IMapper<IInsertStatement, IInsertStatement>
-```
-
-###### update {#typescript-statementmapperoptions-update}
-
-Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement).
-
-**Definition**
-
-```typescript
-update?: IMapper<IUpdateStatement, IUpdateStatement>
-```
-
-###### delete {#typescript-statementmapperoptions-delete}
-
-Rewrites a finished [IDeleteStatement](#typescript-ideletestatement).
-
-**Definition**
-
-```typescript
-delete?: IMapper<IDeleteStatement, IDeleteStatement>
-```
-
-###### storedProcedure {#typescript-statementmapperoptions-storedprocedure}
-
-Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement).
-
-**Definition**
-
-```typescript
-storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
-```
+| entity | Maps the table or entity name. |
+| columns | Maps column names. |
+| rows | Read-row Mapper. |
+| query | Rewrites a finished [IQuery](#typescript-iquery). |
+| insert | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
+| update | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
+| delete | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
+| storedProcedure | Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement). |
 
 ##### C#
 
@@ -14155,14 +11897,14 @@ public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
 
 | Name | Description |
 | --- | --- |
-| [Entity](#csharp-statementmapper-entity) | Maps the table or entity name when the repository is built. |
-| [Columns](#csharp-statementmapper-columns) | Maps column names when the repository is built. |
-| [Query](#csharp-statementmapper-query) | Rewrites a finished [IQuery](#csharp-iquery). |
-| [Insert](#csharp-statementmapper-insert) | Rewrites a finished [IInsertStatement](#csharp-iinsertstatement). |
-| [Update](#csharp-statementmapper-update) | Rewrites a finished [IUpdateStatement](#csharp-iupdatestatement). |
-| [Delete](#csharp-statementmapper-delete) | Rewrites a finished [IDeleteStatement](#csharp-ideletestatement). |
-| [StoredProcedure](#csharp-statementmapper-storedprocedure) | Rewrites a finished [IStoredProcedureStatement](#csharp-istoredprocedurestatement). |
-| [Rows](#csharp-statementmapper-rows) | Read-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
+| Entity | Maps the table or entity name when the repository is built. |
+| Columns | Maps column names when the repository is built. |
+| Query | Rewrites a finished [IQuery](#csharp-iquery). |
+| Insert | Rewrites a finished [IInsertStatement](#csharp-iinsertstatement). |
+| Update | Rewrites a finished [IUpdateStatement](#csharp-iupdatestatement). |
+| Delete | Rewrites a finished [IDeleteStatement](#csharp-ideletestatement). |
+| StoredProcedure | Rewrites a finished [IStoredProcedureStatement](#csharp-istoredprocedurestatement). |
+| Rows | Read-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
 
 **Methods**
 
@@ -14170,86 +11912,6 @@ public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
 | --- | --- |
 | [Map(value)](#csharp-statementmapper-map-value) | Maps a row through [Rows](#csharp-statementmapper-rows). |
 | [ReverseMap(value)](#csharp-statementmapper-reversemap-value) | Reverse-maps a row through [Rows](#csharp-statementmapper-rows). |
-
-###### Entity {#csharp-statementmapper-entity}
-
-Maps the table or entity name when the repository is built.
-
-**Definition**
-
-```csharp
-IMapper<string, string> Entity { get; init; }
-```
-
-###### Columns {#csharp-statementmapper-columns}
-
-Maps column names when the repository is built.
-
-**Definition**
-
-```csharp
-IMapper<string, string> Columns { get; init; }
-```
-
-###### Query {#csharp-statementmapper-query}
-
-Rewrites a finished [IQuery](#csharp-iquery).
-
-**Definition**
-
-```csharp
-IMapper<IQuery, IQuery>? Query { get; init; }
-```
-
-###### Insert {#csharp-statementmapper-insert}
-
-Rewrites a finished [IInsertStatement](#csharp-iinsertstatement).
-
-**Definition**
-
-```csharp
-IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
-```
-
-###### Update {#csharp-statementmapper-update}
-
-Rewrites a finished [IUpdateStatement](#csharp-iupdatestatement).
-
-**Definition**
-
-```csharp
-IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
-```
-
-###### Delete {#csharp-statementmapper-delete}
-
-Rewrites a finished [IDeleteStatement](#csharp-ideletestatement).
-
-**Definition**
-
-```csharp
-IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
-```
-
-###### StoredProcedure {#csharp-statementmapper-storedprocedure}
-
-Rewrites a finished [IStoredProcedureStatement](#csharp-istoredprocedurestatement).
-
-**Definition**
-
-```csharp
-IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure { get; init; }
-```
-
-###### Rows {#csharp-statementmapper-rows}
-
-Read-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here.
-
-**Definition**
-
-```csharp
-IMapper<T, T> Rows { get; init; }
-```
 
 ###### Map(value) {#csharp-statementmapper-map-value}
 
@@ -14303,14 +11965,14 @@ pub struct StatementMapper
 
 | Name | Description |
 | --- | --- |
-| [entity](#rust-statementmapper-entity) | Maps the table or entity name when the repository is built. |
-| [columns](#rust-statementmapper-columns) | Maps column names when the repository is built. |
-| [query](#rust-statementmapper-query) | Rewrites finished query SQL. |
-| [insert](#rust-statementmapper-insert) | Rewrites finished insert SQL. |
-| [update](#rust-statementmapper-update) | Rewrites finished update SQL. |
-| [delete](#rust-statementmapper-delete) | Rewrites finished delete SQL. |
-| [stored_procedure](#rust-statementmapper-stored_procedure) | Rewrites finished stored-procedure SQL. |
-| [rows](#rust-statementmapper-rows) | Read-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here. |
+| entity | Maps the table or entity name when the repository is built. |
+| columns | Maps column names when the repository is built. |
+| query | Rewrites finished query SQL. |
+| insert | Rewrites finished insert SQL. |
+| update | Rewrites finished update SQL. |
+| delete | Rewrites finished delete SQL. |
+| stored_procedure | Rewrites finished stored-procedure SQL. |
+| rows | Read-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here. |
 
 **Methods**
 
@@ -14320,86 +11982,6 @@ pub struct StatementMapper
 | [map_sql(mapper, text)](#rust-statementmapper-map_sql-mapper-text) | Applies an optional SQL-text mapper. |
 | [map(value)](#rust-statementmapper-map-value) | Maps a row through [rows](#rust-statementmapper-rows). |
 | [reverse_map(value)](#rust-statementmapper-reverse_map-value) | Reverse-maps a row through [rows](#rust-statementmapper-rows). |
-
-###### entity {#rust-statementmapper-entity}
-
-Maps the table or entity name when the repository is built.
-
-**Definition**
-
-```rust
-pub entity: TransformMapper<String, String>
-```
-
-###### columns {#rust-statementmapper-columns}
-
-Maps column names when the repository is built.
-
-**Definition**
-
-```rust
-pub columns: TransformMapper<String, String>
-```
-
-###### query {#rust-statementmapper-query}
-
-Rewrites finished query SQL.
-
-**Definition**
-
-```rust
-pub query: Option<Arc<TransformMapper<String, String>>>
-```
-
-###### insert {#rust-statementmapper-insert}
-
-Rewrites finished insert SQL.
-
-**Definition**
-
-```rust
-pub insert: Option<Arc<TransformMapper<String, String>>>
-```
-
-###### update {#rust-statementmapper-update}
-
-Rewrites finished update SQL.
-
-**Definition**
-
-```rust
-pub update: Option<Arc<TransformMapper<String, String>>>
-```
-
-###### delete {#rust-statementmapper-delete}
-
-Rewrites finished delete SQL.
-
-**Definition**
-
-```rust
-pub delete: Option<Arc<TransformMapper<String, String>>>
-```
-
-###### stored_procedure {#rust-statementmapper-stored_procedure}
-
-Rewrites finished stored-procedure SQL.
-
-**Definition**
-
-```rust
-pub stored_procedure: Option<Arc<TransformMapper<String, String>>>
-```
-
-###### rows {#rust-statementmapper-rows}
-
-Read-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here.
-
-**Definition**
-
-```rust
-pub rows: TransformMapper<Row, Row>
-```
 
 ###### identity(source, destination) {#rust-statementmapper-identity-source-destination}
 
@@ -14802,8 +12384,8 @@ class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
 
 | Name | Description |
 | --- | --- |
-| [types](#typescript-rowtypeconverter-types) | Provider type catalog. Convert does not read this map. |
-| [fields](#typescript-rowtypeconverter-fields) | Per-column converters. Convert uses `fields[name]`. |
+| types | Provider type catalog. Convert does not read this map. |
+| fields | Per-column converters. Convert uses `fields[name]`. |
 
 **Methods**
 
@@ -14828,26 +12410,6 @@ constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<s
 | --- | --- |
 | `types` | provider catalog; unused at convert time |
 | `fields` | per-column TypeConverter |
-
-###### types {#typescript-rowtypeconverter-types}
-
-Provider type catalog. Convert does not read this map.
-
-**Definition**
-
-```typescript
-types: Record<string, TypeConverter<Cell, Cell>>
-```
-
-###### fields {#typescript-rowtypeconverter-fields}
-
-Per-column converters. Convert uses `fields[name]`.
-
-**Definition**
-
-```typescript
-fields: Record<string, TypeConverter<Cell, Cell>>
-```
 
 ###### convert(row, type?) {#typescript-rowtypeconverter-convert-row-type}
 
@@ -14908,8 +12470,8 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
 
 | Name | Description |
 | --- | --- |
-| [Types](#csharp-rowtypeconverter-types) | Provider type catalog. Convert does not read this map. |
-| [Fields](#csharp-rowtypeconverter-fields) | Per-column converters. Convert uses `Fields[name]`. |
+| Types | Provider type catalog. Convert does not read this map. |
+| Fields | Per-column converters. Convert uses `Fields[name]`. |
 
 **Methods**
 
@@ -14934,26 +12496,6 @@ public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>
 | --- | --- |
 | `types` | provider catalog; unused at convert time |
 | `fields` | per-column TypeConverter |
-
-###### Types {#csharp-rowtypeconverter-types}
-
-Provider type catalog. Convert does not read this map.
-
-**Definition**
-
-```csharp
-Dictionary<string, TypeConverter<Value, Value>> Types { get; set; }
-```
-
-###### Fields {#csharp-rowtypeconverter-fields}
-
-Per-column converters. Convert uses `Fields[name]`.
-
-**Definition**
-
-```csharp
-Dictionary<string, TypeConverter<Value, Value>> Fields { get; set; }
-```
 
 ###### Convert(from) {#csharp-rowtypeconverter-convert-from}
 
@@ -15014,8 +12556,8 @@ pub struct RowTypeConverter
 
 | Name | Description |
 | --- | --- |
-| [types](#rust-rowtypeconverter-types) | Provider type catalog. Convert does not read this map. |
-| [fields](#rust-rowtypeconverter-fields) | Per-column converters. Convert uses `fields[name]`. |
+| types | Provider type catalog. Convert does not read this map. |
+| fields | Per-column converters. Convert uses `fields[name]`. |
 
 **Methods**
 
@@ -15059,26 +12601,6 @@ pub fn of<T: ConvertSchema>() -> Self
 **Returns**
 
 [RowTypeConverter](#rust-rowtypeconverter)
-
-###### types {#rust-rowtypeconverter-types}
-
-Provider type catalog. Convert does not read this map.
-
-**Definition**
-
-```rust
-pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
-```
-
-###### fields {#rust-rowtypeconverter-fields}
-
-Per-column converters. Convert uses `fields[name]`.
-
-**Definition**
-
-```rust
-pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
-```
 
 ###### with_types(types) {#rust-rowtypeconverter-with_types-types}
 

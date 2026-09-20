@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Code reference pages
 
-Follow [docs/formats/code-reference.md](docs/formats/code-reference.md). MSDN-style: title, summary, dialect selector, member tables, then definition and parameters per member.
+Follow [docs/formats/code-reference.md](docs/formats/code-reference.md). MSDN-style: title, summary, dialect selector, member tables, then definition and parameters per Constructor and Methods member. Properties render as a table only.
 
 Required order: `# Title`, summary, `## Classes` + `::: reference`, `## Remarks`, optional `## Examples`.
 
@@ -62,7 +62,7 @@ static create(provider?: string, options?: DatasourceOptions): IDatasource
 
 - One major class per page; associated types and page-local argument/return types are extra `####` headings.
 - Link parameter and return types. Types with their own page stay links only.
-- Do not hand-write member tables; the transform builds them from `#####` members.
+- Do not hand-write member tables; the transform builds them from `#####` members. Properties stay as that table; Constructor and Methods also get a definition and parameters.
 - Use `**Constructor**` / `**Properties**` / `**Methods**`.
 - Rust may use `#### datasources` for free functions.
 - Omit `bindInstall` / `bind_install`.
