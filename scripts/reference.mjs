@@ -75,7 +75,11 @@ const renderIndex = (lang, cls) =>
     .filter((group) => group.members.length)
     .map((group) => {
       const rows = group.members
-        .map((member) => `| [${member.name}](#${slug(lang, cls.name, member.name)}) | ${summaryOf(member.description)} |`)
+        .map((member) => {
+          const name =
+            group.name === "Properties" ? member.name : `[${member.name}](#${slug(lang, cls.name, member.name)})`;
+          return `| ${name} | ${summaryOf(member.description)} |`;
+        })
         .join("\n");
       return `**${group.name}**\n\n| Name | Description |\n| --- | --- |\n${rows}`;
     })
@@ -100,6 +104,7 @@ export const renderClassReference = (body, lang) => {
   const rendered = parseClasses(body)
     .map((cls) => {
       const details = cls.groups
+        .filter((group) => group.name !== "Properties")
         .flatMap((group) => group.members.map((member) => renderDetail(lang, cls, member)))
         .join("\n\n");
       return [`#### ${cls.name} {#${slug(lang, cls.name)}}`, cls.definition, renderIndex(lang, cls), details]
