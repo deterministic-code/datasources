@@ -1,6 +1,6 @@
 # Repository
 
-Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a builder, then create by entity type name or by type. The callback receives an optional connection.
+Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
 
 Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
 
@@ -32,29 +32,27 @@ interface IRepositoryFactory
 
 **Methods**
 
-##### register(typeOrName, factory)
+##### register(repository)
 
-Registers a readonly factory by constructor or entity type name.
+Registers a readonly repository by [type](#irepository-type).
 
 ```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => IReadonlyRepository): void
+register(repository: IRepository): void
 ```
 
-- `typeOrName` — constructor or entity type name
-- `factory` — builds an [IReadonlyRepository](./readonly-repository.md) from an optional [IConnection](./connection.md)
+- `repository` — [IRepository](#irepository) to look up by `type`
 
-##### create(typeOrName, connection?)
+##### create(type)
 
 Creates a readonly repository.
 
 ```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): IReadonlyRepository
+create<T>(type: Constructable<T>): IReadonlyRepository<T>
 ```
 
-- `typeOrName` — constructor or entity type name
-- `connection` — optional open [IConnection](./connection.md)
+- `type` — item constructor
 
-**Returns** [IReadonlyRepository](./readonly-repository.md)
+**Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
 #### ICRUDRepositoryFactory
 
@@ -64,29 +62,27 @@ interface ICRUDRepositoryFactory
 
 **Methods**
 
-##### register(typeOrName, factory)
+##### register(repository)
 
-Registers a CRUD factory by constructor or entity type name.
+Registers a CRUD repository by [type](#irepository-type).
 
 ```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => ICRUDRepository): void
+register(repository: IRepository): void
 ```
 
-- `typeOrName` — constructor or entity type name
-- `factory` — builds an [ICRUDRepository](./crud-repository.md) from an optional [IConnection](./connection.md)
+- `repository` — [IRepository](#irepository) to look up by `type`
 
-##### create(typeOrName, connection?)
+##### create(type)
 
 Creates a CRUD repository.
 
 ```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): ICRUDRepository
+create<T>(type: Constructable<T>): ICRUDRepository<T>
 ```
 
-- `typeOrName` — constructor or entity type name
-- `connection` — optional open [IConnection](./connection.md)
+- `type` — item constructor
 
-**Returns** [ICRUDRepository](./crud-repository.md)
+**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
 #### RepositoryFactory
 
@@ -98,7 +94,7 @@ class RepositoryFactory implements ICRUDRepositoryFactory
 
 ##### asReadonly
 
-Readonly factory view. `register` / `create` call [registerReadonly](#repositoryfactory-registerreadonly-typeorname-factory) / [createReadonly](#repositoryfactory-createreadonly-typeorname-connection).
+Readonly factory view. `register` / `create` call [IRepositoryFactory](#irepositoryfactory).
 
 ```typescript
 readonly asReadonly: IRepositoryFactory
@@ -106,53 +102,27 @@ readonly asReadonly: IRepositoryFactory
 
 **Methods**
 
-##### register(typeOrName, factory)
+##### register(repository)
 
-Registers CRUD and readonly for the same factory.
-
-```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => unknown): void
-```
-
-- `typeOrName` — constructor or entity type name
-- `factory` — builds a repository from an optional [IConnection](./connection.md)
-
-##### registerReadonly(typeOrName, factory)
-
-Registers readonly only. CRUD [create](#repositoryfactory-create-typeorname-connection) throws.
+Registers CRUD and readonly for the same repository.
 
 ```typescript
-registerReadonly(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => unknown): void
+register(repository: IRepository): void
 ```
 
-- `typeOrName` — constructor or entity type name
-- `factory` — builds a readonly repository from an optional [IConnection](./connection.md)
+- `repository` — [IRepository](#irepository) to look up by `type`
 
-##### create(typeOrName, connection?)
+##### create(type)
 
 Creates a CRUD repository.
 
 ```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): ICRUDRepository
+create<T>(type: Constructable<T>): ICRUDRepository<T>
 ```
 
-- `typeOrName` — constructor or entity type name
-- `connection` — optional open [IConnection](./connection.md)
+- `type` — item constructor
 
-**Returns** [ICRUDRepository](./crud-repository.md)
-
-##### createReadonly(typeOrName, connection?)
-
-Creates a readonly repository.
-
-```typescript
-createReadonly(typeOrName: Constructable<unknown> | string, connection?: IConnection): IReadonlyRepository
-```
-
-- `typeOrName` — constructor or entity type name
-- `connection` — optional open [IConnection](./connection.md)
-
-**Returns** [IReadonlyRepository](./readonly-repository.md)
+**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
 #### RepositoryNotRegisteredError
 
@@ -164,7 +134,7 @@ class RepositoryNotRegisteredError extends Error
 
 ##### RepositoryNotRegisteredError(entityTypeName)
 
-Thrown when [create](#repositoryfactory-create-typeorname-connection) cannot find a factory.
+Thrown when [create](#repositoryfactory-create-type) cannot find a repository.
 
 ```typescript
 constructor(entityTypeName: string)
@@ -207,75 +177,27 @@ public interface IRepositoryFactory
 
 **Methods**
 
-##### Register(factory)
+##### Register(repository)
 
-Registers a readonly factory by `T`.
-
-```csharp
-void Register<T>(Func<IConnection?, IReadonlyRepository<T>> factory)
-```
-
-- `factory` — builds an [IReadonlyRepository](./readonly-repository.md) from an optional [IConnection](./connection.md)
-
-##### Register(entityTypeName, factory)
-
-Registers a readonly factory by entity type name.
+Registers a readonly repository by [Type](#irepository-type).
 
 ```csharp
-void Register(string entityTypeName, Func<IConnection?, object> factory)
+void Register(IRepository repository)
 ```
 
-- `entityTypeName` — entity type name
-- `factory` — builds a repository from an optional [IConnection](./connection.md)
-
-##### Register(type, factory)
-
-Registers a readonly factory by CLR type.
-
-```csharp
-void Register(Type type, Func<IConnection?, object> factory)
-```
-
-- `type` — item CLR type
-- `factory` — builds a repository from an optional [IConnection](./connection.md)
+- `repository` — [IRepository](#irepository) to look up by `Type`
 
 ##### Create()
 
 Creates a readonly repository by `T`.
 
 ```csharp
-IReadonlyRepository<T> Create<T>(IConnection? connection = null)
+IReadonlyRepository<T> Create<T>()
 ```
 
 - `connection` — optional open [IConnection](./connection.md)
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
-
-##### Create(entityTypeName, connection)
-
-Creates a readonly repository by entity type name.
-
-```csharp
-object Create(string entityTypeName, IConnection? connection = null)
-```
-
-- `entityTypeName` — entity type name
-- `connection` — optional open [IConnection](./connection.md)
-
-**Returns** `object`
-
-##### Create(type, connection)
-
-Creates a readonly repository by CLR type.
-
-```csharp
-object Create(Type type, IConnection? connection = null)
-```
-
-- `type` — item CLR type
-- `connection` — optional open [IConnection](./connection.md)
-
-**Returns** `object`
 
 #### ICRUDRepositoryFactory
 
@@ -285,75 +207,25 @@ public interface ICRUDRepositoryFactory
 
 **Methods**
 
-##### Register(factory)
+##### Register(repository)
 
-Registers a CRUD factory by `T`.
-
-```csharp
-void Register<T>(Func<IConnection?, ICRUDRepository<T>> factory)
-```
-
-- `factory` — builds an [ICRUDRepository](./crud-repository.md) from an optional [IConnection](./connection.md)
-
-##### Register(entityTypeName, factory)
-
-Registers a CRUD factory by entity type name.
+Registers a CRUD repository by [Type](#irepository-type).
 
 ```csharp
-void Register(string entityTypeName, Func<IConnection?, object> factory)
+void Register(IRepository repository)
 ```
 
-- `entityTypeName` — entity type name
-- `factory` — builds a repository from an optional [IConnection](./connection.md)
-
-##### Register(type, factory)
-
-Registers a CRUD factory by CLR type.
-
-```csharp
-void Register(Type type, Func<IConnection?, object> factory)
-```
-
-- `type` — item CLR type
-- `factory` — builds a repository from an optional [IConnection](./connection.md)
+- `repository` — [IRepository](#irepository) to look up by `Type`
 
 ##### Create()
 
 Creates a CRUD repository by `T`.
 
 ```csharp
-ICRUDRepository<T> Create<T>(IConnection? connection = null)
+ICRUDRepository<T> Create<T>()
 ```
-
-- `connection` — optional open [IConnection](./connection.md)
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
-
-##### Create(entityTypeName, connection)
-
-Creates a CRUD repository by entity type name.
-
-```csharp
-object Create(string entityTypeName, IConnection? connection = null)
-```
-
-- `entityTypeName` — entity type name
-- `connection` — optional open [IConnection](./connection.md)
-
-**Returns** `object`
-
-##### Create(type, connection)
-
-Creates a CRUD repository by CLR type.
-
-```csharp
-object Create(Type type, IConnection? connection = null)
-```
-
-- `type` — item CLR type
-- `connection` — optional open [IConnection](./connection.md)
-
-**Returns** `object`
 
 #### RepositoryFactory
 
@@ -363,75 +235,25 @@ public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFacto
 
 **Methods**
 
-##### Register(factory)
+##### Register(repository)
 
-Registers CRUD and readonly for `T`.
-
-```csharp
-public void Register<T>(Func<IConnection?, ICRUDRepository<T>> factory)
-```
-
-- `factory` — builds an [ICRUDRepository](./crud-repository.md) from an optional [IConnection](./connection.md)
-
-##### Register(entityTypeName, factory)
-
-Registers CRUD and readonly by entity type name.
+Registers CRUD and readonly for the same repository.
 
 ```csharp
-public void Register(string entityTypeName, Func<IConnection?, object> factory)
+public void Register(IRepository repository)
 ```
 
-- `entityTypeName` — entity type name
-- `factory` — builds a repository from an optional [IConnection](./connection.md)
-
-##### Register(type, factory)
-
-Registers CRUD and readonly by CLR type.
-
-```csharp
-public void Register(Type type, Func<IConnection?, object> factory)
-```
-
-- `type` — item CLR type
-- `factory` — builds a repository from an optional [IConnection](./connection.md)
+- `repository` — [IRepository](#irepository) to look up by `Type`
 
 ##### Create()
 
 Creates a CRUD repository by `T`.
 
 ```csharp
-public ICRUDRepository<T> Create<T>(IConnection? connection = null)
+public ICRUDRepository<T> Create<T>()
 ```
-
-- `connection` — optional open [IConnection](./connection.md)
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
-
-##### Create(entityTypeName, connection)
-
-Creates a readonly repository by entity type name. Use [ICRUDRepositoryFactory](#icrudrepositoryfactory) for the CRUD map.
-
-```csharp
-public object Create(string entityTypeName, IConnection? connection = null)
-```
-
-- `entityTypeName` — entity type name
-- `connection` — optional open [IConnection](./connection.md)
-
-**Returns** `object`
-
-##### Create(type, connection)
-
-Creates a readonly repository by CLR type. Use [ICRUDRepositoryFactory](#icrudrepositoryfactory) for the CRUD map.
-
-```csharp
-public object Create(Type type, IConnection? connection = null)
-```
-
-- `type` — item CLR type
-- `connection` — optional open [IConnection](./connection.md)
-
-**Returns** `object`
 
 #### RepositoryNotRegisteredException
 
@@ -443,7 +265,7 @@ public sealed class RepositoryNotRegisteredException : DatasourceException
 
 ##### RepositoryNotRegisteredException(entityTypeName)
 
-Thrown when [Create](#repositoryfactory-create) cannot find a factory.
+Thrown when [Create](#repositoryfactory-create) cannot find a repository.
 
 ```csharp
 public RepositoryNotRegisteredException(string entityTypeName)
@@ -508,49 +330,23 @@ pub trait ReadonlyRepositoryFactory
 
 **Methods**
 
-##### register(name, factory)
+##### register(repository)
 
-Registers a readonly factory by entity type name.
-
-```rust
-fn register(&self, name: &str, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync>)
-```
-
-- `name` — entity type name
-- `factory` — builds a [ReadonlyRepository](./readonly-repository.md) from an optional [Connection](./connection.md)
-
-##### register_type(factory)
-
-Registers a readonly factory by `T`.
+Registers a readonly repository by [entity_type](#irepository-entity_type).
 
 ```rust
-fn register_type<T: 'static>(&self, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync>)
+fn register(&self, repository: Arc<dyn ReadonlyRepository>)
 ```
 
-- `factory` — builds a [ReadonlyRepository](./readonly-repository.md) from an optional [Connection](./connection.md)
+- `repository` — [ReadonlyRepository](./readonly-repository.md) to look up by `entity_type`
 
-##### create(name, connection)
-
-Creates a readonly repository by entity type name.
-
-```rust
-fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-- `name` — entity type name
-- `connection` — optional open [Connection](./connection.md)
-
-**Returns** `Result<Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>>`
-
-##### create_type(connection)
+##### create()
 
 Creates a readonly repository by `T`.
 
 ```rust
-fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
+fn create<T: 'static>(&self) -> Result<Arc<dyn ReadonlyRepository>>
 ```
-
-- `connection` — optional open [Connection](./connection.md)
 
 **Returns** `Result<Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>>`
 
@@ -562,49 +358,23 @@ pub trait CRUDRepositoryFactory
 
 **Methods**
 
-##### register(name, factory)
+##### register(repository)
 
-Registers a CRUD factory by entity type name.
-
-```rust
-fn register(&self, name: &str, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync>)
-```
-
-- `name` — entity type name
-- `factory` — builds a [CRUDRepository](./crud-repository.md) from an optional [Connection](./connection.md)
-
-##### register_type(factory)
-
-Registers a CRUD factory by `T`.
+Registers a CRUD repository by [entity_type](#irepository-entity_type).
 
 ```rust
-fn register_type<T: 'static>(&self, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync>)
+fn register(&self, repository: Arc<dyn CRUDRepository>)
 ```
 
-- `factory` — builds a [CRUDRepository](./crud-repository.md) from an optional [Connection](./connection.md)
+- `repository` — [CRUDRepository](./crud-repository.md) to look up by `entity_type`
 
-##### create(name, connection)
-
-Creates a CRUD repository by entity type name.
-
-```rust
-fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
-```
-
-- `name` — entity type name
-- `connection` — optional open [Connection](./connection.md)
-
-**Returns** `Result<Arc<dyn `[CRUDRepository](./crud-repository.md)`>>`
-
-##### create_type(connection)
+##### create()
 
 Creates a CRUD repository by `T`.
 
 ```rust
-fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
+fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>
 ```
-
-- `connection` — optional open [Connection](./connection.md)
 
 **Returns** `Result<Arc<dyn `[CRUDRepository](./crud-repository.md)`>>`
 
@@ -628,106 +398,47 @@ pub fn new() -> Self
 
 **Methods**
 
-##### register(name, factory)
+##### register(repository)
 
-Registers CRUD and readonly by entity type name.
-
-```rust
-pub fn register(&self, name: &str, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
-```
-
-- `name` — entity type name
-- `factory` — builds a [CRUDRepository](./crud-repository.md) from an optional [Connection](./connection.md)
-
-##### register_type(factory)
-
-Registers CRUD and readonly by `T`.
+Registers CRUD and readonly for the same repository.
 
 ```rust
-pub fn register_type<T: 'static>(&self, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
+pub fn register(&self, repository: Arc<dyn CRUDRepository>)
 ```
 
-- `factory` — builds a [CRUDRepository](./crud-repository.md) from an optional [Connection](./connection.md)
+- `repository` — [CRUDRepository](./crud-repository.md) to look up by `entity_type`
 
-##### register_readonly(name, factory)
-
-Registers readonly only. CRUD [create](#repositoryfactory-create-name-connection) fails.
-
-```rust
-pub fn register_readonly(&self, name: &str, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync + 'static)
-```
-
-- `name` — entity type name
-- `factory` — builds a [ReadonlyRepository](./readonly-repository.md) from an optional [Connection](./connection.md)
-
-##### register_readonly_type(factory)
-
-Registers readonly only by `T`.
-
-```rust
-pub fn register_readonly_type<T: 'static>(&self, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync + 'static)
-```
-
-- `factory` — builds a [ReadonlyRepository](./readonly-repository.md) from an optional [Connection](./connection.md)
-
-##### create(name, connection)
-
-Creates a CRUD repository by entity type name.
-
-```rust
-pub fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
-```
-
-- `name` — entity type name
-- `connection` — optional open [Connection](./connection.md)
-
-**Returns** `Result<Arc<dyn `[CRUDRepository](./crud-repository.md)`>>`
-
-##### create_type(connection)
+##### create()
 
 Creates a CRUD repository by `T`.
 
 ```rust
-pub fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
+pub fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>
 ```
-
-- `connection` — optional open [Connection](./connection.md)
 
 **Returns** `Result<Arc<dyn `[CRUDRepository](./crud-repository.md)`>>`
-
-##### create_readonly(name, connection)
-
-Creates a readonly repository by entity type name.
-
-```rust
-pub fn create_readonly(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-- `name` — entity type name
-- `connection` — optional open [Connection](./connection.md)
-
-**Returns** `Result<Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>>`
-
-##### create_readonly_type(connection)
-
-Creates a readonly repository by `T`.
-
-```rust
-pub fn create_readonly_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-- `connection` — optional open [Connection](./connection.md)
-
-**Returns** `Result<Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>>`
 :::
 
 ## Remarks
 
 SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
 
-A missing factory throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
+A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
 
 See [Datasource](./datasource.md) for `CreateRepository` / `createRepository`.
+
+## Examples
+
+### Register and create
+
+::: example
+```csharp csharp/Datasources.Tests/RepositoryFactoryTests.cs#L12-L19
+```
+```rust rust/datasources/src/repository_factory.rs#L112-L116
+```
+```typescript typescript/datasources/src/RepositoryFactory.test.ts#L18-L24
+```
+:::
 
 ## See also
 

@@ -31,10 +31,12 @@ public class CoreTests
     {
         Assert.Empty(Helpers.ParametersToRecord(null));
         Assert.Equal(new Value.Int(1), Helpers.ParametersToRecord(new[] { new Parameter("id", 1) })["id"]);
-        Assert.Equal("SELECT 1", new Query("SELECT 1").GetText());
-        Assert.Null(new Query("SELECT 1").Where);
+        var select = new Query("SELECT 1");
         var byId = new Where("id = 1");
-        Assert.Same(byId, new Query("SELECT 1", byId).Where);
+        var withWhere = new Query("SELECT 1", byId);
+        Assert.Equal("SELECT 1", select.GetText());
+        Assert.Null(select.Where);
+        Assert.Same(byId, withWhere.Where);
         Assert.Equal("id = 1", byId.GetText());
         var withId = new Row { ["id"] = 9, ["name"] = "a" };
         Assert.Single(Helpers.IdentityFilter(withId));

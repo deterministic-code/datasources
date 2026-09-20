@@ -2439,7 +2439,7 @@ function execute(command: ICommand, statement: IStatement, parameters?: Paramete
 | Name | Description |
 | --- | --- |
 | `command` | [ICommand](#typescript-icommand) |
-| `statement` | [IStatement](#statements) |
+| `statement` | [IStatement](#typescript-istatement) |
 | `parameters` | optional [Parameter](#typescript-parameter) list |
 
 **Returns**
@@ -2461,7 +2461,7 @@ function executeReader(command: ICommand, statement: IStatement, parameters?: Pa
 | Name | Description |
 | --- | --- |
 | `command` | [ICommand](#typescript-icommand) |
-| `statement` | [IStatement](#statements) |
+| `statement` | [IStatement](#typescript-istatement) |
 | `parameters` | optional [Parameter](#typescript-parameter) list |
 
 **Returns**
@@ -2736,7 +2736,7 @@ Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>?
 
 | Name | Description |
 | --- | --- |
-| `statement` | [IStatement](#statements) |
+| `statement` | [IStatement](#csharp-istatement) |
 | `parameters` | optional [Parameter](#csharp-parameter) list |
 
 **Returns**
@@ -2757,7 +2757,7 @@ Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameter
 
 | Name | Description |
 | --- | --- |
-| `statement` | [IStatement](#statements) |
+| `statement` | [IStatement](#csharp-istatement) |
 | `parameters` | optional [Parameter](#csharp-parameter) list |
 
 **Returns**
@@ -3016,7 +3016,7 @@ async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: 
 
 | Name | Description |
 | --- | --- |
-| `statement` | [Statement](#statements) |
+| `statement` | [Statement](#rust-statement) |
 | `parameters` | optional [Parameter](#rust-parameter) slice |
 
 **Returns**
@@ -3037,7 +3037,7 @@ async fn execute_statement(&self, statement: &dyn Statement, parameters: Option<
 
 | Name | Description |
 | --- | --- |
-| `statement` | [Statement](#statements) |
+| `statement` | [Statement](#rust-statement) |
 | `parameters` | optional [Parameter](#rust-parameter) slice |
 
 **Returns**
@@ -3405,35 +3405,3767 @@ while (await reader.next()) {
 
 ## Statements
 
-Shared statement construction used by SQL providers. `StatementBuilder` builds query / insert / update / delete text. `WhereBuilder` composes predicates. Dialect packages may wrap `StatementBuilder` for quoting and native column types, including `CreateStoredProcedure` the same way as `CreateInsert`.
+Command text. `IQuery` / `IUpdateStatement` / `IDeleteStatement` also keep the `Where` object.
 
-### StatementBuilder
+### Classes
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `StatementBuilder` | `StatementBuilder` | `StatementBuilder` |
-| `CreateQuery` | `create_query` | `createQuery` |
-| `CreateInsert` | `create_insert` | `createInsert` |
-| `CreateUpdate` | `create_update` | `createUpdate` |
-| `CreateDelete` | `create_delete` | `createDelete` |
-| `CreateTable` | `create_table` | `createTable` |
-| `CreateStoredProcedure` | `create_stored_procedure` | `createStoredProcedure` |
+##### TypeScript
 
-### WhereBuilder
+##### IStatement {#typescript-istatement}
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `WhereBuilder` | `WhereBuilder` | `WhereBuilder` |
-| `Equals` | `equals` | `equals` |
-| `And` / `Or` / `Not` | `and` / `or` / `not` | `and` / `or` / `not` |
+```typescript
+interface IStatement
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-istatement-gettext) | Command text. |
+
+###### getText() {#typescript-istatement-gettext}
+
+Command text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### IQuery {#typescript-iquery}
+
+```typescript
+interface IQuery extends IStatement
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [where](#typescript-iquery-where) | Optional [IWhere](#typescript-iwhere) used to build this query. |
+
+###### where {#typescript-iquery-where}
+
+Optional [IWhere](#typescript-iwhere) used to build this query.
+
+**Definition**
+
+```typescript
+readonly where?: IWhere
+```
+
+##### Query {#typescript-query}
+
+```typescript
+class Query implements IQuery
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Query(text, where?)](#typescript-query-query-text-where) | Wraps query text and an optional [IWhere](#typescript-iwhere). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [where](#typescript-query-where) | Optional [IWhere](#typescript-iwhere) used to build this query. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-query-gettext) | Command text. |
+
+###### Query(text, where?) {#typescript-query-query-text-where}
+
+Wraps query text and an optional [IWhere](#typescript-iwhere).
+
+**Definition**
+
+```typescript
+constructor(text: string, where?: IWhere)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where` | optional [IWhere](#typescript-iwhere) |
+
+###### where {#typescript-query-where}
+
+Optional [IWhere](#typescript-iwhere) used to build this query.
+
+**Definition**
+
+```typescript
+readonly where?: IWhere
+```
+
+###### getText() {#typescript-query-gettext}
+
+Command text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### IWhere {#typescript-iwhere}
+
+```typescript
+interface IWhere extends IStatement {}
+```
+
+##### Where {#typescript-where}
+
+```typescript
+class Where implements IWhere
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Where(text)](#typescript-where-where-text) | Wraps predicate text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-where-gettext) | Predicate text. |
+
+###### Where(text) {#typescript-where-where-text}
+
+Wraps predicate text.
+
+**Definition**
+
+```typescript
+constructor(text: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | predicate text |
+
+###### getText() {#typescript-where-gettext}
+
+Predicate text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### IInsertStatement {#typescript-iinsertstatement}
+
+```typescript
+interface IInsertStatement extends IStatement {}
+```
+
+##### InsertStatement {#typescript-insertstatement}
+
+```typescript
+class InsertStatement implements IInsertStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [InsertStatement(text)](#typescript-insertstatement-insertstatement-text) | Wraps insert text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-insertstatement-gettext) | Command text. |
+
+###### InsertStatement(text) {#typescript-insertstatement-insertstatement-text}
+
+Wraps insert text.
+
+**Definition**
+
+```typescript
+constructor(text: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+###### getText() {#typescript-insertstatement-gettext}
+
+Command text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### IUpdateStatement {#typescript-iupdatestatement}
+
+```typescript
+interface IUpdateStatement extends IStatement
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [where](#typescript-iupdatestatement-where) | Optional [IWhere](#typescript-iwhere) used to build this update. |
+
+###### where {#typescript-iupdatestatement-where}
+
+Optional [IWhere](#typescript-iwhere) used to build this update.
+
+**Definition**
+
+```typescript
+readonly where?: IWhere
+```
+
+##### UpdateStatement {#typescript-updatestatement}
+
+```typescript
+class UpdateStatement implements IUpdateStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [UpdateStatement(text, where?)](#typescript-updatestatement-updatestatement-text-where) | Wraps update text and an optional [IWhere](#typescript-iwhere). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [where](#typescript-updatestatement-where) | Optional [IWhere](#typescript-iwhere) used to build this update. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-updatestatement-gettext) | Command text. |
+
+###### UpdateStatement(text, where?) {#typescript-updatestatement-updatestatement-text-where}
+
+Wraps update text and an optional [IWhere](#typescript-iwhere).
+
+**Definition**
+
+```typescript
+constructor(text: string, where?: IWhere)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where` | optional [IWhere](#typescript-iwhere) |
+
+###### where {#typescript-updatestatement-where}
+
+Optional [IWhere](#typescript-iwhere) used to build this update.
+
+**Definition**
+
+```typescript
+readonly where?: IWhere
+```
+
+###### getText() {#typescript-updatestatement-gettext}
+
+Command text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### IDeleteStatement {#typescript-ideletestatement}
+
+```typescript
+interface IDeleteStatement extends IStatement
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [where](#typescript-ideletestatement-where) | Optional [IWhere](#typescript-iwhere) used to build this delete. |
+
+###### where {#typescript-ideletestatement-where}
+
+Optional [IWhere](#typescript-iwhere) used to build this delete.
+
+**Definition**
+
+```typescript
+readonly where?: IWhere
+```
+
+##### DeleteStatement {#typescript-deletestatement}
+
+```typescript
+class DeleteStatement implements IDeleteStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DeleteStatement(text, where?)](#typescript-deletestatement-deletestatement-text-where) | Wraps delete text and an optional [IWhere](#typescript-iwhere). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [where](#typescript-deletestatement-where) | Optional [IWhere](#typescript-iwhere) used to build this delete. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-deletestatement-gettext) | Command text. |
+
+###### DeleteStatement(text, where?) {#typescript-deletestatement-deletestatement-text-where}
+
+Wraps delete text and an optional [IWhere](#typescript-iwhere).
+
+**Definition**
+
+```typescript
+constructor(text: string, where?: IWhere)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where` | optional [IWhere](#typescript-iwhere) |
+
+###### where {#typescript-deletestatement-where}
+
+Optional [IWhere](#typescript-iwhere) used to build this delete.
+
+**Definition**
+
+```typescript
+readonly where?: IWhere
+```
+
+###### getText() {#typescript-deletestatement-gettext}
+
+Command text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### ICreateTableStatement {#typescript-icreatetablestatement}
+
+```typescript
+interface ICreateTableStatement extends IStatement {}
+```
+
+##### CreateTableStatement {#typescript-createtablestatement}
+
+```typescript
+class CreateTableStatement implements ICreateTableStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CreateTableStatement(text)](#typescript-createtablestatement-createtablestatement-text) | Wraps create-table text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-createtablestatement-gettext) | Command text. |
+
+###### CreateTableStatement(text) {#typescript-createtablestatement-createtablestatement-text}
+
+Wraps create-table text.
+
+**Definition**
+
+```typescript
+constructor(text: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+###### getText() {#typescript-createtablestatement-gettext}
+
+Command text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### IStoredProcedureStatement {#typescript-istoredprocedurestatement}
+
+```typescript
+interface IStoredProcedureStatement extends IStatement {}
+```
+
+##### StoredProcedureStatement {#typescript-storedprocedurestatement}
+
+```typescript
+class StoredProcedureStatement implements IStoredProcedureStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [StoredProcedureStatement(text)](#typescript-storedprocedurestatement-storedprocedurestatement-text) | Wraps stored-procedure call text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-storedprocedurestatement-gettext) | Command text. |
+
+###### StoredProcedureStatement(text) {#typescript-storedprocedurestatement-storedprocedurestatement-text}
+
+Wraps stored-procedure call text.
+
+**Definition**
+
+```typescript
+constructor(text: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+###### getText() {#typescript-storedprocedurestatement-gettext}
+
+Command text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### C#
+
+##### IStatement {#csharp-istatement}
+
+```csharp
+public interface IStatement
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-istatement-gettext) | Command text. |
+
+###### GetText() {#csharp-istatement-gettext}
+
+Command text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### IQuery {#csharp-iquery}
+
+```csharp
+public interface IQuery : IStatement
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Where](#csharp-iquery-where) | Optional [IWhere](#csharp-iwhere) used to build this query. |
+
+###### Where {#csharp-iquery-where}
+
+Optional [IWhere](#csharp-iwhere) used to build this query.
+
+**Definition**
+
+```csharp
+IWhere? Where { get; }
+```
+
+##### Query {#csharp-query}
+
+```csharp
+public sealed class Query : IQuery
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Query(text, where)](#csharp-query-query-text-where) | Wraps query text and an optional [IWhere](#csharp-iwhere). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Where](#csharp-query-where) | Optional [IWhere](#csharp-iwhere) used to build this query. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-query-gettext) | Command text. |
+
+###### Query(text, where) {#csharp-query-query-text-where}
+
+Wraps query text and an optional [IWhere](#csharp-iwhere).
+
+**Definition**
+
+```csharp
+public Query(string text, IWhere? where = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where` | optional [IWhere](#csharp-iwhere) |
+
+###### Where {#csharp-query-where}
+
+Optional [IWhere](#csharp-iwhere) used to build this query.
+
+**Definition**
+
+```csharp
+IWhere? Where { get; }
+```
+
+###### GetText() {#csharp-query-gettext}
+
+Command text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### IWhere {#csharp-iwhere}
+
+```csharp
+public interface IWhere : IStatement
+```
+
+##### Where {#csharp-where}
+
+```csharp
+public sealed class Where : IWhere
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Where(text)](#csharp-where-where-text) | Wraps predicate text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-where-gettext) | Predicate text. |
+
+###### Where(text) {#csharp-where-where-text}
+
+Wraps predicate text.
+
+**Definition**
+
+```csharp
+public Where(string text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | predicate text |
+
+###### GetText() {#csharp-where-gettext}
+
+Predicate text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### IInsertStatement {#csharp-iinsertstatement}
+
+```csharp
+public interface IInsertStatement : IStatement
+```
+
+##### InsertStatement {#csharp-insertstatement}
+
+```csharp
+public sealed class InsertStatement : IInsertStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [InsertStatement(text)](#csharp-insertstatement-insertstatement-text) | Wraps insert text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-insertstatement-gettext) | Command text. |
+
+###### InsertStatement(text) {#csharp-insertstatement-insertstatement-text}
+
+Wraps insert text.
+
+**Definition**
+
+```csharp
+public InsertStatement(string text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+###### GetText() {#csharp-insertstatement-gettext}
+
+Command text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### IUpdateStatement {#csharp-iupdatestatement}
+
+```csharp
+public interface IUpdateStatement : IStatement
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Where](#csharp-iupdatestatement-where) | Optional [IWhere](#csharp-iwhere) used to build this update. |
+
+###### Where {#csharp-iupdatestatement-where}
+
+Optional [IWhere](#csharp-iwhere) used to build this update.
+
+**Definition**
+
+```csharp
+IWhere? Where { get; }
+```
+
+##### UpdateStatement {#csharp-updatestatement}
+
+```csharp
+public sealed class UpdateStatement : IUpdateStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [UpdateStatement(text, where)](#csharp-updatestatement-updatestatement-text-where) | Wraps update text and an optional [IWhere](#csharp-iwhere). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Where](#csharp-updatestatement-where) | Optional [IWhere](#csharp-iwhere) used to build this update. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-updatestatement-gettext) | Command text. |
+
+###### UpdateStatement(text, where) {#csharp-updatestatement-updatestatement-text-where}
+
+Wraps update text and an optional [IWhere](#csharp-iwhere).
+
+**Definition**
+
+```csharp
+public UpdateStatement(string text, IWhere? where = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where` | optional [IWhere](#csharp-iwhere) |
+
+###### Where {#csharp-updatestatement-where}
+
+Optional [IWhere](#csharp-iwhere) used to build this update.
+
+**Definition**
+
+```csharp
+IWhere? Where { get; }
+```
+
+###### GetText() {#csharp-updatestatement-gettext}
+
+Command text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### IDeleteStatement {#csharp-ideletestatement}
+
+```csharp
+public interface IDeleteStatement : IStatement
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Where](#csharp-ideletestatement-where) | Optional [IWhere](#csharp-iwhere) used to build this delete. |
+
+###### Where {#csharp-ideletestatement-where}
+
+Optional [IWhere](#csharp-iwhere) used to build this delete.
+
+**Definition**
+
+```csharp
+IWhere? Where { get; }
+```
+
+##### DeleteStatement {#csharp-deletestatement}
+
+```csharp
+public sealed class DeleteStatement : IDeleteStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DeleteStatement(text, where)](#csharp-deletestatement-deletestatement-text-where) | Wraps delete text and an optional [IWhere](#csharp-iwhere). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Where](#csharp-deletestatement-where) | Optional [IWhere](#csharp-iwhere) used to build this delete. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-deletestatement-gettext) | Command text. |
+
+###### DeleteStatement(text, where) {#csharp-deletestatement-deletestatement-text-where}
+
+Wraps delete text and an optional [IWhere](#csharp-iwhere).
+
+**Definition**
+
+```csharp
+public DeleteStatement(string text, IWhere? where = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where` | optional [IWhere](#csharp-iwhere) |
+
+###### Where {#csharp-deletestatement-where}
+
+Optional [IWhere](#csharp-iwhere) used to build this delete.
+
+**Definition**
+
+```csharp
+IWhere? Where { get; }
+```
+
+###### GetText() {#csharp-deletestatement-gettext}
+
+Command text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### ICreateTableStatement {#csharp-icreatetablestatement}
+
+```csharp
+public interface ICreateTableStatement : IStatement
+```
+
+##### CreateTableStatement {#csharp-createtablestatement}
+
+```csharp
+public sealed class CreateTableStatement : ICreateTableStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CreateTableStatement(text)](#csharp-createtablestatement-createtablestatement-text) | Wraps create-table text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-createtablestatement-gettext) | Command text. |
+
+###### CreateTableStatement(text) {#csharp-createtablestatement-createtablestatement-text}
+
+Wraps create-table text.
+
+**Definition**
+
+```csharp
+public CreateTableStatement(string text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+###### GetText() {#csharp-createtablestatement-gettext}
+
+Command text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### IStoredProcedureStatement {#csharp-istoredprocedurestatement}
+
+```csharp
+public interface IStoredProcedureStatement : IStatement
+```
+
+##### StoredProcedureStatement {#csharp-storedprocedurestatement}
+
+```csharp
+public sealed class StoredProcedureStatement : IStoredProcedureStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [StoredProcedureStatement(text)](#csharp-storedprocedurestatement-storedprocedurestatement-text) | Wraps stored-procedure call text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-storedprocedurestatement-gettext) | Command text. |
+
+###### StoredProcedureStatement(text) {#csharp-storedprocedurestatement-storedprocedurestatement-text}
+
+Wraps stored-procedure call text.
+
+**Definition**
+
+```csharp
+public StoredProcedureStatement(string text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+###### GetText() {#csharp-storedprocedurestatement-gettext}
+
+Command text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### Rust
+
+##### Statement {#rust-statement}
+
+```rust
+pub trait Statement: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-statement-get_text) | Command text. |
+
+###### get_text() {#rust-statement-get_text}
+
+Command text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+##### Query {#rust-query}
+
+```rust
+pub trait Query: Statement
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [where_clause()](#rust-query-where_clause) | Optional [Where](#rust-where) used to build this query. |
+
+###### where_clause() {#rust-query-where_clause}
+
+Optional [Where](#rust-where) used to build this query.
+
+**Definition**
+
+```rust
+fn where_clause(&self) -> Option<&dyn Where>
+```
+
+**Returns**
+
+`Option<&dyn `[Where](#rust-where)`>`
+
+##### TextQuery {#rust-textquery}
+
+```rust
+pub struct TextQuery
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(text)](#rust-textquery-new-text) | Wraps query text. |
+| [with_where(text, where_clause)](#rust-textquery-with_where-text-where_clause) | Wraps query text and a [Where](#rust-where). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-textquery-get_text) | Command text. |
+| [where_clause()](#rust-textquery-where_clause) | Optional [Where](#rust-where) used to build this query. |
+
+###### new(text) {#rust-textquery-new-text}
+
+Wraps query text.
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+**Returns**
+
+[TextQuery](#rust-textquery)
+
+###### with_where(text, where_clause) {#rust-textquery-with_where-text-where_clause}
+
+Wraps query text and a [Where](#rust-where).
+
+**Definition**
+
+```rust
+pub fn with_where(text: impl Into<String>, where_clause: impl Where + 'static) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where_clause` | [Where](#rust-where) |
+
+**Returns**
+
+[TextQuery](#rust-textquery)
+
+###### get_text() {#rust-textquery-get_text}
+
+Command text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+###### where_clause() {#rust-textquery-where_clause}
+
+Optional [Where](#rust-where) used to build this query.
+
+**Definition**
+
+```rust
+fn where_clause(&self) -> Option<&dyn Where>
+```
+
+**Returns**
+
+`Option<&dyn `[Where](#rust-where)`>`
+
+##### Where {#rust-where}
+
+```rust
+pub trait Where: Statement {}
+```
+
+##### TextWhere {#rust-textwhere}
+
+```rust
+pub struct TextWhere
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(text)](#rust-textwhere-new-text) | Wraps predicate text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-textwhere-get_text) | Predicate text. |
+
+###### new(text) {#rust-textwhere-new-text}
+
+Wraps predicate text.
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | predicate text |
+
+**Returns**
+
+[TextWhere](#rust-textwhere)
+
+###### get_text() {#rust-textwhere-get_text}
+
+Predicate text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+##### InsertStatement {#rust-insertstatement}
+
+```rust
+pub trait InsertStatement: Statement {}
+```
+
+##### TextInsertStatement {#rust-textinsertstatement}
+
+```rust
+pub struct TextInsertStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(text)](#rust-textinsertstatement-new-text) | Wraps insert text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-textinsertstatement-get_text) | Command text. |
+
+###### new(text) {#rust-textinsertstatement-new-text}
+
+Wraps insert text.
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+**Returns**
+
+[TextInsertStatement](#rust-textinsertstatement)
+
+###### get_text() {#rust-textinsertstatement-get_text}
+
+Command text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+##### UpdateStatement {#rust-updatestatement}
+
+```rust
+pub trait UpdateStatement: Statement
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [where_clause()](#rust-updatestatement-where_clause) | Optional [Where](#rust-where) used to build this update. |
+
+###### where_clause() {#rust-updatestatement-where_clause}
+
+Optional [Where](#rust-where) used to build this update.
+
+**Definition**
+
+```rust
+fn where_clause(&self) -> Option<&dyn Where>
+```
+
+**Returns**
+
+`Option<&dyn `[Where](#rust-where)`>`
+
+##### TextUpdateStatement {#rust-textupdatestatement}
+
+```rust
+pub struct TextUpdateStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(text, where_clause)](#rust-textupdatestatement-new-text-where_clause) | Wraps update text and an optional [Where](#rust-where). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-textupdatestatement-get_text) | Command text. |
+| [where_clause()](#rust-textupdatestatement-where_clause) | Optional [Where](#rust-where) used to build this update. |
+
+###### new(text, where_clause) {#rust-textupdatestatement-new-text-where_clause}
+
+Wraps update text and an optional [Where](#rust-where).
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where_clause` | optional [Where](#rust-where) |
+
+**Returns**
+
+[TextUpdateStatement](#rust-textupdatestatement)
+
+###### get_text() {#rust-textupdatestatement-get_text}
+
+Command text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+###### where_clause() {#rust-textupdatestatement-where_clause}
+
+Optional [Where](#rust-where) used to build this update.
+
+**Definition**
+
+```rust
+fn where_clause(&self) -> Option<&dyn Where>
+```
+
+**Returns**
+
+`Option<&dyn `[Where](#rust-where)`>`
+
+##### DeleteStatement {#rust-deletestatement}
+
+```rust
+pub trait DeleteStatement: Statement
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [where_clause()](#rust-deletestatement-where_clause) | Optional [Where](#rust-where) used to build this delete. |
+
+###### where_clause() {#rust-deletestatement-where_clause}
+
+Optional [Where](#rust-where) used to build this delete.
+
+**Definition**
+
+```rust
+fn where_clause(&self) -> Option<&dyn Where>
+```
+
+**Returns**
+
+`Option<&dyn `[Where](#rust-where)`>`
+
+##### TextDeleteStatement {#rust-textdeletestatement}
+
+```rust
+pub struct TextDeleteStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(text, where_clause)](#rust-textdeletestatement-new-text-where_clause) | Wraps delete text and an optional [Where](#rust-where). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-textdeletestatement-get_text) | Command text. |
+| [where_clause()](#rust-textdeletestatement-where_clause) | Optional [Where](#rust-where) used to build this delete. |
+
+###### new(text, where_clause) {#rust-textdeletestatement-new-text-where_clause}
+
+Wraps delete text and an optional [Where](#rust-where).
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+| `where_clause` | optional [Where](#rust-where) |
+
+**Returns**
+
+[TextDeleteStatement](#rust-textdeletestatement)
+
+###### get_text() {#rust-textdeletestatement-get_text}
+
+Command text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+###### where_clause() {#rust-textdeletestatement-where_clause}
+
+Optional [Where](#rust-where) used to build this delete.
+
+**Definition**
+
+```rust
+fn where_clause(&self) -> Option<&dyn Where>
+```
+
+**Returns**
+
+`Option<&dyn `[Where](#rust-where)`>`
+
+##### CreateTableStatement {#rust-createtablestatement}
+
+```rust
+pub trait CreateTableStatement: Statement {}
+```
+
+##### TextCreateTableStatement {#rust-textcreatetablestatement}
+
+```rust
+pub struct TextCreateTableStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(text)](#rust-textcreatetablestatement-new-text) | Wraps create-table text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-textcreatetablestatement-get_text) | Command text. |
+
+###### new(text) {#rust-textcreatetablestatement-new-text}
+
+Wraps create-table text.
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+**Returns**
+
+[TextCreateTableStatement](#rust-textcreatetablestatement)
+
+###### get_text() {#rust-textcreatetablestatement-get_text}
+
+Command text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+##### StoredProcedureStatement {#rust-storedprocedurestatement}
+
+```rust
+pub trait StoredProcedureStatement: Statement {}
+```
+
+##### TextStoredProcedureStatement {#rust-textstoredprocedurestatement}
+
+```rust
+pub struct TextStoredProcedureStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(text)](#rust-textstoredprocedurestatement-new-text) | Wraps stored-procedure call text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-textstoredprocedurestatement-get_text) | Command text. |
+
+###### new(text) {#rust-textstoredprocedurestatement-new-text}
+
+Wraps stored-procedure call text.
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+**Returns**
+
+[TextStoredProcedureStatement](#rust-textstoredprocedurestatement)
+
+###### get_text() {#rust-textstoredprocedurestatement-get_text}
+
+Command text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+### Remarks
+
+[Command](#command) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereBuilder](#where-builder).
+
+Build SQL with [StatementBuilder](#statement-builder). Compose predicates with [WhereBuilder](#where-builder).
+
+### See also
+
+- [StatementBuilder](#statement-builder)
+- [WhereBuilder](#where-builder)
 
 ### Examples
 
-TODO: query / insert / where samples as the builder API is documented.
+#### Wrap query text and an optional where
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L34-L36)
+
+```csharp
+var select = new Query("SELECT 1");
+var byId = new Where("id = 1");
+var withWhere = new Query("SELECT 1", byId);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L782-L785)
+
+```rust
+let query = TextQuery::with_where("SELECT 1", TextWhere::new("id = 1"));
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L17-L19)
+
+```typescript
+const select = new Query("SELECT 1");
+const where = new Where("id = 1");
+const withWhere = new Query("SELECT 1", where);
+```
+
+## StatementBuilder
+
+Stateless factory for query / insert / update / delete / table / stored-procedure SQL. Identifiers are unquoted. Placeholders are `$name`.
+
+### Classes
+
+##### TypeScript
+
+##### StatementBuilder {#typescript-statementbuilder}
+
+```typescript
+const StatementBuilder
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [createQuery(table, fields, where?, joins?)](#typescript-statementbuilder-createquery-table-fields-where-joins) | Builds a select. An empty field list is `SELECT *`. |
+| [createInsert(table, fields)](#typescript-statementbuilder-createinsert-table-fields) | Builds an insert. Values are `$name` placeholders. |
+| [createUpdate(table, fields, where?)](#typescript-statementbuilder-createupdate-table-fields-where) | Builds an update. Assignments are `name = $name`. |
+| [createDelete(table, where?)](#typescript-statementbuilder-createdelete-table-where) | Builds a delete. |
+| [createTable(table, columns)](#typescript-statementbuilder-createtable-table-columns) | Builds a create-table statement. |
+| [createStoredProcedure(name, parameters?)](#typescript-statementbuilder-createstoredprocedure-name-parameters) | Builds a `CALL` with `$name` placeholders. |
+
+###### createQuery(table, fields, where?, joins?) {#typescript-statementbuilder-createquery-table-fields-where-joins}
+
+Builds a select. An empty field list is `SELECT *`.
+
+**Definition**
+
+```typescript
+createQuery(table: string, fields: string[], where?: IWhere, joins?: Join[]): IQuery
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | selected columns; empty selects `*` |
+| `where` | optional [IWhere](#typescript-iwhere) |
+| `joins` | optional [Join](#typescript-join) list |
+
+**Returns**
+
+[IQuery](#typescript-iquery)
+
+###### createInsert(table, fields) {#typescript-statementbuilder-createinsert-table-fields}
+
+Builds an insert. Values are `$name` placeholders.
+
+**Definition**
+
+```typescript
+createInsert(table: string, fields: Field[]): IInsertStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | [Field](#typescript-field) name and value pairs |
+
+**Returns**
+
+[IInsertStatement](#typescript-iinsertstatement)
+
+###### createUpdate(table, fields, where?) {#typescript-statementbuilder-createupdate-table-fields-where}
+
+Builds an update. Assignments are `name = $name`.
+
+**Definition**
+
+```typescript
+createUpdate(table: string, fields: Field[], where?: IWhere): IUpdateStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | [Field](#typescript-field) name and value pairs |
+| `where` | optional [IWhere](#typescript-iwhere) |
+
+**Returns**
+
+[IUpdateStatement](#typescript-iupdatestatement)
+
+###### createDelete(table, where?) {#typescript-statementbuilder-createdelete-table-where}
+
+Builds a delete.
+
+**Definition**
+
+```typescript
+createDelete(table: string, where?: IWhere): IDeleteStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `where` | optional [IWhere](#typescript-iwhere) |
+
+**Returns**
+
+[IDeleteStatement](#typescript-ideletestatement)
+
+###### createTable(table, columns) {#typescript-statementbuilder-createtable-table-columns}
+
+Builds a create-table statement.
+
+**Definition**
+
+```typescript
+createTable(table: string, columns: Column[]): ICreateTableStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `columns` | [Column](#typescript-column) name and type pairs |
+
+**Returns**
+
+[ICreateTableStatement](#typescript-icreatetablestatement)
+
+###### createStoredProcedure(name, parameters?) {#typescript-statementbuilder-createstoredprocedure-name-parameters}
+
+Builds a `CALL` with `$name` placeholders.
+
+**Definition**
+
+```typescript
+createStoredProcedure(name: string, parameters?: Field[]): IStoredProcedureStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | procedure name |
+| `parameters` | optional [Field](#typescript-field) list |
+
+**Returns**
+
+[IStoredProcedureStatement](#typescript-istoredprocedurestatement)
+
+##### Column {#typescript-column}
+
+```typescript
+interface Column
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [name](#typescript-column-name) | Column name. |
+| [type](#typescript-column-type) | SQL type text. |
+
+###### name {#typescript-column-name}
+
+Column name.
+
+**Definition**
+
+```typescript
+name: string
+```
+
+###### type {#typescript-column-type}
+
+SQL type text.
+
+**Definition**
+
+```typescript
+type: string
+```
+
+##### Field {#typescript-field}
+
+```typescript
+interface Field
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [name](#typescript-field-name) | Field name. |
+| [value](#typescript-field-value) | Field [Scalar](#typescript-scalar). |
+
+###### name {#typescript-field-name}
+
+Field name.
+
+**Definition**
+
+```typescript
+name: string
+```
+
+###### value {#typescript-field-value}
+
+Field [Scalar](#typescript-scalar).
+
+**Definition**
+
+```typescript
+value: Scalar
+```
+
+##### JoinKind {#typescript-joinkind}
+
+```typescript
+type JoinKind = "inner" | "left" | "right"
+```
+
+##### Join {#typescript-join}
+
+```typescript
+type Join
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [kind](#typescript-join-kind) | [JoinKind](#typescript-joinkind). |
+| [table](#typescript-join-table) | Joined table. |
+| [left](#typescript-join-left) | Left-hand join column. |
+| [right](#typescript-join-right) | Right-hand join column. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [inner(table, left, right)](#typescript-join-inner-table-left-right) | Builds an inner [Join](#typescript-join). |
+| [left(table, left, right)](#typescript-join-left-table-left-right) | Builds a left [Join](#typescript-join). |
+| [right(table, left, right)](#typescript-join-right-table-left-right) | Builds a right [Join](#typescript-join). |
+
+###### kind {#typescript-join-kind}
+
+[JoinKind](#typescript-joinkind).
+
+**Definition**
+
+```typescript
+kind: JoinKind
+```
+
+###### table {#typescript-join-table}
+
+Joined table.
+
+**Definition**
+
+```typescript
+table: string
+```
+
+###### left {#typescript-join-left}
+
+Left-hand join column.
+
+**Definition**
+
+```typescript
+left: string
+```
+
+###### right {#typescript-join-right}
+
+Right-hand join column.
+
+**Definition**
+
+```typescript
+right: string
+```
+
+###### inner(table, left, right) {#typescript-join-inner-table-left-right}
+
+Builds an inner [Join](#typescript-join).
+
+**Definition**
+
+```typescript
+inner(table: string, left: string, right: string): Join
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#typescript-join)
+
+###### left(table, left, right) {#typescript-join-left-table-left-right}
+
+Builds a left [Join](#typescript-join).
+
+**Definition**
+
+```typescript
+left(table: string, left: string, right: string): Join
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#typescript-join)
+
+###### right(table, left, right) {#typescript-join-right-table-left-right}
+
+Builds a right [Join](#typescript-join).
+
+**Definition**
+
+```typescript
+right(table: string, left: string, right: string): Join
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#typescript-join)
+
+##### C#
+
+##### StatementBuilder {#csharp-statementbuilder}
+
+```csharp
+public static class StatementBuilder
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [CreateQuery(table, fields, where, joins)](#csharp-statementbuilder-createquery-table-fields-where-joins) | Builds a select. An empty field list is `SELECT *`. |
+| [CreateInsert(table, fields)](#csharp-statementbuilder-createinsert-table-fields) | Builds an insert. Values are `$name` placeholders. |
+| [CreateUpdate(table, fields, where)](#csharp-statementbuilder-createupdate-table-fields-where) | Builds an update. Assignments are `name = $name`. |
+| [CreateDelete(table, where)](#csharp-statementbuilder-createdelete-table-where) | Builds a delete. |
+| [CreateTable(table, columns)](#csharp-statementbuilder-createtable-table-columns) | Builds a create-table statement. |
+| [CreateStoredProcedure(name, parameters)](#csharp-statementbuilder-createstoredprocedure-name-parameters) | Builds a `CALL` with `$name` placeholders. |
+
+###### CreateQuery(table, fields, where, joins) {#csharp-statementbuilder-createquery-table-fields-where-joins}
+
+Builds a select. An empty field list is `SELECT *`.
+
+**Definition**
+
+```csharp
+public static IQuery CreateQuery(string table, IReadOnlyList<string> fields, IWhere? where = null, IReadOnlyList<Join>? joins = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | selected columns; empty selects `*` |
+| `where` | optional [IWhere](#csharp-iwhere) |
+| `joins` | optional [Join](#csharp-join) list |
+
+**Returns**
+
+[IQuery](#csharp-iquery)
+
+###### CreateInsert(table, fields) {#csharp-statementbuilder-createinsert-table-fields}
+
+Builds an insert. Values are `$name` placeholders.
+
+**Definition**
+
+```csharp
+public static IInsertStatement CreateInsert(string table, IReadOnlyList<Parameter> fields)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | [Parameter](#csharp-parameter) name and value pairs |
+
+**Returns**
+
+[IInsertStatement](#csharp-iinsertstatement)
+
+###### CreateUpdate(table, fields, where) {#csharp-statementbuilder-createupdate-table-fields-where}
+
+Builds an update. Assignments are `name = $name`.
+
+**Definition**
+
+```csharp
+public static IUpdateStatement CreateUpdate(string table, IReadOnlyList<Parameter> fields, IWhere? where = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | [Parameter](#csharp-parameter) name and value pairs |
+| `where` | optional [IWhere](#csharp-iwhere) |
+
+**Returns**
+
+[IUpdateStatement](#csharp-iupdatestatement)
+
+###### CreateDelete(table, where) {#csharp-statementbuilder-createdelete-table-where}
+
+Builds a delete.
+
+**Definition**
+
+```csharp
+public static IDeleteStatement CreateDelete(string table, IWhere? where = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `where` | optional [IWhere](#csharp-iwhere) |
+
+**Returns**
+
+[IDeleteStatement](#csharp-ideletestatement)
+
+###### CreateTable(table, columns) {#csharp-statementbuilder-createtable-table-columns}
+
+Builds a create-table statement.
+
+**Definition**
+
+```csharp
+public static ICreateTableStatement CreateTable(string table, IReadOnlyList<Column> columns)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `columns` | [Column](#csharp-column) name and type pairs |
+
+**Returns**
+
+[ICreateTableStatement](#csharp-icreatetablestatement)
+
+###### CreateStoredProcedure(name, parameters) {#csharp-statementbuilder-createstoredprocedure-name-parameters}
+
+Builds a `CALL` with `$name` placeholders.
+
+**Definition**
+
+```csharp
+public static IStoredProcedureStatement CreateStoredProcedure(string name, IReadOnlyList<Parameter>? parameters = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | procedure name |
+| `parameters` | optional [Parameter](#csharp-parameter) list |
+
+**Returns**
+
+[IStoredProcedureStatement](#csharp-istoredprocedurestatement)
+
+##### Column {#csharp-column}
+
+```csharp
+public sealed record Column(string Name, string Type)
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Name](#csharp-column-name) | Column name. |
+| [Type](#csharp-column-type) | SQL type text. |
+
+###### Name {#csharp-column-name}
+
+Column name.
+
+**Definition**
+
+```csharp
+string Name { get; }
+```
+
+###### Type {#csharp-column-type}
+
+SQL type text.
+
+**Definition**
+
+```csharp
+string Type { get; }
+```
+
+##### JoinKind {#csharp-joinkind}
+
+```csharp
+public enum JoinKind
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Inner](#csharp-joinkind-inner) | Inner join. |
+| [Left](#csharp-joinkind-left) | Left join. |
+| [Right](#csharp-joinkind-right) | Right join. |
+
+###### Inner {#csharp-joinkind-inner}
+
+Inner join.
+
+**Definition**
+
+```csharp
+Inner
+```
+
+###### Left {#csharp-joinkind-left}
+
+Left join.
+
+**Definition**
+
+```csharp
+Left
+```
+
+###### Right {#csharp-joinkind-right}
+
+Right join.
+
+**Definition**
+
+```csharp
+Right
+```
+
+##### Join {#csharp-join}
+
+```csharp
+public sealed record Join(JoinKind Kind, string Table, string LeftColumn, string RightColumn)
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Kind](#csharp-join-kind) | [JoinKind](#csharp-joinkind). |
+| [Table](#csharp-join-table) | Joined table. |
+| [LeftColumn](#csharp-join-leftcolumn) | Left-hand join column. |
+| [RightColumn](#csharp-join-rightcolumn) | Right-hand join column. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Inner(table, left, right)](#csharp-join-inner-table-left-right) | Builds an inner [Join](#csharp-join). |
+| [Left(table, left, right)](#csharp-join-left-table-left-right) | Builds a left [Join](#csharp-join). |
+| [Right(table, left, right)](#csharp-join-right-table-left-right) | Builds a right [Join](#csharp-join). |
+
+###### Kind {#csharp-join-kind}
+
+[JoinKind](#csharp-joinkind).
+
+**Definition**
+
+```csharp
+JoinKind Kind { get; }
+```
+
+###### Table {#csharp-join-table}
+
+Joined table.
+
+**Definition**
+
+```csharp
+string Table { get; }
+```
+
+###### LeftColumn {#csharp-join-leftcolumn}
+
+Left-hand join column.
+
+**Definition**
+
+```csharp
+string LeftColumn { get; }
+```
+
+###### RightColumn {#csharp-join-rightcolumn}
+
+Right-hand join column.
+
+**Definition**
+
+```csharp
+string RightColumn { get; }
+```
+
+###### Inner(table, left, right) {#csharp-join-inner-table-left-right}
+
+Builds an inner [Join](#csharp-join).
+
+**Definition**
+
+```csharp
+public static Join Inner(string table, string left, string right)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#csharp-join)
+
+###### Left(table, left, right) {#csharp-join-left-table-left-right}
+
+Builds a left [Join](#csharp-join).
+
+**Definition**
+
+```csharp
+public static Join Left(string table, string left, string right)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#csharp-join)
+
+###### Right(table, left, right) {#csharp-join-right-table-left-right}
+
+Builds a right [Join](#csharp-join).
+
+**Definition**
+
+```csharp
+public static Join Right(string table, string left, string right)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#csharp-join)
+
+##### Rust
+
+##### StatementBuilder {#rust-statementbuilder}
+
+```rust
+pub struct StatementBuilder
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create_query(table, fields, where_clause, joins)](#rust-statementbuilder-create_query-table-fields-where_clause-joins) | Builds a select. An empty field list is `SELECT *`. |
+| [create_insert(table, fields)](#rust-statementbuilder-create_insert-table-fields) | Builds an insert. Values are `$name` placeholders. |
+| [create_update(table, fields, where_clause)](#rust-statementbuilder-create_update-table-fields-where_clause) | Builds an update. Assignments are `name = $name`. |
+| [create_delete(table, where_clause)](#rust-statementbuilder-create_delete-table-where_clause) | Builds a delete. |
+| [create_table(table, columns)](#rust-statementbuilder-create_table-table-columns) | Builds a create-table statement. |
+| [create_stored_procedure(name, parameters)](#rust-statementbuilder-create_stored_procedure-name-parameters) | Builds a `CALL` with `$name` placeholders. |
+
+###### create_query(table, fields, where_clause, joins) {#rust-statementbuilder-create_query-table-fields-where_clause-joins}
+
+Builds a select. An empty field list is `SELECT *`.
+
+**Definition**
+
+```rust
+pub fn create_query(table: impl AsRef<str>, fields: &[&str], where_clause: Option<&dyn Where>, joins: &[Join]) -> TextQuery
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | selected columns; empty selects `*` |
+| `where_clause` | optional [Where](#rust-where) |
+| `joins` | [Join](#rust-join) slice |
+
+**Returns**
+
+[TextQuery](#rust-textquery)
+
+###### create_insert(table, fields) {#rust-statementbuilder-create_insert-table-fields}
+
+Builds an insert. Values are `$name` placeholders.
+
+**Definition**
+
+```rust
+pub fn create_insert(table: impl AsRef<str>, fields: &[Parameter]) -> TextInsertStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | [Parameter](#rust-parameter) name and value pairs |
+
+**Returns**
+
+[TextInsertStatement](#rust-textinsertstatement)
+
+###### create_update(table, fields, where_clause) {#rust-statementbuilder-create_update-table-fields-where_clause}
+
+Builds an update. Assignments are `name = $name`.
+
+**Definition**
+
+```rust
+pub fn create_update(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&dyn Where>) -> TextUpdateStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | [Parameter](#rust-parameter) name and value pairs |
+| `where_clause` | optional [Where](#rust-where) |
+
+**Returns**
+
+[TextUpdateStatement](#rust-textupdatestatement)
+
+###### create_delete(table, where_clause) {#rust-statementbuilder-create_delete-table-where_clause}
+
+Builds a delete.
+
+**Definition**
+
+```rust
+pub fn create_delete(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> TextDeleteStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `where_clause` | optional [Where](#rust-where) |
+
+**Returns**
+
+[TextDeleteStatement](#rust-textdeletestatement)
+
+###### create_table(table, columns) {#rust-statementbuilder-create_table-table-columns}
+
+Builds a create-table statement.
+
+**Definition**
+
+```rust
+pub fn create_table(table: impl AsRef<str>, columns: &[Column]) -> TextCreateTableStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `columns` | [Column](#rust-column) name and type pairs |
+
+**Returns**
+
+[TextCreateTableStatement](#rust-textcreatetablestatement)
+
+###### create_stored_procedure(name, parameters) {#rust-statementbuilder-create_stored_procedure-name-parameters}
+
+Builds a `CALL` with `$name` placeholders.
+
+**Definition**
+
+```rust
+pub fn create_stored_procedure(name: impl AsRef<str>, parameters: &[Parameter]) -> TextStoredProcedureStatement
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | procedure name |
+| `parameters` | [Parameter](#rust-parameter) slice |
+
+**Returns**
+
+[TextStoredProcedureStatement](#rust-textstoredprocedurestatement)
+
+##### Column {#rust-column}
+
+```rust
+pub struct Column
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(name, type_name)](#rust-column-new-name-type_name) | Builds a column name and SQL type. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [name](#rust-column-name) | Column name. |
+| [type_name](#rust-column-type_name) | SQL type text. |
+
+###### new(name, type_name) {#rust-column-new-name-type_name}
+
+Builds a column name and SQL type.
+
+**Definition**
+
+```rust
+pub fn new(name: impl Into<String>, type_name: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column name |
+| `type_name` | SQL type text |
+
+**Returns**
+
+[Column](#rust-column)
+
+###### name {#rust-column-name}
+
+Column name.
+
+**Definition**
+
+```rust
+pub name: String
+```
+
+###### type_name {#rust-column-type_name}
+
+SQL type text.
+
+**Definition**
+
+```rust
+pub type_name: String
+```
+
+##### JoinKind {#rust-joinkind}
+
+```rust
+pub enum JoinKind
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Inner](#rust-joinkind-inner) | Inner join. |
+| [Left](#rust-joinkind-left) | Left join. |
+| [Right](#rust-joinkind-right) | Right join. |
+
+###### Inner {#rust-joinkind-inner}
+
+Inner join.
+
+**Definition**
+
+```rust
+Inner
+```
+
+###### Left {#rust-joinkind-left}
+
+Left join.
+
+**Definition**
+
+```rust
+Left
+```
+
+###### Right {#rust-joinkind-right}
+
+Right join.
+
+**Definition**
+
+```rust
+Right
+```
+
+##### Join {#rust-join}
+
+```rust
+pub struct Join
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [kind](#rust-join-kind) | [JoinKind](#rust-joinkind). |
+| [table](#rust-join-table) | Joined table. |
+| [left](#rust-join-left) | Left-hand join column. |
+| [right](#rust-join-right) | Right-hand join column. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [inner(table, left, right)](#rust-join-inner-table-left-right) | Builds an inner [Join](#rust-join). |
+| [left(table, left, right)](#rust-join-left-table-left-right) | Builds a left [Join](#rust-join). |
+| [right(table, left, right)](#rust-join-right-table-left-right) | Builds a right [Join](#rust-join). |
+
+###### kind {#rust-join-kind}
+
+[JoinKind](#rust-joinkind).
+
+**Definition**
+
+```rust
+pub kind: JoinKind
+```
+
+###### table {#rust-join-table}
+
+Joined table.
+
+**Definition**
+
+```rust
+pub table: String
+```
+
+###### left {#rust-join-left}
+
+Left-hand join column.
+
+**Definition**
+
+```rust
+pub left: String
+```
+
+###### right {#rust-join-right}
+
+Right-hand join column.
+
+**Definition**
+
+```rust
+pub right: String
+```
+
+###### inner(table, left, right) {#rust-join-inner-table-left-right}
+
+Builds an inner [Join](#rust-join).
+
+**Definition**
+
+```rust
+pub fn inner(table: impl Into<String>, left: impl Into<String>, right: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#rust-join)
+
+###### left(table, left, right) {#rust-join-left-table-left-right}
+
+Builds a left [Join](#rust-join).
+
+**Definition**
+
+```rust
+pub fn left(table: impl Into<String>, left: impl Into<String>, right: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#rust-join)
+
+###### right(table, left, right) {#rust-join-right-table-left-right}
+
+Builds a right [Join](#rust-join).
+
+**Definition**
+
+```rust
+pub fn right(table: impl Into<String>, left: impl Into<String>, right: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | joined table |
+| `left` | left-hand column |
+| `right` | right-hand column |
+
+**Returns**
+
+[Join](#rust-join)
+
+### Remarks
+
+Dialect packages wrap [StatementBuilder](#statementbuilder) for quoting and native column types, including `CreateStoredProcedure` the same way as `CreateInsert`. C# and TypeScript keep the original [IWhere](#iwhere) on query / update / delete. Rust stores `where_clause()`. Joins exist on the core builder. The SQLite dialect forwards them; Postgres and MySQL dialect wrappers do not.
+
+[RepositoryStatements](#crud-repository) is table-scoped sugar over this builder.
+
+### Examples
+
+#### Build a select
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L78-L79)
+
+```csharp
+var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+var query = StatementBuilder.CreateQuery("users", ["id", "name"], where);
+```
+
+**After: select**
+
+```
+SELECT id, name FROM users WHERE id = $id AND age > $age
+```
+
+**After: insert**
+
+```
+INSERT INTO users (id, name) VALUES ($id, $name)
+```
+
+**After: call**
+
+```
+CALL save($id, $name)
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L696-L702)
+
+```rust
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let query = StatementBuilder::create_query("users", &["id", "name"], Some(&where_clause), &[]);
+```
+
+**After: select**
+
+```
+SELECT id, name FROM users WHERE id = $id AND age > $age
+```
+
+**After: insert**
+
+```
+INSERT INTO users (id, name) VALUES ($id, $name)
+```
+
+**After: call**
+
+```
+CALL save($id, $name)
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L70-L71)
+
+```typescript
+const where = WhereBuilder.equals("id", 1);
+const query = StatementBuilder.createQuery("users", ["id", "name"], where);
+```
+
+**After: select**
+
+```
+SELECT id, name FROM users WHERE id = $id
+```
+
+**After: insert**
+
+```
+INSERT INTO users (id, name) VALUES ($id, $name)
+```
+
+**After: call**
+
+```
+CALL save($id, $name)
+```
+
+#### Query with joins
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/Contact/ContactsJoinQuery.cs#L8-L34)
+
+```csharp
+public static IQuery Create() =>
+    StatementBuilder.CreateQuery(
+        "contacts_base",
+        [
+            "contacts_base.id AS id",
+            "contacts_base.first_name AS first_name",
+            "contacts_base.last_name AS last_name",
+            "contacts_base.email AS email",
+            "contact_source.name AS contact_source_name",
+            "contact_type.name AS contact_type_name",
+            "address.id AS address_id",
+            "address.line1 AS address_line1",
+            "address.city AS address_city",
+            "address_type.name AS address_type_name",
+            "phone.id AS phone_id",
+            "phone.number AS phone_number",
+            "phone_type.name AS phone_type_name",
+        ],
+        null,
+        [
+            Join.Inner("contact_source", "contacts_base.contact_source_id", "contact_source.id"),
+            Join.Inner("contact_type", "contacts_base.contact_type_id", "contact_type.id"),
+            Join.Left("address", "contacts_base.id", "address.contact_id"),
+            Join.Left("address_type", "address.address_type_id", "address_type.id"),
+            Join.Left("phone", "contacts_base.id", "phone.contact_id"),
+            Join.Left("phone_type", "phone.phone_type_id", "phone_type.id"),
+        ]);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/sql-specs/src/contacts_join_query.rs#L3-L39)
+
+```rust
+StatementBuilder::create_query(
+    "contacts_base",
+    &[
+        "contacts_base.id AS id",
+        "contacts_base.first_name AS first_name",
+        "contacts_base.last_name AS last_name",
+        "contacts_base.email AS email",
+        "contact_source.name AS contact_source_name",
+        "contact_type.name AS contact_type_name",
+        "address.id AS address_id",
+        "address.line1 AS address_line1",
+        "address.city AS address_city",
+        "address_type.name AS address_type_name",
+        "phone.id AS phone_id",
+        "phone.number AS phone_number",
+        "phone_type.name AS phone_type_name",
+    ],
+    None,
+    &[
+        Join::inner(
+            "contact_source",
+            "contacts_base.contact_source_id",
+            "contact_source.id",
+        ),
+        Join::inner(
+            "contact_type",
+            "contacts_base.contact_type_id",
+            "contact_type.id",
+        ),
+        Join::left("address", "contacts_base.id", "address.contact_id"),
+        Join::left("address_type", "address.address_type_id", "address_type.id"),
+        Join::left("phone", "contacts_base.id", "phone.contact_id"),
+        Join::left("phone_type", "phone.phone_type_id", "phone_type.id"),
+    ],
+)
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/tests/contact/contactsJoinQuery.ts#L3-L30)
+
+```typescript
+export const contactsJoinQuery = (): IQuery =>
+  StatementBuilder.createQuery(
+    "contacts_base",
+    [
+      "contacts_base.id AS id",
+      "contacts_base.first_name AS first_name",
+      "contacts_base.last_name AS last_name",
+      "contacts_base.email AS email",
+      "contact_source.name AS contact_source_name",
+      "contact_type.name AS contact_type_name",
+      "address.id AS address_id",
+      "address.line1 AS address_line1",
+      "address.city AS address_city",
+      "address_type.name AS address_type_name",
+      "phone.id AS phone_id",
+      "phone.number AS phone_number",
+      "phone_type.name AS phone_type_name",
+    ],
+    undefined,
+    [
+      Join.inner("contact_source", "contacts_base.contact_source_id", "contact_source.id"),
+      Join.inner("contact_type", "contacts_base.contact_type_id", "contact_type.id"),
+      Join.left("address", "contacts_base.id", "address.contact_id"),
+      Join.left("address_type", "address.address_type_id", "address_type.id"),
+      Join.left("phone", "contacts_base.id", "phone.contact_id"),
+      Join.left("phone_type", "phone.phone_type_id", "phone_type.id"),
+    ],
+  );
+```
+
+## WhereBuilder
+
+[IWhere](#iwhere) built from compare, group, not, and in factories. Placeholders are `$field` and `$field_0` for `In`.
+
+### Classes
+
+##### TypeScript
+
+##### WhereBuilder {#typescript-wherebuilder}
+
+```typescript
+class WhereBuilder implements IWhere
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [parameters](#typescript-wherebuilder-parameters) | Bound [Parameter](#typescript-parameter) list. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [equals(field, value)](#typescript-wherebuilder-equals-field-value) | `field = $field`. |
+| [ne(field, value)](#typescript-wherebuilder-ne-field-value) | `field <> $field`. |
+| [greaterThan(field, value)](#typescript-wherebuilder-greaterthan-field-value) | `field > $field`. |
+| [lt(field, value)](#typescript-wherebuilder-lt-field-value) | `field < $field`. |
+| [gte(field, value)](#typescript-wherebuilder-gte-field-value) | `field >= $field`. |
+| [lte(field, value)](#typescript-wherebuilder-lte-field-value) | `field <= $field`. |
+| [and(...children)](#typescript-wherebuilder-and-children) | Joins children with `AND`. Empty is `1 = 1`. |
+| [or(...children)](#typescript-wherebuilder-or-children) | Joins children with `OR`. Empty is `1 = 0`. |
+| [not(child)](#typescript-wherebuilder-not-child) | `NOT (child)`. |
+| [in(field, values)](#typescript-wherebuilder-in-field-values) | `field IN ($field_0, …)`. Empty is `1 = 0`. |
+| [getText()](#typescript-wherebuilder-gettext) | Predicate text. |
+
+###### parameters {#typescript-wherebuilder-parameters}
+
+Bound [Parameter](#typescript-parameter) list.
+
+**Definition**
+
+```typescript
+get parameters(): Parameter[]
+```
+
+###### equals(field, value) {#typescript-wherebuilder-equals-field-value}
+
+`field = $field`.
+
+**Definition**
+
+```typescript
+static equals(field: string, value: Scalar): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | [Scalar](#typescript-scalar) |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### ne(field, value) {#typescript-wherebuilder-ne-field-value}
+
+`field <> $field`.
+
+**Definition**
+
+```typescript
+static ne(field: string, value: Scalar): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | [Scalar](#typescript-scalar) |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### greaterThan(field, value) {#typescript-wherebuilder-greaterthan-field-value}
+
+`field > $field`.
+
+**Definition**
+
+```typescript
+static greaterThan(field: string, value: Scalar): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | [Scalar](#typescript-scalar) |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### lt(field, value) {#typescript-wherebuilder-lt-field-value}
+
+`field < $field`.
+
+**Definition**
+
+```typescript
+static lt(field: string, value: Scalar): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | [Scalar](#typescript-scalar) |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### gte(field, value) {#typescript-wherebuilder-gte-field-value}
+
+`field >= $field`.
+
+**Definition**
+
+```typescript
+static gte(field: string, value: Scalar): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | [Scalar](#typescript-scalar) |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### lte(field, value) {#typescript-wherebuilder-lte-field-value}
+
+`field <= $field`.
+
+**Definition**
+
+```typescript
+static lte(field: string, value: Scalar): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | [Scalar](#typescript-scalar) |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### and(...children) {#typescript-wherebuilder-and-children}
+
+Joins children with `AND`. Empty is `1 = 1`.
+
+**Definition**
+
+```typescript
+static and(...children: WhereBuilder[]): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `children` | [WhereBuilder](#typescript-wherebuilder) predicates |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### or(...children) {#typescript-wherebuilder-or-children}
+
+Joins children with `OR`. Empty is `1 = 0`.
+
+**Definition**
+
+```typescript
+static or(...children: WhereBuilder[]): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `children` | [WhereBuilder](#typescript-wherebuilder) predicates |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### not(child) {#typescript-wherebuilder-not-child}
+
+`NOT (child)`.
+
+**Definition**
+
+```typescript
+static not(child: WhereBuilder): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `child` | [WhereBuilder](#typescript-wherebuilder) |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### in(field, values) {#typescript-wherebuilder-in-field-values}
+
+`field IN ($field_0, …)`. Empty is `1 = 0`.
+
+**Definition**
+
+```typescript
+static in(field: string, values: Scalar[]): WhereBuilder
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `values` | [Scalar](#typescript-scalar) list |
+
+**Returns**
+
+[WhereBuilder](#typescript-wherebuilder)
+
+###### getText() {#typescript-wherebuilder-gettext}
+
+Predicate text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### Scalar {#typescript-scalar}
+
+```typescript
+type Scalar = string | number | boolean | bigint | null
+```
+
+##### C#
+
+##### WhereBuilder {#csharp-wherebuilder}
+
+```csharp
+public sealed class WhereBuilder : IWhere
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Parameters](#csharp-wherebuilder-parameters) | Bound [Parameter](#csharp-parameter) list. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Equals(field, value)](#csharp-wherebuilder-equals-field-value) | `field = $field`. |
+| [Ne(field, value)](#csharp-wherebuilder-ne-field-value) | `field <> $field`. |
+| [GreaterThan(field, value)](#csharp-wherebuilder-greaterthan-field-value) | `field > $field`. |
+| [Lt(field, value)](#csharp-wherebuilder-lt-field-value) | `field < $field`. |
+| [Gte(field, value)](#csharp-wherebuilder-gte-field-value) | `field >= $field`. |
+| [Lte(field, value)](#csharp-wherebuilder-lte-field-value) | `field <= $field`. |
+| [And(children)](#csharp-wherebuilder-and-children) | Joins children with `AND`. Empty is `1 = 1`. |
+| [Or(children)](#csharp-wherebuilder-or-children) | Joins children with `OR`. Empty is `1 = 0`. |
+| [Not(child)](#csharp-wherebuilder-not-child) | `NOT (child)`. |
+| [In(field, values)](#csharp-wherebuilder-in-field-values) | `field IN ($field_0, …)`. Empty is `1 = 0`. |
+| [GetText()](#csharp-wherebuilder-gettext) | Predicate text. |
+
+###### Parameters {#csharp-wherebuilder-parameters}
+
+Bound [Parameter](#csharp-parameter) list.
+
+**Definition**
+
+```csharp
+public IReadOnlyList<Parameter> Parameters { get; }
+```
+
+###### Equals(field, value) {#csharp-wherebuilder-equals-field-value}
+
+`field = $field`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder Equals(string field, Value? value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value; omitted is null |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### Ne(field, value) {#csharp-wherebuilder-ne-field-value}
+
+`field <> $field`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder Ne(string field, Value? value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value; omitted is null |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### GreaterThan(field, value) {#csharp-wherebuilder-greaterthan-field-value}
+
+`field > $field`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder GreaterThan(string field, Value? value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value; omitted is null |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### Lt(field, value) {#csharp-wherebuilder-lt-field-value}
+
+`field < $field`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder Lt(string field, Value? value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value; omitted is null |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### Gte(field, value) {#csharp-wherebuilder-gte-field-value}
+
+`field >= $field`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder Gte(string field, Value? value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value; omitted is null |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### Lte(field, value) {#csharp-wherebuilder-lte-field-value}
+
+`field <= $field`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder Lte(string field, Value? value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value; omitted is null |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### And(children) {#csharp-wherebuilder-and-children}
+
+Joins children with `AND`. Empty is `1 = 1`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder And(params WhereBuilder[] children)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `children` | [WhereBuilder](#csharp-wherebuilder) predicates |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### Or(children) {#csharp-wherebuilder-or-children}
+
+Joins children with `OR`. Empty is `1 = 0`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder Or(params WhereBuilder[] children)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `children` | [WhereBuilder](#csharp-wherebuilder) predicates |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### Not(child) {#csharp-wherebuilder-not-child}
+
+`NOT (child)`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder Not(WhereBuilder child)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `child` | [WhereBuilder](#csharp-wherebuilder) |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### In(field, values) {#csharp-wherebuilder-in-field-values}
+
+`field IN ($field_0, …)`. Empty is `1 = 0`.
+
+**Definition**
+
+```csharp
+public static WhereBuilder In(string field, IReadOnlyList<Value> values)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `values` | cell values |
+
+**Returns**
+
+[WhereBuilder](#csharp-wherebuilder)
+
+###### GetText() {#csharp-wherebuilder-gettext}
+
+Predicate text.
+
+**Definition**
+
+```csharp
+public string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### Rust
+
+##### WhereBuilder {#rust-wherebuilder}
+
+```rust
+pub struct WhereBuilder
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [equals(field, value)](#rust-wherebuilder-equals-field-value) | `field = $field`. |
+| [ne(field, value)](#rust-wherebuilder-ne-field-value) | `field <> $field`. |
+| [greater_than(field, value)](#rust-wherebuilder-greater_than-field-value) | `field > $field`. |
+| [lt(field, value)](#rust-wherebuilder-lt-field-value) | `field < $field`. |
+| [gte(field, value)](#rust-wherebuilder-gte-field-value) | `field >= $field`. |
+| [lte(field, value)](#rust-wherebuilder-lte-field-value) | `field <= $field`. |
+| [and(children)](#rust-wherebuilder-and-children) | Joins children with `AND`. Empty is `1 = 1`. |
+| [or(children)](#rust-wherebuilder-or-children) | Joins children with `OR`. Empty is `1 = 0`. |
+| [not(child)](#rust-wherebuilder-not-child) | `NOT (child)`. |
+| [in_list(field, values)](#rust-wherebuilder-in_list-field-values) | `field IN ($field_0, …)`. Empty is `1 = 0`. |
+| [get_text()](#rust-wherebuilder-get_text) | Predicate text. |
+| [parameters()](#rust-wherebuilder-parameters) | Bound [Parameter](#rust-parameter) list. |
+
+###### equals(field, value) {#rust-wherebuilder-equals-field-value}
+
+`field = $field`.
+
+**Definition**
+
+```rust
+pub fn equals(field: impl Into<String>, value: impl Into<Value>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### ne(field, value) {#rust-wherebuilder-ne-field-value}
+
+`field <> $field`.
+
+**Definition**
+
+```rust
+pub fn ne(field: impl Into<String>, value: impl Into<Value>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### greater_than(field, value) {#rust-wherebuilder-greater_than-field-value}
+
+`field > $field`.
+
+**Definition**
+
+```rust
+pub fn greater_than(field: impl Into<String>, value: impl Into<Value>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### lt(field, value) {#rust-wherebuilder-lt-field-value}
+
+`field < $field`.
+
+**Definition**
+
+```rust
+pub fn lt(field: impl Into<String>, value: impl Into<Value>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### gte(field, value) {#rust-wherebuilder-gte-field-value}
+
+`field >= $field`.
+
+**Definition**
+
+```rust
+pub fn gte(field: impl Into<String>, value: impl Into<Value>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### lte(field, value) {#rust-wherebuilder-lte-field-value}
+
+`field <= $field`.
+
+**Definition**
+
+```rust
+pub fn lte(field: impl Into<String>, value: impl Into<Value>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `value` | cell value |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### and(children) {#rust-wherebuilder-and-children}
+
+Joins children with `AND`. Empty is `1 = 1`.
+
+**Definition**
+
+```rust
+pub fn and(children: Vec<WhereBuilder>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `children` | [WhereBuilder](#rust-wherebuilder) predicates |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### or(children) {#rust-wherebuilder-or-children}
+
+Joins children with `OR`. Empty is `1 = 0`.
+
+**Definition**
+
+```rust
+pub fn or(children: Vec<WhereBuilder>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `children` | [WhereBuilder](#rust-wherebuilder) predicates |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### not(child) {#rust-wherebuilder-not-child}
+
+`NOT (child)`.
+
+**Definition**
+
+```rust
+pub fn not(child: WhereBuilder) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `child` | [WhereBuilder](#rust-wherebuilder) |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### in_list(field, values) {#rust-wherebuilder-in_list-field-values}
+
+`field IN ($field_0, …)`. Empty is `1 = 0`.
+
+**Definition**
+
+```rust
+pub fn in_list(field: impl Into<String>, values: Vec<Value>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `field` | column name |
+| `values` | cell values |
+
+**Returns**
+
+[WhereBuilder](#rust-wherebuilder)
+
+###### get_text() {#rust-wherebuilder-get_text}
+
+Predicate text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+###### parameters() {#rust-wherebuilder-parameters}
+
+Bound [Parameter](#rust-parameter) list.
+
+**Definition**
+
+```rust
+fn parameters(&self) -> Vec<Parameter>
+```
+
+**Returns**
+
+`Vec<`[Parameter](#rust-parameter)`>`
+
+### Remarks
+
+[StatementBuilder](#statement-builder) inlines predicate text into query / update / delete SQL. Keep the [WhereBuilder](#wherebuilder) when the caller needs bound parameters.
+
+### Examples
+
+#### Compare, groups, not, and in
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L53-L54)
+
+```csharp
+var where = WhereBuilder.And(WhereBuilder.Equals("id", 1), WhereBuilder.GreaterThan("age", 18));
+```
+
+**After: and**
+
+```
+id = $id AND age > $age
+```
+
+**After: in**
+
+```
+id IN ($id_0, $id_1)
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L655-L658)
+
+```rust
+let where_clause = WhereBuilder::and(vec![
+    WhereBuilder::equals("id", 1_i64),
+    WhereBuilder::greater_than("age", 18_i64),
+]);
+```
+
+**After: and**
+
+```
+id = $id AND age > $age
+```
+
+**After: in**
+
+```
+id IN ($id_0, $id_1)
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L27-L30)
+
+```typescript
+const where = WhereBuilder.and(
+  WhereBuilder.equals("id", 1),
+  WhereBuilder.greaterThan("age", 18),
+);
+```
+
+**After: and**
+
+```
+id = $id AND age > $age
+```
+
+**After: in**
+
+```
+id IN ($id_0, $id_1)
+```
 
 ## Repository
 
-Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a builder, then create by entity type name or by type. The callback receives an optional connection.
+Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
 
 Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
 
@@ -3473,46 +7205,44 @@ interface IRepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [register(typeOrName, factory)](#typescript-irepositoryfactory-register-typeorname-factory) | Registers a readonly factory by constructor or entity type name. |
-| [create(typeOrName, connection?)](#typescript-irepositoryfactory-create-typeorname-connection) | Creates a readonly repository. |
+| [register(repository)](#typescript-irepositoryfactory-register-repository) | Registers a readonly repository by [type](#typescript-irepository-type). |
+| [create(type)](#typescript-irepositoryfactory-create-type) | Creates a readonly repository. |
 
-###### register(typeOrName, factory) {#typescript-irepositoryfactory-register-typeorname-factory}
+###### register(repository) {#typescript-irepositoryfactory-register-repository}
 
-Registers a readonly factory by constructor or entity type name.
+Registers a readonly repository by [type](#typescript-irepository-type).
 
 **Definition**
 
 ```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => IReadonlyRepository): void
+register(repository: IRepository): void
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `factory` | builds an [IReadonlyRepository](#readonly-repository) from an optional [IConnection](#connection) |
+| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
 
-###### create(typeOrName, connection?) {#typescript-irepositoryfactory-create-typeorname-connection}
+###### create(type) {#typescript-irepositoryfactory-create-type}
 
 Creates a readonly repository.
 
 **Definition**
 
 ```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): IReadonlyRepository
+create<T>(type: Constructable<T>): IReadonlyRepository<T>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `connection` | optional open [IConnection](#connection) |
+| `type` | item constructor |
 
 **Returns**
 
-[IReadonlyRepository](#readonly-repository)
+[IReadonlyRepository](#readonly-repository)`<T>`
 
 ##### ICRUDRepositoryFactory {#typescript-icrudrepositoryfactory}
 
@@ -3524,46 +7254,44 @@ interface ICRUDRepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [register(typeOrName, factory)](#typescript-icrudrepositoryfactory-register-typeorname-factory) | Registers a CRUD factory by constructor or entity type name. |
-| [create(typeOrName, connection?)](#typescript-icrudrepositoryfactory-create-typeorname-connection) | Creates a CRUD repository. |
+| [register(repository)](#typescript-icrudrepositoryfactory-register-repository) | Registers a CRUD repository by [type](#typescript-irepository-type). |
+| [create(type)](#typescript-icrudrepositoryfactory-create-type) | Creates a CRUD repository. |
 
-###### register(typeOrName, factory) {#typescript-icrudrepositoryfactory-register-typeorname-factory}
+###### register(repository) {#typescript-icrudrepositoryfactory-register-repository}
 
-Registers a CRUD factory by constructor or entity type name.
+Registers a CRUD repository by [type](#typescript-irepository-type).
 
 **Definition**
 
 ```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => ICRUDRepository): void
+register(repository: IRepository): void
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `factory` | builds an [ICRUDRepository](#crud-repository) from an optional [IConnection](#connection) |
+| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
 
-###### create(typeOrName, connection?) {#typescript-icrudrepositoryfactory-create-typeorname-connection}
+###### create(type) {#typescript-icrudrepositoryfactory-create-type}
 
 Creates a CRUD repository.
 
 **Definition**
 
 ```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): ICRUDRepository
+create<T>(type: Constructable<T>): ICRUDRepository<T>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `connection` | optional open [IConnection](#connection) |
+| `type` | item constructor |
 
 **Returns**
 
-[ICRUDRepository](#crud-repository)
+[ICRUDRepository](#crud-repository)`<T>`
 
 ##### RepositoryFactory {#typescript-repositoryfactory}
 
@@ -3575,20 +7303,18 @@ class RepositoryFactory implements ICRUDRepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [asReadonly](#typescript-repositoryfactory-asreadonly) | Readonly factory view. `register` / `create` call [registerReadonly](#typescript-repositoryfactory-registerreadonly-typeorname-factory) / [createReadonly](#typescript-repositoryfactory-createreadonly-typeorname-connection). |
+| [asReadonly](#typescript-repositoryfactory-asreadonly) | Readonly factory view. `register` / `create` call [IRepositoryFactory](#typescript-irepositoryfactory). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [register(typeOrName, factory)](#typescript-repositoryfactory-register-typeorname-factory) | Registers CRUD and readonly for the same factory. |
-| [registerReadonly(typeOrName, factory)](#typescript-repositoryfactory-registerreadonly-typeorname-factory) | Registers readonly only. CRUD [create](#typescript-repositoryfactory-create-typeorname-connection) throws. |
-| [create(typeOrName, connection?)](#typescript-repositoryfactory-create-typeorname-connection) | Creates a CRUD repository. |
-| [createReadonly(typeOrName, connection?)](#typescript-repositoryfactory-createreadonly-typeorname-connection) | Creates a readonly repository. |
+| [register(repository)](#typescript-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
+| [create(type)](#typescript-repositoryfactory-create-type) | Creates a CRUD repository. |
 
 ###### asReadonly {#typescript-repositoryfactory-asreadonly}
 
-Readonly factory view. `register` / `create` call [registerReadonly](#typescript-repositoryfactory-registerreadonly-typeorname-factory) / [createReadonly](#typescript-repositoryfactory-createreadonly-typeorname-connection).
+Readonly factory view. `register` / `create` call [IRepositoryFactory](#typescript-irepositoryfactory).
 
 **Definition**
 
@@ -3596,81 +7322,41 @@ Readonly factory view. `register` / `create` call [registerReadonly](#typescript
 readonly asReadonly: IRepositoryFactory
 ```
 
-###### register(typeOrName, factory) {#typescript-repositoryfactory-register-typeorname-factory}
+###### register(repository) {#typescript-repositoryfactory-register-repository}
 
-Registers CRUD and readonly for the same factory.
+Registers CRUD and readonly for the same repository.
 
 **Definition**
 
 ```typescript
-register(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => unknown): void
+register(repository: IRepository): void
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
+| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
 
-###### registerReadonly(typeOrName, factory) {#typescript-repositoryfactory-registerreadonly-typeorname-factory}
-
-Registers readonly only. CRUD [create](#typescript-repositoryfactory-create-typeorname-connection) throws.
-
-**Definition**
-
-```typescript
-registerReadonly(typeOrName: Constructable<unknown> | string, factory: (connection?: IConnection) => unknown): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `factory` | builds a readonly repository from an optional [IConnection](#connection) |
-
-###### create(typeOrName, connection?) {#typescript-repositoryfactory-create-typeorname-connection}
+###### create(type) {#typescript-repositoryfactory-create-type}
 
 Creates a CRUD repository.
 
 **Definition**
 
 ```typescript
-create(typeOrName: Constructable<unknown> | string, connection?: IConnection): ICRUDRepository
+create<T>(type: Constructable<T>): ICRUDRepository<T>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `connection` | optional open [IConnection](#connection) |
+| `type` | item constructor |
 
 **Returns**
 
-[ICRUDRepository](#crud-repository)
-
-###### createReadonly(typeOrName, connection?) {#typescript-repositoryfactory-createreadonly-typeorname-connection}
-
-Creates a readonly repository.
-
-**Definition**
-
-```typescript
-createReadonly(typeOrName: Constructable<unknown> | string, connection?: IConnection): IReadonlyRepository
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `typeOrName` | constructor or entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[IReadonlyRepository](#readonly-repository)
+[ICRUDRepository](#crud-repository)`<T>`
 
 ##### RepositoryNotRegisteredError {#typescript-repositorynotregisterederror}
 
@@ -3682,7 +7368,7 @@ class RepositoryNotRegisteredError extends Error
 
 | Name | Description |
 | --- | --- |
-| [RepositoryNotRegisteredError(entityTypeName)](#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename) | Thrown when [create](#typescript-repositoryfactory-create-typeorname-connection) cannot find a factory. |
+| [RepositoryNotRegisteredError(entityTypeName)](#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename) | Thrown when [create](#typescript-repositoryfactory-create-type) cannot find a repository. |
 
 **Properties**
 
@@ -3692,7 +7378,7 @@ class RepositoryNotRegisteredError extends Error
 
 ###### RepositoryNotRegisteredError(entityTypeName) {#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename}
 
-Thrown when [create](#typescript-repositoryfactory-create-typeorname-connection) cannot find a factory.
+Thrown when [create](#typescript-repositoryfactory-create-type) cannot find a repository.
 
 **Definition**
 
@@ -3750,62 +7436,24 @@ public interface IRepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [Register(factory)](#csharp-irepositoryfactory-register-factory) | Registers a readonly factory by `T`. |
-| [Register(entityTypeName, factory)](#csharp-irepositoryfactory-register-entitytypename-factory) | Registers a readonly factory by entity type name. |
-| [Register(type, factory)](#csharp-irepositoryfactory-register-type-factory) | Registers a readonly factory by CLR type. |
+| [Register(repository)](#csharp-irepositoryfactory-register-repository) | Registers a readonly repository by [Type](#csharp-irepository-type). |
 | [Create()](#csharp-irepositoryfactory-create) | Creates a readonly repository by `T`. |
-| [Create(entityTypeName, connection)](#csharp-irepositoryfactory-create-entitytypename-connection) | Creates a readonly repository by entity type name. |
-| [Create(type, connection)](#csharp-irepositoryfactory-create-type-connection) | Creates a readonly repository by CLR type. |
 
-###### Register(factory) {#csharp-irepositoryfactory-register-factory}
+###### Register(repository) {#csharp-irepositoryfactory-register-repository}
 
-Registers a readonly factory by `T`.
+Registers a readonly repository by [Type](#csharp-irepository-type).
 
 **Definition**
 
 ```csharp
-void Register<T>(Func<IConnection?, IReadonlyRepository<T>> factory)
+void Register(IRepository repository)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `factory` | builds an [IReadonlyRepository](#readonly-repository) from an optional [IConnection](#connection) |
-
-###### Register(entityTypeName, factory) {#csharp-irepositoryfactory-register-entitytypename-factory}
-
-Registers a readonly factory by entity type name.
-
-**Definition**
-
-```csharp
-void Register(string entityTypeName, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Register(type, factory) {#csharp-irepositoryfactory-register-type-factory}
-
-Registers a readonly factory by CLR type.
-
-**Definition**
-
-```csharp
-void Register(Type type, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
+| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
 
 ###### Create() {#csharp-irepositoryfactory-create}
 
@@ -3814,7 +7462,7 @@ Creates a readonly repository by `T`.
 **Definition**
 
 ```csharp
-IReadonlyRepository<T> Create<T>(IConnection? connection = null)
+IReadonlyRepository<T> Create<T>()
 ```
 
 **Parameters**
@@ -3827,48 +7475,6 @@ IReadonlyRepository<T> Create<T>(IConnection? connection = null)
 
 [IReadonlyRepository](#readonly-repository)`<T>`
 
-###### Create(entityTypeName, connection) {#csharp-irepositoryfactory-create-entitytypename-connection}
-
-Creates a readonly repository by entity type name.
-
-**Definition**
-
-```csharp
-object Create(string entityTypeName, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-###### Create(type, connection) {#csharp-irepositoryfactory-create-type-connection}
-
-Creates a readonly repository by CLR type.
-
-**Definition**
-
-```csharp
-object Create(Type type, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
 ##### ICRUDRepositoryFactory {#csharp-icrudrepositoryfactory}
 
 ```csharp
@@ -3879,62 +7485,24 @@ public interface ICRUDRepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [Register(factory)](#csharp-icrudrepositoryfactory-register-factory) | Registers a CRUD factory by `T`. |
-| [Register(entityTypeName, factory)](#csharp-icrudrepositoryfactory-register-entitytypename-factory) | Registers a CRUD factory by entity type name. |
-| [Register(type, factory)](#csharp-icrudrepositoryfactory-register-type-factory) | Registers a CRUD factory by CLR type. |
+| [Register(repository)](#csharp-icrudrepositoryfactory-register-repository) | Registers a CRUD repository by [Type](#csharp-irepository-type). |
 | [Create()](#csharp-icrudrepositoryfactory-create) | Creates a CRUD repository by `T`. |
-| [Create(entityTypeName, connection)](#csharp-icrudrepositoryfactory-create-entitytypename-connection) | Creates a CRUD repository by entity type name. |
-| [Create(type, connection)](#csharp-icrudrepositoryfactory-create-type-connection) | Creates a CRUD repository by CLR type. |
 
-###### Register(factory) {#csharp-icrudrepositoryfactory-register-factory}
+###### Register(repository) {#csharp-icrudrepositoryfactory-register-repository}
 
-Registers a CRUD factory by `T`.
+Registers a CRUD repository by [Type](#csharp-irepository-type).
 
 **Definition**
 
 ```csharp
-void Register<T>(Func<IConnection?, ICRUDRepository<T>> factory)
+void Register(IRepository repository)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `factory` | builds an [ICRUDRepository](#crud-repository) from an optional [IConnection](#connection) |
-
-###### Register(entityTypeName, factory) {#csharp-icrudrepositoryfactory-register-entitytypename-factory}
-
-Registers a CRUD factory by entity type name.
-
-**Definition**
-
-```csharp
-void Register(string entityTypeName, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Register(type, factory) {#csharp-icrudrepositoryfactory-register-type-factory}
-
-Registers a CRUD factory by CLR type.
-
-**Definition**
-
-```csharp
-void Register(Type type, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
+| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
 
 ###### Create() {#csharp-icrudrepositoryfactory-create}
 
@@ -3943,60 +7511,12 @@ Creates a CRUD repository by `T`.
 **Definition**
 
 ```csharp
-ICRUDRepository<T> Create<T>(IConnection? connection = null)
+ICRUDRepository<T> Create<T>()
 ```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [IConnection](#connection) |
 
 **Returns**
 
 [ICRUDRepository](#crud-repository)`<T>`
-
-###### Create(entityTypeName, connection) {#csharp-icrudrepositoryfactory-create-entitytypename-connection}
-
-Creates a CRUD repository by entity type name.
-
-**Definition**
-
-```csharp
-object Create(string entityTypeName, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-###### Create(type, connection) {#csharp-icrudrepositoryfactory-create-type-connection}
-
-Creates a CRUD repository by CLR type.
-
-**Definition**
-
-```csharp
-object Create(Type type, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
 
 ##### RepositoryFactory {#csharp-repositoryfactory}
 
@@ -4008,62 +7528,24 @@ public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFacto
 
 | Name | Description |
 | --- | --- |
-| [Register(factory)](#csharp-repositoryfactory-register-factory) | Registers CRUD and readonly for `T`. |
-| [Register(entityTypeName, factory)](#csharp-repositoryfactory-register-entitytypename-factory) | Registers CRUD and readonly by entity type name. |
-| [Register(type, factory)](#csharp-repositoryfactory-register-type-factory) | Registers CRUD and readonly by CLR type. |
+| [Register(repository)](#csharp-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
 | [Create()](#csharp-repositoryfactory-create) | Creates a CRUD repository by `T`. |
-| [Create(entityTypeName, connection)](#csharp-repositoryfactory-create-entitytypename-connection) | Creates a readonly repository by entity type name. Use [ICRUDRepositoryFactory](#csharp-icrudrepositoryfactory) for the CRUD map. |
-| [Create(type, connection)](#csharp-repositoryfactory-create-type-connection) | Creates a readonly repository by CLR type. Use [ICRUDRepositoryFactory](#csharp-icrudrepositoryfactory) for the CRUD map. |
 
-###### Register(factory) {#csharp-repositoryfactory-register-factory}
+###### Register(repository) {#csharp-repositoryfactory-register-repository}
 
-Registers CRUD and readonly for `T`.
+Registers CRUD and readonly for the same repository.
 
 **Definition**
 
 ```csharp
-public void Register<T>(Func<IConnection?, ICRUDRepository<T>> factory)
+public void Register(IRepository repository)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `factory` | builds an [ICRUDRepository](#crud-repository) from an optional [IConnection](#connection) |
-
-###### Register(entityTypeName, factory) {#csharp-repositoryfactory-register-entitytypename-factory}
-
-Registers CRUD and readonly by entity type name.
-
-**Definition**
-
-```csharp
-public void Register(string entityTypeName, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
-
-###### Register(type, factory) {#csharp-repositoryfactory-register-type-factory}
-
-Registers CRUD and readonly by CLR type.
-
-**Definition**
-
-```csharp
-public void Register(Type type, Func<IConnection?, object> factory)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `factory` | builds a repository from an optional [IConnection](#connection) |
+| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
 
 ###### Create() {#csharp-repositoryfactory-create}
 
@@ -4072,60 +7554,12 @@ Creates a CRUD repository by `T`.
 **Definition**
 
 ```csharp
-public ICRUDRepository<T> Create<T>(IConnection? connection = null)
+public ICRUDRepository<T> Create<T>()
 ```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [IConnection](#connection) |
 
 **Returns**
 
 [ICRUDRepository](#crud-repository)`<T>`
-
-###### Create(entityTypeName, connection) {#csharp-repositoryfactory-create-entitytypename-connection}
-
-Creates a readonly repository by entity type name. Use [ICRUDRepositoryFactory](#csharp-icrudrepositoryfactory) for the CRUD map.
-
-**Definition**
-
-```csharp
-public object Create(string entityTypeName, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | entity type name |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
-
-###### Create(type, connection) {#csharp-repositoryfactory-create-type-connection}
-
-Creates a readonly repository by CLR type. Use [ICRUDRepositoryFactory](#csharp-icrudrepositoryfactory) for the CRUD map.
-
-**Definition**
-
-```csharp
-public object Create(Type type, IConnection? connection = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item CLR type |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-`object`
 
 ##### RepositoryNotRegisteredException {#csharp-repositorynotregisteredexception}
 
@@ -4137,7 +7571,7 @@ public sealed class RepositoryNotRegisteredException : DatasourceException
 
 | Name | Description |
 | --- | --- |
-| [RepositoryNotRegisteredException(entityTypeName)](#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename) | Thrown when [Create](#csharp-repositoryfactory-create) cannot find a factory. |
+| [RepositoryNotRegisteredException(entityTypeName)](#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename) | Thrown when [Create](#csharp-repositoryfactory-create) cannot find a repository. |
 
 **Properties**
 
@@ -4147,7 +7581,7 @@ public sealed class RepositoryNotRegisteredException : DatasourceException
 
 ###### RepositoryNotRegisteredException(entityTypeName) {#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename}
 
-Thrown when [Create](#csharp-repositoryfactory-create) cannot find a factory.
+Thrown when [Create](#csharp-repositoryfactory-create) cannot find a repository.
 
 **Definition**
 
@@ -4241,80 +7675,34 @@ pub trait ReadonlyRepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [register(name, factory)](#rust-readonlyrepositoryfactory-register-name-factory) | Registers a readonly factory by entity type name. |
-| [register_type(factory)](#rust-readonlyrepositoryfactory-register_type-factory) | Registers a readonly factory by `T`. |
-| [create(name, connection)](#rust-readonlyrepositoryfactory-create-name-connection) | Creates a readonly repository by entity type name. |
-| [create_type(connection)](#rust-readonlyrepositoryfactory-create_type-connection) | Creates a readonly repository by `T`. |
+| [register(repository)](#rust-readonlyrepositoryfactory-register-repository) | Registers a readonly repository by [entity_type](#rust-irepository-entity_type). |
+| [create()](#rust-readonlyrepositoryfactory-create) | Creates a readonly repository by `T`. |
 
-###### register(name, factory) {#rust-readonlyrepositoryfactory-register-name-factory}
+###### register(repository) {#rust-readonlyrepositoryfactory-register-repository}
 
-Registers a readonly factory by entity type name.
+Registers a readonly repository by [entity_type](#rust-irepository-entity_type).
 
 **Definition**
 
 ```rust
-fn register(&self, name: &str, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync>)
+fn register(&self, repository: Arc<dyn ReadonlyRepository>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `name` | entity type name |
-| `factory` | builds a [ReadonlyRepository](#readonly-repository) from an optional [Connection](#connection) |
+| `repository` | [ReadonlyRepository](#readonly-repository) to look up by `entity_type` |
 
-###### register_type(factory) {#rust-readonlyrepositoryfactory-register_type-factory}
-
-Registers a readonly factory by `T`.
-
-**Definition**
-
-```rust
-fn register_type<T: 'static>(&self, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds a [ReadonlyRepository](#readonly-repository) from an optional [Connection](#connection) |
-
-###### create(name, connection) {#rust-readonlyrepositoryfactory-create-name-connection}
-
-Creates a readonly repository by entity type name.
-
-**Definition**
-
-```rust
-fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[ReadonlyRepository](#readonly-repository)`>>`
-
-###### create_type(connection) {#rust-readonlyrepositoryfactory-create_type-connection}
+###### create() {#rust-readonlyrepositoryfactory-create}
 
 Creates a readonly repository by `T`.
 
 **Definition**
 
 ```rust
-fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
+fn create<T: 'static>(&self) -> Result<Arc<dyn ReadonlyRepository>>
 ```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [Connection](#connection) |
 
 **Returns**
 
@@ -4330,80 +7718,34 @@ pub trait CRUDRepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [register(name, factory)](#rust-crudrepositoryfactory-register-name-factory) | Registers a CRUD factory by entity type name. |
-| [register_type(factory)](#rust-crudrepositoryfactory-register_type-factory) | Registers a CRUD factory by `T`. |
-| [create(name, connection)](#rust-crudrepositoryfactory-create-name-connection) | Creates a CRUD repository by entity type name. |
-| [create_type(connection)](#rust-crudrepositoryfactory-create_type-connection) | Creates a CRUD repository by `T`. |
+| [register(repository)](#rust-crudrepositoryfactory-register-repository) | Registers a CRUD repository by [entity_type](#rust-irepository-entity_type). |
+| [create()](#rust-crudrepositoryfactory-create) | Creates a CRUD repository by `T`. |
 
-###### register(name, factory) {#rust-crudrepositoryfactory-register-name-factory}
+###### register(repository) {#rust-crudrepositoryfactory-register-repository}
 
-Registers a CRUD factory by entity type name.
+Registers a CRUD repository by [entity_type](#rust-irepository-entity_type).
 
 **Definition**
 
 ```rust
-fn register(&self, name: &str, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync>)
+fn register(&self, repository: Arc<dyn CRUDRepository>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `name` | entity type name |
-| `factory` | builds a [CRUDRepository](#crud-repository) from an optional [Connection](#connection) |
+| `repository` | [CRUDRepository](#crud-repository) to look up by `entity_type` |
 
-###### register_type(factory) {#rust-crudrepositoryfactory-register_type-factory}
-
-Registers a CRUD factory by `T`.
-
-**Definition**
-
-```rust
-fn register_type<T: 'static>(&self, factory: Arc<dyn Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds a [CRUDRepository](#crud-repository) from an optional [Connection](#connection) |
-
-###### create(name, connection) {#rust-crudrepositoryfactory-create-name-connection}
-
-Creates a CRUD repository by entity type name.
-
-**Definition**
-
-```rust
-fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
-
-###### create_type(connection) {#rust-crudrepositoryfactory-create_type-connection}
+###### create() {#rust-crudrepositoryfactory-create}
 
 Creates a CRUD repository by `T`.
 
 **Definition**
 
 ```rust
-fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
+fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>
 ```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [Connection](#connection) |
 
 **Returns**
 
@@ -4425,14 +7767,8 @@ pub struct RepositoryFactory
 
 | Name | Description |
 | --- | --- |
-| [register(name, factory)](#rust-repositoryfactory-register-name-factory) | Registers CRUD and readonly by entity type name. |
-| [register_type(factory)](#rust-repositoryfactory-register_type-factory) | Registers CRUD and readonly by `T`. |
-| [register_readonly(name, factory)](#rust-repositoryfactory-register_readonly-name-factory) | Registers readonly only. CRUD [create](#rust-repositoryfactory-create-name-connection) fails. |
-| [register_readonly_type(factory)](#rust-repositoryfactory-register_readonly_type-factory) | Registers readonly only by `T`. |
-| [create(name, connection)](#rust-repositoryfactory-create-name-connection) | Creates a CRUD repository by entity type name. |
-| [create_type(connection)](#rust-repositoryfactory-create_type-connection) | Creates a CRUD repository by `T`. |
-| [create_readonly(name, connection)](#rust-repositoryfactory-create_readonly-name-connection) | Creates a readonly repository by entity type name. |
-| [create_readonly_type(connection)](#rust-repositoryfactory-create_readonly_type-connection) | Creates a readonly repository by `T`. |
+| [register(repository)](#rust-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
+| [create()](#rust-repositoryfactory-create) | Creates a CRUD repository by `T`. |
 
 ###### new() {#rust-repositoryfactory-new}
 
@@ -4448,161 +7784,73 @@ pub fn new() -> Self
 
 [RepositoryFactory](#rust-repositoryfactory)
 
-###### register(name, factory) {#rust-repositoryfactory-register-name-factory}
+###### register(repository) {#rust-repositoryfactory-register-repository}
 
-Registers CRUD and readonly by entity type name.
+Registers CRUD and readonly for the same repository.
 
 **Definition**
 
 ```rust
-pub fn register(&self, name: &str, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
+pub fn register(&self, repository: Arc<dyn CRUDRepository>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `name` | entity type name |
-| `factory` | builds a [CRUDRepository](#crud-repository) from an optional [Connection](#connection) |
+| `repository` | [CRUDRepository](#crud-repository) to look up by `entity_type` |
 
-###### register_type(factory) {#rust-repositoryfactory-register_type-factory}
-
-Registers CRUD and readonly by `T`.
-
-**Definition**
-
-```rust
-pub fn register_type<T: 'static>(&self, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds a [CRUDRepository](#crud-repository) from an optional [Connection](#connection) |
-
-###### register_readonly(name, factory) {#rust-repositoryfactory-register_readonly-name-factory}
-
-Registers readonly only. CRUD [create](#rust-repositoryfactory-create-name-connection) fails.
-
-**Definition**
-
-```rust
-pub fn register_readonly(&self, name: &str, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync + 'static)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `factory` | builds a [ReadonlyRepository](#readonly-repository) from an optional [Connection](#connection) |
-
-###### register_readonly_type(factory) {#rust-repositoryfactory-register_readonly_type-factory}
-
-Registers readonly only by `T`.
-
-**Definition**
-
-```rust
-pub fn register_readonly_type<T: 'static>(&self, factory: impl Fn(Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository> + Send + Sync + 'static)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `factory` | builds a [ReadonlyRepository](#readonly-repository) from an optional [Connection](#connection) |
-
-###### create(name, connection) {#rust-repositoryfactory-create-name-connection}
-
-Creates a CRUD repository by entity type name.
-
-**Definition**
-
-```rust
-pub fn create(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
-
-###### create_type(connection) {#rust-repositoryfactory-create_type-connection}
+###### create() {#rust-repositoryfactory-create}
 
 Creates a CRUD repository by `T`.
 
 **Definition**
 
 ```rust
-pub fn create_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn CRUDRepository>>
+pub fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>
 ```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [Connection](#connection) |
 
 **Returns**
 
 `Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
 
-###### create_readonly(name, connection) {#rust-repositoryfactory-create_readonly-name-connection}
-
-Creates a readonly repository by entity type name.
-
-**Definition**
-
-```rust
-pub fn create_readonly(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | entity type name |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[ReadonlyRepository](#readonly-repository)`>>`
-
-###### create_readonly_type(connection) {#rust-repositoryfactory-create_readonly_type-connection}
-
-Creates a readonly repository by `T`.
-
-**Definition**
-
-```rust
-pub fn create_readonly_type<T: 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ReadonlyRepository>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [Connection](#connection) |
-
-**Returns**
-
-`Result<Arc<dyn `[ReadonlyRepository](#readonly-repository)`>>`
-
 ### Remarks
 
 SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
 
-A missing factory throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
+A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
 
 See [Datasource](#datasource) for `CreateRepository` / `createRepository`.
+
+### Examples
+
+#### Register and create
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryFactoryTests.cs#L12-L19)
+
+```csharp
+var factory = new RepositoryFactory();
+var repo = new StubRepository<Item>("memory", new StubConnection("memory"));
+factory.Register(repo);
+var created = factory.Create<Item>();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L112-L116)
+
+```rust
+let factory = RepositoryFactory::new();
+factory.register(Arc::new(StubRepository::typed::<Item>("memory")));
+let created = factory.create::<Item>().unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/RepositoryFactory.test.ts#L18-L24)
+
+```typescript
+const factory = new RepositoryFactory();
+const repo = new MockRepository<Item>(new MockConnection(), Item);
+factory.register(repo);
+const created = factory.create(Item);
+```
 
 ### See also
 
@@ -10646,11 +13894,11 @@ class StatementMapper<T> implements IMapper<T, T>
 | --- | --- |
 | [entity](#typescript-statementmapper-entity) | Maps the table or entity name when the repository is built. |
 | [columns](#typescript-statementmapper-columns) | Maps column names when the repository is built. |
-| [query](#typescript-statementmapper-query) | Rewrites a finished query. |
-| [insert](#typescript-statementmapper-insert) | Rewrites a finished insert. |
-| [update](#typescript-statementmapper-update) | Rewrites a finished update. |
-| [delete](#typescript-statementmapper-delete) | Rewrites a finished delete. |
-| [storedProcedure](#typescript-statementmapper-storedprocedure) | Rewrites a finished stored-procedure statement. |
+| [query](#typescript-statementmapper-query) | Rewrites a finished [IQuery](#typescript-iquery). |
+| [insert](#typescript-statementmapper-insert) | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
+| [update](#typescript-statementmapper-update) | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
+| [delete](#typescript-statementmapper-delete) | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
+| [storedProcedure](#typescript-statementmapper-storedprocedure) | Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement). |
 | [rows](#typescript-statementmapper-rows) | Read-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
 
 **Methods**
@@ -10698,7 +13946,7 @@ readonly columns: INameMapper
 
 ###### query {#typescript-statementmapper-query}
 
-Rewrites a finished query.
+Rewrites a finished [IQuery](#typescript-iquery).
 
 **Definition**
 
@@ -10708,7 +13956,7 @@ readonly query?: IMapper<IQuery, IQuery>
 
 ###### insert {#typescript-statementmapper-insert}
 
-Rewrites a finished insert.
+Rewrites a finished [IInsertStatement](#typescript-iinsertstatement).
 
 **Definition**
 
@@ -10718,7 +13966,7 @@ readonly insert?: IMapper<IInsertStatement, IInsertStatement>
 
 ###### update {#typescript-statementmapper-update}
 
-Rewrites a finished update.
+Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement).
 
 **Definition**
 
@@ -10728,7 +13976,7 @@ readonly update?: IMapper<IUpdateStatement, IUpdateStatement>
 
 ###### delete {#typescript-statementmapper-delete}
 
-Rewrites a finished delete.
+Rewrites a finished [IDeleteStatement](#typescript-ideletestatement).
 
 **Definition**
 
@@ -10738,7 +13986,7 @@ readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>
 
 ###### storedProcedure {#typescript-statementmapper-storedprocedure}
 
-Rewrites a finished stored-procedure statement.
+Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement).
 
 **Definition**
 
@@ -10809,11 +14057,11 @@ type StatementMapperOptions<T>
 | [entity](#typescript-statementmapperoptions-entity) | Maps the table or entity name. |
 | [columns](#typescript-statementmapperoptions-columns) | Maps column names. |
 | [rows](#typescript-statementmapperoptions-rows) | Read-row Mapper. |
-| [query](#typescript-statementmapperoptions-query) | Rewrites a finished query. |
-| [insert](#typescript-statementmapperoptions-insert) | Rewrites a finished insert. |
-| [update](#typescript-statementmapperoptions-update) | Rewrites a finished update. |
-| [delete](#typescript-statementmapperoptions-delete) | Rewrites a finished delete. |
-| [storedProcedure](#typescript-statementmapperoptions-storedprocedure) | Rewrites a finished stored-procedure statement. |
+| [query](#typescript-statementmapperoptions-query) | Rewrites a finished [IQuery](#typescript-iquery). |
+| [insert](#typescript-statementmapperoptions-insert) | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
+| [update](#typescript-statementmapperoptions-update) | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
+| [delete](#typescript-statementmapperoptions-delete) | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
+| [storedProcedure](#typescript-statementmapperoptions-storedprocedure) | Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement). |
 
 ###### entity {#typescript-statementmapperoptions-entity}
 
@@ -10847,7 +14095,7 @@ rows?: IMapper<T, T>
 
 ###### query {#typescript-statementmapperoptions-query}
 
-Rewrites a finished query.
+Rewrites a finished [IQuery](#typescript-iquery).
 
 **Definition**
 
@@ -10857,7 +14105,7 @@ query?: IMapper<IQuery, IQuery>
 
 ###### insert {#typescript-statementmapperoptions-insert}
 
-Rewrites a finished insert.
+Rewrites a finished [IInsertStatement](#typescript-iinsertstatement).
 
 **Definition**
 
@@ -10867,7 +14115,7 @@ insert?: IMapper<IInsertStatement, IInsertStatement>
 
 ###### update {#typescript-statementmapperoptions-update}
 
-Rewrites a finished update.
+Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement).
 
 **Definition**
 
@@ -10877,7 +14125,7 @@ update?: IMapper<IUpdateStatement, IUpdateStatement>
 
 ###### delete {#typescript-statementmapperoptions-delete}
 
-Rewrites a finished delete.
+Rewrites a finished [IDeleteStatement](#typescript-ideletestatement).
 
 **Definition**
 
@@ -10887,7 +14135,7 @@ delete?: IMapper<IDeleteStatement, IDeleteStatement>
 
 ###### storedProcedure {#typescript-statementmapperoptions-storedprocedure}
 
-Rewrites a finished stored-procedure statement.
+Rewrites a finished [IStoredProcedureStatement](#typescript-istoredprocedurestatement).
 
 **Definition**
 
@@ -10909,11 +14157,11 @@ public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
 | --- | --- |
 | [Entity](#csharp-statementmapper-entity) | Maps the table or entity name when the repository is built. |
 | [Columns](#csharp-statementmapper-columns) | Maps column names when the repository is built. |
-| [Query](#csharp-statementmapper-query) | Rewrites a finished query. |
-| [Insert](#csharp-statementmapper-insert) | Rewrites a finished insert. |
-| [Update](#csharp-statementmapper-update) | Rewrites a finished update. |
-| [Delete](#csharp-statementmapper-delete) | Rewrites a finished delete. |
-| [StoredProcedure](#csharp-statementmapper-storedprocedure) | Rewrites a finished stored-procedure statement. |
+| [Query](#csharp-statementmapper-query) | Rewrites a finished [IQuery](#csharp-iquery). |
+| [Insert](#csharp-statementmapper-insert) | Rewrites a finished [IInsertStatement](#csharp-iinsertstatement). |
+| [Update](#csharp-statementmapper-update) | Rewrites a finished [IUpdateStatement](#csharp-iupdatestatement). |
+| [Delete](#csharp-statementmapper-delete) | Rewrites a finished [IDeleteStatement](#csharp-ideletestatement). |
+| [StoredProcedure](#csharp-statementmapper-storedprocedure) | Rewrites a finished [IStoredProcedureStatement](#csharp-istoredprocedurestatement). |
 | [Rows](#csharp-statementmapper-rows) | Read-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
 
 **Methods**
@@ -10945,7 +14193,7 @@ IMapper<string, string> Columns { get; init; }
 
 ###### Query {#csharp-statementmapper-query}
 
-Rewrites a finished query.
+Rewrites a finished [IQuery](#csharp-iquery).
 
 **Definition**
 
@@ -10955,7 +14203,7 @@ IMapper<IQuery, IQuery>? Query { get; init; }
 
 ###### Insert {#csharp-statementmapper-insert}
 
-Rewrites a finished insert.
+Rewrites a finished [IInsertStatement](#csharp-iinsertstatement).
 
 **Definition**
 
@@ -10965,7 +14213,7 @@ IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
 
 ###### Update {#csharp-statementmapper-update}
 
-Rewrites a finished update.
+Rewrites a finished [IUpdateStatement](#csharp-iupdatestatement).
 
 **Definition**
 
@@ -10975,7 +14223,7 @@ IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
 
 ###### Delete {#csharp-statementmapper-delete}
 
-Rewrites a finished delete.
+Rewrites a finished [IDeleteStatement](#csharp-ideletestatement).
 
 **Definition**
 
@@ -10985,7 +14233,7 @@ IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
 
 ###### StoredProcedure {#csharp-statementmapper-storedprocedure}
 
-Rewrites a finished stored-procedure statement.
+Rewrites a finished [IStoredProcedureStatement](#csharp-istoredprocedurestatement).
 
 **Definition**
 

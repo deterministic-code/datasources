@@ -31,6 +31,7 @@ const sidebar = [
 
 const redirects = {
   "/sections/flat-to-type-mapper": "/sections/flat-to-nested-mapper",
+  "/sections/builders": "/sections/statements",
 };
 
 const watchToc = () => ({

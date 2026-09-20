@@ -71,7 +71,7 @@ function execute(command: ICommand, statement: IStatement, parameters?: Paramete
 ```
 
 - `command` — [ICommand](#icommand)
-- `statement` — [IStatement](./builders.md)
+- `statement` — [IStatement](./statements.md#istatement)
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Promise<[Response](#response)>`
@@ -85,7 +85,7 @@ function executeReader(command: ICommand, statement: IStatement, parameters?: Pa
 ```
 
 - `command` — [ICommand](#icommand)
-- `statement` — [IStatement](./builders.md)
+- `statement` — [IStatement](./statements.md#istatement)
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Promise<[IReader](#reader)<Cells>>`
@@ -264,7 +264,7 @@ Runs [ExecuteReader](#icommand-executereader-text-parameters) with `statement.Ge
 Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
 ```
 
-- `statement` — [IStatement](./builders.md)
+- `statement` — [IStatement](./statements.md#istatement)
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Task<[IReader](#reader)<Row>>`
@@ -277,7 +277,7 @@ Runs [Execute](#icommand-execute-text-parameters) with `statement.GetText()`.
 Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
 ```
 
-- `statement` — [IStatement](./builders.md)
+- `statement` — [IStatement](./statements.md#istatement)
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Task<[Response](#response)>`
@@ -446,7 +446,7 @@ Runs [execute_reader](#command-execute_reader-text-parameters) with `statement.g
 async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: Option<&[Parameter]>) -> Result<Box<dyn Reader>>
 ```
 
-- `statement` — [Statement](./builders.md)
+- `statement` — [Statement](./statements.md#statement)
 - `parameters` — optional [Parameter](#parameter) slice
 
 **Returns** `Result<Box<dyn `[Reader](#reader)`>>`
@@ -459,7 +459,7 @@ Runs [execute](#command-execute-text-parameters) with `statement.get_text()`.
 async fn execute_statement(&self, statement: &dyn Statement, parameters: Option<&[Parameter]>) -> Result<Response>
 ```
 
-- `statement` — [Statement](./builders.md)
+- `statement` — [Statement](./statements.md#statement)
 - `parameters` — optional [Parameter](#parameter) slice
 
 **Returns** `Result<[Response](#response)>`

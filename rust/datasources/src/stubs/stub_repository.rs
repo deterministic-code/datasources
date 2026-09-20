@@ -7,20 +7,31 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::where_trait::Where;
 use async_trait::async_trait;
+use std::any::TypeId;
 
 pub struct StubRepository {
     provider: String,
+    entity_type: TypeId,
 }
 
 impl StubRepository {
     pub fn new(provider: impl Into<String>) -> Self {
+        Self::typed::<Row>(provider)
+    }
+
+    pub fn typed<T: 'static>(provider: impl Into<String>) -> Self {
         Self {
             provider: provider.into(),
+            entity_type: TypeId::of::<T>(),
         }
     }
 }
 
-impl IRepository for StubRepository {}
+impl IRepository for StubRepository {
+    fn entity_type(&self) -> TypeId {
+        self.entity_type
+    }
+}
 
 #[async_trait]
 impl ReadonlyRepository for StubRepository {

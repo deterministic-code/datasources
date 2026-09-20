@@ -14,7 +14,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | [Transaction](./sections/transaction.md) | ✅ | ✅ | ✅ |
 | [Command](./sections/command.md) | ✅ | ✅ | ✅ |
 | [Reader](./sections/command.md#reader) | ✅ | ✅ | ✅ |
-| [Statements](./sections/builders.md) | ✅ | ✅ | ✅ |
+| [Statements](./sections/statements.md) | ✅ | ✅ | ✅ |
 | [Repository](./sections/repository.md) | ✅ | ✅ | ✅ |
 | [Readonly Repository](./sections/readonly-repository.md) | ✅ | ✅ | ✅ |
 | [CRUD Repository](./sections/crud-repository.md) | ✅ | ✅ | ✅ |

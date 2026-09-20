@@ -27,9 +27,17 @@ pages:
     title: Reader
     group: Code Reference
     hash: reader
-  - path: sections/builders.md
+  - path: sections/statements.md
     title: Statements
     group: Code Reference
+  - path: sections/statement-builder.md
+    title: Statement Builder
+    group: Code Reference
+    parent: Statements
+  - path: sections/where-builder.md
+    title: Where Builder
+    group: Code Reference
+    parent: Statements
   - path: sections/repository.md
     title: Repository
     group: Code Reference
