@@ -2324,124 +2324,1084 @@ await txn.abort();
 
 ## Command
 
-`CreateCommand` / `createCommand` / `create_command` is sync. It binds an optional connection (or constructs one) and returns a named command. The caller executes it. The connection must be open.
+Named command bound to an optional open [connection](#connection). `CreateCommand` / `createCommand` / `create_command` is sync. The caller executes it.
 
-Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL against the injected driver. Stub dialects return a named command; execute / execute-reader throw or return not-implemented.
+### Classes
+
+##### TypeScript
+
+##### ICommand {#typescript-icommand}
+
+```typescript
+interface ICommand
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [connection](#typescript-icommand-connection) | The [IConnection](#connection) this command is bound to. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [addMiddleware(middleware)](#typescript-icommand-addmiddleware-middleware) | Adds [ICommandMiddleware](#typescript-icommandmiddleware). Returns this command. |
+| [executeReader(text, parameters?)](#typescript-icommand-executereader-text-parameters) | Runs a query and returns a reader over the rows. |
+| [execute(text, parameters?)](#typescript-icommand-execute-text-parameters) | Runs a non-query command. |
+| [execute(command, statement, parameters?)](#typescript-icommand-execute-command-statement-parameters) | Runs [execute](#typescript-icommand-execute-text-parameters) with `statement.getText()`. |
+| [executeReader(command, statement, parameters?)](#typescript-icommand-executereader-command-statement-parameters) | Runs [executeReader](#typescript-icommand-executereader-text-parameters) with `statement.getText()`. |
+
+###### connection {#typescript-icommand-connection}
+
+The [IConnection](#connection) this command is bound to.
+
+**Definition**
+
+```typescript
+readonly connection: IConnection
+```
+
+###### addMiddleware(middleware) {#typescript-icommand-addmiddleware-middleware}
+
+Adds [ICommandMiddleware](#typescript-icommandmiddleware). Returns this command.
+
+**Definition**
+
+```typescript
+addMiddleware(middleware: ICommandMiddleware): this
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `middleware` | [ICommandMiddleware](#typescript-icommandmiddleware) |
+
+**Returns**
+
+`this`
+
+###### executeReader(text, parameters?) {#typescript-icommand-executereader-text-parameters}
+
+Runs a query and returns a reader over the rows.
+
+**Definition**
+
+```typescript
+executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | SQL or dialect command text |
+| `parameters` | optional [Parameter](#typescript-parameter) list |
+
+**Returns**
+
+`Promise<[IReader](#typescript-reader)<Cells>>`
+
+###### execute(text, parameters?) {#typescript-icommand-execute-text-parameters}
+
+Runs a non-query command.
+
+**Definition**
+
+```typescript
+execute(text: string, parameters?: Parameter[]): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | SQL or dialect command text |
+| `parameters` | optional [Parameter](#typescript-parameter) list |
+
+**Returns**
+
+`Promise<[Response](#typescript-response)>`
+
+###### execute(command, statement, parameters?) {#typescript-icommand-execute-command-statement-parameters}
+
+Runs [execute](#typescript-icommand-execute-text-parameters) with `statement.getText()`.
+
+**Definition**
+
+```typescript
+function execute(command: ICommand, statement: IStatement, parameters?: Parameter[]): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `command` | [ICommand](#typescript-icommand) |
+| `statement` | [IStatement](#statements) |
+| `parameters` | optional [Parameter](#typescript-parameter) list |
+
+**Returns**
+
+`Promise<[Response](#typescript-response)>`
+
+###### executeReader(command, statement, parameters?) {#typescript-icommand-executereader-command-statement-parameters}
+
+Runs [executeReader](#typescript-icommand-executereader-text-parameters) with `statement.getText()`.
+
+**Definition**
+
+```typescript
+function executeReader(command: ICommand, statement: IStatement, parameters?: Parameter[]): Promise<IReader<Cells>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `command` | [ICommand](#typescript-icommand) |
+| `statement` | [IStatement](#statements) |
+| `parameters` | optional [Parameter](#typescript-parameter) list |
+
+**Returns**
+
+`Promise<[IReader](#typescript-reader)<Cells>>`
+
+##### ICommandMiddleware {#typescript-icommandmiddleware}
+
+```typescript
+interface ICommandMiddleware
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [beforeQuery(query, params?)](#typescript-icommandmiddleware-beforequery-query-params) | Runs before the query. A thrown error skips the query. A `{ query, params }` return rewrites it. |
+| [afterQuery(query, params, results, elapsedMs, error?)](#typescript-icommandmiddleware-afterquery-query-params-results-elapsedms-error) | Runs after the query, including when the query failed. |
+
+###### beforeQuery(query, params?) {#typescript-icommandmiddleware-beforequery-query-params}
+
+Runs before the query. A thrown error skips the query. A `{ query, params }` return rewrites it.
+
+**Definition**
+
+```typescript
+beforeQuery(query: string, params?: ReadonlyArray<Parameter>): void | { query: string; params?: ReadonlyArray<Parameter> } | Promise<void | { query: string; params?: ReadonlyArray<Parameter> }>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | command text |
+| `params` | optional [Parameter](#typescript-parameter) list |
+
+###### afterQuery(query, params, results, elapsedMs, error?) {#typescript-icommandmiddleware-afterquery-query-params-results-elapsedms-error}
+
+Runs after the query, including when the query failed.
+
+**Definition**
+
+```typescript
+afterQuery(query: string, params: ReadonlyArray<Parameter> | undefined, results: ReadonlyArray<Row>, elapsedMs: number, error?: Error): void | Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | command text |
+| `params` | [Parameter](#typescript-parameter) list used |
+| `results` | rows produced |
+| `elapsedMs` | elapsed milliseconds |
+| `error` | query error when the command failed |
+
+##### Parameter {#typescript-parameter}
+
+```typescript
+interface Parameter<T = unknown>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [name](#typescript-parameter-name) | Parameter name. |
+| [value](#typescript-parameter-value) | Parameter value. |
+
+###### name {#typescript-parameter-name}
+
+Parameter name.
+
+**Definition**
+
+```typescript
+name: string
+```
+
+###### value {#typescript-parameter-value}
+
+Parameter value.
+
+**Definition**
+
+```typescript
+value: T
+```
+
+##### Response {#typescript-response}
+
+```typescript
+interface Response
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [result](#typescript-response-result) | Scalar or row result from the command. |
+| [rowsAffected](#typescript-response-rowsaffected) | Rows inserted, updated, or deleted. |
+
+###### result {#typescript-response-result}
+
+Scalar or row result from the command.
+
+**Definition**
+
+```typescript
+result: unknown
+```
+
+###### rowsAffected {#typescript-response-rowsaffected}
+
+Rows inserted, updated, or deleted.
+
+**Definition**
+
+```typescript
+rowsAffected: number
+```
+
+##### IReader {#reader} {#typescript-ireader-reader}
+
+```typescript
+interface IReader<T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [current](#typescript-ireader-reader-current) | The row from the last successful [next](#typescript-ireader-next). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [next()](#typescript-ireader-reader-next) | Advances to the next row. |
+
+###### current {#typescript-ireader-reader-current}
+
+The row from the last successful [next](#typescript-ireader-next).
+
+**Definition**
+
+```typescript
+readonly current: T | undefined
+```
+
+###### next() {#typescript-ireader-reader-next}
+
+Advances to the next row.
+
+**Definition**
+
+```typescript
+next(): Promise<boolean>
+```
+
+**Returns**
+
+`Promise<boolean>`
+
+##### C#
+
+##### ICommand {#csharp-icommand}
+
+```csharp
+public interface ICommand
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Connection](#csharp-icommand-connection) | The [IConnection](#connection) this command is bound to. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [AddMiddleware(middleware)](#csharp-icommand-addmiddleware-middleware) | Adds [ICommandMiddleware](#csharp-icommandmiddleware). Returns this command. |
+| [ExecuteReader(text, parameters)](#csharp-icommand-executereader-text-parameters) | Runs a query and returns a reader over the rows. |
+| [Execute(text, parameters)](#csharp-icommand-execute-text-parameters) | Runs a non-query command. |
+| [ExecuteReader(statement, parameters)](#csharp-icommand-executereader-statement-parameters) | Runs [ExecuteReader](#csharp-icommand-executereader-text-parameters) with `statement.GetText()`. |
+| [Execute(statement, parameters)](#csharp-icommand-execute-statement-parameters) | Runs [Execute](#csharp-icommand-execute-text-parameters) with `statement.GetText()`. |
+
+###### Connection {#csharp-icommand-connection}
+
+The [IConnection](#connection) this command is bound to.
+
+**Definition**
+
+```csharp
+IConnection Connection { get; }
+```
+
+###### AddMiddleware(middleware) {#csharp-icommand-addmiddleware-middleware}
+
+Adds [ICommandMiddleware](#csharp-icommandmiddleware). Returns this command.
+
+**Definition**
+
+```csharp
+ICommand AddMiddleware(ICommandMiddleware middleware)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `middleware` | [ICommandMiddleware](#csharp-icommandmiddleware) |
+
+**Returns**
+
+[ICommand](#csharp-icommand)
+
+###### ExecuteReader(text, parameters) {#csharp-icommand-executereader-text-parameters}
+
+Runs a query and returns a reader over the rows.
+
+**Definition**
+
+```csharp
+Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | SQL or dialect command text |
+| `parameters` | optional [Parameter](#csharp-parameter) list |
+
+**Returns**
+
+`Task<[IReader](#csharp-reader)<Row>>`
+
+###### Execute(text, parameters) {#csharp-icommand-execute-text-parameters}
+
+Runs a non-query command.
+
+**Definition**
+
+```csharp
+Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | SQL or dialect command text |
+| `parameters` | optional [Parameter](#csharp-parameter) list |
+
+**Returns**
+
+`Task<[Response](#csharp-response)>`
+
+###### ExecuteReader(statement, parameters) {#csharp-icommand-executereader-statement-parameters}
+
+Runs [ExecuteReader](#csharp-icommand-executereader-text-parameters) with `statement.GetText()`.
+
+**Definition**
+
+```csharp
+Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [IStatement](#statements) |
+| `parameters` | optional [Parameter](#csharp-parameter) list |
+
+**Returns**
+
+`Task<[IReader](#csharp-reader)<Row>>`
+
+###### Execute(statement, parameters) {#csharp-icommand-execute-statement-parameters}
+
+Runs [Execute](#csharp-icommand-execute-text-parameters) with `statement.GetText()`.
+
+**Definition**
+
+```csharp
+Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [IStatement](#statements) |
+| `parameters` | optional [Parameter](#csharp-parameter) list |
+
+**Returns**
+
+`Task<[Response](#csharp-response)>`
+
+##### ICommandMiddleware {#csharp-icommandmiddleware}
+
+```csharp
+public interface ICommandMiddleware
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [BeforeQuery(query, parameters)](#csharp-icommandmiddleware-beforequery-query-parameters) | Runs before the query. A thrown error skips the query. A non-null return rewrites it. |
+| [AfterQuery(query, parameters, results, elapsedMs, error)](#csharp-icommandmiddleware-afterquery-query-parameters-results-elapsedms-error) | Runs after the query, including when the query failed. |
+
+###### BeforeQuery(query, parameters) {#csharp-icommandmiddleware-beforequery-query-parameters}
+
+Runs before the query. A thrown error skips the query. A non-null return rewrites it.
+
+**Definition**
+
+```csharp
+Task<(string Query, IReadOnlyList<Parameter>? Parameters)?> BeforeQuery(string query, IReadOnlyList<Parameter>? parameters)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | command text |
+| `parameters` | optional [Parameter](#csharp-parameter) list |
+
+**Returns**
+
+`Task<(string Query, IReadOnlyList<Parameter>? Parameters)?>`
+
+###### AfterQuery(query, parameters, results, elapsedMs, error) {#csharp-icommandmiddleware-afterquery-query-parameters-results-elapsedms-error}
+
+Runs after the query, including when the query failed.
+
+**Definition**
+
+```csharp
+Task AfterQuery(string query, IReadOnlyList<Parameter>? parameters, IReadOnlyList<Row> results, double elapsedMs, Exception? error = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | command text |
+| `parameters` | [Parameter](#csharp-parameter) list used |
+| `results` | rows produced |
+| `elapsedMs` | elapsed milliseconds |
+| `error` | query error when the command failed |
+
+##### Parameter {#csharp-parameter}
+
+```csharp
+public sealed record Parameter(string Name, Value Value)
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Name](#csharp-parameter-name) | Parameter name. |
+| [Value](#csharp-parameter-value) | Parameter value. |
+
+###### Name {#csharp-parameter-name}
+
+Parameter name.
+
+**Definition**
+
+```csharp
+string Name { get; }
+```
+
+###### Value {#csharp-parameter-value}
+
+Parameter value.
+
+**Definition**
+
+```csharp
+Value Value { get; }
+```
+
+##### Response {#csharp-response}
+
+```csharp
+public sealed record Response(Value Result, int RowsAffected)
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Result](#csharp-response-result) | Scalar or row result from the command. |
+| [RowsAffected](#csharp-response-rowsaffected) | Rows inserted, updated, or deleted. |
+
+###### Result {#csharp-response-result}
+
+Scalar or row result from the command.
+
+**Definition**
+
+```csharp
+Value Result { get; }
+```
+
+###### RowsAffected {#csharp-response-rowsaffected}
+
+Rows inserted, updated, or deleted.
+
+**Definition**
+
+```csharp
+int RowsAffected { get; }
+```
+
+##### IReader {#reader} {#csharp-ireader-reader}
+
+```csharp
+public interface IReader<out T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [Current](#csharp-ireader-reader-current) | The row from the last successful [Next](#csharp-ireader-next). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Next()](#csharp-ireader-reader-next) | Advances to the next row. |
+
+###### Current {#csharp-ireader-reader-current}
+
+The row from the last successful [Next](#csharp-ireader-next).
+
+**Definition**
+
+```csharp
+T? Current { get; }
+```
+
+###### Next() {#csharp-ireader-reader-next}
+
+Advances to the next row.
+
+**Definition**
+
+```csharp
+Task<bool> Next()
+```
+
+**Returns**
+
+`Task<bool>`
+
+##### Rust
+
+##### Command {#rust-command}
+
+```rust
+pub trait Command: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [add_middleware(middleware)](#rust-command-add_middleware-middleware) | Adds [CommandMiddleware](#rust-commandmiddleware). |
+| [execute_reader(text, parameters)](#rust-command-execute_reader-text-parameters) | Runs a query and returns a reader over the rows. |
+| [execute(text, parameters)](#rust-command-execute-text-parameters) | Runs a non-query command. |
+| [execute_reader_statement(statement, parameters)](#rust-command-execute_reader_statement-statement-parameters) | Runs [execute_reader](#rust-command-execute_reader-text-parameters) with `statement.get_text()`. |
+| [execute_statement(statement, parameters)](#rust-command-execute_statement-statement-parameters) | Runs [execute](#rust-command-execute-text-parameters) with `statement.get_text()`. |
+
+###### add_middleware(middleware) {#rust-command-add_middleware-middleware}
+
+Adds [CommandMiddleware](#rust-commandmiddleware).
+
+**Definition**
+
+```rust
+fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `middleware` | [CommandMiddleware](#rust-commandmiddleware) |
+
+###### execute_reader(text, parameters) {#rust-command-execute_reader-text-parameters}
+
+Runs a query and returns a reader over the rows.
+
+**Definition**
+
+```rust
+async fn execute_reader(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Box<dyn Reader>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | SQL or dialect command text |
+| `parameters` | optional [Parameter](#rust-parameter) slice |
+
+**Returns**
+
+`Result<Box<dyn `[Reader](#rust-reader)`>>`
+
+###### execute(text, parameters) {#rust-command-execute-text-parameters}
+
+Runs a non-query command.
+
+**Definition**
+
+```rust
+async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | SQL or dialect command text |
+| `parameters` | optional [Parameter](#rust-parameter) slice |
+
+**Returns**
+
+`Result<[Response](#rust-response)>`
+
+###### execute_reader_statement(statement, parameters) {#rust-command-execute_reader_statement-statement-parameters}
+
+Runs [execute_reader](#rust-command-execute_reader-text-parameters) with `statement.get_text()`.
+
+**Definition**
+
+```rust
+async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: Option<&[Parameter]>) -> Result<Box<dyn Reader>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [Statement](#statements) |
+| `parameters` | optional [Parameter](#rust-parameter) slice |
+
+**Returns**
+
+`Result<Box<dyn `[Reader](#rust-reader)`>>`
+
+###### execute_statement(statement, parameters) {#rust-command-execute_statement-statement-parameters}
+
+Runs [execute](#rust-command-execute-text-parameters) with `statement.get_text()`.
+
+**Definition**
+
+```rust
+async fn execute_statement(&self, statement: &dyn Statement, parameters: Option<&[Parameter]>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [Statement](#statements) |
+| `parameters` | optional [Parameter](#rust-parameter) slice |
+
+**Returns**
+
+`Result<[Response](#rust-response)>`
+
+##### CommandMiddleware {#rust-commandmiddleware}
+
+```rust
+pub trait CommandMiddleware: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [before_query(query, params)](#rust-commandmiddleware-before_query-query-params) | Runs before the query. An `Err` skips the query. `Some` rewrites it. |
+| [after_query(query, params, results, elapsed_ms, error)](#rust-commandmiddleware-after_query-query-params-results-elapsed_ms-error) | Runs after the query, including when the query failed. |
+
+###### before_query(query, params) {#rust-commandmiddleware-before_query-query-params}
+
+Runs before the query. An `Err` skips the query. `Some` rewrites it.
+
+**Definition**
+
+```rust
+async fn before_query(&self, query: &str, params: Option<&[Parameter]>) -> Result<Option<(String, Option<Vec<Parameter>>)>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | command text |
+| `params` | optional [Parameter](#rust-parameter) slice |
+
+**Returns**
+
+`Result<Option<(String, Option<Vec<Parameter>>)>>`
+
+###### after_query(query, params, results, elapsed_ms, error) {#rust-commandmiddleware-after_query-query-params-results-elapsed_ms-error}
+
+Runs after the query, including when the query failed.
+
+**Definition**
+
+```rust
+async fn after_query(&self, query: &str, params: Option<&[Parameter]>, results: &[Row], elapsed_ms: f64, error: Option<&DatasourceError>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | command text |
+| `params` | [Parameter](#rust-parameter) slice used |
+| `results` | rows produced |
+| `elapsed_ms` | elapsed milliseconds |
+| `error` | query error when the command failed |
+
+**Returns**
+
+`Result<()>`
+
+##### Parameter {#rust-parameter}
+
+```rust
+pub struct Parameter<T = Value>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [name](#rust-parameter-name) | Parameter name. |
+| [value](#rust-parameter-value) | Parameter value. |
+
+###### name {#rust-parameter-name}
+
+Parameter name.
+
+**Definition**
+
+```rust
+pub name: String
+```
+
+###### value {#rust-parameter-value}
+
+Parameter value.
+
+**Definition**
+
+```rust
+pub value: T
+```
+
+##### Response {#rust-response}
+
+```rust
+pub struct Response
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| [result](#rust-response-result) | Scalar or row result from the command. |
+| [rows_affected](#rust-response-rows_affected) | Rows inserted, updated, or deleted. |
+
+###### result {#rust-response-result}
+
+Scalar or row result from the command.
+
+**Definition**
+
+```rust
+pub result: Value
+```
+
+###### rows_affected {#rust-response-rows_affected}
+
+Rows inserted, updated, or deleted.
+
+**Definition**
+
+```rust
+pub rows_affected: i64
+```
+
+##### Reader {#reader} {#rust-reader-reader}
+
+```rust
+pub trait Reader<T = Row>: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [current()](#rust-reader-reader-current) | The row from the last successful [next](#rust-reader-next). |
+| [next()](#rust-reader-reader-next) | Advances to the next row. |
+
+###### current() {#rust-reader-reader-current}
+
+The row from the last successful [next](#rust-reader-next).
+
+**Definition**
+
+```rust
+fn current(&self) -> Option<T>
+```
+
+**Returns**
+
+`Option<T>`
+
+###### next() {#rust-reader-reader-next}
+
+Advances to the next row.
+
+**Definition**
+
+```rust
+async fn next(&self) -> Result<bool>
+```
+
+**Returns**
+
+`Result<bool>`
+
+### Remarks
+
+The connection must be open before `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader`.
+
+`AddMiddleware` / `addMiddleware` / `add_middleware` runs `BeforeQuery` / `beforeQuery` / `before_query` then the command, then `AfterQuery` / `afterQuery` / `after_query`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
+
+Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
 
 The Rust `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection today.
 
-### ICommand
+`ExecuteReader` returns rows. Convert with [RowTypeConverter](#row-type-converter), then map with a [Mapper](#mapper).
 
-| C# | Rust | TypeScript |
-| --- | --- | --- |
-| `ICommand` | `Command` | `ICommand` |
-| `AddMiddleware` | `add_middleware` | `addMiddleware` |
-| `ExecuteReader` | `execute_reader` | `executeReader` |
-| `Execute` | `execute` | `execute` |
+### Examples
 
-`ICommand` supports `addMiddleware` / `AddMiddleware` / `add_middleware` with `beforeQuery` / `afterQuery`. A `beforeQuery` error skips the query. A query error still runs `afterQuery` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console.
+#### ExecuteReader to NameValue
 
-### Reader
-
-`ExecuteReader` / `executeReader` / `execute_reader` returns a reader over query results.
-
-### Create and execute
-
-##### C#
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CommandTests.cs#L46-L60)
 
 ```csharp
-DatasourceFactory.Register("json", opts => new JsonConnection(opts), JsonConnection.Repository);
-
-var json = new Datasource("json", () => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() }), JsonConnection.Repository);
-var connection = await json.CreateConnection();
-await connection.Open();
-
-var command = json.CreateCommand(connection);
-await command.Execute("insert", new[] { new Parameter("id", 1) });
-await command.ExecuteReader("");
+var command = new MockCommand(new MockConnection())
+{
+    Reader = new MockReader<Row>([new Row { ["Name"] = "theme", ["Value"] = "dark" }])
+};
+var reader = await command.ExecuteReader("SELECT Name, Value FROM settings");
+var converter = new RowTypeConverter<NameValue>();
+var items = new List<NameValue>();
+while (await reader.Next())
+    items.Add(converter.Convert(reader.Current!));
 ```
 
-##### Rust
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L60-L82)
 
 ```rust
-use datasources::{create, register};
-use datasources_json::JsonConnection;
-use std::collections::HashMap;
-
-register("json", JsonConnection::from_options, JsonConnection::repository);
-
-let json = create(Some(&HashMap::from([("provider".into(), "json".into())])))?;
-let connection = json.create_connection().await?;
-connection.open().await?;
-
-let command = json.create_command(Some(connection));
-command.execute("insert", None).await?;
-command.execute_reader("", None).await?;
+let command = MockCommand::new();
+command
+    .reader_rows
+    .lock()
+    .unwrap()
+    .push(row(&[
+        ("name", Value::from("theme")),
+        ("value", Value::from("dark")),
+    ]));
+let reader = command
+    .execute_reader("SELECT name, value FROM settings", None)
+    .await
+    .unwrap();
+let converter = RowTypeConverter::of::<NameValue>();
+let mut items = Vec::new();
+while reader.next().await.unwrap() {
+    items.push(converter.convert(&reader.current().unwrap()).unwrap());
+}
 ```
 
-##### TypeScript
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Command.test.ts#L45-L56)
 
 ```typescript
-import { Datasource, DatasourceFactory } from "@datasources/core";
-import { JsonConnection } from "@datasources/json";
-
-DatasourceFactory.register("json", opts => new JsonConnection(opts), JsonConnection.repository);
-
-const json = Datasource.create({ provider: "json" });
-const connection = await json.createConnection();
-await connection.open();
-
-const command = json.createCommand(connection);
-await command.execute("insert", [{ name: "id", value: 1 }]);
-await command.executeReader("");
+const command = new MockCommand(new MockConnection());
+command.reader = new MockReader([{ name: "theme", value: "dark" }]);
+const reader = await command.executeReader("SELECT name, value FROM settings");
+const converter = new RowTypeConverter<NameValue>();
+const items: NameValue[] = [];
+while (await reader.next()) {
+  items.push(converter.convert(reader.current!, NameValue));
+}
 ```
 
-### Mock
+#### Execute insert, update, and delete
 
-Depend on `ICommand` / `Command`. Use `MockCommand` / `MockDatasource`.
-
-##### C#
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CommandTests.cs#L62-L71)
 
 ```csharp
-var ds = new MockDatasource();
-var command = ds.CreateCommand();
-await command.Execute("insert");
-Assert.Single(((MockCommand)command).ExecuteCalls);
-
-var failing = new MockCommand(ds.Connection) { ExecuteError = new InvalidOperationException("exec-fail") };
-ds.Command = failing;
-await Assert.ThrowsAsync<InvalidOperationException>(() => failing.Execute(""));
+var command = new MockCommand(new MockConnection());
+await command.Execute("insert", [new Parameter("id", 1), new Parameter("name", "a")]);
+await command.Execute("update", [new Parameter("id", 1), new Parameter("name", "A")]);
+await command.Execute("delete", [new Parameter("id", 1)]);
 ```
 
-##### Rust
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L84-L116)
 
 ```rust
-use datasources::{Datasource, MockCommand, MockDatasource};
-
-let ds = MockDatasource::new("mock");
-let command = ds.create_command(None);
-command.execute("", None).await?;
-command.execute_reader("", None).await?;
-
-let failing = MockCommand::new();
-failing.set_execute_error("exec-fail");
-assert!(failing.execute("", None).await.is_err());
+let command = MockCommand::new();
+command
+    .execute(
+        "insert",
+        Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "a")]),
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "update",
+        Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "A")]),
+    )
+    .await
+    .unwrap();
+command
+    .execute("delete", Some(&[Parameter::new("id", 1_i64)]))
+    .await
+    .unwrap();
 ```
 
-##### TypeScript
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Command.test.ts#L58-L78)
 
 ```typescript
-const ds = new MockDatasource();
-const command = ds.createCommand();
-await command.execute("insert");
-expect((command as MockCommand).executeCalls).toHaveLength(1);
-
-const failing = new MockCommand(ds.connection);
-failing.executeError = new Error("exec-fail");
-await expect(failing.execute("")).rejects.toThrow("exec-fail");
+const command = new MockCommand(new MockConnection());
+await command.execute("insert", [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+]);
+await command.execute("update", [
+  { name: "id", value: 1 },
+  { name: "name", value: "A" },
+]);
+await command.execute("delete", [{ name: "id", value: 1 }]);
 ```
 
-Provider tests inject fakes on options (`MemoryFileStore`, `ScriptedDriver`) and then execute / execute-reader.
+#### Map flat contacts
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CommandTests.cs#L73-L97)
+
+```csharp
+var command = new MockCommand(new MockConnection())
+{
+    Reader = new MockReader<Row>([new Row
+    {
+        ["id"] = 1,
+        ["username"] = "bobby",
+        ["email"] = "bob@asdf.com",
+        ["contact_name1"] = "bob",
+        ["contact_name2"] = "roberta"
+    }])
+};
+var reader = await command.ExecuteReader(
+    "SELECT contact_name1, contact_name2, email, id, username FROM users");
+var converter = new RowTypeConverter<User>();
+var mapper = UserContactsMapper();
+User? user = null;
+while (await reader.Next())
+    user = mapper.Map(converter.Convert(reader.Current!));
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L118-L150)
+
+```rust
+let command = MockCommand::new();
+command.reader_rows.lock().unwrap().push(row(&[
+    ("id", Value::Int(1)),
+    ("username", Value::from("bobby")),
+    ("email", Value::from("bob@asdf.com")),
+    ("contact_name1", Value::from("bob")),
+    ("contact_name2", Value::from("roberta")),
+]));
+let reader = command
+    .execute_reader(
+        "SELECT contact_name1, contact_name2, email, id, username FROM users",
+        None,
+    )
+    .await
+    .unwrap();
+let converter = RowTypeConverter::of::<UserRow>();
+let mapper = user_contacts_mapper();
+let mut user = None;
+while reader.next().await.unwrap() {
+    user = Some(Mapper::map(
+        &mapper,
+        converter.convert(&reader.current().unwrap()).unwrap(),
+    ));
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Command.test.ts#L80-L103)
+
+```typescript
+const command = new MockCommand(new MockConnection());
+command.reader = new MockReader([
+  {
+    id: 1,
+    username: "bobby",
+    email: "bob@asdf.com",
+    contact_name1: "bob",
+    contact_name2: "roberta",
+  },
+]);
+const reader = await command.executeReader(
+  "SELECT contact_name1, contact_name2, email, id, username FROM users",
+);
+const converter = new RowTypeConverter<User>();
+const mapper = userContactsMapper();
+let user: User | undefined;
+while (await reader.next()) {
+  user = mapper.map(converter.convert(reader.current!, User));
+}
+```
 
 ## Statements
 
@@ -4038,6 +4998,7 @@ Assert.Single(rows);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L845-L851)
 
 ```rust
+}));
 let rows = repo.read(None).await.unwrap();
 ```
 
@@ -5391,6 +6352,7 @@ await repo.Create(obj);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L886-L899)
 
 ```rust
+let repo = Repository::new(include_id).unwrap();
 repo.create(&obj).await.unwrap();
 ```
 
@@ -7069,6 +8031,7 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1235-L1244)
 
 ```rust
+])]));
 let mut repo = EnrichedReadonlyRepository::new(parents);
 repo.add_enriched(
     "type_name",
@@ -7078,7 +8041,6 @@ repo.add_enriched(
     Some("name".into()),
     false,
 );
-let items = repo.read(None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -7505,24 +8467,24 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-let parents = Arc::new(list_repository::ListRepository::new(vec![]));
-let children = Arc::new(list_repository::ListRepository::new(vec![]));
-let mut repo = BulkCRUDRepository::new(parents.clone());
-repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
-let response = repo
-    .create_bulk(&[
-        record(&[(
-            "children",
-            encode_rows(&[record(&[("label", Value::from("a"))])]),
-        )]),
-        record(&[(
-            "children",
-            encode_rows(&[
-                record(&[("label", Value::from("b"))]),
-                record(&[("label", Value::from("c"))]),
-            ]),
-        )]),
-    ])
+async fn bulk_create_writes_parents_and_children() {
+    let parents = Arc::new(list_repository::ListRepository::new(vec![]));
+    let children = Arc::new(list_repository::ListRepository::new(vec![]));
+    let mut repo = BulkCRUDRepository::new(parents.clone());
+    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    let response = repo
+        .create_bulk(&[
+            record(&[(
+                "children",
+                encode_rows(&[record(&[("label", Value::from("a"))])]),
+            )]),
+            record(&[(
+                "children",
+                encode_rows(&[
+                    record(&[("label", Value::from("b"))]),
+                    record(&[("label", Value::from("c"))]),
+                ]),
+            )]),
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -8401,6 +9363,26 @@ public void FlattensAndUnflattensUserAndContacts()
     var flat = mapper.Map(nested);
 ```
 
+**Before: nested value**
+
+```
+{
+  user: { id: 1, name: 'Ada' },
+  contacts: { email: 'ada@x.dev', phone: '555' }
+}
+```
+
+**After: flat value**
+
+```
+{
+  userId: 1,
+  userName: 'Ada',
+  contactEmail: 'ada@x.dev',
+  contactPhone: '555'
+}
+```
+
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L122-L157)
 
 ```rust
@@ -8435,6 +9417,26 @@ let mapper = TransformMapper::new(
 let flat = Mapper::map(&mapper, nested.clone());
 ```
 
+**Before: nested value**
+
+```
+{
+  user: { id: 1, name: 'Ada' },
+  contacts: { email: 'ada@x.dev', phone: '555' }
+}
+```
+
+**After: flat value**
+
+```
+{
+  userId: 1,
+  userName: 'Ada',
+  contactEmail: 'ada@x.dev',
+  contactPhone: '555'
+}
+```
+
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40)
 
 ```typescript
@@ -8455,6 +9457,26 @@ const mapper = new TransformMapper<Nested, Flat>(
   }),
 );
 const flat = mapper.map(nested);
+```
+
+**Before: nested value**
+
+```
+{
+  user: { id: 1, name: 'Ada' },
+  contacts: { email: 'ada@x.dev', phone: '555' }
+}
+```
+
+**After: flat value**
+
+```
+{
+  userId: 1,
+  userName: 'Ada',
+  contactEmail: 'ada@x.dev',
+  contactPhone: '555'
+}
 ```
 
 ## FlatToTypeMapper
@@ -10102,13 +11124,15 @@ C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `i
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L794-L804)
 
 ```rust
-let mut mapper = StatementMapper::identity("", "");
-mapper.stored_procedure = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} /* mapped */"),
-    |text| text,
-)));
-let built = StatementBuilder::create_stored_procedure("save", &[Parameter::new("id", 1_i64)]);
-let text = StatementMapper::map_sql(&mapper.stored_procedure, built.get_text());
+#[test]
+fn stored_procedure_mapper_rewrites_finished_sql() {
+    let mut mapper = StatementMapper::identity("", "");
+    mapper.stored_procedure = Some(Arc::new(TransformMapper::new(
+        |text: String| format!("{text} /* mapped */"),
+        |text| text,
+    )));
+    let built = StatementBuilder::create_stored_procedure("save", &[Parameter::new("id", 1_i64)]);
+    let text = StatementMapper::map_sql(&mapper.stored_procedure, built.get_text());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59)

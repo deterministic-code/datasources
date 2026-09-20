@@ -61,7 +61,7 @@ const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
 describe("Repository", () => {
   it("builds select and maps rows", async () => {
     const { repo, command } = create();
-    repo.addMiddleware({ beforeQuery() {}, afterQuery() {} });
+    repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
     command.reader = new MockReader([
       { id: 1, name: "a" },
     ]);

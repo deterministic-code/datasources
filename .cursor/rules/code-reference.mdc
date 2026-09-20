@@ -68,3 +68,4 @@ static create(provider?: string, options?: DatasourceOptions): IDatasource
 - Omit `bindInstall` / `bind_install`.
 - The page-level selector switches both the class list and `::: example` samples.
 - Under `## Examples`, use `::: example` pointing at unit, integration, or e2e test line ranges in all three languages. The transform extracts the usage body (not the test wrapper or equality asserts); do not paste fictional fences.
+- Optional `output [Title]` fences in `::: example` render as titled textboxes under the sample. Use `output:typescript` / `output:csharp` / `output:rust` when the printed value differs by dialect.

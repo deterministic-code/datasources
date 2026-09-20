@@ -28,7 +28,7 @@ impl CommandMiddlewareHost {
 
     pub async fn run<T: 'static, F, Fut>(
         &self,
-        query: &str,
+        text: &str,
         params: Option<&[Parameter]>,
         fn_op: F,
     ) -> Result<T>
@@ -36,17 +36,17 @@ impl CommandMiddlewareHost {
         F: FnOnce(String, Option<Vec<Parameter>>) -> Fut,
         Fut: Future<Output = Result<(T, Vec<Row>)>>,
     {
-        let mut query = query.trim().to_string();
+        let mut text = text.trim().to_string();
         let mut params = params.map(ToOwned::to_owned);
         let middlewares = self.middlewares.lock().expect("middleware").clone();
         for middleware in &middlewares {
-            if let Some(next) = middleware.before_query(&query, params.as_deref()).await? {
-                (query, params) = next;
+            if let Some(next) = middleware.before_command(&text, params.as_deref()).await? {
+                (text, params) = next;
             }
         }
 
         let start = Instant::now();
-        let outcome = fn_op(query.clone(), params.clone()).await;
+        let outcome = fn_op(text.clone(), params.clone()).await;
         let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
         let execute_rows = match &outcome {
             Ok((value, rows)) if rows.is_empty() => response_row(value),
@@ -66,7 +66,7 @@ impl CommandMiddlewareHost {
         };
         for middleware in &middlewares {
             middleware
-                .after_query(&query, params.as_deref(), rows, elapsed_ms, error)
+                .after_command(&text, params.as_deref(), rows, elapsed_ms, error)
                 .await?;
         }
         outcome.map(|(value, _)| value)

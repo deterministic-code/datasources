@@ -80,8 +80,8 @@ impl ConsoleCommandMiddleware {
         )
     }
 
-    fn line(&self, phase: &str, query: &str) -> String {
-        format!("[{}]-[datasource][{phase}]-[{query}]", (self.now)())
+    fn line(&self, phase: &str, text: &str) -> String {
+        format!("[{}]-[datasource][{phase}]-[{text}]", (self.now)())
     }
 }
 
@@ -93,21 +93,21 @@ impl Default for ConsoleCommandMiddleware {
 
 #[async_trait]
 impl CommandMiddleware for ConsoleCommandMiddleware {
-    async fn before_query(
+    async fn before_command(
         &self,
-        query: &str,
+        text: &str,
         params: Option<&[Parameter]>,
     ) -> Result<Option<(String, Option<Vec<Parameter>>)>> {
-        (self.write)(&self.line("Start", query));
+        (self.write)(&self.line("Start", text));
         if self.verbose() {
             (self.write)(&self.line("Request", &params_of(params)));
         }
         Ok(None)
     }
 
-    async fn after_query(
+    async fn after_command(
         &self,
-        query: &str,
+        text: &str,
         _params: Option<&[Parameter]>,
         results: &[Row],
         elapsed_ms: f64,
@@ -117,11 +117,11 @@ impl CommandMiddleware for ConsoleCommandMiddleware {
         options.insert("elapsedMs".into(), format_elapsed(elapsed_ms));
         (self.write)(&format!(
             "{} {}",
-            self.line("Finish", query),
+            self.line("Finish", text),
             options["elapsedMs"]
         ));
         if self.verbose() {
-            (self.write)(&self.line("Response", &rows_of(results)));
+            (self.write)(&self.line("AfterCommand", &rows_of(results)));
         }
         Ok(())
     }

@@ -2,16 +2,16 @@ import type { Parameter } from "./Parameter.ts";
 import type { Row } from "./Row.ts";
 
 export interface ICommandMiddleware {
-  beforeQuery(
-    query: string,
+  beforeCommand(
+    text: string,
     params?: ReadonlyArray<Parameter>,
   ):
     | void
-    | { query: string; params?: ReadonlyArray<Parameter> }
-    | Promise<void | { query: string; params?: ReadonlyArray<Parameter> }>;
+    | { text: string; params?: ReadonlyArray<Parameter> }
+    | Promise<void | { text: string; params?: ReadonlyArray<Parameter> }>;
 
-  afterQuery(
-    query: string,
+  afterCommand(
+    text: string,
     params: ReadonlyArray<Parameter> | undefined,
     results: ReadonlyArray<Row>,
     elapsedMs: number,

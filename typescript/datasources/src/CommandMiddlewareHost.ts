@@ -36,19 +36,19 @@ export class CommandMiddlewareHost {
   }
 
   async run<T>(
-    query: string,
+    text: string,
     params: Parameter[] | undefined,
     fn: (
-      query: string,
+      text: string,
       params?: Parameter[],
     ) => Promise<{ value: T; rows: readonly Row[] }>,
   ): Promise<T> {
-    let q = query.trim();
+    let q = text.trim();
     let p = params;
     for (const middleware of this.middlewares) {
-      const rewritten = await middleware.beforeQuery(q, p);
+      const rewritten = await middleware.beforeCommand(q, p);
       if (rewritten) {
-        q = rewritten.query;
+        q = rewritten.text;
         p = rewritten.params as Parameter[] | undefined;
       }
     }
@@ -58,13 +58,13 @@ export class CommandMiddlewareHost {
       const { value, rows } = await fn(q, p);
       const elapsedMs = performance.now() - start;
       for (const middleware of this.middlewares) {
-        await middleware.afterQuery(q, p, logged(value, rows), elapsedMs);
+        await middleware.afterCommand(q, p, logged(value, rows), elapsedMs);
       }
       return value;
     } catch (error) {
       const elapsedMs = performance.now() - start;
       for (const middleware of this.middlewares) {
-        await middleware.afterQuery(q, p, [], elapsedMs, asError(error));
+        await middleware.afterCommand(q, p, [], elapsedMs, asError(error));
       }
       throw error;
     }

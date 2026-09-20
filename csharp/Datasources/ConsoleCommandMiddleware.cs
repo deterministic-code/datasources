@@ -16,17 +16,17 @@ public sealed class ConsoleCommandMiddleware : ICommandMiddleware
         this.options = options ?? new Dictionary<string, string>();
     }
 
-    public Task<(string Query, IReadOnlyList<Parameter>? Parameters)?> BeforeQuery(
-        string query,
+    public Task<(string Text, IReadOnlyList<Parameter>? Parameters)?> BeforeCommand(
+        string text,
         IReadOnlyList<Parameter>? parameters)
     {
-        write(Line("Start", query));
+        write(Line("Start", text));
         if (Verbose()) write(Line("Request", ParamsOf(parameters)));
-        return Task.FromResult<(string Query, IReadOnlyList<Parameter>? Parameters)?>(null);
+        return Task.FromResult<(string Text, IReadOnlyList<Parameter>? Parameters)?>(null);
     }
 
-    public Task AfterQuery(
-        string query,
+    public Task AfterCommand(
+        string text,
         IReadOnlyList<Parameter>? parameters,
         IReadOnlyList<Row> results,
         double elapsedMs,
@@ -34,8 +34,8 @@ public sealed class ConsoleCommandMiddleware : ICommandMiddleware
     {
         var elapsed = FormatElapsed(elapsedMs);
         var bag = new Dictionary<string, string>(options) { ["elapsedMs"] = elapsed };
-        write($"{Line("Finish", query)} {bag["elapsedMs"]}");
-        if (Verbose()) write(Line("Response", RowsOf(results)));
+        write($"{Line("Finish", text)} {bag["elapsedMs"]}");
+        if (Verbose()) write(Line("AfterCommand", RowsOf(results)));
         return Task.CompletedTask;
     }
 
@@ -45,8 +45,8 @@ public sealed class ConsoleCommandMiddleware : ICommandMiddleware
     bool Verbose() =>
         options.TryGetValue("isVerbose", out var flag) && flag is "true" or "1";
 
-    string Line(string phase, string query) =>
-        $"[{now().UtcDateTime:yyyy-MM-ddTHH:mm:ss.fff}Z]-[datasource][{phase}]-[{query}]";
+    string Line(string phase, string text) =>
+        $"[{now().UtcDateTime:yyyy-MM-ddTHH:mm:ss.fff}Z]-[datasource][{phase}]-[{text}]";
 
     static string ParamsOf(IReadOnlyList<Parameter>? parameters) =>
         $"{{{string.Join(", ", (parameters ?? []).Select(param => $"{param.Name}: {Cell(param.Value)}"))}}}";

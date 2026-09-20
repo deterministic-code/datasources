@@ -20,6 +20,7 @@ const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const REFERENCE_BLOCK = /^::: reference\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
 const EXAMPLE_FENCE = /^```([a-zA-Z0-9_+-]+)[ \t]+(\S+#L\d+-L\d+)\s*\r?\n([\s\S]*?)^```\s*$/gm;
+const OUTPUT_FENCE = /^```output(?::([a-zA-Z0-9_+-]+))?[ \t]+\[([^\]]+)\]\s*\r?\n([\s\S]*?)^```\s*$/gm;
 const DOC_FENCE = /(^~~~~[\s\S]*?^~~~~)/m;
 const PANEL_ORDER = ["typescript", "csharp", "rust"];
 
@@ -42,6 +43,33 @@ export const parseExampleFences = (body) => {
   if (!fences.length) throw new Error("::: example has no test ranges");
   return fences;
 };
+
+export const parseExampleOutputs = (body) => {
+  OUTPUT_FENCE.lastIndex = 0;
+  return [...body.matchAll(OUTPUT_FENCE)].map((match) => ({
+    lang: match[1] ? slotName(match[1]) : null,
+    title: match[2],
+    value: match[3].replace(/\n$/, ""),
+  }));
+};
+
+const outputsFor = (outputs, lang) => {
+  const override = new Set(outputs.filter((output) => output.lang === lang).map((output) => output.title));
+  return outputs.filter((output) => output.lang === lang || (!output.lang && !override.has(output.title)));
+};
+
+const labeledOutputs = (outputs) =>
+  outputs.map((output) =>
+    output.lang ? { ...output, title: `${output.title} (${labelFor(output.lang)})` } : output,
+  );
+
+const escapeAttr = (value) =>
+  String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+
+const renderOutputs = (outputs) =>
+  outputs.length
+    ? `<ExampleOutputs items="${escapeAttr(JSON.stringify(outputs.map(({ title, value }) => ({ title, value }))))}" />`
+    : "";
 
 const resolveExamples = (body) =>
   parseExampleFences(body).map(({ lang, spec }) => {
@@ -139,28 +167,37 @@ export const toReadmeReference = (body) =>
 
 const hasReference = (markdown) => /^::: reference\r?\n/m.test(markdown);
 
-const toReadmeExamples = (body) =>
-  resolveExamples(body)
-    .map(
-      ({ lang, code, href }) =>
-        `#### ${labelFor(lang)} [${SOURCE_ICON}](${href})\n\n\`\`\`${lang}\n${code}\n\`\`\``,
-    )
-    .join("\n\n");
+const readmeOutput = (outputs) =>
+  outputs.map(({ title, value }) => `**${title}**\n\n\`\`\`\n${value}\n\`\`\``).join("\n\n");
 
-const toVitePressExamplePanels = (body) =>
-  resolveExamples(body)
-    .map(({ lang, code, href }) =>
-      toPanel(slotName(lang), `${sourceLink(href)}\n\n\`\`\`${lang}\n${code}\n\`\`\``),
-    )
+const toReadmeExamples = (body) => {
+  const outputs = parseExampleOutputs(body);
+  return resolveExamples(body)
+    .map(({ lang, code, href }) => {
+      const boxes = readmeOutput(outputsFor(outputs, slotName(lang)));
+      return `#### ${labelFor(lang)} [${SOURCE_ICON}](${href})\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`;
+    })
     .join("\n\n");
+};
+
+const toVitePressExamplePanels = (body) => {
+  const outputs = parseExampleOutputs(body);
+  return resolveExamples(body)
+    .map(({ lang, code, href }) => {
+      const boxes = renderOutputs(outputsFor(outputs, slotName(lang)));
+      return toPanel(slotName(lang), `${sourceLink(href)}\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`);
+    })
+    .join("\n\n");
+};
 
 const toVitePressExamples = (body) => {
   const resolved = resolveExamples(body);
+  const boxes = renderOutputs(labeledOutputs(parseExampleOutputs(body)));
   const group = resolved
     .map(({ lang, code }) => `\`\`\`${lang} [${labelFor(lang)}]\n${code}\n\`\`\``)
     .join("\n\n");
   const links = resolved.map(({ href }) => sourceLink(href)).join("\n");
-  return `${links}\n\n::: code-group\n\n${group}\n\n:::`;
+  return `${links}\n\n::: code-group\n\n${group}\n\n:::${boxes ? `\n\n${boxes}` : ""}`;
 };
 
 export const transformDialects = (markdown, style) => {

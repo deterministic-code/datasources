@@ -6,15 +6,15 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait CommandMiddleware: Send + Sync {
-    async fn before_query(
+    async fn before_command(
         &self,
-        query: &str,
+        text: &str,
         params: Option<&[Parameter]>,
     ) -> Result<Option<(String, Option<Vec<Parameter>>)>>;
 
-    async fn after_query(
+    async fn after_command(
         &self,
-        query: &str,
+        text: &str,
         params: Option<&[Parameter]>,
         results: &[Row],
         elapsed_ms: f64,

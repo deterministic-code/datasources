@@ -32,25 +32,25 @@ export class ConsoleCommandMiddleware implements ICommandMiddleware {
     private readonly options: Record<string, string> = {},
   ) {}
 
-  beforeQuery = (query: string, params?: ReadonlyArray<Parameter>): void => {
-    this.write(this.line("Start", query));
+  beforeCommand = (text: string, params?: ReadonlyArray<Parameter>): void => {
+    this.write(this.line("Start", text));
     if (this.verbose()) this.write(this.line("Request", paramsOf(params)));
   };
 
-  afterQuery = (
-    query: string,
+  afterCommand = (
+    text: string,
     _params: ReadonlyArray<Parameter> | undefined,
     results: ReadonlyArray<Row>,
     elapsedMs: number,
   ): void => {
     const options = { ...this.options, elapsedMs: formatElapsed(elapsedMs) };
-    this.write(`${this.line("Finish", query)} ${options.elapsedMs}`);
-    if (this.verbose()) this.write(this.line("Response", rowsOf(results)));
+    this.write(`${this.line("Finish", text)} ${options.elapsedMs}`);
+    if (this.verbose()) this.write(this.line("AfterCommand", rowsOf(results)));
   };
 
   private verbose = (): boolean =>
     this.options.isVerbose === "true" || this.options.isVerbose === "1";
 
-  private line = (phase: string, query: string): string =>
-    `[${this.now().toISOString()}]-[datasource][${phase}]-[${query}]`;
+  private line = (phase: string, text: string): string =>
+    `[${this.now().toISOString()}]-[datasource][${phase}]-[${text}]`;
 }
