@@ -129,20 +129,20 @@ impl ReadonlyRepository for BulkCRUDRepository {
         self.inner.entity_type()
     }
 
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
-        self.inner.get_single(query).await
+    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+        self.inner.read_single(query).await
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
-        self.inner.get(query).await
+    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+        self.inner.read(query).await
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.inner.get_single_where(where_clause).await
+    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
+        self.inner.read_single_where(where_clause).await
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.inner.get_where(where_clause).await
+    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
+        self.inner.read_where(where_clause).await
     }
 }
 

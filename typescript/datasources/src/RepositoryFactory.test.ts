@@ -9,8 +9,8 @@ class Item {}
 
 const emptyReadonly = (): IReadonlyRepository => ({
   type: Object,
-  getSingle: async () => undefined,
-  async *get() {},
+  readSingle: async () => undefined,
+  async *read() {},
 });
 
 describe("RepositoryFactory", () => {

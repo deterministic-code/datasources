@@ -6,7 +6,7 @@ import type { IWhere } from "./IWhere.ts";
 
 export interface IReadonlyEnrichmentStrategy<T extends object>
   extends IReadonlyEnrichmentBinder {
-  get(
+  read(
     inner: IReadonlyRepository<T>,
     tree: IRepositoryTree,
     query?: IQuery | IWhere,

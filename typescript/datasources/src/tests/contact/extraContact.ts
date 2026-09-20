@@ -37,7 +37,7 @@ export const addExtraContact = async (
   const contact = extraContact(ids);
   await service.create(contact);
   const loaded = (
-    await collectAsync(service.get(WhereBuilder.equals("id", contact.id)))
+    await collectAsync(service.read(WhereBuilder.equals("id", contact.id)))
   )[0];
   if (!loaded) throw new Error(`extra contact ${contact.id} missing`);
   return loaded;

@@ -8,10 +8,10 @@ export const untyped = <T>(): Constructable<T> => Object as never as Constructab
 export abstract class ReadonlyRepository<T> implements IReadonlyRepository<T> {
   constructor(readonly type: Constructable<T>) {}
 
-  abstract get(query?: IQuery | IWhere): AsyncIterable<T>;
+  abstract read(query?: IQuery | IWhere): AsyncIterable<T>;
 
-  async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
-    for await (const item of this.get(query)) return item;
+  async readSingle(query?: IQuery | IWhere): Promise<T | undefined> {
+    for await (const item of this.read(query)) return item;
     return undefined;
   }
 }

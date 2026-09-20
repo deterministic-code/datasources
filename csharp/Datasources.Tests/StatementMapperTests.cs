@@ -11,16 +11,19 @@ public class StatementMapperTests
         public string name { get; set; } = "";
     }
 
-    static TransformMapper<string, string> Names() =>
-        new(
-            name => name switch
-            {
-                "users" => "people",
-                "id" => "user_id",
-                "name" => "full_name",
-                _ => name
-            },
-            name => name);
+    sealed class TestNameMapper : INameMapper
+    {
+        public string Map(string name) => name switch
+        {
+            "users" => "people",
+            "id" => "user_id",
+            "name" => "full_name",
+            _ => name
+        };
+        public string ReverseMap(string name) => name;
+    }
+
+    static INameMapper Names() => new TestNameMapper();
 
     static (Repository<UserRow> Repo, MockCommand Command) Create(StatementMapper<UserRow> mapper)
     {
@@ -42,7 +45,7 @@ public class StatementMapperTests
         var names = Names();
         var (repo, command) = Create(new StatementMapper<UserRow> { Entity = names, Columns = names });
         command.Reader = new MockReader<Row>([]);
-        await repo.GetSingle();
+        await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
         await repo.Create(new UserRow { id = 1, name = "a" });
         Assert.Equal("INSERT INTO people (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
@@ -116,7 +119,7 @@ public class StatementMapperTests
                 delete => delete)
         });
         command.Reader = new MockReader<Row>([]);
-        await repo.GetSingle();
+        await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people LIMIT 1", command.ExecuteReaderCalls[0].Text);
         var row = new UserRow { id = 1, name = "a" };
         await repo.Create(row);

@@ -60,7 +60,7 @@ pub async fn add_extra_contact(service: &DeepCRUDRepository, ids: &ContactLookup
         return Err(DatasourceError::message("expected insert id"));
     };
     service
-        .get_single_where(&WhereBuilder::equals("id", Value::Int(id)))
+        .read_single_where(&WhereBuilder::equals("id", Value::Int(id)))
         .await?
         .ok_or_else(|| DatasourceError::message(format!("extra contact {id} missing")))
 }

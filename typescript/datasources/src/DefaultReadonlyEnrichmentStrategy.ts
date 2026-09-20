@@ -10,13 +10,13 @@ import { keyOf, props, scalar } from "./RepositoryTreeNode.ts";
 export class DefaultReadonlyEnrichmentStrategy<T extends object>
   implements IReadonlyEnrichmentStrategy<T>
 {
-  async *get(
+  async *read(
     inner: IReadonlyRepository<T>,
     tree: IRepositoryTree,
     query?: IQuery | IWhere,
   ): AsyncIterable<T> {
     const items: T[] = [];
-    for await (const item of inner.get(query)) items.push(item);
+    for await (const item of inner.read(query)) items.push(item);
     await this.enrich(tree, items);
     for (const item of items) yield item;
   }
@@ -48,7 +48,7 @@ const applyLookup = async <TRelated extends object>(
     if (!cache.has(cacheKey))
       cache.set(
         cacheKey,
-        await via.getSingle(WhereBuilder.equals(enrichment.by, scalar(key))),
+        await via.readSingle(WhereBuilder.equals(enrichment.by, scalar(key))),
       );
     const related = cache.get(cacheKey);
     if (!related) continue;
@@ -68,7 +68,7 @@ const applyMany = async <TRelated extends object>(
     const key = props(parent)[enrichment.from];
     if (key === undefined || key === null) continue;
     const related: TRelated[] = [];
-    for await (const item of via.get(
+    for await (const item of via.read(
       WhereBuilder.equals(enrichment.by, scalar(key)),
     ))
       related.push(item);

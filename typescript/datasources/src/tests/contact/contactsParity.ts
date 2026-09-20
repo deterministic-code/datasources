@@ -20,11 +20,11 @@ export const contactsParity = async (
     await collectAsync(
       new Repository<Cells>({ connection, entity: "contacts_base" })
         .addMiddleware(middleware)
-        .get(contactsJoinQuery()),
+        .read(contactsJoinQuery()),
     ),
   );
   const enriched = await collectAsync(
-    contactsServiceOf(connection, verbose ? middleware : undefined).get(),
+    contactsServiceOf(connection, verbose ? middleware : undefined).read(),
   );
   return { eager, enriched };
 };

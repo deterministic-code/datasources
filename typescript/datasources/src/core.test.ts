@@ -510,14 +510,14 @@ describe("stubs", () => {
 
     const repo = ds.createRepository(provided);
     expect(repo).toBeInstanceOf(StubRepository);
-    await expect(repo.getSingle()).rejects.toThrow(ProviderNotImplementedError);
-    await expect(repo.getSingle(new Where("1=1"))).rejects.toThrow(
+    await expect(repo.readSingle()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(repo.readSingle(new Where("1=1"))).rejects.toThrow(
       ProviderNotImplementedError,
     );
-    await expect(collectAsync(repo.get())).rejects.toThrow(
+    await expect(collectAsync(repo.read())).rejects.toThrow(
       ProviderNotImplementedError,
     );
-    await expect(collectAsync(repo.get(new Where("1=1")))).rejects.toThrow(
+    await expect(collectAsync(repo.read(new Where("1=1")))).rejects.toThrow(
       ProviderNotImplementedError,
     );
     await expect(repo.create({})).rejects.toThrow(ProviderNotImplementedError);
@@ -631,23 +631,23 @@ describe("published mocks", () => {
 
   it("records repository CRUD and errors", async () => {
     const repo = new MockRepository<{ id: number }>(new MockConnection());
-    expect(await repo.getSingle()).toBeUndefined();
+    expect(await repo.readSingle()).toBeUndefined();
     repo.items = [{ id: 1 }, { id: 2 }];
-    expect(await repo.getSingle(new MockQuery("id=1"))).toEqual({ id: 1 });
-    expect(await collectAsync(repo.get())).toEqual([{ id: 1 }, { id: 2 }]);
-    expect(await collectAsync(repo.get(new MockQuery("all")))).toHaveLength(2);
-    expect(await repo.getSingle(new MockWhere("id=1"))).toEqual({ id: 1 });
-    expect(await collectAsync(repo.get(new MockWhere("all")))).toHaveLength(2);
+    expect(await repo.readSingle(new MockQuery("id=1"))).toEqual({ id: 1 });
+    expect(await collectAsync(repo.read())).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(await collectAsync(repo.read(new MockQuery("all")))).toHaveLength(2);
+    expect(await repo.readSingle(new MockWhere("id=1"))).toEqual({ id: 1 });
+    expect(await collectAsync(repo.read(new MockWhere("all")))).toHaveLength(2);
     expect((await repo.create({ id: 3 })).rowsAffected).toBe(1);
     expect(
       (await repo.update({ id: 3 }, new MockWhere("id=3"))).rowsAffected,
     ).toBe(1);
     expect((await repo.delete({ id: 3 })).rowsAffected).toBe(1);
 
-    repo.getSingleError = new Error("gs");
-    await expect(repo.getSingle()).rejects.toThrow("gs");
-    repo.getError = new Error("g");
-    await expect(collectAsync(repo.get())).rejects.toThrow("g");
+    repo.readSingleError = new Error("gs");
+    await expect(repo.readSingle()).rejects.toThrow("gs");
+    repo.readError = new Error("g");
+    await expect(collectAsync(repo.read())).rejects.toThrow("g");
     repo.addError = new Error("ad");
     await expect(repo.create({ id: 0 })).rejects.toThrow("ad");
     repo.updateError = new Error("up");

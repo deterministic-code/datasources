@@ -4,11 +4,11 @@ public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
 {
     public Type Type => typeof(T);
 
-    public abstract IAsyncEnumerable<T> Get(IStatement? query = null);
+    public abstract IAsyncEnumerable<T> Read(IStatement? query = null);
 
-    public virtual async Task<T?> GetSingle(IStatement? query = null)
+    public virtual async Task<T?> ReadSingle(IStatement? query = null)
     {
-        await foreach (var item in Get(query))
+        await foreach (var item in Read(query))
             return item;
         return default;
     }

@@ -40,22 +40,22 @@ steps:
         create_string: "2024-02-20T15:30:00Z"
         version: BQUFBQ==
 
-  - GET:
+  - READ:
       id: 1
       expect: *alice
-  - GETBY:
+  - READBY:
       where:
         username: alice
       expect: *alice
-  - GETBY:
+  - READBY:
       where:
         uuid: 550e8400-e29b-41d4-a716-446655440000
       expect: *alice
-  - GETBY:
+  - READBY:
       where:
         usertypename: admin
       expect: *alice
-  - GETBY:
+  - READBY:
       where:
         create_string: "2024-01-15T10:00:00Z"
       expect: *alice
@@ -78,11 +78,11 @@ steps:
         version: BQUFBQ==
       expect:
         rowsAffected: 1
-  - GETBY:
+  - READBY:
       where:
         uuid: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
       expect: *bobAdmin
-  - GETBY:
+  - READBY:
       where:
         create_string: "2024-02-20T15:30:00Z"
       expect: *bobAdmin
@@ -98,7 +98,7 @@ steps:
         create_string: "2024-02-20T15:30:00Z"
       expect:
         rowsAffected: 1
-  - GET:
+  - READ:
       id: 2
       expect: null
   - QUERY:

@@ -27,7 +27,7 @@ public class EnrichedReadonlyRepositoryTests
     }
 
     [Fact]
-    public Task GetFillsLookupSelectAndLeavesMissingDefault() =>
+    public Task ReadFillsLookupSelectAndLeavesMissingDefault() =>
         FillLookup(new DefaultReadonlyEnrichmentStrategy<Parent>());
 
     [Fact]
@@ -43,18 +43,18 @@ public class EnrichedReadonlyRepositoryTests
         var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         var items = new List<Parent>();
-        await foreach (var item in repo.Get())
+        await foreach (var item in repo.Read())
             items.Add(item);
         Assert.Equal("person", items[0].type_name);
         Assert.Equal("", items[1].type_name);
     }
 
     [Fact]
-    public Task GetFillsListsAndGetSingleIsEnriched() =>
+    public Task ReadFillsListsAndReadSingleIsEnriched() =>
         FillLists(new DefaultReadonlyEnrichmentStrategy<Parent>());
 
     [Fact]
-    public Task HashsetFillsListsAndGetSingleIsEnriched() =>
+    public Task HashsetFillsListsAndReadSingleIsEnriched() =>
         FillLists(new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
 
     async Task FillLists(IReadonlyEnrichmentStrategy<Parent> strategy)
@@ -68,13 +68,13 @@ public class EnrichedReadonlyRepositoryTests
         var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         repo.AddEnriched("children", "id", children, "parent_id", many: true);
-        var item = await repo.GetSingle();
+        var item = await repo.ReadSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal(["a", "b"], item.children.Select(child => child.label));
     }
 
     [Fact]
-    public Task GetNestsListLookupAndKeepsRootSibling() =>
+    public Task ReadNestsListLookupAndKeepsRootSibling() =>
         NestListLookup(new DefaultReadonlyEnrichmentStrategy<Parent>());
 
     [Fact]
@@ -94,14 +94,14 @@ public class EnrichedReadonlyRepositoryTests
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         repo.AddEnriched("children", "id", children, "parent_id", many: true,
             nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
-        var item = await repo.GetSingle();
+        var item = await repo.ReadSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal("home", item.children[0].type_name);
         Assert.Equal("", item.children[1].type_name);
     }
 
     [Fact]
-    public async Task HashsetUsesOneGetPerEdge()
+    public async Task HashsetUsesOneReadPerEdge()
     {
         var types = new CountingReadonlyRepository<TypeRow>(
             new ListReadonlyRepository<TypeRow>(
@@ -118,15 +118,15 @@ public class EnrichedReadonlyRepositoryTests
             new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         repo.AddEnriched("children", "id", children, "parent_id", many: true);
-        await foreach (var _ in repo.Get()) { }
-        Assert.Equal(1, types.Gets);
-        Assert.Equal(0, types.GetSingles);
-        Assert.Equal(1, children.Gets);
-        Assert.Equal(0, children.GetSingles);
+        await foreach (var _ in repo.Read()) { }
+        Assert.Equal(1, types.Reads);
+        Assert.Equal(0, types.ReadSingles);
+        Assert.Equal(1, children.Reads);
+        Assert.Equal(0, children.ReadSingles);
     }
 
     [Fact]
-    public async Task DefaultUsesGetSinglePerLookupKey()
+    public async Task DefaultUsesReadSinglePerLookupKey()
     {
         var types = new CountingReadonlyRepository<TypeRow>(
             new ListReadonlyRepository<TypeRow>(
@@ -137,9 +137,9 @@ public class EnrichedReadonlyRepositoryTests
                 new Parent { id = 1, type_id = 10 },
                 new Parent { id = 2, type_id = 11 }));
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
-        await foreach (var _ in repo.Get()) { }
-        Assert.Equal(2, types.GetSingles);
-        Assert.Equal(0, types.Gets);
+        await foreach (var _ in repo.Read()) { }
+        Assert.Equal(2, types.ReadSingles);
+        Assert.Equal(0, types.Reads);
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class EnrichedReadonlyRepositoryTests
                     },
                     _ => throw new InvalidOperationException())));
         var items = new List<Parent>();
-        await foreach (var item in repo.Get())
+        await foreach (var item in repo.Read())
             items.Add(item);
         Assert.Equal([1, 2], items.Select(item => item.id));
         Assert.Equal(["person", "org"], items.Select(item => item.type_name));
@@ -177,20 +177,20 @@ public class EnrichedReadonlyRepositoryTests
 
     sealed class CountingReadonlyRepository<T>(IReadonlyRepository<T> inner) : ReadonlyRepository<T>
     {
-        public int Gets { get; private set; }
-        public int GetSingles { get; private set; }
+        public int Reads { get; private set; }
+        public int ReadSingles { get; private set; }
 
-        public override async IAsyncEnumerable<T> Get(IStatement? query = null)
+        public override async IAsyncEnumerable<T> Read(IStatement? query = null)
         {
-            Gets++;
-            await foreach (var item in inner.Get(query))
+            Reads++;
+            await foreach (var item in inner.Read(query))
                 yield return item;
         }
 
-        public override async Task<T?> GetSingle(IStatement? query = null)
+        public override async Task<T?> ReadSingle(IStatement? query = null)
         {
-            GetSingles++;
-            return await inner.GetSingle(query);
+            ReadSingles++;
+            return await inner.ReadSingle(query);
         }
     }
 }

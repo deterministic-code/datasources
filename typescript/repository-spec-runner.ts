@@ -260,22 +260,22 @@ export const runRepositorySpec = async (
       CREATE: async () => {
         if (step.CREATE) await repo.create(step.CREATE.row);
       },
-      GET: async () => {
-        if (!step.GET) return;
-        const row = await repo.getSingle(WhereBuilder.equals("id", step.GET.id));
-        if ("expect" in step.GET) assertRow(`${spec.name} GET`, row, step.GET.expect ?? null);
+      READ: async () => {
+        if (!step.READ) return;
+        const row = await repo.readSingle(WhereBuilder.equals("id", step.READ.id));
+        if ("expect" in step.READ) assertRow(`${spec.name} READ`, row, step.READ.expect ?? null);
       },
       QUERY: async () => {
         if (!step.QUERY) return;
         const query = step.QUERY.where ? whereOf(mapping, step.QUERY.where) : undefined;
         const rows: SpecRow[] = [];
-        for await (const row of repo.get(query)) rows.push(row);
+        for await (const row of repo.read(query)) rows.push(row);
         if (step.QUERY.expect) assertRows(`${spec.name} QUERY`, rows, step.QUERY.expect);
       },
-      GETBY: async () => {
-        if (!step.GETBY) return;
-        const row = await repo.getSingle(whereOf(mapping, step.GETBY.where));
-        if ("expect" in step.GETBY) assertRow(`${spec.name} GETBY`, row, step.GETBY.expect ?? null);
+      READBY: async () => {
+        if (!step.READBY) return;
+        const row = await repo.readSingle(whereOf(mapping, step.READBY.where));
+        if ("expect" in step.READBY) assertRow(`${spec.name} READBY`, row, step.READBY.expect ?? null);
       },
       UPDATE: async () => {
         if (!step.UPDATE) return;

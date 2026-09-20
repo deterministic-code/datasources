@@ -64,9 +64,9 @@ public static class RepositorySpec
             await (step switch
             {
                 { Create: { } create } => repo.Create(ToEntity(create.Row, spec.Type, mapping)),
-                { Get: { } get } => AssertGet(spec.Name, get, repo.GetSingle(WhereBuilder.Equals("id", IdValue(get.Id, spec.Type)))),
-                { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Get(Where(mapping, where, spec.Type)) : repo.Get()),
-                { GetBy: { } getBy } => AssertGet(spec.Name, getBy, repo.GetSingle(Where(mapping, getBy.Where, spec.Type))),
+                { Read: { } read } => AssertRead(spec.Name, read, repo.ReadSingle(WhereBuilder.Equals("id", IdValue(read.Id, spec.Type)))),
+                { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Read(Where(mapping, where, spec.Type)) : repo.Read()),
+                { ReadBy: { } readBy } => AssertRead(spec.Name, readBy, repo.ReadSingle(Where(mapping, readBy.Where, spec.Type))),
                 { Update: { } update } => AssertAffected($"{spec.Name} UPDATE", update.HasExpect, update.Expect,
                     repo.Update(ToEntity(update.Row, spec.Type, mapping))),
                 { UpdateBy: { } updateBy } => AssertAffected($"{spec.Name} UPDATEBY", updateBy.HasExpect, updateBy.Expect,
@@ -79,16 +79,16 @@ public static class RepositorySpec
             });
     }
 
-    static async Task AssertGet<T>(string name, IdOp get, Task<T?> task)
+    static async Task AssertRead<T>(string name, IdOp read, Task<T?> task)
     {
         var actual = await task;
-        if (get.HasExpect) AssertRow($"{name} GET", actual, get.Expect);
+        if (read.HasExpect) AssertRow($"{name} READ", actual, read.Expect);
     }
 
-    static async Task AssertGet<T>(string name, WhereOp getBy, Task<T?> task)
+    static async Task AssertRead<T>(string name, WhereOp readBy, Task<T?> task)
     {
         var actual = await task;
-        if (getBy.HasExpect) AssertRow($"{name} GETBY", actual, getBy.Expect);
+        if (readBy.HasExpect) AssertRow($"{name} READBY", actual, readBy.Expect);
     }
 
     static async Task AssertAffected(string name, bool hasExpect, object? expect, Task<Response> task)
@@ -229,9 +229,9 @@ public static class RepositorySpec
             yield return step switch
             {
                 { Create: { } create } => WithStatementSql(StatementBuilder.CreateInsert(table, Fields(Flatten(create.Row, spec.Type), col => !spec.Type.AssignIdentityOnCreate || !ids.Contains(col))).GetText(), true, spec.Type),
-                { Get: { } get } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, WhereBuilder.Equals("id", Value.From(get.Id))).GetText(), false, spec.Type),
+                { Read: { } read } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, WhereBuilder.Equals("id", Value.From(read.Id))).GetText(), false, spec.Type),
                 { Query: { } query } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, query.Where is { } where ? SqlWhere(where) : null).GetText(), false, spec.Type),
-                { GetBy: { } getBy } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, SqlWhere(getBy.Where)).GetText(), false, spec.Type),
+                { ReadBy: { } readBy } => WithStatementSql(StatementBuilder.CreateQuery(table, columns, SqlWhere(readBy.Where)).GetText(), false, spec.Type),
                 { Update: { } update } => WithStatementSql(StatementBuilder.CreateUpdate(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), WhereBuilder.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"]))).GetText(), true, spec.Type),
                 { UpdateBy: { } updateBy } => WithStatementSql(StatementBuilder.CreateUpdate(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(), true, spec.Type),
                 { Delete: { } delete } => WithStatementSql(StatementBuilder.CreateDelete(table, WhereBuilder.Equals("id", Value.From(delete.Id))).GetText(), true, spec.Type),
@@ -446,9 +446,9 @@ public static class RepositorySpec
     sealed class Step
     {
         [YamlMember(Alias = "CREATE")] public RowOp? Create { get; set; }
-        [YamlMember(Alias = "GET")] public IdOp? Get { get; set; }
+        [YamlMember(Alias = "READ")] public IdOp? Read { get; set; }
         [YamlMember(Alias = "QUERY")] public QueryOp? Query { get; set; }
-        [YamlMember(Alias = "GETBY")] public WhereOp? GetBy { get; set; }
+        [YamlMember(Alias = "READBY")] public WhereOp? ReadBy { get; set; }
         [YamlMember(Alias = "UPDATE")] public RowOp? Update { get; set; }
         [YamlMember(Alias = "UPDATEBY")] public UpdateByOp? UpdateBy { get; set; }
         [YamlMember(Alias = "DELETE")] public IdOp? Delete { get; set; }

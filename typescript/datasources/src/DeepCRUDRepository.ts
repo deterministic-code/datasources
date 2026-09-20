@@ -79,7 +79,7 @@ const load = async (
   const key = get(parent, enrichment.from);
   if (key === undefined || key === null || typeof key === "object") return [];
   const items: object[] = [];
-  for await (const item of writer.get(WhereBuilder.equals(enrichment.by, key)))
+  for await (const item of writer.read(WhereBuilder.equals(enrichment.by, key)))
     items.push(item);
   return items;
 };

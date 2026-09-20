@@ -101,7 +101,7 @@ See [Command](./sections/command.md) for middleware and `execute`.
 
 ## Enriched CRUD repository
 
-A `DeepCRUDRepository` wraps a CRUD repository, fills related fields after `get`, and writes nested `many` children on create / update / delete.
+A `DeepCRUDRepository` wraps a CRUD repository, fills related fields after `read`, and writes nested `many` children on create / update / delete.
 
 ::: dialects
 ```csharp
@@ -110,7 +110,7 @@ contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name"
 contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
     nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
 
-var loaded = await contacts.GetSingle(WhereBuilder.Equals("id", 10));
+var loaded = await contacts.ReadSingle(WhereBuilder.Equals("id", 10));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
 ```
 ```rust
@@ -121,7 +121,7 @@ contacts
         node.include(address_types, "address_type_name", "address_type_id", "id", Some("name".into()), false);
     });
 
-let loaded = contacts.get_single_where(&WhereBuilder::equals("id", 10)).await?;
+let loaded = contacts.read_single_where(&WhereBuilder::equals("id", 10)).await?;
 contacts.create(contact).await?;
 ```
 ```typescript
@@ -131,7 +131,7 @@ contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true
   node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
 );
 
-const loaded = await contacts.getSingle(WhereBuilder.equals("id", 10));
+const loaded = await contacts.readSingle(WhereBuilder.equals("id", 10));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 :::
@@ -140,7 +140,7 @@ See [Repository](./sections/repository.md) for readonly, CRUD, and bulk.
 
 ## Mappers
 
-`TransformMapper` reshapes an already-converted object. Repository get is convert, then map.
+`TransformMapper` reshapes an already-converted object. Repository read is convert, then map.
 
 ::: dialects
 ```csharp
@@ -168,7 +168,7 @@ const back = mapper.reverseMap(flat);
 ```
 :::
 
-See [Mapper](./sections/mappers.md) for `NameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
+See [Mapper](./sections/mappers.md) for `INameMapper`, `FlatToTypeMapper`, and `StatementMapper`.
 
 ## Type Converter
 

@@ -11,7 +11,7 @@ use std::sync::Mutex;
 
 pub struct MockRepository {
     pub items: Mutex<Vec<Row>>,
-    get_single_error: Mutex<Option<String>>,
+    read_single_error: Mutex<Option<String>>,
     get_error: Mutex<Option<String>>,
     add_error: Mutex<Option<String>>,
     update_error: Mutex<Option<String>>,
@@ -22,7 +22,7 @@ impl MockRepository {
     pub fn new() -> Self {
         Self {
             items: Mutex::new(Vec::new()),
-            get_single_error: Mutex::new(None),
+            read_single_error: Mutex::new(None),
             get_error: Mutex::new(None),
             add_error: Mutex::new(None),
             update_error: Mutex::new(None),
@@ -30,11 +30,11 @@ impl MockRepository {
         }
     }
 
-    pub fn set_get_single_error(&self, message: impl Into<String>) {
-        *self.get_single_error.lock().expect("mock") = Some(message.into());
+    pub fn set_read_single_error(&self, message: impl Into<String>) {
+        *self.read_single_error.lock().expect("mock") = Some(message.into());
     }
 
-    pub fn set_get_error(&self, message: impl Into<String>) {
+    pub fn set_read_error(&self, message: impl Into<String>) {
         *self.get_error.lock().expect("mock") = Some(message.into());
     }
 
@@ -53,26 +53,26 @@ impl MockRepository {
 
 #[async_trait]
 impl ReadonlyRepository for MockRepository {
-    async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Row>> {
-        if let Some(error) = &*self.get_single_error.lock().expect("mock") {
+    async fn read_single(&self, _query: Option<&dyn Query>) -> Result<Option<Row>> {
+        if let Some(error) = &*self.read_single_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(self.items.lock().expect("mock").first().cloned())
     }
 
-    async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, _query: Option<&dyn Query>) -> Result<Vec<Row>> {
         if let Some(error) = &*self.get_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(self.items.lock().expect("mock").clone())
     }
 
-    async fn get_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.get_single(None).await
+    async fn read_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Row>> {
+        self.read_single(None).await
     }
 
-    async fn get_where(&self, _where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.get(None).await
+    async fn read_where(&self, _where_clause: &dyn Where) -> Result<Vec<Row>> {
+        self.read(None).await
     }
 }
 

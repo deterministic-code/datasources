@@ -100,12 +100,12 @@ struct StatementMapperSpec {
 struct Step {
     #[serde(rename = "CREATE")]
     create: Option<RowOp>,
-    #[serde(rename = "GET")]
-    get: Option<IdOp>,
+    #[serde(rename = "READ")]
+    read: Option<IdOp>,
     #[serde(rename = "QUERY")]
     query: Option<QueryOp>,
-    #[serde(rename = "GETBY")]
-    get_by: Option<WhereOp>,
+    #[serde(rename = "READBY")]
+    read_by: Option<WhereOp>,
     #[serde(rename = "UPDATE")]
     update: Option<RowOp>,
     #[serde(rename = "UPDATEBY")]
@@ -506,8 +506,8 @@ fn queries(spec: &Spec) -> Vec<String> {
                     true,
                     &spec.type_spec,
                 )
-            } else if let Some(get) = &step.get {
-                let where_clause = WhereBuilder::equals("id", yaml_value(&get.id));
+            } else if let Some(read) = &step.read {
+                let where_clause = WhereBuilder::equals("id", yaml_value(&read.id));
                 with_statement_sql(
                     StatementBuilder::create_query(&table, &refs, Some(&where_clause), &[])
                         .get_text(),
@@ -527,8 +527,8 @@ fn queries(spec: &Spec) -> Vec<String> {
                     false,
                     &spec.type_spec,
                 )
-            } else if let Some(get_by) = &step.get_by {
-                let where_clause = where_sql(&get_by.where_clause);
+            } else if let Some(read_by) = &step.read_by {
+                let where_clause = where_sql(&read_by.where_clause);
                 with_statement_sql(
                     StatementBuilder::create_query(&table, &refs, Some(&where_clause), &[])
                         .get_text(),
@@ -686,37 +686,37 @@ pub async fn run(
                     .await
                     .unwrap();
             }
-            Step { get: Some(get), .. } => {
-                let where_clause = WhereBuilder::equals("id", yaml_value(&get.id));
-                let row = repo.get_single_where(&where_clause).await.unwrap();
-                if let Some(expect) = &get.expect {
-                    assert_row(&format!("{} GET", spec.name), row.as_ref(), expect);
+            Step { read: Some(read), .. } => {
+                let where_clause = WhereBuilder::equals("id", yaml_value(&read.id));
+                let row = repo.read_single_where(&where_clause).await.unwrap();
+                if let Some(expect) = &read.expect {
+                    assert_row(&format!("{} READ", spec.name), row.as_ref(), expect);
                 }
             }
             Step {
                 query: Some(query), ..
             } => {
                 let rows = if let Some(where_clause) = &query.where_clause {
-                    repo.get_where(&where_of(&mapping, where_clause))
+                    repo.read_where(&where_of(&mapping, where_clause))
                         .await
                         .unwrap()
                 } else {
-                    repo.get(None).await.unwrap()
+                    repo.read(None).await.unwrap()
                 };
                 if let Some(expect) = &query.expect {
                     assert_rows(&format!("{} QUERY", spec.name), &rows, expect);
                 }
             }
             Step {
-                get_by: Some(get_by),
+                read_by: Some(read_by),
                 ..
             } => {
                 let row = repo
-                    .get_single_where(&where_of(&mapping, &get_by.where_clause))
+                    .read_single_where(&where_of(&mapping, &read_by.where_clause))
                     .await
                     .unwrap();
-                if let Some(expect) = &get_by.expect {
-                    assert_row(&format!("{} GETBY", spec.name), row.as_ref(), expect);
+                if let Some(expect) = &read_by.expect {
+                    assert_row(&format!("{} READBY", spec.name), row.as_ref(), expect);
                 }
             }
             Step {

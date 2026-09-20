@@ -19,11 +19,11 @@ internal static class ContactsParity
         });
         if (middleware is not null)
             join.AddMiddleware(middleware);
-        await foreach (var row in join.Get(ContactsJoinQuery.Create()))
+        await foreach (var row in join.Read(ContactsJoinQuery.Create()))
             rows.Add(row);
         var eager = AsContactsView.FromMapped(new FlatToTypeMapper(ContactsView.TypeMap).Collapse(rows));
         var items = new List<Contact>();
-        await foreach (var item in ContactsServiceOf.Create(connection, middleware).Get())
+        await foreach (var item in ContactsServiceOf.Create(connection, middleware).Read())
             items.Add(item);
         return (eager, AsContactsView.FromContacts(items));
     }

@@ -20,7 +20,7 @@ impl MemoryRepository {
 
 #[async_trait]
 impl ReadonlyRepository for MemoryRepository {
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         let text = query.map(|q| q.get_text()).unwrap_or_default();
         let reader = MemoryCommand::new(self.connection.clone())
             .execute_reader(&text, None)
@@ -32,7 +32,7 @@ impl ReadonlyRepository for MemoryRepository {
         }
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
         let text = query.map(|q| q.get_text()).unwrap_or_default();
         let reader = MemoryCommand::new(self.connection.clone())
             .execute_reader(&text, None)
@@ -40,13 +40,13 @@ impl ReadonlyRepository for MemoryRepository {
         datasources::collect_reader(&*reader).await
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.get_single(Some(&TextQuery::new(where_clause.get_text())))
+    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
+        self.read_single(Some(&TextQuery::new(where_clause.get_text())))
             .await
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.get(Some(&TextQuery::new(where_clause.get_text())))
+    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
+        self.read(Some(&TextQuery::new(where_clause.get_text())))
             .await
     }
 }

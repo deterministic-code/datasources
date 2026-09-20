@@ -16,24 +16,24 @@ pub struct DefaultReadonlyEnrichmentStrategy;
 
 #[async_trait]
 impl ReadonlyEnrichmentStrategy for DefaultReadonlyEnrichmentStrategy {
-    async fn get(
+    async fn read(
         &self,
         inner: &dyn ReadonlyRepository,
         tree: &RepositoryTree,
         query: Option<&dyn Query>,
     ) -> Result<Vec<Row>> {
-        let mut items = inner.get(query).await?;
+        let mut items = inner.read(query).await?;
         self.enrich(tree, &mut items).await?;
         Ok(items)
     }
 
-    async fn get_where(
+    async fn read_where(
         &self,
         inner: &dyn ReadonlyRepository,
         tree: &RepositoryTree,
         where_clause: &dyn Where,
     ) -> Result<Vec<Row>> {
-        let mut items = inner.get_where(where_clause).await?;
+        let mut items = inner.read_where(where_clause).await?;
         self.enrich(tree, &mut items).await?;
         Ok(items)
     }
@@ -82,7 +82,7 @@ async fn apply_lookup(
         let cache_key = key.wire_text();
         if !cache.contains_key(&cache_key) {
             let related = via
-                .get_single_where(&WhereBuilder::equals(enrichment.by.clone(), key.clone()))
+                .read_single_where(&WhereBuilder::equals(enrichment.by.clone(), key.clone()))
                 .await?;
             cache.insert(cache_key.clone(), related);
         }
@@ -112,7 +112,7 @@ async fn apply_many(
             continue;
         };
         let mut related = via
-            .get_where(&WhereBuilder::equals(enrichment.by.clone(), key))
+            .read_where(&WhereBuilder::equals(enrichment.by.clone(), key))
             .await?;
         for child in children {
             child.enrich_from(&mut related).await?;

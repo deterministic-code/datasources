@@ -104,24 +104,24 @@ mod tests {
         conn.open().await.unwrap();
         assert_eq!(conn.collection_name(), "");
         let repo = MemoryRepository::new(conn.clone());
-        assert!(repo.get_single(None).await.unwrap().is_some());
+        assert!(repo.read_single(None).await.unwrap().is_some());
         assert!(repo
-            .get_single(Some(&TextQuery::new("{\"id\":9}")))
+            .read_single(Some(&TextQuery::new("{\"id\":9}")))
             .await
             .unwrap()
             .is_none());
         assert!(!repo
-            .get(Some(&TextQuery::new("{\"id\":1}")))
+            .read(Some(&TextQuery::new("{\"id\":1}")))
             .await
             .unwrap()
             .is_empty());
         assert!(repo
-            .get_single_where(&TextWhere::new("{\"id\":1}"))
+            .read_single_where(&TextWhere::new("{\"id\":1}"))
             .await
             .unwrap()
             .is_some());
         assert!(!repo
-            .get_where(&TextWhere::new("{\"id\":1}"))
+            .read_where(&TextWhere::new("{\"id\":1}"))
             .await
             .unwrap()
             .is_empty());

@@ -31,7 +31,7 @@ constructor(options?: StatementMapperOptions<T>)
 Maps the table or entity name when the repository is built.
 
 ```typescript
-readonly entity: IMapper<string, string>
+readonly entity: INameMapper
 ```
 
 ##### columns
@@ -39,7 +39,7 @@ readonly entity: IMapper<string, string>
 Maps column names when the repository is built.
 
 ```typescript
-readonly columns: IMapper<string, string>
+readonly columns: INameMapper
 ```
 
 ##### query
@@ -84,7 +84,7 @@ readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureSt
 
 ##### rows
 
-Get-row Mapper. [map](#statementmapper-map-value) / [reverseMap](#statementmapper-reversemap-value) delegate here.
+Read-row Mapper. [map](#statementmapper-map-value) / [reverseMap](#statementmapper-reversemap-value) delegate here.
 
 ```typescript
 readonly rows: IMapper<T, T>
@@ -131,7 +131,7 @@ Constructor bag for [StatementMapper](#statementmapper).
 Maps the table or entity name.
 
 ```typescript
-entity?: IMapper<string, string>
+entity?: INameMapper
 ```
 
 ##### columns
@@ -139,12 +139,12 @@ entity?: IMapper<string, string>
 Maps column names.
 
 ```typescript
-columns?: IMapper<string, string>
+columns?: INameMapper
 ```
 
 ##### rows
 
-Get-row Mapper.
+Read-row Mapper.
 
 ```typescript
 rows?: IMapper<T, T>
@@ -257,7 +257,7 @@ IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure {
 
 ##### Rows
 
-Get-row Mapper. [Map](#statementmapper-map-value) / [ReverseMap](#statementmapper-reversemap-value) delegate here.
+Read-row Mapper. [Map](#statementmapper-map-value) / [ReverseMap](#statementmapper-reversemap-value) delegate here.
 
 ```csharp
 IMapper<T, T> Rows { get; init; }
@@ -356,7 +356,7 @@ pub stored_procedure: Option<Arc<TransformMapper<String, String>>>
 
 ##### rows
 
-Get-row mapper. [map](#statementmapper-map-value) / [reverse_map](#statementmapper-reverse_map-value) delegate here.
+Read-row mapper. [map](#statementmapper-map-value) / [reverse_map](#statementmapper-reverse_map-value) delegate here.
 
 ```rust
 pub rows: TransformMapper<Row, Row>

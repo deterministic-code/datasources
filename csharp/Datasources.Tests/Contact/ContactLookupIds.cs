@@ -14,7 +14,7 @@ internal static class ContactLookupIds
                 Connection = connection,
                 Entity = entity,
                 Columns = ["id", "name"]
-            }).GetSingle(WhereBuilder.Equals("name", name));
+            }).ReadSingle(WhereBuilder.Equals("name", name));
             return row?.id ?? throw new InvalidOperationException($"{entity} '{name}' missing");
         }
         return new ContactLookups(

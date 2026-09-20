@@ -130,7 +130,7 @@ impl Repository {
         }
     }
 
-    async fn read_single(&self, text: String, params: Vec<Parameter>) -> Result<Option<Row>> {
+    async fn fetch_one(&self, text: String, params: Vec<Parameter>) -> Result<Option<Row>> {
         let reader = self.command().execute_reader(&text, Some(&params)).await?;
         if !reader.next().await? {
             return Ok(None);
@@ -145,7 +145,7 @@ impl Repository {
             .transpose()
     }
 
-    async fn read_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Row>> {
+    async fn fetch_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Row>> {
         let reader = self.command().execute_reader(&text, Some(&params)).await?;
         let mut items = Vec::new();
         while reader.next().await? {
@@ -173,24 +173,24 @@ impl ReadonlyRepository for Repository {
         self.entity_type
     }
 
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         let (text, params) = self.query_parts(query);
-        self.read_single(text, params).await
+        self.fetch_one(text, params).await
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
         let (text, params) = self.query_parts(query);
-        self.read_all(text, params).await
+        self.fetch_all(text, params).await
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
+    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
         let (text, params) = self.statements.query(Some(where_clause));
-        self.read_single(text, params).await
+        self.fetch_one(text, params).await
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
+    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
         let (text, params) = self.statements.query(Some(where_clause));
-        self.read_all(text, params).await
+        self.fetch_all(text, params).await
     }
 }
 

@@ -21,20 +21,20 @@ impl StubRepository {
 
 #[async_trait]
 impl ReadonlyRepository for StubRepository {
-    async fn get_single(&self, _query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, _query: Option<&dyn Query>) -> Result<Option<Row>> {
         Err(fail(&self.provider))
     }
 
-    async fn get(&self, _query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, _query: Option<&dyn Query>) -> Result<Vec<Row>> {
         Err(fail(&self.provider))
     }
 
-    async fn get_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.get_single(None).await
+    async fn read_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Row>> {
+        self.read_single(None).await
     }
 
-    async fn get_where(&self, _where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.get(None).await
+    async fn read_where(&self, _where_clause: &dyn Where) -> Result<Vec<Row>> {
+        self.read(None).await
     }
 }
 

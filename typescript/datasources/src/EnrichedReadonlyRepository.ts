@@ -47,7 +47,7 @@ export class EnrichedReadonlyRepository<T extends object>
     return items;
   };
 
-  async *get(query?: IQuery | IWhere): AsyncIterable<T> {
-    yield* this.strategy.get(this.inner, this.tree, query);
+  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
+    yield* this.strategy.read(this.inner, this.tree, query);
   }
 }

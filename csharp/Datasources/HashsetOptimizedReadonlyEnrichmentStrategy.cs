@@ -4,13 +4,13 @@ namespace Datasources;
 
 public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T>
 {
-    public async IAsyncEnumerable<T> Get(
+    public async IAsyncEnumerable<T> Read(
         IReadonlyRepository<T> inner,
         IRepositoryTree tree,
         IStatement? query)
     {
         var items = new List<T>();
-        await foreach (var item in inner.Get(query))
+        await foreach (var item in inner.Read(query))
             items.Add(item);
         await Enrich(tree, items);
         foreach (var item in items)
@@ -34,7 +34,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         var keys = Keys(parents, enrichment.From);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, TRelated>();
-        await foreach (var item in via.Get(WhereBuilder.In(enrichment.By, keys.Values.ToList())))
+        await foreach (var item in via.Read(WhereBuilder.In(enrichment.By, keys.Values.ToList())))
         {
             var by = RepositoryTreeNode.Get(item!, enrichment.By);
             if (by is not null)
@@ -60,7 +60,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         var keys = Keys(parents, enrichment.From);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, List<TRelated>>();
-        await foreach (var item in via.Get(WhereBuilder.In(enrichment.By, keys.Values.ToList())))
+        await foreach (var item in via.Read(WhereBuilder.In(enrichment.By, keys.Values.ToList())))
         {
             var by = RepositoryTreeNode.Get(item!, enrichment.By);
             if (by is null) continue;

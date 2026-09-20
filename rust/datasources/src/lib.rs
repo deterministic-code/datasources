@@ -96,7 +96,7 @@ pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
     FlatToTypeMapper, FlatToTypeMapperTrait, MappedRow, MappedValue, Mapper, NameMapper,
-    NameSourceDestinationMapper, RowTypeMapper, SourceDestinationMapper, StatementMapper,
+    NameSourceDestinationMapper, RowTypeMapper, StatementMapper,
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
 pub use mocks::{

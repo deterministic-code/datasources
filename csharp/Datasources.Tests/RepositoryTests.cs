@@ -63,13 +63,13 @@ public class RepositoryTests
         repo.AddMiddleware(new PassMiddleware());
         command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
         var rows = new List<UserRow>();
-        await foreach (var row in repo.Get())
+        await foreach (var row in repo.Read())
             rows.Add(row);
         Assert.Single(rows);
         Assert.Equal(1, rows[0].id);
         Assert.Equal("SELECT id, name FROM users", command.ExecuteReaderCalls[0].Text);
         command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
-        Assert.Equal(1, (await repo.GetSingle())!.id);
+        Assert.Equal(1, (await repo.ReadSingle())!.id);
     }
 
     [Fact]
@@ -78,10 +78,10 @@ public class RepositoryTests
         var (repo, command) = Create();
         command.Reader = new MockReader<Row>([]);
         var where = WhereBuilder.Equals("id", 9);
-        await repo.GetSingle(StatementBuilder.CreateQuery("users", ["id"], where));
+        await repo.ReadSingle(StatementBuilder.CreateQuery("users", ["id"], where));
         Assert.Equal("SELECT id FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
         Assert.Equal(new Value.Int(9), command.ExecuteReaderCalls[0].Parameters![0].Value);
-        Assert.Null(await repo.GetSingle());
+        Assert.Null(await repo.ReadSingle());
     }
 
     [Fact]
@@ -89,10 +89,10 @@ public class RepositoryTests
     {
         var (repo, command) = Create();
         command.Reader = new MockReader<Row>([]);
-        await repo.GetSingle(WhereBuilder.Equals("id", 9));
+        await repo.ReadSingle(WhereBuilder.Equals("id", 9));
         Assert.Equal("SELECT id, name FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
         Assert.Equal(new Value.Int(9), command.ExecuteReaderCalls[0].Parameters![0].Value);
-        await foreach (var _ in repo.Get(WhereBuilder.Equals("id", 9)))
+        await foreach (var _ in repo.Read(WhereBuilder.Equals("id", 9)))
             break;
     }
 
@@ -129,7 +129,7 @@ public class RepositoryTests
         command.Reader = new MockReader<Row>([null]);
         await Assert.ThrowsAsync<DatasourceException>(async () =>
         {
-            await foreach (var _ in repo.Get()) { }
+            await foreach (var _ in repo.Read()) { }
         });
         var (cells, _) = Create<Dictionary<string, Value>>();
         await Assert.ThrowsAsync<DatasourceException>(() =>
@@ -201,7 +201,7 @@ public class RepositoryTests
                 row => { row.name = row.name.ToLowerInvariant(); return row; })
         });
         command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
-        Assert.Equal("A", (await repo.GetSingle())!.name);
+        Assert.Equal("A", (await repo.ReadSingle())!.name);
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public class RepositoryTests
             ["contact_name1"] = "bob",
             ["contact_name2"] = "roberta"
         }]);
-        var user = await repo.GetSingle();
+        var user = await repo.ReadSingle();
         Assert.Equal("bobby", user!.username);
         Assert.Equal("bob@asdf.com", user.email);
         Assert.Equal(["bob", "roberta"], user.Contacts.Select(contact => contact.Name));
@@ -240,7 +240,7 @@ public class RepositoryTests
             ["contact_name2"] = "roberta"
         }]);
         var rows = new List<User>();
-        await foreach (var row in repo.Get())
+        await foreach (var row in repo.Read())
             rows.Add(row);
         Assert.Equal(2, rows[0].Contacts.Count);
     }

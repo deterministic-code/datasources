@@ -8,13 +8,13 @@ import type { IWhere } from "../IWhere.ts";
 
 export class MockRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   items: T[] = [];
-  getSingleCalls: Array<IQuery | IWhere | undefined> = [];
-  getCalls: Array<IQuery | IWhere | undefined> = [];
+  readSingleCalls: Array<IQuery | IWhere | undefined> = [];
+  readCalls: Array<IQuery | IWhere | undefined> = [];
   addCalls: T[] = [];
   updateCalls: Array<{ item: T; byWhere?: IWhere }> = [];
   deleteCalls: Array<{ item: T; byWhere?: IWhere }> = [];
-  getSingleError?: unknown;
-  getError?: unknown;
+  readSingleError?: unknown;
+  readError?: unknown;
   addError?: unknown;
   updateError?: unknown;
   deleteError?: unknown;
@@ -29,18 +29,18 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     super(type);
   }
 
-  async getSingle(query?: IQuery | IWhere): Promise<T | undefined> {
-    this.getSingleCalls.push(query);
-    if (this.getSingleError) {
-      throw this.getSingleError;
+  async readSingle(query?: IQuery | IWhere): Promise<T | undefined> {
+    this.readSingleCalls.push(query);
+    if (this.readSingleError) {
+      throw this.readSingleError;
     }
     return this.items[0];
   }
 
-  async *get(query?: IQuery | IWhere): AsyncIterable<T> {
-    this.getCalls.push(query);
-    if (this.getError) {
-      throw this.getError;
+  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
+    this.readCalls.push(query);
+    if (this.readError) {
+      throw this.readError;
     }
     for (const item of this.items) {
       yield item;

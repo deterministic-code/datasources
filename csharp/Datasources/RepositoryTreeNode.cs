@@ -97,7 +97,7 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         Task<Response> Create(object item);
         Task<Response> Update(object item, IWhere? byWhere = null);
         Task<Response> Delete(object item, IWhere? byWhere = null);
-        IAsyncEnumerable<object> Get(IStatement? query = null);
+        IAsyncEnumerable<object> Read(IStatement? query = null);
     }
 
     sealed class ChildPersist<T> : IChildPersist
@@ -109,9 +109,9 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
             inner.Update((T)item, byWhere);
         public Task<Response> Delete(object item, IWhere? byWhere = null) =>
             inner.Delete((T)item, byWhere);
-        public async IAsyncEnumerable<object> Get(IStatement? query = null)
+        public async IAsyncEnumerable<object> Read(IStatement? query = null)
         {
-            await foreach (var item in inner.Get(query))
+            await foreach (var item in inner.Read(query))
                 yield return item!;
         }
     }

@@ -49,22 +49,22 @@ impl ListRepository {
 
 #[async_trait]
 impl ReadonlyRepository for ListRepository {
-    async fn get_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         Ok(self
             .filter(query.and_then(Query::where_clause))
             .into_iter()
             .next())
     }
 
-    async fn get(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
         Ok(self.filter(query.and_then(Query::where_clause)))
     }
 
-    async fn get_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
+    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
         Ok(self.filter(Some(where_clause)).into_iter().next())
     }
 
-    async fn get_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
+    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
         Ok(self.filter(Some(where_clause)))
     }
 }

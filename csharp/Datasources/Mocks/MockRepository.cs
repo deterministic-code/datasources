@@ -3,21 +3,21 @@ namespace Datasources;
 public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>
 {
     public List<T> Items { get; } = new();
-    public Exception? GetSingleError { get; set; }
-    public Exception? GetError { get; set; }
+    public Exception? ReadSingleError { get; set; }
+    public Exception? ReadError { get; set; }
     public Exception? CreateError { get; set; }
     public Exception? UpdateError { get; set; }
     public Exception? DeleteError { get; set; }
     public MockRepository(IConnection _) { }
 
-    public override Task<T?> GetSingle(IStatement? query = null) =>
-        GetSingleError is not null
-            ? throw GetSingleError
+    public override Task<T?> ReadSingle(IStatement? query = null) =>
+        ReadSingleError is not null
+            ? throw ReadSingleError
             : Task.FromResult(Items.Count == 0 ? default : Items[0]);
 
-    public override async IAsyncEnumerable<T> Get(IStatement? query = null)
+    public override async IAsyncEnumerable<T> Read(IStatement? query = null)
     {
-        if (GetError is not null) throw GetError;
+        if (ReadError is not null) throw ReadError;
         await Task.Yield();
         foreach (var item in Items) yield return item;
     }
