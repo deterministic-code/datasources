@@ -14,9 +14,11 @@ import {
 
 describe("Query and Where", () => {
   it("keeps optional where on the query", () => {
+    const select = new Query("SELECT 1");
     const where = new Where("id = 1");
-    expect(new Query("SELECT 1").where).toBeUndefined();
-    expect(new Query("SELECT 1", where).where).toBe(where);
+    const withWhere = new Query("SELECT 1", where);
+    expect(select.where).toBeUndefined();
+    expect(withWhere.where).toBe(where);
   });
 });
 

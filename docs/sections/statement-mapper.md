@@ -44,7 +44,7 @@ readonly columns: INameMapper
 
 ##### query
 
-Rewrites a finished query.
+Rewrites a finished [IQuery](./statements.md#iquery).
 
 ```typescript
 readonly query?: IMapper<IQuery, IQuery>
@@ -52,7 +52,7 @@ readonly query?: IMapper<IQuery, IQuery>
 
 ##### insert
 
-Rewrites a finished insert.
+Rewrites a finished [IInsertStatement](./statements.md#iinsertstatement).
 
 ```typescript
 readonly insert?: IMapper<IInsertStatement, IInsertStatement>
@@ -60,7 +60,7 @@ readonly insert?: IMapper<IInsertStatement, IInsertStatement>
 
 ##### update
 
-Rewrites a finished update.
+Rewrites a finished [IUpdateStatement](./statements.md#iupdatestatement).
 
 ```typescript
 readonly update?: IMapper<IUpdateStatement, IUpdateStatement>
@@ -68,7 +68,7 @@ readonly update?: IMapper<IUpdateStatement, IUpdateStatement>
 
 ##### delete
 
-Rewrites a finished delete.
+Rewrites a finished [IDeleteStatement](./statements.md#ideletestatement).
 
 ```typescript
 readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>
@@ -76,7 +76,7 @@ readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>
 
 ##### storedProcedure
 
-Rewrites a finished stored-procedure statement.
+Rewrites a finished [IStoredProcedureStatement](./statements.md#istoredprocedurestatement).
 
 ```typescript
 readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
@@ -152,7 +152,7 @@ rows?: IMapper<T, T>
 
 ##### query
 
-Rewrites a finished query.
+Rewrites a finished [IQuery](./statements.md#iquery).
 
 ```typescript
 query?: IMapper<IQuery, IQuery>
@@ -160,7 +160,7 @@ query?: IMapper<IQuery, IQuery>
 
 ##### insert
 
-Rewrites a finished insert.
+Rewrites a finished [IInsertStatement](./statements.md#iinsertstatement).
 
 ```typescript
 insert?: IMapper<IInsertStatement, IInsertStatement>
@@ -168,7 +168,7 @@ insert?: IMapper<IInsertStatement, IInsertStatement>
 
 ##### update
 
-Rewrites a finished update.
+Rewrites a finished [IUpdateStatement](./statements.md#iupdatestatement).
 
 ```typescript
 update?: IMapper<IUpdateStatement, IUpdateStatement>
@@ -176,7 +176,7 @@ update?: IMapper<IUpdateStatement, IUpdateStatement>
 
 ##### delete
 
-Rewrites a finished delete.
+Rewrites a finished [IDeleteStatement](./statements.md#ideletestatement).
 
 ```typescript
 delete?: IMapper<IDeleteStatement, IDeleteStatement>
@@ -184,7 +184,7 @@ delete?: IMapper<IDeleteStatement, IDeleteStatement>
 
 ##### storedProcedure
 
-Rewrites a finished stored-procedure statement.
+Rewrites a finished [IStoredProcedureStatement](./statements.md#istoredprocedurestatement).
 
 ```typescript
 storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
@@ -217,7 +217,7 @@ IMapper<string, string> Columns { get; init; }
 
 ##### Query
 
-Rewrites a finished query.
+Rewrites a finished [IQuery](./statements.md#iquery).
 
 ```csharp
 IMapper<IQuery, IQuery>? Query { get; init; }
@@ -225,7 +225,7 @@ IMapper<IQuery, IQuery>? Query { get; init; }
 
 ##### Insert
 
-Rewrites a finished insert.
+Rewrites a finished [IInsertStatement](./statements.md#iinsertstatement).
 
 ```csharp
 IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
@@ -233,7 +233,7 @@ IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
 
 ##### Update
 
-Rewrites a finished update.
+Rewrites a finished [IUpdateStatement](./statements.md#iupdatestatement).
 
 ```csharp
 IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
@@ -241,7 +241,7 @@ IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
 
 ##### Delete
 
-Rewrites a finished delete.
+Rewrites a finished [IDeleteStatement](./statements.md#ideletestatement).
 
 ```csharp
 IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
@@ -249,7 +249,7 @@ IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
 
 ##### StoredProcedure
 
-Rewrites a finished stored-procedure statement.
+Rewrites a finished [IStoredProcedureStatement](./statements.md#istoredprocedurestatement).
 
 ```csharp
 IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure { get; init; }

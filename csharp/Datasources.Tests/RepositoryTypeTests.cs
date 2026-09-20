@@ -28,8 +28,8 @@ public class RepositoryTypeTests
     public void FactoryCreateByTypeExposesItemType()
     {
         var factory = new RepositoryFactory();
-        factory.Register<Item>(_ => new StubRepository<Item>("memory", new StubConnection("memory")));
-        var repo = (IRepository)factory.Create(typeof(Item));
+        factory.Register(new StubRepository<Item>("memory", new StubConnection("memory")));
+        var repo = factory.Create<Item>();
         Assert.Equal(typeof(Item), repo.Type);
     }
 }
