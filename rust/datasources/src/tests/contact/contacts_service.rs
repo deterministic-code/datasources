@@ -1,4 +1,5 @@
 use crate::deep_crud_repository::DeepCRUDRepository;
+use crate::i_repository::IRepository;
 use crate::query::Query;
 use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::response::Response;
@@ -73,12 +74,14 @@ impl ContactsService {
     }
 }
 
-#[async_trait]
-impl ReadonlyRepository for ContactsService {
+impl IRepository for ContactsService {
     fn entity_type(&self) -> TypeId {
         self.inner.entity_type()
     }
+}
 
+#[async_trait]
+impl ReadonlyRepository for ContactsService {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }

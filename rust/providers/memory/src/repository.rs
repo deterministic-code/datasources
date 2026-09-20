@@ -3,8 +3,8 @@ use crate::connection::MemoryConnection;
 use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, CRUDRepository, Command, Query, ReadonlyRepository, Response, Result, Row,
-    TextQuery, Value, Where,
+    identity_filter, CRUDRepository, Command, IRepository, Query, ReadonlyRepository, Response,
+    Result, Row, TextQuery, Value, Where,
 };
 use std::sync::Arc;
 
@@ -17,6 +17,8 @@ impl MemoryRepository {
         Self { connection }
     }
 }
+
+impl IRepository for MemoryRepository {}
 
 #[async_trait]
 impl ReadonlyRepository for MemoryRepository {

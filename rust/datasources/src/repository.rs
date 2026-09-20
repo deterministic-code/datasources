@@ -1,3 +1,4 @@
+use crate::i_repository::IRepository;
 use crate::query::Query;
 use crate::response::Response;
 use crate::result::Result;
@@ -8,11 +9,7 @@ use std::any::TypeId;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait ReadonlyRepository: Send + Sync {
-    fn entity_type(&self) -> TypeId {
-        TypeId::of::<Row>()
-    }
-
+pub trait ReadonlyRepository: IRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>;
     async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>;
     async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>>;
@@ -28,12 +25,14 @@ pub trait CRUDRepository: ReadonlyRepository {
 
 struct AsReadonly(Arc<dyn CRUDRepository>);
 
-#[async_trait]
-impl ReadonlyRepository for AsReadonly {
+impl IRepository for AsReadonly {
     fn entity_type(&self) -> TypeId {
         self.0.entity_type()
     }
+}
 
+#[async_trait]
+impl ReadonlyRepository for AsReadonly {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.0.read_single(query).await
     }

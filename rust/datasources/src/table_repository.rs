@@ -9,6 +9,7 @@ use crate::datasource_error::DatasourceError;
 use crate::mappers::{Mapper, StatementMapper};
 use crate::parameter::Parameter;
 use crate::query::Query;
+use crate::i_repository::IRepository;
 use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
@@ -167,12 +168,14 @@ impl Repository {
     }
 }
 
-#[async_trait]
-impl ReadonlyRepository for Repository {
+impl IRepository for Repository {
     fn entity_type(&self) -> TypeId {
         self.entity_type
     }
+}
 
+#[async_trait]
+impl ReadonlyRepository for Repository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         let (text, params) = self.query_parts(query);
         self.fetch_one(text, params).await

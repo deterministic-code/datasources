@@ -1,4 +1,5 @@
 use super::not_implemented::fail;
+use crate::i_repository::IRepository;
 use crate::query::Query;
 use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::response::Response;
@@ -18,6 +19,8 @@ impl StubRepository {
         }
     }
 }
+
+impl IRepository for StubRepository {}
 
 #[async_trait]
 impl ReadonlyRepository for StubRepository {

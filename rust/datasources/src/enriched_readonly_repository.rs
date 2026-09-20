@@ -2,6 +2,7 @@ use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrate
 use crate::enriched::Enriched;
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
+use crate::i_repository::IRepository;
 use crate::repository::ReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
@@ -106,12 +107,14 @@ impl Enriched for EnrichedReadonlyRepository {
     }
 }
 
-#[async_trait]
-impl ReadonlyRepository for EnrichedReadonlyRepository {
+impl IRepository for EnrichedReadonlyRepository {
     fn entity_type(&self) -> TypeId {
         self.inner.entity_type()
     }
+}
 
+#[async_trait]
+impl ReadonlyRepository for EnrichedReadonlyRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         Ok(self.read(query).await?.into_iter().next())
     }

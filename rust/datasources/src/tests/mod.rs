@@ -991,6 +991,10 @@ async fn table_repository() {
 fn repository_entity_type() {
     let typed = Repository::from_type::<Item>(MockConnection::new()).unwrap();
     assert_eq!(typed.entity_type(), TypeId::of::<Item>());
+    assert_eq!(
+        (&typed as &dyn IRepository).entity_type(),
+        TypeId::of::<Item>()
+    );
     let untyped = Repository::new(create_repository_builder_options::<Item>(
         MockConnection::new(),
     ))
@@ -1002,6 +1006,10 @@ fn repository_entity_type() {
     );
     let deep = DeepCRUDRepository::new(Arc::new(typed));
     assert_eq!(deep.entity_type(), TypeId::of::<Item>());
+    assert_eq!(
+        (&deep as &dyn IRepository).entity_type(),
+        TypeId::of::<Item>()
+    );
 }
 
 fn user_contacts_mapper() -> TransformMapper<Row, Row> {
@@ -1346,12 +1354,14 @@ struct CountingRepository {
     read_singles: Mutex<u32>,
 }
 
-#[async_trait]
-impl ReadonlyRepository for CountingRepository {
+impl IRepository for CountingRepository {
     fn entity_type(&self) -> TypeId {
         self.inner.entity_type()
     }
+}
 
+#[async_trait]
+impl ReadonlyRepository for CountingRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         *self.read_singles.lock().unwrap() += 1;
         self.inner.read_single(query).await

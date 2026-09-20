@@ -3,8 +3,8 @@ use crate::connection::JsonConnection;
 use crate::filter::{json_from_record, matches, parse_filter, value_to_json};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, CRUDRepository, Command, Query, ReadonlyRepository, Response, Result, Row,
-    TextQuery, Value, Where,
+    identity_filter, CRUDRepository, Command, IRepository, Query, ReadonlyRepository, Response,
+    Result, Row, TextQuery, Value, Where,
 };
 use serde_json::Value as JsonValue;
 use std::sync::Arc;
@@ -18,6 +18,8 @@ impl JsonRepository {
         Self { connection }
     }
 }
+
+impl IRepository for JsonRepository {}
 
 #[async_trait]
 impl ReadonlyRepository for JsonRepository {
