@@ -161,6 +161,56 @@ public class CoreTests
         Assert.Equal("DELETE FROM users", new DeleteStatement("users").GetText());
         var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
         Assert.Equal("CREATE TABLE users (id INTEGER, name TEXT)", createTable.GetText());
+        var namedTable = new CreateTableStatement(
+            "orders",
+            [
+                new Column("id", "INTEGER", new ColumnDefault("0", "df_id"), new NotNull("nn_id")),
+                new Column("tenant_id", "INTEGER"),
+                new Column("user_id", "INTEGER"),
+                new Column("qty", "INTEGER")
+            ],
+            [
+                new PrimaryKey("pk_orders", ["id", "tenant_id"]),
+                new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
+                new UniqueConstraint("uq_orders_user", ["user_id"]),
+                new CheckConstraint("chk_orders_qty", "qty > 0")
+            ]);
+        Assert.Equal(
+            "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
+            namedTable.GetText());
+        Assert.Equal(
+            "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
+            new CreateTableStatement(
+                "items",
+                [new Column("id", "INTEGER", new ColumnDefault("0")), new Column("name", "TEXT", NotNull: new NotNull())],
+                [new ForeignKey("fk_items_user", ["id"], "users", ["id"])]).GetText());
+        Assert.Equal(
+            "CREATE TABLE users (id INTEGER)",
+            new CreateTableStatement("users", [new Column("id", "INTEGER")], []).GetText());
+        Assert.Equal(
+            "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)",
+            new CreateTableStatement(
+                "t",
+                [new Column("id", "INTEGER")],
+                [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)]).GetText());
+        Assert.Equal(
+            "CREATE TABLE t (id INTEGER, CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION)",
+            new CreateTableStatement(
+                "t",
+                [new Column("id", "INTEGER")],
+                [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)]).GetText());
+        Assert.Throws<InvalidOperationException>(() =>
+            new CreateTableStatement("t", [new Column("id", "INTEGER")], [new EmptyTableConstraint()]).GetText());
+        Assert.Throws<InvalidOperationException>(() =>
+            new CreateTableStatement(
+                "t",
+                [new Column("id", "INTEGER")],
+                [new ForeignKey("fk", ["id"], "u", ["id"], (ReferentialAction)99)]).GetText());
+        var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
+        Assert.Equal("CREATE INDEX idx_orders_user ON orders (user_id)", createIndex.GetText());
+        Assert.Equal(
+            "CREATE UNIQUE INDEX uq_orders_code ON orders (code)",
+            new CreateIndexStatement("uq_orders_code", "orders", ["code"], true).GetText());
         var call = new ExecuteStoredProcedureStatement("save", fields);
         Assert.Equal("CALL save($id, $name)", call.GetText());
         Assert.Equal("CALL save()", new ExecuteStoredProcedureStatement("save", []).GetText());
@@ -181,6 +231,7 @@ public class CoreTests
         Assert.Equal("x", new UpdateStatement("x").GetText());
         Assert.Equal("x", DeleteStatement.Raw("x").GetText());
         Assert.Equal("x", new CreateTableStatement("x").GetText());
+        Assert.Equal("x", new CreateIndexStatement("x").GetText());
         Assert.Equal("x", new ExecuteStoredProcedureStatement("x").GetText());
         Assert.Equal("x", new ReturnStatement("x").GetText());
     }
@@ -630,4 +681,6 @@ public class CoreTests
             Exception? error = null) =>
             _after(text, parameters, results, elapsedMs, error);
     }
+
+    sealed record EmptyTableConstraint : ITableConstraint;
 }

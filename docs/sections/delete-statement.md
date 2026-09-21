@@ -218,7 +218,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](./where-claus
 ```
 ```rust rust/datasources/src/tests/mod.rs#L937-L942
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L224-L226
+```typescript typescript/datasources/src/builders/builders.test.ts#L233-L235
 ```
 
 ```output [After: delete]

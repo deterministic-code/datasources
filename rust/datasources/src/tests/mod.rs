@@ -952,6 +952,74 @@ fn statements_and_builders() {
         create_table.get_text(),
         "CREATE TABLE users (id INTEGER, name TEXT)"
     );
+    let named_table = CreateTableStatement::with_constraints(
+        "orders",
+        &[
+            Column::new("id", "INTEGER")
+                .with_default(ColumnDefault::named("df_id", "0"))
+                .with_not_null(NotNull::named("nn_id")),
+            Column::new("tenant_id", "INTEGER"),
+            Column::new("user_id", "INTEGER"),
+            Column::new("qty", "INTEGER"),
+        ],
+        &[
+            PrimaryKey::new("pk_orders", &["id", "tenant_id"]).into(),
+            ForeignKey::new("fk_orders_user", &["user_id"], "users", &["id"])
+                .with_on_delete(ReferentialAction::Cascade)
+                .into(),
+            UniqueConstraint::new("uq_orders_user", &["user_id"]).into(),
+            CheckConstraint::new("chk_orders_qty", "qty > 0").into(),
+        ],
+    );
+    assert_eq!(
+        named_table.get_text(),
+        "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))"
+    );
+    assert_eq!(
+        CreateTableStatement::with_constraints(
+            "items",
+            &[
+                Column::new("id", "INTEGER").with_default(ColumnDefault::new("0")),
+                Column::new("name", "TEXT").with_not_null(NotNull::default()),
+            ],
+            &[ForeignKey::new("fk_items_user", &["id"], "users", &["id"]).into()],
+        )
+        .get_text(),
+        "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))"
+    );
+    assert_eq!(
+        CreateTableStatement::with_constraints(
+            "t",
+            &[Column::new("id", "INTEGER")],
+            &[ForeignKey::new("fk_set_null", &["id"], "u", &["id"])
+                .with_on_delete(ReferentialAction::SetNull)
+                .with_on_update(ReferentialAction::SetDefault)
+                .into()],
+        )
+        .get_text(),
+        "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)"
+    );
+    assert_eq!(
+        CreateTableStatement::with_constraints(
+            "t",
+            &[Column::new("id", "INTEGER")],
+            &[ForeignKey::new("fk_restrict", &["id"], "u", &["id"])
+                .with_on_delete(ReferentialAction::Restrict)
+                .with_on_update(ReferentialAction::NoAction)
+                .into()],
+        )
+        .get_text(),
+        "CREATE TABLE t (id INTEGER, CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION)"
+    );
+    let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"]);
+    assert_eq!(
+        create_index.get_text(),
+        "CREATE INDEX idx_orders_user ON orders (user_id)"
+    );
+    assert_eq!(
+        CreateIndexStatement::unique("uq_orders_code", "orders", &["code"]).get_text(),
+        "CREATE UNIQUE INDEX uq_orders_code ON orders (code)"
+    );
     let call = ExecuteStoredProcedureStatement::new("save", &fields);
     assert_eq!(call.get_text(), "CALL save($id, $name)");
     assert_eq!(
@@ -996,6 +1064,7 @@ fn statements_and_builders() {
     assert_eq!(UpdateStatement::text("x", None).get_text(), "x");
     assert_eq!(DeleteStatement::raw("x", None).get_text(), "x");
     assert_eq!(CreateTableStatement::text("x").get_text(), "x");
+    assert_eq!(CreateIndexStatement::text("x").get_text(), "x");
     assert_eq!(ExecuteStoredProcedureStatement::text("x").get_text(), "x");
     assert_eq!(ReturnStatement::text("x").get_text(), "x");
 }

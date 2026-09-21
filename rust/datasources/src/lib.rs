@@ -63,9 +63,11 @@ pub use array_reader::ArrayReader;
 pub use builders::{Column, Join, JoinKind};
 pub use statements::statement;
 pub use statements::{
-    ArrayExpression, CreateTableStatement, DeleteStatement, Expression, Identifier,
-    ExecuteStoredProcedureStatement, InsertStatement, Literal, Operator, ReturnStatement,
-    Statement, StatementEvaluator, Text, UpdateStatement, WhereClause,
+    ArrayExpression, CheckConstraint, ColumnDefault, CreateIndexStatement, CreateTableStatement,
+    DeleteStatement, ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier,
+    InsertStatement, Literal, NotNull, Operator, PrimaryKey, ReferentialAction, ReturnStatement,
+    Statement, StatementEvaluator, TableConstraint, Text, UniqueConstraint, UpdateStatement,
+    WhereClause,
 };
 pub use built_repository::BuiltRepository;
 pub use bulk_crud_repository::BulkCRUDRepository;

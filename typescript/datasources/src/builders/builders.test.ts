@@ -1,22 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
   ArrayExpression,
+  CheckConstraint,
+  ColumnDefault,
+  CreateIndexStatement,
   CreateTableStatement,
   DeleteStatement,
+  ForeignKey,
   Identifier,
   InsertStatement,
   Join,
   Literal,
+  NotNull,
   Operator,
+  PrimaryKey,
   QueryStatement,
+  ReferentialAction,
   StatementEvaluator,
   ParameterDirection,
   ReturnStatement,
+  UniqueConstraint,
   ExecuteStoredProcedureStatement,
   UpdateStatement,
   Where,
   WhereClause,
 } from "../index.ts";
+import type { ITableConstraint, TableConstraintKind } from "../index.ts";
 import type { Parameter } from "../index.ts";
 
 describe("Query and Where", () => {
@@ -232,6 +241,67 @@ describe("statements", () => {
       { name: "name", type: "TEXT" },
     ]);
     expect(createTable.getText()).toBe("CREATE TABLE users (id INTEGER, name TEXT)");
+    const namedTable = new CreateTableStatement(
+      "orders",
+      [
+        { name: "id", type: "INTEGER", default: new ColumnDefault("0", "df_id"), notNull: new NotNull("nn_id") },
+        { name: "tenant_id", type: "INTEGER" },
+        { name: "user_id", type: "INTEGER" },
+        { name: "qty", type: "INTEGER" },
+      ],
+      [
+        new PrimaryKey("pk_orders", ["id", "tenant_id"]),
+        new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
+        new UniqueConstraint("uq_orders_user", ["user_id"]),
+        new CheckConstraint("chk_orders_qty", "qty > 0"),
+      ],
+    );
+    expect(namedTable.getText()).toBe(
+      "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
+    );
+    expect(
+      new CreateTableStatement(
+        "items",
+        [
+          { name: "id", type: "INTEGER", default: new ColumnDefault("0") },
+          { name: "name", type: "TEXT", notNull: new NotNull() },
+        ],
+        [new ForeignKey("fk_items_user", ["id"], "users", ["id"])],
+      ).getText(),
+    ).toBe(
+      "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
+    );
+    expect(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }], []).getText()).toBe(
+      "CREATE TABLE users (id INTEGER)",
+    );
+    expect(
+      new CreateTableStatement(
+        "t",
+        [{ name: "id", type: "INTEGER" }],
+        [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)],
+      ).getText(),
+    ).toBe(
+      "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)",
+    );
+    expect(
+      new CreateTableStatement(
+        "t",
+        [{ name: "id", type: "INTEGER" }],
+        [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)],
+      ).getText(),
+    ).toBe(
+      "CREATE TABLE t (id INTEGER, CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION)",
+    );
+    expect(() =>
+      new CreateTableStatement("t", [{ name: "id", type: "INTEGER" }], [
+        { kind: "nope" as TableConstraintKind, name: "x" } as ITableConstraint,
+      ]).getText(),
+    ).toThrow("empty constraint");
+    const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
+    expect(createIndex.getText()).toBe("CREATE INDEX idx_orders_user ON orders (user_id)");
+    expect(new CreateIndexStatement("uq_orders_code", "orders", ["code"], true).getText()).toBe(
+      "CREATE UNIQUE INDEX uq_orders_code ON orders (code)",
+    );
     const call = new ExecuteStoredProcedureStatement("save", [...fields]);
     expect(call.getText()).toBe("CALL save($id, $name)");
     expect(new ExecuteStoredProcedureStatement("save", []).getText()).toBe(
@@ -263,6 +333,7 @@ describe("statements", () => {
     expect(new UpdateStatement("x").getText()).toBe("x");
     expect(DeleteStatement.raw("x").getText()).toBe("x");
     expect(new CreateTableStatement("x").getText()).toBe("x");
+    expect(new CreateIndexStatement("x").getText()).toBe("x");
     expect(new ExecuteStoredProcedureStatement("x").getText()).toBe("x");
     expect(new ReturnStatement("x").getText()).toBe("x");
   });
