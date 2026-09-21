@@ -164,11 +164,24 @@ public class CoreTests
             new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]).GetText());
         Assert.Equal("CALL save($id, $name)", new StoredProcedureStatement("save", fields).GetText());
         Assert.Equal("CALL save()", new StoredProcedureStatement("save", []).GetText());
+        Assert.Equal("SELECT add($id, $name)", new ReturnStatement("add", fields).GetText());
+        Assert.Equal("SELECT add()", new ReturnStatement("add", []).GetText());
+        Assert.Equal(
+            "CALL save($id)",
+            new StoredProcedureStatement("save", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)]).GetText());
+        Assert.Equal(
+            "SELECT add($id)",
+            new ReturnStatement("add", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)]).GetText());
+        Assert.Equal(ParameterDirection.Input, new Parameter("id", 1).Direction);
+        Assert.Equal(ParameterDirection.Output, new Parameter("count", ParameterDirection.Output).Direction);
+        Assert.Equal(Value.Null.Instance, new Parameter("count", ParameterDirection.Output).Value);
+        Assert.Null(new Response(1, 2).Parameters);
         Assert.Equal("INSERT INTO t () VALUES ()", new InsertStatement("INSERT INTO t () VALUES ()").GetText());
         Assert.Equal("x", new UpdateStatement("x").GetText());
         Assert.Equal("x", DeleteStatement.Raw("x").GetText());
         Assert.Equal("x", new CreateTableStatement("x").GetText());
         Assert.Equal("x", new StoredProcedureStatement("x").GetText());
+        Assert.Equal("x", new ReturnStatement("x").GetText());
     }
 
     [Fact]

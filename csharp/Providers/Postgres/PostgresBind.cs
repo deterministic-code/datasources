@@ -8,6 +8,24 @@ public static class PostgresBind
 
     public static (string Sql, object?[] Values) ToPostgres(string sql, Row parameters)
     {
+        var (text, names) = Rewrite(sql);
+        return (text, names.Select(name => parameters.TryGetValue(name, out var value) ? Reverse(value).ToObject() : null).ToArray());
+    }
+
+    public static (string Sql, Parameter[] Bound) ToPostgres(string sql, IReadOnlyList<Parameter>? parameters)
+    {
+        var map = new Dictionary<string, Parameter>(StringComparer.Ordinal);
+        if (parameters is not null)
+            foreach (var parameter in parameters)
+                map[parameter.Name.TrimStart('$', '@', ':')] = parameter;
+        var (text, names) = Rewrite(sql);
+        return (text, names.Select(name => map.TryGetValue(name, out var parameter)
+            ? parameter
+            : new Parameter(name, Value.Null.Instance)).ToArray());
+    }
+
+    static (string Sql, List<string> Names) Rewrite(string sql)
+    {
         var names = new List<string>();
         var text = Name.Replace(sql, match =>
         {
@@ -20,10 +38,10 @@ public static class PostgresBind
             }
             return $"${index + 1}";
         });
-        return (text, names.Select(name => parameters.TryGetValue(name, out var value) ? Reverse(value).ToObject() : null).ToArray());
+        return (text, names);
     }
 
-    static Value Reverse(Value value) => value switch
+    public static Value Reverse(Value value) => value switch
     {
         Value.DateTime => new DateTimeConverter().ReverseConvert(value),
         Value.Guid => new UuidConverter().ReverseConvert(value),

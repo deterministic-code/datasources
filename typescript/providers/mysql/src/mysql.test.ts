@@ -138,12 +138,11 @@ describe("Mysql2Driver", () => {
     const { driver, client } = fakeDriver();
     await driver.open("x");
     client.arrayResult = true;
-    expect(await driver.execute("SELECT 1")).toEqual({ rowsAffected: 1 });
+    expect(await driver.execute("SELECT 1")).toMatchObject({ rowsAffected: 1, result: 1 });
     client.arrayResult = false;
     client.header = {};
-    expect(await driver.execute("UPDATE items")).toEqual({
+    expect(await driver.execute("UPDATE items")).toMatchObject({
       rowsAffected: 0,
-      result: undefined,
     });
     await driver.close();
     await driver.close();
@@ -193,13 +192,42 @@ describe("MysqlCommand", () => {
     const { command, client } = await setup();
     client.arrayResult = true;
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
-      .toEqual({ result: undefined, rowsAffected: 1 });
-    expect(await command.execute("")).toEqual({ rowsAffected: 0 });
+      .toEqual({ result: undefined, rowsAffected: 1, parameters: [{ name: "id", value: 1 }] });
+    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0 });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
+    client.arrayResult = true;
+    client.rows = [{ add_one: 5 }];
+    expect(await command.execute("SELECT add_one($n)", [{ name: "n", value: 4 }]))
+      .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });
+    client.rows = [];
+    expect(await command.execute("SELECT 1")).toEqual({
+      result: undefined,
+      rowsAffected: 0,
+    });
+    const { ParameterDirection } = await import("@datasources/core");
+    client.rows = [{ result: 5 }];
+    const start = { name: "start_n", value: 4 };
+    const out = { name: "result", direction: ParameterDirection.Output };
+    expect(
+      await command.execute("CALL bump($start_n, $result)", [start, out]),
+    ).toMatchObject({
+      parameters: [start, { name: "result", direction: ParameterDirection.Output, value: 5 }],
+    });
+    const inout = { name: "n", value: 4, direction: ParameterDirection.InputOutput };
+    client.rows = [{ n: 5 }];
+    expect(await command.execute("CALL bump($n)", [inout])).toMatchObject({
+      parameters: [{ name: "n", value: 5, direction: ParameterDirection.InputOutput }],
+    });
+    expect(
+      await command.execute("CALL bump($start_n, $result)", [
+        { name: "start_n" },
+        { name: "result", direction: ParameterDirection.Output },
+      ]),
+    ).toMatchObject({ rowsAffected: 0 });
   });
 });
 

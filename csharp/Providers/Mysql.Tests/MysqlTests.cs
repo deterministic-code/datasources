@@ -82,6 +82,8 @@ public class MysqlTests
         public Task Close() { Opened = false; return Task.CompletedTask; }
         public Task<MysqlExecuteResult> Execute(string sql, Row parameters) =>
             Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new MysqlExecuteResult(0, Value.Null.Instance) : new MysqlExecuteResult(2, 5));
+        public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyList<Parameter>? parameters) =>
+            Execute(sql, Helpers.ParametersToRecord(parameters));
         public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
             Task.FromResult<IReadOnlyList<Row>>(
                 string.IsNullOrWhiteSpace(sql) ? [] : [new Row { ["id"] = 1 }]);

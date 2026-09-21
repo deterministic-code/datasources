@@ -1,14 +1,21 @@
-import type { Field } from "../builders/Field.ts";
+import { ParameterDirection } from "../ParameterDirection.ts";
+import type { Parameter } from "../Parameter.ts";
 import type { IStoredProcedureStatement } from "./IStoredProcedureStatement.ts";
+
+const args = (parameters: Parameter[]): string =>
+  parameters
+    .filter((parameter) => parameter.direction !== ParameterDirection.ReturnValue)
+    .map((parameter) => `$${parameter.name}`)
+    .join(", ");
 
 export class StoredProcedureStatement implements IStoredProcedureStatement {
   private readonly text: string;
 
   constructor(text: string);
-  constructor(name: string, parameters: Field[]);
-  constructor(nameOrText: string, parameters?: Field[]) {
+  constructor(name: string, parameters: Parameter[]);
+  constructor(nameOrText: string, parameters?: Parameter[]) {
     this.text = parameters
-      ? `CALL ${nameOrText}(${parameters.map((field) => `$${field.name}`).join(", ")})`
+      ? `CALL ${nameOrText}(${args(parameters)})`
       : nameOrText;
   }
 

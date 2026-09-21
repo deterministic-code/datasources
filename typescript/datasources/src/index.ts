@@ -14,6 +14,7 @@ export type {
   IText,
   IStatement,
   IStoredProcedureStatement,
+  IReturnStatement,
   IUpdateStatement,
   IWhere,
 } from "./statements/index.ts";
@@ -61,6 +62,7 @@ export {
   QueryStatement,
   StatementEvaluator,
   StoredProcedureStatement,
+  ReturnStatement,
   UpdateStatement,
   Where,
   WhereClause,
@@ -68,6 +70,9 @@ export {
 } from "./statements/index.ts";
 export type { IDatasourceFactory } from "./IDatasourceFactory.ts";
 export type { Parameter } from "./Parameter.ts";
+export { ParameterDirection } from "./ParameterDirection.ts";
+export type { ParameterDirection as ParameterDirectionName } from "./ParameterDirection.ts";
+export { responseOf } from "./Response.ts";
 export type { Row } from "./Row.ts";
 export { ArrayReader } from "./ArrayReader.ts";
 export { collectAsync } from "./collectAsync.ts";

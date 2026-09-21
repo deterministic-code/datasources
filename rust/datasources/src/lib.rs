@@ -30,6 +30,7 @@ mod isolation_level;
 pub mod mappers;
 pub mod mocks;
 mod parameter;
+mod parameter_direction;
 mod parameters_to_map;
 mod provider_from_url;
 pub mod statements;
@@ -63,7 +64,8 @@ pub use builders::{Column, Join, JoinKind};
 pub use statements::statement;
 pub use statements::{
     ArrayExpression, CreateTableStatement, DeleteStatement, Expression, Identifier,
-    InsertStatement, Literal, Operator, Statement, StatementEvaluator, StoredProcedureStatement,
+    InsertStatement, Literal, Operator, ReturnStatement, Statement, StatementEvaluator,
+    StoredProcedureStatement,
     Text, UpdateStatement, WhereClause,
 };
 pub use built_repository::BuiltRepository;
@@ -106,6 +108,7 @@ pub use mocks::{
     MockTransaction, MockWhere,
 };
 pub use parameter::Parameter;
+pub use parameter_direction::ParameterDirection;
 pub use parameters_to_map::parameters_to_map;
 pub use provider_from_url::provider_from_url;
 pub use query::Query;

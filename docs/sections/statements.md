@@ -345,6 +345,64 @@ constructor(text: string)
 
 - `text` — command text
 
+##### StoredProcedureStatement(name, parameters)
+
+Compiles a `CALL`. Empty [Parameter](./command.md#parameter) list is `CALL name()`. [returnValue](./command.md#parameterdirection) parameters are omitted from the argument list.
+
+```typescript
+constructor(name: string, parameters: Parameter[])
+```
+
+- `name` — procedure name
+- `parameters` — bound values (empty for `CALL name()`)
+
+**Methods**
+
+##### getText()
+
+Command text.
+
+```typescript
+getText(): string
+```
+
+**Returns** `string`
+
+#### IReturnStatement
+
+```typescript
+interface IReturnStatement extends IStatement {}
+```
+
+#### ReturnStatement
+
+```typescript
+class ReturnStatement implements IReturnStatement
+```
+
+**Constructor**
+
+##### ReturnStatement(text)
+
+Wraps function-call text.
+
+```typescript
+constructor(text: string)
+```
+
+- `text` — command text
+
+##### ReturnStatement(name, parameters)
+
+Compiles a `SELECT`. Empty [Parameter](./command.md#parameter) list is `SELECT name()`. [returnValue](./command.md#parameterdirection) parameters are omitted from the argument list.
+
+```typescript
+constructor(name: string, parameters: Parameter[])
+```
+
+- `name` — function name
+- `parameters` — bound values (empty for `SELECT name()`)
+
 **Methods**
 
 ##### getText()
@@ -699,7 +757,7 @@ public interface IStoredProcedureStatement : IStatement
 #### StoredProcedureStatement
 
 ```csharp
-public sealed class StoredProcedureStatement : IStoredProcedureStatement
+public sealed record StoredProcedureStatement : IStoredProcedureStatement
 ```
 
 **Constructor**
@@ -713,6 +771,64 @@ public StoredProcedureStatement(string text)
 ```
 
 - `text` — command text
+
+##### StoredProcedureStatement(name, parameters)
+
+Compiles a `CALL`. Empty [Parameter](./command.md#parameter) list is `CALL name()`. [ReturnValue](./command.md#parameterdirection) parameters are omitted from the argument list.
+
+```csharp
+public StoredProcedureStatement(string name, IReadOnlyList<Parameter> parameters)
+```
+
+- `name` — procedure name
+- `parameters` — bound values (empty for `CALL name()`)
+
+**Methods**
+
+##### GetText()
+
+Command text.
+
+```csharp
+string GetText()
+```
+
+**Returns** `string`
+
+#### IReturnStatement
+
+```csharp
+public interface IReturnStatement : IStatement
+```
+
+#### ReturnStatement
+
+```csharp
+public sealed record ReturnStatement : IReturnStatement
+```
+
+**Constructor**
+
+##### ReturnStatement(text)
+
+Wraps function-call text.
+
+```csharp
+public ReturnStatement(string text)
+```
+
+- `text` — command text
+
+##### ReturnStatement(name, parameters)
+
+Compiles a `SELECT`. Empty [Parameter](./command.md#parameter) list is `SELECT name()`. [ReturnValue](./command.md#parameterdirection) parameters are omitted from the argument list.
+
+```csharp
+public ReturnStatement(string name, IReadOnlyList<Parameter> parameters)
+```
+
+- `name` — function name
+- `parameters` — bound values (empty for `SELECT name()`)
 
 **Methods**
 
@@ -1121,13 +1237,58 @@ fn get_text(&self) -> String
 ```
 
 **Returns** `String`
+
+#### ReturnStatement
+
+```rust
+pub struct ReturnStatement
+```
+
+**Constructor**
+
+##### text(text)
+
+Wraps function-call text.
+
+```rust
+pub fn text(text: impl Into<String>) -> Self
+```
+
+- `text` — command text
+
+**Returns** [ReturnStatement](#returnstatement)
+
+##### new(name, parameters)
+
+Compiles a `SELECT`. Empty [Parameter](./command.md#parameter) list is `SELECT name()`. [ReturnValue](./command.md#parameterdirection) parameters are omitted from the argument list.
+
+```rust
+pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self
+```
+
+- `name` — function name
+- `parameters` — bound values (empty for `SELECT name()`)
+
+**Returns** [ReturnStatement](#returnstatement)
+
+**Methods**
+
+##### get_text()
+
+Command text.
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns** `String`
 :::
 
 ## Remarks
 
 [Command](./command.md) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereClause](./where-clause.md).
 
-Construct SQL with [QueryStatement](#querystatement) / [InsertStatement](#insertstatement) / [UpdateStatement](#updatestatement) / [DeleteStatement](#deletestatement). Compose predicates with [WhereClause](./where-clause.md). [IStatement](#istatement) is not an [IExpression](./expressions.md#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](#iwhere) is a clause ([IExpression](./expressions.md#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
+Construct SQL with [QueryStatement](#querystatement) / [InsertStatement](#insertstatement) / [UpdateStatement](#updatestatement) / [DeleteStatement](#deletestatement). [StoredProcedureStatement](#storedprocedurestatement) compiles `CALL name($p)` or `CALL name()`. [ReturnStatement](#returnstatement) compiles `SELECT name($p)` or `SELECT name()`. [ReturnValue](./command.md#parameterdirection) parameters are binds only and stay out of the argument list. Compose predicates with [WhereClause](./where-clause.md). [IStatement](#istatement) is not an [IExpression](./expressions.md#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](#iwhere) is a clause ([IExpression](./expressions.md#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
 
 ## See also
 
@@ -1142,8 +1303,19 @@ Construct SQL with [QueryStatement](#querystatement) / [InsertStatement](#insert
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L33-L38
 ```
-```rust rust/datasources/src/tests/mod.rs#L963-L966
+```rust rust/datasources/src/tests/mod.rs#L992-L995
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L21-L25
+```
+:::
+
+### Compile CALL and SELECT
+
+::: example
+```csharp csharp/Datasources.Tests/CoreTests.cs#L165-L174
+```
+```rust rust/datasources/src/tests/mod.rs#L953-L982
+```
+```typescript typescript/datasources/src/builders/builders.test.ts#L234-L255
 ```
 :::

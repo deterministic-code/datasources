@@ -50,7 +50,7 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
         if (op === "insert") {
           this.connection.getCollection().push(obj);
           await this.connection.persist();
-          return { value: { result: obj, rowsAffected: 1 }, rows: [] };
+          return { value: { result: obj, rowsAffected: 1, parameters: params }, rows: [] };
         }
         if (op === "update") {
           const whereText =
@@ -58,12 +58,12 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
           const next = { ...obj };
           delete next.$where;
           const filter = whereText ? parseFilter(whereText) : identityFilter(next);
-          return { value: await this.applyUpdate(next, filter), rows: [] };
+          return { value: { ...(await this.applyUpdate(next, filter)), parameters: params }, rows: [] };
         }
         if (op === "delete") {
           const filter =
             Object.keys(obj).length === 0 ? {} : identityFilter(obj);
-          return { value: await this.applyDelete(filter), rows: [] };
+          return { value: { ...(await this.applyDelete(filter)), parameters: params }, rows: [] };
         }
         throw new Error(`Unsupported JSON command: ${query}`);
     });

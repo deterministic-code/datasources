@@ -1,9 +1,10 @@
-import type { IsolationLevelName } from "@datasources/core";
+import type { IsolationLevelName, Parameter } from "@datasources/core";
 import type { Cells, Scalar } from "./scalar.ts";
 
 export interface MysqlExecuteResult {
   rowsAffected: number;
   result?: Scalar;
+  parameters?: Parameter[];
 }
 
 export interface IMysqlDriver {
@@ -12,6 +13,7 @@ export interface IMysqlDriver {
   execute(
     sql: string,
     params?: Record<string, Scalar>,
+    parameters?: Parameter[],
   ): Promise<MysqlExecuteResult>;
   query(sql: string, params?: Record<string, Scalar>): Promise<Cells[]>;
   begin(isolation?: IsolationLevelName): Promise<void>;

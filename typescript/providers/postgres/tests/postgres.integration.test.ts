@@ -1,4 +1,9 @@
-import { beforeAll, describe, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+  ParameterDirection,
+  ReturnStatement,
+  StoredProcedureStatement,
+} from "@datasources/core";
 import { ensureCompose } from "../../ensure-compose.ts";
 import {
   loadDialect,
@@ -71,4 +76,51 @@ describe("shared sql specs", () => {
       }
     });
   }
+});
+
+describe("return and output parameters", () => {
+  it("reads INOUT and function results", async () => {
+    const isolated = await isolate(url);
+    try {
+      const connection = new PostgresConnection({
+        url,
+        schema: isolated.schema,
+        driver: await loadPgDriver(url, undefined, isolated.schema),
+      });
+      await connection.open();
+      const command = new PostgresCommand(connection);
+      await command.execute(`
+        CREATE PROCEDURE bump(INOUT result INT)
+        LANGUAGE plpgsql
+        AS $$
+        BEGIN
+          result := result + 1;
+        END;
+        $$
+      `);
+      await command.execute(`
+        CREATE FUNCTION add_one(n INT) RETURNS INT
+        LANGUAGE sql
+        AS $$ SELECT n + 1 $$
+      `);
+      const result = {
+        name: "result",
+        value: 4,
+        direction: ParameterDirection.InputOutput,
+      };
+      const call = await command.execute(
+        new StoredProcedureStatement("bump", [result]).getText(),
+        [result],
+      );
+      expect(call.parameters?.[0]?.value).toBe(5);
+      const n = { name: "n", value: 4 };
+      const ret = await command.execute(
+        new ReturnStatement("add_one", [n]).getText(),
+        [n],
+      );
+      expect(ret.result).toBe(5);
+    } finally {
+      await isolated.cleanup();
+    }
+  });
 });

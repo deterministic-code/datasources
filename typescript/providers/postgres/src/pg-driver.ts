@@ -1,4 +1,4 @@
-import type { IsolationLevelName } from "@datasources/core";
+import type { IsolationLevelName, Parameter } from "@datasources/core";
 import type {
   IPostgresDriver,
   PgClientCtor,
@@ -25,7 +25,8 @@ export class PgDriver implements IPostgresDriver {
   execute = (
     sql: string,
     params?: Record<string, Scalar>,
-  ): Promise<PostgresExecuteResult> => this.commands.execute(sql, params);
+    parameters?: Parameter[],
+  ): Promise<PostgresExecuteResult> => this.commands.execute(sql, params, parameters);
   query = (sql: string, params?: Record<string, Scalar>): Promise<Cells[]> =>
     this.commands.query(sql, params);
   begin = (isolation?: IsolationLevelName): Promise<void> =>

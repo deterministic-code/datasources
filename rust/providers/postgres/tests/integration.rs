@@ -313,3 +313,73 @@ async fn shared_specs() {
             .ok();
     }
 }
+
+#[tokio::test]
+async fn return_and_output_parameters() {
+    use datasources::{ParameterDirection, ReturnStatement, StoredProcedureStatement, Text};
+    let Ok(url) = std::env::var("POSTGRES_URL") else {
+        return;
+    };
+    let schema = format!(
+        "ds_{:x}",
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    );
+    let (client, connection) = tokio_postgres::connect(&url, NoTls).await.unwrap();
+    tokio::spawn(async move {
+        let _ = connection.await;
+    });
+    client
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .await
+        .unwrap();
+    let conn = Arc::new(PostgresConnection::new(
+        Some(url.clone()),
+        Some(schema.clone()),
+        Arc::new(TokioPostgresDriver::new(Some(schema.clone()))),
+    ));
+    conn.open().await.unwrap();
+    let command = PostgresCommand::new(conn);
+    command
+        .execute(
+            "CREATE PROCEDURE bump(INOUT result INT) LANGUAGE plpgsql AS $$ BEGIN result := result + 1; END; $$",
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute(
+            "CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$",
+            None,
+        )
+        .await
+        .unwrap();
+    let result = [Parameter::with_direction(
+        "result",
+        4_i64,
+        ParameterDirection::InputOutput,
+    )];
+    let call = command
+        .execute(
+            &StoredProcedureStatement::new("bump", &result).get_text(),
+            Some(&result),
+        )
+        .await
+        .unwrap();
+    assert_eq!(call.result, Value::Int(5));
+    let parameters = [Parameter::new("n", 4_i64)];
+    let ret = command
+        .execute(
+            &ReturnStatement::new("add_one", &parameters).get_text(),
+            Some(&parameters),
+        )
+        .await
+        .unwrap();
+    assert_eq!(ret.result, Value::Int(5));
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .await
+        .ok();
+}

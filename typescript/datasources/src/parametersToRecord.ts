@@ -5,6 +5,7 @@ export function parametersToRecord<T>(
 ): Record<string, T> {
   if (!parameters) return {};
   const record: Record<string, T> = {};
-  for (const parameter of parameters) record[parameter.name] = parameter.value;
+  for (const parameter of parameters)
+    if (parameter.value !== undefined) record[parameter.name] = parameter.value;
   return record;
 }

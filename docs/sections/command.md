@@ -126,7 +126,7 @@ afterCommand(text: string, params: ReadonlyArray<Parameter> | undefined, results
 #### Parameter
 
 ```typescript
-interface Parameter<T = unknown>
+interface Parameter<T = Scalar>
 ```
 
 **Properties**
@@ -141,11 +141,34 @@ name: string
 
 ##### value
 
-Parameter value.
+Parameter value. Omitted for [output](#parameterdirection) / [returnValue](#parameterdirection).
 
 ```typescript
-value: T
+value?: T
 ```
+
+##### direction
+
+Bind direction. Omitted means [input](#parameterdirection).
+
+```typescript
+direction?: ParameterDirection
+```
+
+#### ParameterDirection
+
+```typescript
+const ParameterDirection
+```
+
+**Properties**
+
+| Name | Value |
+| --- | --- |
+| Input | `"input"` |
+| Output | `"output"` |
+| InputOutput | `"inputOutput"` |
+| ReturnValue | `"returnValue"` |
 
 #### Response
 
@@ -170,6 +193,28 @@ Rows inserted, updated, or deleted.
 ```typescript
 rowsAffected: number
 ```
+
+##### parameters
+
+Bound [Parameter](#parameter) list after [execute](#icommand-execute-text-parameters). Holds filled [output](#parameterdirection) / [returnValue](#parameterdirection) values.
+
+```typescript
+parameters?: Parameter[]
+```
+
+#### responseOf(result, rowsAffected, parameters?)
+
+Builds a [Response](#response). Copies a [returnValue](#parameterdirection) onto [result](#response-result) when `result` is null.
+
+```typescript
+function responseOf(result: unknown, rowsAffected: number, parameters?: Parameter[]): Response
+```
+
+- `result` — scalar or row result
+- `rowsAffected` — rows inserted, updated, or deleted
+- `parameters` — bound [Parameter](#parameter) list
+
+**Returns** [Response](#response)
 
 #### IReader {#reader}
 
@@ -320,7 +365,7 @@ Task AfterCommand(string text, IReadOnlyList<Parameter>? parameters, IReadOnlyLi
 #### Parameter
 
 ```csharp
-public sealed record Parameter(string Name, Value Value)
+public sealed record Parameter(string Name, Value Value, ParameterDirection Direction = ParameterDirection.Input)
 ```
 
 **Properties**
@@ -335,16 +380,52 @@ string Name { get; }
 
 ##### Value
 
-Parameter value.
+Parameter value. `Value.Null` for output-only / return slots.
 
 ```csharp
 Value Value { get; }
 ```
 
+##### Direction
+
+Bind direction. Default is [Input](#parameterdirection).
+
+```csharp
+ParameterDirection Direction { get; }
+```
+
+**Constructor**
+
+##### Parameter(name, direction)
+
+Output-only / return slot. [Value](#parameter-value) is `Value.Null`.
+
+```csharp
+public Parameter(string name, ParameterDirection direction)
+```
+
+- `name` — parameter name
+- `direction` — [Output](#parameterdirection) / [InputOutput](#parameterdirection) / [ReturnValue](#parameterdirection)
+
+#### ParameterDirection
+
+```csharp
+public enum ParameterDirection
+```
+
+**Properties**
+
+| Name | Value |
+| --- | --- |
+| Input | `Input` |
+| Output | `Output` |
+| InputOutput | `InputOutput` |
+| ReturnValue | `ReturnValue` |
+
 #### Response
 
 ```csharp
-public sealed record Response(Value Result, int RowsAffected)
+public sealed record Response(Value Result, int RowsAffected, IReadOnlyList<Parameter>? Parameters = null)
 ```
 
 **Properties**
@@ -364,6 +445,30 @@ Rows inserted, updated, or deleted.
 ```csharp
 int RowsAffected { get; }
 ```
+
+##### Parameters
+
+Bound [Parameter](#parameter) list after [Execute](#icommand-execute-text-parameters). Holds filled [Output](#parameterdirection) / [ReturnValue](#parameterdirection) values.
+
+```csharp
+IReadOnlyList<Parameter>? Parameters { get; }
+```
+
+**Methods**
+
+##### Of(result, rowsAffected, parameters)
+
+Builds a [Response](#response). Copies a [ReturnValue](#parameterdirection) onto [Result](#response-result) when `result` is `Value.Null`.
+
+```csharp
+public static Response Of(Value result, int rowsAffected, IReadOnlyList<Parameter>? parameters = null)
+```
+
+- `result` — scalar or row result
+- `rowsAffected` — rows inserted, updated, or deleted
+- `parameters` — bound [Parameter](#parameter) list
+
+**Returns** [Response](#response)
 
 #### IReader {#reader}
 
@@ -519,11 +624,87 @@ pub name: String
 
 ##### value
 
-Parameter value.
+Parameter value. `Value::Null` for output-only / return slots.
 
 ```rust
 pub value: T
 ```
+
+##### direction
+
+Bind direction. Default is [Input](#parameterdirection).
+
+```rust
+pub direction: ParameterDirection
+```
+
+**Methods**
+
+##### new(name, value)
+
+Input [Parameter](#parameter).
+
+```rust
+pub fn new(name: impl Into<String>, value: impl Into<Value>) -> Self
+```
+
+- `name` — parameter name
+- `value` — parameter value
+
+**Returns** [Parameter](#parameter)
+
+##### output(name)
+
+Output-only slot. [value](#parameter-value) is `Value::Null`.
+
+```rust
+pub fn output(name: impl Into<String>) -> Self
+```
+
+- `name` — parameter name
+
+**Returns** [Parameter](#parameter)
+
+##### return_value(name)
+
+Return slot. [value](#parameter-value) is `Value::Null`.
+
+```rust
+pub fn return_value(name: impl Into<String>) -> Self
+```
+
+- `name` — parameter name
+
+**Returns** [Parameter](#parameter)
+
+##### with_direction(name, value, direction)
+
+Parameter with an explicit [ParameterDirection](#parameterdirection).
+
+```rust
+pub fn with_direction(name: impl Into<String>, value: impl Into<Value>, direction: ParameterDirection) -> Self
+```
+
+- `name` — parameter name
+- `value` — parameter value
+- `direction` — bind direction
+
+**Returns** [Parameter](#parameter)
+
+#### ParameterDirection
+
+```rust
+pub enum ParameterDirection
+```
+
+**Properties**
+
+| Name | Value |
+| --- | --- |
+| Input | `Input` |
+| Output | `Output` |
+| InputOutput | `InputOutput` |
+| ReturnValue | `ReturnValue` |
 
 #### Response
 
@@ -548,6 +729,43 @@ Rows inserted, updated, or deleted.
 ```rust
 pub rows_affected: i64
 ```
+
+##### parameters
+
+Bound [Parameter](#parameter) list after [execute](#command-execute-text-parameters). Holds filled [Output](#parameterdirection) / [ReturnValue](#parameterdirection) values.
+
+```rust
+pub parameters: Option<Vec<Parameter>>
+```
+
+**Methods**
+
+##### new(result, rows_affected)
+
+Builds a [Response](#response) with no [parameters](#response-parameters).
+
+```rust
+pub fn new(result: impl Into<Value>, rows_affected: i64) -> Self
+```
+
+- `result` — scalar or row result
+- `rows_affected` — rows inserted, updated, or deleted
+
+**Returns** [Response](#response)
+
+##### of(result, rows_affected, parameters)
+
+Builds a [Response](#response). Copies a [ReturnValue](#parameterdirection) onto [result](#response-result) when `result` is `Value::Null`.
+
+```rust
+pub fn of(result: impl Into<Value>, rows_affected: i64, parameters: Option<Vec<Parameter>>) -> Self
+```
+
+- `result` — scalar or row result
+- `rows_affected` — rows inserted, updated, or deleted
+- `parameters` — bound [Parameter](#parameter) list
+
+**Returns** [Response](#response)
 
 #### Reader {#reader}
 
@@ -590,6 +808,8 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 
 `ExecuteReader` returns rows. Convert with [RowTypeConverter](./row-type-converter.md), then map with a [Mapper](./mappers.md).
 
+[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection) / [InputOutput](#parameterdirection) / [ReturnValue](#parameterdirection) values are filled on [Response.Parameters](#response-parameters) after `Execute`. A [ReturnValue](#parameterdirection) copies onto [Response.Result](#response-result) when `Result` would otherwise be null. `Execute` on `SELECT` text reads the first scalar into `Result`.
+
 ## Examples
 
 ### ExecuteReader to NameValue
@@ -622,5 +842,16 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 ```rust rust/datasources/src/tests/command.rs#L118-L150
 ```
 ```typescript typescript/datasources/src/Command.test.ts#L80-L103
+```
+:::
+
+### Parameter direction and Response.Parameters
+
+::: example
+```csharp csharp/Datasources.Tests/CoreTests.cs#L175-L178
+```
+```rust rust/datasources/src/tests/mod.rs#L983-L989
+```
+```typescript typescript/datasources/src/builders/builders.test.ts#L256-L259
 ```
 :::

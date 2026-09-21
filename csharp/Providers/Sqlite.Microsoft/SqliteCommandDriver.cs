@@ -6,7 +6,12 @@ namespace Datasources.Sqlite;
 public sealed class SqliteCommandDriver(SqliteConnectionDriver connection)
 {
     public Task<SqliteExecuteResult> Execute(string sql, Row parameters) =>
-        string.IsNullOrWhiteSpace(sql) ? Task.FromResult(new SqliteExecuteResult(0, Value.Null.Instance)) : Run(sql, parameters);
+        Execute(sql, parameters.Select(p => new Parameter(p.Key, p.Value)).ToArray());
+
+    public Task<SqliteExecuteResult> Execute(string sql, IReadOnlyList<Parameter>? parameters = null) =>
+        string.IsNullOrWhiteSpace(sql)
+            ? Task.FromResult(new SqliteExecuteResult(0, Value.Null.Instance, parameters))
+            : Run(sql, parameters);
 
     public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
         string.IsNullOrWhiteSpace(sql)
@@ -20,13 +25,18 @@ public sealed class SqliteCommandDriver(SqliteConnectionDriver connection)
         await command.ExecuteNonQueryAsync();
     }
 
-    async Task<SqliteExecuteResult> Run(string sql, Row parameters)
+    async Task<SqliteExecuteResult> Run(string sql, IReadOnlyList<Parameter>? parameters)
     {
-        using var command = Bind(sql, parameters);
+        using var command = Bind(sql, Helpers.ParametersToRecord(parameters));
+        if (sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+        {
+            var scalar = await command.ExecuteScalarAsync();
+            return new SqliteExecuteResult(scalar is null ? 0 : 1, Value.From(scalar), parameters);
+        }
         var rows = await command.ExecuteNonQueryAsync();
         using var id = connection.Require().CreateCommand();
         id.CommandText = "SELECT last_insert_rowid()";
-        return new SqliteExecuteResult(rows, Value.From(await id.ExecuteScalarAsync()));
+        return new SqliteExecuteResult(rows, Value.From(await id.ExecuteScalarAsync()), parameters);
     }
 
     async Task<IReadOnlyList<Row>> Read(string sql, Row parameters)

@@ -92,6 +92,8 @@ public class PostgresTests
         public Task Close() => Task.CompletedTask;
         public Task<PostgresExecuteResult> Execute(string sql, Row parameters) =>
             Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new PostgresExecuteResult(0, Value.Null.Instance) : new PostgresExecuteResult(2, 5));
+        public Task<PostgresExecuteResult> Execute(string sql, IReadOnlyList<Parameter>? parameters) =>
+            Execute(sql, Helpers.ParametersToRecord(parameters));
         public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
             Task.FromResult<IReadOnlyList<Row>>(
                 string.IsNullOrWhiteSpace(sql) ? [] : [new Row { ["id"] = 1 }]);

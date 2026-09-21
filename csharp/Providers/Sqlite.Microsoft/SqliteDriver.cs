@@ -17,6 +17,8 @@ public sealed class SqliteDriver : ISqliteDriver
     public Task Open(string filename) => _connection.Open(filename);
     public Task Close() => _connection.Close();
     public Task<SqliteExecuteResult> Execute(string sql, Row parameters) => _commands.Execute(sql, parameters);
+    public Task<SqliteExecuteResult> Execute(string sql, IReadOnlyList<Parameter>? parameters) =>
+        _commands.Execute(sql, parameters);
     public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) => _commands.Query(sql, parameters);
     public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => _transactions.Begin(isolation);
     public Task Commit() => _transactions.Commit();
