@@ -5,7 +5,9 @@ mod connection_driver;
 mod converters;
 mod driver;
 mod pg_value;
-mod statement_builder;
+mod column;
+mod column_type;
+mod quote;
 mod tokio_postgres_driver;
 mod transaction;
 mod transaction_driver;
@@ -16,7 +18,9 @@ pub use driver::{
     isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver,
     PostgresExecuteResult,
 };
-pub use statement_builder::{PostgresColumn, PostgresStatementBuilder};
+pub use column::PostgresColumn;
+pub use column_type::PostgresColumnType;
+pub use quote::PostgresQuote;
 pub use tokio_postgres_driver::TokioPostgresDriver;
 pub use transaction::PostgresTransaction;
 

@@ -1,3 +1,4 @@
+using Datasources;
 using Datasources.Postgres;
 using Datasources.SqlSpecs;
 using Npgsql;
@@ -33,9 +34,7 @@ public class PostgresRepositorySpecTests
                         Driver = new PostgresDriver(schema),
                     });
                     return new RepositorySpec.Session(conn, new PostgresCommand(conn));
-                }, (table, columns) => PostgresStatementBuilder.CreateTable(table,
-                    [.. columns.Select(column => new PostgresColumn(column.Name, column.Type, column.Id))]).GetText(),
-                    PostgresStatementBuilder.Quote);
+                }, CreateTable, PostgresQuote.Quote);
             }
             finally
             {
@@ -47,4 +46,11 @@ public class PostgresRepositorySpecTests
             }
         }
     }
+
+    static string CreateTable(string table, IReadOnlyList<SpecColumn> columns) =>
+        new CreateTableStatement(
+            PostgresQuote.Quote(table),
+            [.. columns.Select(column => new Column(
+                PostgresQuote.Quote(column.Name),
+                column.Id ? $"{PostgresColumnType.Map(column.Type)} PRIMARY KEY" : PostgresColumnType.Map(column.Type)))]).GetText();
 }

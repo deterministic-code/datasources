@@ -7,7 +7,9 @@ mod converters;
 mod driver;
 mod rusqlite_driver;
 mod sqlite_path;
-mod statement_builder;
+mod column;
+mod column_type;
+mod quote;
 mod transaction;
 mod transaction_driver;
 
@@ -15,7 +17,9 @@ pub use command::SqliteCommand;
 pub use connection::SqliteConnection;
 pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
 pub use rusqlite_driver::RusqliteDriver;
-pub use statement_builder::{SqliteColumn, SqliteStatementBuilder};
+pub use column::SqliteColumn;
+pub use column_type::SqliteColumnType;
+pub use quote::SqliteQuote;
 pub use transaction::SqliteTransaction;
 
 #[cfg(test)]

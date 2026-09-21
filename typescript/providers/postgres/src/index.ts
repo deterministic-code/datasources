@@ -24,9 +24,8 @@ export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
 export { UuidConverter } from "./converters/UuidConverter.ts";
 export { DecimalConverter } from "./converters/DecimalConverter.ts";
 export { BinaryConverter } from "./converters/BinaryConverter.ts";
-export {
-  PostgresStatementBuilder,
-  type PostgresColumn,
-} from "./postgresStatementBuilder.ts";
+export { PostgresQuote } from "./postgresQuote.ts";
+export { PostgresColumnType } from "./postgresColumnType.ts";
+export type { PostgresColumn } from "./postgresColumn.ts";
 export type { Cells, Scalar } from "./scalar.ts";
 export { PostgresConnection as default } from "./connection.ts";

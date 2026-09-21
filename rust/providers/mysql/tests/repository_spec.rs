@@ -1,8 +1,8 @@
 use super::command::MysqlCommand;
 use super::connection::MysqlConnection;
 use super::mysql_async_driver::MysqlAsyncDriver;
-use super::statement_builder::{MysqlColumn, MysqlStatementBuilder};
-use datasources::{Connection, Text};
+use super::{MysqlColumnType, MysqlQuote};
+use datasources::{Column, Connection, CreateTableStatement, Text};
 use datasources_sql_specs::RepositoryDialect;
 use mysql_async::prelude::Queryable;
 use mysql_async::Conn;
@@ -12,15 +12,23 @@ use std::time::SystemTime;
 fn dialect() -> RepositoryDialect {
     RepositoryDialect {
         provider: "mysql",
-        quote: MysqlStatementBuilder::quote,
+        quote: MysqlQuote::quote,
         create_table: |table, columns| {
-            let mapped: Vec<MysqlColumn> = columns
+            let mapped: Vec<Column> = columns
                 .iter()
-                .map(|column| MysqlColumn::new(&column.name, &column.type_name, column.id))
+                .map(|column| {
+                    let affinity = MysqlColumnType::map(&column.type_name).expect("column type");
+                    Column::new(
+                        MysqlQuote::quote(&column.name),
+                        if column.id {
+                            format!("{affinity} PRIMARY KEY")
+                        } else {
+                            affinity
+                        },
+                    )
+                })
                 .collect();
-            MysqlStatementBuilder::create_table(table, &mapped)
-                .expect("create table")
-                .get_text()
+            CreateTableStatement::new(MysqlQuote::quote(table), &mapped).get_text()
         },
         field: super::converters::field,
         register: super::converters::register,

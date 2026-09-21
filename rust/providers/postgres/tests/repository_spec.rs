@@ -1,8 +1,8 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
-use super::statement_builder::{PostgresColumn, PostgresStatementBuilder};
+use super::{PostgresColumnType, PostgresQuote};
 use super::tokio_postgres_driver::TokioPostgresDriver;
-use datasources::{Connection, Text};
+use datasources::{Column, Connection, CreateTableStatement, Text};
 use datasources_sql_specs::RepositoryDialect;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -11,15 +11,23 @@ use tokio_postgres::NoTls;
 fn dialect() -> RepositoryDialect {
     RepositoryDialect {
         provider: "postgres",
-        quote: PostgresStatementBuilder::quote,
+        quote: PostgresQuote::quote,
         create_table: |table, columns| {
-            let mapped: Vec<PostgresColumn> = columns
+            let mapped: Vec<Column> = columns
                 .iter()
-                .map(|column| PostgresColumn::new(&column.name, &column.type_name, column.id))
+                .map(|column| {
+                    let affinity = PostgresColumnType::map(&column.type_name).expect("column type");
+                    Column::new(
+                        PostgresQuote::quote(&column.name),
+                        if column.id {
+                            format!("{affinity} PRIMARY KEY")
+                        } else {
+                            affinity
+                        },
+                    )
+                })
                 .collect();
-            PostgresStatementBuilder::create_table(table, &mapped)
-                .expect("create table")
-                .get_text()
+            CreateTableStatement::new(PostgresQuote::quote(table), &mapped).get_text()
         },
         field: super::converters::field,
         register: super::converters::register,

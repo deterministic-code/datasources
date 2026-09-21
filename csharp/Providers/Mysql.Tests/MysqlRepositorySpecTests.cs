@@ -1,3 +1,4 @@
+using Datasources;
 using Datasources.Mysql;
 using Datasources.SqlSpecs;
 using MySqlConnector;
@@ -25,9 +26,7 @@ public class MysqlRepositorySpecTests
                         Driver = new MysqlDriver(),
                     });
                     return new RepositorySpec.Session(conn, new MysqlCommand(conn));
-                }, (table, columns) => MysqlStatementBuilder.CreateTable(table,
-                    [.. columns.Select(column => new MysqlColumn(column.Name, column.Type, column.Id))]).GetText(),
-                    MysqlStatementBuilder.Quote);
+                }, CreateTable, MysqlQuote.Quote);
             }
             finally
             {
@@ -35,6 +34,13 @@ public class MysqlRepositorySpecTests
             }
         }
     }
+
+    static string CreateTable(string table, IReadOnlyList<SpecColumn> columns) =>
+        new CreateTableStatement(
+            MysqlQuote.Quote(table),
+            [.. columns.Select(column => new Column(
+                MysqlQuote.Quote(column.Name),
+                column.Id ? $"{MysqlColumnType.Map(column.Type)} PRIMARY KEY" : MysqlColumnType.Map(column.Type)))]).GetText();
 
     static async Task<(string Url, Func<Task> Cleanup)> Isolate(string baseUrl)
     {

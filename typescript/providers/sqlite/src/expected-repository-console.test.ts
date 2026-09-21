@@ -14,7 +14,7 @@ describe("expected repository console", () => {
     readFileSync(join(repoRoot(), "specs", "repositories", "user-crud.yaml"), "utf8"),
   ) as RepositorySpec;
 
-  it("expands user-crud into StatementBuilder SQL", () => {
+  it("expands user-crud into statement SQL", () => {
     expect(repositoryQueries(spec)).toEqual([
       "INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)",
       "INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)",
@@ -34,7 +34,7 @@ describe("expected repository console", () => {
     ]);
   });
 
-  it("expands complex-crud-mappings into flattened StatementBuilder SQL", () => {
+  it("expands complex-crud-mappings into flattened statement SQL", () => {
     const mapped = parse(
       readFileSync(join(repoRoot(), "specs", "repositories", "complex-crud-mappings.yaml"), "utf8"),
     ) as RepositorySpec;
@@ -57,7 +57,7 @@ describe("expected repository console", () => {
     ]);
   });
 
-  it("expands statement-mapper-crud into remapped StatementBuilder SQL", () => {
+  it("expands statement-mapper-crud into remapped statement SQL", () => {
     const mapped = parse(
       readFileSync(join(repoRoot(), "specs", "repositories", "statement-mapper-crud.yaml"), "utf8"),
     ) as RepositorySpec;

@@ -1,3 +1,4 @@
+using Datasources;
 using Datasources.Sqlite;
 using Datasources.SqlSpecs;
 
@@ -18,9 +19,14 @@ public class SqliteRepositorySpecTests
                     Driver = new SqliteDriver(),
                 });
                 return new RepositorySpec.Session(conn, new SqliteCommand(conn));
-            }, (table, columns) => SqliteStatementBuilder.CreateTable(table,
-                [.. columns.Select(column => new SqliteColumn(column.Name, column.Type, column.Id))]).GetText(),
-                SqliteStatementBuilder.Quote);
+            }, CreateTable, SqliteQuote.Quote);
         }
     }
+
+    static string CreateTable(string table, IReadOnlyList<SpecColumn> columns) =>
+        new CreateTableStatement(
+            SqliteQuote.Quote(table),
+            [.. columns.Select(column => new Column(
+                SqliteQuote.Quote(column.Name),
+                column.Id ? $"{SqliteColumnType.Map(column.Type)} PRIMARY KEY" : SqliteColumnType.Map(column.Type)))]).GetText();
 }

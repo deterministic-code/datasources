@@ -24,9 +24,8 @@ export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
 export { UuidConverter } from "./converters/UuidConverter.ts";
 export { DecimalConverter } from "./converters/DecimalConverter.ts";
 export { BinaryConverter } from "./converters/BinaryConverter.ts";
-export {
-  MysqlStatementBuilder,
-  type MysqlColumn,
-} from "./mysqlStatementBuilder.ts";
+export { MysqlQuote } from "./mysqlQuote.ts";
+export { MysqlColumnType } from "./mysqlColumnType.ts";
+export type { MysqlColumn } from "./mysqlColumn.ts";
 export type { Cells, Scalar } from "./scalar.ts";
 export { MysqlConnection as default } from "./connection.ts";
