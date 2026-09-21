@@ -27,7 +27,7 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             if (op == "insert")
             {
                 Typed.GetCollection().Add(new Row(obj));
-                return Task.FromResult((new Response(Value.Null.Instance, 1), EmptyRows()));
+                return Task.FromResult((Response.Of(Value.Null.Instance, 1, paramsList), EmptyRows()));
             }
 
             if (op == "update")
@@ -35,11 +35,11 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
                 var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
                 var filter = whereText is not null ? ParseFilter(whereText) : new Row(Helpers.IdentityFilter(obj));
-                return Task.FromResult((ApplyUpdate(new Row(obj), filter), EmptyRows()));
+                return Task.FromResult((ApplyUpdate(new Row(obj), filter) with { Parameters = paramsList }, EmptyRows()));
             }
 
             if (op == "delete")
-                return Task.FromResult((ApplyDelete(obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj))), EmptyRows()));
+                return Task.FromResult((ApplyDelete(obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj))) with { Parameters = paramsList }, EmptyRows()));
 
             throw new DatasourceException($"Unsupported Memory command: {query}");
         });

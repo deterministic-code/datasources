@@ -1,4 +1,4 @@
-import type { IsolationLevelName } from "@datasources/core";
+import type { IsolationLevelName, Parameter } from "@datasources/core";
 import type {
   IMysqlDriver,
   MysqlCreateConnection,
@@ -25,7 +25,8 @@ export class Mysql2Driver implements IMysqlDriver {
   execute = (
     sql: string,
     params?: Record<string, Scalar>,
-  ): Promise<MysqlExecuteResult> => this.commands.execute(sql, params);
+    parameters?: Parameter[],
+  ): Promise<MysqlExecuteResult> => this.commands.execute(sql, params, parameters);
   query = (sql: string, params?: Record<string, Scalar>): Promise<Cells[]> =>
     this.commands.query(sql, params);
   begin = (isolation?: IsolationLevelName): Promise<void> =>

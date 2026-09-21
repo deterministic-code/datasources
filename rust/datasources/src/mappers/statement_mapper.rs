@@ -10,6 +10,7 @@ pub struct StatementMapper {
     pub update: Option<Arc<TransformMapper<String, String>>>,
     pub delete: Option<Arc<TransformMapper<String, String>>>,
     pub stored_procedure: Option<Arc<TransformMapper<String, String>>>,
+    pub return_: Option<Arc<TransformMapper<String, String>>>,
     pub rows: TransformMapper<Row, Row>,
 }
 
@@ -23,6 +24,7 @@ impl StatementMapper {
             update: None,
             delete: None,
             stored_procedure: None,
+            return_: None,
             rows: TransformMapper::new(|row| row, |row| row),
         }
     }

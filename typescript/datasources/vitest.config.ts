@@ -19,6 +19,7 @@ export default defineConfig({
         "src/statements/IQuery.ts",
         "src/statements/IStatement.ts",
         "src/statements/IStoredProcedureStatement.ts",
+        "src/statements/IReturnStatement.ts",
         "src/statements/IUpdateStatement.ts",
         "src/statements/IExpression.ts",
         "src/statements/IText.ts",

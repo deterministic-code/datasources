@@ -44,7 +44,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         const obj = parametersToObject(params);
         if (op === "insert") {
           this.connection.getCollection().push({ ...obj });
-          return { value: { result: obj, rowsAffected: 1 }, rows: [] };
+          return { value: { result: obj, rowsAffected: 1, parameters: params }, rows: [] };
         }
         if (op === "update") {
           const whereText =
@@ -52,12 +52,12 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
           const next = { ...obj };
           delete next.$where;
           const filter = whereText ? parseFilter(whereText) : identityFilter(next);
-          return { value: this.applyUpdate(next, filter), rows: [] };
+          return { value: { ...this.applyUpdate(next, filter), parameters: params }, rows: [] };
         }
         if (op === "delete") {
           const filter =
             Object.keys(obj).length === 0 ? {} : identityFilter(obj);
-          return { value: this.applyDelete(filter), rows: [] };
+          return { value: { ...this.applyDelete(filter), parameters: params }, rows: [] };
         }
         throw new Error(`Unsupported Memory command: ${query}`);
     });

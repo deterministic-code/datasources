@@ -93,6 +93,20 @@ public class StatementMapperTests
     }
 
     [Fact]
+    public void ReturnMapperRewritesFinishedSql()
+    {
+        var mapper = new StatementMapper<UserRow>
+        {
+            Return = new TransformMapper<IReturnStatement, IReturnStatement>(
+                ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
+                ret => ret)
+        };
+        var built = new ReturnStatement("add", [new Parameter("id", 1)]);
+        var statement = mapper.Return is { } map ? map.Map(built) : built;
+        Assert.Equal("SELECT add($id) /* mapped */", statement.GetText());
+    }
+
+    [Fact]
     public async Task BuilderThenStatementMapper()
     {
         var names = Names();

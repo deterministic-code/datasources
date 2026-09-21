@@ -28,6 +28,17 @@ impl<'a> MysqlCommandDriver<'a> {
                 result: Value::Null,
             });
         }
+        if sql.trim_start().len() >= 6 && sql.trim_start()[..6].eq_ignore_ascii_case("SELECT") {
+            let rows = self.query(sql, params).await?;
+            let result = rows
+                .first()
+                .and_then(|row| row.values().next().cloned())
+                .unwrap_or(Value::Null);
+            return Ok(MysqlExecuteResult {
+                rows_affected: if rows.is_empty() { 0 } else { 1 },
+                result,
+            });
+        }
         let sql = to_mysql(sql);
         let params = named_params(params);
         let mut slot = self.connection.conn.lock().await;

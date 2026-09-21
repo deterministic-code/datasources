@@ -10,11 +10,14 @@ import {
   Operator,
   QueryStatement,
   StatementEvaluator,
+  ParameterDirection,
+  ReturnStatement,
   StoredProcedureStatement,
   UpdateStatement,
   Where,
   WhereClause,
 } from "../index.ts";
+import type { Parameter } from "../index.ts";
 
 describe("Query and Where", () => {
   it("keeps optional where on the query", () => {
@@ -235,6 +238,26 @@ describe("statements", () => {
     expect(new StoredProcedureStatement("save", []).getText()).toBe(
       "CALL save()",
     );
+    expect(new ReturnStatement("add", [...fields]).getText()).toBe(
+      "SELECT add($id, $name)",
+    );
+    expect(new ReturnStatement("add", []).getText()).toBe("SELECT add()");
+    expect(
+      new StoredProcedureStatement("save", [
+        { name: "id", value: 1 },
+        { name: "ret", direction: ParameterDirection.ReturnValue },
+      ]).getText(),
+    ).toBe("CALL save($id)");
+    expect(
+      new ReturnStatement("add", [
+        { name: "id", value: 1 },
+        { name: "ret", direction: ParameterDirection.ReturnValue },
+      ]).getText(),
+    ).toBe("SELECT add($id)");
+    const input: Parameter = { name: "id", value: 1 };
+    const output: Parameter = { name: "count", direction: ParameterDirection.Output };
+    expect(input.direction).toBeUndefined();
+    expect(output.direction).toBe(ParameterDirection.Output);
   });
 
   it("wraps raw statement text", () => {
@@ -243,5 +266,6 @@ describe("statements", () => {
     expect(DeleteStatement.raw("x").getText()).toBe("x");
     expect(new CreateTableStatement("x").getText()).toBe("x");
     expect(new StoredProcedureStatement("x").getText()).toBe("x");
+    expect(new ReturnStatement("x").getText()).toBe("x");
   });
 });

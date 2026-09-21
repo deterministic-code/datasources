@@ -198,7 +198,14 @@ describe("MemoryCommand and MemoryRepository", () => {
         { name: "id", value: 2 },
         { name: "name", value: "b" },
       ]),
-    ).toEqual({ result: { id: 2, name: "b" }, rowsAffected: 1 });
+    ).toEqual({
+      result: { id: 2, name: "b" },
+      rowsAffected: 1,
+      parameters: [
+        { name: "id", value: 2 },
+        { name: "name", value: "b" },
+      ],
+    });
 
     expect(
       await command.execute("update", [

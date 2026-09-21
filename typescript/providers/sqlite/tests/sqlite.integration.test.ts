@@ -1,4 +1,5 @@
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { ReturnStatement } from "@datasources/core";
 import {
   loadDialect,
   runSpec,
@@ -40,4 +41,21 @@ describe("shared sql specs", () => {
       });
     });
   }
+});
+
+describe("return statement", () => {
+  it("selects a scalar", async () => {
+    const connection = new SqliteConnection({
+      filename: ":memory:",
+      driver: await loadBetterSqlite3Driver(":memory:"),
+    });
+    await connection.open();
+    const command = new SqliteCommand(connection);
+    const parameters = [{ name: "x", value: -3 }];
+    const response = await command.execute(
+      new ReturnStatement("abs", parameters).getText(),
+      parameters,
+    );
+    expect(response.result).toBe(3);
+  });
 });

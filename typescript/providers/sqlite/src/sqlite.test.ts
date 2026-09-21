@@ -252,8 +252,14 @@ describe("SqliteCommand and Repository", () => {
     const { command, db } = await setup();
     db()!.rows = [{ id: 1, name: "a" }];
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
-      .toEqual({ result: 5, rowsAffected: 2 });
-    expect(await command.execute("")).toEqual({ rowsAffected: 0 });
+      .toEqual({ result: 5, rowsAffected: 2, parameters: [{ name: "id", value: 1 }] });
+    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0 });
+    db()!.rows = [{ abs: 3 }];
+    expect(await command.execute("SELECT abs($x)", [{ name: "x", value: -3 }]))
+      .toEqual({ result: 3, rowsAffected: 1, parameters: [{ name: "x", value: -3 }] });
+    db()!.rows = [];
+    expect(await command.execute("SELECT 1")).toEqual({ result: null, rowsAffected: 0 });
+    db()!.rows = [{ id: 1, name: "a" }];
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1, name: "a" });

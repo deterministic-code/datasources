@@ -57,7 +57,14 @@ impl Command for SqliteCommand {
                     connection.ensure_open()?;
                     let mapped = parameters_to_map(params.as_deref());
                     let result = connection.driver.execute(&sql, &mapped).await?;
-                    Ok((Response::new(result.result, result.rows_affected), vec![]))
+                    Ok((
+                        Response::of(
+                            result.result,
+                            result.rows_affected,
+                            params.map(|list| list.to_vec()),
+                        ),
+                        vec![],
+                    ))
                 }
             })
             .await

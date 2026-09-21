@@ -82,6 +82,14 @@ Rewrites a finished [IStoredProcedureStatement](./statements.md#istoredprocedure
 readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
 ```
 
+##### return
+
+Rewrites a finished [IReturnStatement](./statements.md#ireturnstatement).
+
+```typescript
+readonly return?: IMapper<IReturnStatement, IReturnStatement>
+```
+
 ##### rows
 
 Read-row Mapper. [map](#statementmapper-map-value) / [reverseMap](#statementmapper-reversemap-value) delegate here.
@@ -255,6 +263,14 @@ Rewrites a finished [IStoredProcedureStatement](./statements.md#istoredprocedure
 IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure { get; init; }
 ```
 
+##### Return
+
+Rewrites a finished [IReturnStatement](./statements.md#ireturnstatement).
+
+```csharp
+IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }
+```
+
 ##### Rows
 
 Read-row Mapper. [Map](#statementmapper-map-value) / [ReverseMap](#statementmapper-reversemap-value) delegate here.
@@ -354,6 +370,14 @@ Rewrites finished stored-procedure SQL.
 pub stored_procedure: Option<Arc<TransformMapper<String, String>>>
 ```
 
+##### return_
+
+Rewrites finished return-call SQL.
+
+```rust
+pub return_: Option<Arc<TransformMapper<String, String>>>
+```
+
 ##### rows
 
 Read-row mapper. [map](#statementmapper-map-value) / [reverse_map](#statementmapper-reverse_map-value) delegate here.
@@ -420,9 +444,9 @@ fn reverse_map(&self, value: Row) -> Row
 Apply statement mapping in either or both places:
 
 1. **Builder** — `RepositoryBuilder` maps `Entity` / `entity` and `Columns` / `columns` into `RepositoryStatements`.
-2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` rewrite the finished statement.
+2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` / `StoredProcedure` / `Return` rewrite the finished statement.
 
-C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `stored_procedure` are [TransformMapper](./transform-mapper.md)`<String, String>` over SQL text via `StatementMapper::map_sql`.
+C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `stored_procedure` / `return_` are [TransformMapper](./transform-mapper.md)`<String, String>` over SQL text via `StatementMapper::map_sql`.
 
 `Repository.Mapper` / `mapper` aliases `Rows` / `rows`.
 
@@ -433,8 +457,19 @@ C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `i
 ::: example
 ```csharp csharp/Datasources.Tests/StatementMapperTests.cs#L55-L81
 ```
-```rust rust/datasources/src/tests/mod.rs#L794-L804
+```rust rust/datasources/src/tests/mod.rs#L1567-L1609
 ```
 ```typescript typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59
+```
+:::
+
+### Rewrite a return call
+
+::: example
+```csharp csharp/Datasources.Tests/StatementMapperTests.cs#L95-L107
+```
+```rust rust/datasources/src/tests/mod.rs#L1216-L1226
+```
+```typescript typescript/datasources/src/mappers/StatementMapper.test.ts#L75-L85
 ```
 :::

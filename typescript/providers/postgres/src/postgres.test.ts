@@ -198,25 +198,56 @@ describe("PostgresConnection", () => {
 
 describe("PostgresCommand", () => {
   async function setup() {
-    const { driver } = fakeDriver();
+    const { driver, client } = fakeDriver();
     const connection = new PostgresConnection({ driver });
     await connection.open();
     return {
       connection,
       command: new PostgresCommand(connection),
+      client,
     };
   }
 
   it("executes SQL through the driver", async () => {
-    const { command } = await setup();
+    const { command, client } = await setup();
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
-      .toEqual({ result: 5, rowsAffected: 2 });
-    expect(await command.execute("")).toEqual({ rowsAffected: 0 });
+      .toEqual({ result: 5, rowsAffected: 2, parameters: [{ name: "id", value: 1 }] });
+    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0 });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 5 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
+    const { ParameterDirection } = await import("@datasources/core");
+    client()!.result = { rowCount: 1, rows: [{ add_one: 5 }] };
+    expect(await command.execute("SELECT add_one($n)", [{ name: "n", value: 4 }]))
+      .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });
+    client()!.result = { rowCount: 0, rows: [] };
+    expect(await command.execute("SELECT 1")).toEqual({
+      result: undefined,
+      rowsAffected: 0,
+    });
+    const inout = { name: "result", value: 4, direction: ParameterDirection.InputOutput };
+    client()!.result = { rowCount: 1, rows: [{ result: 5 }] };
+    expect(await command.execute("CALL bump($result)", [inout])).toMatchObject({
+      result: 5,
+      parameters: [{ name: "result", value: 5, direction: ParameterDirection.InputOutput }],
+    });
+    client()!.result = { rowCount: 1, rows: [{ id: 1 }] };
+    expect(
+      await command.execute("CALL noop($n)", [
+        { name: "n", value: 1, direction: ParameterDirection.Input },
+      ]),
+    ).toMatchObject({ rowsAffected: 1 });
+    expect(await command.execute("CALL noop()")).toMatchObject({ rowsAffected: 1 });
+    client()!.result = { rowCount: 1, rows: [{ other: 9 }] };
+    expect(
+      await command.execute("CALL bump($missing)", [
+        { name: "missing", value: 1, direction: ParameterDirection.Output },
+      ]),
+    ).toMatchObject({
+      parameters: [{ name: "missing", value: 1, direction: ParameterDirection.Output }],
+    });
   });
 });
 

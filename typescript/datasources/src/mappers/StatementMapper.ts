@@ -1,7 +1,8 @@
-import type { IDeleteStatement } from "../builders/IDeleteStatement.ts";
-import type { IInsertStatement } from "../builders/IInsertStatement.ts";
-import type { IStoredProcedureStatement } from "../builders/IStoredProcedureStatement.ts";
-import type { IUpdateStatement } from "../builders/IUpdateStatement.ts";
+import type { IDeleteStatement } from "../statements/IDeleteStatement.ts";
+import type { IInsertStatement } from "../statements/IInsertStatement.ts";
+import type { IReturnStatement } from "../statements/IReturnStatement.ts";
+import type { IStoredProcedureStatement } from "../statements/IStoredProcedureStatement.ts";
+import type { IUpdateStatement } from "../statements/IUpdateStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import { TransformMapper } from "./TransformMapper.ts";
 import type { IMapper } from "./IMapper.ts";
@@ -15,6 +16,7 @@ export type StatementMapperOptions<T> = {
   update?: IMapper<IUpdateStatement, IUpdateStatement>;
   delete?: IMapper<IDeleteStatement, IDeleteStatement>;
   storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>;
+  return?: IMapper<IReturnStatement, IReturnStatement>;
 };
 
 export class StatementMapper<T> implements IMapper<T, T> {
@@ -26,6 +28,7 @@ export class StatementMapper<T> implements IMapper<T, T> {
   readonly update?: IMapper<IUpdateStatement, IUpdateStatement>;
   readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>;
   readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>;
+  readonly return?: IMapper<IReturnStatement, IReturnStatement>;
 
   constructor(options: StatementMapperOptions<T> = {}) {
     this.entity = options.entity ?? new TransformMapper((name) => name, (name) => name);
@@ -37,6 +40,7 @@ export class StatementMapper<T> implements IMapper<T, T> {
     this.update = options.update;
     this.delete = options.delete;
     this.storedProcedure = options.storedProcedure;
+    this.return = options.return;
   }
 
   map = (value: T): T => this.rows.map(value);

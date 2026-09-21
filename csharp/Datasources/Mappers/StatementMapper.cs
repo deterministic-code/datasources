@@ -11,6 +11,7 @@ public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
     public IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
     public IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
     public IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure { get; init; }
+    public IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }
     public IMapper<T, T> Rows { get; init; } =
         new TransformMapper<T, T>(static value => value, static value => value);
 

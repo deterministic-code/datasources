@@ -34,6 +34,22 @@ impl<'a> SqliteCommandDriver<'a> {
         let pairs = bind_pairs(params);
         let bound = as_params(&pairs);
         let mut statement = conn.prepare(sql).map_err(map_err)?;
+        if sql.trim_start().len() >= 6
+            && sql.trim_start()[..6].eq_ignore_ascii_case("SELECT")
+            && statement.column_count() > 0
+        {
+            let mut rows = statement.query(bound.as_slice()).map_err(map_err)?;
+            return Ok(match rows.next().map_err(map_err)? {
+                Some(row) => SqliteExecuteResult {
+                    rows_affected: 1,
+                    result: from_sql(row.get_ref(0).map_err(map_err)?),
+                },
+                None => SqliteExecuteResult {
+                    rows_affected: 0,
+                    result: Value::Null,
+                },
+            });
+        }
         let rows_affected = if statement.column_count() > 0 {
             let mut rows = statement.query(bound.as_slice()).map_err(map_err)?;
             while rows.next().map_err(map_err)?.is_some() {}

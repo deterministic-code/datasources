@@ -137,6 +137,21 @@ mod tests {
         let closed = Arc::new(SqliteConnection::new(None, driver));
         assert!(SqliteCommand::new(closed).execute("x", None).await.is_err());
     }
+
+    #[tokio::test]
+    async fn return_statement_selects_scalar() {
+        use datasources::{Parameter, ReturnStatement, Text};
+        let driver: Arc<dyn SqliteDriver> = Arc::new(RusqliteDriver::new());
+        let conn = Arc::new(SqliteConnection::new(Some(":memory:".into()), driver));
+        conn.open().await.unwrap();
+        let command = SqliteCommand::new(conn);
+        let parameters = [Parameter::new("x", -3_i64)];
+        let response = command
+            .execute(&ReturnStatement::new("abs", &parameters).get_text(), Some(&parameters))
+            .await
+            .unwrap();
+        assert_eq!(response.result, datasources::Value::Int(3));
+    }
 }
 
 pub use converters::{register as register_converters, types as converter_types};

@@ -329,3 +329,46 @@ fn uuid_name() -> String {
             .unwrap_or(0)
     )
 }
+
+#[tokio::test]
+async fn return_statement_selects_scalar() {
+    use datasources::{ReturnStatement, Text};
+    let Ok(base) = std::env::var("MYSQL_URL") else {
+        return;
+    };
+    let name = format!("ds_{}", uuid_name());
+    let mut admin = Conn::from_url(base.clone()).await.unwrap();
+    admin
+        .query_drop(format!("CREATE DATABASE `{name}`"))
+        .await
+        .unwrap();
+    drop(admin);
+    let url = replace_db(&base, &name);
+    let conn = Arc::new(MysqlConnection::new(
+        Some(url),
+        Arc::new(MysqlAsyncDriver::new()),
+    ));
+    conn.open().await.unwrap();
+    let command = MysqlCommand::new(conn);
+    command
+        .execute(
+            "CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC RETURN n + 1",
+            None,
+        )
+        .await
+        .unwrap();
+    let parameters = [Parameter::new("n", 4_i64)];
+    let response = command
+        .execute(
+            &ReturnStatement::new("add_one", &parameters).get_text(),
+            Some(&parameters),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.result, Value::Int(5));
+    let mut admin = Conn::from_url(base).await.unwrap();
+    admin
+        .query_drop(format!("DROP DATABASE `{name}`"))
+        .await
+        .ok();
+}

@@ -1,4 +1,9 @@
-import { beforeAll, describe, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+  ParameterDirection,
+  ReturnStatement,
+  StoredProcedureStatement,
+} from "@datasources/core";
 import { ensureCompose } from "../../ensure-compose.ts";
 import {
   loadDialect,
@@ -80,4 +85,43 @@ describe("shared sql specs", () => {
       }
     });
   }
+});
+
+describe("return and output parameters", () => {
+  it("reads OUT and function results", async () => {
+    const isolated = await isolate(url);
+    try {
+      const connection = new MysqlConnection({
+        url: isolated.url,
+        driver: await loadMysql2Driver(isolated.url),
+      });
+      await connection.open();
+      const command = new MysqlCommand(connection);
+      await command.execute(`
+        CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
+        BEGIN
+          SET result = start_n + 1;
+        END
+      `);
+      await command.execute(`
+        CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC
+        RETURN n + 1
+      `);
+      const start = { name: "start_n", value: 4 };
+      const result = { name: "result", direction: ParameterDirection.Output };
+      const call = await command.execute(
+        new StoredProcedureStatement("bump", [start, result]).getText(),
+        [start, result],
+      );
+      expect(call.parameters?.[1]?.value).toBe(5);
+      const n = { name: "n", value: 4 };
+      const ret = await command.execute(
+        new ReturnStatement("add_one", [n]).getText(),
+        [n],
+      );
+      expect(ret.result).toBe(5);
+    } finally {
+      await isolated.cleanup();
+    }
+  });
 });

@@ -959,6 +959,35 @@ fn statements_and_builders() {
         StoredProcedureStatement::new("save", &[]).get_text(),
         "CALL save()"
     );
+    assert_eq!(
+        ReturnStatement::new("add", &fields).get_text(),
+        "SELECT add($id, $name)"
+    );
+    assert_eq!(ReturnStatement::new("add", &[]).get_text(), "SELECT add()");
+    assert_eq!(
+        StoredProcedureStatement::new(
+            "save",
+            &[Parameter::new("id", 1_i64), Parameter::return_value("ret")]
+        )
+        .get_text(),
+        "CALL save($id)"
+    );
+    assert_eq!(
+        ReturnStatement::new(
+            "add",
+            &[Parameter::new("id", 1_i64), Parameter::return_value("ret")]
+        )
+        .get_text(),
+        "SELECT add($id)"
+    );
+    assert_eq!(
+        Parameter::new("id", 1_i64).direction,
+        ParameterDirection::Input
+    );
+    assert_eq!(Parameter::output("count").direction, ParameterDirection::Output);
+    assert_eq!(Parameter::output("count").value, Value::Null);
+    assert!(Response::new(1_i64, 2).parameters.is_none());
+    assert_eq!(ReturnStatement::text("x").get_text(), "x");
 
     let query = QueryStatement::with_where("SELECT 1", TextWhere::new("id = 1"));
     assert_eq!(query.get_text(), "SELECT 1");
@@ -971,6 +1000,7 @@ fn statements_and_builders() {
     assert_eq!(DeleteStatement::raw("x", None).get_text(), "x");
     assert_eq!(CreateTableStatement::text("x").get_text(), "x");
     assert_eq!(StoredProcedureStatement::text("x").get_text(), "x");
+    assert_eq!(ReturnStatement::text("x").get_text(), "x");
 }
 
 #[test]
@@ -1181,6 +1211,18 @@ fn stored_procedure_mapper_rewrites_finished_sql() {
     let built = StoredProcedureStatement::new("save", &[Parameter::new("id", 1_i64)]);
     let text = StatementMapper::map_sql(&mapper.stored_procedure, built.get_text());
     assert_eq!(text, "CALL save($id) /* mapped */");
+}
+
+#[test]
+fn return_mapper_rewrites_finished_sql() {
+    let mut mapper = StatementMapper::identity("", "");
+    mapper.return_ = Some(Arc::new(TransformMapper::new(
+        |text: String| format!("{text} /* mapped */"),
+        |text| text,
+    )));
+    let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
+    let text = StatementMapper::map_sql(&mapper.return_, built.get_text());
+    assert_eq!(text, "SELECT add($id) /* mapped */");
 }
 
 #[tokio::test]

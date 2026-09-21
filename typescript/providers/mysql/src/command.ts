@@ -1,6 +1,7 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  responseOf,
   type Cells,
   type ICommand,
   type IReader,
@@ -38,9 +39,10 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       const result = await this.connection.driver.execute(
         query,
         bindParameters(params),
+        params,
       );
       return {
-        value: { result: result.result, rowsAffected: result.rowsAffected },
+        value: responseOf(result.result, result.rowsAffected, result.parameters ?? params),
         rows: [],
       };
     });

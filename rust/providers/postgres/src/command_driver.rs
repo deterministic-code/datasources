@@ -37,7 +37,12 @@ impl<'a> PostgresCommandDriver<'a> {
         let client = slot
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Postgres driver is not open"))?;
-        if rewritten.to_ascii_lowercase().contains("returning") {
+        if rewritten.to_ascii_lowercase().contains("returning")
+            || rewritten.trim_start().len() >= 6
+                && rewritten.trim_start()[..6].eq_ignore_ascii_case("SELECT")
+            || rewritten.trim_start().len() >= 4
+                && rewritten.trim_start()[..4].eq_ignore_ascii_case("CALL")
+        {
             let rows = client.query(&text, &refs).await.map_err(map_err)?;
             let result = rows
                 .first()

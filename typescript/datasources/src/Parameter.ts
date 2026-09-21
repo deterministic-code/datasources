@@ -1,4 +1,8 @@
-export interface Parameter<T = unknown> {
+import type { Scalar } from "./builders/Scalar.ts";
+import type { ParameterDirection } from "./ParameterDirection.ts";
+
+export interface Parameter<T = Scalar> {
   name: string;
-  value: T;
+  value?: T;
+  direction?: ParameterDirection;
 }
