@@ -22,7 +22,6 @@ export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
 export { UuidConverter } from "./converters/UuidConverter.ts";
 export { DecimalConverter } from "./converters/DecimalConverter.ts";
 export { BinaryConverter } from "./converters/BinaryConverter.ts";
-export {
-  SqliteStatementBuilder,
-  type SqliteColumn,
-} from "./sqliteStatementBuilder.ts";
+export { SqliteQuote } from "./sqliteQuote.ts";
+export { SqliteColumnType } from "./sqliteColumnType.ts";
+export type { SqliteColumn } from "./sqliteColumn.ts";

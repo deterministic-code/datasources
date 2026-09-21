@@ -4,12 +4,29 @@ import {
   repositorySpecFiles,
   runRepositorySpec,
 } from "../../repository-spec-runner.ts";
+import { CreateTableStatement } from "@datasources/core";
 import {
   loadMysql2Driver,
+  MysqlColumnType,
   MysqlCommand,
   MysqlConnection,
-  MysqlStatementBuilder,
+  MysqlQuote,
 } from "../src/index.ts";
+import type { RepositoryDialect } from "../../repository-spec-runner.ts";
+
+const dialect: RepositoryDialect = {
+  quote: MysqlQuote.quote,
+  createTable: (table, columns) =>
+    new CreateTableStatement(
+      MysqlQuote.quote(table),
+      columns.map((column) => ({
+        name: MysqlQuote.quote(column.name),
+        type: column.id
+          ? `${MysqlColumnType.map(column.type)} PRIMARY KEY`
+          : MysqlColumnType.map(column.type),
+      })),
+    ),
+};
 import type { Mysql2Module } from "../src/i-mysql-driver.ts";
 
 const url = (process.env.MYSQL_URL ??=
@@ -61,7 +78,7 @@ describe("repository specs", () => {
           file,
           connection,
           (sql) => command.execute(sql),
-          MysqlStatementBuilder,
+          dialect,
         );
       } finally {
         await isolated.cleanup();

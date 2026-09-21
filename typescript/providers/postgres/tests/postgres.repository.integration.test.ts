@@ -4,12 +4,29 @@ import {
   repositorySpecFiles,
   runRepositorySpec,
 } from "../../repository-spec-runner.ts";
+import { CreateTableStatement } from "@datasources/core";
 import {
   loadPgDriver,
+  PostgresColumnType,
   PostgresCommand,
   PostgresConnection,
-  PostgresStatementBuilder,
+  PostgresQuote,
 } from "../src/index.ts";
+import type { RepositoryDialect } from "../../repository-spec-runner.ts";
+
+const dialect: RepositoryDialect = {
+  quote: PostgresQuote.quote,
+  createTable: (table, columns) =>
+    new CreateTableStatement(
+      PostgresQuote.quote(table),
+      columns.map((column) => ({
+        name: PostgresQuote.quote(column.name),
+        type: column.id
+          ? `${PostgresColumnType.map(column.type)} PRIMARY KEY`
+          : PostgresColumnType.map(column.type),
+      })),
+    ),
+};
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
 const url = (process.env.POSTGRES_URL ??=
@@ -52,7 +69,7 @@ describe("repository specs", () => {
           file,
           connection,
           (sql) => command.execute(sql),
-          PostgresStatementBuilder,
+          dialect,
         );
       } finally {
         await isolated.cleanup();

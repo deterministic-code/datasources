@@ -5,7 +5,9 @@ mod connection_driver;
 mod converters;
 mod driver;
 mod mysql_async_driver;
-mod statement_builder;
+mod column;
+mod column_type;
+mod quote;
 mod transaction;
 mod transaction_driver;
 
@@ -13,7 +15,9 @@ pub use command::MysqlCommand;
 pub use connection::MysqlConnection;
 pub use driver::{isolation_sql, require_driver, to_mysql, MysqlDriver, MysqlExecuteResult};
 pub use mysql_async_driver::MysqlAsyncDriver;
-pub use statement_builder::{MysqlColumn, MysqlStatementBuilder};
+pub use column::MysqlColumn;
+pub use column_type::MysqlColumnType;
+pub use quote::MysqlQuote;
 pub use transaction::MysqlTransaction;
 
 #[cfg(test)]
