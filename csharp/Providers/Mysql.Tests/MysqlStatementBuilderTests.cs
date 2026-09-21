@@ -37,7 +37,7 @@ public class MysqlStatementBuilderTests
     [Fact]
     public void QuotesTablesInDml()
     {
-        var where = WhereBuilder.Equals("id", 1);
+        var where = new WhereStatement(new Operator.Equals("id", 1));
         Parameter[] fields = [new("id", 1), new("username", "alice")];
         Assert.Equal(
             "SELECT `id`, `username` FROM `user` WHERE id = $id",

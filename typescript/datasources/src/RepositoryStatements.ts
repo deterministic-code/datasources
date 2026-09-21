@@ -1,8 +1,8 @@
 import type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
 import type { IInsertStatement } from "./builders/IInsertStatement.ts";
-import type { IQuery } from "./IQuery.ts";
+import type { IQuery } from "./statements/IQuery.ts";
 import type { IUpdateStatement } from "./builders/IUpdateStatement.ts";
-import type { IWhere } from "./IWhere.ts";
+import type { IWhere } from "./statements/IWhere.ts";
 import { StatementBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
 import type { IMapper } from "./mappers/IMapper.ts";

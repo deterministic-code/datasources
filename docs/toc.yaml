@@ -34,8 +34,16 @@ pages:
     title: Statement Builder
     group: Code Reference
     parent: Statements
-  - path: sections/where-builder.md
-    title: Where Builder
+  - path: sections/where-statement.md
+    title: Where Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/expressions.md
+    title: Expressions
+    group: Code Reference
+    parent: Statements
+  - path: sections/statement-evaluator.md
+    title: Statement Evaluator
     group: Code Reference
     parent: Statements
   - path: sections/repository.md

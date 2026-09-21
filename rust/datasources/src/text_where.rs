@@ -17,4 +17,8 @@ impl Statement for TextWhere {
     }
 }
 
-impl Where for TextWhere {}
+impl Where for TextWhere {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}

@@ -1,6 +1,6 @@
 import type { Constructable } from "../converters/Constructable.ts";
-import type { IQuery } from "../IQuery.ts";
-import type { IWhere } from "../IWhere.ts";
+import type { IQuery } from "../statements/IQuery.ts";
+import type { IWhere } from "../statements/IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
 import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 

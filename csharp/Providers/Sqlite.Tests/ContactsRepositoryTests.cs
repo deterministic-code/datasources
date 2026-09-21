@@ -34,7 +34,7 @@ public class ContactsRepositoryTests
         var service = ContactsServiceOf.Create(conn);
         var created = ExtraContact.New(await ContactLookupIds.Resolve(conn));
         await service.Create(created);
-        var extra = await service.ReadSingle(WhereBuilder.Equals("id", Value.From(created.id)));
+        var extra = await service.ReadSingle(new WhereStatement(new Operator.Equals("id", Value.From(created.id))));
         Assert.NotNull(extra);
         Assert.Equal("Extra", extra.first_name);
         Assert.Single(extra.addresses);

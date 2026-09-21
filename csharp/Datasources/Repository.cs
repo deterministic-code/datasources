@@ -80,10 +80,12 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
         middlewares.Aggregate(connection.CreateCommand(), (command, middleware) => command.AddMiddleware(middleware));
 
     IWhere IdWhere(Row record) =>
-        WhereBuilder.And([.. ids.Select(col =>
+        new WhereStatement(ids.Select(col =>
             record.TryGetValue(col, out var value)
-                ? WhereBuilder.Equals(col, value)
-                : throw new DatasourceException($"Missing Id value \"{col}\""))]);
+                ? (IExpression)new Operator.Equals(col, value)
+                : throw new DatasourceException($"Missing Id value \"{col}\"")
+        ).DefaultIfEmpty(new Operator.Equals(new Literal(1), new Literal(1)))
+         .Aggregate((left, right) => new Operator.And(left, right)));
 
     static IReadOnlyList<Parameter> Params(
         Row record, Func<string, bool> include) =>

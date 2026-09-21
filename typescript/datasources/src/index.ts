@@ -5,13 +5,17 @@ export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory, bindInstall } from "./DatasourceFactory.ts";
-export type { ICreateTableStatement } from "./builders/ICreateTableStatement.ts";
-export type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
-export type { IInsertStatement } from "./builders/IInsertStatement.ts";
-export type { IQuery } from "./IQuery.ts";
-export type { IStatement } from "./builders/IStatement.ts";
-export type { IStoredProcedureStatement } from "./builders/IStoredProcedureStatement.ts";
-export type { IUpdateStatement } from "./builders/IUpdateStatement.ts";
+export type {
+  ICreateTableStatement,
+  IDeleteStatement,
+  IExpression,
+  IInsertStatement,
+  IQuery,
+  IStatement,
+  IStoredProcedureStatement,
+  IUpdateStatement,
+  IWhere,
+} from "./statements/index.ts";
 export type { IReader } from "./IReader.ts";
 export type { IRepository } from "./IRepository.ts";
 export type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -45,7 +49,21 @@ export type { Response } from "./Response.ts";
 export type { ITransaction } from "./ITransaction.ts";
 export { IsolationLevel } from "./IsolationLevel.ts";
 export type { IsolationLevel as IsolationLevelName } from "./IsolationLevel.ts";
-export type { IWhere } from "./IWhere.ts";
+export {
+  ArrayExpression,
+  CreateTableStatement,
+  DeleteStatement,
+  Identifier,
+  InsertStatement,
+  Literal,
+  Operator,
+  Query,
+  StatementEvaluator,
+  StoredProcedureStatement,
+  UpdateStatement,
+  Where,
+  WhereStatement,
+} from "./statements/index.ts";
 export type { IDatasourceFactory } from "./IDatasourceFactory.ts";
 export type { Parameter } from "./Parameter.ts";
 export type { Row } from "./Row.ts";
@@ -90,21 +108,13 @@ export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
 export {
   Join,
   StatementBuilder,
-  WhereBuilder,
   type Column,
   type Field,
   type JoinKind,
   type Scalar,
 } from "./builders/index.ts";
 export type { Join } from "./builders/index.ts";
-export { CreateTableStatement } from "./builders/CreateTableStatement.ts";
-export { DeleteStatement } from "./builders/DeleteStatement.ts";
-export { InsertStatement } from "./builders/InsertStatement.ts";
-export { Query } from "./Query.ts";
-export { StoredProcedureStatement } from "./builders/StoredProcedureStatement.ts";
-export { UpdateStatement } from "./builders/UpdateStatement.ts";
 export { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
-export { Where } from "./Where.ts";
 export {
   StubCommand,
   StubConnection,

@@ -50,30 +50,80 @@ public class CoreTests
     [Fact]
     public void StatementsAndBuilders()
     {
-        var where = WhereBuilder.And(WhereBuilder.Equals("id", 1), WhereBuilder.GreaterThan("age", 18));
+        var where = new WhereStatement(new Operator.And(
+            new Operator.Equals("id", 1),
+            new Operator.GreaterThan("age", 18)));
         Assert.Equal("id = $id AND age > $age", where.GetText());
         Assert.Equal(2, where.Parameters.Count);
         Assert.Equal(new Value.Int(1), where.Parameters[0].Value);
         Assert.Equal(new Value.Int(18), where.Parameters[1].Value);
-        Assert.Equal("id <> $id", WhereBuilder.Ne("id", 2).GetText());
-        Assert.Equal("n < $n", WhereBuilder.Lt("n", 0).GetText());
-        Assert.Equal("n >= $n", WhereBuilder.Gte("n", 0).GetText());
-        Assert.Equal("n <= $n", WhereBuilder.Lte("n", 0).GetText());
-        Assert.Equal("1 = 1", WhereBuilder.And().GetText());
-        Assert.Equal("1 = 0", WhereBuilder.Or().GetText());
-        Assert.Equal("id = $id", WhereBuilder.And(WhereBuilder.Equals("id", 1)).GetText());
-        Assert.Equal("id = $id", WhereBuilder.Or(WhereBuilder.Equals("id", 1)).GetText());
+        Assert.Equal("id <> $id", new WhereStatement(new Operator.NotEquals("id", 2)).GetText());
+        Assert.Equal("n < $n", new WhereStatement(new Operator.LessThan("n", 0)).GetText());
+        Assert.Equal("n >= $n", new WhereStatement(new Operator.GreaterThanOrEqual("n", 0)).GetText());
+        Assert.Equal("n <= $n", new WhereStatement(new Operator.LessThanOrEqual("n", 0)).GetText());
+        Assert.Equal("1 = 1", new WhereStatement(new Operator.Equals(new Literal(1), new Literal(1))).GetText());
+        Assert.Equal("1 = 0", new WhereStatement(new Operator.Equals(new Literal(1), new Literal(0))).GetText());
+        Assert.Equal("id = $id", new WhereStatement(new Operator.Equals("id", 1)).GetText());
         Assert.Equal(
             "(id = $id AND age > $age) OR name = $name",
-            WhereBuilder.Or(where, WhereBuilder.Equals("name", "a")).GetText());
-        Assert.Equal("NOT (id = $id)", WhereBuilder.Not(WhereBuilder.Equals("id", 1)).GetText());
-        Assert.Equal("1 = 0", WhereBuilder.In("id", []).GetText());
-        Assert.Empty(WhereBuilder.In("id", []).Parameters);
-        var inIds = WhereBuilder.In("id", [1, 2]);
+            new WhereStatement(new Operator.Or(where, new Operator.Equals("name", "a"))).GetText());
+        Assert.Equal(3, new WhereStatement(new Operator.Or(where, new Operator.Equals("name", "a"))).Parameters.Count);
+        var notWhere = new WhereStatement(new Operator.Not(new WhereStatement(new Operator.Equals("id", 1))));
+        Assert.Equal("NOT (id = $id)", notWhere.GetText());
+        Assert.Equal(["id"], notWhere.Parameters.Select(parameter => parameter.Name));
+        Assert.Equal(
+            "(id = $id OR id = $id) AND age = $age",
+            new WhereStatement(new Operator.And(
+                new Operator.Or(new Operator.Equals("id", 1), new Operator.Equals("id", 2)),
+                new Operator.Equals("age", 18))).GetText());
+        Assert.Equal(
+            "(id IN ($id_0)) OR name = $name",
+            new WhereStatement(new Operator.Or(
+                new Operator.In("id", [1]),
+                new Operator.Equals("name", "a"))).GetText());
+        Assert.Equal("id", new WhereStatement(new Identifier("id")).GetText());
+        Assert.Empty(new WhereStatement(new Identifier("id")).Parameters);
+        Assert.Equal("1", new WhereStatement(new ArrayExpression([new Literal(1)])).GetText());
+        Assert.Empty(new WhereStatement(new ArrayExpression([new Literal(1)])).Parameters);
+        Assert.Equal("a = b", new WhereStatement(new Operator.Equals(new Identifier("a"), new Identifier("b"))).GetText());
+        Assert.Empty(new WhereStatement(new Operator.Equals(new Identifier("a"), new Identifier("b"))).Parameters);
+        Assert.Equal("1 IN 2", new WhereStatement(new Operator.In(new Literal(1), new Literal(2))).GetText());
+        Assert.Equal("true = false", new WhereStatement(new Operator.Equals(new Literal(true), new Literal(false))).GetText());
+        Assert.Empty(new WhereStatement(new Operator.Equals(new Literal(true), new Literal(false))).Parameters);
+        Assert.Equal("null = null", new WhereStatement(new Operator.Equals(new Literal(Value.Null.Instance), new Literal(Value.Null.Instance))).GetText());
+        Assert.Equal("1.5 = 2.5", new WhereStatement(new Operator.Equals(new Literal(1.5), new Literal(2.5))).GetText());
+        Assert.Equal("1.5 = 2.5", new WhereStatement(new Operator.Equals(new Literal(1.5m), new Literal(2.5m))).GetText());
+        Assert.Equal("a = b", new WhereStatement(new Operator.Equals(new Literal("a"), new Literal("b"))).GetText());
+        Assert.Contains("=", new WhereStatement(new Operator.Equals(new Literal(Guid.Empty), new Literal(Guid.Empty))).GetText());
+        Assert.Contains("=", new WhereStatement(new Operator.Equals(new Literal(new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc)), new Literal(new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc)))).GetText());
+        Assert.Contains("=", new WhereStatement(new Operator.Equals(new Literal(new Value.Binary([1])), new Literal(new Value.Binary([1])))).GetText());
+        Assert.Equal(
+            "(NOT (id = $id)) AND age = $age",
+            new WhereStatement(new Operator.And(
+                new Operator.Not(new Operator.Equals("id", 1)),
+                new Operator.Equals("age", 18))).GetText());
+        Assert.Equal("id = $id", new WhereStatement(new Operator.Equals("id", null)).GetText());
+        Assert.Equal(Value.Null.Instance, new WhereStatement(new Operator.Equals("id", null)).Parameters[0].Value);
+        Assert.Equal(Value.Null.Instance, new WhereStatement(new Operator.NotEquals("id", null)).Parameters[0].Value);
+        Assert.Equal(Value.Null.Instance, new WhereStatement(new Operator.GreaterThan("id", null)).Parameters[0].Value);
+        Assert.Equal(Value.Null.Instance, new WhereStatement(new Operator.LessThan("id", null)).Parameters[0].Value);
+        Assert.Equal(Value.Null.Instance, new WhereStatement(new Operator.GreaterThanOrEqual("id", null)).Parameters[0].Value);
+        Assert.Equal(Value.Null.Instance, new WhereStatement(new Operator.LessThanOrEqual("id", null)).Parameters[0].Value);
+        Assert.Throws<InvalidOperationException>(() => new WhereStatement(new Query("x")).GetText());
+        Assert.Throws<InvalidOperationException>(() => new WhereStatement(new Query("x")).Parameters);
+        Assert.Throws<InvalidOperationException>(() =>
+            new WhereStatement(new Operator.In(new Identifier("id"), new ArrayExpression([new Identifier("x")]))).Parameters);
+        Assert.Equal("1 = 0", new WhereStatement(new Operator.In("id", [])).GetText());
+        Assert.Empty(new WhereStatement(new Operator.In("id", [])).Parameters);
+        var inIds = new WhereStatement(new Operator.In("id", [1, 2]));
         Assert.Equal("id IN ($id_0, $id_1)", inIds.GetText());
         Assert.Equal(["id_0", "id_1"], inIds.Parameters.Select(parameter => parameter.Name));
         Assert.Equal(new Value.Int(1), inIds.Parameters[0].Value);
         Assert.Equal(new Value.Int(2), inIds.Parameters[1].Value);
+        var and = Assert.IsType<Operator.And>(where.Condition);
+        var idEquals = Assert.IsType<Operator.Equals>(and.Left);
+        Assert.Equal("id", Assert.IsType<Identifier>(idEquals.Left).Name);
+        Assert.Equal(new Value.Int(1), Assert.IsType<Literal>(idEquals.Right).Value);
 
         var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
         var query = StatementBuilder.CreateQuery("users", ["id", "name"], where);
@@ -92,7 +142,7 @@ public class CoreTests
             StatementBuilder.CreateQuery(
                 "users",
                 ["users.id"],
-                WhereBuilder.Equals("users.id", 1),
+                new WhereStatement(new Operator.Equals("users.id", 1)),
                 [
                     Join.Inner("orders", "users.id", "orders.user_id"),
                     Join.Left("payments", "orders.id", "payments.order_id"),
@@ -120,6 +170,87 @@ public class CoreTests
         Assert.Equal("x", new DeleteStatement("x").GetText());
         Assert.Equal("x", new CreateTableStatement("x").GetText());
         Assert.Equal("x", new StoredProcedureStatement("x").GetText());
+    }
+
+    [Fact]
+    public void EvaluatesWhereStatement()
+    {
+        var evaluator = new StatementEvaluator();
+        IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.Equals("id", 1)), row));
+        Assert.Equal(new Value.Bool(false), evaluator.Evaluate(new WhereStatement(new Operator.Equals("id", 2)), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.NotEquals("id", 2)), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.GreaterThan("age", 18)), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.LessThan("age", 30)), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.GreaterThanOrEqual("age", 21)), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.LessThanOrEqual("age", 21)), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new WhereStatement(new Operator.And(
+                new Operator.Equals("id", 1),
+                new Operator.GreaterThan("age", 18))), row));
+        Assert.Equal(
+            new Value.Bool(false),
+            evaluator.Evaluate(new WhereStatement(new Operator.And(
+                new Operator.Equals("id", 0),
+                new Operator.GreaterThan("age", 18))), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new WhereStatement(new Operator.Or(
+                new Operator.Equals("id", 0),
+                new Operator.Equals("name", "a"))), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new WhereStatement(new Operator.Or(
+                new Operator.Equals("id", 1),
+                new Operator.Equals("name", "z"))), row));
+        Assert.Equal(
+            new Value.Bool(false),
+            evaluator.Evaluate(new WhereStatement(new Operator.Not(new Operator.Equals("id", 1))), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.In("id", [1, 2])), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new WhereStatement(new Operator.Equals(new Literal(1), new Literal(1))), row));
+        Assert.Equal(
+            new Value.Bool(false),
+            evaluator.Evaluate(new WhereStatement(new Operator.Equals(new Literal(1), new Literal(0))), row));
+        Assert.Throws<InvalidOperationException>(() => evaluator.Evaluate(new Where("id = 1"), row));
+        Assert.Throws<InvalidOperationException>(() => evaluator.Evaluate(new ArrayExpression([]), row));
+        Assert.Throws<InvalidOperationException>(() => evaluator.Evaluate(new Query("x"), row));
+        Assert.Throws<InvalidOperationException>(() =>
+            evaluator.Evaluate(new Operator.GreaterThan(new Literal(true), new Literal(1)), row));
+        Assert.Throws<InvalidOperationException>(() =>
+            evaluator.Evaluate(new Operator.In(new Identifier("id"), new Literal(1)), row));
+        Assert.Equal(Value.Null.Instance, evaluator.Evaluate(new Identifier("missing"), row));
+        Assert.Equal(Value.Null.Instance, evaluator.Evaluate(new Identifier("id"), null));
+        Assert.Equal(Value.Null.Instance, evaluator.Evaluate(new Literal(Value.Null.Instance), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.LessThan("name", "b")), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.GreaterThanOrEqual("name", "a")), row));
+        Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new WhereStatement(new Operator.GreaterThan("name", "Z")), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new Operator.GreaterThan(new Literal(2.5), new Literal(1.5)), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new Operator.GreaterThan(new Literal(2.5m), new Literal(1.5m)), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new Operator.GreaterThan(new Literal(2), new Literal(1.5)), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new Operator.GreaterThan(new Literal(2.5), new Literal(1)), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new Operator.GreaterThan(new Literal(2), new Literal(1.5m)), row));
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(new Operator.GreaterThan(new Literal(2.5m), new Literal(1)), row));
+        var now = new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(
+            new Value.Bool(true),
+            evaluator.Evaluate(
+                new Operator.GreaterThan(new Literal(now.AddDays(1)), new Literal(now)),
+                row));
     }
 
     [Fact]

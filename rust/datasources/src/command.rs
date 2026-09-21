@@ -1,4 +1,4 @@
-use crate::builders::statement::Statement;
+use crate::statement::Statement;
 use crate::command_middleware::CommandMiddleware;
 use crate::parameter::Parameter;
 use crate::reader::Reader;

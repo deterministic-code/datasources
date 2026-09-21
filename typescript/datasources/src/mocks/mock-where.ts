@@ -1,4 +1,4 @@
-import type { IWhere } from "../IWhere.ts";
+import type { IWhere } from "../statements/IWhere.ts";
 
 export class MockWhere implements IWhere {
   getTextCalls = 0;

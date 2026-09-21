@@ -118,7 +118,7 @@ public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDReposit
         var key = Get(parent, enrichment.From);
         if (key is null) return [];
         var items = new List<object>();
-        await foreach (var item in writer.Read(WhereBuilder.Equals(enrichment.By, Value.From(key))))
+        await foreach (var item in writer.Read(new WhereStatement(new Operator.Equals(enrichment.By, Value.From(key)))))
             items.Add(item);
         return items;
     }

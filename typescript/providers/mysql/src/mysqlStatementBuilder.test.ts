@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DatasourceError, WhereBuilder } from "@datasources/core";
+import { DatasourceError, Operator, WhereStatement } from "@datasources/core";
 import { MysqlStatementBuilder } from "./mysqlStatementBuilder.ts";
 
 const userColumns = [
@@ -29,7 +29,7 @@ describe("MysqlStatementBuilder", () => {
   });
 
   it("quotes tables in DML and keeps parameter names", () => {
-    const where = WhereBuilder.equals("id", 1);
+    const where = new WhereStatement(new Operator.Equals("id", 1));
     const fields = [
       { name: "id", value: 1 },
       { name: "username", value: "alice" },

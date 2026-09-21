@@ -116,7 +116,7 @@ impl SqliteStatementBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{Join, Statement, WhereBuilder};
+    use datasources::{Join, Operator, Statement, WhereStatement};
 
     fn user_columns() -> Vec<SqliteColumn> {
         vec![
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn quotes_tables_in_dml() {
-        let where_clause = WhereBuilder::equals("id", 1_i64);
+        let where_clause = WhereStatement::new(Operator::equals("id", 1_i64));
         let fields = [
             Parameter::new("id", 1_i64),
             Parameter::new("username", "alice"),
@@ -190,7 +190,7 @@ mod tests {
             SqliteStatementBuilder::create_query(
                 "users",
                 &["users.id", "orders.total"],
-                Some(&WhereBuilder::equals("users.id", 1_i64)),
+                Some(&WhereStatement::new(Operator::equals("users.id", 1_i64))),
                 &[
                     Join::inner("orders", "users.id", "orders.user_id"),
                     Join::left("payments", "orders.id", "payments.order_id"),

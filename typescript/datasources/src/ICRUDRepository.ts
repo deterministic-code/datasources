@@ -1,5 +1,5 @@
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
-import type { IWhere } from "./IWhere.ts";
+import type { IWhere } from "./statements/IWhere.ts";
 import type { Response } from "./Response.ts";
 
 export interface ICRUDRepository<T = unknown> extends IReadonlyRepository<T> {

@@ -3,6 +3,8 @@ use crate::query::Query;
 use crate::repository::ReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statements::{StatementEvaluator, WhereStatement};
+use crate::value::Value;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 
@@ -18,12 +20,22 @@ impl ItemsRepository {
     fn filter(&self, where_clause: Option<&dyn Where>) -> Vec<Row> {
         match where_clause {
             None => self.items.clone(),
-            Some(predicate) => self
-                .items
-                .iter()
-                .filter(|row| super::where_match::row_matches(row, predicate))
-                .cloned()
-                .collect(),
+            Some(predicate) => {
+                let evaluator = StatementEvaluator;
+                self.items
+                    .iter()
+                    .filter(|row| {
+                        predicate
+                            .as_any()
+                            .downcast_ref::<WhereStatement>()
+                            .map(|statement| {
+                                evaluator.evaluate(&statement.condition, row) == Value::Bool(true)
+                            })
+                            .unwrap_or(true)
+                    })
+                    .cloned()
+                    .collect()
+            }
         }
     }
 }

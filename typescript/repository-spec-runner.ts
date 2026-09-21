@@ -12,7 +12,9 @@ import {
   StatementMapper,
   TransformMapper,
   UpdateStatement,
-  WhereBuilder,
+  Literal,
+  Operator,
+  WhereStatement,
   type Cell,
   type Cells,
   type Constructable,
@@ -82,12 +84,16 @@ const unquoteSql = (text: string): string =>
 type SpecValue = Cell | SpecRow;
 type SpecRow = { [key: string]: SpecValue };
 
-const whereOf = (mapping: RowTypeConverter<SpecRow>, row: RepositoryRow) =>
-  WhereBuilder.and(
-    ...Object.entries(mapping.reverseConvert(row)).map(([name, value]) =>
-      WhereBuilder.equals(name, value as Scalar),
-    ),
+const whereOf = (mapping: RowTypeConverter<SpecRow>, row: RepositoryRow) => {
+  const parts = Object.entries(mapping.reverseConvert(row)).map(
+    ([name, value]) => new Operator.Equals(name, value as Scalar),
   );
+  return new WhereStatement(
+    parts.length === 0
+      ? new Operator.Equals(new Literal(1), new Literal(1))
+      : parts.reduce((left, right) => new Operator.And(left, right)),
+  );
+};
 
 const attach = (repo: Repository<SpecRow>, logs: string[]) => {
   const write = (line: string) => {
@@ -262,7 +268,7 @@ export const runRepositorySpec = async (
       },
       READ: async () => {
         if (!step.READ) return;
-        const row = await repo.readSingle(WhereBuilder.equals("id", step.READ.id));
+        const row = await repo.readSingle(new WhereStatement(new Operator.Equals("id", step.READ.id)));
         if ("expect" in step.READ) assertRow(`${spec.name} READ`, row, step.READ.expect ?? null);
       },
       QUERY: async () => {

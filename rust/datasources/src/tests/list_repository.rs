@@ -4,6 +4,7 @@ use crate::repository::{CRUDRepository, ReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statements::{StatementEvaluator, WhereStatement};
 use crate::value::Value;
 use crate::where_trait::Where;
 use async_trait::async_trait;
@@ -39,11 +40,22 @@ impl ListRepository {
         let items = self.items.lock().expect("list");
         match where_clause {
             None => items.clone(),
-            Some(predicate) => items
-                .iter()
-                .filter(|row| super::where_match::row_matches(row, predicate))
-                .cloned()
-                .collect(),
+            Some(predicate) => {
+                let evaluator = StatementEvaluator;
+                items
+                    .iter()
+                    .filter(|row| {
+                        predicate
+                            .as_any()
+                            .downcast_ref::<WhereStatement>()
+                            .map(|statement| {
+                                evaluator.evaluate(&statement.condition, row) == Value::Bool(true)
+                            })
+                            .unwrap_or(true)
+                    })
+                    .cloned()
+                    .collect()
+            }
         }
     }
 }

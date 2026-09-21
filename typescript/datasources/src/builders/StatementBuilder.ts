@@ -1,16 +1,18 @@
-import { CreateTableStatement } from "./CreateTableStatement.ts";
-import { Query } from "../Query.ts";
-import type { IQuery } from "../IQuery.ts";
-import { DeleteStatement } from "./DeleteStatement.ts";
-import { InsertStatement } from "./InsertStatement.ts";
-import { StoredProcedureStatement } from "./StoredProcedureStatement.ts";
-import { UpdateStatement } from "./UpdateStatement.ts";
-import type { ICreateTableStatement } from "./ICreateTableStatement.ts";
-import type { IDeleteStatement } from "./IDeleteStatement.ts";
-import type { IInsertStatement } from "./IInsertStatement.ts";
-import type { IStoredProcedureStatement } from "./IStoredProcedureStatement.ts";
-import type { IUpdateStatement } from "./IUpdateStatement.ts";
-import type { IWhere } from "../IWhere.ts";
+import {
+  CreateTableStatement,
+  DeleteStatement,
+  InsertStatement,
+  Query,
+  StoredProcedureStatement,
+  UpdateStatement,
+  type ICreateTableStatement,
+  type IDeleteStatement,
+  type IInsertStatement,
+  type IQuery,
+  type IStoredProcedureStatement,
+  type IUpdateStatement,
+  type IWhere,
+} from "../statements/index.ts";
 import type { Column } from "./Column.ts";
 import type { Field } from "./Field.ts";
 import type { Join, JoinKind } from "./Join.ts";
