@@ -83,11 +83,11 @@ public class StatementMapperTests
     {
         var mapper = new StatementMapper<UserRow>
         {
-            StoredProcedure = new TransformMapper<IStoredProcedureStatement, IStoredProcedureStatement>(
-                proc => new StoredProcedureStatement($"{proc.GetText()} /* mapped */"),
+            StoredProcedure = new TransformMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>(
+                proc => new ExecuteStoredProcedureStatement($"{proc.GetText()} /* mapped */"),
                 proc => proc)
         };
-        var built = new StoredProcedureStatement("save", [new Parameter("id", 1)]);
+        var built = new ExecuteStoredProcedureStatement("save", [new Parameter("id", 1)]);
         var statement = mapper.StoredProcedure is { } map ? map.Map(built) : built;
         Assert.Equal("CALL save($id) /* mapped */", statement.GetText());
     }

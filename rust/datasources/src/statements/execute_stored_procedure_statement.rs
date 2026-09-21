@@ -3,11 +3,11 @@ use super::text::Text;
 use crate::parameter::Parameter;
 use crate::parameter_direction::ParameterDirection;
 
-pub struct StoredProcedureStatement {
+pub struct ExecuteStoredProcedureStatement {
     text: String,
 }
 
-impl StoredProcedureStatement {
+impl ExecuteStoredProcedureStatement {
     pub fn text(text: impl Into<String>) -> Self {
         Self { text: text.into() }
     }
@@ -19,13 +19,13 @@ impl StoredProcedureStatement {
     }
 }
 
-impl Text for StoredProcedureStatement {
+impl Text for ExecuteStoredProcedureStatement {
     fn get_text(&self) -> String {
         self.text.clone()
     }
 }
 
-impl Statement for StoredProcedureStatement {}
+impl Statement for ExecuteStoredProcedureStatement {}
 
 fn args(parameters: &[Parameter]) -> String {
     parameters

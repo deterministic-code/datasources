@@ -316,7 +316,7 @@ async fn shared_specs() {
 
 #[tokio::test]
 async fn return_and_output_parameters() {
-    use datasources::{ParameterDirection, ReturnStatement, StoredProcedureStatement, Text};
+    use datasources::{ParameterDirection, ReturnStatement, ExecuteStoredProcedureStatement, Text};
     let Ok(url) = std::env::var("POSTGRES_URL") else {
         return;
     };
@@ -363,7 +363,7 @@ async fn return_and_output_parameters() {
     )];
     let call = command
         .execute(
-            &StoredProcedureStatement::new("bump", &result).get_text(),
+            &ExecuteStoredProcedureStatement::new("bump", &result).get_text(),
             Some(&result),
         )
         .await

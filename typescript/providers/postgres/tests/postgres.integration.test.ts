@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   ParameterDirection,
   ReturnStatement,
-  StoredProcedureStatement,
+  ExecuteStoredProcedureStatement,
 } from "@datasources/core";
 import { ensureCompose } from "../../ensure-compose.ts";
 import {
@@ -109,7 +109,7 @@ describe("return and output parameters", () => {
         direction: ParameterDirection.InputOutput,
       };
       const call = await command.execute(
-        new StoredProcedureStatement("bump", [result]).getText(),
+        new ExecuteStoredProcedureStatement("bump", [result]).getText(),
         [result],
       );
       expect(call.parameters?.[0]?.value).toBe(5);

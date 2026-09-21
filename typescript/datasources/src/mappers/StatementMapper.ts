@@ -1,7 +1,7 @@
 import type { IDeleteStatement } from "../statements/IDeleteStatement.ts";
 import type { IInsertStatement } from "../statements/IInsertStatement.ts";
 import type { IReturnStatement } from "../statements/IReturnStatement.ts";
-import type { IStoredProcedureStatement } from "../statements/IStoredProcedureStatement.ts";
+import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IUpdateStatement } from "../statements/IUpdateStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import { TransformMapper } from "./TransformMapper.ts";
@@ -15,7 +15,7 @@ export type StatementMapperOptions<T> = {
   insert?: IMapper<IInsertStatement, IInsertStatement>;
   update?: IMapper<IUpdateStatement, IUpdateStatement>;
   delete?: IMapper<IDeleteStatement, IDeleteStatement>;
-  storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>;
+  storedProcedure?: IMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>;
   return?: IMapper<IReturnStatement, IReturnStatement>;
 };
 
@@ -27,7 +27,7 @@ export class StatementMapper<T> implements IMapper<T, T> {
   readonly insert?: IMapper<IInsertStatement, IInsertStatement>;
   readonly update?: IMapper<IUpdateStatement, IUpdateStatement>;
   readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>;
-  readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>;
+  readonly storedProcedure?: IMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>;
   readonly return?: IMapper<IReturnStatement, IReturnStatement>;
 
   constructor(options: StatementMapperOptions<T> = {}) {

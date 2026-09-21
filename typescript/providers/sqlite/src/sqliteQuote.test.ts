@@ -5,7 +5,7 @@ import {
   Join,
   Operator,
   QueryStatement,
-  StoredProcedureStatement,
+  ExecuteStoredProcedureStatement,
   UpdateStatement,
   WhereClause,
 } from "@datasources/core";
@@ -36,7 +36,7 @@ describe("SqliteQuote", () => {
     expect(new DeleteStatement(SqliteQuote.quote("user"), where).getText()).toBe(
       'DELETE FROM "user" WHERE id = $id',
     );
-    expect(new StoredProcedureStatement(SqliteQuote.quote("save"), fields).getText()).toBe(
+    expect(new ExecuteStoredProcedureStatement(SqliteQuote.quote("save"), fields).getText()).toBe(
       'CALL "save"($id, $username)',
     );
     expect(

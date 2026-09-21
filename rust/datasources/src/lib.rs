@@ -64,9 +64,8 @@ pub use builders::{Column, Join, JoinKind};
 pub use statements::statement;
 pub use statements::{
     ArrayExpression, CreateTableStatement, DeleteStatement, Expression, Identifier,
-    InsertStatement, Literal, Operator, ReturnStatement, Statement, StatementEvaluator,
-    StoredProcedureStatement,
-    Text, UpdateStatement, WhereClause,
+    ExecuteStoredProcedureStatement, InsertStatement, Literal, Operator, ReturnStatement,
+    Statement, StatementEvaluator, Text, UpdateStatement, WhereClause,
 };
 pub use built_repository::BuiltRepository;
 pub use bulk_crud_repository::BulkCRUDRepository;

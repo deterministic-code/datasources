@@ -15,7 +15,7 @@ mod tests {
     use super::*;
     use datasources::{
         DeleteStatement, InsertStatement, Operator, Parameter, QueryStatement,
-        StoredProcedureStatement, Text, UpdateStatement, WhereClause,
+        ExecuteStoredProcedureStatement, Text, UpdateStatement, WhereClause,
     };
 
     #[test]
@@ -57,7 +57,7 @@ mod tests {
             "DELETE FROM \"user\" WHERE id = $id"
         );
         assert_eq!(
-            StoredProcedureStatement::new(PostgresQuote::quote("save"), &fields).get_text(),
+            ExecuteStoredProcedureStatement::new(PostgresQuote::quote("save"), &fields).get_text(),
             "CALL \"save\"($id, $username)"
         );
     }

@@ -18,7 +18,7 @@ interface IExpression {}
 abstract class Operator implements IExpression
 ```
 
-Compare, group, not, and in nodes. Field constructors take a column and [Scalar](./where-statement.md#scalar): `new Operator.Equals("id", 9)`.
+Compare, group, not, and in nodes. Field constructors take a column and [Scalar](./where-clause.md#scalar): `new Operator.Equals("id", 9)`.
 
 ##### Operator.Equals / NotEquals / GreaterThan / LessThan / GreaterThanOrEqual / LessThanOrEqual
 
@@ -84,7 +84,7 @@ class Literal implements IExpression
 constructor(value: Scalar)
 ```
 
-- `value` — [Scalar](./where-statement.md#scalar)
+- `value` — [Scalar](./where-clause.md#scalar)
 
 **Properties**
 

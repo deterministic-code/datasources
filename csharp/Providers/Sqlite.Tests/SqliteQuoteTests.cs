@@ -32,7 +32,7 @@ public class SqliteQuoteTests
             new DeleteStatement(SqliteQuote.Quote("user"), where).GetText());
         Assert.Equal(
             "CALL \"save\"($id, $username)",
-            new StoredProcedureStatement(SqliteQuote.Quote("save"), fields).GetText());
+            new ExecuteStoredProcedureStatement(SqliteQuote.Quote("save"), fields).GetText());
         Assert.Equal(
             "SELECT \"users\".\"id\", \"orders\".\"total\" FROM \"users\" INNER JOIN \"orders\" ON \"users\".\"id\" = \"orders\".\"user_id\" LEFT JOIN \"payments\" ON \"orders\".\"id\" = \"payments\".\"order_id\" WHERE users.id = $users.id",
             new QueryStatement(

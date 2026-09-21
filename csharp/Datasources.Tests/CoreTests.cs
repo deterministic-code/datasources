@@ -159,16 +159,17 @@ public class CoreTests
         Assert.Equal("DELETE FROM users WHERE id = $id AND age > $age", delete.GetText());
         Assert.Same(where, delete.Where);
         Assert.Equal("DELETE FROM users", new DeleteStatement("users").GetText());
-        Assert.Equal(
-            "CREATE TABLE users (id INTEGER, name TEXT)",
-            new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]).GetText());
-        Assert.Equal("CALL save($id, $name)", new StoredProcedureStatement("save", fields).GetText());
-        Assert.Equal("CALL save()", new StoredProcedureStatement("save", []).GetText());
-        Assert.Equal("SELECT add($id, $name)", new ReturnStatement("add", fields).GetText());
+        var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
+        Assert.Equal("CREATE TABLE users (id INTEGER, name TEXT)", createTable.GetText());
+        var call = new ExecuteStoredProcedureStatement("save", fields);
+        Assert.Equal("CALL save($id, $name)", call.GetText());
+        Assert.Equal("CALL save()", new ExecuteStoredProcedureStatement("save", []).GetText());
+        var ret = new ReturnStatement("add", fields);
+        Assert.Equal("SELECT add($id, $name)", ret.GetText());
         Assert.Equal("SELECT add()", new ReturnStatement("add", []).GetText());
         Assert.Equal(
             "CALL save($id)",
-            new StoredProcedureStatement("save", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)]).GetText());
+            new ExecuteStoredProcedureStatement("save", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)]).GetText());
         Assert.Equal(
             "SELECT add($id)",
             new ReturnStatement("add", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)]).GetText());
@@ -180,7 +181,7 @@ public class CoreTests
         Assert.Equal("x", new UpdateStatement("x").GetText());
         Assert.Equal("x", DeleteStatement.Raw("x").GetText());
         Assert.Equal("x", new CreateTableStatement("x").GetText());
-        Assert.Equal("x", new StoredProcedureStatement("x").GetText());
+        Assert.Equal("x", new ExecuteStoredProcedureStatement("x").GetText());
         Assert.Equal("x", new ReturnStatement("x").GetText());
     }
 
@@ -522,7 +523,7 @@ public class CoreTests
         command.ExecuteError = null;
         command.ExecuteReaderError = null;
         Parameter[] fields = [new("id", 1)];
-        var statement = new StoredProcedureStatement("save", fields);
+        var statement = new ExecuteStoredProcedureStatement("save", fields);
         ICommand asCommand = command;
         await asCommand.Execute(statement, fields);
         Assert.Equal("CALL save($id)", command.ExecuteCalls[^1].Text);

@@ -32,6 +32,6 @@ public class PostgresQuoteTests
             new DeleteStatement(PostgresQuote.Quote("user"), where).GetText());
         Assert.Equal(
             "CALL \"save\"($id, $username)",
-            new StoredProcedureStatement(PostgresQuote.Quote("save"), fields).GetText());
+            new ExecuteStoredProcedureStatement(PostgresQuote.Quote("save"), fields).GetText());
     }
 }

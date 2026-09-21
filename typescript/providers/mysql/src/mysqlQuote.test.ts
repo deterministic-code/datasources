@@ -4,7 +4,7 @@ import {
   InsertStatement,
   Operator,
   QueryStatement,
-  StoredProcedureStatement,
+  ExecuteStoredProcedureStatement,
   UpdateStatement,
   WhereClause,
 } from "@datasources/core";
@@ -35,7 +35,7 @@ describe("MysqlQuote", () => {
     expect(new DeleteStatement(MysqlQuote.quote("user"), where).getText()).toBe(
       "DELETE FROM `user` WHERE id = $id",
     );
-    expect(new StoredProcedureStatement(MysqlQuote.quote("save"), fields).getText()).toBe(
+    expect(new ExecuteStoredProcedureStatement(MysqlQuote.quote("save"), fields).getText()).toBe(
       "CALL `save`($id, $username)",
     );
   });
