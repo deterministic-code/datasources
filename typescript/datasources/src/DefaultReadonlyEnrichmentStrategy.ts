@@ -1,4 +1,4 @@
-import { Operator, WhereStatement } from "./statements/index.ts";
+import { Operator, WhereClause } from "./statements/index.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IQuery } from "./IQuery.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
@@ -48,7 +48,7 @@ const applyLookup = async <TRelated extends object>(
     if (!cache.has(cacheKey))
       cache.set(
         cacheKey,
-        await via.readSingle(new WhereStatement(new Operator.Equals(enrichment.by, scalar(key)))),
+        await via.readSingle(new WhereClause(new Operator.Equals(enrichment.by, scalar(key)))),
       );
     const related = cache.get(cacheKey);
     if (!related) continue;
@@ -69,7 +69,7 @@ const applyMany = async <TRelated extends object>(
     if (key === undefined || key === null) continue;
     const related: TRelated[] = [];
     for await (const item of via.read(
-      new WhereStatement(new Operator.Equals(enrichment.by, scalar(key))),
+      new WhereClause(new Operator.Equals(enrichment.by, scalar(key))),
     ))
       related.push(item);
     Object.assign(parent, { [enrichment.into]: related });

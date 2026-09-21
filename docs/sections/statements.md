@@ -6,10 +6,28 @@ Command text. `IQuery` / `IUpdateStatement` / `IDeleteStatement` also keep the `
 
 ::: reference
 ### typescript
+#### IText
+
+```typescript
+interface IText
+```
+
+**Methods**
+
+##### getText()
+
+Rendered text.
+
+```typescript
+getText(): string
+```
+
+**Returns** `string`
+
 #### IStatement
 
 ```typescript
-interface IStatement extends IExpression
+interface IStatement extends IText
 ```
 
 **Methods**
@@ -40,15 +58,15 @@ Optional [IWhere](#iwhere) used to build this query.
 readonly where?: IWhere
 ```
 
-#### Query
+#### QueryStatement
 
 ```typescript
-class Query implements IQuery
+class QueryStatement implements IQuery
 ```
 
 **Constructor**
 
-##### Query(text, where?)
+##### QueryStatement(text, where?)
 
 Wraps query text and an optional [IWhere](#iwhere).
 
@@ -84,7 +102,7 @@ getText(): string
 #### IWhere
 
 ```typescript
-interface IWhere extends IStatement {}
+interface IWhere extends IExpression, IText {}
 ```
 
 #### Where
@@ -340,10 +358,28 @@ getText(): string
 **Returns** `string`
 
 ### csharp
+#### IText
+
+```csharp
+public interface IText
+```
+
+**Methods**
+
+##### GetText()
+
+Rendered text.
+
+```csharp
+string GetText()
+```
+
+**Returns** `string`
+
 #### IStatement
 
 ```csharp
-public interface IStatement : IExpression
+public interface IStatement : IText
 ```
 
 **Methods**
@@ -374,24 +410,41 @@ Optional [IWhere](#iwhere) used to build this query.
 IWhere? Where { get; }
 ```
 
-#### Query
+#### QueryStatement
 
 ```csharp
-public sealed class Query : IQuery
+public sealed record QueryStatement : IQuery
 ```
 
 **Constructor**
 
-##### Query(text, where)
+##### QueryStatement(text, where)
 
 Wraps query text and an optional [IWhere](#iwhere).
 
 ```csharp
-public Query(string text, IWhere? where = null)
+public QueryStatement(string text, IWhere? where = null)
 ```
 
 - `text` — command text
 - `where` — optional [IWhere](#iwhere)
+
+##### QueryStatement(table, fields, where, joins)
+
+Compiles a `SELECT` from a table, fields, optional [IWhere](#iwhere), and joins.
+
+```csharp
+public QueryStatement(
+    string table,
+    IReadOnlyList<string> fields,
+    IWhere? where = null,
+    IReadOnlyList<Join>? joins = null)
+```
+
+- `table` — table name
+- `fields` — selected columns (`*` when empty)
+- `where` — optional [IWhere](#iwhere)
+- `joins` — optional joins
 
 **Properties**
 
@@ -418,7 +471,7 @@ string GetText()
 #### IWhere
 
 ```csharp
-public interface IWhere : IStatement
+public interface IWhere : IExpression, IText
 ```
 
 #### Where
@@ -674,10 +727,28 @@ string GetText()
 **Returns** `string`
 
 ### rust
+#### Text
+
+```rust
+pub trait Text: Send + Sync
+```
+
+**Methods**
+
+##### get_text()
+
+Rendered text.
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns** `String`
+
 #### Statement
 
 ```rust
-pub trait Statement: Send + Sync
+pub trait Statement: Text
 ```
 
 **Methods**
@@ -710,25 +781,25 @@ fn where_clause(&self) -> Option<&dyn Where>
 
 **Returns** `Option<&dyn `[Where](#where)`>`
 
-#### TextQuery
+#### QueryStatement
 
 ```rust
-pub struct TextQuery
+pub struct QueryStatement
 ```
 
 **Constructor**
 
-##### new(text)
+##### text(text)
 
 Wraps query text.
 
 ```rust
-pub fn new(text: impl Into<String>) -> Self
+pub fn text(text: impl Into<String>) -> Self
 ```
 
 - `text` — command text
 
-**Returns** [TextQuery](#textquery)
+**Returns** [QueryStatement](#querystatement)
 
 ##### with_where(text, where_clause)
 
@@ -741,7 +812,7 @@ pub fn with_where(text: impl Into<String>, where_clause: impl Where + 'static) -
 - `text` — command text
 - `where_clause` — [Where](#where)
 
-**Returns** [TextQuery](#textquery)
+**Returns** [QueryStatement](#querystatement)
 
 **Methods**
 
@@ -768,7 +839,7 @@ fn where_clause(&self) -> Option<&dyn Where>
 #### Where
 
 ```rust
-pub trait Where: Statement {}
+pub trait Where: Text {}
 ```
 
 #### TextWhere
@@ -806,28 +877,35 @@ fn get_text(&self) -> String
 #### InsertStatement
 
 ```rust
-pub trait InsertStatement: Statement {}
-```
-
-#### TextInsertStatement
-
-```rust
-pub struct TextInsertStatement
+pub struct InsertStatement
 ```
 
 **Constructor**
 
-##### new(text)
+##### text(text)
 
 Wraps insert text.
 
 ```rust
-pub fn new(text: impl Into<String>) -> Self
+pub fn text(text: impl Into<String>) -> Self
 ```
 
 - `text` — command text
 
-**Returns** [TextInsertStatement](#textinsertstatement)
+**Returns** [InsertStatement](#insertstatement)
+
+##### new(table, fields)
+
+Compiles an `INSERT`.
+
+```rust
+pub fn new(table: impl AsRef<str>, fields: &[Parameter]) -> Self
+```
+
+- `table` — table name
+- `fields` — columns and bound values
+
+**Returns** [InsertStatement](#insertstatement)
 
 **Methods**
 
@@ -844,41 +922,37 @@ fn get_text(&self) -> String
 #### UpdateStatement
 
 ```rust
-pub trait UpdateStatement: Statement
-```
-
-**Methods**
-
-##### where_clause()
-
-Optional [Where](#where) used to build this update.
-
-```rust
-fn where_clause(&self) -> Option<&dyn Where>
-```
-
-**Returns** `Option<&dyn `[Where](#where)`>`
-
-#### TextUpdateStatement
-
-```rust
-pub struct TextUpdateStatement
+pub struct UpdateStatement
 ```
 
 **Constructor**
 
-##### new(text, where_clause)
+##### text(text, where_clause)
 
 Wraps update text and an optional [Where](#where).
 
 ```rust
-pub fn new(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
 ```
 
 - `text` — command text
 - `where_clause` — optional [Where](#where)
 
-**Returns** [TextUpdateStatement](#textupdatestatement)
+**Returns** [UpdateStatement](#updatestatement)
+
+##### new(table, fields, where_clause)
+
+Compiles an `UPDATE`.
+
+```rust
+pub fn new(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&dyn Where>) -> Self
+```
+
+- `table` — table name
+- `fields` — columns and bound values
+- `where_clause` — optional [Where](#where)
+
+**Returns** [UpdateStatement](#updatestatement)
 
 **Methods**
 
@@ -905,41 +979,36 @@ fn where_clause(&self) -> Option<&dyn Where>
 #### DeleteStatement
 
 ```rust
-pub trait DeleteStatement: Statement
-```
-
-**Methods**
-
-##### where_clause()
-
-Optional [Where](#where) used to build this delete.
-
-```rust
-fn where_clause(&self) -> Option<&dyn Where>
-```
-
-**Returns** `Option<&dyn `[Where](#where)`>`
-
-#### TextDeleteStatement
-
-```rust
-pub struct TextDeleteStatement
+pub struct DeleteStatement
 ```
 
 **Constructor**
 
-##### new(text, where_clause)
+##### raw(text, where_clause)
 
 Wraps delete text and an optional [Where](#where).
 
 ```rust
-pub fn new(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
 ```
 
 - `text` — command text
 - `where_clause` — optional [Where](#where)
 
-**Returns** [TextDeleteStatement](#textdeletestatement)
+**Returns** [DeleteStatement](#deletestatement)
+
+##### new(table, where_clause)
+
+Compiles a `DELETE`.
+
+```rust
+pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> Self
+```
+
+- `table` — table name
+- `where_clause` — optional [Where](#where)
+
+**Returns** [DeleteStatement](#deletestatement)
 
 **Methods**
 
@@ -966,28 +1035,35 @@ fn where_clause(&self) -> Option<&dyn Where>
 #### CreateTableStatement
 
 ```rust
-pub trait CreateTableStatement: Statement {}
-```
-
-#### TextCreateTableStatement
-
-```rust
-pub struct TextCreateTableStatement
+pub struct CreateTableStatement
 ```
 
 **Constructor**
 
-##### new(text)
+##### text(text)
 
 Wraps create-table text.
 
 ```rust
-pub fn new(text: impl Into<String>) -> Self
+pub fn text(text: impl Into<String>) -> Self
 ```
 
 - `text` — command text
 
-**Returns** [TextCreateTableStatement](#textcreatetablestatement)
+**Returns** [CreateTableStatement](#createtablestatement)
+
+##### new(table, columns)
+
+Compiles a `CREATE TABLE`.
+
+```rust
+pub fn new(table: impl AsRef<str>, columns: &[Column]) -> Self
+```
+
+- `table` — table name
+- `columns` — column names and types
+
+**Returns** [CreateTableStatement](#createtablestatement)
 
 **Methods**
 
@@ -1004,28 +1080,35 @@ fn get_text(&self) -> String
 #### StoredProcedureStatement
 
 ```rust
-pub trait StoredProcedureStatement: Statement {}
-```
-
-#### TextStoredProcedureStatement
-
-```rust
-pub struct TextStoredProcedureStatement
+pub struct StoredProcedureStatement
 ```
 
 **Constructor**
 
-##### new(text)
+##### text(text)
 
 Wraps stored-procedure call text.
 
 ```rust
-pub fn new(text: impl Into<String>) -> Self
+pub fn text(text: impl Into<String>) -> Self
 ```
 
 - `text` — command text
 
-**Returns** [TextStoredProcedureStatement](#textstoredprocedurestatement)
+**Returns** [StoredProcedureStatement](#storedprocedurestatement)
+
+##### new(name, parameters)
+
+Compiles a `CALL`.
+
+```rust
+pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self
+```
+
+- `name` — procedure name
+- `parameters` — bound values (empty for `CALL name()`)
+
+**Returns** [StoredProcedureStatement](#storedprocedurestatement)
 
 **Methods**
 
@@ -1042,14 +1125,13 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-[Command](./command.md) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereStatement](./where-statement.md).
+[Command](./command.md) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereClause](./where-clause.md).
 
-Build SQL with [StatementBuilder](./statement-builder.md). Compose predicates with [WhereStatement](./where-statement.md).
+Construct SQL with [QueryStatement](#querystatement) / [InsertStatement](#insertstatement) / [UpdateStatement](#updatestatement) / [DeleteStatement](#deletestatement). Compose predicates with [WhereClause](./where-clause.md). [IStatement](#istatement) is not an [IExpression](./expressions.md#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](#iwhere) is a clause ([IExpression](./expressions.md#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
 
 ## See also
 
-- [StatementBuilder](./statement-builder.md)
-- [WhereStatement](./where-statement.md)
+- [WhereClause](./where-clause.md)
 - [Expressions](./expressions.md)
 - [StatementEvaluator](./statement-evaluator.md)
 
@@ -1058,10 +1140,10 @@ Build SQL with [StatementBuilder](./statement-builder.md). Compose predicates wi
 ### Wrap query text and an optional where
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L34-L36
+```csharp csharp/Datasources.Tests/CoreTests.cs#L33-L38
 ```
-```rust rust/datasources/src/tests/mod.rs#L782-L785
+```rust rust/datasources/src/tests/mod.rs#L963-L966
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L17-L19
+```typescript typescript/datasources/src/builders/builders.test.ts#L21-L25
 ```
 :::

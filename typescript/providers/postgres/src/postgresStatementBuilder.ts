@@ -1,6 +1,11 @@
 import {
+  CreateTableStatement,
   DatasourceError,
-  StatementBuilder,
+  DeleteStatement,
+  InsertStatement,
+  QueryStatement,
+  StoredProcedureStatement,
+  UpdateStatement,
   type Field,
   type IWhere,
 } from "@datasources/core";
@@ -28,7 +33,7 @@ export const PostgresStatementBuilder = {
     })(),
 
   createTable: (table: string, columns: PostgresColumn[]) =>
-    StatementBuilder.createTable(
+    new CreateTableStatement(
       PostgresStatementBuilder.quote(table),
       columns.map((column) => ({
         name: PostgresStatementBuilder.quote(column.name),
@@ -39,24 +44,21 @@ export const PostgresStatementBuilder = {
     ),
 
   createQuery: (table: string, fields: string[], where?: IWhere) =>
-    StatementBuilder.createQuery(
+    new QueryStatement(
       PostgresStatementBuilder.quote(table),
       fields.map(PostgresStatementBuilder.quote),
       where,
     ),
 
   createInsert: (table: string, fields: Field[]) =>
-    StatementBuilder.createInsert(PostgresStatementBuilder.quote(table), fields),
+    new InsertStatement(PostgresStatementBuilder.quote(table), fields),
 
   createStoredProcedure: (name: string, parameters: Field[] = []) =>
-    StatementBuilder.createStoredProcedure(
-      PostgresStatementBuilder.quote(name),
-      parameters,
-    ),
+    new StoredProcedureStatement(PostgresStatementBuilder.quote(name), parameters),
 
   createUpdate: (table: string, fields: Field[], where?: IWhere) =>
-    StatementBuilder.createUpdate(PostgresStatementBuilder.quote(table), fields, where),
+    new UpdateStatement(PostgresStatementBuilder.quote(table), fields, where),
 
   createDelete: (table: string, where?: IWhere) =>
-    StatementBuilder.createDelete(PostgresStatementBuilder.quote(table), where),
+    new DeleteStatement(PostgresStatementBuilder.quote(table), where),
 };

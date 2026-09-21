@@ -35,4 +35,14 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
 
     public override IAsyncEnumerable<T> Read(IStatement? query = null) =>
         strategy.Read(inner, Tree, query);
+
+    public override async IAsyncEnumerable<T> Read(IWhere where)
+    {
+        var items = new List<T>();
+        await foreach (var item in inner.Read(where))
+            items.Add(item);
+        await Enrich(items);
+        foreach (var item in items)
+            yield return item;
+    }
 }

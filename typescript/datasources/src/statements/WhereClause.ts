@@ -26,7 +26,7 @@ const inline = (value: Scalar): string =>
   value === null ? "null" : typeof value === "boolean" ? String(value) : String(value);
 
 const needsParens = (child: IExpression, and: boolean): boolean =>
-  child instanceof WhereStatement
+  child instanceof WhereClause
     ? needsParens(child.condition, and)
     : child instanceof Operator.Not ||
       child instanceof Operator.In ||
@@ -52,7 +52,7 @@ const operands = (
     : undefined;
 
 const render = (expression: IExpression): string =>
-  expression instanceof WhereStatement
+  expression instanceof WhereClause
     ? render(expression.condition)
     : expression instanceof Identifier
       ? expression.name
@@ -86,7 +86,7 @@ const render = (expression: IExpression): string =>
                 })();
 
 const collect = (expression: IExpression): Parameter<Scalar>[] =>
-  expression instanceof WhereStatement
+  expression instanceof WhereClause
     ? collect(expression.condition)
     : expression instanceof Literal || expression instanceof Identifier
       ? []
@@ -117,7 +117,7 @@ const collect = (expression: IExpression): Parameter<Scalar>[] =>
                         })();
             })();
 
-export class WhereStatement implements IWhere {
+export class WhereClause implements IWhere {
   constructor(readonly condition: IExpression) {}
 
   getText = (): string => render(this.condition);

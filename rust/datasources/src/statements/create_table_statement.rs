@@ -1,21 +1,32 @@
 use super::statement::Statement;
+use super::text::Text;
+use crate::builders::Column;
 
-pub trait CreateTableStatement: Statement {}
-
-pub struct TextCreateTableStatement {
+pub struct CreateTableStatement {
     text: String,
 }
 
-impl TextCreateTableStatement {
-    pub fn new(text: impl Into<String>) -> Self {
+impl CreateTableStatement {
+    pub fn text(text: impl Into<String>) -> Self {
         Self { text: text.into() }
+    }
+
+    pub fn new(table: impl AsRef<str>, columns: &[Column]) -> Self {
+        let cols = columns
+            .iter()
+            .map(|column| format!("{} {}", column.name, column.type_name))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Self {
+            text: format!("CREATE TABLE {} ({})", table.as_ref(), cols),
+        }
     }
 }
 
-impl Statement for TextCreateTableStatement {
+impl Text for CreateTableStatement {
     fn get_text(&self) -> String {
         self.text.clone()
     }
 }
 
-impl CreateTableStatement for TextCreateTableStatement {}
+impl Statement for CreateTableStatement {}

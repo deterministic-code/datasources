@@ -1,6 +1,11 @@
 import {
+  CreateTableStatement,
   DatasourceError,
-  StatementBuilder,
+  DeleteStatement,
+  InsertStatement,
+  QueryStatement,
+  StoredProcedureStatement,
+  UpdateStatement,
   type Field,
   type IWhere,
 } from "@datasources/core";
@@ -28,7 +33,7 @@ export const MysqlStatementBuilder = {
     })(),
 
   createTable: (table: string, columns: MysqlColumn[]) =>
-    StatementBuilder.createTable(
+    new CreateTableStatement(
       MysqlStatementBuilder.quote(table),
       columns.map((column) => ({
         name: MysqlStatementBuilder.quote(column.name),
@@ -39,24 +44,21 @@ export const MysqlStatementBuilder = {
     ),
 
   createQuery: (table: string, fields: string[], where?: IWhere) =>
-    StatementBuilder.createQuery(
+    new QueryStatement(
       MysqlStatementBuilder.quote(table),
       fields.map(MysqlStatementBuilder.quote),
       where,
     ),
 
   createInsert: (table: string, fields: Field[]) =>
-    StatementBuilder.createInsert(MysqlStatementBuilder.quote(table), fields),
+    new InsertStatement(MysqlStatementBuilder.quote(table), fields),
 
   createStoredProcedure: (name: string, parameters: Field[] = []) =>
-    StatementBuilder.createStoredProcedure(
-      MysqlStatementBuilder.quote(name),
-      parameters,
-    ),
+    new StoredProcedureStatement(MysqlStatementBuilder.quote(name), parameters),
 
   createUpdate: (table: string, fields: Field[], where?: IWhere) =>
-    StatementBuilder.createUpdate(MysqlStatementBuilder.quote(table), fields, where),
+    new UpdateStatement(MysqlStatementBuilder.quote(table), fields, where),
 
   createDelete: (table: string, where?: IWhere) =>
-    StatementBuilder.createDelete(MysqlStatementBuilder.quote(table), where),
+    new DeleteStatement(MysqlStatementBuilder.quote(table), where),
 };

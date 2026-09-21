@@ -1,4 +1,4 @@
-import { Operator, WhereStatement } from "./statements/index.ts";
+import { Operator, WhereClause } from "./statements/index.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
@@ -79,7 +79,7 @@ const load = async (
   const key = get(parent, enrichment.from);
   if (key === undefined || key === null || typeof key === "object") return [];
   const items: object[] = [];
-  for await (const item of writer.read(new WhereStatement(new Operator.Equals(enrichment.by, key))))
+  for await (const item of writer.read(new WhereClause(new Operator.Equals(enrichment.by, key))))
     items.push(item);
   return items;
 };

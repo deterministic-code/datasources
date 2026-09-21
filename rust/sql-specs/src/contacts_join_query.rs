@@ -1,7 +1,7 @@
-use datasources::{Join, StatementBuilder, TextQuery};
+use datasources::{Join, QueryStatement};
 
-pub fn contacts_join_query() -> TextQuery {
-    StatementBuilder::create_query(
+pub fn contacts_join_query() -> QueryStatement {
+    QueryStatement::new(
         "contacts_base",
         &[
             "contacts_base.id AS id",

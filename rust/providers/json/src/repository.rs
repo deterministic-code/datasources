@@ -4,7 +4,7 @@ use crate::filter::{json_from_record, matches, parse_filter, value_to_json};
 use async_trait::async_trait;
 use datasources::{
     identity_filter, CRUDRepository, Command, IRepository, Query, ReadonlyRepository, Response,
-    Result, Row, TextQuery, Value, Where,
+    Result, Row, QueryStatement, Value, Where,
 };
 use serde_json::Value as JsonValue;
 use std::sync::Arc;
@@ -44,12 +44,12 @@ impl ReadonlyRepository for JsonRepository {
     }
 
     async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.read_single(Some(&TextQuery::new(where_clause.get_text())))
+        self.read_single(Some(&QueryStatement::text(where_clause.get_text())))
             .await
     }
 
     async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.read(Some(&TextQuery::new(where_clause.get_text())))
+        self.read(Some(&QueryStatement::text(where_clause.get_text())))
             .await
     }
 }

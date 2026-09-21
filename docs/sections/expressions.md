@@ -1,6 +1,6 @@
 # Expressions
 
-AST nodes for [WhereStatement](./where-statement.md). `Operator` records hold operands; `GetText()` maps them to SQL.
+AST nodes for [WhereClause](./where-clause.md). `Operator` records hold operands; `GetText()` maps them to SQL.
 
 ## Classes
 

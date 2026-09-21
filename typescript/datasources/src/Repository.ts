@@ -10,7 +10,7 @@ import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
 import { Operator } from "./statements/Operator.ts";
-import { WhereStatement } from "./statements/WhereStatement.ts";
+import { WhereClause } from "./statements/WhereClause.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
@@ -136,6 +136,6 @@ export class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRU
         throw new DatasourceError(`Missing Id value "${col}"`);
       return new Operator.Equals(col, record[col] as Scalar);
     });
-    return new WhereStatement(parts.reduce((left, right) => new Operator.And(left, right)));
+    return new WhereClause(parts.reduce((left, right) => new Operator.And(left, right)));
   };
 }

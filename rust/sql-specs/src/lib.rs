@@ -3,9 +3,10 @@ use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
-    DefaultTypeConverters, Parameter, ReadonlyRepository, Repository, RepositoryBuilder,
-    RepositoryBuilderOptions, Result, Row, Statement, StatementBuilder, StatementMapper,
-    Expression, Literal, Operator, TransformMapper, TypeConverter, Value, WhereStatement,
+    DefaultTypeConverters, DeleteStatement, Expression, InsertStatement, Literal, Operator,
+    Parameter, QueryStatement, ReadonlyRepository, Repository, RepositoryBuilder,
+    RepositoryBuilderOptions, Result, Row, StatementMapper, Text, TransformMapper,
+    TypeConverter, UpdateStatement, Value, WhereClause,
 };
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -197,16 +198,16 @@ fn and_all(parts: Vec<Expression>) -> Expression {
         })
 }
 
-fn where_sql(map: &BTreeMap<String, serde_yaml::Value>) -> WhereStatement {
-    WhereStatement::new(and_all(
+fn where_sql(map: &BTreeMap<String, serde_yaml::Value>) -> WhereClause {
+    WhereClause::new(and_all(
         map.iter()
             .map(|(name, value)| Operator::equals(name.clone(), yaml_value(value)).into())
             .collect(),
     ))
 }
 
-fn where_of(mapping: &RowTypeConverter, map: &BTreeMap<String, serde_yaml::Value>) -> WhereStatement {
-    WhereStatement::new(and_all(
+fn where_of(mapping: &RowTypeConverter, map: &BTreeMap<String, serde_yaml::Value>) -> WhereClause {
+    WhereClause::new(and_all(
         map.iter()
             .map(|(name, value)| {
                 let raw = yaml_value(value);
@@ -511,7 +512,7 @@ fn queries(spec: &Spec) -> Vec<String> {
         .map(|step| {
             if let Some(create) = &step.create {
                 with_statement_sql(
-                    StatementBuilder::create_insert(
+                    InsertStatement::new(
                         &table,
                         &fields_of(
                             &flatten_yaml(&create.row, &spec.type_spec.mappings),
@@ -523,9 +524,9 @@ fn queries(spec: &Spec) -> Vec<String> {
                     &spec.type_spec,
                 )
             } else if let Some(read) = &step.read {
-                let where_clause = WhereStatement::new(Operator::equals("id", yaml_value(&read.id)));
+                let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&read.id)));
                 with_statement_sql(
-                    StatementBuilder::create_query(&table, &refs, Some(&where_clause), &[])
+                    QueryStatement::new(&table, &refs, Some(&where_clause), &[])
                         .get_text(),
                     false,
                     &spec.type_spec,
@@ -533,7 +534,7 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(query) = &step.query {
                 let where_clause = query.where_clause.as_ref().map(where_sql);
                 with_statement_sql(
-                    StatementBuilder::create_query(
+                    QueryStatement::new(
                         &table,
                         &refs,
                         where_clause.as_ref().map(|w| w as &dyn datasources::Where),
@@ -546,7 +547,7 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(read_by) = &step.read_by {
                 let where_clause = where_sql(&read_by.where_clause);
                 with_statement_sql(
-                    StatementBuilder::create_query(&table, &refs, Some(&where_clause), &[])
+                    QueryStatement::new(&table, &refs, Some(&where_clause), &[])
                         .get_text(),
                     false,
                     &spec.type_spec,
@@ -554,9 +555,9 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(update) = &step.update {
                 let flat = flatten_yaml(&update.row, &spec.type_spec.mappings);
                 let fields = fields_of(&flat, |col| !ids.contains(col));
-                let where_clause = WhereStatement::new(Operator::equals("id", yaml_value(&flat["id"])));
+                let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&flat["id"])));
                 with_statement_sql(
-                    StatementBuilder::create_update(&table, &fields, Some(&where_clause))
+                    UpdateStatement::new(&table, &fields, Some(&where_clause))
                         .get_text(),
                     true,
                     &spec.type_spec,
@@ -568,22 +569,22 @@ fn queries(spec: &Spec) -> Vec<String> {
                 );
                 let where_clause = where_sql(&update_by.where_clause);
                 with_statement_sql(
-                    StatementBuilder::create_update(&table, &fields, Some(&where_clause))
+                    UpdateStatement::new(&table, &fields, Some(&where_clause))
                         .get_text(),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(delete) = &step.delete {
-                let where_clause = WhereStatement::new(Operator::equals("id", yaml_value(&delete.id)));
+                let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&delete.id)));
                 with_statement_sql(
-                    StatementBuilder::create_delete(&table, Some(&where_clause)).get_text(),
+                    DeleteStatement::new(&table, Some(&where_clause)).get_text(),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(delete_by) = &step.delete_by {
                 let where_clause = where_sql(&delete_by.where_clause);
                 with_statement_sql(
-                    StatementBuilder::create_delete(&table, Some(&where_clause)).get_text(),
+                    DeleteStatement::new(&table, Some(&where_clause)).get_text(),
                     true,
                     &spec.type_spec,
                 )
@@ -703,7 +704,7 @@ pub async fn run(
                     .unwrap();
             }
             Step { read: Some(read), .. } => {
-                let where_clause = WhereStatement::new(Operator::equals("id", yaml_value(&read.id)));
+                let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&read.id)));
                 let row = repo.read_single_where(&where_clause).await.unwrap();
                 if let Some(expect) = &read.expect {
                     assert_row(&format!("{} READ", spec.name), row.as_ref(), expect);

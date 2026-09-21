@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   Repository,
-  StatementBuilder,
+  QueryStatement,
   RowTypeConverter,
   StatementMapper,
   TransformMapper,
   Where,
-  WhereStatement,
+  WhereClause,
   Operator,
   RepositoryBuilder,
   createRepositoryBuilderOptions,
@@ -18,7 +18,6 @@ import {
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
-import { Query } from "./statements/Query.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
@@ -77,9 +76,9 @@ describe("Repository", () => {
   it("uses caller query and returns empty", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([]);
-    const where = new WhereStatement(new Operator.Equals("id", 9));
+    const where = new WhereClause(new Operator.Equals("id", 9));
     expect(
-      await repo.readSingle(StatementBuilder.createQuery("users", ["id"], where)),
+      await repo.readSingle(new QueryStatement("users", ["id"], where)),
     ).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id FROM users WHERE id = $id",
@@ -90,7 +89,7 @@ describe("Repository", () => {
   it("attaches where to the default select", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([]);
-    expect(await repo.readSingle(new WhereStatement(new Operator.Equals("id", 9)))).toBeUndefined();
+    expect(await repo.readSingle(new WhereClause(new Operator.Equals("id", 9)))).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id, name FROM users WHERE id = $id",
     );
@@ -156,7 +155,7 @@ describe("Repository", () => {
     });
     await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
-    await typed.delete(Object.assign(new Item(), { name: "z" }), new WhereStatement(new Operator.Equals("name", "z")));
+    await typed.delete(Object.assign(new Item(), { name: "z" }), new WhereClause(new Operator.Equals("name", "z")));
     expect(command.executeCalls[1]?.text).toBe("DELETE FROM users WHERE name = $name");
   });
 
@@ -294,7 +293,7 @@ describe("Repository", () => {
         entity: names,
         columns: names,
         query: new TransformMapper(
-          (query) => new Query(`${query.getText()} LIMIT 1`, query.where),
+          (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
           (query) => query,
         ),
         insert: new TransformMapper(
@@ -308,7 +307,7 @@ describe("Repository", () => {
         ),
         delete: new TransformMapper(
           (remove) =>
-            new DeleteStatement(`${remove.getText()} RETURNING id`, remove.where),
+            DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
           (remove) => remove,
         ),
       }),

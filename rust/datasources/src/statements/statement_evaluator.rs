@@ -1,6 +1,6 @@
 use super::expression::Expression;
 use super::operator::Operator;
-use super::where_statement::WhereStatement;
+use super::where_clause::WhereClause;
 use crate::row::Row;
 use crate::value::Value;
 use crate::where_trait::Where;
@@ -54,8 +54,8 @@ impl StatementEvaluator {
     pub fn evaluate_where(&self, statement: &dyn Where, parameters: &Row) -> Value {
         statement
             .as_any()
-            .downcast_ref::<WhereStatement>()
-            .map(|where_statement| self.evaluate(&where_statement.condition, parameters))
+            .downcast_ref::<WhereClause>()
+            .map(|where_clause| self.evaluate(&where_clause.condition, parameters))
             .unwrap_or_else(|| panic!("text where is not evaluable"))
     }
 

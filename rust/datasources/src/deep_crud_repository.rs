@@ -1,4 +1,4 @@
-use crate::{Operator, WhereStatement};
+use crate::{Operator, WhereClause};
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enriched::Enriched;
@@ -300,7 +300,7 @@ async fn load(
         return Ok(Vec::new());
     };
     writer
-        .read_where(&WhereStatement::new(Operator::equals(enrichment.by.clone(), key)))
+        .read_where(&WhereClause::new(Operator::equals(enrichment.by.clone(), key)))
         .await
 }
 

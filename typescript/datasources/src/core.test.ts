@@ -12,7 +12,6 @@ import {
   DatasourceError,
   execute,
   executeReader,
-  StatementBuilder,
   identityFilter,
   identityWhereText,
   IsolationLevel,
@@ -31,7 +30,8 @@ import {
   ProviderNotImplementedError,
   ProviderNotInstalledError,
   providerFromUrl,
-  Query,
+  QueryStatement,
+  StoredProcedureStatement,
   readerToAsyncIterable,
   StubCommand,
   StubConnection,
@@ -115,7 +115,7 @@ describe("parametersToRecord", () => {
 
 describe("Query and Where", () => {
   it("returns constructor text", () => {
-    expect(new Query("SELECT 1").getText()).toBe("SELECT 1");
+    expect(new QueryStatement("SELECT 1").getText()).toBe("SELECT 1");
     expect(new Where("id = 1").getText()).toBe("id = 1");
   });
 });
@@ -603,7 +603,7 @@ describe("published mocks", () => {
     command.executeError = undefined;
     command.executeReaderError = undefined;
     const fields = [{ name: "id", value: 1 }];
-    const statement = StatementBuilder.createStoredProcedure("save", fields);
+    const statement = new StoredProcedureStatement("save", fields);
     await execute(command, statement, fields);
     expect(command.executeCalls.at(-1)).toEqual({
       text: "CALL save($id)",

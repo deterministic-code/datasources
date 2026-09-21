@@ -6,7 +6,7 @@ import {
   DefaultTypeConverters,
   DeleteStatement,
   InsertStatement,
-  Query,
+  QueryStatement,
   Repository,
   RowTypeConverter,
   StatementMapper,
@@ -14,7 +14,7 @@ import {
   UpdateStatement,
   Literal,
   Operator,
-  WhereStatement,
+  WhereClause,
   type Cell,
   type Cells,
   type Constructable,
@@ -88,7 +88,7 @@ const whereOf = (mapping: RowTypeConverter<SpecRow>, row: RepositoryRow) => {
   const parts = Object.entries(mapping.reverseConvert(row)).map(
     ([name, value]) => new Operator.Equals(name, value as Scalar),
   );
-  return new WhereStatement(
+  return new WhereClause(
     parts.length === 0
       ? new Operator.Equals(new Literal(1), new Literal(1))
       : parts.reduce((left, right) => new Operator.And(left, right)),
@@ -168,10 +168,10 @@ const statementMapperOf = (
       (name) => name,
     ),
     rows,
-    query: suffix((text, query) => new Query(text, query.where), mapper.querySuffix),
+    query: suffix((text, query) => new QueryStatement(text, query.where), mapper.querySuffix),
     insert: suffix((text) => new InsertStatement(text), mapper.writeSuffix),
     update: suffix((text, update) => new UpdateStatement(text, update.where), mapper.writeSuffix),
-    delete: suffix((text, remove) => new DeleteStatement(text, remove.where), mapper.writeSuffix),
+    delete: suffix((text, remove) => DeleteStatement.raw(text, remove.where), mapper.writeSuffix),
   });
 };
 
@@ -268,7 +268,7 @@ export const runRepositorySpec = async (
       },
       READ: async () => {
         if (!step.READ) return;
-        const row = await repo.readSingle(new WhereStatement(new Operator.Equals("id", step.READ.id)));
+        const row = await repo.readSingle(new WhereClause(new Operator.Equals("id", step.READ.id)));
         if ("expect" in step.READ) assertRow(`${spec.name} READ`, row, step.READ.expect ?? null);
       },
       QUERY: async () => {

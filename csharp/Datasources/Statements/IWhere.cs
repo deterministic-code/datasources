@@ -1,3 +1,6 @@
 namespace Datasources;
 
-public interface IWhere : IStatement;
+public interface IWhere : IExpression, IText
+{
+    IReadOnlyList<Parameter> Parameters => [];
+}

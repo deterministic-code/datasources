@@ -2,7 +2,7 @@ use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use super::rusqlite_driver::RusqliteDriver;
 use super::statement_builder::{SqliteColumn, SqliteStatementBuilder};
-use datasources::{Connection, Statement};
+use datasources::{Connection, Text};
 use datasources_sql_specs::RepositoryDialect;
 use std::sync::Arc;
 

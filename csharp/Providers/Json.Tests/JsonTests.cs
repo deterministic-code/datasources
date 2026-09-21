@@ -92,8 +92,8 @@ public class JsonTests
         var repo = new JsonRepository(conn);
         var command = new JsonCommand(conn);
         Assert.NotNull(await repo.ReadSingle());
-        Assert.Null(await repo.ReadSingle(new Query("{\"id\":9}")));
-        Assert.NotEmpty(await repo.Read(new Query("{\"id\":1}")).ToListAsync());
+        Assert.Null(await repo.ReadSingle(new QueryStatement("{\"id\":9}")));
+        Assert.NotEmpty(await repo.Read(new QueryStatement("{\"id\":1}")).ToListAsync());
         Assert.NotNull(await repo.ReadSingle(new Where("{\"id\":1}")));
         Assert.NotEmpty(await repo.Read(new Where("{\"id\":1}")).ToListAsync());
         await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });

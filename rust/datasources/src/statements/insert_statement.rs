@@ -1,21 +1,40 @@
 use super::statement::Statement;
+use super::text::Text;
+use crate::parameter::Parameter;
 
-pub trait InsertStatement: Statement {}
-
-pub struct TextInsertStatement {
+pub struct InsertStatement {
     text: String,
 }
 
-impl TextInsertStatement {
-    pub fn new(text: impl Into<String>) -> Self {
+impl InsertStatement {
+    pub fn text(text: impl Into<String>) -> Self {
         Self { text: text.into() }
+    }
+
+    pub fn new(table: impl AsRef<str>, fields: &[Parameter]) -> Self {
+        Self {
+            text: format!(
+                "INSERT INTO {} ({}) VALUES ({})",
+                table.as_ref(),
+                fields
+                    .iter()
+                    .map(|field| field.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                fields
+                    .iter()
+                    .map(|field| format!("${}", field.name))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        }
     }
 }
 
-impl Statement for TextInsertStatement {
+impl Text for InsertStatement {
     fn get_text(&self) -> String {
         self.text.clone()
     }
 }
 
-impl InsertStatement for TextInsertStatement {}
+impl Statement for InsertStatement {}

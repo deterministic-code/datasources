@@ -1,8 +1,11 @@
 import {
   Literal,
   Operator,
-  StatementBuilder,
-  WhereStatement,
+  QueryStatement,
+  InsertStatement,
+  UpdateStatement,
+  DeleteStatement,
+  WhereClause,
   type Field,
   type IExpression,
   type Scalar,
@@ -86,7 +89,7 @@ const fieldsOf = (row: RepositoryRow, include: (col: string) => boolean): Field[
     .map(([name, value]) => ({ name, value: value as Scalar }));
 
 const andAll = (parts: IExpression[]) =>
-  new WhereStatement(
+  new WhereClause(
     parts.length === 0
       ? new Operator.Equals(new Literal(1), new Literal(1))
       : parts.reduce((left, right) => new Operator.And(left, right)),
@@ -119,17 +122,17 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
         flattenRepositoryRow(step.CREATE.row, type.mappings),
         (col) => !type.assignIdentityOnAdd || !ids.has(col),
       );
-      return withStatementSql(StatementBuilder.createInsert(table, fields).getText(), true, type);
+      return withStatementSql(new InsertStatement(table, fields).getText(), true, type);
     }
     if (step.READ)
       return withStatementSql(
-        StatementBuilder.createQuery(table, columns, idWhere(type, step.READ.id)).getText(),
+        new QueryStatement(table, columns, idWhere(type, step.READ.id)).getText(),
         false,
         type,
       );
     if (step.QUERY)
       return withStatementSql(
-        StatementBuilder.createQuery(
+        new QueryStatement(
           table,
           columns,
           step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
@@ -139,7 +142,7 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
       );
     if (step.READBY)
       return withStatementSql(
-        StatementBuilder.createQuery(table, columns, whereOf(step.READBY.where)).getText(),
+        new QueryStatement(table, columns, whereOf(step.READBY.where)).getText(),
         false,
         type,
       );
@@ -147,7 +150,7 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
       const flat = flattenRepositoryRow(step.UPDATE.row, type.mappings);
       const fields = fieldsOf(flat, (col) => !ids.has(col));
       return withStatementSql(
-        StatementBuilder.createUpdate(table, fields, idWhere(type, flat.id as Scalar)).getText(),
+        new UpdateStatement(table, fields, idWhere(type, flat.id as Scalar)).getText(),
         true,
         type,
       );
@@ -158,20 +161,20 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
         (col) => !ids.has(col),
       );
       return withStatementSql(
-        StatementBuilder.createUpdate(table, fields, whereOf(step.UPDATEBY.where)).getText(),
+        new UpdateStatement(table, fields, whereOf(step.UPDATEBY.where)).getText(),
         true,
         type,
       );
     }
     if (step.DELETE)
       return withStatementSql(
-        StatementBuilder.createDelete(table, idWhere(type, step.DELETE.id)).getText(),
+        new DeleteStatement(table, idWhere(type, step.DELETE.id)).getText(),
         true,
         type,
       );
     if (step.DELETEBY)
       return withStatementSql(
-        StatementBuilder.createDelete(table, whereOf(step.DELETEBY.where)).getText(),
+        new DeleteStatement(table, whereOf(step.DELETEBY.where)).getText(),
         true,
         type,
       );

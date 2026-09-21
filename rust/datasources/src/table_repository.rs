@@ -1,4 +1,4 @@
-use crate::{Expression, Literal, Operator, WhereStatement};
+use crate::{Expression, Literal, Operator, WhereClause};
 use crate::built_repository::BuiltRepository;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
@@ -105,7 +105,7 @@ impl Repository {
             .collect()
     }
 
-    fn id_where(&self, record: &Row) -> Result<WhereStatement> {
+    fn id_where(&self, record: &Row) -> Result<WhereClause> {
         let children = self
             .id
             .iter()
@@ -116,7 +116,7 @@ impl Repository {
                 Ok(Expression::from(Operator::equals(col.clone(), value.clone())))
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(WhereStatement::new(and_all(children)))
+        Ok(WhereClause::new(and_all(children)))
     }
 
     fn query_parts(&self, query: Option<&dyn Query>) -> (String, Vec<Parameter>) {

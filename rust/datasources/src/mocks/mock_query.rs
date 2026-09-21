@@ -1,5 +1,6 @@
 use crate::query::Query;
 use crate::statement::Statement;
+use crate::statements::text::Text;
 use crate::where_trait::Where;
 use std::sync::Mutex;
 
@@ -31,12 +32,14 @@ impl MockQuery {
     }
 }
 
-impl Statement for MockQuery {
+impl Text for MockQuery {
     fn get_text(&self) -> String {
         *self.calls.lock().expect("mock") += 1;
         self.text.clone()
     }
 }
+
+impl Statement for MockQuery {}
 
 impl Query for MockQuery {
     fn where_clause(&self) -> Option<&dyn Where> {

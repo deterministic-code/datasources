@@ -1,5 +1,4 @@
 using Datasources;
-using Datasources.Builders;
 
 namespace Datasources.Tests;
 
@@ -58,7 +57,7 @@ public class StatementMapperTests
             "users",
             ["id", "name"],
             new TransformMapper<IQuery, IQuery>(
-                query => new Query($"{query.GetText()} LIMIT 1", query.Where),
+                query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
                 query => query),
             new TransformMapper<IInsertStatement, IInsertStatement>(
                 insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
@@ -67,7 +66,7 @@ public class StatementMapperTests
                 update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
                 update => update),
             new TransformMapper<IDeleteStatement, IDeleteStatement>(
-                delete => new DeleteStatement($"{delete.GetText()} RETURNING id", delete.Where),
+                delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),
                 delete => delete));
         Assert.Equal("SELECT id, name FROM users LIMIT 1", statements.Query().GetText());
         Assert.Equal(
@@ -88,7 +87,7 @@ public class StatementMapperTests
                 proc => new StoredProcedureStatement($"{proc.GetText()} /* mapped */"),
                 proc => proc)
         };
-        var built = StatementBuilder.CreateStoredProcedure("save", [new Parameter("id", 1)]);
+        var built = new StoredProcedureStatement("save", [new Parameter("id", 1)]);
         var statement = mapper.StoredProcedure is { } map ? map.Map(built) : built;
         Assert.Equal("CALL save($id) /* mapped */", statement.GetText());
     }
@@ -102,7 +101,7 @@ public class StatementMapperTests
             Entity = names,
             Columns = names,
             Query = new TransformMapper<IQuery, IQuery>(
-                query => new Query($"{query.GetText()} LIMIT 1", query.Where),
+                query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
                 query => query),
             Insert = new TransformMapper<IInsertStatement, IInsertStatement>(
                 insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
@@ -111,7 +110,7 @@ public class StatementMapperTests
                 update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
                 update => update),
             Delete = new TransformMapper<IDeleteStatement, IDeleteStatement>(
-                delete => new DeleteStatement($"{delete.GetText()} RETURNING id", delete.Where),
+                delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),
                 delete => delete)
         });
         command.Reader = new MockReader<Row>([]);
