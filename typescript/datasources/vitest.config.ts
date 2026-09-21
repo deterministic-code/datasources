@@ -14,6 +14,8 @@ export default defineConfig({
         "src/IConnection.ts",
         "src/IDatasource.ts",
         "src/statements/ICreateTableStatement.ts",
+        "src/statements/ICreateIndexStatement.ts",
+        "src/statements/ITableConstraint.ts",
         "src/statements/IDeleteStatement.ts",
         "src/statements/IInsertStatement.ts",
         "src/statements/IQuery.ts",

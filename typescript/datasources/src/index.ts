@@ -7,6 +7,7 @@ export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory, bindInstall } from "./DatasourceFactory.ts";
 export type {
   ICreateTableStatement,
+  ICreateIndexStatement,
   IDeleteStatement,
   IExpression,
   IInsertStatement,
@@ -15,6 +16,8 @@ export type {
   IStatement,
   IExecuteStoredProcedureStatement,
   IReturnStatement,
+  ITableConstraint,
+  TableConstraintKind,
   IUpdateStatement,
   IWhere,
 } from "./statements/index.ts";
@@ -53,16 +56,24 @@ export { IsolationLevel } from "./IsolationLevel.ts";
 export type { IsolationLevel as IsolationLevelName } from "./IsolationLevel.ts";
 export {
   ArrayExpression,
+  CheckConstraint,
+  ColumnDefault,
+  CreateIndexStatement,
   CreateTableStatement,
   DeleteStatement,
+  ForeignKey,
   Identifier,
   InsertStatement,
   Literal,
+  NotNull,
   Operator,
+  PrimaryKey,
   QueryStatement,
+  ReferentialAction,
   StatementEvaluator,
   ExecuteStoredProcedureStatement,
   ReturnStatement,
+  UniqueConstraint,
   UpdateStatement,
   Where,
   WhereClause,
@@ -112,7 +123,7 @@ export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";
 export { ProviderNotImplementedError } from "./ProviderNotImplementedError.ts";
 export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
-export type { Column, JoinKind } from "./statements/index.ts";
+export type { Column, JoinKind, ReferentialAction as ReferentialActionName } from "./statements/index.ts";
 export type { Field, Scalar } from "./builders/index.ts";
 export { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 export {

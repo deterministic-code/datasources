@@ -217,7 +217,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](./w
 ```
 ```rust rust/datasources/src/tests/mod.rs#L928-L933
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L216-L220
+```typescript typescript/datasources/src/builders/builders.test.ts#L225-L229
 ```
 
 ```output [After: update]

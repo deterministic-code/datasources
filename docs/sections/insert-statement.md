@@ -185,7 +185,7 @@ Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](./command.
 ```
 ```rust rust/datasources/src/tests/mod.rs#L923-L927
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L212-L215
+```typescript typescript/datasources/src/builders/builders.test.ts#L221-L224
 ```
 
 ```output [After: insert]

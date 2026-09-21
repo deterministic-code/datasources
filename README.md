@@ -3132,19 +3132,22 @@ while (await reader.next()) {
 
 #### Parameter direction and Response.Parameters
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L176-L179)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L226-L229)
 
 ```csharp
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L986)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1048-L1054)
 
 ```rust
-
+    )
+    .get_text(),
+    "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)"
+);
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L255-L258)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L325-L328)
 
 ```typescript
 const input: Parameter = { name: "id", value: 1 };
@@ -3330,6 +3333,7 @@ Bound values live on [WhereClause](#where-clause). [IStatement](#istatement) is 
 - [UpdateStatement](#update-statement)
 - [DeleteStatement](#delete-statement)
 - [CreateTableStatement](#create-table-statement)
+- [CreateIndexStatement](#create-index-statement)
 - [ExecuteStoredProcedureStatement](#execute-stored-procedure-statement)
 - [ReturnStatement](#return-statement)
 - [WhereClause](#where-clause)
@@ -3944,13 +3948,16 @@ var byId = new Where("id = 1");
 var withWhere = new QueryStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L992)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1057-L1060)
 
 ```rust
-let query = QueryStatement::with_where("SELECT 1", TextWhere::new("id = 1"));
+        .with_on_delete(ReferentialAction::Restrict)
+        .with_on_update(ReferentialAction::NoAction)
+        .into()],
+)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L24-L26)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L33-L35)
 
 ```typescript
 const select = new QueryStatement("SELECT 1");
@@ -3976,8 +3983,13 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L877-L883)
 
 ```rust
-let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
-let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
+.get_text()
+.contains('='));
+assert!(WhereClause::new(Operator::Equals {
+    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+})
+.get_text()
 ```
 
 **After: select**
@@ -3989,8 +4001,12 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L175-L180)
 
 ```typescript
-const where = new WhereClause(new Operator.Equals("id", 1));
-const query = new QueryStatement("users", ["id", "name"], where);
+});
+
+describe("statements", () => {
+  const fields = [
+    { name: "id", value: 1 },
+    { name: "name", value: "a" },
 ```
 
 **After: select**
@@ -4265,7 +4281,11 @@ INSERT INTO users (id, name) VALUES ($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L923-L927)
 
 ```rust
-let insert = InsertStatement::new("users", &fields);
+    },
+    _ => panic!("and"),
+}
+
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
 ```
 
 **After: insert**
@@ -4274,7 +4294,7 @@ let insert = InsertStatement::new("users", &fields);
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L212-L215)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L221-L224)
 
 ```typescript
 const insert = new InsertStatement("users", [...fields]);
@@ -4584,7 +4604,7 @@ UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L928-L933)
 
 ```rust
-let update = UpdateStatement::new("users", &fields, Some(&where_clause));
+let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
 ```
 
 **After: update**
@@ -4593,7 +4613,7 @@ let update = UpdateStatement::new("users", &fields, Some(&where_clause));
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L216-L220)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L225-L229)
 
 ```typescript
 const update = new UpdateStatement("users", [...fields], where);
@@ -4908,7 +4928,10 @@ DELETE FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L937-L942)
 
 ```rust
-let delete = DeleteStatement::new("users", Some(&where_clause));
+);
+assert!(QueryStatement::new("users", &[], None, &[])
+    .where_clause()
+    .is_none());
 ```
 
 **After: delete**
@@ -4917,7 +4940,7 @@ let delete = DeleteStatement::new("users", Some(&where_clause));
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L224-L226)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L233-L235)
 
 ```typescript
 const del = new DeleteStatement("users", where);
@@ -4931,7 +4954,7 @@ DELETE FROM users WHERE id = $id
 
 ## Create Table Statement
 
-`CREATE TABLE` text, or a compiled `CREATE TABLE` from a table and columns.
+`CREATE TABLE` text, or a compiled `CREATE TABLE` from a table, columns, and optional named table constraints.
 
 ### Classes
 
@@ -4954,7 +4977,7 @@ class CreateTableStatement implements ICreateTableStatement
 | Name | Description |
 | --- | --- |
 | [CreateTableStatement(text)](#typescript-createtablestatement-createtablestatement-text) | Wraps create-table text. |
-| [CreateTableStatement(table, columns)](#typescript-createtablestatement-createtablestatement-table-columns) | Compiles a `CREATE TABLE`. |
+| [CreateTableStatement(table, columns, constraints?)](#typescript-createtablestatement-createtablestatement-table-columns-constraints) | Compiles a `CREATE TABLE`. |
 
 **Methods**
 
@@ -4978,14 +5001,14 @@ constructor(text: string)
 | --- | --- |
 | `text` | command text |
 
-###### CreateTableStatement(table, columns) {#typescript-createtablestatement-createtablestatement-table-columns}
+###### CreateTableStatement(table, columns, constraints?) {#typescript-createtablestatement-createtablestatement-table-columns-constraints}
 
 Compiles a `CREATE TABLE`.
 
 **Definition**
 
 ```typescript
-constructor(table: string, columns: Column[])
+constructor(table: string, columns: Column[], constraints?: ITableConstraint[])
 ```
 
 **Parameters**
@@ -4993,7 +5016,8 @@ constructor(table: string, columns: Column[])
 | Name | Description |
 | --- | --- |
 | `table` | table name |
-| `columns` | [Column](#typescript-column) names and types |
+| `columns` | [Column](#typescript-column) names, types, optional [ColumnDefault](#typescript-columndefault) and [NotNull](#typescript-notnull) |
+| `constraints` | optional named [ITableConstraint](#typescript-itableconstraint) list |
 
 ###### getText() {#typescript-createtablestatement-gettext}
 
@@ -5021,6 +5045,227 @@ interface Column
 | --- | --- |
 | name | Column name. |
 | type | SQL type name. |
+| default | Optional [ColumnDefault](#typescript-columndefault). |
+| notNull | Optional [NotNull](#typescript-notnull). |
+
+##### ColumnDefault {#typescript-columndefault}
+
+```typescript
+class ColumnDefault
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ColumnDefault(value, name?)](#typescript-columndefault-columndefault-value-name) | Default value, optionally named. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| value | Raw SQL default fragment. |
+| name | Optional constraint name. |
+
+###### ColumnDefault(value, name?) {#typescript-columndefault-columndefault-value-name}
+
+Default value, optionally named.
+
+**Definition**
+
+```typescript
+constructor(value: string, name?: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | raw SQL default fragment |
+| `name` | optional constraint name |
+
+##### NotNull {#typescript-notnull}
+
+```typescript
+class NotNull
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [NotNull(name?)](#typescript-notnull-notnull-name) | `NOT NULL`, optionally named. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| name | Optional constraint name. |
+
+###### NotNull(name?) {#typescript-notnull-notnull-name}
+
+`NOT NULL`, optionally named.
+
+**Definition**
+
+```typescript
+constructor(name?: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | optional constraint name |
+
+##### ITableConstraint {#typescript-itableconstraint}
+
+```typescript
+interface ITableConstraint
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| kind | Constraint kind. |
+| name | Constraint name. |
+
+##### PrimaryKey {#typescript-primarykey}
+
+```typescript
+class PrimaryKey implements ITableConstraint
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [PrimaryKey(name, columns)](#typescript-primarykey-primarykey-name-columns) | Named primary key. Multiple columns are a composite key. |
+
+###### PrimaryKey(name, columns) {#typescript-primarykey-primarykey-name-columns}
+
+Named primary key. Multiple columns are a composite key.
+
+**Definition**
+
+```typescript
+constructor(name: string, columns: string[])
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `columns` | key columns |
+
+##### ForeignKey {#typescript-foreignkey}
+
+```typescript
+class ForeignKey implements ITableConstraint
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ForeignKey(name, columns, referencesTable, referencesColumns, onDelete?, onUpdate?)](#typescript-foreignkey-foreignkey-name-columns-referencestable-referencescolumns-ondelete-onupdate) | Named foreign key. |
+
+###### ForeignKey(name, columns, referencesTable, referencesColumns, onDelete?, onUpdate?) {#typescript-foreignkey-foreignkey-name-columns-referencestable-referencescolumns-ondelete-onupdate}
+
+Named foreign key.
+
+**Definition**
+
+```typescript
+constructor(name: string, columns: string[], referencesTable: string, referencesColumns: string[], onDelete?: ReferentialAction, onUpdate?: ReferentialAction)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `columns` | local columns |
+| `referencesTable` | referenced table |
+| `referencesColumns` | referenced columns |
+| `onDelete` | optional [ReferentialAction](#typescript-referentialaction) |
+| `onUpdate` | optional [ReferentialAction](#typescript-referentialaction) |
+
+##### UniqueConstraint {#typescript-uniqueconstraint}
+
+```typescript
+class UniqueConstraint implements ITableConstraint
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [UniqueConstraint(name, columns)](#typescript-uniqueconstraint-uniqueconstraint-name-columns) | Named unique constraint. |
+
+###### UniqueConstraint(name, columns) {#typescript-uniqueconstraint-uniqueconstraint-name-columns}
+
+Named unique constraint.
+
+**Definition**
+
+```typescript
+constructor(name: string, columns: string[])
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `columns` | unique columns |
+
+##### CheckConstraint {#typescript-checkconstraint}
+
+```typescript
+class CheckConstraint implements ITableConstraint
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CheckConstraint(name, expression)](#typescript-checkconstraint-checkconstraint-name-expression) | Named check constraint. |
+
+###### CheckConstraint(name, expression) {#typescript-checkconstraint-checkconstraint-name-expression}
+
+Named check constraint.
+
+**Definition**
+
+```typescript
+constructor(name: string, expression: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `expression` | raw SQL check fragment |
+
+##### ReferentialAction {#typescript-referentialaction}
+
+```typescript
+const ReferentialAction
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Cascade | `ON DELETE` / `ON UPDATE CASCADE`. |
+| SetNull | `ON DELETE` / `ON UPDATE SET NULL`. |
+| SetDefault | `ON DELETE` / `ON UPDATE SET DEFAULT`. |
+| Restrict | `ON DELETE` / `ON UPDATE RESTRICT`. |
+| NoAction | `ON DELETE` / `ON UPDATE NO ACTION`. |
 
 ##### C#
 
@@ -5041,7 +5286,7 @@ public sealed record CreateTableStatement : ICreateTableStatement
 | Name | Description |
 | --- | --- |
 | [CreateTableStatement(text)](#csharp-createtablestatement-createtablestatement-text) | Wraps create-table text. |
-| [CreateTableStatement(table, columns)](#csharp-createtablestatement-createtablestatement-table-columns) | Compiles a `CREATE TABLE`. |
+| [CreateTableStatement(table, columns, constraints?)](#csharp-createtablestatement-createtablestatement-table-columns-constraints) | Compiles a `CREATE TABLE`. |
 
 **Methods**
 
@@ -5065,14 +5310,14 @@ public CreateTableStatement(string text)
 | --- | --- |
 | `text` | command text |
 
-###### CreateTableStatement(table, columns) {#csharp-createtablestatement-createtablestatement-table-columns}
+###### CreateTableStatement(table, columns, constraints?) {#csharp-createtablestatement-createtablestatement-table-columns-constraints}
 
 Compiles a `CREATE TABLE`.
 
 **Definition**
 
 ```csharp
-public CreateTableStatement(string table, IReadOnlyList<Column> columns)
+public CreateTableStatement(string table, IReadOnlyList<Column> columns, IReadOnlyList<ITableConstraint>? constraints = null)
 ```
 
 **Parameters**
@@ -5080,7 +5325,8 @@ public CreateTableStatement(string table, IReadOnlyList<Column> columns)
 | Name | Description |
 | --- | --- |
 | `table` | table name |
-| `columns` | [Column](#csharp-column) names and types |
+| `columns` | [Column](#csharp-column) names, types, optional [ColumnDefault](#csharp-columndefault) and [NotNull](#csharp-notnull) |
+| `constraints` | optional named [ITableConstraint](#csharp-itableconstraint) list |
 
 ###### GetText() {#csharp-createtablestatement-gettext}
 
@@ -5099,7 +5345,7 @@ public string GetText()
 ##### Column {#csharp-column}
 
 ```csharp
-public sealed record Column(string Name, string Type)
+public sealed record Column(string Name, string Type, ColumnDefault? Default = null, NotNull? NotNull = null)
 ```
 
 **Properties**
@@ -5108,6 +5354,111 @@ public sealed record Column(string Name, string Type)
 | --- | --- |
 | Name | Column name. |
 | Type | SQL type name. |
+| Default | Optional [ColumnDefault](#csharp-columndefault). |
+| NotNull | Optional [NotNull](#csharp-notnull). |
+
+##### ColumnDefault {#csharp-columndefault}
+
+```csharp
+public sealed record ColumnDefault(string Value, string? Name = null)
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Value | Raw SQL default fragment. |
+| Name | Optional constraint name. |
+
+##### NotNull {#csharp-notnull}
+
+```csharp
+public sealed record NotNull(string? Name = null)
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Name | Optional constraint name. |
+
+##### ITableConstraint {#csharp-itableconstraint}
+
+```csharp
+public interface ITableConstraint
+```
+
+##### PrimaryKey {#csharp-primarykey}
+
+```csharp
+public sealed record PrimaryKey(string Name, IReadOnlyList<string> Columns) : ITableConstraint
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Name | Constraint name. |
+| Columns | Key columns. Multiple columns are a composite key. |
+
+##### ForeignKey {#csharp-foreignkey}
+
+```csharp
+public sealed record ForeignKey(string Name, IReadOnlyList<string> Columns, string ReferencesTable, IReadOnlyList<string> ReferencesColumns, ReferentialAction? OnDelete = null, ReferentialAction? OnUpdate = null) : ITableConstraint
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Name | Constraint name. |
+| Columns | Local columns. |
+| ReferencesTable | Referenced table. |
+| ReferencesColumns | Referenced columns. |
+| OnDelete | Optional [ReferentialAction](#csharp-referentialaction). |
+| OnUpdate | Optional [ReferentialAction](#csharp-referentialaction). |
+
+##### UniqueConstraint {#csharp-uniqueconstraint}
+
+```csharp
+public sealed record UniqueConstraint(string Name, IReadOnlyList<string> Columns) : ITableConstraint
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Name | Constraint name. |
+| Columns | Unique columns. |
+
+##### CheckConstraint {#csharp-checkconstraint}
+
+```csharp
+public sealed record CheckConstraint(string Name, string Expression) : ITableConstraint
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Name | Constraint name. |
+| Expression | Raw SQL check fragment. |
+
+##### ReferentialAction {#csharp-referentialaction}
+
+```csharp
+public enum ReferentialAction
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Cascade | `ON DELETE` / `ON UPDATE CASCADE`. |
+| SetNull | `ON DELETE` / `ON UPDATE SET NULL`. |
+| SetDefault | `ON DELETE` / `ON UPDATE SET DEFAULT`. |
+| Restrict | `ON DELETE` / `ON UPDATE RESTRICT`. |
+| NoAction | `ON DELETE` / `ON UPDATE NO ACTION`. |
 
 ##### Rust
 
@@ -5123,6 +5474,7 @@ pub struct CreateTableStatement
 | --- | --- |
 | [text(text)](#rust-createtablestatement-text-text) | Wraps create-table text. |
 | [new(table, columns)](#rust-createtablestatement-new-table-columns) | Compiles a `CREATE TABLE`. |
+| [with_constraints(table, columns, constraints)](#rust-createtablestatement-with_constraints-table-columns-constraints) | Compiles a `CREATE TABLE` with named [TableConstraint](#rust-tableconstraint) values. |
 
 **Methods**
 
@@ -5171,6 +5523,28 @@ pub fn new(table: impl AsRef<str>, columns: &[Column]) -> Self
 
 [CreateTableStatement](#rust-createtablestatement)
 
+###### with_constraints(table, columns, constraints) {#rust-createtablestatement-with_constraints-table-columns-constraints}
+
+Compiles a `CREATE TABLE` with named [TableConstraint](#rust-tableconstraint) values.
+
+**Definition**
+
+```rust
+pub fn with_constraints(table: impl AsRef<str>, columns: &[Column], constraints: &[TableConstraint]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `columns` | [Column](#rust-column) names, types, optional [ColumnDefault](#rust-columndefault) and [NotNull](#rust-notnull) |
+| `constraints` | named [TableConstraint](#rust-tableconstraint) list |
+
+**Returns**
+
+[CreateTableStatement](#rust-createtablestatement)
+
 ###### get_text() {#rust-createtablestatement-get_text}
 
 Command text.
@@ -5196,6 +5570,8 @@ pub struct Column
 | Name | Description |
 | --- | --- |
 | [new(name, type_name)](#rust-column-new-name-type_name) | Column name and SQL type. |
+| [with_default(self, default)](#rust-column-with_default-self-default) | Sets an optional [ColumnDefault](#rust-columndefault). |
+| [with_not_null(self, not_null)](#rust-column-with_not_null-self-not_null) | Sets an optional [NotNull](#rust-notnull). |
 
 ###### new(name, type_name) {#rust-column-new-name-type_name}
 
@@ -5218,9 +5594,348 @@ pub fn new(name: impl Into<String>, type_name: impl Into<String>) -> Self
 
 [Column](#rust-column)
 
+###### with_default(self, default) {#rust-column-with_default-self-default}
+
+Sets an optional [ColumnDefault](#rust-columndefault).
+
+**Definition**
+
+```rust
+pub fn with_default(self, default: ColumnDefault) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `default` | [ColumnDefault](#rust-columndefault) |
+
+**Returns**
+
+[Column](#rust-column)
+
+###### with_not_null(self, not_null) {#rust-column-with_not_null-self-not_null}
+
+Sets an optional [NotNull](#rust-notnull).
+
+**Definition**
+
+```rust
+pub fn with_not_null(self, not_null: NotNull) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `not_null` | [NotNull](#rust-notnull) |
+
+**Returns**
+
+[Column](#rust-column)
+
+##### ColumnDefault {#rust-columndefault}
+
+```rust
+pub struct ColumnDefault
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(value)](#rust-columndefault-new-value) | Unnamed default value. |
+| [named(name, value)](#rust-columndefault-named-name-value) | Named default value. |
+
+###### new(value) {#rust-columndefault-new-value}
+
+Unnamed default value.
+
+**Definition**
+
+```rust
+pub fn new(value: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | raw SQL default fragment |
+
+**Returns**
+
+[ColumnDefault](#rust-columndefault)
+
+###### named(name, value) {#rust-columndefault-named-name-value}
+
+Named default value.
+
+**Definition**
+
+```rust
+pub fn named(name: impl Into<String>, value: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `value` | raw SQL default fragment |
+
+**Returns**
+
+[ColumnDefault](#rust-columndefault)
+
+##### NotNull {#rust-notnull}
+
+```rust
+pub struct NotNull
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new()](#rust-notnull-new) | Unnamed `NOT NULL`. |
+| [named(name)](#rust-notnull-named-name) | Named `NOT NULL`. |
+
+###### new() {#rust-notnull-new}
+
+Unnamed `NOT NULL`.
+
+**Definition**
+
+```rust
+pub fn new() -> Self
+```
+
+**Returns**
+
+[NotNull](#rust-notnull)
+
+###### named(name) {#rust-notnull-named-name}
+
+Named `NOT NULL`.
+
+**Definition**
+
+```rust
+pub fn named(name: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+
+**Returns**
+
+[NotNull](#rust-notnull)
+
+##### TableConstraint {#rust-tableconstraint}
+
+```rust
+pub enum TableConstraint
+```
+
+##### PrimaryKey {#rust-primarykey}
+
+```rust
+pub struct PrimaryKey
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(name, columns)](#rust-primarykey-new-name-columns) | Named primary key. Multiple columns are a composite key. |
+
+###### new(name, columns) {#rust-primarykey-new-name-columns}
+
+Named primary key. Multiple columns are a composite key.
+
+**Definition**
+
+```rust
+pub fn new(name: impl Into<String>, columns: &[&str]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `columns` | key columns |
+
+**Returns**
+
+[PrimaryKey](#rust-primarykey)
+
+##### ForeignKey {#rust-foreignkey}
+
+```rust
+pub struct ForeignKey
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(name, columns, references_table, references_columns)](#rust-foreignkey-new-name-columns-references_table-references_columns) | Named foreign key. |
+| [with_on_delete(self, action)](#rust-foreignkey-with_on_delete-self-action) | Sets `ON DELETE`. |
+| [with_on_update(self, action)](#rust-foreignkey-with_on_update-self-action) | Sets `ON UPDATE`. |
+
+###### new(name, columns, references_table, references_columns) {#rust-foreignkey-new-name-columns-references_table-references_columns}
+
+Named foreign key.
+
+**Definition**
+
+```rust
+pub fn new(name: impl Into<String>, columns: &[&str], references_table: impl Into<String>, references_columns: &[&str]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `columns` | local columns |
+| `references_table` | referenced table |
+| `references_columns` | referenced columns |
+
+**Returns**
+
+[ForeignKey](#rust-foreignkey)
+
+###### with_on_delete(self, action) {#rust-foreignkey-with_on_delete-self-action}
+
+Sets `ON DELETE`.
+
+**Definition**
+
+```rust
+pub fn with_on_delete(self, action: ReferentialAction) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `action` | [ReferentialAction](#rust-referentialaction) |
+
+**Returns**
+
+[ForeignKey](#rust-foreignkey)
+
+###### with_on_update(self, action) {#rust-foreignkey-with_on_update-self-action}
+
+Sets `ON UPDATE`.
+
+**Definition**
+
+```rust
+pub fn with_on_update(self, action: ReferentialAction) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `action` | [ReferentialAction](#rust-referentialaction) |
+
+**Returns**
+
+[ForeignKey](#rust-foreignkey)
+
+##### UniqueConstraint {#rust-uniqueconstraint}
+
+```rust
+pub struct UniqueConstraint
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(name, columns)](#rust-uniqueconstraint-new-name-columns) | Named unique constraint. |
+
+###### new(name, columns) {#rust-uniqueconstraint-new-name-columns}
+
+Named unique constraint.
+
+**Definition**
+
+```rust
+pub fn new(name: impl Into<String>, columns: &[&str]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `columns` | unique columns |
+
+**Returns**
+
+[UniqueConstraint](#rust-uniqueconstraint)
+
+##### CheckConstraint {#rust-checkconstraint}
+
+```rust
+pub struct CheckConstraint
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(name, expression)](#rust-checkconstraint-new-name-expression) | Named check constraint. |
+
+###### new(name, expression) {#rust-checkconstraint-new-name-expression}
+
+Named check constraint.
+
+**Definition**
+
+```rust
+pub fn new(name: impl Into<String>, expression: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | constraint name |
+| `expression` | raw SQL check fragment |
+
+**Returns**
+
+[CheckConstraint](#rust-checkconstraint)
+
+##### ReferentialAction {#rust-referentialaction}
+
+```rust
+pub enum ReferentialAction
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Cascade | `ON DELETE` / `ON UPDATE CASCADE`. |
+| SetNull | `ON DELETE` / `ON UPDATE SET NULL`. |
+| SetDefault | `ON DELETE` / `ON UPDATE SET DEFAULT`. |
+| Restrict | `ON DELETE` / `ON UPDATE RESTRICT`. |
+| NoAction | `ON DELETE` / `ON UPDATE NO ACTION`. |
+
 ### Remarks
 
-Compiled form is `CREATE TABLE table (name TYPE, …)`. [Command](#command) uses `GetText()` / `getText()` / `get_text()` only.
+Compiled form is `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTRAINT n NOT NULL], …, CONSTRAINT name …)`. Table and column names are interpolated as given. Default and check values are raw SQL fragments. Indexes use [CreateIndexStatement](#create-index-statement). [Command](#command) uses `GetText()` / `getText()` / `get_text()` only.
 
 ### Examples
 
@@ -5241,9 +5956,13 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L947-L954)
 
 ```rust
-let create_table = CreateTableStatement::new(
-    "users",
-    &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
+        "users",
+        &["users.id", "orders.total"],
+        None,
+        &[Join::inner("orders", "users.id", "orders.user_id")],
+    )
+    .get_text(),
+    "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id"
 );
 ```
 
@@ -5253,7 +5972,7 @@ let create_table = CreateTableStatement::new(
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L230-L234)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L239-L243)
 
 ```typescript
 const createTable = new CreateTableStatement("users", [
@@ -5266,6 +5985,418 @@ const createTable = new CreateTableStatement("users", [
 
 ```
 CREATE TABLE users (id INTEGER, name TEXT)
+```
+
+#### Compile named constraints
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L164-L177)
+
+```csharp
+var namedTable = new CreateTableStatement(
+    "orders",
+    [
+        new Column("id", "INTEGER", new ColumnDefault("0", "df_id"), new NotNull("nn_id")),
+        new Column("tenant_id", "INTEGER"),
+        new Column("user_id", "INTEGER"),
+        new Column("qty", "INTEGER")
+    ],
+    [
+        new PrimaryKey("pk_orders", ["id", "tenant_id"]),
+        new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
+        new UniqueConstraint("uq_orders_user", ["user_id"]),
+        new CheckConstraint("chk_orders_qty", "qty > 0")
+    ]);
+```
+
+**After: named constraints**
+
+```
+CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L955-L973)
+
+```rust
+
+```
+
+**After: named constraints**
+
+```
+CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L244-L258)
+
+```typescript
+const namedTable = new CreateTableStatement(
+  "orders",
+  [
+    { name: "id", type: "INTEGER", default: new ColumnDefault("0", "df_id"), notNull: new NotNull("nn_id") },
+    { name: "tenant_id", type: "INTEGER" },
+    { name: "user_id", type: "INTEGER" },
+    { name: "qty", type: "INTEGER" },
+  ],
+  [
+    new PrimaryKey("pk_orders", ["id", "tenant_id"]),
+    new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
+    new UniqueConstraint("uq_orders_user", ["user_id"]),
+    new CheckConstraint("chk_orders_qty", "qty > 0"),
+  ],
+);
+```
+
+**After: named constraints**
+
+```
+CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
+```
+
+## Create Index Statement
+
+`CREATE INDEX` text, or a compiled `CREATE [UNIQUE] INDEX` from a name, table, and columns.
+
+### Classes
+
+##### TypeScript
+
+##### ICreateIndexStatement {#typescript-icreateindexstatement}
+
+```typescript
+interface ICreateIndexStatement extends IStatement {}
+```
+
+##### CreateIndexStatement {#typescript-createindexstatement}
+
+```typescript
+class CreateIndexStatement implements ICreateIndexStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CreateIndexStatement(text)](#typescript-createindexstatement-createindexstatement-text) | Wraps create-index text. |
+| [CreateIndexStatement(name, table, columns, unique?)](#typescript-createindexstatement-createindexstatement-name-table-columns-unique) | Compiles a `CREATE INDEX`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-createindexstatement-gettext) | Command text. |
+
+###### CreateIndexStatement(text) {#typescript-createindexstatement-createindexstatement-text}
+
+Wraps create-index text.
+
+**Definition**
+
+```typescript
+constructor(text: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+###### CreateIndexStatement(name, table, columns, unique?) {#typescript-createindexstatement-createindexstatement-name-table-columns-unique}
+
+Compiles a `CREATE INDEX`.
+
+**Definition**
+
+```typescript
+constructor(name: string, table: string, columns: string[], unique?: boolean)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | index name |
+| `table` | table name |
+| `columns` | indexed columns |
+| `unique` | `CREATE UNIQUE INDEX` when true |
+
+###### getText() {#typescript-createindexstatement-gettext}
+
+Command text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### C#
+
+##### ICreateIndexStatement {#csharp-icreateindexstatement}
+
+```csharp
+public interface ICreateIndexStatement : IStatement
+```
+
+##### CreateIndexStatement {#csharp-createindexstatement}
+
+```csharp
+public sealed record CreateIndexStatement : ICreateIndexStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CreateIndexStatement(text)](#csharp-createindexstatement-createindexstatement-text) | Wraps create-index text. |
+| [CreateIndexStatement(name, table, columns, unique?)](#csharp-createindexstatement-createindexstatement-name-table-columns-unique) | Compiles a `CREATE INDEX`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-createindexstatement-gettext) | Command text. |
+
+###### CreateIndexStatement(text) {#csharp-createindexstatement-createindexstatement-text}
+
+Wraps create-index text.
+
+**Definition**
+
+```csharp
+public CreateIndexStatement(string text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+###### CreateIndexStatement(name, table, columns, unique?) {#csharp-createindexstatement-createindexstatement-name-table-columns-unique}
+
+Compiles a `CREATE INDEX`.
+
+**Definition**
+
+```csharp
+public CreateIndexStatement(string name, string table, IReadOnlyList<string> columns, bool unique = false)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | index name |
+| `table` | table name |
+| `columns` | indexed columns |
+| `unique` | `CREATE UNIQUE INDEX` when true |
+
+###### GetText() {#csharp-createindexstatement-gettext}
+
+Command text.
+
+**Definition**
+
+```csharp
+public string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### Rust
+
+##### CreateIndexStatement {#rust-createindexstatement}
+
+```rust
+pub struct CreateIndexStatement
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [text(text)](#rust-createindexstatement-text-text) | Wraps create-index text. |
+| [new(name, table, columns)](#rust-createindexstatement-new-name-table-columns) | Compiles a `CREATE INDEX`. |
+| [unique(name, table, columns)](#rust-createindexstatement-unique-name-table-columns) | Compiles a `CREATE UNIQUE INDEX`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-createindexstatement-get_text) | Command text. |
+
+###### text(text) {#rust-createindexstatement-text-text}
+
+Wraps create-index text.
+
+**Definition**
+
+```rust
+pub fn text(text: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | command text |
+
+**Returns**
+
+[CreateIndexStatement](#rust-createindexstatement)
+
+###### new(name, table, columns) {#rust-createindexstatement-new-name-table-columns}
+
+Compiles a `CREATE INDEX`.
+
+**Definition**
+
+```rust
+pub fn new(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | index name |
+| `table` | table name |
+| `columns` | indexed columns |
+
+**Returns**
+
+[CreateIndexStatement](#rust-createindexstatement)
+
+###### unique(name, table, columns) {#rust-createindexstatement-unique-name-table-columns}
+
+Compiles a `CREATE UNIQUE INDEX`.
+
+**Definition**
+
+```rust
+pub fn unique(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | index name |
+| `table` | table name |
+| `columns` | indexed columns |
+
+**Returns**
+
+[CreateIndexStatement](#rust-createindexstatement)
+
+###### get_text() {#rust-createindexstatement-get_text}
+
+Command text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+### Remarks
+
+Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX name ON table (cols)`. Table and column names are interpolated as given. [Command](#command) uses `GetText()` / `getText()` / `get_text()` only.
+
+### Examples
+
+#### Compile a CREATE INDEX
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L209-L210)
+
+```csharp
+var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
+```
+
+**After: create index**
+
+```
+CREATE INDEX idx_orders_user ON orders (user_id)
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1014-L1018)
+
+```rust
+],
+&[
+    PrimaryKey::new("pk_orders", &["id", "tenant_id"]).into(),
+    ForeignKey::new("fk_orders_user", &["user_id"], "users", &["id"])
+        .with_on_delete(ReferentialAction::Cascade)
+```
+
+**After: create index**
+
+```
+CREATE INDEX idx_orders_user ON orders (user_id)
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L300-L301)
+
+```typescript
+const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
+```
+
+**After: create index**
+
+```
+CREATE INDEX idx_orders_user ON orders (user_id)
+```
+
+#### Compile a CREATE UNIQUE INDEX
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L211-L213)
+
+```csharp
+
+```
+
+**After: create unique index**
+
+```
+CREATE UNIQUE INDEX uq_orders_code ON orders (code)
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1019-L1022)
+
+```rust
+        .into(),
+    UniqueConstraint::new("uq_orders_user", &["user_id"]).into(),
+    CheckConstraint::new("chk_orders_qty", "qty > 0").into(),
+],
+```
+
+**After: create unique index**
+
+```
+CREATE UNIQUE INDEX uq_orders_code ON orders (code)
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L302-L304)
+
+```typescript
+
+```
+
+**After: create unique index**
+
+```
+CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
 ## Execute Stored Procedure Statement
@@ -5506,7 +6637,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 
 #### Compile a CALL
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L164-L165)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L214-L215)
 
 ```csharp
 var call = new ExecuteStoredProcedureStatement("save", fields);
@@ -5518,10 +6649,10 @@ var call = new ExecuteStoredProcedureStatement("save", fields);
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L955-L956)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1023-L1024)
 
 ```rust
-let call = ExecuteStoredProcedureStatement::new("save", &fields);
+);
 ```
 
 **After: call**
@@ -5530,7 +6661,7 @@ let call = ExecuteStoredProcedureStatement::new("save", &fields);
 CALL save($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L235-L236)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L305-L306)
 
 ```typescript
 const call = new ExecuteStoredProcedureStatement("save", [...fields]);
@@ -5780,7 +6911,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 
 #### Compile a SELECT function call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L167-L168)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L217-L218)
 
 ```csharp
 var ret = new ReturnStatement("add", fields);
@@ -5792,10 +6923,11 @@ var ret = new ReturnStatement("add", fields);
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L961-L962)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1029-L1030)
 
 ```rust
-let ret = ReturnStatement::new("add", &fields);
+CreateTableStatement::with_constraints(
+    "items",
 ```
 
 **After: return**
@@ -5804,7 +6936,7 @@ let ret = ReturnStatement::new("add", &fields);
 SELECT add($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L240-L241)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L310-L311)
 
 ```typescript
 const ret = new ReturnStatement("add", [...fields]);
@@ -6202,11 +7334,11 @@ id IN ($id_0, $id_1)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L654-L658)
 
 ```rust
+}
+
+#[test]
 fn statements_and_builders() {
     let where_clause = WhereClause::new(Operator::and(
-        Operator::equals("id", 1_i64),
-        Operator::greater_than("age", 18_i64),
-    ));
 ```
 
 **After: and**
@@ -6224,8 +7356,9 @@ id IN ($id_0, $id_1)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L31-L33)
 
 ```typescript
-describe("WhereClause", () => {
-  it("renders compare, groups, and not", () => {
+describe("Query and Where", () => {
+  it("keeps optional where on the query", () => {
+    const select = new QueryStatement("SELECT 1");
 ```
 
 **After: and**
@@ -6258,8 +7391,13 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L877-L883)
 
 ```rust
-let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
-let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
+.get_text()
+.contains('='));
+assert!(WhereClause::new(Operator::Equals {
+    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+})
+.get_text()
 ```
 
 **After: select**
@@ -6271,8 +7409,12 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L175-L180)
 
 ```typescript
-const where = new WhereClause(new Operator.Equals("id", 1));
-const query = new QueryStatement("users", ["id", "name"], where);
+});
+
+describe("statements", () => {
+  const fields = [
+    { name: "id", value: 1 },
+    { name: "name", value: "a" },
 ```
 
 **After: select**
@@ -6646,13 +7788,18 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operat
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L704-L719)
 
 ```rust
-);
+
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L63-L73)
 
 ```typescript
-
+    new Operator.And(
+      new Operator.Or(new Operator.Equals("id", 1), new Operator.Equals("id", 2)),
+      new Operator.Equals("age", 18),
+    ),
+  ).getText(),
+).toBe("(id = $id OR id = $id) AND age = $age");
 ```
 
 ## StatementEvaluator
@@ -6774,24 +7921,23 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 
 #### Match and miss
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L180-L181)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L244-L245)
 
 ```csharp
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L982-L983)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1078-L1079)
 
 ```rust
-    ParameterDirection::Input
 );
+let ret = ReturnStatement::new("add", &fields);
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L89-L90)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L100-L101)
 
 ```typescript
-const evaluator = new StatementEvaluator();
-const row = { id: 1, age: 21, name: "a" };
+
 ```
 
 ## Repository
@@ -7817,7 +8963,12 @@ Assert.Single(rows);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L845-L851)
 
 ```rust
-.is_empty());
+            rust_decimal::Decimal::new(25, 1)
+        )))),
+    })
+    .get_text(),
+    "1.5 = 2.5"
+);
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
@@ -8689,11 +9840,11 @@ await repo.Create(obj);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L886-L899)
 
 ```rust
-    "SELECT * FROM users"
-);
-assert!(QueryStatement::new("users", &[], None, &[])
-    .where_clause()
-    .is_none());
+    left: Box::new(Expression::Literal(Literal::new(1_i64))),
+    right: Box::new(Expression::Literal(Literal::new(2_i64))),
+})
+.parameters()
+.is_empty());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L100-L111)
@@ -10021,7 +11172,7 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1235-L1244)
 
 ```rust
-RowTypeConverter::of::<Item>()
+);
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -10448,24 +11599,15 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-        self.inner.entity_type()
-    }
+fn schema() -> Vec<(&'static str, &'static str)> {
+    vec![
+        ("id", "INTEGER"),
+        ("username", "TEXT"),
+        ("email", "TEXT"),
+        ("contact_name1", "TEXT"),
+        ("contact_name2", "TEXT"),
+    ]
 }
-
-#[async_trait]
-impl ReadonlyRepository for CountingRepository {
-    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
-        *self.read_singles.lock().unwrap() += 1;
-        self.inner.read_single(query).await
-    }
-
-    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
-        *self.reads.lock().unwrap() += 1;
-        self.inner.read(query).await
-    }
-
-    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        *self.read_singles.lock().unwrap() += 1;
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -12282,27 +13424,7 @@ var statements = new RepositoryStatements(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1567-L1609)
 
 ```rust
-)));
-let returning = |text: String| format!("{text} RETURNING id");
-mapper.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
-mapper.update = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} RETURNING id"),
-    |text| text,
-)));
-mapper.delete = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} RETURNING id"),
-    |text| text,
-)));
-let mut options = RepositoryBuilderOptions::with_factory(
-    MockConnection::with_command_provider(command.clone(), "memory"),
-);
-options.entity = "users".into();
-options.assign_identity_on_create = false;
-options.mapping = Some(users_mapping());
-options.statement_mapper = Some(mapper);
-let repo = Repository::new(options).unwrap();
-command.reader_rows.lock().unwrap().clear();
-assert!(repo.read_single(None).await.unwrap().is_none());
+let typed = Repository::from_type::<Item>(MockConnection::new()).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59)
@@ -12354,7 +13476,9 @@ var statement = mapper.Return is { } map ? map.Map(built) : built;
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1216-L1226)
 
 ```rust
-text
+    ),
+    no
+);
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L75-L85)

@@ -50,6 +50,10 @@ pages:
     title: Create Table Statement
     group: Code Reference
     parent: Statements
+  - path: sections/create-index-statement.md
+    title: Create Index Statement
+    group: Code Reference
+    parent: Statements
   - path: sections/execute-stored-procedure-statement.md
     title: Execute Stored Procedure Statement
     group: Code Reference
