@@ -67,7 +67,7 @@ mod tests {
             })
             .collect();
         assert_eq!(
-            CreateTableStatement::new(PostgresQuote::quote("user"), &mapped).get_text(),
+            CreateTableStatement::new(PostgresQuote::quote("user"), &mapped, &[]).get_text(),
             "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" UUID, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" DOUBLE PRECISION, \"created\" TIMESTAMPTZ, \"version\" BYTEA)"
         );
     }

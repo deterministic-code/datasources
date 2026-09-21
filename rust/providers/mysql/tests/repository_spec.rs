@@ -28,7 +28,7 @@ fn dialect() -> RepositoryDialect {
                     )
                 })
                 .collect();
-            CreateTableStatement::new(MysqlQuote::quote(table), &mapped).get_text()
+            CreateTableStatement::new(MysqlQuote::quote(table), &mapped, &[]).get_text()
         },
         field: super::converters::field,
         register: super::converters::register,

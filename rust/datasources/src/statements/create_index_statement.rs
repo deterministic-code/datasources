@@ -10,15 +10,7 @@ impl CreateIndexStatement {
         Self { text: text.into() }
     }
 
-    pub fn new(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> Self {
-        Self::compile(name, table, columns, false)
-    }
-
-    pub fn unique(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> Self {
-        Self::compile(name, table, columns, true)
-    }
-
-    fn compile(
+    pub fn new(
         name: impl AsRef<str>,
         table: impl AsRef<str>,
         columns: &[&str],

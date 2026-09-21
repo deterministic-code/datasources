@@ -126,31 +126,18 @@ pub fn text(text: impl Into<String>) -> Self
 
 **Returns** [CreateIndexStatement](#createindexstatement)
 
-##### new(name, table, columns)
+##### new(name, table, columns, unique)
 
 Compiles a `CREATE INDEX`.
 
 ```rust
-pub fn new(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> Self
+pub fn new(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str], unique: bool) -> Self
 ```
 
 - `name` — index name
 - `table` — table name
 - `columns` — indexed columns
-
-**Returns** [CreateIndexStatement](#createindexstatement)
-
-##### unique(name, table, columns)
-
-Compiles a `CREATE UNIQUE INDEX`.
-
-```rust
-pub fn unique(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> Self
-```
-
-- `name` — index name
-- `table` — table name
-- `columns` — indexed columns
+- `unique` — `CREATE UNIQUE INDEX` when true
 
 **Returns** [CreateIndexStatement](#createindexstatement)
 
@@ -178,7 +165,7 @@ Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX nam
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L209-L210
 ```
-```rust rust/datasources/src/tests/mod.rs#L1014-L1018
+```rust rust/datasources/src/tests/mod.rs#L1028-L1031
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L300-L301
 ```
@@ -193,7 +180,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L211-L213
 ```
-```rust rust/datasources/src/tests/mod.rs#L1019-L1022
+```rust rust/datasources/src/tests/mod.rs#L1033-L1035
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L302-L304
 ```

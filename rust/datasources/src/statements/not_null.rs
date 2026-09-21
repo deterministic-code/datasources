@@ -4,19 +4,9 @@ pub struct NotNull {
 }
 
 impl NotNull {
-    pub fn new() -> Self {
-        Self { name: None }
-    }
-
-    pub fn named(name: impl Into<String>) -> Self {
+    pub fn new(name: Option<&str>) -> Self {
         Self {
-            name: Some(name.into()),
+            name: name.map(str::to_string),
         }
-    }
-}
-
-impl Default for NotNull {
-    fn default() -> Self {
-        Self::new()
     }
 }

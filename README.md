@@ -3138,13 +3138,10 @@ while (await reader.next()) {
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1048-L1054)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1062-L1068)
 
 ```rust
-    )
-    .get_text(),
-    "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)"
-);
+
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L325-L328)
@@ -3948,13 +3945,10 @@ var byId = new Where("id = 1");
 var withWhere = new QueryStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1057-L1060)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1071-L1074)
 
 ```rust
-        .with_on_delete(ReferentialAction::Restrict)
-        .with_on_update(ReferentialAction::NoAction)
-        .into()],
-)
+let query = QueryStatement::with_where("SELECT 1", TextWhere::new("id = 1"));
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L33-L35)
@@ -3983,13 +3977,8 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L877-L883)
 
 ```rust
-.get_text()
-.contains('='));
-assert!(WhereClause::new(Operator::Equals {
-    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-})
-.get_text()
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
 ```
 
 **After: select**
@@ -4281,11 +4270,7 @@ INSERT INTO users (id, name) VALUES ($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L923-L927)
 
 ```rust
-    },
-    _ => panic!("and"),
-}
-
-let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let insert = InsertStatement::new("users", &fields);
 ```
 
 **After: insert**
@@ -4604,7 +4589,7 @@ UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L928-L933)
 
 ```rust
-let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
+let update = UpdateStatement::new("users", &fields, Some(&where_clause));
 ```
 
 **After: update**
@@ -4928,10 +4913,7 @@ DELETE FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L937-L942)
 
 ```rust
-);
-assert!(QueryStatement::new("users", &[], None, &[])
-    .where_clause()
-    .is_none());
+let delete = DeleteStatement::new("users", Some(&where_clause));
 ```
 
 **After: delete**
@@ -5473,8 +5455,7 @@ pub struct CreateTableStatement
 | Name | Description |
 | --- | --- |
 | [text(text)](#rust-createtablestatement-text-text) | Wraps create-table text. |
-| [new(table, columns)](#rust-createtablestatement-new-table-columns) | Compiles a `CREATE TABLE`. |
-| [with_constraints(table, columns, constraints)](#rust-createtablestatement-with_constraints-table-columns-constraints) | Compiles a `CREATE TABLE` with named [TableConstraint](#rust-tableconstraint) values. |
+| [new(table, columns, constraints)](#rust-createtablestatement-new-table-columns-constraints) | Compiles a `CREATE TABLE`. |
 
 **Methods**
 
@@ -5502,35 +5483,14 @@ pub fn text(text: impl Into<String>) -> Self
 
 [CreateTableStatement](#rust-createtablestatement)
 
-###### new(table, columns) {#rust-createtablestatement-new-table-columns}
+###### new(table, columns, constraints) {#rust-createtablestatement-new-table-columns-constraints}
 
 Compiles a `CREATE TABLE`.
 
 **Definition**
 
 ```rust
-pub fn new(table: impl AsRef<str>, columns: &[Column]) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `columns` | [Column](#rust-column) names and types |
-
-**Returns**
-
-[CreateTableStatement](#rust-createtablestatement)
-
-###### with_constraints(table, columns, constraints) {#rust-createtablestatement-with_constraints-table-columns-constraints}
-
-Compiles a `CREATE TABLE` with named [TableConstraint](#rust-tableconstraint) values.
-
-**Definition**
-
-```rust
-pub fn with_constraints(table: impl AsRef<str>, columns: &[Column], constraints: &[TableConstraint]) -> Self
+pub fn new(table: impl AsRef<str>, columns: &[Column], constraints: &[TableConstraint]) -> Self
 ```
 
 **Parameters**
@@ -5539,7 +5499,7 @@ pub fn with_constraints(table: impl AsRef<str>, columns: &[Column], constraints:
 | --- | --- |
 | `table` | table name |
 | `columns` | [Column](#rust-column) names, types, optional [ColumnDefault](#rust-columndefault) and [NotNull](#rust-notnull) |
-| `constraints` | named [TableConstraint](#rust-tableconstraint) list |
+| `constraints` | named [TableConstraint](#rust-tableconstraint) list (empty when omitted in C# / TypeScript) |
 
 **Returns**
 
@@ -5570,8 +5530,8 @@ pub struct Column
 | Name | Description |
 | --- | --- |
 | [new(name, type_name)](#rust-column-new-name-type_name) | Column name and SQL type. |
-| [with_default(self, default)](#rust-column-with_default-self-default) | Sets an optional [ColumnDefault](#rust-columndefault). |
-| [with_not_null(self, not_null)](#rust-column-with_not_null-self-not_null) | Sets an optional [NotNull](#rust-notnull). |
+| [default(self, default)](#rust-column-default-self-default) | Sets an optional [ColumnDefault](#rust-columndefault). |
+| [not_null(self, not_null)](#rust-column-not_null-self-not_null) | Sets an optional [NotNull](#rust-notnull). |
 
 ###### new(name, type_name) {#rust-column-new-name-type_name}
 
@@ -5594,14 +5554,14 @@ pub fn new(name: impl Into<String>, type_name: impl Into<String>) -> Self
 
 [Column](#rust-column)
 
-###### with_default(self, default) {#rust-column-with_default-self-default}
+###### default(self, default) {#rust-column-default-self-default}
 
 Sets an optional [ColumnDefault](#rust-columndefault).
 
 **Definition**
 
 ```rust
-pub fn with_default(self, default: ColumnDefault) -> Self
+pub fn default(self, default: ColumnDefault) -> Self
 ```
 
 **Parameters**
@@ -5614,14 +5574,14 @@ pub fn with_default(self, default: ColumnDefault) -> Self
 
 [Column](#rust-column)
 
-###### with_not_null(self, not_null) {#rust-column-with_not_null-self-not_null}
+###### not_null(self, not_null) {#rust-column-not_null-self-not_null}
 
 Sets an optional [NotNull](#rust-notnull).
 
 **Definition**
 
 ```rust
-pub fn with_not_null(self, not_null: NotNull) -> Self
+pub fn not_null(self, not_null: NotNull) -> Self
 ```
 
 **Parameters**
@@ -5644,17 +5604,16 @@ pub struct ColumnDefault
 
 | Name | Description |
 | --- | --- |
-| [new(value)](#rust-columndefault-new-value) | Unnamed default value. |
-| [named(name, value)](#rust-columndefault-named-name-value) | Named default value. |
+| [new(value, name)](#rust-columndefault-new-value-name) | Default value, optionally named. |
 
-###### new(value) {#rust-columndefault-new-value}
+###### new(value, name) {#rust-columndefault-new-value-name}
 
-Unnamed default value.
+Default value, optionally named.
 
 **Definition**
 
 ```rust
-pub fn new(value: impl Into<String>) -> Self
+pub fn new(value: impl Into<String>, name: Option<&str>) -> Self
 ```
 
 **Parameters**
@@ -5662,27 +5621,7 @@ pub fn new(value: impl Into<String>) -> Self
 | Name | Description |
 | --- | --- |
 | `value` | raw SQL default fragment |
-
-**Returns**
-
-[ColumnDefault](#rust-columndefault)
-
-###### named(name, value) {#rust-columndefault-named-name-value}
-
-Named default value.
-
-**Definition**
-
-```rust
-pub fn named(name: impl Into<String>, value: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | constraint name |
-| `value` | raw SQL default fragment |
+| `name` | optional constraint name |
 
 **Returns**
 
@@ -5698,38 +5637,23 @@ pub struct NotNull
 
 | Name | Description |
 | --- | --- |
-| [new()](#rust-notnull-new) | Unnamed `NOT NULL`. |
-| [named(name)](#rust-notnull-named-name) | Named `NOT NULL`. |
+| [new(name)](#rust-notnull-new-name) | `NOT NULL`, optionally named. |
 
-###### new() {#rust-notnull-new}
+###### new(name) {#rust-notnull-new-name}
 
-Unnamed `NOT NULL`.
-
-**Definition**
-
-```rust
-pub fn new() -> Self
-```
-
-**Returns**
-
-[NotNull](#rust-notnull)
-
-###### named(name) {#rust-notnull-named-name}
-
-Named `NOT NULL`.
+`NOT NULL`, optionally named.
 
 **Definition**
 
 ```rust
-pub fn named(name: impl Into<String>) -> Self
+pub fn new(name: Option<&str>) -> Self
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `name` | constraint name |
+| `name` | optional constraint name |
 
 **Returns**
 
@@ -5760,7 +5684,7 @@ Named primary key. Multiple columns are a composite key.
 **Definition**
 
 ```rust
-pub fn new(name: impl Into<String>, columns: &[&str]) -> Self
+pub fn new(name: impl Into<String>, columns: &[&str]) -> TableConstraint
 ```
 
 **Parameters**
@@ -5772,7 +5696,7 @@ pub fn new(name: impl Into<String>, columns: &[&str]) -> Self
 
 **Returns**
 
-[PrimaryKey](#rust-primarykey)
+[TableConstraint](#rust-tableconstraint)
 
 ##### ForeignKey {#rust-foreignkey}
 
@@ -5784,18 +5708,16 @@ pub struct ForeignKey
 
 | Name | Description |
 | --- | --- |
-| [new(name, columns, references_table, references_columns)](#rust-foreignkey-new-name-columns-references_table-references_columns) | Named foreign key. |
-| [with_on_delete(self, action)](#rust-foreignkey-with_on_delete-self-action) | Sets `ON DELETE`. |
-| [with_on_update(self, action)](#rust-foreignkey-with_on_update-self-action) | Sets `ON UPDATE`. |
+| [new(name, columns, references_table, references_columns, on_delete, on_update)](#rust-foreignkey-new-name-columns-references_table-references_columns-on_delete-on_update) | Named foreign key. |
 
-###### new(name, columns, references_table, references_columns) {#rust-foreignkey-new-name-columns-references_table-references_columns}
+###### new(name, columns, references_table, references_columns, on_delete, on_update) {#rust-foreignkey-new-name-columns-references_table-references_columns-on_delete-on_update}
 
 Named foreign key.
 
 **Definition**
 
 ```rust
-pub fn new(name: impl Into<String>, columns: &[&str], references_table: impl Into<String>, references_columns: &[&str]) -> Self
+pub fn new(name: impl Into<String>, columns: &[&str], references_table: impl Into<String>, references_columns: &[&str], on_delete: Option<ReferentialAction>, on_update: Option<ReferentialAction>) -> TableConstraint
 ```
 
 **Parameters**
@@ -5806,50 +5728,12 @@ pub fn new(name: impl Into<String>, columns: &[&str], references_table: impl Int
 | `columns` | local columns |
 | `references_table` | referenced table |
 | `references_columns` | referenced columns |
+| `on_delete` | optional [ReferentialAction](#rust-referentialaction) |
+| `on_update` | optional [ReferentialAction](#rust-referentialaction) |
 
 **Returns**
 
-[ForeignKey](#rust-foreignkey)
-
-###### with_on_delete(self, action) {#rust-foreignkey-with_on_delete-self-action}
-
-Sets `ON DELETE`.
-
-**Definition**
-
-```rust
-pub fn with_on_delete(self, action: ReferentialAction) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `action` | [ReferentialAction](#rust-referentialaction) |
-
-**Returns**
-
-[ForeignKey](#rust-foreignkey)
-
-###### with_on_update(self, action) {#rust-foreignkey-with_on_update-self-action}
-
-Sets `ON UPDATE`.
-
-**Definition**
-
-```rust
-pub fn with_on_update(self, action: ReferentialAction) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `action` | [ReferentialAction](#rust-referentialaction) |
-
-**Returns**
-
-[ForeignKey](#rust-foreignkey)
+[TableConstraint](#rust-tableconstraint)
 
 ##### UniqueConstraint {#rust-uniqueconstraint}
 
@@ -5870,7 +5754,7 @@ Named unique constraint.
 **Definition**
 
 ```rust
-pub fn new(name: impl Into<String>, columns: &[&str]) -> Self
+pub fn new(name: impl Into<String>, columns: &[&str]) -> TableConstraint
 ```
 
 **Parameters**
@@ -5882,7 +5766,7 @@ pub fn new(name: impl Into<String>, columns: &[&str]) -> Self
 
 **Returns**
 
-[UniqueConstraint](#rust-uniqueconstraint)
+[TableConstraint](#rust-tableconstraint)
 
 ##### CheckConstraint {#rust-checkconstraint}
 
@@ -5903,7 +5787,7 @@ Named check constraint.
 **Definition**
 
 ```rust
-pub fn new(name: impl Into<String>, expression: impl Into<String>) -> Self
+pub fn new(name: impl Into<String>, expression: impl Into<String>) -> TableConstraint
 ```
 
 **Parameters**
@@ -5915,7 +5799,7 @@ pub fn new(name: impl Into<String>, expression: impl Into<String>) -> Self
 
 **Returns**
 
-[CheckConstraint](#rust-checkconstraint)
+[TableConstraint](#rust-tableconstraint)
 
 ##### ReferentialAction {#rust-referentialaction}
 
@@ -5953,16 +5837,13 @@ var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER")
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L947-L954)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L947-L955)
 
 ```rust
-        "users",
-        &["users.id", "orders.total"],
-        None,
-        &[Join::inner("orders", "users.id", "orders.user_id")],
-    )
-    .get_text(),
-    "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id"
+let create_table = CreateTableStatement::new(
+    "users",
+    &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
+    &[],
 );
 ```
 
@@ -6014,10 +5895,33 @@ var namedTable = new CreateTableStatement(
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L955-L973)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L956-L979)
 
 ```rust
-
+let named_table = CreateTableStatement::new(
+    "orders",
+    &[
+        Column::new("id", "INTEGER")
+            .default(ColumnDefault::new("0", Some("df_id")))
+            .not_null(NotNull::new(Some("nn_id"))),
+        Column::new("tenant_id", "INTEGER"),
+        Column::new("user_id", "INTEGER"),
+        Column::new("qty", "INTEGER"),
+    ],
+    &[
+        PrimaryKey::new("pk_orders", &["id", "tenant_id"]),
+        ForeignKey::new(
+            "fk_orders_user",
+            &["user_id"],
+            "users",
+            &["id"],
+            Some(ReferentialAction::Cascade),
+            None,
+        ),
+        UniqueConstraint::new("uq_orders_user", &["user_id"]),
+        CheckConstraint::new("chk_orders_qty", "qty > 0"),
+    ],
+);
 ```
 
 **After: named constraints**
@@ -6223,8 +6127,7 @@ pub struct CreateIndexStatement
 | Name | Description |
 | --- | --- |
 | [text(text)](#rust-createindexstatement-text-text) | Wraps create-index text. |
-| [new(name, table, columns)](#rust-createindexstatement-new-name-table-columns) | Compiles a `CREATE INDEX`. |
-| [unique(name, table, columns)](#rust-createindexstatement-unique-name-table-columns) | Compiles a `CREATE UNIQUE INDEX`. |
+| [new(name, table, columns, unique)](#rust-createindexstatement-new-name-table-columns-unique) | Compiles a `CREATE INDEX`. |
 
 **Methods**
 
@@ -6252,14 +6155,14 @@ pub fn text(text: impl Into<String>) -> Self
 
 [CreateIndexStatement](#rust-createindexstatement)
 
-###### new(name, table, columns) {#rust-createindexstatement-new-name-table-columns}
+###### new(name, table, columns, unique) {#rust-createindexstatement-new-name-table-columns-unique}
 
 Compiles a `CREATE INDEX`.
 
 **Definition**
 
 ```rust
-pub fn new(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> Self
+pub fn new(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str], unique: bool) -> Self
 ```
 
 **Parameters**
@@ -6269,28 +6172,7 @@ pub fn new(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> S
 | `name` | index name |
 | `table` | table name |
 | `columns` | indexed columns |
-
-**Returns**
-
-[CreateIndexStatement](#rust-createindexstatement)
-
-###### unique(name, table, columns) {#rust-createindexstatement-unique-name-table-columns}
-
-Compiles a `CREATE UNIQUE INDEX`.
-
-**Definition**
-
-```rust
-pub fn unique(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str]) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | index name |
-| `table` | table name |
-| `columns` | indexed columns |
+| `unique` | `CREATE UNIQUE INDEX` when true |
 
 **Returns**
 
@@ -6330,14 +6212,10 @@ var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_i
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1014-L1018)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1028-L1031)
 
 ```rust
-],
-&[
-    PrimaryKey::new("pk_orders", &["id", "tenant_id"]).into(),
-    ForeignKey::new("fk_orders_user", &["user_id"], "users", &["id"])
-        .with_on_delete(ReferentialAction::Cascade)
+let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);
 ```
 
 **After: create index**
@@ -6372,13 +6250,10 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1019-L1022)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1033-L1035)
 
 ```rust
-        .into(),
-    UniqueConstraint::new("uq_orders_user", &["user_id"]).into(),
-    CheckConstraint::new("chk_orders_qty", "qty > 0").into(),
-],
+
 ```
 
 **After: create unique index**
@@ -6649,10 +6524,10 @@ var call = new ExecuteStoredProcedureStatement("save", fields);
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1023-L1024)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1037-L1038)
 
 ```rust
-);
+let call = ExecuteStoredProcedureStatement::new("save", &fields);
 ```
 
 **After: call**
@@ -6923,11 +6798,10 @@ var ret = new ReturnStatement("add", fields);
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1029-L1030)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1043-L1044)
 
 ```rust
-CreateTableStatement::with_constraints(
-    "items",
+let ret = ReturnStatement::new("add", &fields);
 ```
 
 **After: return**
@@ -7334,11 +7208,11 @@ id IN ($id_0, $id_1)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L654-L658)
 
 ```rust
-}
-
-#[test]
 fn statements_and_builders() {
     let where_clause = WhereClause::new(Operator::and(
+        Operator::equals("id", 1_i64),
+        Operator::greater_than("age", 18_i64),
+    ));
 ```
 
 **After: and**
@@ -7391,13 +7265,8 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L877-L883)
 
 ```rust
-.get_text()
-.contains('='));
-assert!(WhereClause::new(Operator::Equals {
-    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-})
-.get_text()
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
 ```
 
 **After: select**
@@ -7788,7 +7657,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operat
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L704-L719)
 
 ```rust
-
+);
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L63-L73)
@@ -7927,11 +7796,10 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1078-L1079)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1092-L1093)
 
 ```rust
-);
-let ret = ReturnStatement::new("add", &fields);
+
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L100-L101)
@@ -8963,12 +8831,7 @@ Assert.Single(rows);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L845-L851)
 
 ```rust
-            rust_decimal::Decimal::new(25, 1)
-        )))),
-    })
-    .get_text(),
-    "1.5 = 2.5"
-);
+.is_empty());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
@@ -9840,11 +9703,11 @@ await repo.Create(obj);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L886-L899)
 
 ```rust
-    left: Box::new(Expression::Literal(Literal::new(1_i64))),
-    right: Box::new(Expression::Literal(Literal::new(2_i64))),
-})
-.parameters()
-.is_empty());
+    "SELECT * FROM users"
+);
+assert!(QueryStatement::new("users", &[], None, &[])
+    .where_clause()
+    .is_none());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L100-L111)
@@ -11172,7 +11035,7 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1235-L1244)
 
 ```rust
-);
+StatementEvaluator.evaluate(&Expression::Array(ArrayExpression::new(vec![])), &Row::new());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -11599,15 +11462,14 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-fn schema() -> Vec<(&'static str, &'static str)> {
-    vec![
-        ("id", "INTEGER"),
-        ("username", "TEXT"),
-        ("email", "TEXT"),
-        ("contact_name1", "TEXT"),
-        ("contact_name2", "TEXT"),
-    ]
-}
+    "type_id",
+    types,
+    "id",
+    Some("name".into()),
+    false,
+)
+.add_enriched("children", "id", children, "parent_id", None, true);
+let item = repo.read_single(None).await.unwrap().unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -13424,7 +13286,7 @@ var statements = new RepositoryStatements(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1567-L1609)
 
 ```rust
-let typed = Repository::from_type::<Item>(MockConnection::new()).unwrap();
+row.insert("name".into(), Value::from(name.to_uppercase()));
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59)
@@ -13476,8 +13338,13 @@ var statement = mapper.Return is { } map ? map.Map(built) : built;
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1216-L1226)
 
 ```rust
+        &Expression::Operator(Operator::GreaterThan {
+            left: Box::new(Expression::Literal(Literal::new(2_i64))),
+            right: Box::new(Expression::Literal(Literal::new(1.5_f64))),
+        }),
+        &row
     ),
-    no
+    Value::Bool(true)
 );
 ```
 

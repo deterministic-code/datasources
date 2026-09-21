@@ -65,7 +65,7 @@ mod tests {
             })
             .collect();
         assert_eq!(
-            CreateTableStatement::new(SqliteQuote::quote("user"), &mapped).get_text(),
+            CreateTableStatement::new(SqliteQuote::quote("user"), &mapped, &[]).get_text(),
             "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" TEXT, \"username\" TEXT, \"is_enabled\" INTEGER, \"balance\" NUMERIC, \"location\" REAL, \"created\" TEXT, \"version\" BLOB)"
         );
     }

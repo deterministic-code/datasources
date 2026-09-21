@@ -5,17 +5,10 @@ pub struct ColumnDefault {
 }
 
 impl ColumnDefault {
-    pub fn new(value: impl Into<String>) -> Self {
+    pub fn new(value: impl Into<String>, name: Option<&str>) -> Self {
         Self {
             value: value.into(),
-            name: None,
-        }
-    }
-
-    pub fn named(name: impl Into<String>, value: impl Into<String>) -> Self {
-        Self {
-            value: value.into(),
-            name: Some(name.into()),
+            name: name.map(str::to_string),
         }
     }
 }
