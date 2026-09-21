@@ -1,12 +1,11 @@
 using Datasources;
-using Datasources.Builders;
 
 namespace Datasources.Tests.Contact;
 
 internal static class ContactsJoinQuery
 {
     public static IQuery Create() =>
-        StatementBuilder.CreateQuery(
+        new QueryStatement(
             "contacts_base",
             [
                 "contacts_base.id AS id",

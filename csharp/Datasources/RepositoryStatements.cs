@@ -1,5 +1,3 @@
-using Datasources.Builders;
-
 namespace Datasources;
 
 public sealed class RepositoryStatements
@@ -33,13 +31,13 @@ public sealed class RepositoryStatements
     public IReadOnlyList<string> Columns => columns;
 
     public IQuery Query(IWhere? where = null) =>
-        Mapped(StatementBuilder.CreateQuery(table, columns, where), query);
+        Mapped(new QueryStatement(table, columns, where), query);
     public IInsertStatement Insert(IReadOnlyList<Parameter> fields) =>
-        Mapped(StatementBuilder.CreateInsert(table, fields), insert);
+        Mapped(new InsertStatement(table, fields), insert);
     public IUpdateStatement Update(IReadOnlyList<Parameter> fields, IWhere? where = null) =>
-        Mapped(StatementBuilder.CreateUpdate(table, fields, where), update);
+        Mapped(new UpdateStatement(table, fields, where), update);
     public IDeleteStatement Delete(IWhere? where = null) =>
-        Mapped(StatementBuilder.CreateDelete(table, where), delete);
+        Mapped(new DeleteStatement(table, where), delete);
 
     static T Mapped<T>(T built, IMapper<T, T>? mapper) =>
         mapper switch

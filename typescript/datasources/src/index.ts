@@ -11,6 +11,7 @@ export type {
   IExpression,
   IInsertStatement,
   IQuery,
+  IText,
   IStatement,
   IStoredProcedureStatement,
   IUpdateStatement,
@@ -57,12 +58,13 @@ export {
   InsertStatement,
   Literal,
   Operator,
-  Query,
+  QueryStatement,
   StatementEvaluator,
   StoredProcedureStatement,
   UpdateStatement,
   Where,
-  WhereStatement,
+  WhereClause,
+  Join,
 } from "./statements/index.ts";
 export type { IDatasourceFactory } from "./IDatasourceFactory.ts";
 export type { Parameter } from "./Parameter.ts";
@@ -105,15 +107,8 @@ export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";
 export { ProviderNotImplementedError } from "./ProviderNotImplementedError.ts";
 export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
-export {
-  Join,
-  StatementBuilder,
-  type Column,
-  type Field,
-  type JoinKind,
-  type Scalar,
-} from "./builders/index.ts";
-export type { Join } from "./builders/index.ts";
+export type { Column, JoinKind } from "./statements/index.ts";
+export type { Field, Scalar } from "./builders/index.ts";
 export { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 export {
   StubCommand,

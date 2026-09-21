@@ -105,7 +105,7 @@ export class FlatToNestedMapper<T> implements IFlatToNestedMapper<T> {
   private mark = (seen: Set<string>, parent: string, item: T) => {
     const record = item as Record<string, Cells[]>;
     for (const [name, group] of Object.entries(this.groups))
-      for (const child of record[name] ?? []) {
+      for (const child of record[name]) {
         const key = cellKey(child[group.destKey]);
         if (key != null) seen.add(`${parent}:${name}:${key}`);
       }
@@ -116,7 +116,7 @@ export class FlatToNestedMapper<T> implements IFlatToNestedMapper<T> {
     const source = from as Record<string, Cells[]>;
     for (const [name, group] of Object.entries(this.groups)) {
       const children = dest[name];
-      for (const child of source[name] ?? []) {
+      for (const child of source[name]) {
         const key = cellKey(child[group.destKey]);
         if (key == null || seen.has(`${parent}:${name}:${key}`)) continue;
         seen.add(`${parent}:${name}:${key}`);

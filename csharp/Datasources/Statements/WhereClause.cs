@@ -2,14 +2,14 @@ using System.Globalization;
 
 namespace Datasources;
 
-public sealed record WhereStatement(IExpression Condition) : IWhere
+public sealed record WhereClause(IExpression Condition) : IWhere
 {
     public string GetText() => Render(Condition);
     public IReadOnlyList<Parameter> Parameters => Collect(Condition);
 
     private static string Render(IExpression expression) => expression switch
     {
-        WhereStatement where => Render(where.Condition),
+        WhereClause where => Render(where.Condition),
         Identifier id => id.Name,
         Literal lit => Inline(lit.Value),
         ArrayExpression arr => string.Join(", ", arr.Elements.Select(Render)),
@@ -36,7 +36,7 @@ public sealed record WhereStatement(IExpression Condition) : IWhere
 
     private static bool NeedsParens(IExpression child, bool and) => child switch
     {
-        WhereStatement where => NeedsParens(where.Condition, and),
+        WhereClause where => NeedsParens(where.Condition, and),
         Operator.Not or Operator.In => true,
         Operator.And when !and => true,
         Operator.Or when and => true,
@@ -81,7 +81,7 @@ public sealed record WhereStatement(IExpression Condition) : IWhere
 
     private static IReadOnlyList<Parameter> Collect(IExpression expression) => expression switch
     {
-        WhereStatement where => Collect(where.Condition),
+        WhereClause where => Collect(where.Condition),
         Literal or Identifier => [],
         Operator.Not not => Collect(not.Argument),
         Operator.In { Left: Identifier id, Right: ArrayExpression arr } =>

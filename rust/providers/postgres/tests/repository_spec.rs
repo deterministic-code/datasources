@@ -2,7 +2,7 @@ use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
 use super::statement_builder::{PostgresColumn, PostgresStatementBuilder};
 use super::tokio_postgres_driver::TokioPostgresDriver;
-use datasources::{Connection, Statement};
+use datasources::{Connection, Text};
 use datasources_sql_specs::RepositoryDialect;
 use std::sync::Arc;
 use std::time::SystemTime;

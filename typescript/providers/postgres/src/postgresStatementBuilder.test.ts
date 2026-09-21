@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DatasourceError, Operator, WhereStatement } from "@datasources/core";
+import { DatasourceError, Operator, WhereClause } from "@datasources/core";
 import { PostgresStatementBuilder } from "./postgresStatementBuilder.ts";
 
 const userColumns = [
@@ -29,7 +29,7 @@ describe("PostgresStatementBuilder", () => {
   });
 
   it("quotes tables in DML and keeps parameter names", () => {
-    const where = new WhereStatement(new Operator.Equals("id", 1));
+    const where = new WhereClause(new Operator.Equals("id", 1));
     const fields = [
       { name: "id", value: 1 },
       { name: "username", value: "alice" },

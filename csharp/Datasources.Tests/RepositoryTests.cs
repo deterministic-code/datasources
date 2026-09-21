@@ -1,5 +1,4 @@
 using Datasources;
-using Datasources.Builders;
 
 namespace Datasources.Tests;
 
@@ -77,8 +76,8 @@ public class RepositoryTests
     {
         var (repo, command) = Create();
         command.Reader = new MockReader<Row>([]);
-        var where = new WhereStatement(new Operator.Equals("id", 9));
-        await repo.ReadSingle(StatementBuilder.CreateQuery("users", ["id"], where));
+        var where = new WhereClause(new Operator.Equals("id", 9));
+        await repo.ReadSingle(new QueryStatement("users", ["id"], where));
         Assert.Equal("SELECT id FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
         Assert.Equal(new Value.Int(9), command.ExecuteReaderCalls[0].Parameters![0].Value);
         Assert.Null(await repo.ReadSingle());
@@ -89,10 +88,10 @@ public class RepositoryTests
     {
         var (repo, command) = Create();
         command.Reader = new MockReader<Row>([]);
-        await repo.ReadSingle(new WhereStatement(new Operator.Equals("id", 9)));
+        await repo.ReadSingle(new WhereClause(new Operator.Equals("id", 9)));
         Assert.Equal("SELECT id, name FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
         Assert.Equal(new Value.Int(9), command.ExecuteReaderCalls[0].Parameters![0].Value);
-        await foreach (var _ in repo.Read(new WhereStatement(new Operator.Equals("id", 9))))
+        await foreach (var _ in repo.Read(new WhereClause(new Operator.Equals("id", 9))))
             break;
     }
 
@@ -148,7 +147,7 @@ public class RepositoryTests
         });
         await typed.Create(new Item { Id = 1, Name = "a" });
         Assert.Contains("INSERT INTO users", command2.ExecuteCalls[0].Text);
-        var where = new WhereStatement(new Operator.Equals("name", "z"));
+        var where = new WhereClause(new Operator.Equals("name", "z"));
         await typed.Delete(new Item { Name = "z" }, where);
         Assert.Equal("DELETE FROM users WHERE name = $name", command2.ExecuteCalls[1].Text);
     }

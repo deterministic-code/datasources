@@ -98,6 +98,7 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         Task<Response> Update(object item, IWhere? byWhere = null);
         Task<Response> Delete(object item, IWhere? byWhere = null);
         IAsyncEnumerable<object> Read(IStatement? query = null);
+        IAsyncEnumerable<object> Read(IWhere where);
     }
 
     sealed class ChildPersist<T> : IChildPersist
@@ -112,6 +113,11 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         public async IAsyncEnumerable<object> Read(IStatement? query = null)
         {
             await foreach (var item in inner.Read(query))
+                yield return item!;
+        }
+        public async IAsyncEnumerable<object> Read(IWhere where)
+        {
+            await foreach (var item in inner.Read(where))
                 yield return item!;
         }
     }

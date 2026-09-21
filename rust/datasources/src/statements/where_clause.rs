@@ -1,16 +1,16 @@
 use super::expression::Expression;
 use super::operator::Operator;
-use super::statement::Statement;
+use super::text::Text;
 use crate::parameter::Parameter;
 use crate::value::Value;
 use crate::where_trait::Where;
 
 #[derive(Clone)]
-pub struct WhereStatement {
+pub struct WhereClause {
     pub condition: Expression,
 }
 
-impl WhereStatement {
+impl WhereClause {
     pub fn new(condition: impl Into<Expression>) -> Self {
         Self {
             condition: condition.into(),
@@ -18,25 +18,25 @@ impl WhereStatement {
     }
 }
 
-impl Statement for WhereStatement {
+impl Text for WhereClause {
     fn get_text(&self) -> String {
         render(&self.condition)
     }
+}
 
+impl Where for WhereClause {
     fn parameters(&self) -> Vec<Parameter> {
         collect(&self.condition)
     }
-}
 
-impl Where for WhereStatement {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 }
 
-impl From<WhereStatement> for Expression {
-    fn from(where_statement: WhereStatement) -> Self {
-        where_statement.condition
+impl From<WhereClause> for Expression {
+    fn from(where_clause: WhereClause) -> Self {
+        where_clause.condition
     }
 }
 
@@ -121,7 +121,7 @@ fn render(expression: &Expression) -> String {
             format!("NOT ({})", render(argument))
         }
         Expression::Operator(op @ Operator::In { left, right }) => match (&**left, &**right) {
-            (Expression::Identifier(id), Expression::Array(arr)) if arr.elements.is_empty() => {
+            (Expression::Identifier(_), Expression::Array(arr)) if arr.elements.is_empty() => {
                 "1 = 0".into()
             }
             (Expression::Identifier(id), Expression::Array(arr)) => {

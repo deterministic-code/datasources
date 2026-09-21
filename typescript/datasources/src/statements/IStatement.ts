@@ -1,7 +1,6 @@
 import type { Parameter } from "../Parameter.ts";
-import type { IExpression } from "./IExpression.ts";
+import type { IText } from "./IText.ts";
 
-export interface IStatement extends IExpression {
-  getText(): string;
+export interface IStatement extends IText {
   readonly parameters?: Parameter[];
 }

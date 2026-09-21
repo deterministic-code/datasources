@@ -2,7 +2,7 @@ use crate::contact_lookups::ContactLookups;
 use chrono::{DateTime, Utc};
 use datasources::{
     encode_rows, CRUDRepository, DatasourceError, DeepCRUDRepository, ReadonlyRepository, Result,
-    Operator, Row, Value, WhereStatement,
+    Operator, Row, Value, WhereClause,
 };
 use uuid::Uuid;
 
@@ -60,7 +60,7 @@ pub async fn add_extra_contact(service: &DeepCRUDRepository, ids: &ContactLookup
         return Err(DatasourceError::message("expected insert id"));
     };
     service
-        .read_single_where(&WhereStatement::new(Operator::equals("id", Value::Int(id))))
+        .read_single_where(&WhereClause::new(Operator::equals("id", Value::Int(id))))
         .await?
         .ok_or_else(|| DatasourceError::message(format!("extra contact {id} missing")))
 }

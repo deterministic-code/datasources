@@ -1,4 +1,4 @@
-namespace Datasources.Builders;
+namespace Datasources;
 
 public enum JoinKind
 {

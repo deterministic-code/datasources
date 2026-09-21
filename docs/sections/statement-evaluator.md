@@ -1,6 +1,6 @@
 # StatementEvaluator
 
-Interprets an [IExpression](./expressions.md) against a name→value map. [WhereStatement.GetText](./where-statement.md) materializes SQL; this type evaluates.
+Interprets an [IExpression](./expressions.md) against a name→value map. [WhereClause.GetText](./where-clause.md) materializes SQL; this type evaluates.
 
 ## Classes
 

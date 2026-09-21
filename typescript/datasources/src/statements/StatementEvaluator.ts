@@ -5,7 +5,7 @@ import type { IExpression } from "./IExpression.ts";
 import { Literal } from "./Literal.ts";
 import { Operator } from "./Operator.ts";
 import { Where } from "./Where.ts";
-import { WhereStatement } from "./WhereStatement.ts";
+import { WhereClause } from "./WhereClause.ts";
 
 const isTrue = (value: Scalar): boolean => value === true;
 
@@ -28,7 +28,7 @@ const compare = (left: Scalar, right: Scalar): number =>
 
 export class StatementEvaluator {
   evaluate = (expression: IExpression, parameters?: Record<string, Scalar>): Scalar =>
-    expression instanceof WhereStatement
+    expression instanceof WhereClause
       ? this.evaluate(expression.condition, parameters)
       : expression instanceof Where
         ? (() => {

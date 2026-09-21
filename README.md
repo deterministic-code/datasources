@@ -154,7 +154,7 @@ contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name"
 contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
     nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
 
-var loaded = await contacts.ReadSingle(new WhereStatement(new Operator.Equals("id", 10)));
+var loaded = await contacts.ReadSingle(new WhereClause(new Operator.Equals("id", 10)));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
 ```
 
@@ -168,7 +168,7 @@ contacts
         node.include(address_types, "address_type_name", "address_type_id", "id", Some("name".into()), false);
     });
 
-let loaded = contacts.read_single_where(&WhereStatement::new(Operator::equals("id", 10))).await?;
+let loaded = contacts.read_single_where(&WhereClause::new(Operator::equals("id", 10))).await?;
 contacts.create(contact).await?;
 ```
 
@@ -181,7 +181,7 @@ contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true
   node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
 );
 
-const loaded = await contacts.readSingle(new WhereStatement(new Operator.Equals("id", 10)));
+const loaded = await contacts.readSingle(new WhereClause(new Operator.Equals("id", 10)));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 
@@ -2913,10 +2913,36 @@ Command text. `IQuery` / `IUpdateStatement` / `IDeleteStatement` also keep the `
 
 ##### TypeScript
 
+##### IText {#typescript-itext}
+
+```typescript
+interface IText
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-itext-gettext) | Rendered text. |
+
+###### getText() {#typescript-itext-gettext}
+
+Rendered text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
 ##### IStatement {#typescript-istatement}
 
 ```typescript
-interface IStatement extends IExpression
+interface IStatement extends IText
 ```
 
 **Methods**
@@ -2951,17 +2977,17 @@ interface IQuery extends IStatement
 | --- | --- |
 | where | Optional [IWhere](#typescript-iwhere) used to build this query. |
 
-##### Query {#typescript-query}
+##### QueryStatement {#typescript-querystatement}
 
 ```typescript
-class Query implements IQuery
+class QueryStatement implements IQuery
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [Query(text, where?)](#typescript-query-query-text-where) | Wraps query text and an optional [IWhere](#typescript-iwhere). |
+| [QueryStatement(text, where?)](#typescript-querystatement-querystatement-text-where) | Wraps query text and an optional [IWhere](#typescript-iwhere). |
 
 **Properties**
 
@@ -2973,9 +2999,9 @@ class Query implements IQuery
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-query-gettext) | Command text. |
+| [getText()](#typescript-querystatement-gettext) | Command text. |
 
-###### Query(text, where?) {#typescript-query-query-text-where}
+###### QueryStatement(text, where?) {#typescript-querystatement-querystatement-text-where}
 
 Wraps query text and an optional [IWhere](#typescript-iwhere).
 
@@ -2992,7 +3018,7 @@ constructor(text: string, where?: IWhere)
 | `text` | command text |
 | `where` | optional [IWhere](#typescript-iwhere) |
 
-###### getText() {#typescript-query-gettext}
+###### getText() {#typescript-querystatement-gettext}
 
 Command text.
 
@@ -3009,7 +3035,7 @@ getText(): string
 ##### IWhere {#typescript-iwhere}
 
 ```typescript
-interface IWhere extends IStatement {}
+interface IWhere extends IExpression, IText {}
 ```
 
 ##### Where {#typescript-where}
@@ -3358,10 +3384,36 @@ getText(): string
 
 ##### C#
 
+##### IText {#csharp-itext}
+
+```csharp
+public interface IText
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-itext-gettext) | Rendered text. |
+
+###### GetText() {#csharp-itext-gettext}
+
+Rendered text.
+
+**Definition**
+
+```csharp
+string GetText()
+```
+
+**Returns**
+
+`string`
+
 ##### IStatement {#csharp-istatement}
 
 ```csharp
-public interface IStatement : IExpression
+public interface IStatement : IText
 ```
 
 **Methods**
@@ -3396,17 +3448,18 @@ public interface IQuery : IStatement
 | --- | --- |
 | Where | Optional [IWhere](#csharp-iwhere) used to build this query. |
 
-##### Query {#csharp-query}
+##### QueryStatement {#csharp-querystatement}
 
 ```csharp
-public sealed class Query : IQuery
+public sealed record QueryStatement : IQuery
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [Query(text, where)](#csharp-query-query-text-where) | Wraps query text and an optional [IWhere](#csharp-iwhere). |
+| [QueryStatement(text, where)](#csharp-querystatement-querystatement-text-where) | Wraps query text and an optional [IWhere](#csharp-iwhere). |
+| [QueryStatement(table, fields, where, joins)](#csharp-querystatement-querystatement-table-fields-where-joins) | Compiles a `SELECT` from a table, fields, optional [IWhere](#csharp-iwhere), and joins. |
 
 **Properties**
 
@@ -3418,16 +3471,16 @@ public sealed class Query : IQuery
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-query-gettext) | Command text. |
+| [GetText()](#csharp-querystatement-gettext) | Command text. |
 
-###### Query(text, where) {#csharp-query-query-text-where}
+###### QueryStatement(text, where) {#csharp-querystatement-querystatement-text-where}
 
 Wraps query text and an optional [IWhere](#csharp-iwhere).
 
 **Definition**
 
 ```csharp
-public Query(string text, IWhere? where = null)
+public QueryStatement(string text, IWhere? where = null)
 ```
 
 **Parameters**
@@ -3437,7 +3490,30 @@ public Query(string text, IWhere? where = null)
 | `text` | command text |
 | `where` | optional [IWhere](#csharp-iwhere) |
 
-###### GetText() {#csharp-query-gettext}
+###### QueryStatement(table, fields, where, joins) {#csharp-querystatement-querystatement-table-fields-where-joins}
+
+Compiles a `SELECT` from a table, fields, optional [IWhere](#csharp-iwhere), and joins.
+
+**Definition**
+
+```csharp
+public QueryStatement(
+    string table,
+    IReadOnlyList<string> fields,
+    IWhere? where = null,
+    IReadOnlyList<Join>? joins = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | selected columns (`*` when empty) |
+| `where` | optional [IWhere](#csharp-iwhere) |
+| `joins` | optional joins |
+
+###### GetText() {#csharp-querystatement-gettext}
 
 Command text.
 
@@ -3454,7 +3530,7 @@ string GetText()
 ##### IWhere {#csharp-iwhere}
 
 ```csharp
-public interface IWhere : IStatement
+public interface IWhere : IExpression, IText
 ```
 
 ##### Where {#csharp-where}
@@ -3803,10 +3879,36 @@ string GetText()
 
 ##### Rust
 
+##### Text {#rust-text}
+
+```rust
+pub trait Text: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [get_text()](#rust-text-get_text) | Rendered text. |
+
+###### get_text() {#rust-text-get_text}
+
+Rendered text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
 ##### Statement {#rust-statement}
 
 ```rust
-pub trait Statement: Send + Sync
+pub trait Statement: Text
 ```
 
 **Methods**
@@ -3855,34 +3957,34 @@ fn where_clause(&self) -> Option<&dyn Where>
 
 `Option<&dyn `[Where](#rust-where)`>`
 
-##### TextQuery {#rust-textquery}
+##### QueryStatement {#rust-querystatement}
 
 ```rust
-pub struct TextQuery
+pub struct QueryStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(text)](#rust-textquery-new-text) | Wraps query text. |
-| [with_where(text, where_clause)](#rust-textquery-with_where-text-where_clause) | Wraps query text and a [Where](#rust-where). |
+| [text(text)](#rust-querystatement-text-text) | Wraps query text. |
+| [with_where(text, where_clause)](#rust-querystatement-with_where-text-where_clause) | Wraps query text and a [Where](#rust-where). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-textquery-get_text) | Command text. |
-| [where_clause()](#rust-textquery-where_clause) | Optional [Where](#rust-where) used to build this query. |
+| [get_text()](#rust-querystatement-get_text) | Command text. |
+| [where_clause()](#rust-querystatement-where_clause) | Optional [Where](#rust-where) used to build this query. |
 
-###### new(text) {#rust-textquery-new-text}
+###### text(text) {#rust-querystatement-text-text}
 
 Wraps query text.
 
 **Definition**
 
 ```rust
-pub fn new(text: impl Into<String>) -> Self
+pub fn text(text: impl Into<String>) -> Self
 ```
 
 **Parameters**
@@ -3893,9 +3995,9 @@ pub fn new(text: impl Into<String>) -> Self
 
 **Returns**
 
-[TextQuery](#rust-textquery)
+[QueryStatement](#rust-querystatement)
 
-###### with_where(text, where_clause) {#rust-textquery-with_where-text-where_clause}
+###### with_where(text, where_clause) {#rust-querystatement-with_where-text-where_clause}
 
 Wraps query text and a [Where](#rust-where).
 
@@ -3914,9 +4016,9 @@ pub fn with_where(text: impl Into<String>, where_clause: impl Where + 'static) -
 
 **Returns**
 
-[TextQuery](#rust-textquery)
+[QueryStatement](#rust-querystatement)
 
-###### get_text() {#rust-textquery-get_text}
+###### get_text() {#rust-querystatement-get_text}
 
 Command text.
 
@@ -3930,7 +4032,7 @@ fn get_text(&self) -> String
 
 `String`
 
-###### where_clause() {#rust-textquery-where_clause}
+###### where_clause() {#rust-querystatement-where_clause}
 
 Optional [Where](#rust-where) used to build this query.
 
@@ -3947,7 +4049,7 @@ fn where_clause(&self) -> Option<&dyn Where>
 ##### Where {#rust-where}
 
 ```rust
-pub trait Where: Statement {}
+pub trait Where: Text {}
 ```
 
 ##### TextWhere {#rust-textwhere}
@@ -4005,35 +4107,30 @@ fn get_text(&self) -> String
 ##### InsertStatement {#rust-insertstatement}
 
 ```rust
-pub trait InsertStatement: Statement {}
-```
-
-##### TextInsertStatement {#rust-textinsertstatement}
-
-```rust
-pub struct TextInsertStatement
+pub struct InsertStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(text)](#rust-textinsertstatement-new-text) | Wraps insert text. |
+| [text(text)](#rust-insertstatement-text-text) | Wraps insert text. |
+| [new(table, fields)](#rust-insertstatement-new-table-fields) | Compiles an `INSERT`. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-textinsertstatement-get_text) | Command text. |
+| [get_text()](#rust-insertstatement-get_text) | Command text. |
 
-###### new(text) {#rust-textinsertstatement-new-text}
+###### text(text) {#rust-insertstatement-text-text}
 
 Wraps insert text.
 
 **Definition**
 
 ```rust
-pub fn new(text: impl Into<String>) -> Self
+pub fn text(text: impl Into<String>) -> Self
 ```
 
 **Parameters**
@@ -4044,9 +4141,30 @@ pub fn new(text: impl Into<String>) -> Self
 
 **Returns**
 
-[TextInsertStatement](#rust-textinsertstatement)
+[InsertStatement](#rust-insertstatement)
 
-###### get_text() {#rust-textinsertstatement-get_text}
+###### new(table, fields) {#rust-insertstatement-new-table-fields}
+
+Compiles an `INSERT`.
+
+**Definition**
+
+```rust
+pub fn new(table: impl AsRef<str>, fields: &[Parameter]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | columns and bound values |
+
+**Returns**
+
+[InsertStatement](#rust-insertstatement)
+
+###### get_text() {#rust-insertstatement-get_text}
 
 Command text.
 
@@ -4063,56 +4181,31 @@ fn get_text(&self) -> String
 ##### UpdateStatement {#rust-updatestatement}
 
 ```rust
-pub trait UpdateStatement: Statement
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [where_clause()](#rust-updatestatement-where_clause) | Optional [Where](#rust-where) used to build this update. |
-
-###### where_clause() {#rust-updatestatement-where_clause}
-
-Optional [Where](#rust-where) used to build this update.
-
-**Definition**
-
-```rust
-fn where_clause(&self) -> Option<&dyn Where>
-```
-
-**Returns**
-
-`Option<&dyn `[Where](#rust-where)`>`
-
-##### TextUpdateStatement {#rust-textupdatestatement}
-
-```rust
-pub struct TextUpdateStatement
+pub struct UpdateStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(text, where_clause)](#rust-textupdatestatement-new-text-where_clause) | Wraps update text and an optional [Where](#rust-where). |
+| [text(text, where_clause)](#rust-updatestatement-text-text-where_clause) | Wraps update text and an optional [Where](#rust-where). |
+| [new(table, fields, where_clause)](#rust-updatestatement-new-table-fields-where_clause) | Compiles an `UPDATE`. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-textupdatestatement-get_text) | Command text. |
-| [where_clause()](#rust-textupdatestatement-where_clause) | Optional [Where](#rust-where) used to build this update. |
+| [get_text()](#rust-updatestatement-get_text) | Command text. |
+| [where_clause()](#rust-updatestatement-where_clause) | Optional [Where](#rust-where) used to build this update. |
 
-###### new(text, where_clause) {#rust-textupdatestatement-new-text-where_clause}
+###### text(text, where_clause) {#rust-updatestatement-text-text-where_clause}
 
 Wraps update text and an optional [Where](#rust-where).
 
 **Definition**
 
 ```rust
-pub fn new(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
 ```
 
 **Parameters**
@@ -4124,9 +4217,31 @@ pub fn new(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Sel
 
 **Returns**
 
-[TextUpdateStatement](#rust-textupdatestatement)
+[UpdateStatement](#rust-updatestatement)
 
-###### get_text() {#rust-textupdatestatement-get_text}
+###### new(table, fields, where_clause) {#rust-updatestatement-new-table-fields-where_clause}
+
+Compiles an `UPDATE`.
+
+**Definition**
+
+```rust
+pub fn new(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&dyn Where>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | columns and bound values |
+| `where_clause` | optional [Where](#rust-where) |
+
+**Returns**
+
+[UpdateStatement](#rust-updatestatement)
+
+###### get_text() {#rust-updatestatement-get_text}
 
 Command text.
 
@@ -4140,7 +4255,7 @@ fn get_text(&self) -> String
 
 `String`
 
-###### where_clause() {#rust-textupdatestatement-where_clause}
+###### where_clause() {#rust-updatestatement-where_clause}
 
 Optional [Where](#rust-where) used to build this update.
 
@@ -4157,56 +4272,31 @@ fn where_clause(&self) -> Option<&dyn Where>
 ##### DeleteStatement {#rust-deletestatement}
 
 ```rust
-pub trait DeleteStatement: Statement
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [where_clause()](#rust-deletestatement-where_clause) | Optional [Where](#rust-where) used to build this delete. |
-
-###### where_clause() {#rust-deletestatement-where_clause}
-
-Optional [Where](#rust-where) used to build this delete.
-
-**Definition**
-
-```rust
-fn where_clause(&self) -> Option<&dyn Where>
-```
-
-**Returns**
-
-`Option<&dyn `[Where](#rust-where)`>`
-
-##### TextDeleteStatement {#rust-textdeletestatement}
-
-```rust
-pub struct TextDeleteStatement
+pub struct DeleteStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(text, where_clause)](#rust-textdeletestatement-new-text-where_clause) | Wraps delete text and an optional [Where](#rust-where). |
+| [raw(text, where_clause)](#rust-deletestatement-raw-text-where_clause) | Wraps delete text and an optional [Where](#rust-where). |
+| [new(table, where_clause)](#rust-deletestatement-new-table-where_clause) | Compiles a `DELETE`. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-textdeletestatement-get_text) | Command text. |
-| [where_clause()](#rust-textdeletestatement-where_clause) | Optional [Where](#rust-where) used to build this delete. |
+| [get_text()](#rust-deletestatement-get_text) | Command text. |
+| [where_clause()](#rust-deletestatement-where_clause) | Optional [Where](#rust-where) used to build this delete. |
 
-###### new(text, where_clause) {#rust-textdeletestatement-new-text-where_clause}
+###### raw(text, where_clause) {#rust-deletestatement-raw-text-where_clause}
 
 Wraps delete text and an optional [Where](#rust-where).
 
 **Definition**
 
 ```rust
-pub fn new(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
 ```
 
 **Parameters**
@@ -4218,9 +4308,30 @@ pub fn new(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Sel
 
 **Returns**
 
-[TextDeleteStatement](#rust-textdeletestatement)
+[DeleteStatement](#rust-deletestatement)
 
-###### get_text() {#rust-textdeletestatement-get_text}
+###### new(table, where_clause) {#rust-deletestatement-new-table-where_clause}
+
+Compiles a `DELETE`.
+
+**Definition**
+
+```rust
+pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `where_clause` | optional [Where](#rust-where) |
+
+**Returns**
+
+[DeleteStatement](#rust-deletestatement)
+
+###### get_text() {#rust-deletestatement-get_text}
 
 Command text.
 
@@ -4234,7 +4345,7 @@ fn get_text(&self) -> String
 
 `String`
 
-###### where_clause() {#rust-textdeletestatement-where_clause}
+###### where_clause() {#rust-deletestatement-where_clause}
 
 Optional [Where](#rust-where) used to build this delete.
 
@@ -4251,35 +4362,30 @@ fn where_clause(&self) -> Option<&dyn Where>
 ##### CreateTableStatement {#rust-createtablestatement}
 
 ```rust
-pub trait CreateTableStatement: Statement {}
-```
-
-##### TextCreateTableStatement {#rust-textcreatetablestatement}
-
-```rust
-pub struct TextCreateTableStatement
+pub struct CreateTableStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(text)](#rust-textcreatetablestatement-new-text) | Wraps create-table text. |
+| [text(text)](#rust-createtablestatement-text-text) | Wraps create-table text. |
+| [new(table, columns)](#rust-createtablestatement-new-table-columns) | Compiles a `CREATE TABLE`. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-textcreatetablestatement-get_text) | Command text. |
+| [get_text()](#rust-createtablestatement-get_text) | Command text. |
 
-###### new(text) {#rust-textcreatetablestatement-new-text}
+###### text(text) {#rust-createtablestatement-text-text}
 
 Wraps create-table text.
 
 **Definition**
 
 ```rust
-pub fn new(text: impl Into<String>) -> Self
+pub fn text(text: impl Into<String>) -> Self
 ```
 
 **Parameters**
@@ -4290,9 +4396,30 @@ pub fn new(text: impl Into<String>) -> Self
 
 **Returns**
 
-[TextCreateTableStatement](#rust-textcreatetablestatement)
+[CreateTableStatement](#rust-createtablestatement)
 
-###### get_text() {#rust-textcreatetablestatement-get_text}
+###### new(table, columns) {#rust-createtablestatement-new-table-columns}
+
+Compiles a `CREATE TABLE`.
+
+**Definition**
+
+```rust
+pub fn new(table: impl AsRef<str>, columns: &[Column]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `columns` | column names and types |
+
+**Returns**
+
+[CreateTableStatement](#rust-createtablestatement)
+
+###### get_text() {#rust-createtablestatement-get_text}
 
 Command text.
 
@@ -4309,35 +4436,30 @@ fn get_text(&self) -> String
 ##### StoredProcedureStatement {#rust-storedprocedurestatement}
 
 ```rust
-pub trait StoredProcedureStatement: Statement {}
-```
-
-##### TextStoredProcedureStatement {#rust-textstoredprocedurestatement}
-
-```rust
-pub struct TextStoredProcedureStatement
+pub struct StoredProcedureStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(text)](#rust-textstoredprocedurestatement-new-text) | Wraps stored-procedure call text. |
+| [text(text)](#rust-storedprocedurestatement-text-text) | Wraps stored-procedure call text. |
+| [new(name, parameters)](#rust-storedprocedurestatement-new-name-parameters) | Compiles a `CALL`. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-textstoredprocedurestatement-get_text) | Command text. |
+| [get_text()](#rust-storedprocedurestatement-get_text) | Command text. |
 
-###### new(text) {#rust-textstoredprocedurestatement-new-text}
+###### text(text) {#rust-storedprocedurestatement-text-text}
 
 Wraps stored-procedure call text.
 
 **Definition**
 
 ```rust
-pub fn new(text: impl Into<String>) -> Self
+pub fn text(text: impl Into<String>) -> Self
 ```
 
 **Parameters**
@@ -4348,9 +4470,30 @@ pub fn new(text: impl Into<String>) -> Self
 
 **Returns**
 
-[TextStoredProcedureStatement](#rust-textstoredprocedurestatement)
+[StoredProcedureStatement](#rust-storedprocedurestatement)
 
-###### get_text() {#rust-textstoredprocedurestatement-get_text}
+###### new(name, parameters) {#rust-storedprocedurestatement-new-name-parameters}
+
+Compiles a `CALL`.
+
+**Definition**
+
+```rust
+pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | procedure name |
+| `parameters` | bound values (empty for `CALL name()`) |
+
+**Returns**
+
+[StoredProcedureStatement](#rust-storedprocedurestatement)
+
+###### get_text() {#rust-storedprocedurestatement-get_text}
 
 Command text.
 
@@ -4366,14 +4509,13 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-[Command](#command) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereStatement](#where-statement).
+[Command](#command) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereClause](#where-clause).
 
-Build SQL with [StatementBuilder](#statement-builder). Compose predicates with [WhereStatement](#where-statement).
+Construct SQL with [QueryStatement](#querystatement) / [InsertStatement](#insertstatement) / [UpdateStatement](#updatestatement) / [DeleteStatement](#deletestatement). Compose predicates with [WhereClause](#where-clause). [IStatement](#istatement) is not an [IExpression](#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](#iwhere) is a clause ([IExpression](#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
 
 ### See also
 
-- [StatementBuilder](#statement-builder)
-- [WhereStatement](#where-statement)
+- [WhereClause](#where-clause)
 - [Expressions](#expressions)
 - [StatementEvaluator](#statement-evaluator)
 
@@ -4381,1311 +4523,31 @@ Build SQL with [StatementBuilder](#statement-builder). Compose predicates with [
 
 #### Wrap query text and an optional where
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L34-L36)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L33-L38)
 
 ```csharp
-var select = new Query("SELECT 1");
+var select = new QueryStatement("SELECT 1");
 var byId = new Where("id = 1");
-var withWhere = new Query("SELECT 1", byId);
+var withWhere = new QueryStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L782-L785)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L963-L966)
 
 ```rust
-
+let query = QueryStatement::with_where("SELECT 1", TextWhere::new("id = 1"));
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L17-L19)
-
-```typescript
-  WhereStatement,
-} from "../index.ts";
-```
-
-## StatementBuilder
-
-Stateless factory for query / insert / update / delete / table / stored-procedure SQL. Identifiers are unquoted. Placeholders are `$name`.
-
-### Classes
-
-##### TypeScript
-
-##### StatementBuilder {#typescript-statementbuilder}
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L21-L25)
 
 ```typescript
-const StatementBuilder
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [createQuery(table, fields, where?, joins?)](#typescript-statementbuilder-createquery-table-fields-where-joins) | Builds a select. An empty field list is `SELECT *`. |
-| [createInsert(table, fields)](#typescript-statementbuilder-createinsert-table-fields) | Builds an insert. Values are `$name` placeholders. |
-| [createUpdate(table, fields, where?)](#typescript-statementbuilder-createupdate-table-fields-where) | Builds an update. Assignments are `name = $name`. |
-| [createDelete(table, where?)](#typescript-statementbuilder-createdelete-table-where) | Builds a delete. |
-| [createTable(table, columns)](#typescript-statementbuilder-createtable-table-columns) | Builds a create-table statement. |
-| [createStoredProcedure(name, parameters?)](#typescript-statementbuilder-createstoredprocedure-name-parameters) | Builds a `CALL` with `$name` placeholders. |
-
-###### createQuery(table, fields, where?, joins?) {#typescript-statementbuilder-createquery-table-fields-where-joins}
-
-Builds a select. An empty field list is `SELECT *`.
-
-**Definition**
-
-```typescript
-createQuery(table: string, fields: string[], where?: IWhere, joins?: Join[]): IQuery
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | selected columns; empty selects `*` |
-| `where` | optional [IWhere](#typescript-iwhere) |
-| `joins` | optional [Join](#typescript-join) list |
-
-**Returns**
-
-[IQuery](#typescript-iquery)
-
-###### createInsert(table, fields) {#typescript-statementbuilder-createinsert-table-fields}
-
-Builds an insert. Values are `$name` placeholders.
-
-**Definition**
-
-```typescript
-createInsert(table: string, fields: Field[]): IInsertStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | [Field](#typescript-field) name and value pairs |
-
-**Returns**
-
-[IInsertStatement](#typescript-iinsertstatement)
-
-###### createUpdate(table, fields, where?) {#typescript-statementbuilder-createupdate-table-fields-where}
-
-Builds an update. Assignments are `name = $name`.
-
-**Definition**
-
-```typescript
-createUpdate(table: string, fields: Field[], where?: IWhere): IUpdateStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | [Field](#typescript-field) name and value pairs |
-| `where` | optional [IWhere](#typescript-iwhere) |
-
-**Returns**
-
-[IUpdateStatement](#typescript-iupdatestatement)
-
-###### createDelete(table, where?) {#typescript-statementbuilder-createdelete-table-where}
-
-Builds a delete.
-
-**Definition**
-
-```typescript
-createDelete(table: string, where?: IWhere): IDeleteStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `where` | optional [IWhere](#typescript-iwhere) |
-
-**Returns**
-
-[IDeleteStatement](#typescript-ideletestatement)
-
-###### createTable(table, columns) {#typescript-statementbuilder-createtable-table-columns}
-
-Builds a create-table statement.
-
-**Definition**
-
-```typescript
-createTable(table: string, columns: Column[]): ICreateTableStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `columns` | [Column](#typescript-column) name and type pairs |
-
-**Returns**
-
-[ICreateTableStatement](#typescript-icreatetablestatement)
-
-###### createStoredProcedure(name, parameters?) {#typescript-statementbuilder-createstoredprocedure-name-parameters}
-
-Builds a `CALL` with `$name` placeholders.
-
-**Definition**
-
-```typescript
-createStoredProcedure(name: string, parameters?: Field[]): IStoredProcedureStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | procedure name |
-| `parameters` | optional [Field](#typescript-field) list |
-
-**Returns**
-
-[IStoredProcedureStatement](#typescript-istoredprocedurestatement)
-
-##### Column {#typescript-column}
-
-```typescript
-interface Column
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| name | Column name. |
-| type | SQL type text. |
-
-##### Field {#typescript-field}
-
-```typescript
-interface Field
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| name | Field name. |
-| value | Field [Scalar](#typescript-scalar). |
-
-##### JoinKind {#typescript-joinkind}
-
-```typescript
-type JoinKind = "inner" | "left" | "right"
-```
-
-##### Join {#typescript-join}
-
-```typescript
-type Join
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| kind | [JoinKind](#typescript-joinkind). |
-| table | Joined table. |
-| left | Left-hand join column. |
-| right | Right-hand join column. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [inner(table, left, right)](#typescript-join-inner-table-left-right) | Builds an inner [Join](#typescript-join). |
-| [left(table, left, right)](#typescript-join-left-table-left-right) | Builds a left [Join](#typescript-join). |
-| [right(table, left, right)](#typescript-join-right-table-left-right) | Builds a right [Join](#typescript-join). |
-
-###### inner(table, left, right) {#typescript-join-inner-table-left-right}
-
-Builds an inner [Join](#typescript-join).
-
-**Definition**
-
-```typescript
-inner(table: string, left: string, right: string): Join
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#typescript-join)
-
-###### left(table, left, right) {#typescript-join-left-table-left-right}
-
-Builds a left [Join](#typescript-join).
-
-**Definition**
-
-```typescript
-left(table: string, left: string, right: string): Join
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#typescript-join)
-
-###### right(table, left, right) {#typescript-join-right-table-left-right}
-
-Builds a right [Join](#typescript-join).
-
-**Definition**
-
-```typescript
-right(table: string, left: string, right: string): Join
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#typescript-join)
-
-##### C#
-
-##### StatementBuilder {#csharp-statementbuilder}
-
-```csharp
-public static class StatementBuilder
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [CreateQuery(table, fields, where, joins)](#csharp-statementbuilder-createquery-table-fields-where-joins) | Builds a select. An empty field list is `SELECT *`. |
-| [CreateInsert(table, fields)](#csharp-statementbuilder-createinsert-table-fields) | Builds an insert. Values are `$name` placeholders. |
-| [CreateUpdate(table, fields, where)](#csharp-statementbuilder-createupdate-table-fields-where) | Builds an update. Assignments are `name = $name`. |
-| [CreateDelete(table, where)](#csharp-statementbuilder-createdelete-table-where) | Builds a delete. |
-| [CreateTable(table, columns)](#csharp-statementbuilder-createtable-table-columns) | Builds a create-table statement. |
-| [CreateStoredProcedure(name, parameters)](#csharp-statementbuilder-createstoredprocedure-name-parameters) | Builds a `CALL` with `$name` placeholders. |
-
-###### CreateQuery(table, fields, where, joins) {#csharp-statementbuilder-createquery-table-fields-where-joins}
-
-Builds a select. An empty field list is `SELECT *`.
-
-**Definition**
-
-```csharp
-public static IQuery CreateQuery(string table, IReadOnlyList<string> fields, IWhere? where = null, IReadOnlyList<Join>? joins = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | selected columns; empty selects `*` |
-| `where` | optional [IWhere](#csharp-iwhere) |
-| `joins` | optional [Join](#csharp-join) list |
-
-**Returns**
-
-[IQuery](#csharp-iquery)
-
-###### CreateInsert(table, fields) {#csharp-statementbuilder-createinsert-table-fields}
-
-Builds an insert. Values are `$name` placeholders.
-
-**Definition**
-
-```csharp
-public static IInsertStatement CreateInsert(string table, IReadOnlyList<Parameter> fields)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | [Parameter](#csharp-parameter) name and value pairs |
-
-**Returns**
-
-[IInsertStatement](#csharp-iinsertstatement)
-
-###### CreateUpdate(table, fields, where) {#csharp-statementbuilder-createupdate-table-fields-where}
-
-Builds an update. Assignments are `name = $name`.
-
-**Definition**
-
-```csharp
-public static IUpdateStatement CreateUpdate(string table, IReadOnlyList<Parameter> fields, IWhere? where = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | [Parameter](#csharp-parameter) name and value pairs |
-| `where` | optional [IWhere](#csharp-iwhere) |
-
-**Returns**
-
-[IUpdateStatement](#csharp-iupdatestatement)
-
-###### CreateDelete(table, where) {#csharp-statementbuilder-createdelete-table-where}
-
-Builds a delete.
-
-**Definition**
-
-```csharp
-public static IDeleteStatement CreateDelete(string table, IWhere? where = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `where` | optional [IWhere](#csharp-iwhere) |
-
-**Returns**
-
-[IDeleteStatement](#csharp-ideletestatement)
-
-###### CreateTable(table, columns) {#csharp-statementbuilder-createtable-table-columns}
-
-Builds a create-table statement.
-
-**Definition**
-
-```csharp
-public static ICreateTableStatement CreateTable(string table, IReadOnlyList<Column> columns)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `columns` | [Column](#csharp-column) name and type pairs |
-
-**Returns**
-
-[ICreateTableStatement](#csharp-icreatetablestatement)
-
-###### CreateStoredProcedure(name, parameters) {#csharp-statementbuilder-createstoredprocedure-name-parameters}
-
-Builds a `CALL` with `$name` placeholders.
-
-**Definition**
-
-```csharp
-public static IStoredProcedureStatement CreateStoredProcedure(string name, IReadOnlyList<Parameter>? parameters = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | procedure name |
-| `parameters` | optional [Parameter](#csharp-parameter) list |
-
-**Returns**
-
-[IStoredProcedureStatement](#csharp-istoredprocedurestatement)
-
-##### Column {#csharp-column}
-
-```csharp
-public sealed record Column(string Name, string Type)
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Name | Column name. |
-| Type | SQL type text. |
-
-##### JoinKind {#csharp-joinkind}
-
-```csharp
-public enum JoinKind
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Inner | Inner join. |
-| Left | Left join. |
-| Right | Right join. |
-
-##### Join {#csharp-join}
-
-```csharp
-public sealed record Join(JoinKind Kind, string Table, string LeftColumn, string RightColumn)
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Kind | [JoinKind](#csharp-joinkind). |
-| Table | Joined table. |
-| LeftColumn | Left-hand join column. |
-| RightColumn | Right-hand join column. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Inner(table, left, right)](#csharp-join-inner-table-left-right) | Builds an inner [Join](#csharp-join). |
-| [Left(table, left, right)](#csharp-join-left-table-left-right) | Builds a left [Join](#csharp-join). |
-| [Right(table, left, right)](#csharp-join-right-table-left-right) | Builds a right [Join](#csharp-join). |
-
-###### Inner(table, left, right) {#csharp-join-inner-table-left-right}
-
-Builds an inner [Join](#csharp-join).
-
-**Definition**
-
-```csharp
-public static Join Inner(string table, string left, string right)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#csharp-join)
-
-###### Left(table, left, right) {#csharp-join-left-table-left-right}
-
-Builds a left [Join](#csharp-join).
-
-**Definition**
-
-```csharp
-public static Join Left(string table, string left, string right)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#csharp-join)
-
-###### Right(table, left, right) {#csharp-join-right-table-left-right}
-
-Builds a right [Join](#csharp-join).
-
-**Definition**
-
-```csharp
-public static Join Right(string table, string left, string right)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#csharp-join)
-
-##### Rust
-
-##### StatementBuilder {#rust-statementbuilder}
-
-```rust
-pub struct StatementBuilder
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [create_query(table, fields, where_clause, joins)](#rust-statementbuilder-create_query-table-fields-where_clause-joins) | Builds a select. An empty field list is `SELECT *`. |
-| [create_insert(table, fields)](#rust-statementbuilder-create_insert-table-fields) | Builds an insert. Values are `$name` placeholders. |
-| [create_update(table, fields, where_clause)](#rust-statementbuilder-create_update-table-fields-where_clause) | Builds an update. Assignments are `name = $name`. |
-| [create_delete(table, where_clause)](#rust-statementbuilder-create_delete-table-where_clause) | Builds a delete. |
-| [create_table(table, columns)](#rust-statementbuilder-create_table-table-columns) | Builds a create-table statement. |
-| [create_stored_procedure(name, parameters)](#rust-statementbuilder-create_stored_procedure-name-parameters) | Builds a `CALL` with `$name` placeholders. |
-
-###### create_query(table, fields, where_clause, joins) {#rust-statementbuilder-create_query-table-fields-where_clause-joins}
-
-Builds a select. An empty field list is `SELECT *`.
-
-**Definition**
-
-```rust
-pub fn create_query(table: impl AsRef<str>, fields: &[&str], where_clause: Option<&dyn Where>, joins: &[Join]) -> TextQuery
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | selected columns; empty selects `*` |
-| `where_clause` | optional [Where](#rust-where) |
-| `joins` | [Join](#rust-join) slice |
-
-**Returns**
-
-[TextQuery](#rust-textquery)
-
-###### create_insert(table, fields) {#rust-statementbuilder-create_insert-table-fields}
-
-Builds an insert. Values are `$name` placeholders.
-
-**Definition**
-
-```rust
-pub fn create_insert(table: impl AsRef<str>, fields: &[Parameter]) -> TextInsertStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | [Parameter](#rust-parameter) name and value pairs |
-
-**Returns**
-
-[TextInsertStatement](#rust-textinsertstatement)
-
-###### create_update(table, fields, where_clause) {#rust-statementbuilder-create_update-table-fields-where_clause}
-
-Builds an update. Assignments are `name = $name`.
-
-**Definition**
-
-```rust
-pub fn create_update(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&dyn Where>) -> TextUpdateStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `fields` | [Parameter](#rust-parameter) name and value pairs |
-| `where_clause` | optional [Where](#rust-where) |
-
-**Returns**
-
-[TextUpdateStatement](#rust-textupdatestatement)
-
-###### create_delete(table, where_clause) {#rust-statementbuilder-create_delete-table-where_clause}
-
-Builds a delete.
-
-**Definition**
-
-```rust
-pub fn create_delete(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> TextDeleteStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `where_clause` | optional [Where](#rust-where) |
-
-**Returns**
-
-[TextDeleteStatement](#rust-textdeletestatement)
-
-###### create_table(table, columns) {#rust-statementbuilder-create_table-table-columns}
-
-Builds a create-table statement.
-
-**Definition**
-
-```rust
-pub fn create_table(table: impl AsRef<str>, columns: &[Column]) -> TextCreateTableStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | table name |
-| `columns` | [Column](#rust-column) name and type pairs |
-
-**Returns**
-
-[TextCreateTableStatement](#rust-textcreatetablestatement)
-
-###### create_stored_procedure(name, parameters) {#rust-statementbuilder-create_stored_procedure-name-parameters}
-
-Builds a `CALL` with `$name` placeholders.
-
-**Definition**
-
-```rust
-pub fn create_stored_procedure(name: impl AsRef<str>, parameters: &[Parameter]) -> TextStoredProcedureStatement
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | procedure name |
-| `parameters` | [Parameter](#rust-parameter) slice |
-
-**Returns**
-
-[TextStoredProcedureStatement](#rust-textstoredprocedurestatement)
-
-##### Column {#rust-column}
-
-```rust
-pub struct Column
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(name, type_name)](#rust-column-new-name-type_name) | Builds a column name and SQL type. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| name | Column name. |
-| type_name | SQL type text. |
-
-###### new(name, type_name) {#rust-column-new-name-type_name}
-
-Builds a column name and SQL type.
-
-**Definition**
-
-```rust
-pub fn new(name: impl Into<String>, type_name: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `name` | column name |
-| `type_name` | SQL type text |
-
-**Returns**
-
-[Column](#rust-column)
-
-##### JoinKind {#rust-joinkind}
-
-```rust
-pub enum JoinKind
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Inner | Inner join. |
-| Left | Left join. |
-| Right | Right join. |
-
-##### Join {#rust-join}
-
-```rust
-pub struct Join
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| kind | [JoinKind](#rust-joinkind). |
-| table | Joined table. |
-| left | Left-hand join column. |
-| right | Right-hand join column. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [inner(table, left, right)](#rust-join-inner-table-left-right) | Builds an inner [Join](#rust-join). |
-| [left(table, left, right)](#rust-join-left-table-left-right) | Builds a left [Join](#rust-join). |
-| [right(table, left, right)](#rust-join-right-table-left-right) | Builds a right [Join](#rust-join). |
-
-###### inner(table, left, right) {#rust-join-inner-table-left-right}
-
-Builds an inner [Join](#rust-join).
-
-**Definition**
-
-```rust
-pub fn inner(table: impl Into<String>, left: impl Into<String>, right: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#rust-join)
-
-###### left(table, left, right) {#rust-join-left-table-left-right}
-
-Builds a left [Join](#rust-join).
-
-**Definition**
-
-```rust
-pub fn left(table: impl Into<String>, left: impl Into<String>, right: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#rust-join)
-
-###### right(table, left, right) {#rust-join-right-table-left-right}
-
-Builds a right [Join](#rust-join).
-
-**Definition**
-
-```rust
-pub fn right(table: impl Into<String>, left: impl Into<String>, right: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `table` | joined table |
-| `left` | left-hand column |
-| `right` | right-hand column |
-
-**Returns**
-
-[Join](#rust-join)
-
-### Remarks
-
-Dialect packages wrap [StatementBuilder](#statementbuilder) for quoting and native column types, including `CreateStoredProcedure` the same way as `CreateInsert`. C# and TypeScript keep the original [IWhere](#iwhere) on query / update / delete. Rust stores `where_clause()`. Joins exist on the core builder. The SQLite dialect forwards them; Postgres and MySQL dialect wrappers do not.
-
-[RepositoryStatements](#crud-repository) is table-scoped sugar over this builder.
-
-### Examples
-
-#### Build a select
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L78-L79)
-
-```csharp
-new Operator.Equals("age", 18))).GetText());
-```
-
-**After: select**
-
-```
-SELECT id, name FROM users WHERE id = $id AND age > $age
-```
-
-**After: insert**
-
-```
-INSERT INTO users (id, name) VALUES ($id, $name)
-```
-
-**After: call**
-
-```
-CALL save($id, $name)
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L696-L702)
-
-```rust
-);
-```
-
-**After: select**
-
-```
-SELECT id, name FROM users WHERE id = $id AND age > $age
-```
-
-**After: insert**
-
-```
-INSERT INTO users (id, name) VALUES ($id, $name)
-```
-
-**After: call**
-
-```
-CALL save($id, $name)
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L70-L71)
-
-```typescript
-]);
-const and = where.condition;
-```
-
-**After: select**
-
-```
-SELECT id, name FROM users WHERE id = $id
-```
-
-**After: insert**
-
-```
-INSERT INTO users (id, name) VALUES ($id, $name)
-```
-
-**After: call**
-
-```
-CALL save($id, $name)
-```
-
-#### Query with joins
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/Contact/ContactsJoinQuery.cs#L8-L34)
-
-```csharp
-public static IQuery Create() =>
-    StatementBuilder.CreateQuery(
-        "contacts_base",
-        [
-            "contacts_base.id AS id",
-            "contacts_base.first_name AS first_name",
-            "contacts_base.last_name AS last_name",
-            "contacts_base.email AS email",
-            "contact_source.name AS contact_source_name",
-            "contact_type.name AS contact_type_name",
-            "address.id AS address_id",
-            "address.line1 AS address_line1",
-            "address.city AS address_city",
-            "address_type.name AS address_type_name",
-            "phone.id AS phone_id",
-            "phone.number AS phone_number",
-            "phone_type.name AS phone_type_name",
-        ],
-        null,
-        [
-            Join.Inner("contact_source", "contacts_base.contact_source_id", "contact_source.id"),
-            Join.Inner("contact_type", "contacts_base.contact_type_id", "contact_type.id"),
-            Join.Left("address", "contacts_base.id", "address.contact_id"),
-            Join.Left("address_type", "address.address_type_id", "address_type.id"),
-            Join.Left("phone", "contacts_base.id", "phone.contact_id"),
-            Join.Left("phone_type", "phone.phone_type_id", "phone_type.id"),
-        ]);
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/sql-specs/src/contacts_join_query.rs#L3-L39)
-
-```rust
-StatementBuilder::create_query(
-    "contacts_base",
-    &[
-        "contacts_base.id AS id",
-        "contacts_base.first_name AS first_name",
-        "contacts_base.last_name AS last_name",
-        "contacts_base.email AS email",
-        "contact_source.name AS contact_source_name",
-        "contact_type.name AS contact_type_name",
-        "address.id AS address_id",
-        "address.line1 AS address_line1",
-        "address.city AS address_city",
-        "address_type.name AS address_type_name",
-        "phone.id AS phone_id",
-        "phone.number AS phone_number",
-        "phone_type.name AS phone_type_name",
-    ],
-    None,
-    &[
-        Join::inner(
-            "contact_source",
-            "contacts_base.contact_source_id",
-            "contact_source.id",
-        ),
-        Join::inner(
-            "contact_type",
-            "contacts_base.contact_type_id",
-            "contact_type.id",
-        ),
-        Join::left("address", "contacts_base.id", "address.contact_id"),
-        Join::left("address_type", "address.address_type_id", "address_type.id"),
-        Join::left("phone", "contacts_base.id", "phone.contact_id"),
-        Join::left("phone_type", "phone.phone_type_id", "phone_type.id"),
-    ],
-)
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/tests/contact/contactsJoinQuery.ts#L3-L30)
-
-```typescript
-export const contactsJoinQuery = (): IQuery =>
-  StatementBuilder.createQuery(
-    "contacts_base",
-    [
-      "contacts_base.id AS id",
-      "contacts_base.first_name AS first_name",
-      "contacts_base.last_name AS last_name",
-      "contacts_base.email AS email",
-      "contact_source.name AS contact_source_name",
-      "contact_type.name AS contact_type_name",
-      "address.id AS address_id",
-      "address.line1 AS address_line1",
-      "address.city AS address_city",
-      "address_type.name AS address_type_name",
-      "phone.id AS phone_id",
-      "phone.number AS phone_number",
-      "phone_type.name AS phone_type_name",
-    ],
-    undefined,
-    [
-      Join.inner("contact_source", "contacts_base.contact_source_id", "contact_source.id"),
-      Join.inner("contact_type", "contacts_base.contact_type_id", "contact_type.id"),
-      Join.left("address", "contacts_base.id", "address.contact_id"),
-      Join.left("address_type", "address.address_type_id", "address_type.id"),
-      Join.left("phone", "contacts_base.id", "phone.contact_id"),
-      Join.left("phone_type", "phone.phone_type_id", "phone_type.id"),
-    ],
-  );
-```
-
-## WhereStatement
-
-
-[IWhere](#iwhere) over an [IExpression](#iexpression) tree. Placeholders are `$field` and `$field_0` for `In`.
-
-### Classes
-
-##### TypeScript
-
-##### WhereStatement {#typescript-wherestatement}
-
-```typescript
-class WhereStatement implements IWhere
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [WhereStatement(condition)](#typescript-wherestatement-wherestatement-condition) | Builds a where statement from an [IExpression](#typescript-iexpression). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| condition | Predicate tree. Typically an [Operator](#typescript-operator). |
-| parameters | Bound [Parameter](#typescript-parameter) list. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [getText()](#typescript-wherestatement-gettext) | Predicate text. |
-
-###### WhereStatement(condition) {#typescript-wherestatement-wherestatement-condition}
-
-Builds a where statement from an [IExpression](#typescript-iexpression).
-
-**Definition**
-
-```typescript
-constructor(condition: IExpression)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `condition` | [IExpression](#typescript-iexpression) |
-
-###### getText() {#typescript-wherestatement-gettext}
-
-Predicate text.
-
-**Definition**
-
-```typescript
-getText(): string
-```
-
-**Returns**
-
-`string`
-
-##### Scalar {#typescript-scalar}
-
-```typescript
-type Scalar = string | number | boolean | bigint | null
-```
-
-##### C#
-
-##### WhereStatement {#csharp-wherestatement}
-
-```csharp
-public sealed record WhereStatement(IExpression Condition) : IWhere
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [WhereStatement(condition)](#csharp-wherestatement-wherestatement-condition) | Builds a where statement from an [IExpression](#csharp-iexpression). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Condition | Predicate tree. Typically an [Operator](#csharp-operator). |
-| Parameters | Bound [Parameter](#csharp-parameter) list. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [GetText()](#csharp-wherestatement-gettext) | Predicate text. |
-
-###### WhereStatement(condition) {#csharp-wherestatement-wherestatement-condition}
-
-Builds a where statement from an [IExpression](#csharp-iexpression).
-
-**Definition**
-
-```csharp
-public WhereStatement(IExpression Condition)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `condition` | [IExpression](#csharp-iexpression) |
-
-###### GetText() {#csharp-wherestatement-gettext}
-
-Predicate text.
-
-**Definition**
-
-```csharp
-public string GetText()
-```
-
-**Returns**
-
-`string`
-
-##### Rust
-
-##### WhereStatement {#rust-wherestatement}
-
-```rust
-pub struct WhereStatement
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(condition)](#rust-wherestatement-new-condition) | Builds a where statement from an [Expression](#rust-expression). |
-| [get_text()](#rust-wherestatement-get_text) | Predicate text. |
-| [parameters()](#rust-wherestatement-parameters) | Bound [Parameter](#rust-parameter) list. |
-
-###### new(condition) {#rust-wherestatement-new-condition}
-
-Builds a where statement from an [Expression](#rust-expression).
-
-**Definition**
-
-```rust
-pub fn new(condition: impl Into<Expression>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `condition` | [Expression](#rust-expression) or [Operator](#rust-operator) |
-
-**Returns**
-
-[WhereStatement](#rust-wherestatement)
-
-###### get_text() {#rust-wherestatement-get_text}
-
-Predicate text.
-
-**Definition**
-
-```rust
-fn get_text(&self) -> String
-```
-
-**Returns**
-
-`String`
-
-###### parameters() {#rust-wherestatement-parameters}
-
-Bound [Parameter](#rust-parameter) list.
-
-**Definition**
-
-```rust
-fn parameters(&self) -> Vec<Parameter>
-```
-
-**Returns**
-
-`Vec<`[Parameter](#rust-parameter)`>`
-
-### Remarks
-
-Construct the predicate with [Operator](#operator) records, then wrap it: `new WhereStatement(new Operator.Equals("id", 9))`. [StatementBuilder](#statement-builder) inlines predicate text into query / update / delete SQL. Keep the [WhereStatement](#wherestatement) when the caller needs bound parameters. [StatementEvaluator](#statement-evaluator) interprets the same tree against a parameter map.
-
-### Examples
-
-#### Compare, groups, not, and in
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L53-L55)
-
-```csharp
-var where = new WhereStatement(new Operator.And(
-    new Operator.Equals("id", 1),
-    new Operator.GreaterThan("age", 18)));
-```
-
-**After: and**
-
-```
-id = $id AND age > $age
-```
-
-**After: in**
-
-```
-id IN ($id_0, $id_1)
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L654-L658)
-
-```rust
-fn statements_and_builders() {
-    let where_clause = WhereStatement::new(Operator::and(
-        Operator::equals("id", 1_i64),
-        Operator::greater_than("age", 18_i64),
-    ));
-```
-
-**After: and**
-
-```
-id = $id AND age > $age
-```
-
-**After: in**
-
-```
-id IN ($id_0, $id_1)
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L31-L33)
-
-```typescript
-it("renders compare, groups, and not", () => {
-  const where = new WhereStatement(
-    new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
-```
-
-**After: and**
-
-```
-id = $id AND age > $age
-```
-
-**After: in**
-
-```
-id IN ($id_0, $id_1)
+const select = new QueryStatement("SELECT 1");
+const where = new Where("id = 1");
+const withWhere = new QueryStatement("SELECT 1", where);
 ```
 
 ## Expressions
 
-AST nodes for [WhereStatement](#where-statement). `Operator` records hold operands; `GetText()` maps them to SQL.
+AST nodes for [WhereClause](#where-clause). `Operator` records hold operands; `GetText()` maps them to SQL.
 
 ### Classes
 
@@ -5769,7 +4631,7 @@ constructor(value: Scalar)
 
 | Name | Description |
 | --- | --- |
-| `value` | [Scalar](#typescript-scalar) |
+| `value` | [Scalar](./where-statement.md#typescript-scalar) |
 
 ##### ArrayExpression {#typescript-arrayexpression}
 
@@ -6042,7 +4904,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operat
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L78-L81)
 
 ```csharp
-new Operator.Equals("age", 18))).GetText());
+
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L704-L719)
@@ -6054,12 +4916,271 @@ new Operator.Equals("age", 18))).GetText());
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L63-L73)
 
 ```typescript
-]);
+
+```
+
+## Where Clause
+
+[IWhere](#iwhere) over an [IExpression](#iexpression) tree. A clause is an expression, not a statement. Placeholders are `$field` and `$field_0` for `In`.
+
+### Classes
+
+##### TypeScript
+
+##### WhereClause {#typescript-whereclause}
+
+```typescript
+class WhereClause implements IWhere
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [WhereClause(condition)](#typescript-whereclause-whereclause-condition) | Builds a where clause from an [IExpression](#typescript-iexpression). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| condition | Predicate tree. Typically an [Operator](#typescript-operator). |
+| parameters | Bound [Parameter](#typescript-parameter) list. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [getText()](#typescript-whereclause-gettext) | Predicate text. |
+
+###### WhereClause(condition) {#typescript-whereclause-whereclause-condition}
+
+Builds a where clause from an [IExpression](#typescript-iexpression).
+
+**Definition**
+
+```typescript
+constructor(condition: IExpression)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `condition` | [IExpression](#typescript-iexpression) |
+
+###### getText() {#typescript-whereclause-gettext}
+
+Predicate text.
+
+**Definition**
+
+```typescript
+getText(): string
+```
+
+**Returns**
+
+`string`
+
+##### Scalar {#typescript-scalar}
+
+```typescript
+type Scalar = string | number | boolean | bigint | null
+```
+
+##### C#
+
+##### WhereClause {#csharp-whereclause}
+
+```csharp
+public sealed record WhereClause(IExpression Condition) : IWhere
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [WhereClause(condition)](#csharp-whereclause-whereclause-condition) | Builds a where clause from an [IExpression](#csharp-iexpression). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Condition | Predicate tree. Typically an [Operator](#csharp-operator). |
+| Parameters | Bound [Parameter](#csharp-parameter) list. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [GetText()](#csharp-whereclause-gettext) | Predicate text. |
+
+###### WhereClause(condition) {#csharp-whereclause-whereclause-condition}
+
+Builds a where clause from an [IExpression](#csharp-iexpression).
+
+**Definition**
+
+```csharp
+public WhereClause(IExpression Condition)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `condition` | [IExpression](#csharp-iexpression) |
+
+###### GetText() {#csharp-whereclause-gettext}
+
+Predicate text.
+
+**Definition**
+
+```csharp
+public string GetText()
+```
+
+**Returns**
+
+`string`
+
+##### Rust
+
+##### WhereClause {#rust-whereclause}
+
+```rust
+pub struct WhereClause
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(condition)](#rust-whereclause-new-condition) | Builds a where clause from an [Expression](#rust-expression). |
+| [get_text()](#rust-whereclause-get_text) | Predicate text. |
+| [parameters()](#rust-whereclause-parameters) | Bound [Parameter](#rust-parameter) list. |
+
+###### new(condition) {#rust-whereclause-new-condition}
+
+Builds a where clause from an [Expression](#rust-expression).
+
+**Definition**
+
+```rust
+pub fn new(condition: impl Into<Expression>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `condition` | [Expression](#rust-expression) or [Operator](#rust-operator) |
+
+**Returns**
+
+[WhereClause](#rust-whereclause)
+
+###### get_text() {#rust-whereclause-get_text}
+
+Predicate text.
+
+**Definition**
+
+```rust
+fn get_text(&self) -> String
+```
+
+**Returns**
+
+`String`
+
+###### parameters() {#rust-whereclause-parameters}
+
+Bound [Parameter](#rust-parameter) list.
+
+**Definition**
+
+```rust
+fn parameters(&self) -> Vec<Parameter>
+```
+
+**Returns**
+
+`Vec<`[Parameter](#rust-parameter)`>`
+
+### Remarks
+
+Construct the predicate with [Operator](#operator) records, then wrap it: `new WhereClause(new Operator.Equals("id", 9))`. [QueryStatement](#querystatement) / [UpdateStatement](#updatestatement) / [DeleteStatement](#deletestatement) embed `WhereClause.GetText()` in the command SQL. Keep the [WhereClause](#whereclause) when the caller needs bound parameters. [StatementEvaluator](#statement-evaluator) interprets the same tree against a parameter map.
+
+### Examples
+
+#### Compare, groups, not, and in
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L53-L55)
+
+```csharp
+new Operator.Equals("id", 1),
+new Operator.GreaterThan("age", 18)));
+```
+
+**After: and**
+
+```
+id = $id AND age > $age
+```
+
+**After: in**
+
+```
+id IN ($id_0, $id_1)
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L654-L658)
+
+```rust
+fn statements_and_builders() {
+    let where_clause = WhereClause::new(Operator::and(
+        Operator::equals("id", 1_i64),
+        Operator::greater_than("age", 18_i64),
+    ));
+```
+
+**After: and**
+
+```
+id = $id AND age > $age
+```
+
+**After: in**
+
+```
+id IN ($id_0, $id_1)
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L31-L33)
+
+```typescript
+const where = new WhereClause(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);
+```
+
+**After: and**
+
+```
+id = $id AND age > $age
+```
+
+**After: in**
+
+```
+id IN ($id_0, $id_1)
 ```
 
 ## StatementEvaluator
 
-Interprets an [IExpression](#expressions) against a name→value map. [WhereStatement.GetText](#where-statement) materializes SQL; this type evaluates.
+Interprets an [IExpression](#expressions) against a name→value map. [WhereClause.GetText](#where-clause) materializes SQL; this type evaluates.
 
 ### Classes
 
@@ -6096,7 +5217,7 @@ evaluate(expression: IExpression, parameters?: Record<string, Scalar>): Scalar
 
 **Returns**
 
-[Scalar](#typescript-scalar)
+[Scalar](./where-statement.md#typescript-scalar)
 
 ##### C#
 
@@ -7206,7 +6327,6 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L62-L72)
 
 ```csharp
-var (repo, command) = Create();
 repo.AddMiddleware(new PassMiddleware());
 command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
 var rows = new List<UserRow>();
@@ -7224,14 +6344,13 @@ Assert.Single(rows);
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
 
 ```typescript
-it("builds select and maps rows", async () => {
-  const { repo, command } = create();
-  repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
-  command.reader = new MockReader([
-    { id: 1, name: "a" },
-  ]);
-  const rows: Cells[] = [];
-  for await (const row of repo.read()) rows.push(row);
+const { repo, command } = create();
+repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
+command.reader = new MockReader([
+  { id: 1, name: "a" },
+]);
+const rows: Cells[] = [];
+for await (const row of repo.read()) rows.push(row);
 ```
 
 ## CRUD repository
@@ -8084,7 +7203,6 @@ Update requires at least one non-id field. Missing id values throw.
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L102-L111)
 
 ```csharp
-var (repo, command) = Create(assignIdentityOnCreate: false);
 var obj = new UserRow { id = 1, name = "a" };
 await repo.Create(obj);
 ```
@@ -8094,7 +7212,7 @@ await repo.Create(obj);
 ```rust
     "SELECT * FROM users"
 );
-assert!(StatementBuilder::create_query("users", &[], None, &[])
+assert!(QueryStatement::new("users", &[], None, &[])
     .where_clause()
     .is_none());
 ```
@@ -8102,10 +7220,9 @@ assert!(StatementBuilder::create_query("users", &[], None, &[])
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L100-L111)
 
 ```typescript
-it("adds updates and deletes through builders", async () => {
-  const { repo, command } = create({ assignIdentityOnCreate: false });
-  const obj = { id: 1, name: "a" };
-  await repo.create(obj);
+const { repo, command } = create({ assignIdentityOnCreate: false });
+const obj = { id: 1, name: "a" };
+await repo.create(obj);
 ```
 
 ## Enriched repository
@@ -11668,7 +10785,7 @@ var statements = new RepositoryStatements(
     "users",
     ["id", "name"],
     new TransformMapper<IQuery, IQuery>(
-        query => new Query($"{query.GetText()} LIMIT 1", query.Where),
+        query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
         query => query),
     new TransformMapper<IInsertStatement, IInsertStatement>(
         insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
@@ -11677,7 +10794,7 @@ var statements = new RepositoryStatements(
         update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
         update => update),
     new TransformMapper<IDeleteStatement, IDeleteStatement>(
-        delete => new DeleteStatement($"{delete.GetText()} RETURNING id", delete.Where),
+        delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),
         delete => delete));
 ```
 
@@ -11693,14 +10810,12 @@ var statements = new RepositoryStatements(
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59)
 
 ```typescript
-});
-
 it("rewrites each finished statement", () => {
   const mapper = new StatementMapper({
     entity: names,
     columns: names,
     query: new TransformMapper(
-      (query) => new Query(`${query.getText()} LIMIT 1`, query.where),
+      (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
       (query) => query,
     ),
     insert: new TransformMapper(
@@ -11714,7 +10829,7 @@ it("rewrites each finished statement", () => {
     ),
     delete: new TransformMapper(
       (remove) =>
-        new DeleteStatement(`${remove.getText()} RETURNING id`, remove.where),
+        DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
       (remove) => remove,
     ),
   });

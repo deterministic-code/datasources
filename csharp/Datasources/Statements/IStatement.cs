@@ -1,7 +1,6 @@
 namespace Datasources;
 
-public interface IStatement : IExpression
+public interface IStatement : IText
 {
-    string GetText();
     IReadOnlyList<Parameter> Parameters => [];
 }

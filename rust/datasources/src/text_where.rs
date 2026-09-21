@@ -1,4 +1,4 @@
-use crate::statement::Statement;
+use crate::statements::text::Text;
 use crate::where_trait::Where;
 
 pub struct TextWhere {
@@ -11,7 +11,7 @@ impl TextWhere {
     }
 }
 
-impl Statement for TextWhere {
+impl Text for TextWhere {
     fn get_text(&self) -> String {
         self.text.clone()
     }

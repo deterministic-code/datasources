@@ -1,7 +1,7 @@
-import { Join, StatementBuilder, type IQuery } from "../../index.ts";
+import { Join, QueryStatement, type IQuery } from "../../index.ts";
 
 export const contactsJoinQuery = (): IQuery =>
-  StatementBuilder.createQuery(
+  new QueryStatement(
     "contacts_base",
     [
       "contacts_base.id AS id",

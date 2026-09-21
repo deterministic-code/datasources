@@ -1,5 +1,3 @@
-using Datasources.Builders;
-
 namespace Datasources.Sqlite;
 
 public sealed record SqliteColumn(string Name, string Type, bool Id = false);
@@ -25,7 +23,7 @@ public static class SqliteStatementBuilder
     };
 
     public static ICreateTableStatement CreateTable(string table, IReadOnlyList<SqliteColumn> columns) =>
-        StatementBuilder.CreateTable(Quote(table), [.. columns.Select(column =>
+        new CreateTableStatement(Quote(table), [.. columns.Select(column =>
             new Column(Quote(column.Name), column.Id ? $"{ColumnType(column.Type)} PRIMARY KEY" : ColumnType(column.Type)))]);
 
     public static IQuery CreateQuery(
@@ -33,7 +31,7 @@ public static class SqliteStatementBuilder
         IReadOnlyList<string> fields,
         IWhere? where = null,
         IReadOnlyList<Join>? joins = null) =>
-        StatementBuilder.CreateQuery(
+        new QueryStatement(
             Quote(table),
             [.. fields.Select(QuoteQualified)],
             where,
@@ -46,15 +44,15 @@ public static class SqliteStatementBuilder
                 })]);
 
     public static IInsertStatement CreateInsert(string table, IReadOnlyList<Parameter> fields) =>
-        StatementBuilder.CreateInsert(Quote(table), fields);
+        new InsertStatement(Quote(table), fields);
 
     public static IStoredProcedureStatement CreateStoredProcedure(
         string name, IReadOnlyList<Parameter>? parameters = null) =>
-        StatementBuilder.CreateStoredProcedure(Quote(name), parameters);
+        new StoredProcedureStatement(Quote(name), parameters ?? []);
 
     public static IUpdateStatement CreateUpdate(string table, IReadOnlyList<Parameter> fields, IWhere? where = null) =>
-        StatementBuilder.CreateUpdate(Quote(table), fields, where);
+        new UpdateStatement(Quote(table), fields, where);
 
     public static IDeleteStatement CreateDelete(string table, IWhere? where = null) =>
-        StatementBuilder.CreateDelete(Quote(table), where);
+        new DeleteStatement(Quote(table), where);
 }

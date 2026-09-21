@@ -59,13 +59,12 @@ mod value;
 mod where_trait;
 
 pub use array_reader::ArrayReader;
-pub use builders::{Column, Join, JoinKind, StatementBuilder};
+pub use builders::{Column, Join, JoinKind};
 pub use statements::statement;
 pub use statements::{
     ArrayExpression, CreateTableStatement, DeleteStatement, Expression, Identifier,
     InsertStatement, Literal, Operator, Statement, StatementEvaluator, StoredProcedureStatement,
-    TextCreateTableStatement, TextDeleteStatement, TextInsertStatement, TextStoredProcedureStatement,
-    TextUpdateStatement, UpdateStatement, WhereStatement,
+    Text, UpdateStatement, WhereClause,
 };
 pub use built_repository::BuiltRepository;
 pub use bulk_crud_repository::BulkCRUDRepository;
@@ -130,7 +129,7 @@ pub use table_repository::Repository;
 pub use table_repository_builder::RepositoryBuilder;
 pub use table_repository_builder_options::RepositoryBuilderOptions;
 pub use table_repository_statements::RepositoryStatements;
-pub use text_query::TextQuery;
+pub use text_query::QueryStatement;
 pub use text_where::TextWhere;
 pub use transaction::Transaction;
 pub use value::Value;

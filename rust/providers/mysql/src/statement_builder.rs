@@ -1,7 +1,7 @@
 use datasources::{
-    Column, Join, Parameter, Result, StatementBuilder, TextCreateTableStatement,
-    TextDeleteStatement, TextInsertStatement, TextQuery, TextStoredProcedureStatement,
-    TextUpdateStatement, Where,
+    Column, Join, Parameter, Result, CreateTableStatement,
+    DeleteStatement, InsertStatement, QueryStatement, StoredProcedureStatement,
+    UpdateStatement, Where,
 };
 
 pub struct MysqlColumn {
@@ -49,7 +49,7 @@ impl MysqlStatementBuilder {
         .into())
     }
 
-    pub fn create_table(table: &str, columns: &[MysqlColumn]) -> Result<TextCreateTableStatement> {
+    pub fn create_table(table: &str, columns: &[MysqlColumn]) -> Result<CreateTableStatement> {
         let mapped = columns
             .iter()
             .map(|column| {
@@ -64,7 +64,7 @@ impl MysqlStatementBuilder {
                 ))
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(StatementBuilder::create_table(Self::quote(table), &mapped))
+        Ok(CreateTableStatement::new(Self::quote(table), &mapped))
     }
 
     pub fn create_query(
@@ -72,7 +72,7 @@ impl MysqlStatementBuilder {
         fields: &[&str],
         where_clause: Option<&dyn Where>,
         joins: &[Join],
-    ) -> TextQuery {
+    ) -> QueryStatement {
         let quoted: Vec<String> = fields
             .iter()
             .map(|field| Self::quote_qualified(field))
@@ -87,37 +87,37 @@ impl MysqlStatementBuilder {
                 right: Self::quote_qualified(&join.right),
             })
             .collect();
-        StatementBuilder::create_query(Self::quote(table), &refs, where_clause, &quoted_joins)
+        QueryStatement::new(Self::quote(table), &refs, where_clause, &quoted_joins)
     }
 
-    pub fn create_insert(table: &str, fields: &[Parameter]) -> TextInsertStatement {
-        StatementBuilder::create_insert(Self::quote(table), fields)
+    pub fn create_insert(table: &str, fields: &[Parameter]) -> InsertStatement {
+        InsertStatement::new(Self::quote(table), fields)
     }
 
     pub fn create_stored_procedure(
         name: &str,
         parameters: &[Parameter],
-    ) -> TextStoredProcedureStatement {
-        StatementBuilder::create_stored_procedure(Self::quote(name), parameters)
+    ) -> StoredProcedureStatement {
+        StoredProcedureStatement::new(Self::quote(name), parameters)
     }
 
     pub fn create_update(
         table: &str,
         fields: &[Parameter],
         where_clause: Option<&dyn Where>,
-    ) -> TextUpdateStatement {
-        StatementBuilder::create_update(Self::quote(table), fields, where_clause)
+    ) -> UpdateStatement {
+        UpdateStatement::new(Self::quote(table), fields, where_clause)
     }
 
-    pub fn create_delete(table: &str, where_clause: Option<&dyn Where>) -> TextDeleteStatement {
-        StatementBuilder::create_delete(Self::quote(table), where_clause)
+    pub fn create_delete(table: &str, where_clause: Option<&dyn Where>) -> DeleteStatement {
+        DeleteStatement::new(Self::quote(table), where_clause)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{Join, Operator, Statement, WhereStatement};
+    use datasources::{Join, Operator, Text, WhereClause};
 
     fn user_columns() -> Vec<MysqlColumn> {
         vec![
@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn quotes_tables_in_dml() {
-        let where_clause = WhereStatement::new(Operator::equals("id", 1_i64));
+        let where_clause = WhereClause::new(Operator::equals("id", 1_i64));
         let fields = [
             Parameter::new("id", 1_i64),
             Parameter::new("username", "alice"),
@@ -188,7 +188,7 @@ mod tests {
             MysqlStatementBuilder::create_query(
                 "users",
                 &["users.id", "orders.total"],
-                Some(&WhereStatement::new(Operator::equals("users.id", 1_i64))),
+                Some(&WhereClause::new(Operator::equals("users.id", 1_i64))),
                 &[
                     Join::inner("orders", "users.id", "orders.user_id"),
                     Join::left("payments", "orders.id", "payments.order_id"),

@@ -1,7 +1,7 @@
-use crate::builders::StatementBuilder;
 use crate::mappers::StatementMapper;
 use crate::parameter::Parameter;
-use crate::statement::Statement;
+use crate::statements::{DeleteStatement, InsertStatement, Statement, Text, UpdateStatement};
+use crate::QueryStatement;
 use crate::where_trait::Where;
 use std::sync::Arc;
 
@@ -30,7 +30,7 @@ impl RepositoryStatements {
 
     pub fn query(&self, where_clause: Option<&dyn Where>) -> (String, Vec<Parameter>) {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
-        let built = StatementBuilder::create_query(&self.table, &refs, where_clause, &[]);
+        let built = QueryStatement::new(&self.table, &refs, where_clause, &[]);
         let text = StatementMapper::map_sql(&self.mapper.query, built.get_text());
         (
             text,
@@ -43,21 +43,21 @@ impl RepositoryStatements {
     pub fn insert(&self, fields: &[Parameter]) -> String {
         StatementMapper::map_sql(
             &self.mapper.insert,
-            StatementBuilder::create_insert(&self.table, fields).get_text(),
+            InsertStatement::new(&self.table, fields).get_text(),
         )
     }
 
     pub fn update(&self, fields: &[Parameter], where_clause: &dyn Where) -> String {
         StatementMapper::map_sql(
             &self.mapper.update,
-            StatementBuilder::create_update(&self.table, fields, Some(where_clause)).get_text(),
+            UpdateStatement::new(&self.table, fields, Some(where_clause)).get_text(),
         )
     }
 
     pub fn delete(&self, where_clause: &dyn Where) -> String {
         StatementMapper::map_sql(
             &self.mapper.delete,
-            StatementBuilder::create_delete(&self.table, Some(where_clause)).get_text(),
+            DeleteStatement::new(&self.table, Some(where_clause)).get_text(),
         )
     }
 }

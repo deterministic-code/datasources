@@ -1,9 +1,12 @@
-import type { IDeleteStatement } from "./builders/IDeleteStatement.ts";
-import type { IInsertStatement } from "./builders/IInsertStatement.ts";
+import type { IDeleteStatement } from "./statements/IDeleteStatement.ts";
+import type { IInsertStatement } from "./statements/IInsertStatement.ts";
 import type { IQuery } from "./statements/IQuery.ts";
-import type { IUpdateStatement } from "./builders/IUpdateStatement.ts";
+import type { IUpdateStatement } from "./statements/IUpdateStatement.ts";
 import type { IWhere } from "./statements/IWhere.ts";
-import { StatementBuilder } from "./builders/index.ts";
+import { DeleteStatement } from "./statements/DeleteStatement.ts";
+import { InsertStatement } from "./statements/InsertStatement.ts";
+import { QueryStatement } from "./statements/QueryStatement.ts";
+import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import type { Field } from "./builders/Field.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import type { StatementMapper } from "./mappers/StatementMapper.ts";
@@ -23,9 +26,9 @@ export const statementsOf = <T>(
   columns: string[],
   mapper?: StatementMapper<T>,
 ): RepositoryStatements => ({
-  query: (where) => mapped(StatementBuilder.createQuery(table, columns, where), mapper?.query),
-  insert: (fields) => mapped(StatementBuilder.createInsert(table, fields), mapper?.insert),
+  query: (where) => mapped(new QueryStatement(table, columns, where), mapper?.query),
+  insert: (fields) => mapped(new InsertStatement(table, fields), mapper?.insert),
   update: (fields, where) =>
-    mapped(StatementBuilder.createUpdate(table, fields, where), mapper?.update),
-  delete: (where) => mapped(StatementBuilder.createDelete(table, where), mapper?.delete),
+    mapped(new UpdateStatement(table, fields, where), mapper?.update),
+  delete: (where) => mapped(new DeleteStatement(table, where), mapper?.delete),
 });

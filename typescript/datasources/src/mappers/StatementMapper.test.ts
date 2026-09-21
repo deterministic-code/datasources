@@ -2,9 +2,8 @@ import { describe, expect, it } from "vitest";
 import { DeleteStatement } from "../statements/DeleteStatement.ts";
 import { InsertStatement } from "../statements/InsertStatement.ts";
 import { StoredProcedureStatement } from "../statements/StoredProcedureStatement.ts";
-import { StatementBuilder } from "../builders/StatementBuilder.ts";
+import { QueryStatement } from "../statements/QueryStatement.ts";
 import { UpdateStatement } from "../statements/UpdateStatement.ts";
-import { Query } from "../statements/Query.ts";
 import { statementsOf } from "../RepositoryStatements.ts";
 import { TransformMapper } from "./TransformMapper.ts";
 import { StatementMapper } from "./StatementMapper.ts";
@@ -31,7 +30,7 @@ describe("StatementMapper", () => {
       entity: names,
       columns: names,
       query: new TransformMapper(
-        (query) => new Query(`${query.getText()} LIMIT 1`, query.where),
+        (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
         (query) => query,
       ),
       insert: new TransformMapper(
@@ -45,7 +44,7 @@ describe("StatementMapper", () => {
       ),
       delete: new TransformMapper(
         (remove) =>
-          new DeleteStatement(`${remove.getText()} RETURNING id`, remove.where),
+          DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
         (remove) => remove,
       ),
     });
@@ -67,7 +66,7 @@ describe("StatementMapper", () => {
         (proc) => proc,
       ),
     });
-    const built = StatementBuilder.createStoredProcedure("save", [{ name: "id", value: 1 }]);
+    const built = new StoredProcedureStatement("save", [{ name: "id", value: 1 }]);
     const statement = mapper.storedProcedure?.map(built) ?? built;
     expect(statement.getText()).toBe("CALL save($id) /* mapped */");
   });

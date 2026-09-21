@@ -1,6 +1,11 @@
 import {
+  CreateTableStatement,
   DatasourceError,
-  StatementBuilder,
+  DeleteStatement,
+  InsertStatement,
+  QueryStatement,
+  StoredProcedureStatement,
+  UpdateStatement,
   type Field,
   type IWhere,
   type Join,
@@ -32,7 +37,7 @@ export const SqliteStatementBuilder = {
     })(),
 
   createTable: (table: string, columns: SqliteColumn[]) =>
-    StatementBuilder.createTable(
+    new CreateTableStatement(
       SqliteStatementBuilder.quote(table),
       columns.map((column) => ({
         name: SqliteStatementBuilder.quote(column.name),
@@ -48,7 +53,7 @@ export const SqliteStatementBuilder = {
     where?: IWhere,
     joins: Join[] = [],
   ) =>
-    StatementBuilder.createQuery(
+    new QueryStatement(
       SqliteStatementBuilder.quote(table),
       fields.map(SqliteStatementBuilder.quoteQualified),
       where,
@@ -61,17 +66,14 @@ export const SqliteStatementBuilder = {
     ),
 
   createInsert: (table: string, fields: Field[]) =>
-    StatementBuilder.createInsert(SqliteStatementBuilder.quote(table), fields),
+    new InsertStatement(SqliteStatementBuilder.quote(table), fields),
 
   createStoredProcedure: (name: string, parameters: Field[] = []) =>
-    StatementBuilder.createStoredProcedure(
-      SqliteStatementBuilder.quote(name),
-      parameters,
-    ),
+    new StoredProcedureStatement(SqliteStatementBuilder.quote(name), parameters),
 
   createUpdate: (table: string, fields: Field[], where?: IWhere) =>
-    StatementBuilder.createUpdate(SqliteStatementBuilder.quote(table), fields, where),
+    new UpdateStatement(SqliteStatementBuilder.quote(table), fields, where),
 
   createDelete: (table: string, where?: IWhere) =>
-    StatementBuilder.createDelete(SqliteStatementBuilder.quote(table), where),
+    new DeleteStatement(SqliteStatementBuilder.quote(table), where),
 };

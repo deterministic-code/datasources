@@ -2,7 +2,7 @@ use super::command::MysqlCommand;
 use super::connection::MysqlConnection;
 use super::mysql_async_driver::MysqlAsyncDriver;
 use super::statement_builder::{MysqlColumn, MysqlStatementBuilder};
-use datasources::{Connection, Statement};
+use datasources::{Connection, Text};
 use datasources_sql_specs::RepositoryDialect;
 use mysql_async::prelude::Queryable;
 use mysql_async::Conn;

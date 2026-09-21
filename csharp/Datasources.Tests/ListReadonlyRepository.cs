@@ -16,7 +16,7 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T>
     }
 
     static bool Matches(T item, IStatement? query) =>
-        query is IWhere where && where.GetText() == "1 = 0"
+        query is IQuery { Where: { } where } && where.GetText() == "1 = 0"
             ? false
             : ParametersOf(query)
                 .GroupBy(parameter => FieldOf(parameter.Name))

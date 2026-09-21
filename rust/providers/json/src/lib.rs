@@ -20,7 +20,7 @@ mod tests {
     use super::*;
     use datasources::{
         create, register, reset, CRUDRepository, Command, Connection, Parameter,
-        ReadonlyRepository, Row, TextQuery, TextWhere, Value,
+        ReadonlyRepository, Row, QueryStatement, TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
     use std::collections::HashMap;
@@ -46,12 +46,12 @@ mod tests {
         let repo = JsonRepository::new(conn.clone());
         assert!(repo.read_single(None).await.unwrap().is_some());
         assert!(repo
-            .read_single(Some(&TextQuery::new("{\"id\":9}")))
+            .read_single(Some(&QueryStatement::text("{\"id\":9}")))
             .await
             .unwrap()
             .is_none());
         assert!(!repo
-            .read(Some(&TextQuery::new("{\"id\":1}")))
+            .read(Some(&QueryStatement::text("{\"id\":1}")))
             .await
             .unwrap()
             .is_empty());

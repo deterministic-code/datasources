@@ -1,5 +1,4 @@
 using Datasources;
-using Datasources.Builders;
 using Datasources.Sqlite;
 
 namespace Datasources.Sqlite.Tests;
@@ -37,7 +36,7 @@ public class SqliteStatementBuilderTests
     [Fact]
     public void QuotesTablesInDml()
     {
-        var where = new WhereStatement(new Operator.Equals("id", 1));
+        var where = new WhereClause(new Operator.Equals("id", 1));
         Parameter[] fields = [new("id", 1), new("username", "alice")];
         Assert.Equal(
             "SELECT \"id\", \"username\" FROM \"user\" WHERE id = $id",
@@ -59,7 +58,7 @@ public class SqliteStatementBuilderTests
             SqliteStatementBuilder.CreateQuery(
                 "users",
                 ["users.id", "orders.total"],
-                new WhereStatement(new Operator.Equals("users.id", 1)),
+                new WhereClause(new Operator.Equals("users.id", 1)),
                 [
                     Join.Inner("orders", "users.id", "orders.user_id"),
                     Join.Left("payments", "orders.id", "payments.order_id"),

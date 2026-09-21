@@ -1,7 +1,7 @@
+use super::text::Text;
 use crate::parameter::Parameter;
 
-pub trait Statement: Send + Sync {
-    fn get_text(&self) -> String;
+pub trait Statement: Text {
     fn parameters(&self) -> Vec<Parameter> {
         Vec::new()
     }

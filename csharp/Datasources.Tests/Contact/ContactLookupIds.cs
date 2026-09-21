@@ -1,5 +1,4 @@
 using Datasources;
-using Datasources.Builders;
 
 namespace Datasources.Tests.Contact;
 
@@ -14,7 +13,7 @@ internal static class ContactLookupIds
                 Connection = connection,
                 Entity = entity,
                 Columns = ["id", "name"]
-            }).ReadSingle(new WhereStatement(new Operator.Equals("name", name)));
+            }).ReadSingle(new WhereClause(new Operator.Equals("name", name)));
             return row?.id ?? throw new InvalidOperationException($"{entity} '{name}' missing");
         }
         return new ContactLookups(

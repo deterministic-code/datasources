@@ -4,7 +4,7 @@ import {
   Datasource,
   DatasourceFactory,
   DatasourceError,
-  Query,
+  QueryStatement,
   Where,
 } from "@datasources/core";
 import {
@@ -234,8 +234,8 @@ describe("MemoryCommand and MemoryRepository", () => {
   it("performs repository CRUD", async () => {
     const { repo } = await openRepo([{ id: 1, name: "a" }]);
     expect(await repo.readSingle()).toEqual({ id: 1, name: "a" });
-    expect(await repo.readSingle(new Query('{"id":9}'))).toBeUndefined();
-    expect(await collectAsync(repo.read(new Query('{"id":1}')))).toEqual([
+    expect(await repo.readSingle(new QueryStatement('{"id":9}'))).toBeUndefined();
+    expect(await collectAsync(repo.read(new QueryStatement('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
     expect(await repo.readSingle(new Where('{"id":1}'))).toEqual({ id: 1, name: "a" });
