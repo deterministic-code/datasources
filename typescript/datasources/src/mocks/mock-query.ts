@@ -1,5 +1,5 @@
-import type { IQuery } from "../IQuery.ts";
-import type { IWhere } from "../IWhere.ts";
+import type { IQuery } from "../statements/IQuery.ts";
+import type { IWhere } from "../statements/IWhere.ts";
 
 export class MockQuery implements IQuery {
   getTextCalls = 0;

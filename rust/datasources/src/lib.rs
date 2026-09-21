@@ -32,6 +32,7 @@ pub mod mocks;
 mod parameter;
 mod parameters_to_map;
 mod provider_from_url;
+pub mod statements;
 mod query;
 mod reader;
 mod readonly_enrichment_strategy;
@@ -58,13 +59,13 @@ mod value;
 mod where_trait;
 
 pub use array_reader::ArrayReader;
-pub use builders::statement;
-pub use builders::statements;
-pub use builders::{
-    Column, CreateTableStatement, DeleteStatement, InsertStatement, Join, JoinKind, Statement,
-    StatementBuilder, StoredProcedureStatement, TextCreateTableStatement, TextDeleteStatement,
-    TextInsertStatement, TextStoredProcedureStatement, TextUpdateStatement, UpdateStatement,
-    WhereBuilder,
+pub use builders::{Column, Join, JoinKind, StatementBuilder};
+pub use statements::statement;
+pub use statements::{
+    ArrayExpression, CreateTableStatement, DeleteStatement, Expression, Identifier,
+    InsertStatement, Literal, Operator, Statement, StatementEvaluator, StoredProcedureStatement,
+    TextCreateTableStatement, TextDeleteStatement, TextInsertStatement, TextStoredProcedureStatement,
+    TextUpdateStatement, UpdateStatement, WhereStatement,
 };
 pub use built_repository::BuiltRepository;
 pub use bulk_crud_repository::BulkCRUDRepository;

@@ -1,6 +1,6 @@
 use super::column::Column;
 use super::join::{Join, JoinKind};
-use super::statements::{
+use crate::statements::{
     TextCreateTableStatement, TextDeleteStatement, TextInsertStatement,
     TextStoredProcedureStatement, TextUpdateStatement,
 };

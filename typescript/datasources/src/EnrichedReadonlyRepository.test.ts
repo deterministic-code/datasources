@@ -7,9 +7,9 @@ import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedRe
 import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
-import type { IQuery } from "./IQuery.ts";
+import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
-import type { IWhere } from "./IWhere.ts";
+import type { IWhere } from "./statements/IWhere.ts";
 
 class Parent {
   id = 0;

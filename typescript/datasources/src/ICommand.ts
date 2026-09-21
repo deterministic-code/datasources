@@ -1,4 +1,4 @@
-import type { IStatement } from "./builders/IStatement.ts";
+import type { IStatement } from "./statements/IStatement.ts";
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { Cells } from "./converters/Cell.ts";

@@ -9,7 +9,7 @@ Command text. `IQuery` / `IUpdateStatement` / `IDeleteStatement` also keep the `
 #### IStatement
 
 ```typescript
-interface IStatement
+interface IStatement extends IExpression
 ```
 
 **Methods**
@@ -343,7 +343,7 @@ getText(): string
 #### IStatement
 
 ```csharp
-public interface IStatement
+public interface IStatement : IExpression
 ```
 
 **Methods**
@@ -1042,14 +1042,16 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-[Command](./command.md) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereBuilder](./where-builder.md).
+[Command](./command.md) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereStatement](./where-statement.md).
 
-Build SQL with [StatementBuilder](./statement-builder.md). Compose predicates with [WhereBuilder](./where-builder.md).
+Build SQL with [StatementBuilder](./statement-builder.md). Compose predicates with [WhereStatement](./where-statement.md).
 
 ## See also
 
 - [StatementBuilder](./statement-builder.md)
-- [WhereBuilder](./where-builder.md)
+- [WhereStatement](./where-statement.md)
+- [Expressions](./expressions.md)
+- [StatementEvaluator](./statement-evaluator.md)
 
 ## Examples
 

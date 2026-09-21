@@ -2,7 +2,7 @@ import type { IDeleteStatement } from "../builders/IDeleteStatement.ts";
 import type { IInsertStatement } from "../builders/IInsertStatement.ts";
 import type { IStoredProcedureStatement } from "../builders/IStoredProcedureStatement.ts";
 import type { IUpdateStatement } from "../builders/IUpdateStatement.ts";
-import type { IQuery } from "../IQuery.ts";
+import type { IQuery } from "../statements/IQuery.ts";
 import { TransformMapper } from "./TransformMapper.ts";
 import type { IMapper } from "./IMapper.ts";
 

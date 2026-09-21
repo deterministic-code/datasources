@@ -139,7 +139,7 @@ name: string
 
 ##### value
 
-Field [Scalar](./where-builder.md#scalar).
+Field [Scalar](./where-statement.md#scalar).
 
 ```typescript
 value: Scalar

@@ -1,7 +1,7 @@
 import type { Constructable } from "./converters/Constructable.ts";
-import type { IQuery } from "./IQuery.ts";
+import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
-import type { IWhere } from "./IWhere.ts";
+import type { IWhere } from "./statements/IWhere.ts";
 
 export const untyped = <T>(): Constructable<T> => Object as never as Constructable<T>;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DatasourceError, Join, WhereBuilder } from "@datasources/core";
+import { DatasourceError, Join, Operator, WhereStatement } from "@datasources/core";
 import { SqliteStatementBuilder } from "./sqliteStatementBuilder.ts";
 
 const userColumns = [
@@ -29,7 +29,7 @@ describe("SqliteStatementBuilder", () => {
   });
 
   it("quotes tables in DML and keeps parameter names", () => {
-    const where = WhereBuilder.equals("id", 1);
+    const where = new WhereStatement(new Operator.Equals("id", 1));
     const fields = [
       { name: "id", value: 1 },
       { name: "username", value: "alice" },
@@ -53,7 +53,7 @@ describe("SqliteStatementBuilder", () => {
       SqliteStatementBuilder.createQuery(
         "users",
         ["users.id", "orders.total"],
-        WhereBuilder.equals("users.id", 1),
+        new WhereStatement(new Operator.Equals("users.id", 1)),
         [
           Join.inner("orders", "users.id", "orders.user_id"),
           Join.left("payments", "orders.id", "payments.order_id"),

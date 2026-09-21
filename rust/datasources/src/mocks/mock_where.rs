@@ -27,4 +27,8 @@ impl Statement for MockWhere {
     }
 }
 
-impl Where for MockWhere {}
+impl Where for MockWhere {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}

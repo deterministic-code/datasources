@@ -6,7 +6,8 @@ import {
   StatementMapper,
   TransformMapper,
   Where,
-  WhereBuilder,
+  WhereStatement,
+  Operator,
   RepositoryBuilder,
   createRepositoryBuilderOptions,
   parts,
@@ -17,7 +18,7 @@ import {
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
-import { Query } from "./Query.ts";
+import { Query } from "./statements/Query.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
@@ -76,7 +77,7 @@ describe("Repository", () => {
   it("uses caller query and returns empty", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([]);
-    const where = WhereBuilder.equals("id", 9);
+    const where = new WhereStatement(new Operator.Equals("id", 9));
     expect(
       await repo.readSingle(StatementBuilder.createQuery("users", ["id"], where)),
     ).toBeUndefined();
@@ -89,7 +90,7 @@ describe("Repository", () => {
   it("attaches where to the default select", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([]);
-    expect(await repo.readSingle(WhereBuilder.equals("id", 9))).toBeUndefined();
+    expect(await repo.readSingle(new WhereStatement(new Operator.Equals("id", 9)))).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id, name FROM users WHERE id = $id",
     );
@@ -155,7 +156,7 @@ describe("Repository", () => {
     });
     await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
-    await typed.delete(Object.assign(new Item(), { name: "z" }), WhereBuilder.equals("name", "z"));
+    await typed.delete(Object.assign(new Item(), { name: "z" }), new WhereStatement(new Operator.Equals("name", "z")));
     expect(command.executeCalls[1]?.text).toBe("DELETE FROM users WHERE name = $name");
   });
 

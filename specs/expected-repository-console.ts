@@ -1,4 +1,12 @@
-import { StatementBuilder, WhereBuilder, type Field, type Scalar } from "@datasources/core";
+import {
+  Literal,
+  Operator,
+  StatementBuilder,
+  WhereStatement,
+  type Field,
+  type IExpression,
+  type Scalar,
+} from "@datasources/core";
 import { expectedConsoleSignatures } from "./expected-console-output.ts";
 
 export type CanonicalType =
@@ -77,13 +85,18 @@ const fieldsOf = (row: RepositoryRow, include: (col: string) => boolean): Field[
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name, value: value as Scalar }));
 
-const whereOf = (row: RepositoryRow) =>
-  WhereBuilder.and(
-    ...Object.entries(row).map(([name, value]) => WhereBuilder.equals(name, value)),
+const andAll = (parts: IExpression[]) =>
+  new WhereStatement(
+    parts.length === 0
+      ? new Operator.Equals(new Literal(1), new Literal(1))
+      : parts.reduce((left, right) => new Operator.And(left, right)),
   );
 
+const whereOf = (row: RepositoryRow) =>
+  andAll(Object.entries(row).map(([name, value]) => new Operator.Equals(name, value)));
+
 const idWhere = (spec: RepositoryTypeSpec, id: Scalar) =>
-  WhereBuilder.and(...spec.ids.map((col) => WhereBuilder.equals(col, id)));
+  andAll(spec.ids.map((col) => new Operator.Equals(col, id)));
 
 export const physicalTableOf = (type: RepositoryTypeSpec): string =>
   type.statementMapper?.entity ?? type.table;

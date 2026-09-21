@@ -154,7 +154,7 @@ contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name"
 contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
     nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
 
-var loaded = await contacts.ReadSingle(WhereBuilder.Equals("id", 10));
+var loaded = await contacts.ReadSingle(new WhereStatement(new Operator.Equals("id", 10)));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
 ```
 
@@ -168,7 +168,7 @@ contacts
         node.include(address_types, "address_type_name", "address_type_id", "id", Some("name".into()), false);
     });
 
-let loaded = contacts.read_single_where(&WhereBuilder::equals("id", 10)).await?;
+let loaded = contacts.read_single_where(&WhereStatement::new(Operator::equals("id", 10))).await?;
 contacts.create(contact).await?;
 ```
 
@@ -181,7 +181,7 @@ contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true
   node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
 );
 
-const loaded = await contacts.readSingle(WhereBuilder.equals("id", 10));
+const loaded = await contacts.readSingle(new WhereStatement(new Operator.Equals("id", 10)));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 
@@ -2916,7 +2916,7 @@ Command text. `IQuery` / `IUpdateStatement` / `IDeleteStatement` also keep the `
 ##### IStatement {#typescript-istatement}
 
 ```typescript
-interface IStatement
+interface IStatement extends IExpression
 ```
 
 **Methods**
@@ -3361,7 +3361,7 @@ getText(): string
 ##### IStatement {#csharp-istatement}
 
 ```csharp
-public interface IStatement
+public interface IStatement : IExpression
 ```
 
 **Methods**
@@ -4366,14 +4366,16 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-[Command](#command) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereBuilder](#where-builder).
+[Command](#command) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only. Bound values live on [WhereStatement](#where-statement).
 
-Build SQL with [StatementBuilder](#statement-builder). Compose predicates with [WhereBuilder](#where-builder).
+Build SQL with [StatementBuilder](#statement-builder). Compose predicates with [WhereStatement](#where-statement).
 
 ### See also
 
 - [StatementBuilder](#statement-builder)
-- [WhereBuilder](#where-builder)
+- [WhereStatement](#where-statement)
+- [Expressions](#expressions)
+- [StatementEvaluator](#statement-evaluator)
 
 ### Examples
 
@@ -4390,15 +4392,14 @@ var withWhere = new Query("SELECT 1", byId);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L782-L785)
 
 ```rust
-let query = TextQuery::with_where("SELECT 1", TextWhere::new("id = 1"));
+
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L17-L19)
 
 ```typescript
-const select = new Query("SELECT 1");
-const where = new Where("id = 1");
-const withWhere = new Query("SELECT 1", where);
+  WhereStatement,
+} from "../index.ts";
 ```
 
 ## StatementBuilder
@@ -5244,8 +5245,7 @@ Dialect packages wrap [StatementBuilder](#statementbuilder) for quoting and nati
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L78-L79)
 
 ```csharp
-var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
-var query = StatementBuilder.CreateQuery("users", ["id", "name"], where);
+new Operator.Equals("age", 18))).GetText());
 ```
 
 **After: select**
@@ -5269,8 +5269,7 @@ CALL save($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L696-L702)
 
 ```rust
-let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
-let query = StatementBuilder::create_query("users", &["id", "name"], Some(&where_clause), &[]);
+);
 ```
 
 **After: select**
@@ -5294,8 +5293,8 @@ CALL save($id, $name)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L70-L71)
 
 ```typescript
-const where = WhereBuilder.equals("id", 1);
-const query = StatementBuilder.createQuery("users", ["id", "name"], where);
+]);
+const and = where.condition;
 ```
 
 **After: select**
@@ -5423,250 +5422,57 @@ export const contactsJoinQuery = (): IQuery =>
   );
 ```
 
-## WhereBuilder
+## WhereStatement
 
-[IWhere](#iwhere) built from compare, group, not, and in factories. Placeholders are `$field` and `$field_0` for `In`.
+
+[IWhere](#iwhere) over an [IExpression](#iexpression) tree. Placeholders are `$field` and `$field_0` for `In`.
 
 ### Classes
 
 ##### TypeScript
 
-##### WhereBuilder {#typescript-wherebuilder}
+##### WhereStatement {#typescript-wherestatement}
 
 ```typescript
-class WhereBuilder implements IWhere
+class WhereStatement implements IWhere
 ```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [WhereStatement(condition)](#typescript-wherestatement-wherestatement-condition) | Builds a where statement from an [IExpression](#typescript-iexpression). |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
+| condition | Predicate tree. Typically an [Operator](#typescript-operator). |
 | parameters | Bound [Parameter](#typescript-parameter) list. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [equals(field, value)](#typescript-wherebuilder-equals-field-value) | `field = $field`. |
-| [ne(field, value)](#typescript-wherebuilder-ne-field-value) | `field <> $field`. |
-| [greaterThan(field, value)](#typescript-wherebuilder-greaterthan-field-value) | `field > $field`. |
-| [lt(field, value)](#typescript-wherebuilder-lt-field-value) | `field < $field`. |
-| [gte(field, value)](#typescript-wherebuilder-gte-field-value) | `field >= $field`. |
-| [lte(field, value)](#typescript-wherebuilder-lte-field-value) | `field <= $field`. |
-| [and(...children)](#typescript-wherebuilder-and-children) | Joins children with `AND`. Empty is `1 = 1`. |
-| [or(...children)](#typescript-wherebuilder-or-children) | Joins children with `OR`. Empty is `1 = 0`. |
-| [not(child)](#typescript-wherebuilder-not-child) | `NOT (child)`. |
-| [in(field, values)](#typescript-wherebuilder-in-field-values) | `field IN ($field_0, …)`. Empty is `1 = 0`. |
-| [getText()](#typescript-wherebuilder-gettext) | Predicate text. |
+| [getText()](#typescript-wherestatement-gettext) | Predicate text. |
 
-###### equals(field, value) {#typescript-wherebuilder-equals-field-value}
+###### WhereStatement(condition) {#typescript-wherestatement-wherestatement-condition}
 
-`field = $field`.
+Builds a where statement from an [IExpression](#typescript-iexpression).
 
 **Definition**
 
 ```typescript
-static equals(field: string, value: Scalar): WhereBuilder
+constructor(condition: IExpression)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `field` | column name |
-| `value` | [Scalar](#typescript-scalar) |
+| `condition` | [IExpression](#typescript-iexpression) |
 
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### ne(field, value) {#typescript-wherebuilder-ne-field-value}
-
-`field <> $field`.
-
-**Definition**
-
-```typescript
-static ne(field: string, value: Scalar): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | [Scalar](#typescript-scalar) |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### greaterThan(field, value) {#typescript-wherebuilder-greaterthan-field-value}
-
-`field > $field`.
-
-**Definition**
-
-```typescript
-static greaterThan(field: string, value: Scalar): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | [Scalar](#typescript-scalar) |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### lt(field, value) {#typescript-wherebuilder-lt-field-value}
-
-`field < $field`.
-
-**Definition**
-
-```typescript
-static lt(field: string, value: Scalar): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | [Scalar](#typescript-scalar) |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### gte(field, value) {#typescript-wherebuilder-gte-field-value}
-
-`field >= $field`.
-
-**Definition**
-
-```typescript
-static gte(field: string, value: Scalar): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | [Scalar](#typescript-scalar) |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### lte(field, value) {#typescript-wherebuilder-lte-field-value}
-
-`field <= $field`.
-
-**Definition**
-
-```typescript
-static lte(field: string, value: Scalar): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | [Scalar](#typescript-scalar) |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### and(...children) {#typescript-wherebuilder-and-children}
-
-Joins children with `AND`. Empty is `1 = 1`.
-
-**Definition**
-
-```typescript
-static and(...children: WhereBuilder[]): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `children` | [WhereBuilder](#typescript-wherebuilder) predicates |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### or(...children) {#typescript-wherebuilder-or-children}
-
-Joins children with `OR`. Empty is `1 = 0`.
-
-**Definition**
-
-```typescript
-static or(...children: WhereBuilder[]): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `children` | [WhereBuilder](#typescript-wherebuilder) predicates |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### not(child) {#typescript-wherebuilder-not-child}
-
-`NOT (child)`.
-
-**Definition**
-
-```typescript
-static not(child: WhereBuilder): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `child` | [WhereBuilder](#typescript-wherebuilder) |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### in(field, values) {#typescript-wherebuilder-in-field-values}
-
-`field IN ($field_0, …)`. Empty is `1 = 0`.
-
-**Definition**
-
-```typescript
-static in(field: string, values: Scalar[]): WhereBuilder
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `values` | [Scalar](#typescript-scalar) list |
-
-**Returns**
-
-[WhereBuilder](#typescript-wherebuilder)
-
-###### getText() {#typescript-wherebuilder-gettext}
+###### getText() {#typescript-wherestatement-gettext}
 
 Predicate text.
 
@@ -5688,242 +5494,48 @@ type Scalar = string | number | boolean | bigint | null
 
 ##### C#
 
-##### WhereBuilder {#csharp-wherebuilder}
+##### WhereStatement {#csharp-wherestatement}
 
 ```csharp
-public sealed class WhereBuilder : IWhere
+public sealed record WhereStatement(IExpression Condition) : IWhere
 ```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [WhereStatement(condition)](#csharp-wherestatement-wherestatement-condition) | Builds a where statement from an [IExpression](#csharp-iexpression). |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
+| Condition | Predicate tree. Typically an [Operator](#csharp-operator). |
 | Parameters | Bound [Parameter](#csharp-parameter) list. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Equals(field, value)](#csharp-wherebuilder-equals-field-value) | `field = $field`. |
-| [Ne(field, value)](#csharp-wherebuilder-ne-field-value) | `field <> $field`. |
-| [GreaterThan(field, value)](#csharp-wherebuilder-greaterthan-field-value) | `field > $field`. |
-| [Lt(field, value)](#csharp-wherebuilder-lt-field-value) | `field < $field`. |
-| [Gte(field, value)](#csharp-wherebuilder-gte-field-value) | `field >= $field`. |
-| [Lte(field, value)](#csharp-wherebuilder-lte-field-value) | `field <= $field`. |
-| [And(children)](#csharp-wherebuilder-and-children) | Joins children with `AND`. Empty is `1 = 1`. |
-| [Or(children)](#csharp-wherebuilder-or-children) | Joins children with `OR`. Empty is `1 = 0`. |
-| [Not(child)](#csharp-wherebuilder-not-child) | `NOT (child)`. |
-| [In(field, values)](#csharp-wherebuilder-in-field-values) | `field IN ($field_0, …)`. Empty is `1 = 0`. |
-| [GetText()](#csharp-wherebuilder-gettext) | Predicate text. |
+| [GetText()](#csharp-wherestatement-gettext) | Predicate text. |
 
-###### Equals(field, value) {#csharp-wherebuilder-equals-field-value}
+###### WhereStatement(condition) {#csharp-wherestatement-wherestatement-condition}
 
-`field = $field`.
+Builds a where statement from an [IExpression](#csharp-iexpression).
 
 **Definition**
 
 ```csharp
-public static WhereBuilder Equals(string field, Value? value)
+public WhereStatement(IExpression Condition)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `field` | column name |
-| `value` | cell value; omitted is null |
+| `condition` | [IExpression](#csharp-iexpression) |
 
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### Ne(field, value) {#csharp-wherebuilder-ne-field-value}
-
-`field <> $field`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder Ne(string field, Value? value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value; omitted is null |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### GreaterThan(field, value) {#csharp-wherebuilder-greaterthan-field-value}
-
-`field > $field`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder GreaterThan(string field, Value? value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value; omitted is null |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### Lt(field, value) {#csharp-wherebuilder-lt-field-value}
-
-`field < $field`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder Lt(string field, Value? value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value; omitted is null |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### Gte(field, value) {#csharp-wherebuilder-gte-field-value}
-
-`field >= $field`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder Gte(string field, Value? value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value; omitted is null |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### Lte(field, value) {#csharp-wherebuilder-lte-field-value}
-
-`field <= $field`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder Lte(string field, Value? value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value; omitted is null |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### And(children) {#csharp-wherebuilder-and-children}
-
-Joins children with `AND`. Empty is `1 = 1`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder And(params WhereBuilder[] children)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `children` | [WhereBuilder](#csharp-wherebuilder) predicates |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### Or(children) {#csharp-wherebuilder-or-children}
-
-Joins children with `OR`. Empty is `1 = 0`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder Or(params WhereBuilder[] children)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `children` | [WhereBuilder](#csharp-wherebuilder) predicates |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### Not(child) {#csharp-wherebuilder-not-child}
-
-`NOT (child)`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder Not(WhereBuilder child)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `child` | [WhereBuilder](#csharp-wherebuilder) |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### In(field, values) {#csharp-wherebuilder-in-field-values}
-
-`field IN ($field_0, …)`. Empty is `1 = 0`.
-
-**Definition**
-
-```csharp
-public static WhereBuilder In(string field, IReadOnlyList<Value> values)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `values` | cell values |
-
-**Returns**
-
-[WhereBuilder](#csharp-wherebuilder)
-
-###### GetText() {#csharp-wherebuilder-gettext}
+###### GetText() {#csharp-wherestatement-gettext}
 
 Predicate text.
 
@@ -5939,237 +5551,41 @@ public string GetText()
 
 ##### Rust
 
-##### WhereBuilder {#rust-wherebuilder}
+##### WhereStatement {#rust-wherestatement}
 
 ```rust
-pub struct WhereBuilder
+pub struct WhereStatement
 ```
 
-**Methods**
+**Constructor**
 
 | Name | Description |
 | --- | --- |
-| [equals(field, value)](#rust-wherebuilder-equals-field-value) | `field = $field`. |
-| [ne(field, value)](#rust-wherebuilder-ne-field-value) | `field <> $field`. |
-| [greater_than(field, value)](#rust-wherebuilder-greater_than-field-value) | `field > $field`. |
-| [lt(field, value)](#rust-wherebuilder-lt-field-value) | `field < $field`. |
-| [gte(field, value)](#rust-wherebuilder-gte-field-value) | `field >= $field`. |
-| [lte(field, value)](#rust-wherebuilder-lte-field-value) | `field <= $field`. |
-| [and(children)](#rust-wherebuilder-and-children) | Joins children with `AND`. Empty is `1 = 1`. |
-| [or(children)](#rust-wherebuilder-or-children) | Joins children with `OR`. Empty is `1 = 0`. |
-| [not(child)](#rust-wherebuilder-not-child) | `NOT (child)`. |
-| [in_list(field, values)](#rust-wherebuilder-in_list-field-values) | `field IN ($field_0, …)`. Empty is `1 = 0`. |
-| [get_text()](#rust-wherebuilder-get_text) | Predicate text. |
-| [parameters()](#rust-wherebuilder-parameters) | Bound [Parameter](#rust-parameter) list. |
+| [new(condition)](#rust-wherestatement-new-condition) | Builds a where statement from an [Expression](#rust-expression). |
+| [get_text()](#rust-wherestatement-get_text) | Predicate text. |
+| [parameters()](#rust-wherestatement-parameters) | Bound [Parameter](#rust-parameter) list. |
 
-###### equals(field, value) {#rust-wherebuilder-equals-field-value}
+###### new(condition) {#rust-wherestatement-new-condition}
 
-`field = $field`.
+Builds a where statement from an [Expression](#rust-expression).
 
 **Definition**
 
 ```rust
-pub fn equals(field: impl Into<String>, value: impl Into<Value>) -> Self
+pub fn new(condition: impl Into<Expression>) -> Self
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `field` | column name |
-| `value` | cell value |
+| `condition` | [Expression](#rust-expression) or [Operator](#rust-operator) |
 
 **Returns**
 
-[WhereBuilder](#rust-wherebuilder)
+[WhereStatement](#rust-wherestatement)
 
-###### ne(field, value) {#rust-wherebuilder-ne-field-value}
-
-`field <> $field`.
-
-**Definition**
-
-```rust
-pub fn ne(field: impl Into<String>, value: impl Into<Value>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### greater_than(field, value) {#rust-wherebuilder-greater_than-field-value}
-
-`field > $field`.
-
-**Definition**
-
-```rust
-pub fn greater_than(field: impl Into<String>, value: impl Into<Value>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### lt(field, value) {#rust-wherebuilder-lt-field-value}
-
-`field < $field`.
-
-**Definition**
-
-```rust
-pub fn lt(field: impl Into<String>, value: impl Into<Value>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### gte(field, value) {#rust-wherebuilder-gte-field-value}
-
-`field >= $field`.
-
-**Definition**
-
-```rust
-pub fn gte(field: impl Into<String>, value: impl Into<Value>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### lte(field, value) {#rust-wherebuilder-lte-field-value}
-
-`field <= $field`.
-
-**Definition**
-
-```rust
-pub fn lte(field: impl Into<String>, value: impl Into<Value>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `value` | cell value |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### and(children) {#rust-wherebuilder-and-children}
-
-Joins children with `AND`. Empty is `1 = 1`.
-
-**Definition**
-
-```rust
-pub fn and(children: Vec<WhereBuilder>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `children` | [WhereBuilder](#rust-wherebuilder) predicates |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### or(children) {#rust-wherebuilder-or-children}
-
-Joins children with `OR`. Empty is `1 = 0`.
-
-**Definition**
-
-```rust
-pub fn or(children: Vec<WhereBuilder>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `children` | [WhereBuilder](#rust-wherebuilder) predicates |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### not(child) {#rust-wherebuilder-not-child}
-
-`NOT (child)`.
-
-**Definition**
-
-```rust
-pub fn not(child: WhereBuilder) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `child` | [WhereBuilder](#rust-wherebuilder) |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### in_list(field, values) {#rust-wherebuilder-in_list-field-values}
-
-`field IN ($field_0, …)`. Empty is `1 = 0`.
-
-**Definition**
-
-```rust
-pub fn in_list(field: impl Into<String>, values: Vec<Value>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `field` | column name |
-| `values` | cell values |
-
-**Returns**
-
-[WhereBuilder](#rust-wherebuilder)
-
-###### get_text() {#rust-wherebuilder-get_text}
+###### get_text() {#rust-wherestatement-get_text}
 
 Predicate text.
 
@@ -6183,7 +5599,7 @@ fn get_text(&self) -> String
 
 `String`
 
-###### parameters() {#rust-wherebuilder-parameters}
+###### parameters() {#rust-wherestatement-parameters}
 
 Bound [Parameter](#rust-parameter) list.
 
@@ -6199,16 +5615,18 @@ fn parameters(&self) -> Vec<Parameter>
 
 ### Remarks
 
-[StatementBuilder](#statement-builder) inlines predicate text into query / update / delete SQL. Keep the [WhereBuilder](#wherebuilder) when the caller needs bound parameters.
+Construct the predicate with [Operator](#operator) records, then wrap it: `new WhereStatement(new Operator.Equals("id", 9))`. [StatementBuilder](#statement-builder) inlines predicate text into query / update / delete SQL. Keep the [WhereStatement](#wherestatement) when the caller needs bound parameters. [StatementEvaluator](#statement-evaluator) interprets the same tree against a parameter map.
 
 ### Examples
 
 #### Compare, groups, not, and in
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L53-L54)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L53-L55)
 
 ```csharp
-var where = WhereBuilder.And(WhereBuilder.Equals("id", 1), WhereBuilder.GreaterThan("age", 18));
+var where = new WhereStatement(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
 ```
 
 **After: and**
@@ -6223,13 +5641,14 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L655-L658)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L654-L658)
 
 ```rust
-let where_clause = WhereBuilder::and(vec![
-    WhereBuilder::equals("id", 1_i64),
-    WhereBuilder::greater_than("age", 18_i64),
-]);
+fn statements_and_builders() {
+    let where_clause = WhereStatement::new(Operator::and(
+        Operator::equals("id", 1_i64),
+        Operator::greater_than("age", 18_i64),
+    ));
 ```
 
 **After: and**
@@ -6244,25 +5663,535 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L27-L30)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L31-L33)
 
 ```typescript
-const where = WhereBuilder.and(
-  WhereBuilder.equals("id", 1),
-  WhereBuilder.greaterThan("age", 18),
+it("renders compare, groups, and not", () => {
+  const where = new WhereStatement(
+    new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+```
+
+**After: and**
+
+```
+id = $id AND age > $age
+```
+
+**After: in**
+
+```
+id IN ($id_0, $id_1)
+```
+
+## Expressions
+
+AST nodes for [WhereStatement](#where-statement). `Operator` records hold operands; `GetText()` maps them to SQL.
+
+### Classes
+
+##### TypeScript
+
+##### IExpression {#typescript-iexpression}
+
+```typescript
+interface IExpression {}
+```
+
+##### Operator {#typescript-operator}
+
+```typescript
+abstract class Operator implements IExpression
+```
+
+##### Identifier {#typescript-identifier}
+
+```typescript
+class Identifier implements IExpression
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Identifier(name)](#typescript-identifier-identifier-name) |  |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| name |  |
+
+###### Identifier(name) {#typescript-identifier-identifier-name}
+
+
+
+**Definition**
+
+```typescript
+constructor(name: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column name |
+
+##### Literal {#typescript-literal}
+
+```typescript
+class Literal implements IExpression
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Literal(value)](#typescript-literal-literal-value) |  |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| value |  |
+
+###### Literal(value) {#typescript-literal-literal-value}
+
+
+
+**Definition**
+
+```typescript
+constructor(value: Scalar)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | [Scalar](#typescript-scalar) |
+
+##### ArrayExpression {#typescript-arrayexpression}
+
+```typescript
+class ArrayExpression implements IExpression
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ArrayExpression(elements)](#typescript-arrayexpression-arrayexpression-elements) |  |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| elements |  |
+
+###### ArrayExpression(elements) {#typescript-arrayexpression-arrayexpression-elements}
+
+
+
+**Definition**
+
+```typescript
+constructor(elements: IExpression[])
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `elements` | [IExpression](#typescript-iexpression) list |
+
+##### C#
+
+##### IExpression {#csharp-iexpression}
+
+```csharp
+public interface IExpression
+```
+
+##### Operator {#csharp-operator}
+
+```csharp
+namespace Datasources.Operator
+```
+
+##### Identifier {#csharp-identifier}
+
+```csharp
+public sealed record Identifier(string Name) : IExpression
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Identifier(name)](#csharp-identifier-identifier-name) |  |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Name |  |
+
+###### Identifier(name) {#csharp-identifier-identifier-name}
+
+
+
+**Definition**
+
+```csharp
+public Identifier(string Name)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column name |
+
+##### Literal {#csharp-literal}
+
+```csharp
+public sealed record Literal(Value Value) : IExpression
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Literal(value)](#csharp-literal-literal-value) |  |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Value |  |
+
+###### Literal(value) {#csharp-literal-literal-value}
+
+
+
+**Definition**
+
+```csharp
+public Literal(Value Value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | cell value |
+
+##### ArrayExpression {#csharp-arrayexpression}
+
+```csharp
+public sealed record ArrayExpression(IReadOnlyList<IExpression> Elements) : IExpression
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ArrayExpression(elements)](#csharp-arrayexpression-arrayexpression-elements) |  |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Elements |  |
+
+###### ArrayExpression(elements) {#csharp-arrayexpression-arrayexpression-elements}
+
+
+
+**Definition**
+
+```csharp
+public ArrayExpression(IReadOnlyList<IExpression> Elements)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `elements` | [IExpression](#csharp-iexpression) list |
+
+##### Rust
+
+##### Expression {#rust-expression}
+
+```rust
+pub enum Expression
+```
+
+##### Operator {#rust-operator}
+
+```rust
+pub enum Operator
+```
+
+##### Identifier {#rust-identifier}
+
+```rust
+pub struct Identifier
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(name)](#rust-identifier-new-name) |  |
+
+###### new(name) {#rust-identifier-new-name}
+
+
+
+**Definition**
+
+```rust
+pub fn new(name: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | column name |
+
+**Returns**
+
+[Identifier](#rust-identifier)
+
+##### Literal {#rust-literal}
+
+```rust
+pub struct Literal
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(value)](#rust-literal-new-value) |  |
+
+###### new(value) {#rust-literal-new-value}
+
+
+
+**Definition**
+
+```rust
+pub fn new(value: impl Into<Value>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | cell value |
+
+**Returns**
+
+[Literal](#rust-literal)
+
+##### ArrayExpression {#rust-arrayexpression}
+
+```rust
+pub struct ArrayExpression
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(elements)](#rust-arrayexpression-new-elements) |  |
+
+###### new(elements) {#rust-arrayexpression-new-elements}
+
+
+
+**Definition**
+
+```rust
+pub fn new(elements: Vec<Expression>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `elements` | [Expression](#rust-expression) list |
+
+**Returns**
+
+[ArrayExpression](#rust-arrayexpression)
+
+### Remarks
+
+A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operator records. `Not` holds one argument. `In` uses an `ArrayExpression` of literals.
+
+### Examples
+
+#### Compare tree
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L78-L81)
+
+```csharp
+new Operator.Equals("age", 18))).GetText());
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L704-L719)
+
+```rust
 );
 ```
 
-**After: and**
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L63-L73)
+
+```typescript
+]);
+```
+
+## StatementEvaluator
+
+Interprets an [IExpression](#expressions) against a name→value map. [WhereStatement.GetText](#where-statement) materializes SQL; this type evaluates.
+
+### Classes
+
+##### TypeScript
+
+##### StatementEvaluator {#typescript-statementevaluator}
+
+```typescript
+class StatementEvaluator
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [evaluate(expression, parameters?)](#typescript-statementevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns a boolean. |
+
+###### evaluate(expression, parameters?) {#typescript-statementevaluator-evaluate-expression-parameters}
+
+Resolves identifiers from `parameters`. A where condition returns a boolean.
+
+**Definition**
+
+```typescript
+evaluate(expression: IExpression, parameters?: Record<string, Scalar>): Scalar
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `expression` | [IExpression](#typescript-iexpression) |
+| `parameters` | row / name→value context |
+
+**Returns**
+
+[Scalar](#typescript-scalar)
+
+##### C#
+
+##### StatementEvaluator {#csharp-statementevaluator}
+
+```csharp
+public sealed class StatementEvaluator
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Evaluate(expression, parameters)](#csharp-statementevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns a [Value](#command) bool. |
+
+###### Evaluate(expression, parameters) {#csharp-statementevaluator-evaluate-expression-parameters}
+
+Resolves identifiers from `parameters`. A where condition returns a [Value](#command) bool.
+
+**Definition**
+
+```csharp
+public Value Evaluate(IExpression expression, IReadOnlyDictionary<string, Value>? parameters)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `expression` | [IExpression](#csharp-iexpression) |
+| `parameters` | row / name→value context |
+
+**Returns**
+
+`Value`
+
+##### Rust
+
+##### StatementEvaluator {#rust-statementevaluator}
+
+```rust
+pub struct StatementEvaluator
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [evaluate(expression, parameters)](#rust-statementevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns `Value::Bool`. |
+
+###### evaluate(expression, parameters) {#rust-statementevaluator-evaluate-expression-parameters}
+
+Resolves identifiers from `parameters`. A where condition returns `Value::Bool`.
+
+**Definition**
+
+```rust
+pub fn evaluate(&self, expression: &Expression, parameters: &Row) -> Value
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `expression` | [Expression](#rust-expression) |
+| `parameters` | row / name→value context |
+
+**Returns**
+
+[Value](#command)
+
+### Remarks
+
+Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A raw text [Where](#where) is not evaluable.
+
+### Examples
+
+#### Match and miss
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L180-L181)
+
+```csharp
 
 ```
-id = $id AND age > $age
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L982-L983)
+
+```rust
+
 ```
 
-**After: in**
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L89-L90)
 
-```
-id IN ($id_0, $id_1)
+```typescript
+
 ```
 
 ## Repository
@@ -7289,20 +7218,20 @@ Assert.Single(rows);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L845-L851)
 
 ```rust
-}));
-let rows = repo.read(None).await.unwrap();
+.is_empty());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
 
 ```typescript
-const { repo, command } = create();
-repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
-command.reader = new MockReader([
-  { id: 1, name: "a" },
-]);
-const rows: Cells[] = [];
-for await (const row of repo.read()) rows.push(row);
+it("builds select and maps rows", async () => {
+  const { repo, command } = create();
+  repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
+  command.reader = new MockReader([
+    { id: 1, name: "a" },
+  ]);
+  const rows: Cells[] = [];
+  for await (const row of repo.read()) rows.push(row);
 ```
 
 ## CRUD repository
@@ -8163,16 +8092,20 @@ await repo.Create(obj);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L886-L899)
 
 ```rust
-let repo = Repository::new(include_id).unwrap();
-repo.create(&obj).await.unwrap();
+    "SELECT * FROM users"
+);
+assert!(StatementBuilder::create_query("users", &[], None, &[])
+    .where_clause()
+    .is_none());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L100-L111)
 
 ```typescript
-const { repo, command } = create({ assignIdentityOnCreate: false });
-const obj = { id: 1, name: "a" };
-await repo.create(obj);
+it("adds updates and deletes through builders", async () => {
+  const { repo, command } = create({ assignIdentityOnCreate: false });
+  const obj = { id: 1, name: "a" };
+  await repo.create(obj);
 ```
 
 ## Enriched repository
@@ -9492,16 +9425,8 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1235-L1244)
 
 ```rust
-async fn enriched_fills_lookup_select_and_leaves_missing_default() {
-    let parents = Arc::new(items_repository::ItemsRepository::new(vec![
-        record(&[("id", Value::Int(1)), ("type_id", Value::Int(10))]),
-        record(&[("id", Value::Int(2)), ("type_id", Value::Int(99))]),
-    ]));
-    let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-        ("id", Value::Int(10)),
-        ("name", Value::from("person")),
-    ])]));
-    let mut repo = EnrichedReadonlyRepository::new(parents);
+command.reader_rows.lock().unwrap().clear();
+assert!(repo.read_single(Some(&query)).await.unwrap().is_none());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -9928,11 +9853,24 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-    Some("name".into()),
-    false,
-)
-.add_enriched_repo("children", "id", children, "parent_id", None, true);
-let item = repo.read_single(None).await.unwrap().unwrap();
+        record(&[("parent_id", Value::Int(1)), ("label", Value::from("a"))]),
+        record(&[("parent_id", Value::Int(2)), ("label", Value::from("b"))]),
+    ])),
+    reads: Mutex::new(0),
+    read_singles: Mutex::new(0),
+});
+let parents = Arc::new(items_repository::ItemsRepository::new(vec![
+    record(&[("id", Value::Int(1)), ("type_id", Value::Int(10))]),
+    record(&[("id", Value::Int(2)), ("type_id", Value::Int(11))]),
+]));
+let mut repo = EnrichedReadonlyRepository::with_strategy(
+    parents,
+    Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy),
+);
+repo.add_enriched(
+    "type_name",
+    "type_id",
+    types.clone(),
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -11746,15 +11684,10 @@ var statements = new RepositoryStatements(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L794-L804)
 
 ```rust
-#[test]
-fn stored_procedure_mapper_rewrites_finished_sql() {
-    let mut mapper = StatementMapper::identity("", "");
-    mapper.stored_procedure = Some(Arc::new(TransformMapper::new(
-        |text: String| format!("{text} /* mapped */"),
-        |text| text,
-    )));
-    let built = StatementBuilder::create_stored_procedure("save", &[Parameter::new("id", 1_i64)]);
-    let text = StatementMapper::map_sql(&mapper.stored_procedure, built.get_text());
+    })
+    .get_text(),
+    "1.5 = 2.5"
+);
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59)

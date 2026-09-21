@@ -6,9 +6,11 @@ import type { IQuery } from "./IQuery.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./IWhere.ts";
-import { WhereBuilder } from "./builders/index.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
+import type { IExpression } from "./statements/IExpression.ts";
+import { Operator } from "./statements/Operator.ts";
+import { WhereStatement } from "./statements/WhereStatement.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
@@ -128,12 +130,12 @@ export class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRU
   private readQuery = (query?: IQuery | IWhere): IQuery =>
     !query ? this.statements.query() : "where" in query ? query : this.statements.query(query);
 
-  private idWhere = (record: Cells): IWhere =>
-    WhereBuilder.and(
-      ...[...this.ids].map((col) => {
-        if (!Object.prototype.hasOwnProperty.call(record, col))
-          throw new DatasourceError(`Missing Id value "${col}"`);
-        return WhereBuilder.equals(col, record[col] as Scalar);
-      }),
-    );
+  private idWhere = (record: Cells): IWhere => {
+    const parts: IExpression[] = [...this.ids].map((col) => {
+      if (!Object.prototype.hasOwnProperty.call(record, col))
+        throw new DatasourceError(`Missing Id value "${col}"`);
+      return new Operator.Equals(col, record[col] as Scalar);
+    });
+    return new WhereStatement(parts.reduce((left, right) => new Operator.And(left, right)));
+  };
 }

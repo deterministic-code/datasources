@@ -1,4 +1,4 @@
-import { WhereBuilder } from "../../builders/WhereBuilder.ts";
+import { Operator, WhereStatement } from "../../statements/index.ts";
 import type { IConnection } from "../../IConnection.ts";
 import { Repository } from "../../Repository.ts";
 import type { Constructable } from "../../converters/Constructable.ts";
@@ -15,7 +15,7 @@ const of = async <T extends { id: number; name: string }>(
   name: string,
 ): Promise<number> => {
   const row = await new Repository({ type, entity, connection, columns: ["id", "name"] }).readSingle(
-    WhereBuilder.equals("name", name),
+    new WhereStatement(new Operator.Equals("name", name)),
   );
   if (!row) throw new Error(`${entity} '${name}' missing`);
   return row.id;

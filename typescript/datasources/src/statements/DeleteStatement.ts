@@ -1,5 +1,5 @@
 import type { IDeleteStatement } from "./IDeleteStatement.ts";
-import type { IWhere } from "../IWhere.ts";
+import type { IWhere } from "./IWhere.ts";
 
 export class DeleteStatement implements IDeleteStatement {
   constructor(

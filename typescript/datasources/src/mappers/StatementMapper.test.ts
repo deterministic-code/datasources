@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DeleteStatement } from "../builders/DeleteStatement.ts";
-import { InsertStatement } from "../builders/InsertStatement.ts";
-import { StoredProcedureStatement } from "../builders/StoredProcedureStatement.ts";
+import { DeleteStatement } from "../statements/DeleteStatement.ts";
+import { InsertStatement } from "../statements/InsertStatement.ts";
+import { StoredProcedureStatement } from "../statements/StoredProcedureStatement.ts";
 import { StatementBuilder } from "../builders/StatementBuilder.ts";
-import { UpdateStatement } from "../builders/UpdateStatement.ts";
-import { Query } from "../Query.ts";
+import { UpdateStatement } from "../statements/UpdateStatement.ts";
+import { Query } from "../statements/Query.ts";
 import { statementsOf } from "../RepositoryStatements.ts";
 import { TransformMapper } from "./TransformMapper.ts";
 import { StatementMapper } from "./StatementMapper.ts";

@@ -6,12 +6,12 @@ mod datasource_factory;
 mod transaction;
 mod items_repository;
 mod list_repository;
-mod where_match;
 
 use crate::converters::{Cells, RowTypeConverter};
 use crate::repository_tree_node::encode_rows;
 use crate::*;
 use async_trait::async_trait;
+use chrono::TimeZone;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -652,46 +652,227 @@ async fn published_mocks() {
 
 #[test]
 fn statements_and_builders() {
-    let where_clause = WhereBuilder::and(vec![
-        WhereBuilder::equals("id", 1_i64),
-        WhereBuilder::greater_than("age", 18_i64),
-    ]);
+    let where_clause = WhereStatement::new(Operator::and(
+        Operator::equals("id", 1_i64),
+        Operator::greater_than("age", 18_i64),
+    ));
     assert_eq!(where_clause.get_text(), "id = $id AND age > $age");
     assert_eq!(where_clause.parameters().len(), 2);
+    assert_eq!(WhereStatement::new(Operator::not_equals("id", 2_i64)).parameters().len(), 1);
+    assert_eq!(WhereStatement::new(Operator::less_than("n", 0_i64)).parameters().len(), 1);
+    assert_eq!(WhereStatement::new(Operator::greater_than_or_equal("n", 0_i64)).parameters().len(), 1);
+    assert_eq!(WhereStatement::new(Operator::less_than_or_equal("n", 0_i64)).parameters().len(), 1);
+    assert!(WhereStatement::new(Operator::Equals {
+        left: Box::new(Expression::Literal(Literal::new(1_i64))),
+        right: Box::new(Expression::Literal(Literal::new(1_i64))),
+    })
+    .parameters()
+    .is_empty());
     assert_eq!(where_clause.parameters()[0].value, Value::Int(1));
     assert_eq!(where_clause.parameters()[1].value, Value::Int(18));
-    assert_eq!(WhereBuilder::ne("id", 2_i64).get_text(), "id <> $id");
-    assert_eq!(WhereBuilder::lt("n", 0_i64).get_text(), "n < $n");
-    assert_eq!(WhereBuilder::gte("n", 0_i64).get_text(), "n >= $n");
-    assert_eq!(WhereBuilder::lte("n", 0_i64).get_text(), "n <= $n");
-    assert_eq!(WhereBuilder::and(vec![]).get_text(), "1 = 1");
-    assert_eq!(WhereBuilder::or(vec![]).get_text(), "1 = 0");
+    assert_eq!(WhereStatement::new(Operator::not_equals("id", 2_i64)).get_text(), "id <> $id");
+    assert_eq!(WhereStatement::new(Operator::less_than("n", 0_i64)).get_text(), "n < $n");
+    assert_eq!(WhereStatement::new(Operator::greater_than_or_equal("n", 0_i64)).get_text(), "n >= $n");
+    assert_eq!(WhereStatement::new(Operator::less_than_or_equal("n", 0_i64)).get_text(), "n <= $n");
     assert_eq!(
-        WhereBuilder::and(vec![WhereBuilder::equals("id", 1_i64)]).get_text(),
+        WhereStatement::new(Operator::Equals {
+            left: Box::new(Expression::Literal(Literal::new(1_i64))),
+            right: Box::new(Expression::Literal(Literal::new(1_i64))),
+        })
+        .get_text(),
+        "1 = 1"
+    );
+    assert_eq!(
+        WhereStatement::new(Operator::Equals {
+            left: Box::new(Expression::Literal(Literal::new(1_i64))),
+            right: Box::new(Expression::Literal(Literal::new(0_i64))),
+        })
+        .get_text(),
+        "1 = 0"
+    );
+    assert_eq!(
+        WhereStatement::new(Operator::equals("id", 1_i64)).get_text(),
         "id = $id"
     );
     assert_eq!(
-        WhereBuilder::or(vec![WhereBuilder::equals("id", 1_i64)]).get_text(),
-        "id = $id"
-    );
-    assert_eq!(
-        WhereBuilder::or(vec![
+        WhereStatement::new(Operator::or(
             where_clause.clone(),
-            WhereBuilder::equals("name", "a")
-        ])
+            Operator::equals("name", "a")
+        ))
         .get_text(),
         "(id = $id AND age > $age) OR name = $name"
     );
     assert_eq!(
-        WhereBuilder::not(WhereBuilder::equals("id", 1_i64)).get_text(),
-        "NOT (id = $id)"
+        WhereStatement::new(Operator::or(
+            where_clause.clone(),
+            Operator::equals("name", "a")
+        ))
+        .parameters()
+        .len(),
+        3
     );
-    assert_eq!(WhereBuilder::in_list("id", vec![]).get_text(), "1 = 0");
-    assert!(WhereBuilder::in_list("id", vec![]).parameters().is_empty());
-    let in_ids = WhereBuilder::in_list("id", vec![Value::Int(1), Value::Int(2)]);
+    let not_where = WhereStatement::new(Operator::not(WhereStatement::new(Operator::equals("id", 1_i64))));
+    assert_eq!(not_where.get_text(), "NOT (id = $id)");
+    assert_eq!(not_where.parameters()[0].name, "id");
+    assert_eq!(
+        WhereStatement::new(Operator::and(
+            Operator::or(Operator::equals("id", 1_i64), Operator::equals("id", 2_i64)),
+            Operator::equals("age", 18_i64)
+        ))
+        .get_text(),
+        "(id = $id OR id = $id) AND age = $age"
+    );
+    assert_eq!(
+        WhereStatement::new(Operator::or(
+            Operator::in_list("id", vec![Value::Int(1)]),
+            Operator::equals("name", "a")
+        ))
+        .get_text(),
+        "(id IN ($id_0)) OR name = $name"
+    );
+    assert_eq!(
+        WhereStatement::new(Expression::Identifier(Identifier::new("id"))).get_text(),
+        "id"
+    );
+    assert!(WhereStatement::new(Expression::Identifier(Identifier::new("id")))
+        .parameters()
+        .is_empty());
+    assert_eq!(
+        WhereStatement::new(Expression::Array(ArrayExpression::new(vec![
+            Expression::Literal(Literal::new(1_i64))
+        ])))
+        .get_text(),
+        "1"
+    );
+    assert!(WhereStatement::new(Expression::Array(ArrayExpression::new(vec![
+        Expression::Literal(Literal::new(1_i64))
+    ])))
+    .parameters()
+    .is_empty());
+    assert_eq!(
+        WhereStatement::new(Operator::Equals {
+            left: Box::new(Expression::Identifier(Identifier::new("a"))),
+            right: Box::new(Expression::Identifier(Identifier::new("b"))),
+        })
+        .get_text(),
+        "a = b"
+    );
+    assert!(WhereStatement::new(Operator::Equals {
+        left: Box::new(Expression::Identifier(Identifier::new("a"))),
+        right: Box::new(Expression::Identifier(Identifier::new("b"))),
+    })
+    .parameters()
+    .is_empty());
+    assert_eq!(
+        WhereStatement::new(Operator::In {
+            left: Box::new(Expression::Literal(Literal::new(1_i64))),
+            right: Box::new(Expression::Literal(Literal::new(2_i64))),
+        })
+        .get_text(),
+        "1 IN 2"
+    );
+    assert_eq!(
+        WhereStatement::new(Operator::Equals {
+            left: Box::new(Expression::Literal(Literal::new(true))),
+            right: Box::new(Expression::Literal(Literal::new(false))),
+        })
+        .get_text(),
+        "true = false"
+    );
+    assert_eq!(
+        WhereStatement::new(Operator::Equals {
+            left: Box::new(Expression::Literal(Literal::new(Value::Null))),
+            right: Box::new(Expression::Literal(Literal::new(Value::Null))),
+        })
+        .get_text(),
+        "null = null"
+    );
+    assert_eq!(
+        WhereStatement::new(Operator::Equals {
+            left: Box::new(Expression::Literal(Literal::new(1.5_f64))),
+            right: Box::new(Expression::Literal(Literal::new(2.5_f64))),
+        })
+        .get_text(),
+        "1.5 = 2.5"
+    );
+    assert_eq!(
+        WhereStatement::new(Operator::Equals {
+            left: Box::new(Expression::Literal(Literal::new(Value::Decimal(
+                rust_decimal::Decimal::new(15, 1)
+            )))),
+            right: Box::new(Expression::Literal(Literal::new(Value::Decimal(
+                rust_decimal::Decimal::new(25, 1)
+            )))),
+        })
+        .get_text(),
+        "1.5 = 2.5"
+    );
+    assert_eq!(
+        WhereStatement::new(Operator::Equals {
+            left: Box::new(Expression::Literal(Literal::new("a"))),
+            right: Box::new(Expression::Literal(Literal::new("b"))),
+        })
+        .get_text(),
+        "a = b"
+    );
+    assert!(WhereStatement::new(Operator::Equals {
+        left: Box::new(Expression::Literal(Literal::new(Value::Uuid(uuid::Uuid::nil())))),
+        right: Box::new(Expression::Literal(Literal::new(Value::Uuid(uuid::Uuid::nil())))),
+    })
+    .get_text()
+    .contains('='));
+    assert!(WhereStatement::new(Operator::Equals {
+        left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
+            chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
+        )))),
+        right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
+            chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
+        )))),
+    })
+    .get_text()
+    .contains('='));
+    assert!(WhereStatement::new(Operator::Equals {
+        left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+        right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+    })
+    .get_text()
+    .contains('='));
+    assert!(WhereStatement::new(Operator::In {
+        left: Box::new(Expression::Literal(Literal::new(1_i64))),
+        right: Box::new(Expression::Literal(Literal::new(2_i64))),
+    })
+    .parameters()
+    .is_empty());
+    assert_eq!(
+        WhereStatement::new(Operator::and(
+            Operator::not(Operator::equals("id", 1_i64)),
+            Operator::equals("age", 18_i64)
+        ))
+        .get_text(),
+        "(NOT (id = $id)) AND age = $age"
+    );
+    assert_eq!(WhereStatement::new(Operator::in_list("id", vec![])).get_text(), "1 = 0");
+    assert!(WhereStatement::new(Operator::in_list("id", vec![])).parameters().is_empty());
+    let in_ids = WhereStatement::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)]));
     assert_eq!(in_ids.get_text(), "id IN ($id_0, $id_1)");
     assert_eq!(in_ids.parameters()[0].name, "id_0");
     assert_eq!(in_ids.parameters()[1].name, "id_1");
+    match &where_clause.condition {
+        Expression::Operator(Operator::And { left, .. }) => match left.as_ref() {
+            Expression::Operator(Operator::Equals { left, right }) => {
+                match left.as_ref() {
+                    Expression::Identifier(id) => assert_eq!(id.name, "id"),
+                    _ => panic!("id"),
+                }
+                match right.as_ref() {
+                    Expression::Literal(lit) => assert_eq!(lit.value, Value::Int(1)),
+                    _ => panic!("lit"),
+                }
+            }
+            _ => panic!("left"),
+        },
+        _ => panic!("and"),
+    }
 
     let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
     let query = StatementBuilder::create_query("users", &["id", "name"], Some(&where_clause), &[]);
@@ -725,7 +906,7 @@ fn statements_and_builders() {
         StatementBuilder::create_query(
             "users",
             &["users.id"],
-            Some(&WhereBuilder::equals("users.id", 1_i64)),
+            Some(&WhereStatement::new(Operator::equals("users.id", 1_i64))),
             &[
                 Join::inner("orders", "users.id", "orders.user_id"),
                 Join::left("payments", "orders.id", "payments.order_id"),
@@ -793,6 +974,204 @@ fn statements_and_builders() {
 }
 
 #[test]
+fn evaluates_where_statement() {
+    let evaluator = StatementEvaluator;
+    let row = record(&[("id", Value::Int(1)), ("age", Value::Int(21)), ("name", Value::Text("a".into()))]);
+    let yes = Value::Bool(true);
+    let no = Value::Bool(false);
+    assert_eq!(evaluator.evaluate_where(&WhereStatement::new(Operator::equals("id", 1_i64)), &row), yes);
+    assert_eq!(evaluator.evaluate_where(&WhereStatement::new(Operator::equals("id", 2_i64)), &row), no);
+    assert_eq!(evaluator.evaluate_where(&WhereStatement::new(Operator::not_equals("id", 2_i64)), &row), yes);
+    assert_eq!(evaluator.evaluate_where(&WhereStatement::new(Operator::greater_than("age", 18_i64)), &row), yes);
+    assert_eq!(evaluator.evaluate_where(&WhereStatement::new(Operator::less_than("age", 30_i64)), &row), yes);
+    assert_eq!(
+        evaluator.evaluate_where(&WhereStatement::new(Operator::greater_than_or_equal("age", 21_i64)), &row),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(&WhereStatement::new(Operator::less_than_or_equal("age", 21_i64)), &row),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereStatement::new(Operator::and(
+                Operator::equals("id", 1_i64),
+                Operator::greater_than("age", 18_i64)
+            )),
+            &row
+        ),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereStatement::new(Operator::and(
+                Operator::equals("id", 0_i64),
+                Operator::greater_than("age", 18_i64)
+            )),
+            &row
+        ),
+        no
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereStatement::new(Operator::or(
+                Operator::equals("id", 0_i64),
+                Operator::equals("name", "a")
+            )),
+            &row
+        ),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereStatement::new(Operator::or(
+                Operator::equals("id", 1_i64),
+                Operator::equals("name", "z")
+            )),
+            &row
+        ),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(&WhereStatement::new(Operator::not(Operator::equals("id", 1_i64))), &row),
+        no
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereStatement::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)])),
+            &row
+        ),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereStatement::new(Operator::Equals {
+                left: Box::new(Expression::Literal(Literal::new(1_i64))),
+                right: Box::new(Expression::Literal(Literal::new(1_i64))),
+            }),
+            &row
+        ),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereStatement::new(Operator::Equals {
+                left: Box::new(Expression::Literal(Literal::new(1_i64))),
+                right: Box::new(Expression::Literal(Literal::new(0_i64))),
+            }),
+            &row
+        ),
+        no
+    );
+    assert_eq!(
+        evaluator.evaluate(&Expression::Identifier(Identifier::new("missing")), &row),
+        Value::Null
+    );
+    assert_eq!(
+        evaluator.evaluate(&Expression::Literal(Literal::new(Value::Null)), &row),
+        Value::Null
+    );
+    assert_eq!(evaluator.evaluate_where(&WhereStatement::new(Operator::less_than("name", "b")), &row), yes);
+    assert_eq!(
+        evaluator.evaluate_where(&WhereStatement::new(Operator::greater_than_or_equal("name", "a")), &row),
+        yes
+    );
+    assert_eq!(evaluator.evaluate_where(&WhereStatement::new(Operator::greater_than("name", "Z")), &row), yes);
+    assert_eq!(
+        evaluator.evaluate(
+            &Expression::Operator(Operator::GreaterThan {
+                left: Box::new(Expression::Literal(Literal::new(2.5_f64))),
+                right: Box::new(Expression::Literal(Literal::new(1.5_f64))),
+            }),
+            &row
+        ),
+        Value::Bool(true)
+    );
+    assert_eq!(
+        evaluator.evaluate(
+            &Expression::Operator(Operator::GreaterThan {
+                left: Box::new(Expression::Literal(Literal::new(Value::Decimal(
+                    rust_decimal::Decimal::new(25, 1)
+                )))),
+                right: Box::new(Expression::Literal(Literal::new(Value::Decimal(
+                    rust_decimal::Decimal::new(15, 1)
+                )))),
+            }),
+            &row
+        ),
+        Value::Bool(true)
+    );
+    assert_eq!(
+        evaluator.evaluate(
+            &Expression::Operator(Operator::GreaterThan {
+                left: Box::new(Expression::Literal(Literal::new(2_i64))),
+                right: Box::new(Expression::Literal(Literal::new(1.5_f64))),
+            }),
+            &row
+        ),
+        Value::Bool(true)
+    );
+    assert_eq!(
+        evaluator.evaluate(
+            &Expression::Operator(Operator::GreaterThan {
+                left: Box::new(Expression::Literal(Literal::new(2.5_f64))),
+                right: Box::new(Expression::Literal(Literal::new(1_i64))),
+            }),
+            &row
+        ),
+        Value::Bool(true)
+    );
+}
+
+#[test]
+#[should_panic(expected = "array is not a scalar")]
+fn evaluate_array_panics() {
+    StatementEvaluator.evaluate(&Expression::Array(ArrayExpression::new(vec![])), &Row::new());
+}
+
+#[test]
+#[should_panic(expected = "text where is not evaluable")]
+fn evaluate_text_where_panics() {
+    StatementEvaluator.evaluate_where(&TextWhere::new("id = 1"), &Row::new());
+}
+
+#[test]
+#[should_panic(expected = "empty in")]
+fn evaluate_empty_in_panics() {
+    StatementEvaluator.evaluate(
+        &Expression::Operator(Operator::In {
+            left: Box::new(Expression::Identifier(Identifier::new("id"))),
+            right: Box::new(Expression::Literal(Literal::new(1_i64))),
+        }),
+        &Row::new(),
+    );
+}
+
+#[test]
+#[should_panic(expected = "empty compare")]
+fn evaluate_empty_compare_panics() {
+    StatementEvaluator.evaluate(
+        &Expression::Operator(Operator::GreaterThan {
+            left: Box::new(Expression::Literal(Literal::new(true))),
+            right: Box::new(Expression::Literal(Literal::new(1_i64))),
+        }),
+        &Row::new(),
+    );
+}
+
+#[test]
+#[should_panic(expected = "empty in")]
+fn collect_in_non_literal_panics() {
+    let _ = WhereStatement::new(Operator::In {
+        left: Box::new(Expression::Identifier(Identifier::new("id"))),
+        right: Box::new(Expression::Array(ArrayExpression::new(vec![
+            Expression::Identifier(Identifier::new("x")),
+        ]))),
+    })
+    .parameters();
+}
+
+#[test]
 fn stored_procedure_mapper_rewrites_finished_sql() {
     let mut mapper = StatementMapper::identity("", "");
     mapper.stored_procedure = Some(Arc::new(TransformMapper::new(
@@ -851,7 +1230,7 @@ async fn table_repository() {
     );
     assert!(repo.read_single(None).await.unwrap().is_some());
 
-    let where_clause = WhereBuilder::equals("id", 9_i64);
+    let where_clause = WhereStatement::new(Operator::equals("id", 9_i64));
     let query = StatementBuilder::create_query("users", &["id"], Some(&where_clause), &[]);
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.read_single(Some(&query)).await.unwrap().is_none());
@@ -862,7 +1241,7 @@ async fn table_repository() {
 
     command.reader_rows.lock().unwrap().clear();
     assert!(repo
-        .read_single_where(&WhereBuilder::equals("id", 9_i64))
+        .read_single_where(&WhereStatement::new(Operator::equals("id", 9_i64)))
         .await
         .unwrap()
         .is_none());
@@ -871,7 +1250,7 @@ async fn table_repository() {
     assert_eq!(last.1[0].name, "id");
     assert_eq!(last.1[0].value, Value::Int(9));
     assert!(repo
-        .read_where(&WhereBuilder::equals("id", 9_i64))
+        .read_where(&WhereStatement::new(Operator::equals("id", 9_i64)))
         .await
         .unwrap()
         .is_empty());
@@ -971,7 +1350,7 @@ async fn table_repository() {
         .unwrap();
     repo.delete(
         &record(&[("name", Value::from("z"))]),
-        Some(&WhereBuilder::equals("name", "z")),
+        Some(&WhereStatement::new(Operator::equals("name", "z"))),
     )
     .await
     .unwrap();

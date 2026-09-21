@@ -1,4 +1,4 @@
-use crate::builders::WhereBuilder;
+use crate::{Expression, Literal, Operator, WhereStatement};
 use crate::built_repository::BuiltRepository;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
@@ -105,7 +105,7 @@ impl Repository {
             .collect()
     }
 
-    fn id_where(&self, record: &Row) -> Result<WhereBuilder> {
+    fn id_where(&self, record: &Row) -> Result<WhereStatement> {
         let children = self
             .id
             .iter()
@@ -113,10 +113,10 @@ impl Repository {
                 let value = record.get(col).ok_or_else(|| {
                     DatasourceError::message(format!("Missing Id value \"{col}\""))
                 })?;
-                Ok(WhereBuilder::equals(col.clone(), value.clone()))
+                Ok(Expression::from(Operator::equals(col.clone(), value.clone())))
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(WhereBuilder::and(children))
+        Ok(WhereStatement::new(and_all(children)))
     }
 
     fn query_parts(&self, query: Option<&dyn Query>) -> (String, Vec<Parameter>) {
@@ -246,4 +246,17 @@ impl CRUDRepository for Repository {
         let parameters = predicate.parameters();
         self.command().execute(&text, Some(&parameters)).await
     }
+}
+
+fn and_all(parts: Vec<Expression>) -> Expression {
+    parts
+        .into_iter()
+        .reduce(|left, right| Operator::and(left, right).into())
+        .unwrap_or_else(|| {
+            Operator::Equals {
+                left: Box::new(Expression::Literal(Literal::new(1_i64))),
+                right: Box::new(Expression::Literal(Literal::new(1_i64))),
+            }
+            .into()
+        })
 }

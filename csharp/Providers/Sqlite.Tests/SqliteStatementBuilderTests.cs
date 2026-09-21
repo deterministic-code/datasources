@@ -37,7 +37,7 @@ public class SqliteStatementBuilderTests
     [Fact]
     public void QuotesTablesInDml()
     {
-        var where = WhereBuilder.Equals("id", 1);
+        var where = new WhereStatement(new Operator.Equals("id", 1));
         Parameter[] fields = [new("id", 1), new("username", "alice")];
         Assert.Equal(
             "SELECT \"id\", \"username\" FROM \"user\" WHERE id = $id",
@@ -59,7 +59,7 @@ public class SqliteStatementBuilderTests
             SqliteStatementBuilder.CreateQuery(
                 "users",
                 ["users.id", "orders.total"],
-                WhereBuilder.Equals("users.id", 1),
+                new WhereStatement(new Operator.Equals("users.id", 1)),
                 [
                     Join.Inner("orders", "users.id", "orders.user_id"),
                     Join.Left("payments", "orders.id", "payments.order_id"),

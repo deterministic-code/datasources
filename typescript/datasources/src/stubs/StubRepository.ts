@@ -1,10 +1,10 @@
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
-import type { IQuery } from "../IQuery.ts";
+import type { IQuery } from "../statements/IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
-import type { IWhere } from "../IWhere.ts";
+import type { IWhere } from "../statements/IWhere.ts";
 import { notImplemented } from "./notImplemented.ts";
 
 export class StubRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {

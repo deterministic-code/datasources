@@ -1,11 +1,11 @@
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import type { IEnriched } from "./IEnriched.ts";
-import type { IQuery } from "./IQuery.ts";
+import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
-import type { IWhere } from "./IWhere.ts";
+import type { IWhere } from "./statements/IWhere.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
