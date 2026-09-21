@@ -1,6 +1,6 @@
 import { ParameterDirection } from "../ParameterDirection.ts";
 import type { Parameter } from "../Parameter.ts";
-import type { IStoredProcedureStatement } from "./IStoredProcedureStatement.ts";
+import type { IExecuteStoredProcedureStatement } from "./IExecuteStoredProcedureStatement.ts";
 
 const args = (parameters: Parameter[]): string =>
   parameters
@@ -8,7 +8,7 @@ const args = (parameters: Parameter[]): string =>
     .map((parameter) => `$${parameter.name}`)
     .join(", ");
 
-export class StoredProcedureStatement implements IStoredProcedureStatement {
+export class ExecuteStoredProcedureStatement implements IExecuteStoredProcedureStatement {
   private readonly text: string;
 
   constructor(text: string);

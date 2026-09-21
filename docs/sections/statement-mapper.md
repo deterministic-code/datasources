@@ -44,7 +44,7 @@ readonly columns: IMapper<string, string>
 
 ##### query
 
-Rewrites a finished [IQuery](./statements.md#iquery).
+Rewrites a finished [IQuery](./query-statement.md#iquery).
 
 ```typescript
 readonly query?: IMapper<IQuery, IQuery>
@@ -52,7 +52,7 @@ readonly query?: IMapper<IQuery, IQuery>
 
 ##### insert
 
-Rewrites a finished [IInsertStatement](./statements.md#iinsertstatement).
+Rewrites a finished [IInsertStatement](./insert-statement.md#iinsertstatement).
 
 ```typescript
 readonly insert?: IMapper<IInsertStatement, IInsertStatement>
@@ -60,7 +60,7 @@ readonly insert?: IMapper<IInsertStatement, IInsertStatement>
 
 ##### update
 
-Rewrites a finished [IUpdateStatement](./statements.md#iupdatestatement).
+Rewrites a finished [IUpdateStatement](./update-statement.md#iupdatestatement).
 
 ```typescript
 readonly update?: IMapper<IUpdateStatement, IUpdateStatement>
@@ -68,7 +68,7 @@ readonly update?: IMapper<IUpdateStatement, IUpdateStatement>
 
 ##### delete
 
-Rewrites a finished [IDeleteStatement](./statements.md#ideletestatement).
+Rewrites a finished [IDeleteStatement](./delete-statement.md#ideletestatement).
 
 ```typescript
 readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>
@@ -76,15 +76,15 @@ readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>
 
 ##### storedProcedure
 
-Rewrites a finished [IStoredProcedureStatement](./statements.md#istoredprocedurestatement).
+Rewrites a finished [IExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md#iexecutestoredprocedurestatement).
 
 ```typescript
-readonly storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
+readonly storedProcedure?: IMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>
 ```
 
 ##### return
 
-Rewrites a finished [IReturnStatement](./statements.md#ireturnstatement).
+Rewrites a finished [IReturnStatement](./return-statement.md#ireturnstatement).
 
 ```typescript
 readonly return?: IMapper<IReturnStatement, IReturnStatement>
@@ -160,7 +160,7 @@ rows?: IMapper<T, T>
 
 ##### query
 
-Rewrites a finished [IQuery](./statements.md#iquery).
+Rewrites a finished [IQuery](./query-statement.md#iquery).
 
 ```typescript
 query?: IMapper<IQuery, IQuery>
@@ -168,7 +168,7 @@ query?: IMapper<IQuery, IQuery>
 
 ##### insert
 
-Rewrites a finished [IInsertStatement](./statements.md#iinsertstatement).
+Rewrites a finished [IInsertStatement](./insert-statement.md#iinsertstatement).
 
 ```typescript
 insert?: IMapper<IInsertStatement, IInsertStatement>
@@ -176,7 +176,7 @@ insert?: IMapper<IInsertStatement, IInsertStatement>
 
 ##### update
 
-Rewrites a finished [IUpdateStatement](./statements.md#iupdatestatement).
+Rewrites a finished [IUpdateStatement](./update-statement.md#iupdatestatement).
 
 ```typescript
 update?: IMapper<IUpdateStatement, IUpdateStatement>
@@ -184,7 +184,7 @@ update?: IMapper<IUpdateStatement, IUpdateStatement>
 
 ##### delete
 
-Rewrites a finished [IDeleteStatement](./statements.md#ideletestatement).
+Rewrites a finished [IDeleteStatement](./delete-statement.md#ideletestatement).
 
 ```typescript
 delete?: IMapper<IDeleteStatement, IDeleteStatement>
@@ -192,10 +192,10 @@ delete?: IMapper<IDeleteStatement, IDeleteStatement>
 
 ##### storedProcedure
 
-Rewrites a finished [IStoredProcedureStatement](./statements.md#istoredprocedurestatement).
+Rewrites a finished [IExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md#iexecutestoredprocedurestatement).
 
 ```typescript
-storedProcedure?: IMapper<IStoredProcedureStatement, IStoredProcedureStatement>
+storedProcedure?: IMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>
 ```
 
 ### csharp
@@ -225,7 +225,7 @@ IMapper<string, string> Columns { get; init; }
 
 ##### Query
 
-Rewrites a finished [IQuery](./statements.md#iquery).
+Rewrites a finished [IQuery](./query-statement.md#iquery).
 
 ```csharp
 IMapper<IQuery, IQuery>? Query { get; init; }
@@ -233,7 +233,7 @@ IMapper<IQuery, IQuery>? Query { get; init; }
 
 ##### Insert
 
-Rewrites a finished [IInsertStatement](./statements.md#iinsertstatement).
+Rewrites a finished [IInsertStatement](./insert-statement.md#iinsertstatement).
 
 ```csharp
 IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
@@ -241,7 +241,7 @@ IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
 
 ##### Update
 
-Rewrites a finished [IUpdateStatement](./statements.md#iupdatestatement).
+Rewrites a finished [IUpdateStatement](./update-statement.md#iupdatestatement).
 
 ```csharp
 IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
@@ -249,7 +249,7 @@ IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
 
 ##### Delete
 
-Rewrites a finished [IDeleteStatement](./statements.md#ideletestatement).
+Rewrites a finished [IDeleteStatement](./delete-statement.md#ideletestatement).
 
 ```csharp
 IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
@@ -257,15 +257,15 @@ IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
 
 ##### StoredProcedure
 
-Rewrites a finished [IStoredProcedureStatement](./statements.md#istoredprocedurestatement).
+Rewrites a finished [IExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md#iexecutestoredprocedurestatement).
 
 ```csharp
-IMapper<IStoredProcedureStatement, IStoredProcedureStatement>? StoredProcedure { get; init; }
+IMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>? StoredProcedure { get; init; }
 ```
 
 ##### Return
 
-Rewrites a finished [IReturnStatement](./statements.md#ireturnstatement).
+Rewrites a finished [IReturnStatement](./return-statement.md#ireturnstatement).
 
 ```csharp
 IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }

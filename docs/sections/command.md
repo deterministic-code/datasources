@@ -848,10 +848,10 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 ### Parameter direction and Response.Parameters
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L175-L178
+```csharp csharp/Datasources.Tests/CoreTests.cs#L176-L179
 ```
-```rust rust/datasources/src/tests/mod.rs#L983-L989
+```rust rust/datasources/src/tests/mod.rs#L980-L986
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L256-L259
+```typescript typescript/datasources/src/builders/builders.test.ts#L255-L258
 ```
 :::

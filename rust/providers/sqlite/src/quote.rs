@@ -15,7 +15,7 @@ mod tests {
     use super::*;
     use datasources::{
         DeleteStatement, InsertStatement, Join, Operator, Parameter, QueryStatement,
-        StoredProcedureStatement, Text, UpdateStatement, WhereClause,
+        ExecuteStoredProcedureStatement, Text, UpdateStatement, WhereClause,
     };
 
     #[test]
@@ -57,7 +57,7 @@ mod tests {
             "DELETE FROM \"user\" WHERE id = $id"
         );
         assert_eq!(
-            StoredProcedureStatement::new(SqliteQuote::quote("save"), &fields).get_text(),
+            ExecuteStoredProcedureStatement::new(SqliteQuote::quote("save"), &fields).get_text(),
             "CALL \"save\"($id, $username)"
         );
         let users_id = SqliteQuote::qualified("users.id");

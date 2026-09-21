@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DeleteStatement } from "../statements/DeleteStatement.ts";
 import { InsertStatement } from "../statements/InsertStatement.ts";
 import { ReturnStatement } from "../statements/ReturnStatement.ts";
-import { StoredProcedureStatement } from "../statements/StoredProcedureStatement.ts";
+import { ExecuteStoredProcedureStatement } from "../statements/ExecuteStoredProcedureStatement.ts";
 import { QueryStatement } from "../statements/QueryStatement.ts";
 import { UpdateStatement } from "../statements/UpdateStatement.ts";
 import { statementsOf } from "../RepositoryStatements.ts";
@@ -63,11 +63,11 @@ describe("StatementMapper", () => {
   it("rewrites a finished stored procedure", () => {
     const mapper = new StatementMapper({
       storedProcedure: new TransformMapper(
-        (proc) => new StoredProcedureStatement(`${proc.getText()} /* mapped */`),
+        (proc) => new ExecuteStoredProcedureStatement(`${proc.getText()} /* mapped */`),
         (proc) => proc,
       ),
     });
-    const built = new StoredProcedureStatement("save", [{ name: "id", value: 1 }]);
+    const built = new ExecuteStoredProcedureStatement("save", [{ name: "id", value: 1 }]);
     const statement = mapper.storedProcedure?.map(built) ?? built;
     expect(statement.getText()).toBe("CALL save($id) /* mapped */");
   });

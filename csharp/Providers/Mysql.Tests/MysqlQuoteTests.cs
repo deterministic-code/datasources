@@ -32,6 +32,6 @@ public class MysqlQuoteTests
             new DeleteStatement(MysqlQuote.Quote("user"), where).GetText());
         Assert.Equal(
             "CALL `save`($id, $username)",
-            new StoredProcedureStatement(MysqlQuote.Quote("save"), fields).GetText());
+            new ExecuteStoredProcedureStatement(MysqlQuote.Quote("save"), fields).GetText());
     }
 }

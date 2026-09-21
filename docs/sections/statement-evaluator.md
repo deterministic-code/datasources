@@ -25,7 +25,7 @@ evaluate(expression: IExpression, parameters?: Record<string, Scalar>): Scalar
 - `expression` — [IExpression](./expressions.md#iexpression)
 - `parameters` — row / name→value context
 
-**Returns** [Scalar](./where-statement.md#scalar)
+**Returns** [Scalar](./where-clause.md#scalar)
 
 ### csharp
 #### StatementEvaluator
@@ -74,7 +74,7 @@ pub fn evaluate(&self, expression: &Expression, parameters: &Row) -> Value
 
 ## Remarks
 
-Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A raw text [Where](./statements.md#where) is not evaluable.
+Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A raw text [Where](./where-clause.md#where) is not evaluable.
 
 ## Examples
 

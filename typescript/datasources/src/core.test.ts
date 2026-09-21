@@ -31,7 +31,7 @@ import {
   ProviderNotInstalledError,
   providerFromUrl,
   QueryStatement,
-  StoredProcedureStatement,
+  ExecuteStoredProcedureStatement,
   readerToAsyncIterable,
   StubCommand,
   StubConnection,
@@ -603,7 +603,7 @@ describe("published mocks", () => {
     command.executeError = undefined;
     command.executeReaderError = undefined;
     const fields = [{ name: "id", value: 1 }];
-    const statement = new StoredProcedureStatement("save", fields);
+    const statement = new ExecuteStoredProcedureStatement("save", fields);
     await execute(command, statement, fields);
     expect(command.executeCalls.at(-1)).toEqual({
       text: "CALL save($id)",

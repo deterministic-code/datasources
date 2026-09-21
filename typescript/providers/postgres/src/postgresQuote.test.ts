@@ -4,7 +4,7 @@ import {
   InsertStatement,
   Operator,
   QueryStatement,
-  StoredProcedureStatement,
+  ExecuteStoredProcedureStatement,
   UpdateStatement,
   WhereClause,
 } from "@datasources/core";
@@ -39,7 +39,7 @@ describe("PostgresQuote", () => {
     expect(new DeleteStatement(PostgresQuote.quote("user"), where).getText()).toBe(
       'DELETE FROM "user" WHERE id = $id',
     );
-    expect(new StoredProcedureStatement(PostgresQuote.quote("save"), fields).getText()).toBe(
+    expect(new ExecuteStoredProcedureStatement(PostgresQuote.quote("save"), fields).getText()).toBe(
       'CALL "save"($id, $username)',
     );
   });

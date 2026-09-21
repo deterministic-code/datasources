@@ -1,10 +1,10 @@
 namespace Datasources;
 
-public sealed record StoredProcedureStatement : IStoredProcedureStatement
+public sealed record ExecuteStoredProcedureStatement : IExecuteStoredProcedureStatement
 {
     readonly string text;
-    public StoredProcedureStatement(string text) => this.text = text;
-    public StoredProcedureStatement(string name, IReadOnlyList<Parameter> parameters) =>
+    public ExecuteStoredProcedureStatement(string text) => this.text = text;
+    public ExecuteStoredProcedureStatement(string name, IReadOnlyList<Parameter> parameters) =>
         text = $"CALL {name}({Args(parameters)})";
     public string GetText() => text;
     static string Args(IReadOnlyList<Parameter> parameters) =>

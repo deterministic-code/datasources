@@ -45,7 +45,7 @@ public class PostgresCommandIntegrationTests
                 AS $$ SELECT n + 1 $$
                 """);
             var result = new Parameter("result", 4, ParameterDirection.InputOutput);
-            var call = await command.Execute(new StoredProcedureStatement("bump", [result]).GetText(), [result]);
+            var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [result]).GetText(), [result]);
             Assert.Equal(new Value.Int(5), call.Parameters![0].Value);
             var n = new Parameter("n", 4);
             var ret = await command.Execute(new ReturnStatement("add_one", [n]).GetText(), [n]);

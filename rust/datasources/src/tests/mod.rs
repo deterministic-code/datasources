@@ -920,8 +920,9 @@ fn statements_and_builders() {
         QueryStatement::new("users", &["id"], None, &[]).get_text(),
         "SELECT id FROM users"
     );
+    let insert = InsertStatement::new("users", &fields);
     assert_eq!(
-        InsertStatement::new("users", &fields).get_text(),
+        insert.get_text(),
         "INSERT INTO users (id, name) VALUES ($id, $name)"
     );
     let update = UpdateStatement::new("users", &fields, Some(&where_clause));
@@ -943,29 +944,25 @@ fn statements_and_builders() {
         DeleteStatement::new("users", None).get_text(),
         "DELETE FROM users"
     );
+    let create_table = CreateTableStatement::new(
+        "users",
+        &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
+    );
     assert_eq!(
-        CreateTableStatement::new(
-            "users",
-            &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")]
-        )
-        .get_text(),
+        create_table.get_text(),
         "CREATE TABLE users (id INTEGER, name TEXT)"
     );
+    let call = ExecuteStoredProcedureStatement::new("save", &fields);
+    assert_eq!(call.get_text(), "CALL save($id, $name)");
     assert_eq!(
-        StoredProcedureStatement::new("save", &fields).get_text(),
-        "CALL save($id, $name)"
-    );
-    assert_eq!(
-        StoredProcedureStatement::new("save", &[]).get_text(),
+        ExecuteStoredProcedureStatement::new("save", &[]).get_text(),
         "CALL save()"
     );
-    assert_eq!(
-        ReturnStatement::new("add", &fields).get_text(),
-        "SELECT add($id, $name)"
-    );
+    let ret = ReturnStatement::new("add", &fields);
+    assert_eq!(ret.get_text(), "SELECT add($id, $name)");
     assert_eq!(ReturnStatement::new("add", &[]).get_text(), "SELECT add()");
     assert_eq!(
-        StoredProcedureStatement::new(
+        ExecuteStoredProcedureStatement::new(
             "save",
             &[Parameter::new("id", 1_i64), Parameter::return_value("ret")]
         )
@@ -999,7 +996,7 @@ fn statements_and_builders() {
     assert_eq!(UpdateStatement::text("x", None).get_text(), "x");
     assert_eq!(DeleteStatement::raw("x", None).get_text(), "x");
     assert_eq!(CreateTableStatement::text("x").get_text(), "x");
-    assert_eq!(StoredProcedureStatement::text("x").get_text(), "x");
+    assert_eq!(ExecuteStoredProcedureStatement::text("x").get_text(), "x");
     assert_eq!(ReturnStatement::text("x").get_text(), "x");
 }
 
@@ -1208,7 +1205,7 @@ fn stored_procedure_mapper_rewrites_finished_sql() {
         |text: String| format!("{text} /* mapped */"),
         |text| text,
     )));
-    let built = StoredProcedureStatement::new("save", &[Parameter::new("id", 1_i64)]);
+    let built = ExecuteStoredProcedureStatement::new("save", &[Parameter::new("id", 1_i64)]);
     let text = StatementMapper::map_sql(&mapper.stored_procedure, built.get_text());
     assert_eq!(text, "CALL save($id) /* mapped */");
 }
@@ -1229,7 +1226,7 @@ fn return_mapper_rewrites_finished_sql() {
 async fn executes_statement_helpers() {
     let command = MockCommand::new();
     let fields = [Parameter::new("id", 1_i64)];
-    let statement = StoredProcedureStatement::new("save", &fields);
+    let statement = ExecuteStoredProcedureStatement::new("save", &fields);
     command
         .execute_statement(&statement, Some(&fields))
         .await

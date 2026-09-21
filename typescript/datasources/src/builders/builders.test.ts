@@ -12,7 +12,7 @@ import {
   StatementEvaluator,
   ParameterDirection,
   ReturnStatement,
-  StoredProcedureStatement,
+  ExecuteStoredProcedureStatement,
   UpdateStatement,
   Where,
   WhereClause,
@@ -209,7 +209,8 @@ describe("statements", () => {
     expect(new QueryStatement("users", ["id"], undefined, []).getText()).toBe(
       "SELECT id FROM users",
     );
-    expect(new InsertStatement("users", [...fields]).getText()).toBe(
+    const insert = new InsertStatement("users", [...fields]);
+    expect(insert.getText()).toBe(
       "INSERT INTO users (id, name) VALUES ($id, $name)",
     );
     const update = new UpdateStatement("users", [...fields], where);
@@ -226,24 +227,21 @@ describe("statements", () => {
     expect(new DeleteStatement("users").getText()).toBe(
       "DELETE FROM users",
     );
-    expect(
-      new CreateTableStatement("users", [
-        { name: "id", type: "INTEGER" },
-        { name: "name", type: "TEXT" },
-      ]).getText(),
-    ).toBe("CREATE TABLE users (id INTEGER, name TEXT)");
-    expect(
-      new StoredProcedureStatement("save", [...fields]).getText(),
-    ).toBe("CALL save($id, $name)");
-    expect(new StoredProcedureStatement("save", []).getText()).toBe(
+    const createTable = new CreateTableStatement("users", [
+      { name: "id", type: "INTEGER" },
+      { name: "name", type: "TEXT" },
+    ]);
+    expect(createTable.getText()).toBe("CREATE TABLE users (id INTEGER, name TEXT)");
+    const call = new ExecuteStoredProcedureStatement("save", [...fields]);
+    expect(call.getText()).toBe("CALL save($id, $name)");
+    expect(new ExecuteStoredProcedureStatement("save", []).getText()).toBe(
       "CALL save()",
     );
-    expect(new ReturnStatement("add", [...fields]).getText()).toBe(
-      "SELECT add($id, $name)",
-    );
+    const ret = new ReturnStatement("add", [...fields]);
+    expect(ret.getText()).toBe("SELECT add($id, $name)");
     expect(new ReturnStatement("add", []).getText()).toBe("SELECT add()");
     expect(
-      new StoredProcedureStatement("save", [
+      new ExecuteStoredProcedureStatement("save", [
         { name: "id", value: 1 },
         { name: "ret", direction: ParameterDirection.ReturnValue },
       ]).getText(),
@@ -265,7 +263,7 @@ describe("statements", () => {
     expect(new UpdateStatement("x").getText()).toBe("x");
     expect(DeleteStatement.raw("x").getText()).toBe("x");
     expect(new CreateTableStatement("x").getText()).toBe("x");
-    expect(new StoredProcedureStatement("x").getText()).toBe("x");
+    expect(new ExecuteStoredProcedureStatement("x").getText()).toBe("x");
     expect(new ReturnStatement("x").getText()).toBe("x");
   });
 });

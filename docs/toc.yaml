@@ -30,14 +30,42 @@ pages:
   - path: sections/statements.md
     title: Statements
     group: Code Reference
-  - path: sections/expressions.md
-    title: Expressions
+  - path: sections/query-statement.md
+    title: Query Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/insert-statement.md
+    title: Insert Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/update-statement.md
+    title: Update Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/delete-statement.md
+    title: Delete Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/create-table-statement.md
+    title: Create Table Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/execute-stored-procedure-statement.md
+    title: Execute Stored Procedure Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/return-statement.md
+    title: Return Statement
     group: Code Reference
     parent: Statements
   - path: sections/where-clause.md
     title: Where Clause
     group: Code Reference
-    parent: Expressions
+    parent: Statements
+  - path: sections/expressions.md
+    title: Expressions
+    group: Code Reference
+    parent: Statements
   - path: sections/statement-evaluator.md
     title: Statement Evaluator
     group: Code Reference

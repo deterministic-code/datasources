@@ -18,7 +18,7 @@ export default defineConfig({
         "src/statements/IInsertStatement.ts",
         "src/statements/IQuery.ts",
         "src/statements/IStatement.ts",
-        "src/statements/IStoredProcedureStatement.ts",
+        "src/statements/IExecuteStoredProcedureStatement.ts",
         "src/statements/IReturnStatement.ts",
         "src/statements/IUpdateStatement.ts",
         "src/statements/IExpression.ts",
