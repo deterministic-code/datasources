@@ -1,14 +1,9 @@
-use crate::as_user_view;
-use crate::cli_command::CliCommand;
-use crate::columns;
+use crate::commands::CliCommand;
 use crate::password_hash;
 use crate::schema;
-use crate::users_roles_groups_query;
-use crate::users_view;
 use datasources::{
-    collect_reader, Command, DatasourceError, ExecuteStoredProcedureStatement, FlatToNestedMapper,
-    InsertStatement, Mapper, Operator, Parameter, QueryStatement, Result, UpdateStatement,
-    Value, Where, WhereClause,
+    Command, DatasourceError, ExecuteStoredProcedureStatement, InsertStatement, Operator,
+    Parameter, QueryStatement, Result, UpdateStatement, Value, Where, WhereClause,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -51,76 +46,46 @@ impl<'a> App<'a> {
 
     pub async fn run(&self, parsed: CliCommand) -> Result<String> {
         match parsed {
-            CliCommand::AddUser { username, password } => self.write_user(&username, &password).await,
-            CliCommand::AddRole { name } => self.write_named("roles", "name", &name, "add_role").await,
-            CliCommand::AddGroup { name } => {
-                self.write_named("groups", &columns::map("name"), &name, "add_group")
-                    .await
-            }
-            CliCommand::AddUserRole { username, role } => {
-                self.write_link(
-                    &username,
-                    "roles",
-                    "name",
-                    &role,
-                    "user_roles",
-                    &columns::map("role_id"),
-                    "add_user_role",
-                )
-                .await
-            }
-            CliCommand::AddUserGroup { username, group } => {
-                self.write_link(
-                    &username,
-                    "groups",
-                    &columns::map("name"),
-                    &group,
-                    "user_groups",
-                    "group_id",
-                    "add_user_group",
-                )
-                .await
-            }
-            CliCommand::EnableUser { username } => self.set_enabled(&username, true).await,
-            CliCommand::DisableUser { username } => self.set_enabled(&username, false).await,
-            CliCommand::ListUsersRolesGroups => self.list().await,
+            CliCommand::AddUser(cmd) => cmd.run(self).await,
+            CliCommand::AddRole(cmd) => cmd.run(self).await,
+            CliCommand::AddGroup(cmd) => cmd.run(self).await,
+            CliCommand::AddUserRole(cmd) => cmd.run(self).await,
+            CliCommand::AddUserGroup(cmd) => cmd.run(self).await,
+            CliCommand::EnableUser(cmd) => cmd.run(self).await,
+            CliCommand::DisableUser(cmd) => cmd.run(self).await,
+            CliCommand::ListUsersRolesGroups(cmd) => cmd.run(self).await,
         }
     }
 
-    async fn write_user(&self, username: &str, password: &str) -> Result<String> {
-        let created = (self.now)();
-        let updated = (self.token)();
-        let hashed = (self.hash)(password)?;
-        self.write(
-            &self.table("users"),
-            "add_user",
-            &[
-                Parameter::new("username", username),
-                Parameter::new("password", hashed.as_str()),
-                Parameter::new("is_enabled", true),
-                Parameter::new("created", created.as_str()),
-                Parameter::new("updated", updated.clone()),
-            ],
-            &[
-                Parameter::new("p_username", username),
-                Parameter::new("p_password", hashed.as_str()),
-                Parameter::new("p_is_enabled", true),
-                Parameter::new("p_created", created.as_str()),
-                Parameter::new("p_updated", updated),
-            ],
-        )
-        .await
+    pub(crate) fn command(&self) -> &'a dyn Command {
+        self.command
     }
 
-    async fn write_named(
+    pub(crate) fn provider(&self) -> &str {
+        &self.provider
+    }
+
+    pub(crate) fn stamp(&self) -> String {
+        (self.now)()
+    }
+
+    pub(crate) fn hash_password(&self, password: &str) -> Result<String> {
+        (self.hash)(password)
+    }
+
+    pub(crate) fn token_bytes(&self) -> Vec<u8> {
+        (self.token)()
+    }
+
+    pub(crate) async fn write_named(
         &self,
         table: &str,
         column: &str,
         value: &str,
         procedure: &str,
     ) -> Result<String> {
-        let created = (self.now)();
-        let updated = (self.token)();
+        let created = self.stamp();
+        let updated = self.token_bytes();
         self.write(
             &self.table(table),
             procedure,
@@ -140,7 +105,7 @@ impl<'a> App<'a> {
         .await
     }
 
-    async fn write_link(
+    pub(crate) async fn write_link(
         &self,
         username: &str,
         right_table: &str,
@@ -152,8 +117,8 @@ impl<'a> App<'a> {
     ) -> Result<String> {
         let user_id = self.id(&self.table("users"), "username", username).await?;
         let right_id = self.id(&self.table(right_table), right_column, right_value).await?;
-        let created = (self.now)();
-        let updated = (self.token)();
+        let created = self.stamp();
+        let updated = self.token_bytes();
         let insert = [
             Parameter::new("user_id", user_id),
             Parameter::new(link_column, right_id),
@@ -185,8 +150,8 @@ impl<'a> App<'a> {
         Ok(String::new())
     }
 
-    async fn set_enabled(&self, username: &str, enabled: bool) -> Result<String> {
-        let updated = (self.token)();
+    pub(crate) async fn set_enabled(&self, username: &str, enabled: bool) -> Result<String> {
+        let updated = self.token_bytes();
         if self.provider == "mysql" {
             let fields = [
                 Parameter::new("p_username", username),
@@ -218,19 +183,7 @@ impl<'a> App<'a> {
         Ok(String::new())
     }
 
-    async fn list(&self) -> Result<String> {
-        let query = users_roles_groups_query::create(&self.provider);
-        let reader = self
-            .command
-            .execute_reader_statement(&query, None)
-            .await?;
-        let rows = collect_reader(reader.as_ref()).await?;
-        let mapped = Mapper::map(&FlatToNestedMapper::new(users_view::type_map()), rows);
-        Ok(serde_json::to_string(&as_user_view::from_mapped(&mapped))
-            .map_err(|error| DatasourceError::message(error.to_string()))?)
-    }
-
-    async fn id(&self, table: &str, column: &str, value: &str) -> Result<i64> {
+    pub(crate) async fn id(&self, table: &str, column: &str, value: &str) -> Result<i64> {
         let where_clause = WhereClause::new(Operator::equals(column, value));
         let query = QueryStatement::new(table, &["id"], Some(&where_clause), &[]);
         let parameters = where_clause.parameters();
@@ -251,7 +204,7 @@ impl<'a> App<'a> {
         }
     }
 
-    async fn write(
+    pub(crate) async fn write(
         &self,
         table: &str,
         procedure: &str,
@@ -270,7 +223,7 @@ impl<'a> App<'a> {
         Ok(String::new())
     }
 
-    fn table(&self, name: &str) -> String {
+    pub(crate) fn table(&self, name: &str) -> String {
         schema::ident(&self.provider, name)
     }
 }

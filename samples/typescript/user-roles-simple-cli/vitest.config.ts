@@ -6,7 +6,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/main.ts", "src/cli-command.ts", "src/*-view.ts"],
+      exclude: ["src/**/*.test.ts", "src/main.ts", "src/commands/cli-command.ts", "src/*-view.ts"],
       thresholds: {
         lines: 100,
         branches: 100,

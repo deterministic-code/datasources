@@ -1,4 +1,7 @@
-use crate::cli_command::CliCommand;
+use crate::commands::{
+    AddGroup, AddRole, AddUser, AddUserGroup, AddUserRole, CliCommand, DisableUser, EnableUser,
+    ListUsersRolesGroups,
+};
 use datasources::{DatasourceError, Result};
 
 pub const USAGE: &str = "\
@@ -13,27 +16,31 @@ list-users-roles-groups";
 
 pub fn args(args: &[String]) -> Result<CliCommand> {
     match args {
-        [cmd, username, password] if cmd == "add-user" => Ok(CliCommand::AddUser {
+        [cmd, username, password] if cmd == "add-user" => Ok(CliCommand::AddUser(AddUser {
             username: username.clone(),
             password: password.clone(),
-        }),
-        [cmd, name] if cmd == "add-role" => Ok(CliCommand::AddRole { name: name.clone() }),
-        [cmd, name] if cmd == "add-group" => Ok(CliCommand::AddGroup { name: name.clone() }),
-        [cmd, username, role] if cmd == "add-user-role" => Ok(CliCommand::AddUserRole {
+        })),
+        [cmd, name] if cmd == "add-role" => Ok(CliCommand::AddRole(AddRole { name: name.clone() })),
+        [cmd, name] if cmd == "add-group" => Ok(CliCommand::AddGroup(AddGroup { name: name.clone() })),
+        [cmd, username, role] if cmd == "add-user-role" => Ok(CliCommand::AddUserRole(AddUserRole {
             username: username.clone(),
             role: role.clone(),
-        }),
-        [cmd, username, group] if cmd == "add-user-group" => Ok(CliCommand::AddUserGroup {
+        })),
+        [cmd, username, group] if cmd == "add-user-group" => {
+            Ok(CliCommand::AddUserGroup(AddUserGroup {
+                username: username.clone(),
+                group: group.clone(),
+            }))
+        }
+        [cmd, username] if cmd == "enable-user" => Ok(CliCommand::EnableUser(EnableUser {
             username: username.clone(),
-            group: group.clone(),
-        }),
-        [cmd, username] if cmd == "enable-user" => Ok(CliCommand::EnableUser {
+        })),
+        [cmd, username] if cmd == "disable-user" => Ok(CliCommand::DisableUser(DisableUser {
             username: username.clone(),
-        }),
-        [cmd, username] if cmd == "disable-user" => Ok(CliCommand::DisableUser {
-            username: username.clone(),
-        }),
-        [cmd] if cmd == "list-users-roles-groups" => Ok(CliCommand::ListUsersRolesGroups),
+        })),
+        [cmd] if cmd == "list-users-roles-groups" => {
+            Ok(CliCommand::ListUsersRolesGroups(ListUsersRolesGroups))
+        }
         [cmd, ..] if cmd == "add-user" => Err(DatasourceError::message(
             "Usage: add-user <username> <password>",
         )),

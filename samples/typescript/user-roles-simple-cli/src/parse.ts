@@ -1,4 +1,4 @@
-import type { CliCommand } from "./cli-command.ts";
+import type { CliCommand } from "./commands/cli-command.ts";
 
 export const usage = `add-user <username> <password>
 add-role <name>
