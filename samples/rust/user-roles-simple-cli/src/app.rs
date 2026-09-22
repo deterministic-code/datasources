@@ -1,11 +1,11 @@
 use crate::commands::CliCommand;
 use crate::password_hash;
 use crate::schema;
+use chrono::Utc;
 use datasources::{
     Command, DatasourceError, ExecuteStoredProcedureStatement, InsertStatement, Operator,
     Parameter, QueryStatement, Result, UpdateStatement, Value, Where, WhereClause,
 };
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub struct App<'a> {
     command: &'a dyn Command,
@@ -20,13 +20,7 @@ impl<'a> App<'a> {
         Self {
             command,
             provider: provider.into(),
-            now: Box::new(|| {
-                let millis = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .map(|value| value.as_millis())
-                    .unwrap_or(0);
-                format!("{millis}")
-            }),
+            now: Box::new(|| Value::iso_datetime(Utc::now())),
             hash: Box::new(password_hash::hash),
             token: Box::new(|| vec![1, 2, 3, 4]),
         }
@@ -41,6 +35,11 @@ impl<'a> App<'a> {
         self.now = Box::new(now);
         self.hash = Box::new(hash);
         self.token = Box::new(token);
+        self
+    }
+
+    pub fn with_now(mut self, now: impl Fn() -> String + Send + Sync + 'static) -> Self {
+        self.now = Box::new(now);
         self
     }
 

@@ -40,12 +40,15 @@ impl<'a> MysqlCommandDriver<'a> {
             });
         }
         let sql = to_mysql(sql);
-        let params = named_params(params);
         let mut slot = self.connection.conn.lock().await;
         let conn = slot
             .as_mut()
             .ok_or_else(|| DatasourceError::message("MySQL driver is not open"))?;
-        conn.exec_drop(sql, params).await.map_err(map_err)?;
+        if params.is_empty() {
+            conn.query_drop(sql.as_str()).await.map_err(map_err)?;
+        } else {
+            conn.exec_drop(sql, named_params(params)).await.map_err(map_err)?;
+        }
         Ok(MysqlExecuteResult {
             rows_affected: conn.affected_rows() as i64,
             result: conn

@@ -1,0 +1,60 @@
+name: user-roles-simple-cli
+now: "2026-09-22T00:00:00.000Z"
+steps:
+  - argv: [add-role, admin]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-role, editor]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-role, viewer]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-group, staff]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-group, contractors]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-group, guests]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user, alice, secret]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user, bob, secret]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user, carol, secret]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-role, alice, editor]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-role, alice, admin]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-role, bob, viewer]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-role, bob, editor]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-role, carol, viewer]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-group, alice, contractors]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-group, alice, staff]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-group, bob, guests]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-group, carol, staff]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [add-user-group, carol, guests]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [list-users-roles-groups]
+    expect:
+      exit: 0
+      stdout: '[{"id":1,"username":"alice","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":1,"name":"admin","is_enabled":true},{"id":2,"name":"editor","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":2,"name":"contractors","is_enabled":true}]},{"id":2,"username":"bob","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":2,"name":"editor","is_enabled":true},{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":3,"name":"guests","is_enabled":true}]},{"id":3,"username":"carol","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":3,"name":"guests","is_enabled":true}]}]'
+      stderr: ""
+  - argv: [disable-user, bob]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [list-users-roles-groups]
+    expect:
+      exit: 0
+      stdout: '[{"id":1,"username":"alice","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":1,"name":"admin","is_enabled":true},{"id":2,"name":"editor","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":2,"name":"contractors","is_enabled":true}]},{"id":2,"username":"bob","is_enabled":false,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":2,"name":"editor","is_enabled":true},{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":3,"name":"guests","is_enabled":true}]},{"id":3,"username":"carol","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":3,"name":"guests","is_enabled":true}]}]'
+      stderr: ""
+  - argv: [enable-user, bob]
+    expect: { exit: 0, stdout: "", stderr: "" }
+  - argv: [list-users-roles-groups]
+    expect:
+      exit: 0
+      stdout: '[{"id":1,"username":"alice","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":1,"name":"admin","is_enabled":true},{"id":2,"name":"editor","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":2,"name":"contractors","is_enabled":true}]},{"id":2,"username":"bob","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":2,"name":"editor","is_enabled":true},{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":3,"name":"guests","is_enabled":true}]},{"id":3,"username":"carol","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":3,"name":"guests","is_enabled":true}]}]'
+      stderr: ""

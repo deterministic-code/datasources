@@ -1,9 +1,29 @@
+use serde::Deserialize;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Mutex;
 
 static LOCK: Mutex<()> = Mutex::new(());
+
+#[derive(Deserialize)]
+struct CliSpec {
+    now: String,
+    steps: Vec<Step>,
+}
+
+#[derive(Deserialize)]
+struct Step {
+    argv: Vec<String>,
+    expect: Expect,
+}
+
+#[derive(Deserialize)]
+struct Expect {
+    exit: i32,
+    stdout: String,
+    stderr: String,
+}
 
 fn sample() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -11,6 +31,13 @@ fn sample() -> PathBuf {
 
 fn repo() -> PathBuf {
     sample().join("../../..").canonicalize().expect("repo")
+}
+
+fn spec() -> CliSpec {
+    serde_yaml::from_str(
+        &fs::read_to_string(sample().join("../../user-roles-simple-cli-shared/cli.yaml")).expect("spec"),
+    )
+    .expect("yaml")
 }
 
 fn write_env(url: &str, schema: &str) {
@@ -21,6 +48,29 @@ fn write_env(url: &str, schema: &str) {
         ),
     )
     .expect("env");
+}
+
+fn env_or(key: &str, default: &str) -> String {
+    std::env::var(key)
+        .ok()
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| default.to_string())
+}
+
+fn ensure_compose(service: &str) {
+    if std::env::var("SKIP_DOCKER")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .is_some()
+    {
+        return;
+    }
+    let status = Command::new("docker")
+        .args(["compose", "up", "-d", "--wait", service])
+        .current_dir(repo())
+        .status()
+        .expect("docker");
+    assert!(status.success(), "docker compose up {service}");
 }
 
 fn setup() {
@@ -41,60 +91,78 @@ fn setup() {
     assert!(status.success());
 }
 
-fn cli(args: &[&str], url: &str, schema: &str) -> String {
-    let output = Command::new("cargo")
-        .args(["run", "--quiet", "--"])
+fn build() -> PathBuf {
+    let status = Command::new("cargo")
+        .args(["build", "--quiet"])
+        .current_dir(sample())
+        .status()
+        .expect("build");
+    assert!(status.success());
+    std::env::var("CARGO_TARGET_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| sample().join("target"))
+        .join("debug/user-roles-simple-cli")
+}
+
+fn cli(bin: &Path, args: &[String], url: &str, schema: &str, now: &str) -> (i32, String, String) {
+    let output = Command::new(bin)
         .args(args)
         .env("DATASOURCE_URL", url)
         .env("DATABASE_SCHEMA", schema)
+        .env("CLI_NOW", now)
         .current_dir(sample())
         .output()
         .expect("cli");
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    String::from_utf8_lossy(&output.stdout).into_owned()
+    (
+        output.status.code().unwrap_or(1),
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+    )
 }
 
-fn script(url: &str, schema: &str) {
-    cli(&["add-role", "admin"], url, schema);
-    cli(&["add-group", "staff"], url, schema);
-    cli(&["add-user", "alice", "secret"], url, schema);
-    cli(&["add-user-role", "alice", "admin"], url, schema);
-    cli(&["add-user-group", "alice", "staff"], url, schema);
-    let listed = cli(&["list-users-roles-groups"], url, schema);
-    let users: serde_json::Value = serde_json::from_str(&listed).expect("json");
-    assert_eq!(users[0]["username"], "alice");
-    assert_eq!(users[0]["is_enabled"], true);
-    assert_eq!(users[0]["roles"][0]["name"], "admin");
-    assert_eq!(users[0]["groups"][0]["name"], "staff");
-    assert!(!listed.contains("password"));
-    assert!(!listed.contains("ugly_name"));
-    cli(&["disable-user", "alice"], url, schema);
-    let disabled: serde_json::Value =
-        serde_json::from_str(&cli(&["list-users-roles-groups"], url, schema)).expect("json");
-    assert_eq!(disabled[0]["is_enabled"], false);
+fn verbose() -> bool {
+    matches!(std::env::var("VERBOSE").as_deref(), Ok("1") | Ok("true"))
+}
+
+fn script(url: &str, schema: &str, provider: &str) {
+    let spec = spec();
+    let bin = build();
+    for step in &spec.steps {
+        let (exit, stdout, stderr) = cli(&bin, &step.argv, url, schema, &spec.now);
+        let cmd = step.argv.join(" ");
+        if verbose() {
+            println!("{provider}: {cmd}");
+            println!("  assert exit {exit} == {}", step.expect.exit);
+            println!("  assert stdout [{stdout}] == [{}]", step.expect.stdout);
+            println!("  assert stderr [{stderr}] == [{}]", step.expect.stderr);
+        }
+        if exit != step.expect.exit || stdout != step.expect.stdout || stderr != step.expect.stderr {
+            panic!(
+                "{provider}: {cmd}: first mismatch\nexpected exit {} stdout [{}] stderr [{}]\nactual exit {exit} stdout [{stdout}] stderr [{stderr}]",
+                step.expect.exit,
+                step.expect.stdout,
+                step.expect.stderr
+            );
+        }
+    }
 }
 
 #[test]
 fn sqlite() {
-    let _guard = LOCK.lock().expect("lock");
+    let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
     let dir = std::env::temp_dir().join(format!("user-roles-{}", uuid()));
     fs::create_dir_all(&dir).expect("tmp");
     let url = format!("sqlite:///{}", dir.join("app.db").display());
     write_env(&url, "");
     setup();
-    script(&url, "");
+    script(&url, "", "sqlite");
 }
 
 #[tokio::test]
 async fn mysql() {
-    let Some(url) = std::env::var("MYSQL_URL").ok().filter(|value| !value.is_empty()) else {
-        return;
-    };
-    let _guard = LOCK.lock().expect("lock");
+    let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    ensure_compose("mysql");
+    let url = env_or("MYSQL_URL", "mysql://ds:ds@127.0.0.1:3306/datasources");
     let name = format!("ds_{}", &uuid()[..16]);
     let pool = mysql_async::Pool::new(url.as_str());
     {
@@ -106,7 +174,7 @@ async fn mysql() {
     let isolated = replace_mysql_db(&url, &name);
     write_env(&isolated, "");
     setup();
-    script(&isolated, "");
+    script(&isolated, "", "mysql");
     let mut conn = pool.get_conn().await.expect("mysql");
     mysql_async::prelude::Queryable::query_drop(&mut conn, format!("DROP DATABASE `{name}`"))
         .await
@@ -115,13 +183,9 @@ async fn mysql() {
 
 #[tokio::test]
 async fn postgres() {
-    let Some(url) = std::env::var("POSTGRES_URL")
-        .ok()
-        .filter(|value| !value.is_empty())
-    else {
-        return;
-    };
-    let _guard = LOCK.lock().expect("lock");
+    let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    ensure_compose("postgres");
+    let url = env_or("POSTGRES_URL", "postgres://ds:ds@127.0.0.1:5432/datasources");
     let schema = format!("ds_{}", &uuid()[..16]);
     let (client, connection) = tokio_postgres::connect(&url, tokio_postgres::NoTls)
         .await
@@ -135,7 +199,7 @@ async fn postgres() {
         .expect("schema");
     write_env(&url, &schema);
     setup();
-    script(&url, &schema);
+    script(&url, &schema, "postgres");
     client
         .execute(&format!("DROP SCHEMA {schema} CASCADE"), &[])
         .await
