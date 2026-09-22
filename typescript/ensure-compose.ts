@@ -24,3 +24,15 @@ export const ensureCompose = (service: "mysql" | "postgres") => {
   compose("up", "-d", "--wait", service);
   if (service === "mysql") grantMysql();
 };
+
+export const freshCompose = (service: "mysql" | "postgres") => {
+  if (process.env.SKIP_DOCKER) return;
+  compose("rm", "-sf", "-v", service);
+  compose("up", "-d", "--wait", service);
+  if (service === "mysql") grantMysql();
+};
+
+export const stopCompose = (service: "mysql" | "postgres") => {
+  if (process.env.SKIP_DOCKER) return;
+  compose("rm", "-sf", "-v", service);
+};

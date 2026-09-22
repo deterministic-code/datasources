@@ -29,5 +29,6 @@
     <Using Include="Xunit" />
     <Compile Include="*Tests.cs" />
     <ProjectReference Include="UserRolesSimpleCli.csproj" />
+    <ProjectReference Include="..\..\..\csharp\Datasources\Datasources.csproj" />
   </ItemGroup>
 </Project>

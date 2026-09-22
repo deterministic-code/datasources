@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using MySqlConnector;
 using Npgsql;
+using Xunit.Abstractions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -11,14 +12,25 @@ public sealed class CliE2ETests(ITestOutputHelper output)
 {
     [Fact]
     [Trait("Category", "e2e")]
-    public async Task Sqlite() =>
-        await Run("sqlite", $"sqlite:///{Path.Combine(Path.GetTempPath(), $"user-roles-{Guid.NewGuid():N}.db")}", null);
+    public async Task Sqlite()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"user-roles-{Guid.NewGuid():N}.db");
+        try
+        {
+            await Run("sqlite", $"sqlite:///{path}", null);
+        }
+        finally
+        {
+            foreach (var leftover in new[] { path, $"{path}-wal", $"{path}-shm" })
+                File.Delete(leftover);
+        }
+    }
 
     [Fact]
     [Trait("Category", "e2e")]
     public async Task Mysql()
     {
-        EnsureCompose("mysql");
+        FreshCompose("mysql");
         var url = Environment.GetEnvironmentVariable("MYSQL_URL");
         if (string.IsNullOrEmpty(url)) url = "mysql://ds:ds@127.0.0.1:3306/datasources";
         var name = $"ds_{Guid.NewGuid():N}"[..18];
@@ -35,11 +47,18 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         }
         finally
         {
-            await using var admin = new MySqlConnection(ToMysql(url));
-            await admin.OpenAsync();
-            await using var drop = admin.CreateCommand();
-            drop.CommandText = $"DROP DATABASE `{name}`";
-            await drop.ExecuteNonQueryAsync();
+            try
+            {
+                await using var admin = new MySqlConnection(ToMysql(url));
+                await admin.OpenAsync();
+                await using var drop = admin.CreateCommand();
+                drop.CommandText = $"DROP DATABASE `{name}`";
+                await drop.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                StopCompose("mysql");
+            }
         }
     }
 
@@ -47,7 +66,7 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     [Trait("Category", "e2e")]
     public async Task Postgres()
     {
-        EnsureCompose("postgres");
+        FreshCompose("postgres");
         var url = Environment.GetEnvironmentVariable("POSTGRES_URL");
         if (string.IsNullOrEmpty(url)) url = "postgres://ds:ds@127.0.0.1:5432/datasources";
         var schema = $"ds_{Guid.NewGuid():N}"[..18];
@@ -64,11 +83,18 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         }
         finally
         {
-            await using var admin = new NpgsqlConnection(ToPostgres(url));
-            await admin.OpenAsync();
-            await using var drop = admin.CreateCommand();
-            drop.CommandText = $"DROP SCHEMA {schema} CASCADE";
-            await drop.ExecuteNonQueryAsync();
+            try
+            {
+                await using var admin = new NpgsqlConnection(ToPostgres(url));
+                await admin.OpenAsync();
+                await using var drop = admin.CreateCommand();
+                drop.CommandText = $"DROP SCHEMA {schema} CASCADE";
+                await drop.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                StopCompose("postgres");
+            }
         }
     }
 
@@ -127,10 +153,22 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     static bool Verbose() =>
         Environment.GetEnvironmentVariable("VERBOSE") is "1" or "true";
 
-    static void EnsureCompose(string service)
+    static void FreshCompose(string service)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
+        Require(Exec("docker", $"compose rm -sf -v {service}", RepoRoot()));
         Require(Exec("docker", $"compose up -d --wait {service}", RepoRoot()));
+        if (service == "mysql")
+            Require(Exec(
+                "docker",
+                "compose exec -T mysql mysql -uroot -proot -e \"GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;\"",
+                RepoRoot()));
+    }
+
+    static void StopCompose(string service)
+    {
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
+        Require(Exec("docker", $"compose rm -sf -v {service}", RepoRoot()));
     }
 
     static string Quote(string value) =>
