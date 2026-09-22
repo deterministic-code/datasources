@@ -45,12 +45,12 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     connection.open().await?;
     let command = connection.create_command();
     migrate::apply(command.as_ref(), connection.provider()).await?;
-    print!(
-        "{}",
-        App::new(command.as_ref(), connection.provider())
-            .run(parsed)
-            .await?
-    );
+    let app = App::new(command.as_ref(), connection.provider());
+    let app = match env("CLI_NOW") {
+        Some(stamp) => app.with_now(move || stamp.clone()),
+        None => app,
+    };
+    print!("{}", app.run(parsed).await?);
     Ok(())
 }
 

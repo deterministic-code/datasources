@@ -23,7 +23,9 @@ static async Task<int> Run(string[] args)
         await connection.Open();
         var command = connection.CreateCommand();
         await Migrate.Apply(command);
-        Console.Write(await new App(command).Run(parsed));
+        Console.Write(await new App(command, Env("CLI_NOW") is { } stamp
+            ? () => DateTime.Parse(stamp, null, System.Globalization.DateTimeStyles.RoundtripKind)
+            : null).Run(parsed));
         return 0;
     }
     catch (Exception ex)

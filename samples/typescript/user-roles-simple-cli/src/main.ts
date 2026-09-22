@@ -48,7 +48,8 @@ const run = async (args: string[]): Promise<number> => {
     await connection.open();
     const command = connection.createCommand();
     await migrate(command);
-    process.stdout.write(await new App(command).run(parsed));
+    const frozen = env("CLI_NOW");
+    process.stdout.write(await new App(command, frozen ? () => new Date(frozen) : undefined).run(parsed));
     return 0;
   } catch (error) {
     process.stderr.write(error instanceof Error ? error.message : "Unknown error");

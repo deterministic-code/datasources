@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1"
 bcrypt = "0.16"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { path = "../../../rust/datasources" }
 datasources-mysql = { path = "../../../rust/providers/mysql" }
 datasources-postgres = { path = "../../../rust/providers/postgres" }
@@ -17,6 +18,8 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 mysql_async = "0.34"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
 
 [lints.rust]
