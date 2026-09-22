@@ -89,8 +89,13 @@ describe("registerListed", () => {
     expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
   });
 
+  it("registers sqlite when the package resolves from the consumer", () => {
+    registerListed({ INSTALLED_PROVIDERS: "sqlite" });
+    expect(DatasourceFactory.registered()).toEqual(["sqlite"]);
+  });
+
   it("throws when the package is missing or the name is unknown", () => {
-    expect(() => registerListed({ INSTALLED_PROVIDERS: "sqlite" })).toThrow(
+    expect(() => registerListed({ INSTALLED_PROVIDERS: "text" })).toThrow(
       ProviderNotInstalledError,
     );
     expect(() => registerListed({ INSTALLED_PROVIDERS: "nope" })).toThrow(

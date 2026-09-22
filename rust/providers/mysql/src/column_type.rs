@@ -1,7 +1,4 @@
-use datasources::{Column, CreateTableStatement, Result, Text};
-
-use crate::column::MysqlColumn;
-use crate::quote::MysqlQuote;
+use datasources::Result;
 
 pub struct MysqlColumnType;
 
@@ -28,6 +25,9 @@ impl MysqlColumnType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::column::MysqlColumn;
+    use crate::quote::MysqlQuote;
+    use datasources::{Column, CreateTableStatement, Text};
 
     fn user_columns() -> Vec<MysqlColumn> {
         vec![

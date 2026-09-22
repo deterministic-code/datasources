@@ -21,6 +21,7 @@ jobs:
           dotnet-version: 10.0.x
       - run: npm ci --prefix typescript
       - run: npm ci --prefix cli
+      - run: npm install --prefix samples/typescript/user-roles-simple-cli
       - run: npm test
       - run: cargo test --workspace --manifest-path rust/Cargo.toml
         env:
@@ -45,6 +46,8 @@ jobs:
           dotnet-version: 10.0.x
       - run: docker compose up -d --wait
       - run: npm ci --prefix typescript
+      - run: npm install --prefix samples/typescript/user-roles-simple-cli
       - run: npm run test:e2e:ci
       - run: npm run test:e2e:rust
       - run: npm run test:e2e:csharp
+      - run: npm run test:e2e:samples
