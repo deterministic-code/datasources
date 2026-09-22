@@ -25,7 +25,7 @@ fn dialect() -> RepositoryDialect {
                     )
                 })
                 .collect();
-            CreateTableStatement::new(SqliteQuote::quote(table), &mapped).get_text()
+            CreateTableStatement::new(SqliteQuote::quote(table), &mapped, &[]).get_text()
         },
         field: super::converters::field,
         register: super::converters::register,

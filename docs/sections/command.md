@@ -850,7 +850,7 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L226-L229
 ```
-```rust rust/datasources/src/tests/mod.rs#L1048-L1054
+```rust rust/datasources/src/tests/mod.rs#L1062-L1068
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L325-L328
 ```

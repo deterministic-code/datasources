@@ -66,7 +66,7 @@ mod tests {
             })
             .collect();
         assert_eq!(
-            CreateTableStatement::new(MysqlQuote::quote("user"), &mapped).get_text(),
+            CreateTableStatement::new(MysqlQuote::quote("user"), &mapped, &[]).get_text(),
             "CREATE TABLE `user` (`id` INT PRIMARY KEY, `uuid` CHAR(36), `username` TEXT, `is_enabled` TINYINT, `balance` DECIMAL(18,4), `location` DOUBLE, `created` TEXT, `version` BLOB)"
         );
     }

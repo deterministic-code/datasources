@@ -18,14 +18,14 @@ impl Column {
         }
     }
 
-    pub fn with_default(self, default: ColumnDefault) -> Self {
+    pub fn default(self, default: ColumnDefault) -> Self {
         Self {
             default: Some(default),
             ..self
         }
     }
 
-    pub fn with_not_null(self, not_null: NotNull) -> Self {
+    pub fn not_null(self, not_null: NotNull) -> Self {
         Self {
             not_null: Some(not_null),
             ..self

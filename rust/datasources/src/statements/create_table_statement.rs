@@ -15,11 +15,7 @@ impl CreateTableStatement {
         Self { text: text.into() }
     }
 
-    pub fn new(table: impl AsRef<str>, columns: &[Column]) -> Self {
-        Self::with_constraints(table, columns, &[])
-    }
-
-    pub fn with_constraints(
+    pub fn new(
         table: impl AsRef<str>,
         columns: &[Column],
         constraints: &[TableConstraint],

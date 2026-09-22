@@ -643,30 +643,17 @@ pub fn text(text: impl Into<String>) -> Self
 
 **Returns** [CreateTableStatement](#createtablestatement)
 
-##### new(table, columns)
+##### new(table, columns, constraints)
 
 Compiles a `CREATE TABLE`.
 
 ```rust
-pub fn new(table: impl AsRef<str>, columns: &[Column]) -> Self
-```
-
-- `table` — table name
-- `columns` — [Column](#column) names and types
-
-**Returns** [CreateTableStatement](#createtablestatement)
-
-##### with_constraints(table, columns, constraints)
-
-Compiles a `CREATE TABLE` with named [TableConstraint](#tableconstraint) values.
-
-```rust
-pub fn with_constraints(table: impl AsRef<str>, columns: &[Column], constraints: &[TableConstraint]) -> Self
+pub fn new(table: impl AsRef<str>, columns: &[Column], constraints: &[TableConstraint]) -> Self
 ```
 
 - `table` — table name
 - `columns` — [Column](#column) names, types, optional [ColumnDefault](#columndefault) and [NotNull](#notnull)
-- `constraints` — named [TableConstraint](#tableconstraint) list
+- `constraints` — named [TableConstraint](#tableconstraint) list (empty when omitted in C# / TypeScript)
 
 **Returns** [CreateTableStatement](#createtablestatement)
 
@@ -703,24 +690,24 @@ pub fn new(name: impl Into<String>, type_name: impl Into<String>) -> Self
 
 **Returns** [Column](#column)
 
-##### with_default(self, default)
+##### default(self, default)
 
 Sets an optional [ColumnDefault](#columndefault).
 
 ```rust
-pub fn with_default(self, default: ColumnDefault) -> Self
+pub fn default(self, default: ColumnDefault) -> Self
 ```
 
 - `default` — [ColumnDefault](#columndefault)
 
 **Returns** [Column](#column)
 
-##### with_not_null(self, not_null)
+##### not_null(self, not_null)
 
 Sets an optional [NotNull](#notnull).
 
 ```rust
-pub fn with_not_null(self, not_null: NotNull) -> Self
+pub fn not_null(self, not_null: NotNull) -> Self
 ```
 
 - `not_null` — [NotNull](#notnull)
@@ -735,28 +722,16 @@ pub struct ColumnDefault
 
 **Constructor**
 
-##### new(value)
+##### new(value, name)
 
-Unnamed default value.
+Default value, optionally named.
 
 ```rust
-pub fn new(value: impl Into<String>) -> Self
+pub fn new(value: impl Into<String>, name: Option<&str>) -> Self
 ```
 
 - `value` — raw SQL default fragment
-
-**Returns** [ColumnDefault](#columndefault)
-
-##### named(name, value)
-
-Named default value.
-
-```rust
-pub fn named(name: impl Into<String>, value: impl Into<String>) -> Self
-```
-
-- `name` — constraint name
-- `value` — raw SQL default fragment
+- `name` — optional constraint name
 
 **Returns** [ColumnDefault](#columndefault)
 
@@ -768,25 +743,15 @@ pub struct NotNull
 
 **Constructor**
 
-##### new()
+##### new(name)
 
-Unnamed `NOT NULL`.
-
-```rust
-pub fn new() -> Self
-```
-
-**Returns** [NotNull](#notnull)
-
-##### named(name)
-
-Named `NOT NULL`.
+`NOT NULL`, optionally named.
 
 ```rust
-pub fn named(name: impl Into<String>) -> Self
+pub fn new(name: Option<&str>) -> Self
 ```
 
-- `name` — constraint name
+- `name` — optional constraint name
 
 **Returns** [NotNull](#notnull)
 
@@ -809,13 +774,13 @@ pub struct PrimaryKey
 Named primary key. Multiple columns are a composite key.
 
 ```rust
-pub fn new(name: impl Into<String>, columns: &[&str]) -> Self
+pub fn new(name: impl Into<String>, columns: &[&str]) -> TableConstraint
 ```
 
 - `name` — constraint name
 - `columns` — key columns
 
-**Returns** [PrimaryKey](#primarykey)
+**Returns** [TableConstraint](#tableconstraint)
 
 #### ForeignKey
 
@@ -825,44 +790,22 @@ pub struct ForeignKey
 
 **Constructor**
 
-##### new(name, columns, references_table, references_columns)
+##### new(name, columns, references_table, references_columns, on_delete, on_update)
 
 Named foreign key.
 
 ```rust
-pub fn new(name: impl Into<String>, columns: &[&str], references_table: impl Into<String>, references_columns: &[&str]) -> Self
+pub fn new(name: impl Into<String>, columns: &[&str], references_table: impl Into<String>, references_columns: &[&str], on_delete: Option<ReferentialAction>, on_update: Option<ReferentialAction>) -> TableConstraint
 ```
 
 - `name` — constraint name
 - `columns` — local columns
 - `references_table` — referenced table
 - `references_columns` — referenced columns
+- `on_delete` — optional [ReferentialAction](#referentialaction)
+- `on_update` — optional [ReferentialAction](#referentialaction)
 
-**Returns** [ForeignKey](#foreignkey)
-
-##### with_on_delete(self, action)
-
-Sets `ON DELETE`.
-
-```rust
-pub fn with_on_delete(self, action: ReferentialAction) -> Self
-```
-
-- `action` — [ReferentialAction](#referentialaction)
-
-**Returns** [ForeignKey](#foreignkey)
-
-##### with_on_update(self, action)
-
-Sets `ON UPDATE`.
-
-```rust
-pub fn with_on_update(self, action: ReferentialAction) -> Self
-```
-
-- `action` — [ReferentialAction](#referentialaction)
-
-**Returns** [ForeignKey](#foreignkey)
+**Returns** [TableConstraint](#tableconstraint)
 
 #### UniqueConstraint
 
@@ -877,13 +820,13 @@ pub struct UniqueConstraint
 Named unique constraint.
 
 ```rust
-pub fn new(name: impl Into<String>, columns: &[&str]) -> Self
+pub fn new(name: impl Into<String>, columns: &[&str]) -> TableConstraint
 ```
 
 - `name` — constraint name
 - `columns` — unique columns
 
-**Returns** [UniqueConstraint](#uniqueconstraint)
+**Returns** [TableConstraint](#tableconstraint)
 
 #### CheckConstraint
 
@@ -898,13 +841,13 @@ pub struct CheckConstraint
 Named check constraint.
 
 ```rust
-pub fn new(name: impl Into<String>, expression: impl Into<String>) -> Self
+pub fn new(name: impl Into<String>, expression: impl Into<String>) -> TableConstraint
 ```
 
 - `name` — constraint name
 - `expression` — raw SQL check fragment
 
-**Returns** [CheckConstraint](#checkconstraint)
+**Returns** [TableConstraint](#tableconstraint)
 
 #### ReferentialAction
 
@@ -966,7 +909,7 @@ Compiled form is `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTR
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L162-L163
 ```
-```rust rust/datasources/src/tests/mod.rs#L947-L954
+```rust rust/datasources/src/tests/mod.rs#L947-L955
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L239-L243
 ```
@@ -981,7 +924,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L164-L177
 ```
-```rust rust/datasources/src/tests/mod.rs#L955-L973
+```rust rust/datasources/src/tests/mod.rs#L956-L979
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L244-L258
 ```
