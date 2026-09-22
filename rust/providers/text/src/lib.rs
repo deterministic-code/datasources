@@ -3,30 +3,23 @@ mod connection;
 mod converters;
 
 pub use command::TextCommand;
-pub use connection::TextConnection;
+pub use connection::{TextConnection, TextProvider};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, register, reset, BuiltDatasource, Datasource};
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new(
-            "text",
-            || TextConnection::from_options(None),
-            TextConnection::repository,
-        )
+        BuiltDatasource::new("text", Arc::new(TextProvider), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register(
-            "text",
-            TextConnection::from_options,
-            TextConnection::repository,
-        );
+        register("text", Arc::new(TextProvider));
         assert_eq!(
             create(Some(&HashMap::from([("provider".into(), "text".into())])))
                 .unwrap()

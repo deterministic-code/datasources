@@ -373,7 +373,7 @@ class DatasourceFactory implements IDatasourceFactory
 | Name | Description |
 | --- | --- |
 | [defaults(options)](#typescript-datasourcefactory-defaults-options) | Registers listed provider packages. Does not apply to a non-null `create` bag. |
-| [register(provider, connection, repository)](#typescript-datasourcefactory-register-provider-connection-repository) | Registers a connection factory and a repository factory by provider name. |
+| [register(provider, driver)](#typescript-datasourcefactory-register-provider-driver) | Registers a provider [IDriver](#typescript-idriver) by name. |
 | [create(options?)](#typescript-datasourcefactory-create-options) | Creates one datasource. `undefined` options read process env; a dictionary is used as-is. |
 | [reset()](#typescript-datasourcefactory-reset) | Clears the registry. Use in tests. |
 | [registered()](#typescript-datasourcefactory-registered) | Lists registered provider names. |
@@ -394,14 +394,14 @@ static defaults(options: DatasourceOptions): void
 | --- | --- |
 | `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#typescript-datasourceoptions) |
 
-###### register(provider, connection, repository) {#typescript-datasourcefactory-register-provider-connection-repository}
+###### register(provider, driver) {#typescript-datasourcefactory-register-provider-driver}
 
-Registers a connection factory and a repository factory by provider name.
+Registers a provider [IDriver](#typescript-idriver) by name.
 
 **Definition**
 
 ```typescript
-static register(provider: string, connection: (options?: DatasourceOptions) => IConnection, repository: (connection: IConnection) => object): void
+static register(provider: string, driver: IDriver): void
 ```
 
 **Parameters**
@@ -409,8 +409,7 @@ static register(provider: string, connection: (options?: DatasourceOptions) => I
 | Name | Description |
 | --- | --- |
 | `provider` | registry key (`sqlite`, `mysql`, …) |
-| `connection` | builds an [IConnection](#connection) from the options bag |
-| `repository` | builds a repository from an [IConnection](#connection) |
+| `driver` | [IDriver](#typescript-idriver) that builds connections, commands, transactions, and row converters |
 
 ###### create(options?) {#typescript-datasourcefactory-create-options}
 
@@ -455,6 +454,96 @@ static registered(): string[]
 **Returns**
 
 `string[]`
+
+##### IDriver {#typescript-idriver}
+
+```typescript
+interface IDriver
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [connection(options?)](#typescript-idriver-connection-options) | Builds an [IConnection](#connection) from the options bag. |
+| [command(connection)](#typescript-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
+| [transaction(connection, isolation?)](#typescript-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
+| [types](#typescript-idriver-types) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+
+###### connection(options?) {#typescript-idriver-connection-options}
+
+Builds an [IConnection](#connection) from the options bag.
+
+**Definition**
+
+```typescript
+connection(options?: DatasourceOptions): IConnection
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions) |
+
+**Returns**
+
+[IConnection](#connection)
+
+###### command(connection) {#typescript-idriver-command-connection}
+
+Builds an [ICommand](#command) for the connection.
+
+**Definition**
+
+```typescript
+command(connection: IConnection): ICommand
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [IConnection](#connection) |
+
+**Returns**
+
+[ICommand](#command)
+
+###### transaction(connection, isolation?) {#typescript-idriver-transaction-connection-isolation}
+
+Builds an [ITransaction](#transaction) for the connection.
+
+**Definition**
+
+```typescript
+transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [IConnection](#connection) |
+| `isolation` | defaults to `serializable` |
+
+**Returns**
+
+[ITransaction](#transaction)
+
+###### types {#typescript-idriver-types}
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+**Definition**
+
+```typescript
+types: Record<string, TypeConverter<Cell, Cell>>
+```
+
+**Returns**
+
+`Record<string, TypeConverter<Cell, Cell>>`
 
 ##### IDatasourceFactory {#typescript-idatasourcefactory}
 
@@ -507,7 +596,7 @@ public sealed class DatasourceFactory : IDatasourceFactory
 | Name | Description |
 | --- | --- |
 | [Defaults(options)](#csharp-datasourcefactory-defaults-options) | Registers listed provider packages. Does not apply to a non-null `Create` bag. |
-| [Register(provider, connection, repository)](#csharp-datasourcefactory-register-provider-connection-repository) | Registers a connection factory and a repository factory by provider name. |
+| [Register(provider, driver)](#csharp-datasourcefactory-register-provider-driver) | Registers a provider [IDriver](#csharp-idriver) by name. |
 | [Create(options)](#csharp-datasourcefactory-create-options) | Creates one datasource. `null` options read process `.env`; a dictionary is used as-is. |
 | [Reset()](#csharp-datasourcefactory-reset) | Clears the registry. Use in tests. |
 | [Registered()](#csharp-datasourcefactory-registered) | Lists registered provider names. |
@@ -528,14 +617,14 @@ public static void Defaults(IReadOnlyDictionary<string, string?> options)
 | --- | --- |
 | `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#csharp-datasourceoptions) |
 
-###### Register(provider, connection, repository) {#csharp-datasourcefactory-register-provider-connection-repository}
+###### Register(provider, driver) {#csharp-datasourcefactory-register-provider-driver}
 
-Registers a connection factory and a repository factory by provider name.
+Registers a provider [IDriver](#csharp-idriver) by name.
 
 **Definition**
 
 ```csharp
-public static void Register(string provider, Func<IReadOnlyDictionary<string, string?>?, IConnection> connection, Func<IConnection, object> repository)
+public static void Register(string provider, IDriver driver)
 ```
 
 **Parameters**
@@ -543,8 +632,7 @@ public static void Register(string provider, Func<IReadOnlyDictionary<string, st
 | Name | Description |
 | --- | --- |
 | `provider` | registry key (`sqlite`, `mysql`, …) |
-| `connection` | builds an [IConnection](#connection) from the options bag |
-| `repository` | builds a repository from an [IConnection](#connection) |
+| `driver` | [IDriver](#csharp-idriver) that builds connections, commands, transactions, and row converters |
 
 ###### Create(options) {#csharp-datasourcefactory-create-options}
 
@@ -589,6 +677,96 @@ public static IReadOnlyList<string> Registered()
 **Returns**
 
 `IReadOnlyList<string>`
+
+##### IDriver {#csharp-idriver}
+
+```csharp
+public interface IDriver
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Connection(options)](#csharp-idriver-connection-options) | Builds an [IConnection](#connection) from the options bag. |
+| [Command(connection)](#csharp-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
+| [Transaction(connection, isolation)](#csharp-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
+| [Types](#csharp-idriver-types) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+
+###### Connection(options) {#csharp-idriver-connection-options}
+
+Builds an [IConnection](#connection) from the options bag.
+
+**Definition**
+
+```csharp
+IConnection Connection(IReadOnlyDictionary<string, string?>? options)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions) |
+
+**Returns**
+
+[IConnection](#connection)
+
+###### Command(connection) {#csharp-idriver-command-connection}
+
+Builds an [ICommand](#command) for the connection.
+
+**Definition**
+
+```csharp
+ICommand Command(IConnection connection)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [IConnection](#connection) |
+
+**Returns**
+
+[ICommand](#command)
+
+###### Transaction(connection, isolation) {#csharp-idriver-transaction-connection-isolation}
+
+Builds an [ITransaction](#transaction) for the connection.
+
+**Definition**
+
+```csharp
+ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [IConnection](#connection) |
+| `isolation` | defaults to `Serializable` |
+
+**Returns**
+
+[ITransaction](#transaction)
+
+###### Types {#csharp-idriver-types}
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+**Definition**
+
+```csharp
+IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; }
+```
+
+**Returns**
+
+`IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
 
 ##### IDatasourceFactory {#csharp-idatasourcefactory}
 
@@ -635,7 +813,7 @@ IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
 | Name | Description |
 | --- | --- |
 | [defaults(options)](#rust-datasources-defaults-options) | Registers listed provider packages. Does not apply to a `Some` `create` bag. |
-| [register(provider, connection, repository)](#rust-datasources-register-provider-connection-repository) | Registers a connection factory and a repository factory by provider name. |
+| [register(provider, driver)](#rust-datasources-register-provider-driver) | Registers a provider [Driver](#rust-driver) by name. |
 | [create(options)](#rust-datasources-create-options) | Creates one datasource. `None` reads process env; `Some` is used as-is. |
 | [default()](#rust-datasources-default) | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#rust-create-options). |
 | [create_default()](#rust-datasources-create_default) | `default()`. |
@@ -662,14 +840,14 @@ pub fn defaults(options: HashMap<String, String>) -> Result<()>
 
 `Result<()>`
 
-###### register(provider, connection, repository) {#rust-datasources-register-provider-connection-repository}
+###### register(provider, driver) {#rust-datasources-register-provider-driver}
 
-Registers a connection factory and a repository factory by provider name.
+Registers a provider [Driver](#rust-driver) by name.
 
 **Definition**
 
 ```rust
-pub fn register(provider: impl Into<String>, connection: impl Fn(Option<&HashMap<String, String>>) -> Arc<dyn Connection> + Send + Sync + 'static, repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
+pub fn register(provider: impl Into<String>, driver: Arc<dyn Driver>)
 ```
 
 **Parameters**
@@ -677,8 +855,7 @@ pub fn register(provider: impl Into<String>, connection: impl Fn(Option<&HashMap
 | Name | Description |
 | --- | --- |
 | `provider` | registry key (`sqlite`, `mysql`, …) |
-| `connection` | builds a [Connection](#connection) from the options bag |
-| `repository` | builds a repository from a [Connection](#connection) |
+| `driver` | [Driver](#rust-driver) that builds connections, commands, transactions, and row converters |
 
 ###### create(options) {#rust-datasources-create-options}
 
@@ -752,13 +929,103 @@ pub fn registered() -> Vec<String>
 
 `Vec<String>`
 
+##### Driver {#rust-driver}
+
+```rust
+pub trait Driver
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [connection(options)](#rust-driver-connection-options) | Builds a [Connection](#connection) from the options bag. |
+| [command(connection)](#rust-driver-command-connection) | Builds a [Command](#command) for the connection. |
+| [transaction(connection, isolation)](#rust-driver-transaction-connection-isolation) | Builds a [Transaction](#transaction) for the connection. |
+| [types()](#rust-driver-types) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+
+###### connection(options) {#rust-driver-connection-options}
+
+Builds a [Connection](#connection) from the options bag.
+
+**Definition**
+
+```rust
+fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#rust-datasourceoptions) |
+
+**Returns**
+
+`Arc<dyn `[Connection](#connection)`>`
+
+###### command(connection) {#rust-driver-command-connection}
+
+Builds a [Command](#command) for the connection.
+
+**Definition**
+
+```rust
+fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [Connection](#connection) |
+
+**Returns**
+
+`Arc<dyn `[Command](#command)`>`
+
+###### transaction(connection, isolation) {#rust-driver-transaction-connection-isolation}
+
+Builds a [Transaction](#transaction) for the connection.
+
+**Definition**
+
+```rust
+fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel) -> Arc<dyn Transaction>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [Connection](#connection) |
+| `isolation` | defaults to `Serializable` at the call site |
+
+**Returns**
+
+`Arc<dyn `[Transaction](#transaction)`>`
+
+###### types() {#rust-driver-types}
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+**Definition**
+
+```rust
+fn types(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+```
+
+**Returns**
+
+`HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`
+
 ### Remarks
 
 `Default` requires `.env` `PROVIDER` and `DATASOURCE_URL`, or process `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` to override them. Missing both throws `DatasourceException` / `DatasourceError`.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryProvider`, `SqliteProvider`, …) and that is what `register` stores. Dialect engine drivers (`ISqliteDriver`, `IMysqlDriver`) stay on the connection.
 
 ### Examples
 
@@ -767,29 +1034,24 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32)
 
 ```csharp
-DatasourceFactory.Register("sqlite", _ => new MockConnection(), c => new MockRepository<object>(c));
+DatasourceFactory.Register("sqlite", new MockDriver());
 Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
 Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
 var ds = DatasourceFactory.Default;
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L21-L33)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L21-L28)
 
 ```rust
-register(
-    "sqlite",
-    |_| MockConnection::new(),
-    |_| Arc::new(MockRepository::new()),
-);
+register("sqlite", MockDriver::arc());
 std::env::set_var("PROVIDER", "sqlite");
 std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
 let ds = default().expect("default");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L33-L39)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L34-L38)
 
 ```typescript
-DatasourceFactory.register("sqlite", () => new MockConnection(), (c) => new MockRepository(c));
 process.env.PROVIDER = "sqlite";
 process.env.DATASOURCE_URL = "sqlite:///:memory:";
 const ds = DatasourceFactory.default;
@@ -800,26 +1062,30 @@ const ds = DatasourceFactory.default;
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
 
 ```csharp
-DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryConnection.Repository);
+DatasourceFactory.Register("memory", new MemoryProvider());
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L36-L46)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L38-L44)
 
 ```rust
-register(
-    "memory",
-    MemoryConnection::from_options,
-    MemoryConnection::repository,
-);
-let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+    r
+}
+
+#[test]
+fn register_and_create() {
+    reset();
+    register("memory", Arc::new(MemoryProvider));
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L27-L32)
 
 ```typescript
-DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
-const ds = DatasourceFactory.create({ provider: "memory" });
+describe("DatasourceFactory", () => {
+  it("register and create", () => {
+    DatasourceFactory.reset();
+    DatasourceFactory.register("memory", new MemoryProvider());
+    const ds = DatasourceFactory.create({ provider: "memory" });
 ```
 
 #### Missing provider
@@ -830,7 +1096,7 @@ const ds = DatasourceFactory.create({ provider: "memory" });
 DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L35-L42)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L31-L37)
 
 ```rust
 create(Some(&HashMap::from([("provider".into(), "missing".into())])));
@@ -860,7 +1126,7 @@ class Datasource implements IDatasource
 
 | Name | Description |
 | --- | --- |
-| [Datasource(provider, newConnection, newRepository)](#typescript-datasource-datasource-provider-newconnection-newrepository) | Builds a datasource from a connection factory and a repository factory. |
+| [Datasource(provider, driver, options?)](#typescript-datasource-datasource-provider-driver-options) | Builds a datasource from a provider [IDriver](#typescript-idriver). |
 
 **Methods**
 
@@ -868,14 +1134,14 @@ class Datasource implements IDatasource
 | --- | --- |
 | [create(options?)](#typescript-datasource-create-options) | Alias of [DatasourceFactory.create](#datasource-factory). `undefined` options read process env; a dictionary is used as-is. |
 
-###### Datasource(provider, newConnection, newRepository) {#typescript-datasource-datasource-provider-newconnection-newrepository}
+###### Datasource(provider, driver, options?) {#typescript-datasource-datasource-provider-driver-options}
 
-Builds a datasource from a connection factory and a repository factory.
+Builds a datasource from a provider [IDriver](#typescript-idriver).
 
 **Definition**
 
 ```typescript
-constructor(provider: string, newConnection: () => IConnection, newRepository: (connection: IConnection) => object)
+constructor(provider: string, driver: IDriver, options?: DatasourceOptions)
 ```
 
 **Parameters**
@@ -883,8 +1149,8 @@ constructor(provider: string, newConnection: () => IConnection, newRepository: (
 | Name | Description |
 | --- | --- |
 | `provider` | registered provider name |
-| `newConnection` | constructs the default [IConnection](#connection) |
-| `newRepository` | constructs a repository from an [IConnection](#connection) |
+| `driver` | [IDriver](#typescript-idriver) that builds connections, commands, transactions, and row converters |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions) passed to `driver.connection` |
 
 ###### create(options?) {#typescript-datasource-create-options}
 
@@ -1027,16 +1293,16 @@ public sealed class Datasource : IDatasource
 
 | Name | Description |
 | --- | --- |
-| [Datasource(provider, newConnection, newRepository)](#csharp-datasource-datasource-provider-newconnection-newrepository) | Builds a datasource from a connection factory and a repository factory. |
+| [Datasource(provider, driver, options)](#csharp-datasource-datasource-provider-driver-options) | Builds a datasource from a provider [IDriver](#csharp-idriver). |
 
-###### Datasource(provider, newConnection, newRepository) {#csharp-datasource-datasource-provider-newconnection-newrepository}
+###### Datasource(provider, driver, options) {#csharp-datasource-datasource-provider-driver-options}
 
-Builds a datasource from a connection factory and a repository factory.
+Builds a datasource from a provider [IDriver](#csharp-idriver).
 
 **Definition**
 
 ```csharp
-public Datasource(string provider, Func<IConnection> newConnection, Func<IConnection, object> newRepository)
+public Datasource(string provider, IDriver driver, IReadOnlyDictionary<string, string?>? options = null)
 ```
 
 **Parameters**
@@ -1044,8 +1310,8 @@ public Datasource(string provider, Func<IConnection> newConnection, Func<IConnec
 | Name | Description |
 | --- | --- |
 | `provider` | registered provider name |
-| `newConnection` | constructs the default [IConnection](#connection) |
-| `newRepository` | constructs a repository from an [IConnection](#connection) |
+| `driver` | [IDriver](#csharp-idriver) that builds connections, commands, transactions, and row converters |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions) passed to `driver.Connection` |
 
 ##### IDatasource {#csharp-idatasource}
 
@@ -1168,16 +1434,16 @@ pub struct BuiltDatasource
 
 | Name | Description |
 | --- | --- |
-| [new(provider, new_connection, new_repository)](#rust-builtdatasource-new-provider-new_connection-new_repository) | Builds a datasource from a connection factory and a repository factory. |
+| [new(provider, driver, options)](#rust-builtdatasource-new-provider-driver-options) | Builds a datasource from a provider [Driver](#rust-driver). |
 
-###### new(provider, new_connection, new_repository) {#rust-builtdatasource-new-provider-new_connection-new_repository}
+###### new(provider, driver, options) {#rust-builtdatasource-new-provider-driver-options}
 
-Builds a datasource from a connection factory and a repository factory.
+Builds a datasource from a provider [Driver](#rust-driver).
 
 **Definition**
 
 ```rust
-pub fn new(provider: impl Into<String>, new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static, new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static) -> Self
+pub fn new(provider: impl Into<String>, driver: Arc<dyn Driver>, options: Option<HashMap<String, String>>) -> Self
 ```
 
 **Parameters**
@@ -1185,8 +1451,8 @@ pub fn new(provider: impl Into<String>, new_connection: impl Fn() -> Arc<dyn Con
 | Name | Description |
 | --- | --- |
 | `provider` | registered provider name |
-| `new_connection` | constructs the default [Connection](#connection) |
-| `new_repository` | constructs a repository from a [Connection](#connection) |
+| `driver` | [Driver](#rust-driver) that builds connections, commands, transactions, and row converters |
+| `options` | [DatasourceOptions](#rust-datasourceoptions) passed to `driver.connection` |
 
 ##### Datasource {#rust-datasource}
 
@@ -1628,7 +1894,7 @@ var ds = DatasourceFactory.Default;
 var connection = await ds.CreateConnection();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L25-L31)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L21-L26)
 
 ```rust
 let ds = default().expect("default");
@@ -1652,20 +1918,25 @@ await connection.Open();
 await connection.Close();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L48-L54)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L47-L52)
 
 ```rust
-let connection = MemoryConnection::from_options(None);
-connection.open().await.unwrap();
-connection.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn open_and_close() {
+    let connection = MemoryConnection::from_options(None);
+    connection.open().await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L36-L41)
 
 ```typescript
-const connection = new MemoryConnection();
-await connection.open();
-await connection.close();
+describe("Connection", () => {
+  it("open and close", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    await connection.close();
 ```
 
 #### Start a transaction
@@ -1678,20 +1949,19 @@ await connection.Open();
 var txn = await connection.StartTransaction();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L56-L62)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L54-L60)
 
 ```rust
-let connection = MemoryConnection::from_options(None);
-connection.open().await.unwrap();
-let txn = connection.start_transaction(None).await.unwrap();
+
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L43-L48)
 
 ```typescript
-const connection = new MemoryConnection();
-await connection.open();
-const txn = await connection.startTransaction();
+it("start a transaction", async () => {
+  const connection = new MemoryConnection();
+  await connection.open();
+  const txn = await connection.startTransaction();
 ```
 
 ## Transaction
@@ -1908,7 +2178,7 @@ await connection.Open();
 var txn = await connection.StartTransaction();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/transaction.rs#L25-L33)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/transaction.rs#L21-L28)
 
 ```rust
 let ds = default().expect("default");
@@ -1937,22 +2207,27 @@ var txn = await connection.StartTransaction();
 await txn.Commit();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L64-L71)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L63-L69)
 
 ```rust
-let connection = MemoryConnection::from_options(None);
-connection.open().await.unwrap();
-let txn = connection.start_transaction(None).await.unwrap();
-txn.commit().await.unwrap();
+}
+
+#[tokio::test]
+async fn commit() {
+    let connection = MemoryConnection::from_options(None);
+    connection.open().await.unwrap();
+    let txn = connection.start_transaction(None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L52-L58)
 
 ```typescript
-const connection = new MemoryConnection();
-await connection.open();
-const txn = await connection.startTransaction();
-await txn.commit();
+describe("Transaction", () => {
+  it("commit", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    const txn = await connection.startTransaction();
+    await txn.commit();
 ```
 
 #### Abort
@@ -1966,22 +2241,26 @@ var txn = await connection.StartTransaction();
 await txn.Abort();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L73-L80)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L72-L78)
 
 ```rust
-let connection = MemoryConnection::from_options(None);
-connection.open().await.unwrap();
-let txn = connection.start_transaction(None).await.unwrap();
-txn.abort().await.unwrap();
+}
+
+#[tokio::test]
+async fn abort() {
+    let connection = MemoryConnection::from_options(None);
+    connection.open().await.unwrap();
+    let txn = connection.start_transaction(None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L60-L66)
 
 ```typescript
-const connection = new MemoryConnection();
-await connection.open();
-const txn = await connection.startTransaction();
-await txn.abort();
+it("abort", async () => {
+  const connection = new MemoryConnection();
+  await connection.open();
+  const txn = await connection.startTransaction();
+  await txn.abort();
 ```
 
 ## Command
@@ -3948,7 +4227,8 @@ var withWhere = new QueryStatement("SELECT 1", byId);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1071-L1074)
 
 ```rust
-let query = QueryStatement::with_where("SELECT 1", TextWhere::new("id = 1"));
+let mock = MockQuery::with_where("q", MockWhere::new("w"));
+assert!(mock.where_clause().is_some());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L33-L35)
@@ -3977,8 +4257,9 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L877-L883)
 
 ```rust
-let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
-let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
+    "SELECT id, name FROM users WHERE id = $id AND age > $age"
+);
+assert!(query.where_clause().is_some());
 ```
 
 **After: select**
@@ -4270,7 +4551,8 @@ INSERT INTO users (id, name) VALUES ($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L923-L927)
 
 ```rust
-let insert = InsertStatement::new("users", &fields);
+);
+let update = UpdateStatement::new("users", &fields, Some(&where_clause));
 ```
 
 **After: insert**
@@ -4589,7 +4871,12 @@ UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L928-L933)
 
 ```rust
-let update = UpdateStatement::new("users", &fields, Some(&where_clause));
+);
+assert!(update.where_clause().is_some());
+assert!(UpdateStatement::new("users", &fields, None)
+    .where_clause()
+    .is_none());
+let delete = DeleteStatement::new("users", Some(&where_clause));
 ```
 
 **After: update**
@@ -4913,7 +5200,8 @@ DELETE FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L937-L942)
 
 ```rust
-let delete = DeleteStatement::new("users", Some(&where_clause));
+);
+assert!(delete.where_clause().is_some());
 ```
 
 **After: delete**
@@ -5840,10 +6128,6 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L947-L955)
 
 ```rust
-let create_table = CreateTableStatement::new(
-    "users",
-    &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
-    &[],
 );
 ```
 
@@ -5898,10 +6182,6 @@ CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L956-L979)
 
 ```rust
-let named_table = CreateTableStatement::new(
-    "orders",
-    &[
-        Column::new("id", "INTEGER")
             .default(ColumnDefault::new("0", Some("df_id")))
             .not_null(NotNull::new(Some("nn_id"))),
         Column::new("tenant_id", "INTEGER"),
@@ -6215,7 +6495,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1028-L1031)
 
 ```rust
-let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);
+);
 ```
 
 **After: create index**
@@ -6253,7 +6533,7 @@ CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1033-L1035)
 
 ```rust
-
+let call = ExecuteStoredProcedureStatement::new("save", &fields);
 ```
 
 **After: create unique index**
@@ -6527,7 +6807,8 @@ CALL save($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1037-L1038)
 
 ```rust
-let call = ExecuteStoredProcedureStatement::new("save", &fields);
+    "CALL save()"
+);
 ```
 
 **After: call**
@@ -6801,7 +7082,8 @@ SELECT add($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1043-L1044)
 
 ```rust
-let ret = ReturnStatement::new("add", &fields);
+ExecuteStoredProcedureStatement::new(
+    "save",
 ```
 
 **After: return**
@@ -7208,11 +7490,7 @@ id IN ($id_0, $id_1)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L654-L658)
 
 ```rust
-fn statements_and_builders() {
-    let where_clause = WhereClause::new(Operator::and(
-        Operator::equals("id", 1_i64),
-        Operator::greater_than("age", 18_i64),
-    ));
+));
 ```
 
 **After: and**
@@ -7265,8 +7543,9 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L877-L883)
 
 ```rust
-let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
-let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
+    "SELECT id, name FROM users WHERE id = $id AND age > $age"
+);
+assert!(query.where_clause().is_some());
 ```
 
 **After: select**
@@ -7657,7 +7936,13 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operat
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L704-L719)
 
 ```rust
+        Operator::equals("name", "a")
+    ))
+    .parameters()
+    .len(),
+    3
 );
+let not_where = WhereClause::new(Operator::not(WhereClause::new(Operator::equals("id", 1_i64))));
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L63-L73)
@@ -8826,7 +9111,11 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L845-L851)
 
 ```rust
-.is_empty());
+        Operator::equals("age", 18_i64)
+    ))
+    .get_text(),
+    "(NOT (id = $id)) AND age = $age"
+);
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
@@ -9697,7 +9986,7 @@ await repo.Create(obj);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1376-L1390)
 
 ```rust
-repo.create(&mut obj).await.unwrap();
+);
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L103-L113)
@@ -11023,7 +11312,7 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1235-L1244)
 
 ```rust
-StatementEvaluator.evaluate(&Expression::Array(ArrayExpression::new(vec![])), &Row::new());
+StatementEvaluator.evaluate_where(&TextWhere::new("id = 1"), &Row::new());
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -11450,10 +11739,6 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-    ("id", Value::Int(1)),
-    ("type_id", Value::Int(10)),
-])]));
 let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
     ("id", Value::Int(10)),
     ("name", Value::from("org")),
@@ -11468,6 +11753,10 @@ let children = Arc::new(items_repository::ItemsRepository::new(vec![
         ("type_id", Value::Int(3)),
         ("label", Value::from("a")),
     ]),
+    record(&[
+        ("parent_id", Value::Int(1)),
+        ("type_id", Value::Int(9)),
+        ("label", Value::from("b")),
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -13148,72 +13437,38 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1615-L1677)
 
 ```rust
-let command = Arc::new(MockCommand::new());
-let mut mapper = CRUDMapper::identity("memory", "rust");
-mapper.entity = TransformMapper::new(
-    |name: String| match name.as_str() {
-        "users" => "people".into(),
-        _ => name,
-    },
-    |name| name,
-);
-mapper.columns = TransformMapper::new(
-    |name: String| match name.as_str() {
-        "id" => "user_id".into(),
-        "name" => "full_name".into(),
-        _ => name,
-    },
-    |name| name,
-);
-mapper.query = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} LIMIT 1"),
-    |text| text,
-)));
-let returning = |text: String| format!("{text} RETURNING id");
-mapper.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
-mapper.update = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} RETURNING id"),
-    |text| text,
-)));
-mapper.delete = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} RETURNING id"),
-    |text| text,
-)));
-let mut options = RepositoryBuilderOptions::with_factory(
-    MockConnection::with_command_provider(command.clone(), "memory"),
-);
-options.entity = "users".into();
-options.mapping = Some(users_mapping());
-options.crud_mapper = Some(mapper);
-let repo = CRUDRepository::new(options).unwrap();
-command.reader_rows.lock().unwrap().clear();
-assert!(repo.read_single(None).await.unwrap().is_none());
+"id" => "user_id".into(),
+"name" => "full_name".into(),
+_ => name,
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L22-L52)
 
 ```typescript
-const mapper = new CRUDMapper({
-  query: new TransformMapper(
-    (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
-    (query) => query,
-  ),
-  insert: new TransformMapper(
-    (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
-    (insert) => insert,
-  ),
-  update: new TransformMapper(
-    (update) =>
-      new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
-    (update) => update,
-  ),
-  delete: new TransformMapper(
-    (remove) =>
-      DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
-    (remove) => remove,
-  ),
 });
-const statements = statementsOf("users", ["id", "name"], mapper);
+
+it("rewrites each finished statement", () => {
+  const mapper = new CRUDMapper({
+    query: new TransformMapper(
+      (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
+      (query) => query,
+    ),
+    insert: new TransformMapper(
+      (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
+      (insert) => insert,
+    ),
+    update: new TransformMapper(
+      (update) =>
+        new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
+      (update) => update,
+    ),
+    delete: new TransformMapper(
+      (remove) =>
+        DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
+      (remove) => remove,
+    ),
+  });
+  const statements = statementsOf("users", ["id", "name"], mapper);
 ```
 
 #### Rewrite a return call
@@ -13235,9 +13490,6 @@ const statements = statementsOf("users", ["id", "name"], mapper);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1285-L1294)
 
 ```rust
-let mut mapper = CRUDMapper::identity("", "");
-mapper.return_ = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} /* mapped */"),
     |text| text,
 )));
 let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
@@ -13247,14 +13499,17 @@ let text = CRUDMapper::map_sql(&mapper.return_, built.get_text());
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L54-L64)
 
 ```typescript
-const mapper = new CRUDMapper({
-  return: new TransformMapper(
-    (ret) => new ReturnStatement(`${ret.getText()} /* mapped */`),
-    (ret) => ret,
-  ),
 });
-const built = new ReturnStatement("add", [{ name: "id", value: 1 }]);
-const statement = mapper.return?.map(built) ?? built;
+
+it("rewrites a finished return call", () => {
+  const mapper = new CRUDMapper({
+    return: new TransformMapper(
+      (ret) => new ReturnStatement(`${ret.getText()} /* mapped */`),
+      (ret) => ret,
+    ),
+  });
+  const built = new ReturnStatement("add", [{ name: "id", value: 1 }]);
+  const statement = mapper.return?.map(built) ?? built;
 ```
 
 ## TypeConverter

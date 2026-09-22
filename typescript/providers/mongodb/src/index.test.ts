@@ -1,18 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { MongoDbCommand, MongoDbConnection } from "./index.ts";
+import { MongoDbCommand, MongoDbConnection, MongoDbProvider } from "./index.ts";
 
 afterEach(() => DatasourceFactory.reset());
 
 describe("mongodb", () => {
   it("creates", () => {
-    DatasourceFactory.register("mongodb", MongoDbConnection.from, MongoDbConnection.repository);
+    DatasourceFactory.register("mongodb", new MongoDbProvider());
     expect(MongoDbConnection.from()).toBeInstanceOf(MongoDbConnection);
     expect(Datasource.create({ provider: "mongodb" }).provider).toBe("mongodb");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new Datasource("mongodb", () => new MongoDbConnection(), MongoDbConnection.repository);
+    const ds = new Datasource("mongodb", new MongoDbProvider());
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(MongoDbConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
@@ -29,5 +29,6 @@ describe("mongodb", () => {
     ds.createRepository(connection);
     ds.createReadonlyRepository();
     ds.createReadonlyRepository(connection);
+    expect(new MongoDbProvider().transaction(connection).isolation).toBe("serializable");
   });
 });

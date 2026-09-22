@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import {
   ConsoleCommandMiddleware,
-  DefaultTypeConverters,
   DeleteStatement,
   InsertStatement,
   QueryStatement,
@@ -243,11 +242,12 @@ export const runRepositorySpec = async (
   connection: IConnection,
   execute: (sql: string) => Promise<unknown>,
   dialect: RepositoryDialect,
+  types: Record<string, TypeConverter<Cell, Cell>>,
 ): Promise<void> => {
   const spec = parse(readFileSync(path, "utf8")) as RepositorySpec;
   if (specVerbose()) console.log(`\n--- ${spec.name} (${connection.provider}) ---`);
   await execute(dialect.createTable(physicalTableOf(spec.type), columnsOf(spec.type)).getText());
-  const catalog = DefaultTypeConverters.for(connection.provider);
+  const catalog = types;
   const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
   const repo = new CRUDRepository<SpecRow>({
     connection,

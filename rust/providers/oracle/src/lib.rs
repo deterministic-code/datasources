@@ -3,30 +3,23 @@ mod connection;
 mod converters;
 
 pub use command::OracleCommand;
-pub use connection::OracleConnection;
+pub use connection::{OracleConnection, OracleProvider};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, register, reset, BuiltDatasource, Datasource};
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new(
-            "oracle",
-            || OracleConnection::from_options(None),
-            OracleConnection::repository,
-        )
+        BuiltDatasource::new("oracle", Arc::new(OracleProvider), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register(
-            "oracle",
-            OracleConnection::from_options,
-            OracleConnection::repository,
-        );
+        register("oracle", Arc::new(OracleProvider));
         assert_eq!(
             create(Some(&HashMap::from([("provider".into(), "oracle".into())])))
                 .unwrap()

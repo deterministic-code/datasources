@@ -11,17 +11,25 @@ export interface ICommand {
   addMiddleware(middleware: ICommandMiddleware): this;
   executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>>;
   execute(text: string, parameters?: Parameter[]): Promise<Response>;
+  executeStatement?(statement: IStatement, parameters?: Parameter[]): Promise<Response>;
+  executeReaderStatement?(
+    statement: IStatement,
+    parameters?: Parameter[],
+  ): Promise<IReader<Cells>>;
 }
 
 export const execute = (
   command: ICommand,
   statement: IStatement,
   parameters?: Parameter[],
-): Promise<Response> => command.execute(statement.getText(), parameters);
+): Promise<Response> =>
+  command.executeStatement?.(statement, parameters) ??
+  command.execute(statement.getText(), parameters);
 
 export const executeReader = (
   command: ICommand,
   statement: IStatement,
   parameters?: Parameter[],
 ): Promise<IReader<Cells>> =>
+  command.executeReaderStatement?.(statement, parameters) ??
   command.executeReader(statement.getText(), parameters);

@@ -11,6 +11,4 @@ public static class MysqlTypes
             ["decimal"] = new DecimalConverter(),
             ["binary"] = new BinaryConverter(),
         };
-
-    static MysqlTypes() => DefaultTypeConverters.Use("mysql", All);
 }

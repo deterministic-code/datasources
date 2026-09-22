@@ -23,6 +23,7 @@ pub(crate) fn matches(obj: &JsonValue, filter: &Map<String, JsonValue>) -> bool 
     filter.iter().all(|(k, v)| map.get(k) == Some(v))
 }
 
+#[cfg(test)]
 pub(crate) fn json_from_record(record: &Row) -> JsonValue {
     let mut map = Map::new();
     for (k, v) in record {

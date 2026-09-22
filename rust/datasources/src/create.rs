@@ -27,14 +27,9 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
         .as_ref()
         .and_then(|map| map.get(&name))
         .ok_or_else(|| DatasourceError::not_installed(&name))?;
-    let connection = pair.connection.clone();
-    let repository = pair.repository.clone();
+    let driver = pair.driver.clone();
     drop(guard);
-    Ok(Arc::new(BuiltDatasource::new(
-        name,
-        move || connection(Some(&listed)),
-        move |conn| repository(conn),
-    )))
+    Ok(Arc::new(BuiltDatasource::new(name, driver, Some(listed))))
 }
 
 pub fn default() -> Result<Arc<dyn Datasource>> {

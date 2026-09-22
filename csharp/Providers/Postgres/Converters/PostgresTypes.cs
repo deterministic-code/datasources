@@ -11,6 +11,4 @@ public static class PostgresTypes
             ["decimal"] = new DecimalConverter(),
             ["binary"] = new BinaryConverter(),
         };
-
-    static PostgresTypes() => DefaultTypeConverters.Use("postgres", All);
 }

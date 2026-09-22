@@ -63,6 +63,12 @@ impl Statement for QueryStatement {
             .map(|predicate| predicate.parameters())
             .unwrap_or_default()
     }
+    fn kind(&self) -> crate::statements::StatementKind {
+        crate::statements::StatementKind::Query
+    }
+    fn predicate(&self) -> Option<&dyn Where> {
+        self.where_clause.as_deref()
+    }
 }
 
 impl Query for QueryStatement {

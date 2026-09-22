@@ -38,7 +38,7 @@ pub use not_null::NotNull;
 pub use operator::Operator;
 pub use primary_key::PrimaryKey;
 pub use return_statement::ReturnStatement;
-pub use statement::Statement;
+pub use statement::{Statement, StatementKind};
 pub use statement_evaluator::StatementEvaluator;
 pub use table_constraint::TableConstraint;
 pub use text::Text;

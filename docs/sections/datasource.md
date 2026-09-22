@@ -14,17 +14,17 @@ class Datasource implements IDatasource
 
 **Constructor**
 
-##### Datasource(provider, newConnection, newRepository)
+##### Datasource(provider, driver, options?)
 
-Builds a datasource from a connection factory and a repository factory.
+Builds a datasource from a provider [IDriver](./datasource-factory.md#idriver).
 
 ```typescript
-constructor(provider: string, newConnection: () => IConnection, newRepository: (connection: IConnection) => object)
+constructor(provider: string, driver: IDriver, options?: DatasourceOptions)
 ```
 
 - `provider` — registered provider name
-- `newConnection` — constructs the default [IConnection](./connection.md)
-- `newRepository` — constructs a repository from an [IConnection](./connection.md)
+- `driver` — [IDriver](./datasource-factory.md#idriver) that builds connections, commands, transactions, and row converters
+- `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.connection`
 
 **Methods**
 
@@ -147,17 +147,17 @@ public sealed class Datasource : IDatasource
 
 **Constructor**
 
-##### Datasource(provider, newConnection, newRepository)
+##### Datasource(provider, driver, options)
 
-Builds a datasource from a connection factory and a repository factory.
+Builds a datasource from a provider [IDriver](./datasource-factory.md#idriver).
 
 ```csharp
-public Datasource(string provider, Func<IConnection> newConnection, Func<IConnection, object> newRepository)
+public Datasource(string provider, IDriver driver, IReadOnlyDictionary<string, string?>? options = null)
 ```
 
 - `provider` — registered provider name
-- `newConnection` — constructs the default [IConnection](./connection.md)
-- `newRepository` — constructs a repository from an [IConnection](./connection.md)
+- `driver` — [IDriver](./datasource-factory.md#idriver) that builds connections, commands, transactions, and row converters
+- `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.Connection`
 
 #### IDatasource
 
@@ -266,17 +266,17 @@ pub struct BuiltDatasource
 
 **Constructor**
 
-##### new(provider, new_connection, new_repository)
+##### new(provider, driver, options)
 
-Builds a datasource from a connection factory and a repository factory.
+Builds a datasource from a provider [Driver](./datasource-factory.md#driver).
 
 ```rust
-pub fn new(provider: impl Into<String>, new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static, new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static) -> Self
+pub fn new(provider: impl Into<String>, driver: Arc<dyn Driver>, options: Option<HashMap<String, String>>) -> Self
 ```
 
 - `provider` — registered provider name
-- `new_connection` — constructs the default [Connection](./connection.md)
-- `new_repository` — constructs a repository from a [Connection](./connection.md)
+- `driver` — [Driver](./datasource-factory.md#driver) that builds connections, commands, transactions, and row converters
+- `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.connection`
 
 #### Datasource
 

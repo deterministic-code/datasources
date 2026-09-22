@@ -6,18 +6,18 @@ public static class DatasourceInstall
 {
     static readonly Dictionary<string, (string Assembly, string Type)> Packages = new()
     {
-        ["json"] = ("Datasources.Json", "Datasources.Json.JsonConnection"),
-        ["memory"] = ("Datasources.Memory", "Datasources.Memory.MemoryConnection"),
-        ["sqlite"] = ("Datasources.Sqlite", "Datasources.Sqlite.SqliteConnection"),
-        ["text"] = ("Datasources.Text", "Datasources.Text.TextConnection"),
-        ["xml"] = ("Datasources.Xml", "Datasources.Xml.XmlConnection"),
-        ["yaml"] = ("Datasources.Yaml", "Datasources.Yaml.YamlConnection"),
-        ["mysql"] = ("Datasources.Mysql", "Datasources.Mysql.MysqlConnection"),
-        ["sqlserver"] = ("Datasources.SqlServer", "Datasources.SqlServer.SqlServerConnection"),
-        ["postgres"] = ("Datasources.Postgres", "Datasources.Postgres.PostgresConnection"),
-        ["oracle"] = ("Datasources.Oracle", "Datasources.Oracle.OracleConnection"),
-        ["mongodb"] = ("Datasources.MongoDb", "Datasources.MongoDb.MongoDbConnection"),
-        ["dynamodb"] = ("Datasources.DynamoDb", "Datasources.DynamoDb.DynamoDbConnection")
+        ["json"] = ("Datasources.Json", "Datasources.Json.JsonProvider"),
+        ["memory"] = ("Datasources.Memory", "Datasources.Memory.MemoryProvider"),
+        ["sqlite"] = ("Datasources.Sqlite", "Datasources.Sqlite.SqliteProvider"),
+        ["text"] = ("Datasources.Text", "Datasources.Text.TextProvider"),
+        ["xml"] = ("Datasources.Xml", "Datasources.Xml.XmlProvider"),
+        ["yaml"] = ("Datasources.Yaml", "Datasources.Yaml.YamlProvider"),
+        ["mysql"] = ("Datasources.Mysql", "Datasources.Mysql.MysqlProvider"),
+        ["sqlserver"] = ("Datasources.SqlServer", "Datasources.SqlServer.SqlServerProvider"),
+        ["postgres"] = ("Datasources.Postgres", "Datasources.Postgres.PostgresProvider"),
+        ["oracle"] = ("Datasources.Oracle", "Datasources.Oracle.OracleProvider"),
+        ["mongodb"] = ("Datasources.MongoDb", "Datasources.MongoDb.MongoDbProvider"),
+        ["dynamodb"] = ("Datasources.DynamoDb", "Datasources.DynamoDb.DynamoDbProvider")
     };
 
     public static void From(IReadOnlyDictionary<string, string?> options) =>
@@ -37,16 +37,9 @@ public static class DatasourceInstall
         {
             var type = Type.GetType($"{package.Type}, {package.Assembly}", throwOnError: false)
                 ?? Assembly.Load(package.Assembly).GetType(package.Type);
-            var ctor = type?.GetConstructor([typeof(IReadOnlyDictionary<string, string?>)]);
-            var repo = type?.GetMethod("Repository", BindingFlags.Public | BindingFlags.Static, [typeof(IConnection)]);
-            if (ctor is null || repo is null)
+            if (Activator.CreateInstance(type!) is not IDriver driver)
                 throw new ProviderNotInstalledException(name);
-            DatasourceFactory.Register(
-                name,
-                opts => ctor.Invoke([opts]) is IConnection connection
-                    ? connection
-                    : throw new ProviderNotInstalledException(name),
-                conn => repo.Invoke(null, [conn])!);
+            DatasourceFactory.Register(name, driver);
         }
         catch (ProviderNotInstalledException)
         {

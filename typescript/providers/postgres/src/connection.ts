@@ -28,12 +28,7 @@ export class PostgresConnection implements IConnection {
       schema: options?.schema ?? options?.database_schema,
     });
 
-  static repository = (connection: IConnection) =>
-    new CRUDRepository({
-      connection: connection as PostgresConnection,
-      entity: "items",
-      mapping: new RowTypeConverter(),
-    });
+
 
   constructor(options: PostgresConnectionOptions = {}) {
     this.url = options.url ?? "";

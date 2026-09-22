@@ -1,5 +1,6 @@
 export { PostgresCommand } from "./command.ts";
 export { PostgresConnection } from "./connection.ts";
+export { PostgresProvider } from "./PostgresProvider.ts";
 export type { PostgresConnectionOptions } from "./connection-options.ts";
 export { PgDriver } from "./pg-driver.ts";
 export {

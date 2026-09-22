@@ -18,6 +18,7 @@ mod crud_repository;
 mod enriched_crud_repository;
 mod default_readonly_enrichment_strategy;
 mod defaults;
+mod driver;
 mod dot_env;
 mod downcast_connection;
 mod enriched;
@@ -68,7 +69,7 @@ pub use statements::{
     ArrayExpression, CheckConstraint, ColumnDefault, CreateIndexStatement, CreateTableStatement,
     DeleteStatement, ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier,
     InsertStatement, Literal, NotNull, Operator, PrimaryKey, ReferentialAction, ReturnStatement,
-    Statement, StatementEvaluator, TableConstraint, Text, UniqueConstraint, UpdateStatement,
+    Statement, StatementKind, StatementEvaluator, TableConstraint, Text, UniqueConstraint, UpdateStatement,
     WhereClause,
 };
 pub use built_repository::BuiltRepository;
@@ -80,7 +81,7 @@ pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
 pub use console_command_middleware::{format_elapsed, utc_iso_millis, ConsoleCommandMiddleware};
 pub use converters::{
-    Casing, ChangeCasingConverter, ConvertSchema, DefaultTypeConverters, PluralizerConverter,
+    Casing, ChangeCasingConverter, ConvertSchema, PluralizerConverter,
     RegexConverter, ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter,
     TypeConverter,
 };
@@ -93,6 +94,7 @@ pub use crud_repository::CRUDRepository;
 pub use enriched_crud_repository::EnrichedCRUDRepository;
 pub use default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 pub use defaults::{bind_install, defaults};
+pub use driver::Driver;
 pub use downcast_connection::downcast_connection;
 pub use enriched::Enriched;
 pub use enriched_readonly_repository::EnrichedReadonlyRepository;
@@ -109,7 +111,7 @@ pub use mappers::{
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
 pub use mocks::{
-    MockCommand, MockConnection, MockDatasource, MockQuery, MockReader, MockRepository,
+    MockCommand, MockConnection, MockDatasource, MockDriver, MockQuery, MockReader, MockRepository,
     MockTransaction, MockWhere,
 };
 pub use parameter::Parameter;

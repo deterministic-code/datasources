@@ -4,7 +4,7 @@ mod datetime_converter;
 mod decimal_converter;
 mod uuid_converter;
 
-use datasources::{DefaultTypeConverters, TypeConverter, Value};
+use datasources::{TypeConverter, Value};
 use std::collections::HashMap;
 
 pub use binary_converter::BinaryConverter;
@@ -31,20 +31,15 @@ pub fn field(canonical: &str) -> Option<Box<dyn TypeConverter<Value, Value> + Se
     }
 }
 
-pub fn register() {
-    DefaultTypeConverters::use_provider("postgres", types);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn registers_catalog() {
-        register();
-        let types = DefaultTypeConverters::for_provider("postgres");
+        let catalog = types();
         for key in ["bool", "datetime", "uuid", "decimal", "binary"] {
-            assert!(types.contains_key(key));
+            assert!(catalog.contains_key(key));
             assert!(field(key).is_some());
         }
         assert!(field("int").is_none());

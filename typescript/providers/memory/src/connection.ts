@@ -9,7 +9,6 @@ import {
 } from "@datasources/core";
 import { MemoryCommand } from "./command.ts";
 import type { MemoryConnectionOptions } from "./connection-options.ts";
-import { MemoryRepository } from "./repository.ts";
 import { MemoryStore, type MemoryRecord } from "./store.ts";
 import { MemoryTransaction } from "./transaction.ts";
 
@@ -25,8 +24,7 @@ export class MemoryConnection implements IConnection {
   static from = (_options?: DatasourceOptions): MemoryConnection =>
     new MemoryConnection();
 
-  static repository = (connection: IConnection) =>
-    new MemoryRepository(connection as MemoryConnection);
+
 
   constructor(options: MemoryConnectionOptions = {}) {
     this.store = options.store ?? new MemoryStore();

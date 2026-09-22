@@ -4,9 +4,8 @@ using Datasources.DynamoDb;
 public partial class RegisterCreateTests
 {
     const string Provider = "dynamodb";
-    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new DynamoDbConnection(options);
-    static object Repository(IConnection connection) => DynamoDbConnection.Repository(connection);
-    static IDatasource Ds() => new Datasource(Provider, () => new DynamoDbConnection(), DynamoDbConnection.Repository);
+    static readonly IDriver Driver = new DynamoDbProvider();
+    static IDatasource Ds() => new Datasource(Provider, new DynamoDbProvider());
 
     [Fact]
     public async Task CreatesConnection()

@@ -11,6 +11,7 @@ import {
   PostgresCommand,
   PostgresConnection,
   PostgresQuote,
+  PostgresTypes,
 } from "../src/index.ts";
 import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 
@@ -70,6 +71,7 @@ describe("repository specs", () => {
           connection,
           (sql) => command.execute(sql),
           dialect,
+          PostgresTypes,
         );
       } finally {
         await isolated.cleanup();

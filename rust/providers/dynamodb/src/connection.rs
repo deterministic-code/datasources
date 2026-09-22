@@ -1,3 +1,3 @@
 use datasources::named_stub_connection;
 
-named_stub_connection!(DynamoDbConnection, "dynamodb");
+named_stub_connection!(DynamoDbConnection, DynamoDbProvider, "dynamodb");

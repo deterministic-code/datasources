@@ -3,7 +3,8 @@ use crate::filter::{matches, parse_filter, record_from_json, value_to_json};
 use async_trait::async_trait;
 use datasources::{
     identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, Value,
+    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, Statement,
+    StatementKind, Value, Where,
 };
 use serde_json::{Map, Value as JsonValue};
 use std::sync::Arc;
@@ -133,4 +134,56 @@ impl Command for JsonCommand {
             })
             .await
     }
+
+    async fn execute_reader_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Box<dyn Reader>> {
+        self.execute_reader(&filter_text(statement), parameters).await
+    }
+
+    async fn execute_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        match statement.kind() {
+            StatementKind::Insert => self.execute("insert", parameters).await,
+            StatementKind::Update => {
+                let params = with_where(parameters, statement.predicate());
+                self.execute("update", Some(&params)).await
+            }
+            StatementKind::Delete => {
+                let params = with_where(parameters, statement.predicate());
+                self.execute("delete", Some(&params)).await
+            }
+            _ => self.execute(&statement.get_text(), parameters).await,
+        }
+    }
+}
+
+fn filter_text(statement: &dyn Statement) -> String {
+    if let Some(where_clause) = statement.predicate() {
+        let text = where_clause.get_text();
+        if text.trim_start().starts_with('{') {
+            return text;
+        }
+    }
+    let text = statement.get_text();
+    if text.trim_start().starts_with('{') || text.trim().is_empty() {
+        text
+    } else {
+        String::new()
+    }
+}
+
+fn with_where(parameters: Option<&[Parameter]>, where_clause: Option<&dyn Where>) -> Vec<Parameter> {
+    let mut params = parameters.unwrap_or(&[]).to_vec();
+    if let Some(text) = where_clause.map(|predicate| predicate.get_text()) {
+        if text.trim_start().starts_with('{') {
+            params.push(Parameter::new("$where", Value::Text(text)));
+        }
+    }
+    params
 }

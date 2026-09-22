@@ -37,4 +37,8 @@ impl Text for InsertStatement {
     }
 }
 
-impl Statement for InsertStatement {}
+impl Statement for InsertStatement {
+    fn kind(&self) -> super::statement::StatementKind {
+        super::statement::StatementKind::Insert
+    }
+}

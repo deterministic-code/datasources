@@ -1,6 +1,5 @@
 mod change_casing_converter;
 mod convert_schema;
-mod default_type_converters;
 mod pluralizer_converter;
 mod regex_converter;
 mod replace_converter;
@@ -11,7 +10,6 @@ mod type_converter;
 
 pub use change_casing_converter::{Casing, ChangeCasingConverter};
 pub use convert_schema::{Cells, ConvertSchema};
-pub use default_type_converters::DefaultTypeConverters;
 pub use pluralizer_converter::PluralizerConverter;
 pub use regex_converter::RegexConverter;
 pub use replace_converter::ReplaceConverter;

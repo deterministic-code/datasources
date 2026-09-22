@@ -2,13 +2,13 @@ mod command;
 mod connection;
 mod converters;
 mod filter;
-mod repository;
+mod provider;
 mod store;
 mod transaction;
 
 pub use command::MemoryCommand;
 pub use connection::MemoryConnection;
-pub use repository::MemoryRepository;
+pub use provider::MemoryProvider;
 pub use store::{MemoryData, MemoryStore};
 pub use transaction::MemoryTransaction;
 
@@ -19,12 +19,19 @@ pub(crate) use filter::{json_to_value, matches, parse_filter};
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, ICRUDRepository, IReadonlyRepository,
-        IsolationLevel, Parameter, Row, QueryStatement, TextWhere, Value,
+        create, register, reset, Command, Connection, CRUDRepository, ICRUDRepository,
+        IReadonlyRepository, IsolationLevel, Parameter, RepositoryBuilderOptions, Row,
+        QueryStatement, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
     use std::sync::Arc;
+
+    fn crud(conn: Arc<MemoryConnection>) -> CRUDRepository {
+        let mut options = RepositoryBuilderOptions::with_factory(conn);
+        options.ids = vec![];
+        CRUDRepository::new(options).expect("repo")
+    }
 
     fn rec(id: i64, name: &str) -> Row {
         let mut r = Row::new();
@@ -36,11 +43,7 @@ mod tests {
     #[test]
     fn register_and_create() {
         reset();
-        register(
-            "memory",
-            MemoryConnection::from_options,
-            MemoryConnection::repository,
-        );
+        register("memory", Arc::new(MemoryProvider));
         let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
     }
@@ -103,7 +106,7 @@ mod tests {
         conn.open().await.unwrap();
         conn.open().await.unwrap();
         assert_eq!(conn.collection_name(), "");
-        let repo = MemoryRepository::new(conn.clone());
+        let repo = crud(conn.clone());
         assert!(repo.read_single(None).await.unwrap().is_some());
         assert!(repo
             .read_single(Some(&QueryStatement::text("{\"id\":9}")))
@@ -193,17 +196,13 @@ mod tests {
             })),
         ));
         named_conn.open().await.unwrap();
-        MemoryRepository::new(named_conn.clone())
+        crud(named_conn.clone())
             .create(&mut rec(2, "b"))
             .await
             .unwrap();
 
         reset();
-        register(
-            "memory",
-            MemoryConnection::from_options,
-            MemoryConnection::repository,
-        );
+        register("memory", Arc::new(MemoryProvider));
         let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
         ds.create_connection().await.unwrap();
@@ -257,15 +256,15 @@ mod tests {
             .execute("insert", None)
             .await
             .is_err());
-        assert!(MemoryRepository::new(closed.clone())
+        assert!(crud(closed.clone())
             .create(&mut rec(1, "a"))
             .await
             .is_err());
-        assert!(MemoryRepository::new(closed.clone())
+        assert!(crud(closed.clone())
             .update(&rec(1, "a"), None)
             .await
             .is_err());
-        assert!(MemoryRepository::new(closed)
+        assert!(crud(closed)
             .delete(&rec(1, "a"), None)
             .await
             .is_err());

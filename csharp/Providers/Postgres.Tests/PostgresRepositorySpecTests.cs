@@ -33,7 +33,7 @@ public class PostgresRepositorySpecTests
                         Schema = schema,
                         Driver = new PostgresDriver(schema),
                     });
-                    return new RepositorySpec.Session(conn, new PostgresCommand(conn));
+                    return new RepositorySpec.Session(conn, new PostgresCommand(conn), PostgresTypes.All);
                 }, CreateTable, PostgresQuote.Quote);
             }
             finally

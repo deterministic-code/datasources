@@ -3,30 +3,23 @@ mod connection;
 mod converters;
 
 pub use command::DynamoDbCommand;
-pub use connection::DynamoDbConnection;
+pub use connection::{DynamoDbConnection, DynamoDbProvider};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, register, reset, BuiltDatasource, Datasource};
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new(
-            "dynamodb",
-            || DynamoDbConnection::from_options(None),
-            DynamoDbConnection::repository,
-        )
+        BuiltDatasource::new("dynamodb", Arc::new(DynamoDbProvider), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register(
-            "dynamodb",
-            DynamoDbConnection::from_options,
-            DynamoDbConnection::repository,
-        );
+        register("dynamodb", Arc::new(DynamoDbProvider));
         assert_eq!(
             create(Some(&HashMap::from([(
                 "provider".into(),

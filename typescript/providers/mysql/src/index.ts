@@ -1,5 +1,6 @@
 export { MysqlCommand } from "./command.ts";
 export { MysqlConnection } from "./connection.ts";
+export { MysqlProvider } from "./MysqlProvider.ts";
 export type { MysqlConnectionOptions } from "./connection-options.ts";
 export { Mysql2Driver } from "./mysql2-driver.ts";
 export {

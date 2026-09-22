@@ -13,6 +13,7 @@ export default defineConfig({
         "src/ICommandMiddleware.ts",
         "src/IConnection.ts",
         "src/IDatasource.ts",
+        "src/IDriver.ts",
         "src/statements/ICreateTableStatement.ts",
         "src/statements/ICreateIndexStatement.ts",
         "src/statements/ITableConstraint.ts",

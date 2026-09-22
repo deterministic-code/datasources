@@ -1,18 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { XmlCommand, XmlConnection } from "./index.ts";
+import { XmlCommand, XmlConnection, XmlProvider } from "./index.ts";
 
 afterEach(() => DatasourceFactory.reset());
 
 describe("xml", () => {
   it("creates", () => {
-    DatasourceFactory.register("xml", XmlConnection.from, XmlConnection.repository);
+    DatasourceFactory.register("xml", new XmlProvider());
     expect(XmlConnection.from()).toBeInstanceOf(XmlConnection);
     expect(Datasource.create({ provider: "xml" }).provider).toBe("xml");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new Datasource("xml", () => new XmlConnection(), XmlConnection.repository);
+    const ds = new Datasource("xml", new XmlProvider());
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(XmlConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
@@ -29,5 +29,6 @@ describe("xml", () => {
     ds.createRepository(connection);
     ds.createReadonlyRepository();
     ds.createReadonlyRepository(connection);
+    expect(new XmlProvider().transaction(connection).isolation).toBe("serializable");
   });
 });

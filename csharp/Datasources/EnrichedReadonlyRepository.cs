@@ -45,4 +45,11 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
         foreach (var item in items)
             yield return item;
     }
+
+    public override async Task<T?> ReadSingle(IWhere where)
+    {
+        await foreach (var item in Read(where))
+            return item;
+        return default;
+    }
 }

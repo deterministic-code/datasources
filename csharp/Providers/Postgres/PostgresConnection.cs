@@ -2,7 +2,6 @@ namespace Datasources.Postgres;
 
 public sealed class PostgresConnection : IConnection
 {
-    static PostgresConnection() => _ = PostgresTypes.All;
 
     public string Url { get; }
     public string? Schema { get; }
@@ -30,14 +29,7 @@ public sealed class PostgresConnection : IConnection
         Driver = PostgresGuard.Require(options.Driver);
     }
 
-    public static object Repository(IConnection connection) =>
-        new CRUDRepository<Dictionary<string, Value>>(
-            new RepositoryBuilderOptions<Dictionary<string, Value>>
-            {
-                Connection = (PostgresConnection)connection,
-                Entity = "items",
-                Mapping = new RowTypeConverter<Dictionary<string, Value>>(),
-            });
+
 
     public async Task Open()
     {

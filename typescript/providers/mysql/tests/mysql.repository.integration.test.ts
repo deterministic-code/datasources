@@ -11,6 +11,7 @@ import {
   MysqlCommand,
   MysqlConnection,
   MysqlQuote,
+  MysqlTypes,
 } from "../src/index.ts";
 import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 
@@ -79,6 +80,7 @@ describe("repository specs", () => {
           connection,
           (sql) => command.execute(sql),
           dialect,
+          MysqlTypes,
         );
       } finally {
         await isolated.cleanup();

@@ -8,6 +8,12 @@ pub struct SqliteTransaction {
     pub(crate) isolation: IsolationLevel,
 }
 
+impl SqliteTransaction {
+    pub fn new(driver: Arc<dyn SqliteDriver>, isolation: IsolationLevel) -> Self {
+        Self { driver, isolation }
+    }
+}
+
 #[async_trait]
 impl Transaction for SqliteTransaction {
     fn isolation(&self) -> IsolationLevel {

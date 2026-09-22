@@ -8,7 +8,7 @@ public class MemoryTests
     public MemoryTests()
     {
         DatasourceFactory.Reset();
-        DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryConnection.Repository);
+        DatasourceFactory.Register("memory", new MemoryProvider());
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class MemoryTests
         await committed.Commit();
         Assert.Equal(2, conn.GetCollection().Count);
 
-        var repo = new MemoryRepository(conn);
+        var repo = new CRUDRepository<Dictionary<string, Value>>(conn);
         var command = new MemoryCommand(conn);
         Assert.NotNull(await repo.ReadSingle());
         Assert.Null(await repo.ReadSingle(new QueryStatement("{\"id\":9}")));
@@ -115,11 +115,11 @@ public class MemoryTests
         var closed = new MemoryConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).ExecuteReader(""));
         await Assert.ThrowsAsync<DatasourceException>(() => new MemoryCommand(closed).Execute("insert"));
-        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Create(new Row()));
-        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Update(new Row { ["id"] = 1 }));
-        await Assert.ThrowsAsync<DatasourceException>(() => new MemoryRepository(closed).Delete(new Row { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Create(new Row()));
+        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Update(new Row { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Delete(new Row { ["id"] = 1 }));
 
-        var ds = new Datasource("memory", () => new MemoryConnection(new MemoryConnectionOptions { Data = new List<Dictionary<string, Value>>() }), MemoryConnection.Repository);
+        var ds = new Datasource("memory", new Of(() => new MemoryConnection(new MemoryConnectionOptions { Data = new List<Dictionary<string, Value>>() })));
         Assert.Equal("memory", ds.Provider);
         var created = await ds.CreateConnection();
         await ((MemoryConnection)created).Open();
@@ -141,5 +141,15 @@ public class MemoryTests
         await a.Open();
         await b.Open();
         Assert.Single(b.GetCollection());
+    }
+
+    sealed class Of(Func<IConnection> connection) : IDriver
+    {
+        public IConnection Connection(IReadOnlyDictionary<string, string?>? _) => connection();
+        public ICommand Command(IConnection c) => c.CreateCommand();
+        public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
+            new MemoryTransaction((MemoryConnection)c, isolation);
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; } =
+            new Dictionary<string, TypeConverter<Value, Value>>();
     }
 }

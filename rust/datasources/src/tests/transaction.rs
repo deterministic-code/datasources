@@ -1,5 +1,4 @@
-use crate::{default, register, reset, IsolationLevel, MockConnection, MockRepository};
-use std::sync::Arc;
+use crate::{default, register, reset, IsolationLevel, MockDriver};
 
 fn clear_env() {
     reset();
@@ -13,11 +12,7 @@ fn clear_env() {
     ] {
         std::env::remove_var(key);
     }
-    register(
-        "sqlite",
-        |_| MockConnection::new(),
-        |_| Arc::new(MockRepository::new()),
-    );
+    register("sqlite", MockDriver::arc());
     std::env::set_var("PROVIDER", "sqlite");
     std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
 }

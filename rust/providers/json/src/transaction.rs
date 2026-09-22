@@ -8,6 +8,12 @@ pub struct JsonTransaction {
     pub(crate) isolation: IsolationLevel,
 }
 
+impl JsonTransaction {
+    pub(crate) fn new(state: Arc<JsonState>, isolation: IsolationLevel) -> Self {
+        Self { state, isolation }
+    }
+}
+
 #[async_trait]
 impl Transaction for JsonTransaction {
     fn isolation(&self) -> IsolationLevel {

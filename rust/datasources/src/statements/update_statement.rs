@@ -49,4 +49,11 @@ impl Text for UpdateStatement {
     }
 }
 
-impl Statement for UpdateStatement {}
+impl Statement for UpdateStatement {
+    fn kind(&self) -> super::statement::StatementKind {
+        super::statement::StatementKind::Update
+    }
+    fn predicate(&self) -> Option<&dyn Where> {
+        self.where_clause.as_deref()
+    }
+}

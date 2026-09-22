@@ -14,7 +14,7 @@ vi.mock("better-sqlite3", () => {
   }
   return { default: Database };
 });
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
 import {
   BetterSqliteDriver,
   bindParameters,
@@ -22,6 +22,9 @@ import {
   requireDriver,
   SqliteCommand,
   SqliteConnection,
+  SqliteProvider,
+  SqliteTransaction,
+  SqliteTypes,
   type SqliteDatabase,
 } from "./index.ts";
 import { filenameOf, sqliteFilename } from "./sqlitePath.ts";
@@ -81,7 +84,7 @@ function fakeDriver(filename = ":memory:") {
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("sqlite", SqliteConnection.from, SqliteConnection.repository);
+  DatasourceFactory.register("sqlite", new SqliteProvider());
 });
 
 describe("sqlitePath", () => {
@@ -272,14 +275,17 @@ describe("Sqlite datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
     expect(() =>
-      new Datasource("sqlite", () => new SqliteConnection(), SqliteConnection.repository)
+      new Datasource("sqlite", new SqliteProvider())
         .createConnection(),
     ).toThrow(DatasourceError);
-    const ds = new Datasource(
-      "sqlite",
-      () => new SqliteConnection({ driver }),
-      SqliteConnection.repository,
-    );
+    const of = (engine = driver): IDriver => ({
+      connection: () => new SqliteConnection({ driver: engine }),
+      command: (c) => c.createCommand(),
+      transaction: (c, isolation = "serializable") =>
+        new SqliteTransaction(c as SqliteConnection, isolation),
+      types: SqliteTypes,
+    });
+    const ds = new Datasource("sqlite", of());
     expect(ds.provider).toBe("sqlite");
     const connection = await ds.createConnection();
     await (connection as SqliteConnection).open();
@@ -299,7 +305,7 @@ describe("Sqlite datasource", () => {
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
     expect(
-      new Datasource("sqlite", () => new SqliteConnection({ driver }), SqliteConnection.repository)
+      new Datasource("sqlite", of())
         .createRepository(),
     ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "sqlite" }).provider).toBe("sqlite");
@@ -307,5 +313,10 @@ describe("Sqlite datasource", () => {
     expect(() =>
       SqliteConnection.from({ database_url: "sqlite:///:memory:" }),
     ).toThrow(DatasourceError);
+    const provider = new SqliteProvider();
+    expect(provider.command(connection)).toBeInstanceOf(SqliteCommand);
+    expect(provider.transaction(connection as SqliteConnection).isolation).toBe(
+      "serializable",
+    );
   });
 });

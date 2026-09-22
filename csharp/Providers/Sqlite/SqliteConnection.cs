@@ -4,7 +4,6 @@ namespace Datasources.Sqlite;
 
 public sealed class SqliteConnection : IConnection
 {
-    static SqliteConnection() => _ = SqliteTypes.All;
 
     public string Filename { get; }
     public ISqliteDriver Driver { get; }
@@ -29,14 +28,7 @@ public sealed class SqliteConnection : IConnection
         Driver = SqliteGuard.Require(options.Driver);
     }
 
-    public static object Repository(IConnection connection) =>
-        new CRUDRepository<Dictionary<string, Value>>(
-            new RepositoryBuilderOptions<Dictionary<string, Value>>
-            {
-                Connection = (SqliteConnection)connection,
-                Entity = "items",
-                Mapping = new RowTypeConverter<Dictionary<string, Value>>(),
-            });
+
 
     public async Task Open()
     {

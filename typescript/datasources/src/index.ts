@@ -3,6 +3,7 @@ export { execute, executeReader } from "./ICommand.ts";
 export type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
+export type { IDriver } from "./IDriver.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory, bindInstall } from "./DatasourceFactory.ts";
 export type {
@@ -102,7 +103,6 @@ export type { Cell, Cells } from "./converters/Cell.ts";
 export type { Constructable } from "./converters/Constructable.ts";
 export { TypeConverter } from "./converters/TypeConverter.ts";
 export { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-export { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 export { ToLowerCaseConverter } from "./converters/ToLowerCaseConverter.ts";
 export { ToUpperCaseConverter } from "./converters/ToUpperCaseConverter.ts";
 export { ChangeCasingConverter, type Casing } from "./converters/ChangeCasingConverter.ts";
@@ -139,6 +139,7 @@ export {
   MockCommand,
   MockConnection,
   MockDatasource,
+  MockDriver,
   MockQuery,
   MockReader,
   MockRepository,

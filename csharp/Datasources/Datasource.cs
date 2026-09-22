@@ -2,15 +2,15 @@ namespace Datasources;
 
 public sealed class Datasource(
     string provider,
-    Func<IConnection> newConnection,
-    Func<IConnection, object> newRepository) : IDatasource
+    IDriver driver,
+    IReadOnlyDictionary<string, string?>? options = null) : IDatasource
 {
     IConnection? _connection;
     public string Provider { get; } = provider;
-    IConnection DefaultConnection() => _connection ??= newConnection();
+    IConnection DefaultConnection() => _connection ??= driver.Connection(options);
     public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
-        (connection ?? DefaultConnection()).CreateCommand();
-    public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) =>
-        (ICRUDRepository<T>)newRepository(connection ?? DefaultConnection());
+        driver.Command(connection ?? DefaultConnection());
+    public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) where T : new() =>
+        new CRUDRepository<T>(CreateRepositoryBuilderOptions.FromType<T>(connection ?? DefaultConnection(), driver.Types));
 }

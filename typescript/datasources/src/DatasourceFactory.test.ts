@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DatasourceFactory,
-  MockConnection,
-  MockRepository,
+  MockCommand,
+  MockDriver,
   ProviderNotInstalledError,
 } from "./index.ts";
 
@@ -31,7 +31,7 @@ afterAll(() => {
 
 describe("DatasourceFactory", () => {
   it("default from environment", () => {
-    DatasourceFactory.register("sqlite", () => new MockConnection(), (c) => new MockRepository(c));
+    DatasourceFactory.register("sqlite", new MockDriver());
     process.env.PROVIDER = "sqlite";
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
     const ds = DatasourceFactory.default;
@@ -41,6 +41,17 @@ describe("DatasourceFactory", () => {
   it("missing provider throws", () => {
     expect(() => DatasourceFactory.create({ provider: "missing" })).toThrow(
       ProviderNotInstalledError,
+    );
+  });
+
+  it("mock driver builds command and transaction", () => {
+    const driver = new MockDriver();
+    expect(driver.types).toEqual({});
+    const connection = driver.connection();
+    expect(driver.command(connection)).toBeInstanceOf(MockCommand);
+    expect(driver.transaction(connection).isolation).toBe("serializable");
+    expect(driver.transaction(connection, "readCommitted").isolation).toBe(
+      "readCommitted",
     );
   });
 });

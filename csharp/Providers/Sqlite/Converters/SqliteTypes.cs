@@ -13,6 +13,4 @@ public static class SqliteTypes
             ["decimal"] = new DecimalConverter(),
             ["binary"] = new BinaryConverter(),
         };
-
-    static SqliteTypes() => DefaultTypeConverters.Use("sqlite", All);
 }

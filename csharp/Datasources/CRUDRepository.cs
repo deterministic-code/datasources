@@ -28,7 +28,7 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     public async Task<Response> Create(T item)
     {
         var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
-        var response = await Command().Execute(Statements.Insert(fields).GetText(), fields);
+        var response = await Command().Execute(Statements.Insert(fields), fields);
         if (response.Result is not Value.Null)
             Apply(item, CRUDMapper.Create.Map(response.Result));
         return response;
@@ -42,14 +42,17 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         return await Command().Execute(
-            Statements.Update(fields, where).GetText(),
+            Statements.Update(fields, where),
             [.. fields, .. where.Parameters]);
     }
 
     public async Task<Response> Delete(T item, IWhere? byWhere = null)
     {
-        var where = byWhere ?? IdWhere(ReverseConvert(item));
-        return await Command().Execute(Statements.Delete(where).GetText(), where.Parameters);
+        var record = ReverseConvert(item);
+        var where = byWhere ?? IdWhere(record);
+        return await Command().Execute(
+            Statements.Delete(where),
+            where.Parameters is { Count: > 0 } parameters ? parameters : Params(record, _ => true));
     }
 
     IWhere IdWhere(Row record) =>

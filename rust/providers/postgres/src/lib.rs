@@ -4,6 +4,7 @@ mod connection;
 mod connection_driver;
 mod converters;
 mod driver;
+mod provider;
 mod pg_value;
 mod column;
 mod column_type;
@@ -14,6 +15,7 @@ mod transaction_driver;
 
 pub use command::PostgresCommand;
 pub use connection::PostgresConnection;
+pub use provider::PostgresProvider;
 pub use driver::{
     isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver,
     PostgresExecuteResult,
@@ -39,10 +41,40 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use datasources::{
-        create, register, reset, Command, Connection, IsolationLevel, Result, Row, Value,
+        create, register, reset, Command, Connection, Driver, IsolationLevel, Transaction,
+        Result, Row, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
+
+    struct With(Arc<dyn PostgresDriver>, Option<String>);
+
+    impl Driver for With {
+        fn connection(&self, _: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+            Arc::new(PostgresConnection::new(self.1.clone(), None, self.0.clone()))
+        }
+
+        fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
+            connection.create_command()
+        }
+
+        fn transaction(
+            &self,
+            connection: Arc<dyn Connection>,
+            isolation: IsolationLevel,
+        ) -> Arc<dyn Transaction> {
+            let conn = datasources::downcast_connection::<PostgresConnection>(connection)
+                .expect("postgres");
+            Arc::new(PostgresTransaction::new(conn.driver.clone(), isolation))
+        }
+
+        fn types(
+            &self,
+        ) -> HashMap<String, Box<dyn datasources::TypeConverter<datasources::Value, datasources::Value> + Send + Sync>>
+        {
+            crate::converters::types()
+        }
+    }
 
     struct FakeDriver;
 
@@ -151,14 +183,7 @@ mod tests {
         let driver_for_ds = driver.clone();
         register(
             "postgres",
-            move |_| {
-                Arc::new(PostgresConnection::new(
-                    Some("postgres://db/app".into()),
-                    None,
-                    driver_for_ds.clone(),
-                ))
-            },
-            PostgresConnection::repository,
+            Arc::new(With(driver_for_ds, Some("postgres://db/app".into()))),
         );
         let ds = create(Some(&HashMap::from([(
             "provider".into(),
@@ -180,4 +205,4 @@ mod tests {
     }
 }
 
-pub use converters::{register as register_converters, types as converter_types};
+pub use converters::types as converter_types;

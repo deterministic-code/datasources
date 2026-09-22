@@ -3,30 +3,23 @@ mod connection;
 mod converters;
 
 pub use command::SqlServerCommand;
-pub use connection::SqlServerConnection;
+pub use connection::{SqlServerConnection, SqlServerProvider};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, register, reset, BuiltDatasource, Datasource};
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new(
-            "sqlserver",
-            || SqlServerConnection::from_options(None),
-            SqlServerConnection::repository,
-        )
+        BuiltDatasource::new("sqlserver", Arc::new(SqlServerProvider), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register(
-            "sqlserver",
-            SqlServerConnection::from_options,
-            SqlServerConnection::repository,
-        );
+        register("sqlserver", Arc::new(SqlServerProvider));
         assert_eq!(
             create(Some(&HashMap::from([(
                 "provider".into(),

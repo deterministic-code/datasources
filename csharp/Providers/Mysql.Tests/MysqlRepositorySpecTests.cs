@@ -25,7 +25,7 @@ public class MysqlRepositorySpecTests
                         Url = isolated.Url,
                         Driver = new MysqlDriver(),
                     });
-                    return new RepositorySpec.Session(conn, new MysqlCommand(conn));
+                    return new RepositorySpec.Session(conn, new MysqlCommand(conn), MysqlTypes.All);
                 }, CreateTable, MysqlQuote.Quote);
             }
             finally

@@ -4,8 +4,7 @@ use crate::sqlite_path::sqlite_filename;
 use crate::transaction::SqliteTransaction;
 use async_trait::async_trait;
 use datasources::{
-    CRUDRepository, Command, Connection, DatasourceError, IsolationLevel, ICRUDRepository,
-    RepositoryBuilderOptions, Result, RowTypeConverter, Transaction,
+    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -18,7 +17,6 @@ pub struct SqliteConnection {
 
 impl SqliteConnection {
     pub fn new(filename: Option<String>, driver: Arc<dyn SqliteDriver>) -> Self {
-        crate::converters::register();
         Self {
             filename: filename.unwrap_or_else(|| ":memory:".to_string()),
             driver,
@@ -38,12 +36,6 @@ impl SqliteConnection {
             filename,
             require_driver(None).expect("SQLite driver is required"),
         ))
-    }
-
-    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> {
-        let mut options = RepositoryBuilderOptions::with_factory(connection);
-        options.mapping = Some(RowTypeConverter::new(vec![]));
-        Arc::new(CRUDRepository::new(options).expect("repository"))
     }
 
     pub fn ensure_open(&self) -> Result<()> {

@@ -4,7 +4,7 @@ use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
     ICRUDRepository, IReadonlyRepository,
-    DefaultTypeConverters, DeleteStatement, Expression, InsertStatement, Literal, Operator,
+    DeleteStatement, Expression, InsertStatement, Literal, Operator,
     Parameter, QueryStatement, RepositoryBuilder,
     CRUDMapper, RepositoryBuilderOptions, Result, Row, Text, TransformMapper,
     TypeConverter, UpdateStatement, Value, WhereClause,
@@ -66,7 +66,7 @@ pub struct RepositoryDialect {
     pub quote: fn(&str) -> String,
     pub create_table: fn(&str, &[SpecColumn]) -> String,
     pub field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
-    pub register: fn(),
+    pub types: fn() -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
 
 #[derive(Deserialize)]
@@ -239,10 +239,9 @@ fn fields_overlay(
 }
 
 fn mapping_of(spec: &Spec, dialect: &RepositoryDialect) -> RowTypeConverter {
-    (dialect.register)();
     let columns: Vec<String> = spec.type_spec.fields.keys().cloned().collect();
     RowTypeConverter::new(columns)
-        .with_types(DefaultTypeConverters::for_provider(dialect.provider))
+        .with_types((dialect.types)())
         .with_fields(fields_overlay(&spec.type_spec, dialect.field))
 }
 

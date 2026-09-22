@@ -1,11 +1,9 @@
 use crate::command::JsonCommand;
 use crate::file_store::{FileStore, MemoryFileStore};
-use crate::repository::JsonRepository;
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
 use datasources::{
-    downcast_connection, ICRUDRepository, Command, Connection, DatasourceError, IsolationLevel,
-    Result, Transaction,
+    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
 };
 use serde_json::{Map, Value as JsonValue};
 use std::collections::HashMap;
@@ -57,12 +55,6 @@ impl JsonConnection {
             None,
             Arc::new(MemoryFileStore::new()),
             None,
-        ))
-    }
-
-    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> {
-        Arc::new(JsonRepository::new(
-            downcast_connection(connection).expect("json connection"),
         ))
     }
 

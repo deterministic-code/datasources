@@ -9,7 +9,7 @@ public class JsonTests
     public JsonTests()
     {
         DatasourceFactory.Reset();
-        DatasourceFactory.Register("json", opts => new JsonConnection(opts), JsonConnection.Repository);
+        DatasourceFactory.Register("json", new JsonProvider());
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class JsonTests
         var t2 = await mem.StartTransaction();
         await t2.Commit();
 
-        var repo = new JsonRepository(conn);
+        var repo = new CRUDRepository<Dictionary<string, Value>>(conn);
         var command = new JsonCommand(conn);
         Assert.NotNull(await repo.ReadSingle());
         Assert.Null(await repo.ReadSingle(new QueryStatement("{\"id\":9}")));
@@ -110,11 +110,11 @@ public class JsonTests
 
         var closed = new JsonConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonCommand(closed).ExecuteReader(""));
-        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Create(new Row()));
-        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Update(new Row { ["id"] = 1 }));
-        await Assert.ThrowsAsync<DatasourceException>(() => new JsonRepository(closed).Delete(new Row { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Create(new Row()));
+        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Update(new Row { ["id"] = 1 }));
+        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Delete(new Row { ["id"] = 1 }));
 
-        var ds = new Datasource("json", () => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() }), JsonConnection.Repository);
+        var ds = new Datasource("json", new Of(() => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() })));
         Assert.Equal("json", ds.Provider);
         var created = await ds.CreateConnection();
         await ((JsonConnection)created).Open();
@@ -137,5 +137,15 @@ public class JsonTests
             FileStore = new MemoryFileStore { Files = { ["c.json"] = "{}" } },
         });
         await fromFile.Open();
+    }
+
+    sealed class Of(Func<IConnection> connection) : IDriver
+    {
+        public IConnection Connection(IReadOnlyDictionary<string, string?>? _) => connection();
+        public ICommand Command(IConnection c) => c.CreateCommand();
+        public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
+            new JsonTransaction((JsonConnection)c, isolation);
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; } =
+            new Dictionary<string, TypeConverter<Value, Value>>();
     }
 }

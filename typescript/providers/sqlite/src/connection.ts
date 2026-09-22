@@ -28,12 +28,7 @@ export class SqliteConnection implements IConnection {
       url: options?.url ?? options?.database_url,
     });
 
-  static repository = (connection: IConnection) =>
-    new CRUDRepository({
-      connection: connection as SqliteConnection,
-      entity: "items",
-      mapping: new RowTypeConverter(),
-    });
+
 
   constructor(options: SqliteConnectionOptions = {}) {
     this.filename = filenameOf(options);

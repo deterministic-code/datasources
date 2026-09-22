@@ -4,9 +4,8 @@ using Datasources.Oracle;
 public partial class RegisterCreateTests
 {
     const string Provider = "oracle";
-    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new OracleConnection(options);
-    static object Repository(IConnection connection) => OracleConnection.Repository(connection);
-    static IDatasource Ds() => new Datasource(Provider, () => new OracleConnection(), OracleConnection.Repository);
+    static readonly IDriver Driver = new OracleProvider();
+    static IDatasource Ds() => new Datasource(Provider, new OracleProvider());
 
     [Fact]
     public async Task CreatesConnection()

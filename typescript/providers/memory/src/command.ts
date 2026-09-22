@@ -1,10 +1,15 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  DeleteStatement,
   identityFilter,
+  InsertStatement,
+  UpdateStatement,
   type Cells,
   type ICommand,
   type IReader,
+  type IStatement,
+  type IWhere,
   type Response,
   type Parameter,
 } from "@datasources/core";
@@ -33,6 +38,23 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
       return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
     });
   }
+
+  executeReaderStatement = (
+    statement: IStatement,
+    parameters?: Parameter[],
+  ): Promise<IReader<Cells>> => this.executeReader(filterText(statement), parameters);
+
+  executeStatement = (
+    statement: IStatement,
+    parameters?: Parameter[],
+  ): Promise<Response> =>
+    statement instanceof InsertStatement
+      ? this.execute("insert", parameters)
+      : statement instanceof UpdateStatement
+        ? this.execute("update", withWhere(parameters, statement.where))
+        : statement instanceof DeleteStatement
+          ? this.execute("delete", withWhere(parameters, statement.where))
+          : this.execute(statement.getText(), parameters);
 
   async execute(
     text: string,
@@ -87,3 +109,20 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     return { result: undefined, rowsAffected };
   }
 }
+
+const looksJson = (text?: string): boolean => !!text?.trimStart().startsWith("{");
+
+const filterText = (statement: IStatement): string => {
+  const where = "where" in statement ? (statement as { where?: IWhere }).where?.getText() : undefined;
+  if (looksJson(where)) return where!;
+  const text = statement.getText();
+  return looksJson(text) || !text.trim() ? text : "";
+};
+
+const withWhere = (
+  parameters: Parameter[] | undefined,
+  where?: IWhere,
+): Parameter[] | undefined =>
+  looksJson(where?.getText())
+    ? [...(parameters ?? []), { name: "$where", value: where!.getText() }]
+    : parameters;

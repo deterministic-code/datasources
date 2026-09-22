@@ -9,6 +9,8 @@ use crate::crud_mapper::CRUDMapper;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
+use crate::statement::Statement;
+use crate::text_query::QueryStatement;
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
@@ -65,20 +67,35 @@ impl ReadonlyRepository {
         command
     }
 
-    pub(crate) fn query_parts(&self, query: Option<&dyn Query>) -> (String, Vec<Parameter>) {
+    pub(crate) fn query_of(&self, query: Option<&dyn Query>) -> (QueryStatement, Vec<Parameter>) {
         if let Some(query) = query {
             let params = query
                 .where_clause()
                 .map(|predicate| predicate.parameters())
                 .unwrap_or_else(|| query.parameters());
-            (query.get_text(), params)
+            let statement = match query.where_clause() {
+                Some(predicate) => {
+                    QueryStatement::with_where(query.get_text(), crate::text_where::TextWhere::new(predicate.get_text()))
+                }
+                None => QueryStatement::text(query.get_text()),
+            };
+            (statement, params)
         } else {
-            self.statements.query(None)
+            let statement = self.statements.query(None);
+            let params = statement.parameters();
+            (statement, params)
         }
     }
 
-    pub(crate) async fn fetch_one(&self, text: String, params: Vec<Parameter>) -> Result<Option<Row>> {
-        let reader = self.command().execute_reader(&text, Some(&params)).await?;
+    pub(crate) async fn fetch_one(
+        &self,
+        statement: &dyn crate::statement::Statement,
+        params: Vec<Parameter>,
+    ) -> Result<Option<Row>> {
+        let reader = self
+            .command()
+            .execute_reader_statement(statement, Some(&params))
+            .await?;
         if !reader.next().await? {
             return Ok(None);
         }
@@ -92,8 +109,15 @@ impl ReadonlyRepository {
             .transpose()
     }
 
-    pub(crate) async fn fetch_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Row>> {
-        let reader = self.command().execute_reader(&text, Some(&params)).await?;
+    pub(crate) async fn fetch_all(
+        &self,
+        statement: &dyn crate::statement::Statement,
+        params: Vec<Parameter>,
+    ) -> Result<Vec<Row>> {
+        let reader = self
+            .command()
+            .execute_reader_statement(statement, Some(&params))
+            .await?;
         let mut items = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
@@ -123,22 +147,22 @@ impl IRepository for ReadonlyRepository {
 #[async_trait]
 impl IReadonlyRepository for ReadonlyRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
-        let (text, params) = self.query_parts(query);
-        self.fetch_one(text, params).await
+        let (statement, params) = self.query_of(query);
+        self.fetch_one(&statement, params).await
     }
 
     async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
-        let (text, params) = self.query_parts(query);
-        self.fetch_all(text, params).await
+        let (statement, params) = self.query_of(query);
+        self.fetch_all(&statement, params).await
     }
 
     async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        let (text, params) = self.statements.query(Some(where_clause));
-        self.fetch_one(text, params).await
+        let statement = self.statements.query(Some(where_clause));
+        self.fetch_one(&statement, where_clause.parameters()).await
     }
 
     async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        let (text, params) = self.statements.query(Some(where_clause));
-        self.fetch_all(text, params).await
+        let statement = self.statements.query(Some(where_clause));
+        self.fetch_all(&statement, where_clause.parameters()).await
     }
 }

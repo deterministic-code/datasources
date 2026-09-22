@@ -33,9 +33,6 @@ public sealed class JsonConnection : IConnection
         Data = Empty();
     }
 
-    public static object Repository(IConnection connection) =>
-        new JsonRepository((JsonConnection)connection);
-
     public async Task Open()
     {
         if (IsOpen) return;

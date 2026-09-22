@@ -7,7 +7,7 @@ public partial class RegisterCreateTests
     [Fact]
     public void Creates()
     {
-        DatasourceFactory.Register(Provider, Connection, Repository);
+        DatasourceFactory.Register(Provider, Driver);
         Assert.Equal(
             Provider,
             DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = Provider }).Provider);

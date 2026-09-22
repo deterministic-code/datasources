@@ -45,7 +45,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>
             _ => throw new DatasourceException("Read requires IQuery or IWhere")
         };
         var reader = await Command().ExecuteReader(
-            statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
+            statement, statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
             yield return Mapper!.Map(RowConverter.Convert(reader.Current
                 ?? throw new DatasourceException("Reader current must be a row")));

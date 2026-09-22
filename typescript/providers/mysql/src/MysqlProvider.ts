@@ -1,0 +1,25 @@
+import type {
+  Cell,
+  DatasourceOptions,
+  ICommand,
+  IConnection,
+  IDriver,
+  ITransaction,
+  IsolationLevel,
+  TypeConverter,
+} from "@datasources/core";
+import { MysqlConnection } from "./connection.ts";
+import { MysqlTransaction } from "./transaction.ts";
+import { MysqlTypes } from "./converters/MysqlTypes.ts";
+
+export class MysqlProvider implements IDriver {
+  types: Record<string, TypeConverter<Cell, Cell>> = MysqlTypes;
+  connection = (options?: DatasourceOptions): IConnection =>
+    MysqlConnection.from(options);
+  command = (connection: IConnection): ICommand => connection.createCommand();
+  transaction = (
+    connection: IConnection,
+    isolation: IsolationLevel = "serializable",
+  ): ITransaction =>
+    new MysqlTransaction(connection as MysqlConnection, isolation);
+}
