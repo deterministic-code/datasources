@@ -1,26 +1,26 @@
 use crate::enriched::Enriched;
 use crate::query::Query;
 use crate::i_repository::IRepository;
-use crate::repository::{CRUDRepository, ReadonlyRepository};
+use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use crate::where_trait::Where;
-use crate::DeepCRUDRepository;
+use crate::EnrichedCRUDRepository;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct BulkCRUDRepository {
-    inner: DeepCRUDRepository,
+    inner: EnrichedCRUDRepository,
 }
 
 impl BulkCRUDRepository {
-    pub fn new(inner: Arc<dyn CRUDRepository>) -> Self {
+    pub fn new(inner: Arc<dyn ICRUDRepository>) -> Self {
         Self {
-            inner: DeepCRUDRepository::new(inner),
+            inner: EnrichedCRUDRepository::new(inner),
         }
     }
 
@@ -28,7 +28,7 @@ impl BulkCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn ReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -41,7 +41,7 @@ impl BulkCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn ReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -56,7 +56,7 @@ impl BulkCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn CRUDRepository>,
+        via: Arc<dyn ICRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -70,7 +70,7 @@ impl BulkCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn CRUDRepository>,
+        via: Arc<dyn ICRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -131,7 +131,7 @@ impl IRepository for BulkCRUDRepository {
 }
 
 #[async_trait]
-impl ReadonlyRepository for BulkCRUDRepository {
+impl IReadonlyRepository for BulkCRUDRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }
@@ -150,7 +150,7 @@ impl ReadonlyRepository for BulkCRUDRepository {
 }
 
 #[async_trait]
-impl CRUDRepository for BulkCRUDRepository {
+impl ICRUDRepository for BulkCRUDRepository {
     async fn create(&self, item: &Row) -> Result<Response> {
         self.inner.create(item).await
     }

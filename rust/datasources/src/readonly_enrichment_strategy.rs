@@ -1,5 +1,5 @@
 use crate::query::Query;
-use crate::repository::ReadonlyRepository;
+use crate::repository::IReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
@@ -11,14 +11,14 @@ use async_trait::async_trait;
 pub trait ReadonlyEnrichmentStrategy: Send + Sync {
     async fn read(
         &self,
-        inner: &dyn ReadonlyRepository,
+        inner: &dyn IReadonlyRepository,
         tree: &RepositoryTree,
         query: Option<&dyn Query>,
     ) -> Result<Vec<Row>>;
 
     async fn read_where(
         &self,
-        inner: &dyn ReadonlyRepository,
+        inner: &dyn IReadonlyRepository,
         tree: &RepositoryTree,
         where_clause: &dyn Where,
     ) -> Result<Vec<Row>>;

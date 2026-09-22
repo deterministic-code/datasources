@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public class BulkCRUDRepository<T> : DeepCRUDRepository<T>
+public class BulkCRUDRepository<T> : EnrichedCRUDRepository<T>
 {
     public BulkCRUDRepository(ICRUDRepository<T> inner) : base(inner) { }
 

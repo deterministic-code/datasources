@@ -6,9 +6,9 @@ internal static class ContactsServiceOf
 {
     public static ContactsService Create(IConnection connection, ICommandMiddleware? middleware = null)
     {
-        Repository<T> Of<T>(string entity, string[] columns) where T : new()
+        CRUDRepository<T> Of<T>(string entity, string[] columns) where T : new()
         {
-            var repo = new Repository<T>(new RepositoryBuilderOptions<T>
+            var repo = new CRUDRepository<T>(new RepositoryBuilderOptions<T>
             {
                 Connection = connection,
                 Entity = entity,

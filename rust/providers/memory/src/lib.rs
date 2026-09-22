@@ -19,8 +19,8 @@ pub(crate) use filter::{json_to_value, matches, parse_filter};
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, CRUDRepository, Command, Connection, IsolationLevel, Parameter,
-        ReadonlyRepository, Row, QueryStatement, TextWhere, Value,
+        create, register, reset, Command, Connection, IsolationLevel, Parameter,
+        Row, QueryStatement, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;

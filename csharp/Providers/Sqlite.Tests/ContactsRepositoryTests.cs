@@ -59,7 +59,7 @@ public class ContactsRepositoryTests
             await command.Execute(sql);
 
         var rows = new List<Row>();
-        await foreach (var row in new Repository<Row>(new RepositoryBuilderOptions<Row>
+        await foreach (var row in new CRUDRepository<Row>(new RepositoryBuilderOptions<Row>
         {
             Connection = conn,
             Entity = "contacts_base"

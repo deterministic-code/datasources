@@ -1,6 +1,6 @@
 use crate::i_repository::IRepository;
 use crate::query::Query;
-use crate::repository::{CRUDRepository, ReadonlyRepository};
+use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -63,7 +63,7 @@ impl ListRepository {
 impl IRepository for ListRepository {}
 
 #[async_trait]
-impl ReadonlyRepository for ListRepository {
+impl IReadonlyRepository for ListRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         Ok(self
             .filter(query.and_then(Query::where_clause))
@@ -85,7 +85,7 @@ impl ReadonlyRepository for ListRepository {
 }
 
 #[async_trait]
-impl CRUDRepository for ListRepository {
+impl ICRUDRepository for ListRepository {
     async fn create(&self, item: &Row) -> Result<Response> {
         let mut row = item.clone();
         let id = match row.get("id") {

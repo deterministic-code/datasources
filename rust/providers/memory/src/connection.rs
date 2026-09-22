@@ -4,7 +4,7 @@ use crate::store::{MemoryData, MemoryStore};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
 use datasources::{
-    downcast_connection, CRUDRepository, Command, Connection, DatasourceError, IsolationLevel,
+    downcast_connection, ICRUDRepository, Command, Connection, DatasourceError, IsolationLevel,
     Result, Row, Transaction,
 };
 use std::collections::HashMap;
@@ -49,7 +49,7 @@ impl MemoryConnection {
         ))
     }
 
-    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn CRUDRepository> {
+    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> {
         Arc::new(MemoryRepository::new(
             downcast_connection(connection).expect("memory connection"),
         ))

@@ -101,11 +101,11 @@ See [Command](./sections/command.md) for middleware and `execute`.
 
 ## Enriched CRUD repository
 
-A `DeepCRUDRepository` wraps a CRUD repository, fills related fields after `read`, and writes nested `many` children on create / update / delete.
+A `EnrichedCRUDRepository` wraps a CRUD repository, fills related fields after `read`, and writes nested `many` children on create / update / delete.
 
 ::: dialects
 ```csharp
-var contacts = new DeepCRUDRepository<Contact>(contactRepo);
+var contacts = new EnrichedCRUDRepository<Contact>(contactRepo);
 contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
 contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
     nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
@@ -114,7 +114,7 @@ var loaded = await contacts.ReadSingle(new WhereClause(new Operator.Equals("id",
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
 ```
 ```rust
-let mut contacts = DeepCRUDRepository::new(contact_repo);
+let mut contacts = EnrichedCRUDRepository::new(contact_repo);
 contacts
     .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false)
     .add_enriched_repo_with("addresses", "id", addresses, "contact_id", None, true, |node| {
@@ -125,7 +125,7 @@ let loaded = contacts.read_single_where(&WhereClause::new(Operator::equals("id",
 contacts.create(contact).await?;
 ```
 ```typescript
-const contacts = new DeepCRUDRepository(contactRepo);
+const contacts = new EnrichedCRUDRepository(contactRepo);
 contacts.addEnriched("contact_type_name", "contact_type_id", types, "id", "name");
 contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true, (node) =>
   node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),

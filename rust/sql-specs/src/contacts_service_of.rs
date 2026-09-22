@@ -1,7 +1,8 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    as_readonly, CRUDRepository, CommandMiddleware, Connection, DeepCRUDRepository,
-    DefaultTypeConverters, Repository, RepositoryBuilderOptions, TypeConverter, Value,
+    as_readonly, CRUDRepository, CommandMiddleware, Connection, EnrichedCRUDRepository,
+    DefaultTypeConverters, ICRUDRepository, RepositoryBuilderOptions,
+    TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -35,13 +36,13 @@ fn repo(
     entity: &str,
     names: &[&str],
     middleware: Option<Arc<dyn CommandMiddleware>>,
-) -> Arc<dyn CRUDRepository> {
+) -> Arc<dyn ICRUDRepository> {
     let mut options = RepositoryBuilderOptions::with_factory(connection.clone());
     options.entity = entity.into();
     options.mapping = Some(
         RowTypeConverter::new(columns(names)).with_fields(stamp_fields(&connection.provider())),
     );
-    let mut repo = Repository::new(options).expect("contacts repo");
+    let mut repo = CRUDRepository::new(options).expect("contacts repo");
     if let Some(middleware) = middleware {
         repo.add_middleware(middleware);
     }
@@ -51,7 +52,7 @@ fn repo(
 pub fn contacts_service_of(
     connection: Arc<dyn Connection>,
     middleware: Option<Arc<dyn CommandMiddleware>>,
-) -> DeepCRUDRepository {
+) -> EnrichedCRUDRepository {
     let base = [
         "id",
         "uuid",
@@ -111,7 +112,7 @@ pub fn contacts_service_of(
         &named,
         middleware.clone(),
     ));
-    let mut inner = DeepCRUDRepository::new(repo(
+    let mut inner = EnrichedCRUDRepository::new(repo(
         connection.clone(),
         "contacts_base",
         &base,

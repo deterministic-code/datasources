@@ -1,23 +1,23 @@
 use crate::datasource_error::DatasourceError;
-use crate::repository::{as_readonly, CRUDRepository, ReadonlyRepository};
+use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 struct Maps {
-    readonly: HashMap<TypeId, Arc<dyn ReadonlyRepository>>,
-    crud: HashMap<TypeId, Arc<dyn CRUDRepository>>,
+    readonly: HashMap<TypeId, Arc<dyn IReadonlyRepository>>,
+    crud: HashMap<TypeId, Arc<dyn ICRUDRepository>>,
 }
 
 pub trait ReadonlyRepositoryFactory: Send + Sync {
-    fn register(&self, repository: Arc<dyn ReadonlyRepository>);
-    fn create<T: 'static>(&self) -> Result<Arc<dyn ReadonlyRepository>>;
+    fn register(&self, repository: Arc<dyn IReadonlyRepository>);
+    fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>>;
 }
 
 pub trait CRUDRepositoryFactory: Send + Sync {
-    fn register(&self, repository: Arc<dyn CRUDRepository>);
-    fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>;
+    fn register(&self, repository: Arc<dyn ICRUDRepository>);
+    fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>;
 }
 
 pub struct RepositoryFactory {
@@ -40,7 +40,7 @@ impl RepositoryFactory {
         }
     }
 
-    pub fn register(&self, repository: Arc<dyn CRUDRepository>) {
+    pub fn register(&self, repository: Arc<dyn ICRUDRepository>) {
         let type_id = repository.entity_type();
         let readonly = as_readonly(repository.clone());
         let mut maps = self.lock();
@@ -48,7 +48,7 @@ impl RepositoryFactory {
         maps.crud.insert(type_id, repository);
     }
 
-    pub fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>> {
+    pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>> {
         let type_id = TypeId::of::<T>();
         let repository = {
             let maps = self.lock();
@@ -63,12 +63,12 @@ impl RepositoryFactory {
 }
 
 impl ReadonlyRepositoryFactory for RepositoryFactory {
-    fn register(&self, repository: Arc<dyn ReadonlyRepository>) {
+    fn register(&self, repository: Arc<dyn IReadonlyRepository>) {
         let type_id = repository.entity_type();
         self.lock().readonly.insert(type_id, repository);
     }
 
-    fn create<T: 'static>(&self) -> Result<Arc<dyn ReadonlyRepository>> {
+    fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>> {
         let type_id = TypeId::of::<T>();
         let repository = {
             let maps = self.lock();
@@ -79,11 +79,11 @@ impl ReadonlyRepositoryFactory for RepositoryFactory {
 }
 
 impl CRUDRepositoryFactory for RepositoryFactory {
-    fn register(&self, repository: Arc<dyn CRUDRepository>) {
+    fn register(&self, repository: Arc<dyn ICRUDRepository>) {
         RepositoryFactory::register(self, repository);
     }
 
-    fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>> {
+    fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>> {
         RepositoryFactory::create::<T>(self)
     }
 }

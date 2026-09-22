@@ -1,6 +1,6 @@
 # Bulk repository
 
-[DeepCRUDRepository](./enriched-repository.md#deepcrudrepository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+[EnrichedCRUDRepository](./enriched-repository.md#deepcrudrepository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
 
 ## Classes
 
@@ -9,7 +9,7 @@
 #### BulkCRUDRepository
 
 ```typescript
-class BulkCRUDRepository<T extends object> extends DeepCRUDRepository<T>
+class BulkCRUDRepository<T extends object> extends EnrichedCRUDRepository<T>
 ```
 
 **Constructor**
@@ -68,7 +68,7 @@ deleteBulk(items: T[], byWhere?: IWhere): Promise<Response>
 #### BulkCRUDRepository
 
 ```csharp
-public class BulkCRUDRepository<T> : DeepCRUDRepository<T>
+public class BulkCRUDRepository<T> : EnrichedCRUDRepository<T>
 ```
 
 **Constructor**
@@ -186,7 +186,7 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 ##### add_enriched / add_enriched_repo
 
-Forwards to the inner [DeepCRUDRepository](./enriched-repository.md#deepcrudrepository). Use `add_enriched_repo` for `many` children that must persist.
+Forwards to the inner [EnrichedCRUDRepository](./enriched-repository.md#deepcrudrepository). Use `add_enriched_repo` for `many` children that must persist.
 
 ##### create_bulk(items)
 
@@ -231,7 +231,7 @@ pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn Where>) -> 
 
 C# exposes list overloads (`Create(IReadOnlyList<T>)`) and `Bulk*` aliases. TypeScript and Rust use `createBulk` / `create_bulk` only.
 
-Each item still runs the same deep persist as [DeepCRUDRepository](./enriched-repository.md#deepcrudrepository).
+Each item still runs the same deep persist as [EnrichedCRUDRepository](./enriched-repository.md#deepcrudrepository).
 
 ## Examples
 

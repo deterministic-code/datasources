@@ -3,11 +3,11 @@ using System.Reflection;
 
 namespace Datasources;
 
-public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
+public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
 {
     readonly ICRUDRepository<T> inner;
 
-    public DeepCRUDRepository(
+    public EnrichedCRUDRepository(
         ICRUDRepository<T> inner,
         IReadonlyEnrichmentStrategy<T>? strategy = null) : base(inner, strategy) =>
         this.inner = inner;

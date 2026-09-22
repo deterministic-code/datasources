@@ -84,7 +84,7 @@ const load = async (
   return items;
 };
 
-export class DeepCRUDRepository<T extends object>
+export class EnrichedCRUDRepository<T extends object>
   extends EnrichedReadonlyRepository<T>
   implements ICRUDRepository<T>
 {

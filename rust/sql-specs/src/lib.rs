@@ -3,8 +3,9 @@ use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
+    ICRUDRepository, IReadonlyRepository,
     DefaultTypeConverters, DeleteStatement, Expression, InsertStatement, Literal, Operator,
-    Parameter, QueryStatement, ReadonlyRepository, Repository, RepositoryBuilder,
+    Parameter, QueryStatement, RepositoryBuilder,
     RepositoryBuilderOptions, Result, Row, StatementMapper, Text, TransformMapper,
     TypeConverter, UpdateStatement, Value, WhereClause,
 };
@@ -691,7 +692,7 @@ pub async fn run(
             if verbose() { "true" } else { "false" }.into(),
         )])),
     );
-    let mut repo = Repository::from_built(built);
+    let mut repo = CRUDRepository::from_built(built);
     repo.add_middleware(middleware);
     for step in &spec.steps {
         match step {

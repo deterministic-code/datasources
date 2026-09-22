@@ -4,7 +4,7 @@ use super::mock_repository::MockRepository;
 use crate::command::Command;
 use crate::connection::Connection;
 use crate::datasource::Datasource;
-use crate::repository::CRUDRepository;
+use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ pub struct MockDatasource {
     provider: String,
     connection: Arc<dyn Connection>,
     command: Arc<dyn Command>,
-    repository: Arc<dyn CRUDRepository>,
+    repository: Arc<dyn ICRUDRepository>,
 }
 
 impl MockDatasource {
@@ -44,7 +44,7 @@ impl Datasource for MockDatasource {
     fn create_repository(
         &self,
         _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn CRUDRepository> {
+    ) -> Arc<dyn ICRUDRepository> {
         self.repository.clone()
     }
 }

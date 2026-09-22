@@ -14,7 +14,7 @@ import { addExtraContact } from "../../../datasources/src/tests/contact/extraCon
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { specVerbose } from "../../../sql-spec-runner.ts";
-import { FlatToNestedMapper, Repository } from "../../../datasources/src/index.ts";
+import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";
 import {
   loadBetterSqlite3Driver,
@@ -81,7 +81,7 @@ describe("contacts readonly repository", () => {
 
     const contacts = new FlatToNestedMapper(contactsView).map(
       await collectAsync(
-        new Repository<Cells>({ connection, entity: "contacts_base" }).read(contactsJoinQuery()),
+        new CRUDRepository<Cells>({ connection, entity: "contacts_base" }).read(contactsJoinQuery()),
       ),
     );
     const mapped = contactWith(contacts, 2, 1);

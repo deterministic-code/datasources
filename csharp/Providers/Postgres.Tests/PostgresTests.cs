@@ -70,7 +70,7 @@ public class PostgresTests
         await implicitCommand.Execute("");
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
-        Assert.IsType<Repository<Dictionary<string, Value>>>(repo2);
+        Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
         Assert.Throws<DatasourceException>(() =>
             new Datasource("postgres", () => new PostgresConnection(), PostgresConnection.Repository)
                 .CreateRepository<Dictionary<string, Value>>());

@@ -8,7 +8,7 @@ use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     Command, Connection, ConsoleCommandMiddleware, FlatToNestedMapper, Mapper,
-    ReadonlyRepository, Repository, RepositoryBuilderOptions,
+    CRUDRepository, IReadonlyRepository, RepositoryBuilderOptions,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -49,7 +49,7 @@ pub async fn contacts_parity(
     let mut cells = RepositoryBuilderOptions::with_factory(connection.clone());
     cells.entity = "contacts_base".into();
     cells.mapping = Some(RowTypeConverter::new(Vec::new()));
-    let mut join_repo = Repository::new(cells).expect("join repo");
+    let mut join_repo = CRUDRepository::new(cells).expect("join repo");
     join_repo.add_middleware(middleware.clone());
     let query = contacts_join_query();
     let eager = from_mapped_contacts(

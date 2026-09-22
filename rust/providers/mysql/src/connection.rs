@@ -3,7 +3,7 @@ use crate::driver::{require_driver, MysqlDriver};
 use crate::transaction::MysqlTransaction;
 use async_trait::async_trait;
 use datasources::{
-    CRUDRepository, Command, Connection, DatasourceError, IsolationLevel, Repository,
+    CRUDRepository, Command, Connection, DatasourceError, IsolationLevel, ICRUDRepository,
     RepositoryBuilderOptions, Result, RowTypeConverter, Transaction,
 };
 use std::collections::HashMap;
@@ -33,10 +33,10 @@ impl MysqlConnection {
         ))
     }
 
-    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn CRUDRepository> {
+    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> {
         let mut options = RepositoryBuilderOptions::with_factory(connection);
         options.mapping = Some(RowTypeConverter::new(vec![]));
-        Arc::new(Repository::new(options).expect("repository"))
+        Arc::new(CRUDRepository::new(options).expect("repository"))
     }
 
     pub fn ensure_open(&self) -> Result<()> {

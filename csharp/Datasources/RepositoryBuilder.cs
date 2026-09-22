@@ -39,7 +39,7 @@ public static class RepositoryBuilder<T> where T : new()
             options.AssignIdentityOnCreate);
     }
 
-    public static Repository<T> Build(RepositoryBuilderOptions<T> options) => new(Parts(options));
+    public static CRUDRepository<T> Build(RepositoryBuilderOptions<T> options) => new(Parts(options));
 
     static string[] Columns() =>
         typeof(IDictionary).IsAssignableFrom(typeof(T))

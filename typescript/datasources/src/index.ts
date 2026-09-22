@@ -40,11 +40,11 @@ export { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentSt
 export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 export { FlatToNestedReadonlyEnrichmentStrategy } from "./FlatToNestedReadonlyEnrichmentStrategy.ts";
 export { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
-export { DeepCRUDRepository } from "./DeepCRUDRepository.ts";
+export { EnrichedCRUDRepository } from "./EnrichedCRUDRepository.ts";
 export { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 export { RepositoryTree } from "./RepositoryTree.ts";
 export { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
-export { Repository } from "./Repository.ts";
+export { CRUDRepository } from "./CRUDRepository.ts";
 export { RepositoryBuilder, parts } from "./RepositoryBuilder.ts";
 export type { BuiltRepository } from "./BuiltRepository.ts";
 export type { RepositoryStatements } from "./RepositoryStatements.ts";

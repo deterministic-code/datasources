@@ -3,7 +3,7 @@ use super::stub_repository::StubRepository;
 use crate::command::Command;
 use crate::connection::Connection;
 use crate::datasource::Datasource;
-use crate::repository::CRUDRepository;
+use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -43,7 +43,7 @@ impl Datasource for StubDatasource {
     fn create_repository(
         &self,
         _connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn CRUDRepository> {
+    ) -> Arc<dyn ICRUDRepository> {
         Arc::new(StubRepository::new(self.provider.clone()))
     }
 }

@@ -4,7 +4,7 @@ use crate::repository::JsonRepository;
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
 use datasources::{
-    downcast_connection, CRUDRepository, Command, Connection, DatasourceError, IsolationLevel,
+    downcast_connection, ICRUDRepository, Command, Connection, DatasourceError, IsolationLevel,
     Result, Transaction,
 };
 use serde_json::{Map, Value as JsonValue};
@@ -60,7 +60,7 @@ impl JsonConnection {
         ))
     }
 
-    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn CRUDRepository> {
+    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> {
         Arc::new(JsonRepository::new(
             downcast_connection(connection).expect("json connection"),
         ))

@@ -7,7 +7,7 @@ import {
   DeleteStatement,
   InsertStatement,
   QueryStatement,
-  Repository,
+  CRUDRepository,
   RowTypeConverter,
   StatementMapper,
   TransformMapper,
@@ -95,7 +95,7 @@ const whereOf = (mapping: RowTypeConverter<SpecRow>, row: RepositoryRow) => {
   );
 };
 
-const attach = (repo: Repository<SpecRow>, logs: string[]) => {
+const attach = (repo: CRUDRepository<SpecRow>, logs: string[]) => {
   const write = (line: string) => {
     logs.push(line);
     if (specVerbose()) console.log(line);
@@ -249,7 +249,7 @@ export const runRepositorySpec = async (
   await execute(dialect.createTable(physicalTableOf(spec.type), columnsOf(spec.type)).getText());
   const catalog = DefaultTypeConverters.for(connection.provider);
   const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
-  const repo = new Repository<SpecRow>({
+  const repo = new CRUDRepository<SpecRow>({
     connection,
     ids: spec.type.ids,
     assignIdentityOnCreate: spec.type.assignIdentityOnAdd,

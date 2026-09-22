@@ -10,16 +10,16 @@ public class RepositoryTypeTests
     [Fact]
     public void RepositoryReportsClosedGenericType()
     {
-        var repo = new Repository<Item>(new MockConnection { Provider = "memory" });
+        var repo = new CRUDRepository<Item>(new MockConnection { Provider = "memory" });
         Assert.Equal(typeof(Item), repo.Type);
         Assert.Equal(typeof(Item), ((IRepository)repo).Type);
     }
 
     [Fact]
-    public void DeepCRUDRepositoryReportsSameTypeAsInner()
+    public void EnrichedCRUDRepositoryReportsSameTypeAsInner()
     {
         var inner = new ListCRUDRepository<Item>();
-        var repo = new DeepCRUDRepository<Item>(inner);
+        var repo = new EnrichedCRUDRepository<Item>(inner);
         Assert.Equal(typeof(Item), inner.Type);
         Assert.Equal(typeof(Item), repo.Type);
     }

@@ -70,7 +70,7 @@ readonly type: Constructable<T>
 
 ##### read(query?)
 
-Yields every item. Implement in a subclass.
+Yields every item. Table repositories convert then map; subclasses may override.
 
 ```typescript
 abstract read(query?: IQuery | IWhere): AsyncIterable<T>
@@ -128,7 +128,7 @@ IAsyncEnumerable<T> Read(IStatement? query = null)
 #### ReadonlyRepository
 
 ```csharp
-public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
+public class ReadonlyRepository<T> : IReadonlyRepository<T>
 ```
 
 **Properties**
@@ -145,10 +145,10 @@ Type Type { get; }
 
 ##### Read(query)
 
-Yields every item. Implement in a subclass.
+Yields every item. Table repositories convert then map; subclasses may override.
 
 ```csharp
-public abstract IAsyncEnumerable<T> Read(IStatement? query = null)
+public virtual IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
 - `query` — optional statement or where; omitted uses the default select
@@ -168,10 +168,10 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 **Returns** `Task<T?>`
 
 ### rust
-#### ReadonlyRepository
+#### IReadonlyRepository
 
 ```rust
-pub trait ReadonlyRepository: IRepository
+pub trait IReadonlyRepository: IRepository
 ```
 
 **Methods**

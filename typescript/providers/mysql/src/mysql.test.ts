@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository } from "@datasources/core";
 import {
   bindParameters,
   loadMysql2Driver,
@@ -258,12 +258,12 @@ describe("Mysql datasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
-    expect(repo).toBeInstanceOf(Repository);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
+    expect(repo).toBeInstanceOf(CRUDRepository);
     expect(
       new Datasource("mysql", () => new MysqlConnection({ driver }), MysqlConnection.repository)
         .createRepository(),
-    ).toBeInstanceOf(Repository);
+    ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "mysql" }).provider).toBe("mysql");
     expect(() => MysqlConnection.from({ database_url: "mysql://db/app" })).toThrow(
       DatasourceError,

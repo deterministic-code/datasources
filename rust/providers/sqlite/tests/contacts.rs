@@ -3,7 +3,7 @@ use super::connection::SqliteConnection;
 use super::rusqlite_driver::RusqliteDriver;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Connection, FlatToNestedMapper, Mapper, ReadonlyRepository, Repository,
+    Connection, CRUDRepository, FlatToNestedMapper, Mapper,
     RepositoryBuilderOptions,
 };
 use datasources_sql_specs::{
@@ -72,7 +72,7 @@ async fn maps_join_rows_to_nested_contacts() {
     let mut cells = RepositoryBuilderOptions::with_factory(conn);
     cells.entity = "contacts_base".into();
     cells.mapping = Some(RowTypeConverter::new(Vec::new()));
-    let join_repo = Repository::new(cells).expect("join repo");
+    let join_repo = CRUDRepository::new(cells).expect("join repo");
     let contacts = from_mapped_contacts(
         &Mapper::map(
             &FlatToNestedMapper::new(contacts_view()),

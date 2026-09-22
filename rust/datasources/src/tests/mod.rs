@@ -1339,7 +1339,7 @@ async fn table_repository() {
     );
     options.entity = "users".into();
     options.mapping = Some(users_mapping());
-    let mut repo = Repository::new(options).unwrap();
+    let mut repo = CRUDRepository::new(options).unwrap();
     repo.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
@@ -1384,7 +1384,7 @@ async fn table_repository() {
     include_id.assign_identity_on_create = false;
     include_id.entity = "users".into();
     include_id.mapping = Some(users_mapping());
-    let repo = Repository::new(include_id).unwrap();
+    let repo = CRUDRepository::new(include_id).unwrap();
     repo.create(&obj).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
@@ -1409,7 +1409,7 @@ async fn table_repository() {
     options.assign_identity_on_create = true;
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Composite>());
-    let repo = Repository::new(options).unwrap();
+    let repo = CRUDRepository::new(options).unwrap();
     repo.create(&record(&[
         ("org_id", Value::Int(1)),
         ("user_id", Value::Int(2)),
@@ -1440,7 +1440,7 @@ async fn table_repository() {
         .contains("org_id = $org_id AND user_id = $user_id"));
 
     let command = Arc::new(MockCommand::new());
-    Repository::new(RepositoryBuilderOptions::with_factory(
+    CRUDRepository::new(RepositoryBuilderOptions::with_factory(
         MockConnection::with_command(command.clone()),
     ))
     .unwrap();
@@ -1448,7 +1448,7 @@ async fn table_repository() {
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.mapping = Some(users_mapping());
-    let repo = Repository::new(options).unwrap();
+    let repo = CRUDRepository::new(options).unwrap();
     assert!(repo
         .update(&record(&[("name", Value::from("a"))]), None)
         .await
@@ -1466,7 +1466,7 @@ async fn table_repository() {
     );
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Cells>());
-    let repo = Repository::new(options).unwrap();
+    let repo = CRUDRepository::new(options).unwrap();
     repo.create(&record(&[("id", Value::Int(1))]))
         .await
         .unwrap();
@@ -1484,19 +1484,19 @@ async fn table_repository() {
             .ids
             .is_empty()
     );
-    Repository::new(from_id).unwrap();
-    Repository::from_type::<Item>(MockConnection::new()).unwrap();
+    CRUDRepository::new(from_id).unwrap();
+    CRUDRepository::from_type::<Item>(MockConnection::new()).unwrap();
 }
 
 #[test]
 fn repository_entity_type() {
-    let typed = Repository::from_type::<Item>(MockConnection::new()).unwrap();
+    let typed = CRUDRepository::from_type::<Item>(MockConnection::new()).unwrap();
     assert_eq!(typed.entity_type(), TypeId::of::<Item>());
     assert_eq!(
         (&typed as &dyn IRepository).entity_type(),
         TypeId::of::<Item>()
     );
-    let untyped = Repository::new(create_repository_builder_options::<Item>(
+    let untyped = CRUDRepository::new(create_repository_builder_options::<Item>(
         MockConnection::new(),
     ))
     .unwrap();
@@ -1505,7 +1505,7 @@ fn repository_entity_type() {
         StubRepository::new("memory").entity_type(),
         TypeId::of::<Row>()
     );
-    let deep = DeepCRUDRepository::new(Arc::new(typed));
+    let deep = EnrichedCRUDRepository::new(Arc::new(typed));
     assert_eq!(deep.entity_type(), TypeId::of::<Item>());
     assert_eq!(
         (&deep as &dyn IRepository).entity_type(),
@@ -1576,7 +1576,7 @@ async fn table_repository_maps_after_row_converter() {
             row
         },
     ));
-    let repo = Repository::new(options).unwrap();
+    let repo = CRUDRepository::new(options).unwrap();
     let rows = repo.read(None).await.unwrap();
     assert_eq!(rows[0]["name"], Value::from("A"));
 }
@@ -1598,7 +1598,7 @@ async fn table_repository_maps_flat_row_into_contacts() {
     options.assign_identity_on_create = false;
     options.mapping = Some(RowTypeConverter::of::<UserRow>());
     options.mapper = Some(user_contacts_mapper());
-    let repo = Repository::new(options).unwrap();
+    let repo = CRUDRepository::new(options).unwrap();
     let user = repo.read_single(None).await.unwrap().unwrap();
     assert_eq!(user["username"], Value::from("bobby"));
     assert_eq!(user["email"], Value::from("bob@asdf.com"));
@@ -1665,7 +1665,7 @@ async fn table_repository_statement_mapper() {
     options.assign_identity_on_create = false;
     options.mapping = Some(users_mapping());
     options.statement_mapper = Some(mapper);
-    let repo = Repository::new(options).unwrap();
+    let repo = CRUDRepository::new(options).unwrap();
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.read_single(None).await.unwrap().is_none());
     assert_eq!(
@@ -1850,7 +1850,7 @@ async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
 }
 
 struct CountingRepository {
-    inner: Arc<dyn ReadonlyRepository>,
+    inner: Arc<dyn IReadonlyRepository>,
     reads: Mutex<u32>,
     read_singles: Mutex<u32>,
 }
@@ -1862,7 +1862,7 @@ impl IRepository for CountingRepository {
 }
 
 #[async_trait]
-impl ReadonlyRepository for CountingRepository {
+impl IReadonlyRepository for CountingRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         *self.read_singles.lock().unwrap() += 1;
         self.inner.read_single(query).await
@@ -2043,7 +2043,7 @@ async fn deep_create_writes_children_stamps_fk_and_skips_select() {
         ("name", Value::from("person")),
     ])]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
-    let mut repo = DeepCRUDRepository::new(parents.clone());
+    let mut repo = EnrichedCRUDRepository::new(parents.clone());
     repo.add_enriched(
         "type_name",
         "type_id",
@@ -2079,7 +2079,7 @@ async fn deep_create_applies_generated_parent_id_before_child_fks() {
         Value::Int(4),
     )])]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
-    let mut repo = DeepCRUDRepository::new(parents);
+    let mut repo = EnrichedCRUDRepository::new(parents);
     repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
     repo.create(&record(&[(
         "children",
@@ -2108,7 +2108,7 @@ async fn deep_update_replace_syncs_children() {
             ("label", Value::from("b")),
         ]),
     ]));
-    let mut repo = DeepCRUDRepository::new(parents);
+    let mut repo = EnrichedCRUDRepository::new(parents);
     repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
     repo.update(
         &record(&[
@@ -2166,7 +2166,7 @@ async fn deep_delete_cascades_children_then_parent() {
             ("text", Value::from("other")),
         ]),
     ]));
-    let mut repo = DeepCRUDRepository::new(parents.clone());
+    let mut repo = EnrichedCRUDRepository::new(parents.clone());
     repo.add_enriched_repo_with(
         "children",
         "id",
@@ -2195,7 +2195,7 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
         ("id", Value::Int(3)),
         ("name", Value::from("home")),
     ])]));
-    let mut repo = DeepCRUDRepository::new(parents);
+    let mut repo = EnrichedCRUDRepository::new(parents);
     repo.add_enriched_repo_with(
         "children",
         "id",
@@ -2236,7 +2236,7 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
 
 #[tokio::test]
 async fn deep_many_readonly_via_throws() {
-    let mut repo = DeepCRUDRepository::new(Arc::new(list_repository::ListRepository::new(vec![])));
+    let mut repo = EnrichedCRUDRepository::new(Arc::new(list_repository::ListRepository::new(vec![])));
     repo.add_enriched(
         "children",
         "id",
@@ -2269,7 +2269,7 @@ async fn deep_get_still_enriches() {
         ("parent_id", Value::Int(1)),
         ("label", Value::from("a")),
     ])]));
-    let mut repo = DeepCRUDRepository::new(parents);
+    let mut repo = EnrichedCRUDRepository::new(parents);
     repo.add_enriched(
         "type_name",
         "type_id",
