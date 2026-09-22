@@ -2,17 +2,15 @@ import { existsSync, readFileSync } from "node:fs";
 import type { DatasourceOptions } from "./DatasourceOptions.ts";
 
 export const DotEnv = {
-  parse: (text: string): DatasourceOptions => {
-    const options: DatasourceOptions = {};
-    for (const raw of text.split(/\r?\n/)) {
-      const line = raw.trimStart();
-      if (!line || line.startsWith("#") || !line.includes("=")) continue;
-      const i = line.indexOf("=");
-      const key = line.slice(0, i).trim();
-      if (key) options[key] = line.slice(i + 1);
-    }
-    return options;
-  },
+  parse: (text: string): DatasourceOptions =>
+    Object.fromEntries(
+      text
+        .split(/\r?\n/)
+        .map((raw) => raw.trimStart().split("=", 2))
+        .filter((parts): parts is [string, string] =>
+          parts.length === 2 && !parts[0].startsWith("#") && parts[0].trim() !== "")
+        .map(([key, value]) => [key.trim(), value]),
+    ),
   load: (path = ".env"): DatasourceOptions =>
     existsSync(path) ? DotEnv.parse(readFileSync(path, "utf8")) : {},
 };
