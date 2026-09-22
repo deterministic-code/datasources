@@ -23,6 +23,12 @@ struct Expect {
     exit: i32,
     stdout: String,
     stderr: String,
+    #[serde(default)]
+    queries: Vec<String>,
+    #[serde(default)]
+    inserts: Vec<String>,
+    #[serde(default)]
+    calls: Vec<String>,
 }
 
 fn sample() -> PathBuf {
@@ -171,21 +177,111 @@ fn script(url: &str, schema: &str, provider: &str) {
     for step in &spec.steps {
         let (exit, stdout, stderr) = cli(&bin, &step.argv, url, schema, &spec.now);
         let cmd = step.argv.join(" ");
+        let (leftover, sql) = commands(&stderr);
+        let writes = if provider == "mysql" {
+            &step.expect.calls
+        } else {
+            &step.expect.inserts
+        };
+        let expected_sql: Vec<String> = step
+            .expect
+            .queries
+            .iter()
+            .chain(writes.iter())
+            .cloned()
+            .collect();
+        let actual_sql: Vec<String> = sql
+            .into_iter()
+            .map(|text| {
+                if text.to_ascii_uppercase().starts_with("SELECT") {
+                    unquote(&text)
+                } else {
+                    text
+                }
+            })
+            .collect();
         if verbose() {
             println!("{provider}: {cmd}");
             println!("  assert exit {exit} == {}", step.expect.exit);
             println!("  assert stdout [{stdout}] == [{}]", step.expect.stdout);
-            println!("  assert stderr [{stderr}] == [{}]", step.expect.stderr);
+            println!("  assert stderr [{leftover}] == [{}]", step.expect.stderr);
+            println!(
+                "  assert commands [{}] == [{}]",
+                actual_sql.join(" | "),
+                expected_sql.join(" | ")
+            );
         }
-        if exit != step.expect.exit || stdout != step.expect.stdout || stderr != step.expect.stderr {
+        if exit != step.expect.exit
+            || stdout != step.expect.stdout
+            || leftover != step.expect.stderr
+            || actual_sql != expected_sql
+        {
             panic!(
-                "{provider}: {cmd}: first mismatch\nexpected exit {} stdout [{}] stderr [{}]\nactual exit {exit} stdout [{stdout}] stderr [{stderr}]",
+                "{provider}: {cmd}: first mismatch\nexpected exit {} stdout [{}] stderr [{}] commands [{}]\nactual exit {exit} stdout [{stdout}] stderr [{leftover}] commands [{}]",
                 step.expect.exit,
                 step.expect.stdout,
-                step.expect.stderr
+                step.expect.stderr,
+                expected_sql.join(" | "),
+                actual_sql.join(" | ")
             );
         }
     }
+}
+
+fn commands(stderr: &str) -> (String, Vec<String>) {
+    let mut leftover = Vec::new();
+    let mut sql = Vec::new();
+    for line in stderr.replace("\r\n", "\n").split('\n') {
+        if line.contains("[datasource][Start]") || line.contains("[datasource][Finish]") {
+            if let Some(text) = start_sql(line) {
+                sql.push(text);
+            }
+        } else if !line.is_empty() {
+            leftover.push(line.to_string());
+        }
+    }
+    (leftover.join("\n"), sql)
+}
+
+fn signature(line: &str) -> String {
+    let body = line
+        .find("]-")
+        .map(|index| &line[index + 2..])
+        .unwrap_or(line);
+    if let Some(duration) = body.rfind("] ") {
+        if body.ends_with("ms") || body.ends_with("μs") {
+            return body[..=duration].to_string();
+        }
+    }
+    body.to_string()
+}
+
+fn start_sql(line: &str) -> Option<String> {
+    let signed = signature(line);
+    let prefix = "[datasource][Start]-[";
+    signed
+        .starts_with(prefix)
+        .then(|| signed.strip_prefix(prefix).and_then(|rest| rest.strip_suffix(']')))
+        .flatten()
+        .map(str::to_string)
+}
+
+fn unquote(text: &str) -> String {
+    let mut out = String::new();
+    let mut chars = text.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '`' || ch == '"' {
+            for inner in chars.by_ref() {
+                if inner == ch {
+                    break;
+                }
+                out.push(inner);
+            }
+        } else {
+            out.push(ch);
+        }
+    }
+    out
 }
 
 #[test]

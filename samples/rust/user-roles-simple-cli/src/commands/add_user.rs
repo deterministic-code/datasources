@@ -1,4 +1,6 @@
 use crate::app::App;
+use crate::commands::write_row;
+use crate::schema;
 use datasources::{Parameter, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,8 +14,10 @@ impl AddUser {
         let created = app.stamp();
         let updated = app.token_bytes();
         let hashed = app.hash_password(&self.password)?;
-        app.write(
-            &app.table("users"),
+        write_row::execute(
+            app.command(),
+            app.provider(),
+            &schema::ident(app.provider(), "users"),
             "add_user",
             &[
                 Parameter::new("username", self.username.as_str()),

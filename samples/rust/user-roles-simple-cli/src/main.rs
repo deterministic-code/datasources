@@ -1,8 +1,9 @@
-use datasources::{provider_from_url, Connection, DatasourceError};
+use datasources::{provider_from_url, utc_iso_millis, Connection, ConsoleCommandMiddleware, DatasourceError};
 use datasources_mysql::{MysqlAsyncDriver, MysqlConnection};
 use datasources_postgres::{PostgresConnection, TokioPostgresDriver};
 use datasources_sqlite::{RusqliteDriver, SqliteConnection};
 use std::sync::Arc;
+use std::time::SystemTime;
 use user_roles_simple_cli::app::App;
 use user_roles_simple_cli::migrate;
 use user_roles_simple_cli::parse;
@@ -45,6 +46,10 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     connection.open().await?;
     let command = connection.create_command();
     migrate::apply(command.as_ref(), connection.provider()).await?;
+    command.add_middleware(Arc::new(ConsoleCommandMiddleware::with_sink(
+        |line| eprintln!("{line}"),
+        || utc_iso_millis(SystemTime::now()),
+    )));
     let app = App::new(command.as_ref(), connection.provider());
     let app = match env("CLI_NOW") {
         Some(stamp) => app.with_now(move || stamp.clone()),

@@ -11,9 +11,45 @@ import { freshCompose, stopCompose } from "../../../../typescript/ensure-compose
 
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(sample, "../../..");
+type Expect = {
+  exit: number;
+  stdout: string;
+  stderr: string;
+  queries?: string[];
+  inserts?: string[];
+  calls?: string[];
+};
+
 const spec = parseYaml(readFileSync(resolve(sample, "../../user-roles-simple-cli-shared/cli.yaml"), "utf8")) as {
   now: string;
-  steps: { argv: string[]; expect: { exit: number; stdout: string; stderr: string } }[];
+  steps: { argv: string[]; expect: Expect }[];
+};
+
+const signature = (line: string): string => {
+  const split = line.indexOf("]-");
+  const body = split >= 0 ? line.slice(split + 2) : line;
+  const duration = body.lastIndexOf("] ");
+  return duration >= 0 && (body.endsWith("ms") || body.endsWith("μs")) ? body.slice(0, duration + 1) : body;
+};
+
+const startSql = (line: string): string | undefined => {
+  const signed = signature(line);
+  const prefix = "[datasource][Start]-[";
+  return signed.startsWith(prefix) && signed.endsWith("]") ? signed.slice(prefix.length, -1) : undefined;
+};
+
+const unquote = (text: string): string => text.replace(/`([^`]+)`/g, "$1").replace(/"([^"]+)"/g, "$1");
+
+const commands = (stderr: string): { leftover: string; sql: string[] } => {
+  const leftover: string[] = [];
+  const sql: string[] = [];
+  for (const line of stderr.replace(/\r\n/g, "\n").split("\n")) {
+    if (line.includes("[datasource][Start]") || line.includes("[datasource][Finish]")) {
+      const text = startSql(line);
+      if (text) sql.push(text);
+    } else if (line.length > 0) leftover.push(line);
+  }
+  return { leftover: leftover.join("\n"), sql };
 };
 
 const cli = (url: string, schema: string, args: string[]) => {
@@ -44,15 +80,24 @@ const script = ({ url, schema }: { url: string; schema: string }, provider: stri
   for (const step of spec.steps) {
     const got = cli(url, schema, step.argv);
     const cmd = step.argv.join(" ");
+    const { leftover, sql } = commands(got.stderr);
+    const expectedSql = [...(step.expect.queries ?? []), ...(provider === "mysql" ? (step.expect.calls ?? []) : (step.expect.inserts ?? []))];
+    const actualSql = sql.map((text) => (text.toUpperCase().startsWith("SELECT") ? unquote(text) : text));
     if (verbose()) {
       console.log(`${provider}: ${cmd}`);
       console.log(`  assert exit ${got.exit} == ${step.expect.exit}`);
       console.log(`  assert stdout [${got.stdout}] == [${step.expect.stdout}]`);
-      console.log(`  assert stderr [${got.stderr}] == [${step.expect.stderr}]`);
+      console.log(`  assert stderr [${leftover}] == [${step.expect.stderr}]`);
+      console.log(`  assert commands [${actualSql.join(" | ")}] == [${expectedSql.join(" | ")}]`);
     }
-    if (got.exit !== step.expect.exit || got.stdout !== step.expect.stdout || got.stderr !== step.expect.stderr)
+    if (
+      got.exit !== step.expect.exit ||
+      got.stdout !== step.expect.stdout ||
+      leftover !== step.expect.stderr ||
+      actualSql.join("\0") !== expectedSql.join("\0")
+    )
       throw new Error(
-        `${provider}: ${cmd}: first mismatch\nexpected exit ${step.expect.exit} stdout [${step.expect.stdout}] stderr [${step.expect.stderr}]\nactual exit ${got.exit} stdout [${got.stdout}] stderr [${got.stderr}]`,
+        `${provider}: ${cmd}: first mismatch\nexpected exit ${step.expect.exit} stdout [${step.expect.stdout}] stderr [${step.expect.stderr}] commands [${expectedSql.join(" | ")}]\nactual exit ${got.exit} stdout [${got.stdout}] stderr [${leftover}] commands [${actualSql.join(" | ")}]`,
       );
   }
 };

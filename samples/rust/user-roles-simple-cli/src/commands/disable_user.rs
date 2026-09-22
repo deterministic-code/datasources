@@ -1,4 +1,5 @@
 use crate::app::App;
+use crate::commands::set_user_enabled;
 use datasources::Result;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -8,6 +9,6 @@ pub struct DisableUser {
 
 impl DisableUser {
     pub async fn run(&self, app: &App<'_>) -> Result<String> {
-        app.set_enabled(&self.username, false).await
+        set_user_enabled::execute(app, &self.username, false).await
     }
 }

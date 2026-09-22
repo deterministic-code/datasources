@@ -14,6 +14,8 @@ public static class Schema
         _ => SqliteQuote.Quote(name)
     };
 
+    public static Value Flag(string provider, bool value) => provider == "sqlite" ? value ? 1 : 0 : value;
+
     public static IReadOnlyList<CreateTableStatement> Tables(string provider, Func<string, string> map)
     {
         var q = (string name) => Ident(provider, name);

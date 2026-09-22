@@ -2,59 +2,112 @@ name: user-roles-simple-cli
 now: "2026-09-22T00:00:00.000Z"
 steps:
   - argv: [add-role, admin]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect:
+      exit: 0
+      stdout: ""
+      stderr: ""
+      inserts: &inserts_role
+        - 'INSERT INTO "roles" (name, is_enabled, created, updated) VALUES ($name, $is_enabled, $created, $updated)'
+      calls: &calls_role
+        - 'CALL add_role($p_name, $p_is_enabled, $p_created, $p_updated)'
   - argv: [add-role, editor]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", inserts: *inserts_role, calls: *calls_role }
   - argv: [add-role, viewer]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", inserts: *inserts_role, calls: *calls_role }
   - argv: [add-group, staff]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect:
+      exit: 0
+      stdout: ""
+      stderr: ""
+      inserts: &inserts_group
+        - 'INSERT INTO "groups" (ugly_name, is_enabled, created, updated) VALUES ($ugly_name, $is_enabled, $created, $updated)'
+      calls: &calls_group
+        - 'CALL add_group($p_name, $p_is_enabled, $p_created, $p_updated)'
   - argv: [add-group, contractors]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", inserts: *inserts_group, calls: *calls_group }
   - argv: [add-group, guests]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", inserts: *inserts_group, calls: *calls_group }
   - argv: [add-user, alice, secret]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect:
+      exit: 0
+      stdout: ""
+      stderr: ""
+      inserts: &inserts_user
+        - 'INSERT INTO "users" (username, password, is_enabled, created, updated) VALUES ($username, $password, $is_enabled, $created, $updated)'
+      calls: &calls_user
+        - 'CALL add_user($p_username, $p_password, $p_is_enabled, $p_created, $p_updated)'
   - argv: [add-user, bob, secret]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", inserts: *inserts_user, calls: *calls_user }
   - argv: [add-user, carol, secret]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", inserts: *inserts_user, calls: *calls_user }
   - argv: [add-user-role, alice, editor]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect:
+      exit: 0
+      stdout: ""
+      stderr: ""
+      queries: &queries_user_role
+        - 'SELECT id FROM users WHERE username = $username'
+        - 'SELECT id FROM roles WHERE name = $name'
+      inserts: &inserts_user_role
+        - 'INSERT INTO "user_roles" (user_id, bad_role_id, created, updated) VALUES ($user_id, $bad_role_id, $created, $updated)'
+      calls: &calls_user_role
+        - 'CALL add_user_role($p_user_id, $p_role_id, $p_created, $p_updated)'
   - argv: [add-user-role, alice, admin]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", queries: *queries_user_role, inserts: *inserts_user_role, calls: *calls_user_role }
   - argv: [add-user-role, bob, viewer]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", queries: *queries_user_role, inserts: *inserts_user_role, calls: *calls_user_role }
   - argv: [add-user-role, bob, editor]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", queries: *queries_user_role, inserts: *inserts_user_role, calls: *calls_user_role }
   - argv: [add-user-role, carol, viewer]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", queries: *queries_user_role, inserts: *inserts_user_role, calls: *calls_user_role }
   - argv: [add-user-group, alice, contractors]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect:
+      exit: 0
+      stdout: ""
+      stderr: ""
+      queries: &queries_user_group
+        - 'SELECT id FROM users WHERE username = $username'
+        - 'SELECT id FROM groups WHERE ugly_name = $ugly_name'
+      inserts: &inserts_user_group
+        - 'INSERT INTO "user_groups" (user_id, group_id, created, updated) VALUES ($user_id, $group_id, $created, $updated)'
+      calls: &calls_user_group
+        - 'CALL add_user_group($p_user_id, $p_group_id, $p_created, $p_updated)'
   - argv: [add-user-group, alice, staff]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", queries: *queries_user_group, inserts: *inserts_user_group, calls: *calls_user_group }
   - argv: [add-user-group, bob, guests]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", queries: *queries_user_group, inserts: *inserts_user_group, calls: *calls_user_group }
   - argv: [add-user-group, carol, staff]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", queries: *queries_user_group, inserts: *inserts_user_group, calls: *calls_user_group }
   - argv: [add-user-group, carol, guests]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", queries: *queries_user_group, inserts: *inserts_user_group, calls: *calls_user_group }
   - argv: [list-users-roles-groups]
     expect:
       exit: 0
       stdout: '[{"id":1,"username":"alice","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":1,"name":"admin","is_enabled":true},{"id":2,"name":"editor","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":2,"name":"contractors","is_enabled":true}]},{"id":2,"username":"bob","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":2,"name":"editor","is_enabled":true},{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":3,"name":"guests","is_enabled":true}]},{"id":3,"username":"carol","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":3,"name":"guests","is_enabled":true}]}]'
       stderr: ""
+      queries: &queries_list
+        - 'SELECT users.id AS id, users.username AS username, users.is_enabled AS is_enabled, users.created AS created, roles.id AS role_id, roles.name AS role_name, roles.is_enabled AS role_is_enabled, groups.id AS group_id, groups.ugly_name AS group_name, groups.is_enabled AS group_is_enabled FROM users LEFT JOIN user_roles ON users.id = user_roles.user_id LEFT JOIN roles ON user_roles.bad_role_id = roles.id LEFT JOIN user_groups ON users.id = user_groups.user_id LEFT JOIN groups ON user_groups.group_id = groups.id'
   - argv: [disable-user, bob]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect:
+      exit: 0
+      stdout: ""
+      stderr: ""
+      inserts: &inserts_set_enabled
+        - 'SELECT id FROM users WHERE username = $username'
+        - 'UPDATE "users" SET is_enabled = $is_enabled, updated = $updated WHERE id = $id'
+      calls: &calls_set_enabled
+        - 'CALL set_user_enabled($p_username, $p_is_enabled, $p_updated)'
   - argv: [list-users-roles-groups]
     expect:
       exit: 0
       stdout: '[{"id":1,"username":"alice","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":1,"name":"admin","is_enabled":true},{"id":2,"name":"editor","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":2,"name":"contractors","is_enabled":true}]},{"id":2,"username":"bob","is_enabled":false,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":2,"name":"editor","is_enabled":true},{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":3,"name":"guests","is_enabled":true}]},{"id":3,"username":"carol","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":3,"name":"guests","is_enabled":true}]}]'
       stderr: ""
+      queries: *queries_list
   - argv: [enable-user, bob]
-    expect: { exit: 0, stdout: "", stderr: "" }
+    expect: { exit: 0, stdout: "", stderr: "", inserts: *inserts_set_enabled, calls: *calls_set_enabled }
   - argv: [list-users-roles-groups]
     expect:
       exit: 0
       stdout: '[{"id":1,"username":"alice","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":1,"name":"admin","is_enabled":true},{"id":2,"name":"editor","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":2,"name":"contractors","is_enabled":true}]},{"id":2,"username":"bob","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":2,"name":"editor","is_enabled":true},{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":3,"name":"guests","is_enabled":true}]},{"id":3,"username":"carol","is_enabled":true,"created":"2026-09-22T00:00:00.000Z","roles":[{"id":3,"name":"viewer","is_enabled":true}],"groups":[{"id":1,"name":"staff","is_enabled":true},{"id":3,"name":"guests","is_enabled":true}]}]'
       stderr: ""
+      queries: *queries_list
