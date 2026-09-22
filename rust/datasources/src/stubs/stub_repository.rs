@@ -54,7 +54,7 @@ impl IReadonlyRepository for StubRepository {
 
 #[async_trait]
 impl ICRUDRepository for StubRepository {
-    async fn create(&self, _item: &Row) -> Result<Response> {
+    async fn create(&self, _item: &mut Row) -> Result<Response> {
         Err(fail(&self.provider))
     }
 

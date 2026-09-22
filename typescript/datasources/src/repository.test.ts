@@ -97,12 +97,14 @@ describe("CRUDRepository", () => {
   });
 
   it("adds updates and deletes through builders", async () => {
-    const { repo, command } = create({ assignIdentityOnCreate: false });
+    const { repo, command } = create();
+    command.response = { result: 9, rowsAffected: 1 };
     const obj = { id: 1, name: "a" };
     await repo.create(obj);
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO users (id, name) VALUES ($id, $name)",
+      "INSERT INTO users (name) VALUES ($name)",
     );
+    expect(obj.id).toBe(9);
     await repo.update(obj);
     expect(command.executeCalls[1]?.text).toBe(
       "UPDATE users SET name = $name WHERE id = $id",
@@ -111,10 +113,17 @@ describe("CRUDRepository", () => {
     expect(command.executeCalls[2]?.text).toBe("DELETE FROM users WHERE id = $id");
   });
 
-  it("supports composite id, assignIdentityOnCreate, and overrides", async () => {
+  it("maps create result onto Id when id is absent", async () => {
+    const { repo, command } = create({ type: asType(PascalId), ids: ["Id"] });
+    command.response = { result: 9, rowsAffected: 1 };
+    const item = Object.assign(new PascalId(), { Id: 0 });
+    await repo.create(item);
+    expect(item.Id).toBe(9);
+  });
+
+  it("supports composite id and omits ids on create", async () => {
     const { repo, command } = create({
       ids: ["org_id", "user_id"],
-      assignIdentityOnCreate: true,
       type: asType(Composite),
     });
     await repo.create({ org_id: 1, user_id: 2, name: 3 });
@@ -235,7 +244,6 @@ describe("CRUDRepository", () => {
       connection,
       type: User,
       entity: "users",
-      assignIdentityOnCreate: false,
       mapping: new RowTypeConverter<User>(),
       mapper: userContactsMapper(),
     });
@@ -250,7 +258,7 @@ describe("CRUDRepository", () => {
     });
     await repo.create(user);
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO users (contact_name1, contact_name2, email, id, username) VALUES ($contact_name1, $contact_name2, $email, $id, $username)",
+      "INSERT INTO users (contact_name1, contact_name2, email, username) VALUES ($contact_name1, $contact_name2, $email, $username)",
     );
     const values = Object.fromEntries(
       (command.executeCalls[0]?.parameters ?? []).map((parameter) => [
@@ -291,7 +299,6 @@ describe("CRUDRepository", () => {
       (name) => name,
     );
     const { repo, command } = create({
-      assignIdentityOnCreate: false,
       crudMapper: new CRUDMapper({
         entity,
         columns,
@@ -323,7 +330,7 @@ describe("CRUDRepository", () => {
     const row = { id: 1, name: "a" };
     await repo.create(row);
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id",
+      "INSERT INTO people (name) VALUES ($name) RETURNING id",
     );
     await repo.update(row);
     expect(command.executeCalls[1]?.text).toBe(

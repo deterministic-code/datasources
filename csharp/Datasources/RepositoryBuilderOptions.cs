@@ -4,7 +4,6 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
 {
     public required IConnection Connection { get; init; }
     public IReadOnlyList<string> Ids { get; init; } = ["id"];
-    public bool AssignIdentityOnCreate { get; init; } = true;
     public string? Entity { get; init; }
     public TypeConverter<T, Row>? Mapping { get; init; }
     public IMapper<T, T>? Mapper { get; init; }

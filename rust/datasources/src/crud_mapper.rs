@@ -1,5 +1,6 @@
 use crate::mappers::{Mapper, TransformMapper};
 use crate::row::Row;
+use crate::value::Value;
 use std::sync::Arc;
 
 pub struct CRUDMapper {
@@ -11,6 +12,7 @@ pub struct CRUDMapper {
     pub delete: Option<Arc<TransformMapper<String, String>>>,
     pub return_: Option<Arc<TransformMapper<String, String>>>,
     pub rows: TransformMapper<Row, Row>,
+    pub create: TransformMapper<Value, Row>,
 }
 
 impl CRUDMapper {
@@ -24,6 +26,16 @@ impl CRUDMapper {
             delete: None,
             return_: None,
             rows: TransformMapper::new(|row| row, |row| row),
+            create: TransformMapper::new(
+                |value| {
+                    let mut row = Row::new();
+                    if value != Value::Null {
+                        row.insert("id".into(), value);
+                    }
+                    row
+                },
+                |_| Value::Null,
+            ),
         }
     }
 

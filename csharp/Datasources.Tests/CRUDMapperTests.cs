@@ -32,7 +32,6 @@ public class CRUDMapperTests
         {
             Connection = connection,
             Entity = "users",
-            AssignIdentityOnCreate = false,
             CRUDMapper = mapper
         }), command);
     }
@@ -45,7 +44,7 @@ public class CRUDMapperTests
         await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
         await repo.Create(new UserRow { id = 1, name = "a" });
-        Assert.Equal("INSERT INTO people (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
+        Assert.Equal("INSERT INTO people (name) VALUES ($name)", command.ExecuteCalls[0].Text);
         await repo.Update(new UserRow { id = 1, name = "a" });
         Assert.StartsWith("UPDATE people SET", command.ExecuteCalls[1].Text);
         await repo.Delete(new UserRow { id = 1, name = "a" });
@@ -119,7 +118,7 @@ public class CRUDMapperTests
         Assert.Equal("SELECT full_name, user_id FROM people LIMIT 1", command.ExecuteReaderCalls[0].Text);
         var row = new UserRow { id = 1, name = "a" };
         await repo.Create(row);
-        Assert.Equal("INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id", command.ExecuteCalls[0].Text);
+        Assert.Equal("INSERT INTO people (name) VALUES ($name) RETURNING id", command.ExecuteCalls[0].Text);
         await repo.Update(row);
         Assert.Equal("UPDATE people SET name = $name WHERE id = $id RETURNING id", command.ExecuteCalls[1].Text);
         await repo.Delete(row);

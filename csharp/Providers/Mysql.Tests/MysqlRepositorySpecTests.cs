@@ -40,7 +40,7 @@ public class MysqlRepositorySpecTests
             MysqlQuote.Quote(table),
             [.. columns.Select(column => new Column(
                 MysqlQuote.Quote(column.Name),
-                column.Id ? $"{MysqlColumnType.Map(column.Type)} PRIMARY KEY" : MysqlColumnType.Map(column.Type)))]).GetText();
+                column.Id ? $"{MysqlColumnType.Map(column.Type)} PRIMARY KEY AUTO_INCREMENT" : MysqlColumnType.Map(column.Type)))]).GetText();
 
     static async Task<(string Url, Func<Task> Cleanup)> Isolate(string baseUrl)
     {

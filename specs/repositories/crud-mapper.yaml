@@ -3,7 +3,6 @@ type:
   name: user
   table: user
   ids: [id]
-  assignIdentityOnAdd: false
   fields:
     id: int
     uuid: uuid

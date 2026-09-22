@@ -252,7 +252,6 @@ export const runRepositorySpec = async (
   const repo = new CRUDRepository<SpecRow>({
     connection,
     ids: spec.type.ids,
-    assignIdentityOnCreate: spec.type.assignIdentityOnAdd,
     type: typeOf(spec.type),
     entity: spec.type.table,
     mapping,

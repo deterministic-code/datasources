@@ -8,7 +8,6 @@ pub fn create_repository_builder_options<T: ConvertSchema>(
 ) -> RepositoryBuilderOptions {
     RepositoryBuilderOptions {
         ids: default_id::<T>(),
-        assign_identity_on_create: true,
         entity: std::any::type_name::<T>()
             .rsplit("::")
             .next()

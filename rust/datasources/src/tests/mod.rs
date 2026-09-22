@@ -479,12 +479,12 @@ async fn stubs_throw() {
         .await
         .is_err());
     let repo = ds.create_repository(None);
-    let empty = Row::new();
+    let mut empty = Row::new();
     assert!(repo.read_single(None).await.is_err());
     assert!(repo.read(None).await.is_err());
     assert!(repo.read_single_where(&TextWhere::new("1=1")).await.is_err());
     assert!(repo.read_where(&TextWhere::new("1=1")).await.is_err());
-    assert!(repo.create(&empty).await.is_err());
+    assert!(repo.create(&mut empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
     let readonly = ds.create_readonly_repository(None);
@@ -585,7 +585,7 @@ async fn published_mocks() {
         repo.read_where(&MockWhere::new("all")).await.unwrap().len(),
         1
     );
-    repo.create(&record(&[("id", Value::Int(2))]))
+    repo.create(&mut record(&[("id", Value::Int(2))]))
         .await
         .unwrap();
     repo.update(
@@ -602,7 +602,7 @@ async fn published_mocks() {
     repo.set_read_error("g");
     assert!(repo.read(None).await.is_err());
     repo.set_add_error("ad");
-    assert!(repo.create(&Row::new()).await.is_err());
+    assert!(repo.create(&mut Row::new()).await.is_err());
     repo.set_update_error("up");
     assert!(repo.update(&Row::new(), None).await.is_err());
     repo.set_delete_error("del");
@@ -1365,19 +1365,20 @@ async fn table_repository() {
         .unwrap()
         .is_empty());
 
-    let obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
+    let mut obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
     let mut include_id = RepositoryBuilderOptions::with_factory(
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
-    include_id.assign_identity_on_create = false;
     include_id.entity = "users".into();
     include_id.mapping = Some(users_mapping());
     let repo = CRUDRepository::new(include_id).unwrap();
-    repo.create(&obj).await.unwrap();
+    *command.response.lock().unwrap() = Response::new(Value::Int(9), 1);
+    repo.create(&mut obj).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO users (id, name) VALUES ($id, $name)"
+        "INSERT INTO users (name) VALUES ($name)"
     );
+    assert_eq!(obj["id"], Value::Int(9));
     repo.update(&obj, None).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
@@ -1394,11 +1395,10 @@ async fn table_repository() {
         MockConnection::with_command_provider(generated.clone(), "memory"),
     );
     options.ids = vec!["org_id".into(), "user_id".into()];
-    options.assign_identity_on_create = true;
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Composite>());
     let repo = CRUDRepository::new(options).unwrap();
-    repo.create(&record(&[
+    repo.create(&mut record(&[
         ("org_id", Value::Int(1)),
         ("user_id", Value::Int(2)),
         ("name", Value::Int(3)),
@@ -1455,7 +1455,7 @@ async fn table_repository() {
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Cells>());
     let repo = CRUDRepository::new(options).unwrap();
-    repo.create(&record(&[("id", Value::Int(1))]))
+    repo.create(&mut record(&[("id", Value::Int(1))]))
         .await
         .unwrap();
     repo.delete(
@@ -1583,11 +1583,10 @@ async fn table_repository_maps_flat_row_into_contacts() {
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.entity = "users".into();
-    options.assign_identity_on_create = false;
     options.mapping = Some(RowTypeConverter::of::<UserRow>());
     options.mapper = Some(user_contacts_mapper());
     let repo = CRUDRepository::new(options).unwrap();
-    let user = repo.read_single(None).await.unwrap().unwrap();
+    let mut user = repo.read_single(None).await.unwrap().unwrap();
     assert_eq!(user["username"], Value::from("bobby"));
     assert_eq!(user["email"], Value::from("bob@asdf.com"));
     assert_eq!(user["contacts"], Value::from("bob,roberta"));
@@ -1595,10 +1594,10 @@ async fn table_repository_maps_flat_row_into_contacts() {
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT contact_name1, contact_name2, email, id, username FROM users"
     );
-    repo.create(&user).await.unwrap();
+    repo.create(&mut user).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO users (contact_name1, contact_name2, email, id, username) VALUES ($contact_name1, $contact_name2, $email, $id, $username)"
+        "INSERT INTO users (contact_name1, contact_name2, email, username) VALUES ($contact_name1, $contact_name2, $email, $username)"
     );
     repo.update(&user, None).await.unwrap();
     assert!(!command.execute_logs.lock().unwrap()[1]
@@ -1648,7 +1647,6 @@ async fn table_repository_crud_mapper() {
         MockConnection::with_command_provider(command.clone(), "memory"),
     );
     options.entity = "users".into();
-    options.assign_identity_on_create = false;
     options.mapping = Some(users_mapping());
     options.crud_mapper = Some(mapper);
     let repo = CRUDRepository::new(options).unwrap();
@@ -1658,11 +1656,11 @@ async fn table_repository_crud_mapper() {
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT full_name, user_id FROM people LIMIT 1"
     );
-    let row = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
-    repo.create(&row).await.unwrap();
+    let mut row = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
+    repo.create(&mut row).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO people (id, name) VALUES ($id, $name) RETURNING id"
+        "INSERT INTO people (name) VALUES ($name) RETURNING id"
     );
     repo.update(&row, None).await.unwrap();
     assert_eq!(
@@ -1985,7 +1983,7 @@ async fn contacts_service_fills_names_and_child_lists() {
         phones,
     );
     service
-        .create(&record(&[
+        .create(&mut record(&[
             ("contact_type_id", Value::Int(2)),
             ("contact_source_id", Value::Int(3)),
             ("first_name", Value::from("Ada")),
@@ -2039,7 +2037,7 @@ async fn deep_create_writes_children_stamps_fk_and_skips_select() {
         false,
     )
     .add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
-    repo.create(&record(&[
+    repo.create(&mut record(&[
         ("type_id", Value::Int(10)),
         (
             "children",
@@ -2067,7 +2065,7 @@ async fn deep_create_applies_generated_parent_id_before_child_fks() {
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
     let mut repo = EnrichedCRUDRepository::new(parents);
     repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
-    repo.create(&record(&[(
+    repo.create(&mut record(&[(
         "children",
         encode_rows(&[record(&[("label", Value::from("n"))])]),
     )]))
@@ -2201,7 +2199,7 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
             node.include_repo(notes.clone(), "notes", "id", "child_id", None, true);
         },
     );
-    repo.create(&record(&[(
+    repo.create(&mut record(&[(
         "children",
         encode_rows(&[record(&[
             ("type_id", Value::Int(3)),
@@ -2232,7 +2230,7 @@ async fn deep_many_readonly_via_throws() {
         true,
     );
     let error = repo
-        .create(&record(&[(
+        .create(&mut record(&[(
             "children",
             encode_rows(&[record(&[("label", Value::from("a"))])]),
         )]))
@@ -2277,7 +2275,7 @@ async fn bulk_create_writes_parents_and_children() {
     let mut repo = BulkCRUDRepository::new(parents.clone());
     repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
     let response = repo
-        .create_bulk(&[
+        .create_bulk(&mut [
             record(&[(
                 "children",
                 encode_rows(&[record(&[("label", Value::from("a"))])]),

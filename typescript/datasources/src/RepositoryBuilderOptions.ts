@@ -8,7 +8,6 @@ import type { CRUDMapper } from "./CRUDMapper.ts";
 export type RepositoryBuilderOptions<T = Cells> = {
   connection: IConnection;
   ids?: string[];
-  assignIdentityOnCreate?: boolean;
   entity?: string;
   mapping?: TypeConverter<T, Cells>;
   mapper?: IMapper<T, T>;

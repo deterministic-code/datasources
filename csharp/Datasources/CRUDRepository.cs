@@ -3,7 +3,6 @@ namespace Datasources;
 public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 {
     readonly HashSet<string> ids;
-    readonly bool assignIdentityOnCreate;
 
     public CRUDRepository(IConnection connection) :
         this(CreateRepositoryBuilderOptions.FromType<T>(connection)) { }
@@ -18,7 +17,6 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     {
         CRUDMapper = built.CRUDMapper;
         ids = new(built.Ids);
-        assignIdentityOnCreate = built.AssignIdentityOnCreate;
     }
 
     public new CRUDRepository<T> AddMiddleware(ICommandMiddleware middleware)
@@ -29,9 +27,11 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 
     public async Task<Response> Create(T item)
     {
-        var fields = Params(ReverseConvert(item), col =>
-            !assignIdentityOnCreate || !ids.Contains(col));
-        return await Command().Execute(Statements.Insert(fields).GetText(), fields);
+        var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
+        var response = await Command().Execute(Statements.Insert(fields).GetText(), fields);
+        if (response.Result is not Value.Null)
+            Apply(item, CRUDMapper.Create.Map(response.Result));
+        return response;
     }
 
     public async Task<Response> Update(T item, IWhere? byWhere = null)
@@ -66,4 +66,22 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
             .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
 
     Row ReverseConvert(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));
+
+    static void Apply(T item, T identity)
+    {
+        if (item is System.Collections.IDictionary dest && identity is System.Collections.IDictionary src)
+        {
+            foreach (System.Collections.DictionaryEntry entry in src)
+                dest[entry.Key] = entry.Value;
+            return;
+        }
+        var unset = new T();
+        foreach (var prop in typeof(T).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Where(prop => prop is { CanRead: true, CanWrite: true } && prop.GetIndexParameters().Length == 0))
+        {
+            var value = prop.GetValue(identity);
+            if (!Equals(value, prop.GetValue(unset)))
+                prop.SetValue(item, value);
+        }
+    }
 }

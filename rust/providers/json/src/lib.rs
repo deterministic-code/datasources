@@ -19,8 +19,8 @@ pub(crate) use filter::{json_from_record, json_to_value, matches, parse_filter, 
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, Parameter,
-        Row, QueryStatement, TextWhere, Value,
+        create, register, reset, Command, Connection, ICRUDRepository, IReadonlyRepository,
+        Parameter, Row, QueryStatement, TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
     use std::collections::HashMap;
@@ -65,7 +65,7 @@ mod tests {
             .await
             .unwrap()
             .is_empty());
-        repo.create(&rec(2, "b")).await.unwrap();
+        repo.create(&mut rec(2, "b")).await.unwrap();
         repo.update(&rec(2, "B"), None).await.unwrap();
         repo.update(&rec(2, "C"), Some(&TextWhere::new("{\"id\":2}")))
             .await
@@ -105,10 +105,10 @@ mod tests {
             .await
             .unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
-        repo.create(&rec(9, "t")).await.unwrap();
+        repo.create(&mut rec(9, "t")).await.unwrap();
         txn.abort().await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
-        repo.create(&rec(8, "c")).await.unwrap();
+        repo.create(&mut rec(8, "c")).await.unwrap();
         txn.commit().await.unwrap();
         conn.close().await.unwrap();
         assert!(conn.ensure_open().is_err());
@@ -121,7 +121,7 @@ mod tests {
         ));
         memory.open().await.unwrap();
         JsonRepository::new(memory.clone())
-            .create(&rec(1, "a"))
+            .create(&mut rec(1, "a"))
             .await
             .unwrap();
         *memory.state.data.lock().unwrap() = JsonValue::Null;
@@ -191,7 +191,7 @@ mod tests {
             .await
             .is_err());
         assert!(JsonRepository::new(closed.clone())
-            .create(&rec(1, "a"))
+            .create(&mut rec(1, "a"))
             .await
             .is_err());
         assert!(JsonRepository::new(closed.clone())

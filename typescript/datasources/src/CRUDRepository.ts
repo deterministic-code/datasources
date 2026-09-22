@@ -21,10 +21,27 @@ const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name, value: value as Scalar }));
 
+const apply = <T>(item: T, identity: T): void => {
+  if (!item || !identity || typeof item !== "object" || typeof identity !== "object") return;
+  for (const [key, value] of Object.entries(identity))
+    if (value != null)
+      (item as Record<string, Scalar>)[key === "id" && !("id" in item) && "Id" in item ? "Id" : key] =
+        value as Scalar;
+};
+
+const asScalar = (value: string | number | boolean | bigint | null | undefined): Scalar | undefined =>
+  value == null
+    ? undefined
+    : typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean" ||
+        typeof value === "bigint"
+      ? value
+      : undefined;
+
 export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   readonly crudMapper?: CRUDMapper<T>;
   private readonly ids: Set<string>;
-  private readonly assignIdentityOnCreate: boolean;
 
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(options: RepositoryBuilderOptions<T>);
@@ -37,15 +54,20 @@ export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements 
     super(built);
     this.crudMapper = built.crudMapper;
     this.ids = new Set(built.ids);
-    this.assignIdentityOnCreate = built.assignIdentityOnCreate;
   }
 
   create = async (item: T): Promise<Response> => {
-    const fields = fieldsOf(
-      this.reverseConvert(item),
-      (col) => !this.assignIdentityOnCreate || !this.ids.has(col),
+    const fields = fieldsOf(this.reverseConvert(item), (col) => !this.ids.has(col));
+    const response = await this.command().execute(
+      this.statements!.insert(fields).getText(),
+      fields,
     );
-    return this.command().execute(this.statements!.insert(fields).getText(), fields);
+    const scalar = asScalar(
+      response.result as string | number | boolean | bigint | null | undefined,
+    );
+    if (scalar !== undefined && this.crudMapper)
+      apply(item, this.crudMapper.create.map(scalar));
+    return response;
   };
 
   update = async (item: T, byWhere?: IWhere): Promise<Response> => {

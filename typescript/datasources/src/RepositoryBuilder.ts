@@ -43,7 +43,6 @@ export const parts = <T>(
     statements: statementsOf(entity, columns, crudMapper),
     columns,
     ids: options.ids ?? ["id"],
-    assignIdentityOnCreate: options.assignIdentityOnCreate !== false,
     type: options.type ?? (Object as never as Constructable<T>),
   };
 };

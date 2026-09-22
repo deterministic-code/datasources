@@ -56,7 +56,7 @@ impl IReadonlyRepository for JsonRepository {
 
 #[async_trait]
 impl ICRUDRepository for JsonRepository {
-    async fn create(&self, item: &Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Response> {
         self.connection.ensure_open()?;
         self.connection
             .collection_mut(|items| items.push(json_from_record(item)));
