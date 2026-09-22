@@ -460,8 +460,8 @@ public class CoreTests
     public void Registry()
     {
         Assert.Empty(DatasourceFactory.Registered());
-        DatasourceFactory.Register("json", _ => new MockConnection(), c => new MockRepository<object>(c));
-        DatasourceFactory.Register("memory", _ => new MockConnection(), c => new MockRepository<object>(c));
+        DatasourceFactory.Register("json", new MockDriver());
+        DatasourceFactory.Register("memory", new MockDriver());
         Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
         Assert.Equal("json", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "json" }).Provider);
         DatasourceFactory.Reset();
@@ -473,7 +473,7 @@ public class CoreTests
     public async Task Defaults()
     {
         Assert.Throws<DatasourceException>(() => DatasourceFactory.Create());
-        DatasourceFactory.Register("sqlite", _ => new MockConnection(), c => new MockRepository<object>(c));
+        DatasourceFactory.Register("sqlite", new MockDriver());
         var ds = DatasourceFactory.Create(new Dictionary<string, string?>
         {
             ["provider"] = "sqlite",
@@ -483,13 +483,13 @@ public class CoreTests
         var connection = await ds.CreateConnection();
         Assert.False(connection.IsOpen);
         Assert.Same(connection, ds.CreateCommand().Connection);
-        Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>());
+        Assert.IsType<CRUDRepository<object>>(ds.CreateRepository<object>());
         DatasourceFactory.Reset();
         var error = Assert.Throws<DatasourceException>(() => DatasourceFactory.Create());
         Assert.Equal("Datasource defaults are not specified", error.Message);
         Assert.Throws<DatasourceException>(() => _ = DatasourceFactory.Default);
-        DatasourceFactory.Register("sqlite", _ => new MockConnection(), c => new MockRepository<object>(c));
-        DatasourceFactory.Register("memory", _ => new MockConnection(), c => new MockRepository<object>(c));
+        DatasourceFactory.Register("sqlite", new MockDriver());
+        DatasourceFactory.Register("memory", new MockDriver());
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
         Assert.Equal("sqlite", DatasourceFactory.Default.Provider);
         Environment.SetEnvironmentVariable("DATASOURCE_URL", null);

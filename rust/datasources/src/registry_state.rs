@@ -1,15 +1,9 @@
-use crate::connection::Connection;
-use crate::repository::ICRUDRepository;
+use crate::driver::Driver;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-pub type ConnectionFn =
-    Arc<dyn Fn(Option<&HashMap<String, String>>) -> Arc<dyn Connection> + Send + Sync>;
-pub type RepositoryFn = Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync>;
-
 pub struct FactoryPair {
-    pub connection: ConnectionFn,
-    pub repository: RepositoryFn,
+    pub driver: Arc<dyn Driver>,
 }
 
 static REGISTRY: Mutex<Option<HashMap<String, FactoryPair>>> = Mutex::new(None);

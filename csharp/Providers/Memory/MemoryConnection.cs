@@ -26,9 +26,6 @@ public sealed class MemoryConnection : IConnection
         _data = options.Data;
     }
 
-    public static object Repository(IConnection connection) =>
-        new MemoryRepository((MemoryConnection)connection);
-
     public Task Open()
     {
         if (IsOpen) return Task.CompletedTask;

@@ -433,11 +433,7 @@ fn registry() {
         std::env::remove_var(key);
     }
     assert!(registered().is_empty());
-    register(
-        "json",
-        |_| MockConnection::new(),
-        |_| Arc::new(MockRepository::new()),
-    );
+    register("json", MockDriver::arc());
     assert_eq!(registered(), vec!["json".to_string()]);
     let created = create(Some(&HashMap::from([("provider".into(), "json".into())]))).unwrap();
     assert_eq!(created.provider(), "json");

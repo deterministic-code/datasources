@@ -30,7 +30,9 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 
-    let (eager, enriched) = contacts_parity(conn.clone(), verbose()).await.unwrap();
+    let (eager, enriched) = contacts_parity(conn.clone(), verbose(), super::converters::field)
+        .await
+        .unwrap();
     expect_contacts_view(&eager, SEED_CONTACT_COUNT);
     expect_contacts_view(&enriched, SEED_CONTACT_COUNT);
     let mapped = contact_with(&eager, 2, 1);
@@ -40,7 +42,7 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     assert_eq!(as_contacts_view(&enriched), as_contacts_view(&eager));
 
     let ids = contact_lookup_ids(conn.clone()).await.unwrap();
-    let extra = add_extra_contact(&contacts_service_of(conn, None), &ids)
+    let extra = add_extra_contact(&contacts_service_of(conn, None, super::converters::field), &ids)
         .await
         .unwrap();
     assert_eq!(extra["first_name"], datasources::Value::from("Extra"));

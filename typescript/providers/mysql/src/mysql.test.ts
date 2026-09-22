@@ -10,13 +10,16 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
 import {
   bindParameters,
   loadMysql2Driver,
   Mysql2Driver,
   MysqlCommand,
   MysqlConnection,
+  MysqlProvider,
+  MysqlTransaction,
+  MysqlTypes,
   requireDriver,
   toMysql,
   type IMysqlClient,
@@ -64,7 +67,7 @@ function fakeDriver(url = "mysql://localhost/app") {
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("mysql", MysqlConnection.from, MysqlConnection.repository);
+  DatasourceFactory.register("mysql", new MysqlProvider());
 });
 
 describe("requireDriver and bindParameters", () => {
@@ -235,14 +238,17 @@ describe("Mysql datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
     expect(() =>
-      new Datasource("mysql", () => new MysqlConnection(), MysqlConnection.repository)
+      new Datasource("mysql", new MysqlProvider())
         .createConnection(),
     ).toThrow(DatasourceError);
-    const ds = new Datasource(
-      "mysql",
-      () => new MysqlConnection({ driver }),
-      MysqlConnection.repository,
-    );
+    const of = (engine = driver): IDriver => ({
+      connection: () => new MysqlConnection({ driver: engine }),
+      command: (c) => c.createCommand(),
+      transaction: (c, isolation = "serializable") =>
+        new MysqlTransaction(c as MysqlConnection, isolation),
+      types: MysqlTypes,
+    });
+    const ds = new Datasource("mysql", of());
     expect(ds.provider).toBe("mysql");
     const connection = await ds.createConnection();
     await (connection as MysqlConnection).open();
@@ -261,12 +267,17 @@ describe("Mysql datasource", () => {
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
     expect(
-      new Datasource("mysql", () => new MysqlConnection({ driver }), MysqlConnection.repository)
+      new Datasource("mysql", of())
         .createRepository(),
     ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "mysql" }).provider).toBe("mysql");
     expect(() => MysqlConnection.from({ database_url: "mysql://db/app" })).toThrow(
       DatasourceError,
+    );
+    const provider = new MysqlProvider();
+    expect(provider.command(connection)).toBeInstanceOf(MysqlCommand);
+    expect(provider.transaction(connection as MysqlConnection).isolation).toBe(
+      "serializable",
     );
   });
 });

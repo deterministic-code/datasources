@@ -5,6 +5,7 @@ import type { IWhere } from "./IWhere.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
+import { Literal } from "./statements/Literal.ts";
 import { Operator } from "./statements/Operator.ts";
 import { WhereClause } from "./statements/WhereClause.ts";
 import type { Cells } from "./converters/Cell.ts";
@@ -13,6 +14,7 @@ import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { CRUDMapper } from "./CRUDMapper.ts";
 import { builtOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
+import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 
 const fieldsOf = (record: Cells, include: (col: string) => boolean): Field[] =>
@@ -29,15 +31,8 @@ const apply = <T>(item: T, identity: T): void => {
         value as Scalar;
 };
 
-const asScalar = (value: string | number | boolean | bigint | null | undefined): Scalar | undefined =>
-  value == null
-    ? undefined
-    : typeof value === "string" ||
-        typeof value === "number" ||
-        typeof value === "boolean" ||
-        typeof value === "bigint"
-      ? value
-      : undefined;
+const asScalar = (value: Scalar | undefined): Scalar | undefined =>
+  value == null ? undefined : value;
 
 export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   readonly crudMapper?: CRUDMapper<T>;
@@ -58,10 +53,7 @@ export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements 
 
   create = async (item: T): Promise<Response> => {
     const fields = fieldsOf(this.reverseConvert(item), (col) => !this.ids.has(col));
-    const response = await this.command().execute(
-      this.statements!.insert(fields).getText(),
-      fields,
-    );
+    const response = await execute(this.command(), this.statements!.insert(fields), fields);
     const scalar = asScalar(
       response.result as string | number | boolean | bigint | null | undefined,
     );
@@ -76,17 +68,19 @@ export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements 
     const fields = fieldsOf(record, (col) => !this.ids.has(col));
     if (fields.length === 0)
       throw new DatasourceError("Update requires at least one non-Id field");
-    return this.command().execute(this.statements!.update(fields, where).getText(), [
+    return execute(this.command(), this.statements!.update(fields, where), [
       ...fields,
       ...(where.parameters ?? []),
     ]);
   };
 
   delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    const where = byWhere ?? this.idWhere(this.reverseConvert(item));
-    return this.command().execute(
-      this.statements!.delete(where).getText(),
-      where.parameters,
+    const record = this.reverseConvert(item);
+    const where = byWhere ?? this.idWhere(record);
+    return execute(
+      this.command(),
+      this.statements!.delete(where),
+      where.parameters?.length ? where.parameters : fieldsOf(record, () => true),
     );
   };
 
@@ -99,6 +93,10 @@ export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements 
         throw new DatasourceError(`Missing Id value "${col}"`);
       return new Operator.Equals(col, record[col] as Scalar);
     });
-    return new WhereClause(parts.reduce((left, right) => new Operator.And(left, right)));
+    return new WhereClause(
+      parts.length === 0
+        ? new Operator.Equals(new Literal(1), new Literal(1))
+        : parts.reduce((left, right) => new Operator.And(left, right)),
+    );
   };
 }

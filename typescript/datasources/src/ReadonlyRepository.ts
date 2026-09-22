@@ -1,4 +1,5 @@
 import type { ICommand } from "./ICommand.ts";
+import { executeReader } from "./ICommand.ts";
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { IQuery } from "./statements/IQuery.ts";
@@ -75,8 +76,9 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
 
   async *read(query?: IQuery | IWhere): AsyncIterable<T> {
     const statement = this.readQuery(query);
-    const reader = await this.command().executeReader(
-      statement.getText(),
+    const reader = await executeReader(
+      this.command(),
+      statement,
       statement.where?.parameters ?? statement.parameters,
     );
     while (await reader.next())

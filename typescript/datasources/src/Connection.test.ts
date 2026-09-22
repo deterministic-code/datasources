@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DatasourceFactory, MockConnection, MockRepository } from "./index.ts";
+import { DatasourceFactory, MockDriver } from "./index.ts";
 
 const envKeys = [
   "INSTALLED_PROVIDERS",
@@ -13,7 +13,7 @@ const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]
 
 beforeEach(() => {
   for (const key of envKeys) delete process.env[key];
-  DatasourceFactory.register("sqlite", () => new MockConnection(), (c) => new MockRepository(c));
+  DatasourceFactory.register("sqlite", new MockDriver());
   process.env.PROVIDER = "sqlite";
   process.env.DATASOURCE_URL = "sqlite:///:memory:";
 });

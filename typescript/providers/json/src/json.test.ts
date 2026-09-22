@@ -11,17 +11,20 @@ vi.mock("node:fs/promises", () => ({
 }));
 import {
   collectAsync,
+  CRUDRepository,
   Datasource,
   DatasourceFactory,
   DatasourceError,
+  InsertStatement,
   QueryStatement,
+  UpdateStatement,
   Where,
 } from "@datasources/core";
 import {
   asRecord,
   JsonCommand,
   JsonConnection,
-  JsonRepository,
+  JsonProvider,
   matches,
   MemoryFileStore,
   NodeFileStore,
@@ -32,7 +35,7 @@ import {
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("json", JsonConnection.from, JsonConnection.repository);
+  DatasourceFactory.register("json", new JsonProvider());
 });
 
 describe("filter helpers", () => {
@@ -209,8 +212,8 @@ describe("JsonConnection", () => {
   });
 });
 
-describe("JsonCommand and JsonRepository", () => {
-  async function openRepo(data: unknown[] = []) {
+describe("JsonCommand and CRUDRepository", () => {
+  async function openRepo(data: Record<string, string | number | boolean>[] = []) {
     const store = new MemoryFileStore();
     const connection = new JsonConnection({
       path: "db.json",
@@ -222,7 +225,7 @@ describe("JsonCommand and JsonRepository", () => {
       connection,
       store,
       command: new JsonCommand(connection),
-      repo: new JsonRepository(connection),
+      repo: new CRUDRepository({ connection }),
     };
   }
 
@@ -312,7 +315,7 @@ describe("JsonCommand and JsonRepository", () => {
   it("rejects command and repository IO when closed", async () => {
     const connection = new JsonConnection({ data: [{ id: 1 }] });
     const command = new JsonCommand(connection);
-    const repo = new JsonRepository(connection);
+    const repo = new CRUDRepository({ connection });
     await expect(command.executeReader("")).rejects.toThrow(DatasourceError);
     await expect(command.execute("insert")).rejects.toThrow(DatasourceError);
     await expect(repo.create({ id: 2 })).rejects.toThrow(DatasourceError);
@@ -325,8 +328,8 @@ describe("Json datasource", () => {
   it("registers and constructs children", async () => {
     const ds = new Datasource(
       "json",
-      () => new JsonConnection({ data: [{ id: 1 }] }),
-      JsonConnection.repository,
+      new JsonProvider(),
+      { data: [{ id: 1 }] },
     );
     expect(ds.provider).toBe("json");
     const connection = (await ds.createConnection()) as JsonConnection;
@@ -344,12 +347,24 @@ describe("Json datasource", () => {
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader("");
     const repo = ds.createRepository(connection);
-    expect(repo).toBeInstanceOf(JsonRepository);
-    expect(ds.createRepository()).toBeInstanceOf(JsonRepository);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(JsonRepository);
+    expect(repo).toBeInstanceOf(CRUDRepository);
+    expect(ds.createRepository()).toBeInstanceOf(CRUDRepository);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
     expect(JsonConnection.from().path).toBe("");
     expect(JsonConnection.from({ path: "db.json" }).path).toBe("db.json");
-    expect(Datasource.create({ provider: "json" }).provider).toBe("json");
+    const registered = Datasource.create({ provider: "json" });
+    expect(registered.provider).toBe("json");
+    expect(await registered.createConnection()).toBeInstanceOf(JsonConnection);
+    expect(registered.createRepository()).toBeInstanceOf(CRUDRepository);
+    const provider = new JsonProvider();
+    expect(provider.transaction(connection).isolation).toBe("serializable");
+    await expect(command.executeStatement(new QueryStatement("nope"))).rejects.toThrow(
+      "Unsupported JSON",
+    );
+    await command.executeReaderStatement(new InsertStatement("t", []));
+    await command.executeStatement(
+      new UpdateStatement("t", [{ name: "name", value: "Z" }], new Where('{"id":99}')),
+    );
   });
 });
 

@@ -39,4 +39,11 @@ impl Text for DeleteStatement {
     }
 }
 
-impl Statement for DeleteStatement {}
+impl Statement for DeleteStatement {
+    fn kind(&self) -> super::statement::StatementKind {
+        super::statement::StatementKind::Delete
+    }
+    fn predicate(&self) -> Option<&dyn Where> {
+        self.where_clause.as_deref()
+    }
+}

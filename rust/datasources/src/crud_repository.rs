@@ -123,8 +123,12 @@ impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &mut Row) -> Result<Response> {
         let record = self.inner.reverse_convert(item)?;
         let fields = self.params(&record);
-        let text = self.inner.statements.insert(&fields);
-        let response = self.inner.command().execute(&text, Some(&fields)).await?;
+        let statement = self.inner.statements.insert(&fields);
+        let response = self
+            .inner
+            .command()
+            .execute_statement(&statement, Some(&fields))
+            .await?;
         if response.result != Value::Null {
             apply(item, Mapper::map(&self.crud_mapper.create, response.result.clone()));
         }
@@ -149,10 +153,13 @@ impl ICRUDRepository for CRUDRepository {
                 "Update requires at least one non-Id field",
             ));
         }
-        let text = self.inner.statements.update(&fields, predicate);
+        let statement = self.inner.statements.update(&fields, predicate);
         let mut parameters = fields;
         parameters.extend(predicate.parameters());
-        self.inner.command().execute(&text, Some(&parameters)).await
+        self.inner
+            .command()
+            .execute_statement(&statement, Some(&parameters))
+            .await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
@@ -167,9 +174,20 @@ impl ICRUDRepository for CRUDRepository {
             (_, Some(where_clause)) => where_clause,
             _ => unreachable!(),
         };
-        let text = self.inner.statements.delete(predicate);
+        let statement = self.inner.statements.delete(predicate);
         let parameters = predicate.parameters();
-        self.inner.command().execute(&text, Some(&parameters)).await
+        let parameters = if parameters.is_empty() {
+            record
+                .iter()
+                .map(|(name, value)| Parameter::new(name.clone(), value.clone()))
+                .collect()
+        } else {
+            parameters
+        };
+        self.inner
+            .command()
+            .execute_statement(&statement, Some(&parameters))
+            .await
     }
 }
 

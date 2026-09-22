@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Cell } from "./Cell.ts";
 import { TypeConverter } from "./TypeConverter.ts";
-import { DefaultTypeConverters } from "./DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./RowTypeConverter.ts";
 
 class OnlyOne extends TypeConverter<Cell, Cell> {
@@ -32,10 +31,5 @@ describe("RowTypeConverter", () => {
       flag = false;
     }
     expect(converter.convert({ flag: 1 }, Item)).toBeInstanceOf(Item);
-  });
-
-  it("registers an empty provider catalog", () => {
-    DefaultTypeConverters.use("memory", {});
-    expect(DefaultTypeConverters.for("memory")).toEqual({});
   });
 });

@@ -36,17 +36,16 @@ static defaults(options: DatasourceOptions): void
 
 - `options` — install keys such as `INSTALLED_PROVIDERS`; not [Create options](./datasource.md#datasourceoptions)
 
-##### register(provider, connection, repository)
+##### register(provider, driver)
 
-Registers a connection factory and a repository factory by provider name.
+Registers a provider [IDriver](#idriver) by name.
 
 ```typescript
-static register(provider: string, connection: (options?: DatasourceOptions) => IConnection, repository: (connection: IConnection) => object): void
+static register(provider: string, driver: IDriver): void
 ```
 
 - `provider` — registry key (`sqlite`, `mysql`, …)
-- `connection` — builds an [IConnection](./connection.md) from the options bag
-- `repository` — builds a repository from an [IConnection](./connection.md)
+- `driver` — [IDriver](#idriver) that builds connections, commands, transactions, and row converters
 
 ##### create(options?)
 
@@ -77,6 +76,61 @@ static registered(): string[]
 ```
 
 **Returns** `string[]`
+
+#### IDriver
+
+```typescript
+interface IDriver
+```
+
+**Methods**
+
+##### connection(options?)
+
+Builds an [IConnection](./connection.md) from the options bag.
+
+```typescript
+connection(options?: DatasourceOptions): IConnection
+```
+
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions)
+
+**Returns** [IConnection](./connection.md)
+
+##### command(connection)
+
+Builds an [ICommand](./command.md) for the connection.
+
+```typescript
+command(connection: IConnection): ICommand
+```
+
+- `connection` — open or closed [IConnection](./connection.md)
+
+**Returns** [ICommand](./command.md)
+
+##### transaction(connection, isolation?)
+
+Builds an [ITransaction](./transaction.md) for the connection.
+
+```typescript
+transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
+```
+
+- `connection` — open or closed [IConnection](./connection.md)
+- `isolation` — defaults to `serializable`
+
+**Returns** [ITransaction](./transaction.md)
+
+##### types
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+```typescript
+types: Record<string, TypeConverter<Cell, Cell>>
+```
+
+**Returns** `Record<string, TypeConverter<Cell, Cell>>`
 
 #### IDatasourceFactory
 
@@ -129,17 +183,16 @@ public static void Defaults(IReadOnlyDictionary<string, string?> options)
 
 - `options` — install keys such as `INSTALLED_PROVIDERS`; not [Create options](./datasource.md#datasourceoptions)
 
-##### Register(provider, connection, repository)
+##### Register(provider, driver)
 
-Registers a connection factory and a repository factory by provider name.
+Registers a provider [IDriver](#idriver) by name.
 
 ```csharp
-public static void Register(string provider, Func<IReadOnlyDictionary<string, string?>?, IConnection> connection, Func<IConnection, object> repository)
+public static void Register(string provider, IDriver driver)
 ```
 
 - `provider` — registry key (`sqlite`, `mysql`, …)
-- `connection` — builds an [IConnection](./connection.md) from the options bag
-- `repository` — builds a repository from an [IConnection](./connection.md)
+- `driver` — [IDriver](#idriver) that builds connections, commands, transactions, and row converters
 
 ##### Create(options)
 
@@ -170,6 +223,61 @@ public static IReadOnlyList<string> Registered()
 ```
 
 **Returns** `IReadOnlyList<string>`
+
+#### IDriver
+
+```csharp
+public interface IDriver
+```
+
+**Methods**
+
+##### Connection(options)
+
+Builds an [IConnection](./connection.md) from the options bag.
+
+```csharp
+IConnection Connection(IReadOnlyDictionary<string, string?>? options)
+```
+
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions)
+
+**Returns** [IConnection](./connection.md)
+
+##### Command(connection)
+
+Builds an [ICommand](./command.md) for the connection.
+
+```csharp
+ICommand Command(IConnection connection)
+```
+
+- `connection` — open or closed [IConnection](./connection.md)
+
+**Returns** [ICommand](./command.md)
+
+##### Transaction(connection, isolation)
+
+Builds an [ITransaction](./transaction.md) for the connection.
+
+```csharp
+ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+```
+
+- `connection` — open or closed [IConnection](./connection.md)
+- `isolation` — defaults to `Serializable`
+
+**Returns** [ITransaction](./transaction.md)
+
+##### Types
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+```csharp
+IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; }
+```
+
+**Returns** `IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
 
 #### IDatasourceFactory
 
@@ -212,17 +320,16 @@ pub fn defaults(options: HashMap<String, String>) -> Result<()>
 
 **Returns** `Result<()>`
 
-##### register(provider, connection, repository)
+##### register(provider, driver)
 
-Registers a connection factory and a repository factory by provider name.
+Registers a provider [Driver](#driver) by name.
 
 ```rust
-pub fn register(provider: impl Into<String>, connection: impl Fn(Option<&HashMap<String, String>>) -> Arc<dyn Connection> + Send + Sync + 'static, repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static)
+pub fn register(provider: impl Into<String>, driver: Arc<dyn Driver>)
 ```
 
 - `provider` — registry key (`sqlite`, `mysql`, …)
-- `connection` — builds a [Connection](./connection.md) from the options bag
-- `repository` — builds a repository from a [Connection](./connection.md)
+- `driver` — [Driver](#driver) that builds connections, commands, transactions, and row converters
 
 ##### create(options)
 
@@ -273,6 +380,61 @@ pub fn registered() -> Vec<String>
 ```
 
 **Returns** `Vec<String>`
+
+#### Driver
+
+```rust
+pub trait Driver
+```
+
+**Methods**
+
+##### connection(options)
+
+Builds a [Connection](./connection.md) from the options bag.
+
+```rust
+fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection>
+```
+
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions)
+
+**Returns** `Arc<dyn `[Connection](./connection.md)`>`
+
+##### command(connection)
+
+Builds a [Command](./command.md) for the connection.
+
+```rust
+fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command>
+```
+
+- `connection` — open or closed [Connection](./connection.md)
+
+**Returns** `Arc<dyn `[Command](./command.md)`>`
+
+##### transaction(connection, isolation)
+
+Builds a [Transaction](./transaction.md) for the connection.
+
+```rust
+fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel) -> Arc<dyn Transaction>
+```
+
+- `connection` — open or closed [Connection](./connection.md)
+- `isolation` — defaults to `Serializable` at the call site
+
+**Returns** `Arc<dyn `[Transaction](./transaction.md)`>`
+
+##### types()
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+```rust
+fn types(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+```
+
+**Returns** `HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`
 :::
 
 ## Remarks
@@ -281,7 +443,7 @@ pub fn registered() -> Vec<String>
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryProvider`, `SqliteProvider`, …) and that is what `register` stores. Dialect engine drivers (`ISqliteDriver`, `IMysqlDriver`) stay on the connection.
 
 ## Examples
 
@@ -290,9 +452,9 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 ::: example
 ```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32
 ```
-```rust rust/datasources/src/tests/datasource_factory.rs#L21-L33
+```rust rust/datasources/src/tests/datasource_factory.rs#L21-L28
 ```
-```typescript typescript/datasources/src/DatasourceFactory.test.ts#L33-L39
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#L34-L38
 ```
 :::
 
@@ -301,7 +463,7 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 ::: example
 ```csharp csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16
 ```
-```rust rust/providers/memory/src/lib.rs#L36-L46
+```rust rust/providers/memory/src/lib.rs#L38-L44
 ```
 ```typescript typescript/providers/memory/src/index.test.ts#L27-L32
 ```
@@ -312,7 +474,7 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 ::: example
 ```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L34-L40
 ```
-```rust rust/datasources/src/tests/datasource_factory.rs#L35-L42
+```rust rust/datasources/src/tests/datasource_factory.rs#L31-L37
 ```
 ```typescript typescript/datasources/src/DatasourceFactory.test.ts#L41-L45
 ```

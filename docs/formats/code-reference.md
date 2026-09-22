@@ -83,9 +83,9 @@ Optional `output` fences after the test ranges become titled textboxes under the
 ::: example
 ```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32
 ```
-```rust rust/datasources/src/tests/datasource_factory.rs#L21-L33
+```rust rust/datasources/src/tests/datasource_factory.rs#L21-L28
 ```
-```typescript typescript/datasources/src/DatasourceFactory.test.ts#L33-L39
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#L34-L38
 ```
 :::
 ~~~~

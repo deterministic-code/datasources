@@ -3,40 +3,33 @@ import {
   DatasourceFactory,
   ProviderNotInstalledError,
   type DatasourceOptions,
-  type IConnection,
+  type IDriver,
 } from "@datasources/core";
-import { JsonConnection } from "@datasources/json";
-import { MemoryConnection } from "@datasources/memory";
-import { MysqlConnection } from "@datasources/mysql";
-import { PostgresConnection } from "@datasources/postgres";
-import { SqliteConnection } from "@datasources/sqlite";
+import { JsonProvider } from "@datasources/json";
+import { MemoryProvider } from "@datasources/memory";
+import { MysqlProvider } from "@datasources/mysql";
+import { PostgresProvider } from "@datasources/postgres";
+import { SqliteProvider } from "@datasources/sqlite";
 import { packages } from "./packages.ts";
 import { providerNames } from "./providerNames.ts";
 
-type Pair = {
-  from: (options?: DatasourceOptions) => IConnection;
-  repository: (connection: IConnection) => object;
+const listed: Record<string, new () => IDriver> = {
+  json: JsonProvider,
+  memory: MemoryProvider,
+  sqlite: SqliteProvider,
+  mysql: MysqlProvider,
+  postgres: PostgresProvider,
 };
 
-const listed: Record<string, Pair> = {
-  json: JsonConnection,
-  memory: MemoryConnection,
-  sqlite: SqliteConnection,
-  mysql: MysqlConnection,
-  postgres: PostgresConnection,
-};
-
-const load = (name: string): Pair => {
-  const pair = listed[name];
-  if (!pair || !packages[name]) throw new ProviderNotInstalledError(name);
-  return pair;
+const load = (name: string): IDriver => {
+  const Type = listed[name];
+  if (!Type || !packages[name]) throw new ProviderNotInstalledError(name);
+  return new Type();
 };
 
 export const registerListed = (options: DatasourceOptions): void => {
-  for (const name of providerNames(options)) {
-    const pair = load(name);
-    DatasourceFactory.register(name, pair.from, pair.repository);
-  }
+  for (const name of providerNames(options))
+    DatasourceFactory.register(name, load(name));
 };
 
 export const from = (options: DatasourceOptions): void => registerListed(options);

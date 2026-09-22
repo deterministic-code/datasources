@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   collectAsync,
+  CRUDRepository,
   Datasource,
   DatasourceFactory,
   DatasourceError,
+  InsertStatement,
   QueryStatement,
+  UpdateStatement,
   Where,
 } from "@datasources/core";
 import {
@@ -12,7 +15,7 @@ import {
   matches,
   MemoryCommand,
   MemoryConnection,
-  MemoryRepository,
+  MemoryProvider,
   MemoryStore,
   parametersToObject,
   parseFilter,
@@ -20,13 +23,13 @@ import {
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
+  DatasourceFactory.register("memory", new MemoryProvider());
 });
 
 describe("DatasourceFactory", () => {
   it("register and create", () => {
     DatasourceFactory.reset();
-    DatasourceFactory.register("memory", MemoryConnection.from, MemoryConnection.repository);
+    DatasourceFactory.register("memory", new MemoryProvider());
     const ds = DatasourceFactory.create({ provider: "memory" });
     expect(ds.provider).toBe("memory");
   });
@@ -163,14 +166,14 @@ describe("MemoryConnection", () => {
   });
 });
 
-describe("MemoryCommand and MemoryRepository", () => {
+describe("MemoryCommand and CRUDRepository", () => {
   async function openRepo(data: Record<string, unknown>[] = []) {
     const connection = new MemoryConnection({ data });
     await connection.open();
     return {
       connection,
       command: new MemoryCommand(connection),
-      repo: new MemoryRepository(connection),
+      repo: new CRUDRepository({ connection }),
     };
   }
 
@@ -264,7 +267,7 @@ describe("MemoryCommand and MemoryRepository", () => {
   it("rejects command and repository IO when closed", async () => {
     const connection = new MemoryConnection({ data: [{ id: 1 }] });
     const command = new MemoryCommand(connection);
-    const repo = new MemoryRepository(connection);
+    const repo = new CRUDRepository({ connection });
     await expect(command.executeReader("")).rejects.toThrow(DatasourceError);
     await expect(command.execute("insert")).rejects.toThrow(DatasourceError);
     await expect(repo.create({ id: 2 })).rejects.toThrow(DatasourceError);
@@ -277,8 +280,8 @@ describe("Memory datasource", () => {
   it("registers and constructs children", async () => {
     const ds = new Datasource(
       "memory",
-      () => new MemoryConnection({ data: [{ id: 1 }] }),
-      MemoryConnection.repository,
+      new MemoryProvider(),
+      { data: [{ id: 1 }] },
     );
     expect(ds.provider).toBe("memory");
     const connection = (await ds.createConnection()) as MemoryConnection;
@@ -296,10 +299,22 @@ describe("Memory datasource", () => {
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader("");
     const repo = ds.createRepository(connection);
-    expect(repo).toBeInstanceOf(MemoryRepository);
-    expect(ds.createRepository()).toBeInstanceOf(MemoryRepository);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(MemoryRepository);
+    expect(repo).toBeInstanceOf(CRUDRepository);
+    expect(ds.createRepository()).toBeInstanceOf(CRUDRepository);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
     expect(MemoryConnection.from().provider).toBe("memory");
-    expect(Datasource.create({ provider: "memory" }).provider).toBe("memory");
+    const registered = Datasource.create({ provider: "memory" });
+    expect(registered.provider).toBe("memory");
+    expect(await registered.createConnection()).toBeInstanceOf(MemoryConnection);
+    expect(registered.createRepository()).toBeInstanceOf(CRUDRepository);
+    const provider = new MemoryProvider();
+    expect(provider.transaction(connection).isolation).toBe("serializable");
+    await expect(command.executeStatement(new QueryStatement("nope"))).rejects.toThrow(
+      "Unsupported Memory",
+    );
+    await command.executeReaderStatement(new InsertStatement("t", []));
+    await command.executeStatement(
+      new UpdateStatement("t", [{ name: "name", value: "Z" }], new Where('{"id":99}')),
+    );
   });
 });

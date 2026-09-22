@@ -1,6 +1,6 @@
-import type { IConnection } from "./IConnection.ts";
 import type { IDatasource } from "./IDatasource.ts";
 import type { IDatasourceFactory } from "./IDatasourceFactory.ts";
+import type { IDriver } from "./IDriver.ts";
 import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import { Datasource } from "./Datasource.ts";
 import { DatasourceError } from "./DatasourceError.ts";
@@ -8,12 +8,7 @@ import { DotEnv } from "./dotEnv.ts";
 import { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
 import { providerFromUrl } from "./providerFromUrl.ts";
 
-type Pair = {
-  connection: (options?: DatasourceOptions) => IConnection;
-  repository: (connection: IConnection) => object;
-};
-
-const factories = new Map<string, Pair>();
+const factories = new Map<string, IDriver>();
 
 type Install = (options: DatasourceOptions) => void;
 let install: Install | undefined;
@@ -55,9 +50,9 @@ const resolve = (options?: DatasourceOptions): IDatasource => {
   if (options === undefined) registerInstalled(listed);
   const name = get(listed, "provider") ?? providerFromUrl(get(listed, "database_url") ?? "")
     ?? (() => { throw new DatasourceError("Datasource defaults are not specified"); })();
-  const pair = factories.get(name);
-  if (!pair) throw new ProviderNotInstalledError(name);
-  return new Datasource(name, () => pair.connection(listed), pair.repository);
+  const driver = factories.get(name);
+  if (!driver) throw new ProviderNotInstalledError(name);
+  return new Datasource(name, driver, listed);
 };
 
 export class DatasourceFactory implements IDatasourceFactory {
@@ -67,12 +62,8 @@ export class DatasourceFactory implements IDatasourceFactory {
 
   static defaults = (options: DatasourceOptions): void => registerInstalled(options);
 
-  static register = (
-    provider: string,
-    connection: (options?: DatasourceOptions) => IConnection,
-    repository: (connection: IConnection) => object,
-  ): void => {
-    factories.set(provider, { connection, repository });
+  static register = (provider: string, driver: IDriver): void => {
+    factories.set(provider, driver);
   };
 
   static create = (options?: DatasourceOptions): IDatasource => resolve(options);

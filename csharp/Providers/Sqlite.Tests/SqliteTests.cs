@@ -8,7 +8,7 @@ public class SqliteTests
     public SqliteTests()
     {
         DatasourceFactory.Reset();
-        DatasourceFactory.Register("sqlite", opts => new SqliteConnection(opts), SqliteConnection.Repository);
+        DatasourceFactory.Register("sqlite", new SqliteProvider());
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class SqliteTests
         Assert.Equal(":memory:", defaulted.Filename);
         Assert.Same(driver, defaulted.Driver);
 
-        var ds = new Datasource("sqlite", () => new SqliteConnection(new SqliteConnectionOptions { Driver = driver }), SqliteConnection.Repository);
+        var ds = new Datasource("sqlite", new Of(() => new SqliteConnection(new SqliteConnectionOptions { Driver = driver })));
         Assert.Equal("sqlite", ds.Provider);
         var created = await ds.CreateConnection();
         await ((SqliteConnection)created).Open();
@@ -69,14 +69,23 @@ public class SqliteTests
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
         Assert.Throws<DatasourceException>(() =>
-            new Datasource("sqlite", () => new SqliteConnection(), SqliteConnection.Repository)
+            new Datasource("sqlite", new SqliteProvider())
                 .CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("sqlite", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "sqlite" }).Provider);
         await Assert.ThrowsAsync<DatasourceException>(() =>
-            new Datasource("sqlite", () => new SqliteConnection(), SqliteConnection.Repository).CreateConnection());
+            new Datasource("sqlite", new SqliteProvider()).CreateConnection());
 
         var closed = new SqliteConnection(new SqliteConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).ExecuteReader("x"));
+    }
+
+    sealed class Of(Func<IConnection> connection) : IDriver
+    {
+        public IConnection Connection(IReadOnlyDictionary<string, string?>? _) => connection();
+        public ICommand Command(IConnection c) => c.CreateCommand();
+        public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
+            new SqliteTransaction((SqliteConnection)c, isolation);
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types => SqliteTypes.All;
     }
 }

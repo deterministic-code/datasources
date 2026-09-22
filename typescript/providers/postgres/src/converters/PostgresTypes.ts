@@ -1,4 +1,4 @@
-import { DefaultTypeConverters, type Cell, type TypeConverter } from "@datasources/core";
+import { type Cell, type TypeConverter } from "@datasources/core";
 import { BinaryConverter } from "./BinaryConverter.ts";
 import { BoolConverter } from "./BoolConverter.ts";
 import { DateTimeConverter } from "./DateTimeConverter.ts";
@@ -13,4 +13,3 @@ export const PostgresTypes: Record<string, TypeConverter<Cell, Cell>> = {
   binary: new BinaryConverter(),
 };
 
-DefaultTypeConverters.use("postgres", PostgresTypes);

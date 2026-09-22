@@ -8,7 +8,7 @@ public class PostgresTests
     public PostgresTests()
     {
         DatasourceFactory.Reset();
-        DatasourceFactory.Register("postgres", opts => new PostgresConnection(opts), PostgresConnection.Repository);
+        DatasourceFactory.Register("postgres", new PostgresProvider());
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class PostgresTests
         var defaulted = new PostgresConnection(new PostgresConnectionOptions { Driver = driver });
         Assert.Equal("", defaulted.Url);
 
-        var ds = new Datasource("postgres", () => new PostgresConnection(new PostgresConnectionOptions { Driver = driver }), PostgresConnection.Repository);
+        var ds = new Datasource("postgres", new Of(() => new PostgresConnection(new PostgresConnectionOptions { Driver = driver })));
         Assert.Equal("postgres", ds.Provider);
         var created = await ds.CreateConnection();
         await ((PostgresConnection)created).Open();
@@ -72,11 +72,11 @@ public class PostgresTests
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
         Assert.Throws<DatasourceException>(() =>
-            new Datasource("postgres", () => new PostgresConnection(), PostgresConnection.Repository)
+            new Datasource("postgres", new PostgresProvider())
                 .CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("postgres", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "postgres" }).Provider);
         await Assert.ThrowsAsync<DatasourceException>(() =>
-            new Datasource("postgres", () => new PostgresConnection(), PostgresConnection.Repository).CreateConnection());
+            new Datasource("postgres", new PostgresProvider()).CreateConnection());
 
         var closed = new PostgresConnection(new PostgresConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute("x"));
@@ -100,5 +100,14 @@ public class PostgresTests
         public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => Task.CompletedTask;
         public Task Commit() => Task.CompletedTask;
         public Task Rollback() => Task.CompletedTask;
+    }
+
+    sealed class Of(Func<IConnection> connection) : IDriver
+    {
+        public IConnection Connection(IReadOnlyDictionary<string, string?>? _) => connection();
+        public ICommand Command(IConnection c) => c.CreateCommand();
+        public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
+            new PostgresTransaction((PostgresConnection)c, isolation);
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types => PostgresTypes.All;
     }
 }

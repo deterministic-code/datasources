@@ -10,7 +10,7 @@ public class RegisterAndCreateTests
     [Fact]
     public void RegisterAndCreate()
     {
-        DatasourceFactory.Register("memory", opts => new MemoryConnection(opts), MemoryConnection.Repository);
+        DatasourceFactory.Register("memory", new MemoryProvider());
         var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
         Assert.Equal("memory", ds.Provider);
     }

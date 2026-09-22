@@ -24,7 +24,7 @@ public class DatasourceFactoryTests
     [Fact]
     public void DefaultFromEnvironment()
     {
-        DatasourceFactory.Register("sqlite", _ => new MockConnection(), c => new MockRepository<object>(c));
+        DatasourceFactory.Register("sqlite", new MockDriver());
         Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
         var ds = DatasourceFactory.Default;

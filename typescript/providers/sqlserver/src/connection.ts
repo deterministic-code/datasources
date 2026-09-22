@@ -1,6 +1,5 @@
 import {
   StubConnection,
-  StubRepository,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
@@ -17,6 +16,5 @@ export class SqlServerConnection extends StubConnection {
   static from = (options?: DatasourceOptions): SqlServerConnection =>
     new SqlServerConnection(options);
 
-  static repository = (connection: IConnection) =>
-    new StubRepository(connection.provider, connection);
+
 }

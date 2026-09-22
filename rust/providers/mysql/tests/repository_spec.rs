@@ -31,7 +31,7 @@ fn dialect() -> RepositoryDialect {
             CreateTableStatement::new(MysqlQuote::quote(table), &mapped, &[]).get_text()
         },
         field: super::converters::field,
-        register: super::converters::register,
+        types: super::converters::types,
     }
 }
 

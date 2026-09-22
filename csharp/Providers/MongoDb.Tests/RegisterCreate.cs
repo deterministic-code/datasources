@@ -4,9 +4,8 @@ using Datasources.MongoDb;
 public partial class RegisterCreateTests
 {
     const string Provider = "mongodb";
-    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new MongoDbConnection(options);
-    static object Repository(IConnection connection) => MongoDbConnection.Repository(connection);
-    static IDatasource Ds() => new Datasource(Provider, () => new MongoDbConnection(), MongoDbConnection.Repository);
+    static readonly IDriver Driver = new MongoDbProvider();
+    static IDatasource Ds() => new Datasource(Provider, new MongoDbProvider());
 
     [Fact]
     public async Task CreatesConnection()

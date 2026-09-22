@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import {
   ArrayReader,
   collectAsync,
+  CRUDRepository,
   createStubDatasource,
   Datasource,
   bindInstall,
@@ -20,6 +21,7 @@ import {
   formatElapsed,
   MockCommand,
   MockConnection,
+  MockDriver,
   MockDatasource,
   MockQuery,
   MockReader,
@@ -426,8 +428,8 @@ describe("DotEnv", () => {
 describe("Datasource registry", () => {
   it("registers, lists, creates, and resets", () => {
     expect(DatasourceFactory.registered()).toEqual([]);
-    DatasourceFactory.register("json", () => new MockConnection(), (c) => new MockRepository(c));
-    DatasourceFactory.register("memory", () => new MockConnection(), (c) => new MockRepository(c));
+    DatasourceFactory.register("json", new MockDriver());
+    DatasourceFactory.register("memory", new MockDriver());
     expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
     const created = Datasource.create({ provider: "json", path: "x" });
     expect(created.provider).toBe("json");
@@ -438,7 +440,7 @@ describe("Datasource registry", () => {
 
   it("requires consumer defaults when provider is omitted", async () => {
     expect(() => Datasource.create()).toThrow(DatasourceError);
-    DatasourceFactory.register("sqlite", () => new MockConnection(), (c) => new MockRepository(c));
+    DatasourceFactory.register("sqlite", new MockDriver());
     const ds = Datasource.create({
       provider: "sqlite",
       database_url: "sqlite:///:memory:",
@@ -447,8 +449,8 @@ describe("Datasource registry", () => {
     const connection = await ds.createConnection();
     expect(connection.isOpen).toBe(false);
     expect(ds.createCommand().connection).toBe(connection);
-    expect(ds.createRepository()).toBeInstanceOf(MockRepository);
-    expect(ds.createReadonlyRepository()).toBeInstanceOf(MockRepository);
+    expect(ds.createRepository()).toBeInstanceOf(CRUDRepository);
+    expect(ds.createReadonlyRepository()).toBeInstanceOf(CRUDRepository);
     expect(new DatasourceFactory().create({
       provider: "sqlite",
       database_schema: "main",
@@ -461,7 +463,7 @@ describe("Datasource registry", () => {
     expect(Datasource.create().provider).toBe("sqlite");
     bindInstall((options) => {
       if (options.INSTALLED_PROVIDERS?.includes("json"))
-        DatasourceFactory.register("json", () => new MockConnection(), (c) => new MockRepository(c));
+        DatasourceFactory.register("json", new MockDriver());
     });
     DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "json" });
     expect(DatasourceFactory.registered()).toEqual(["json", "sqlite"]);
@@ -469,8 +471,8 @@ describe("Datasource registry", () => {
     for (const key of envKeys) delete process.env[key];
     expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
     expect(() => DatasourceFactory.default).toThrow("Datasource defaults are not specified");
-    DatasourceFactory.register("sqlite", () => new MockConnection(), (c) => new MockRepository(c));
-    DatasourceFactory.register("memory", () => new MockConnection(), (c) => new MockRepository(c));
+    DatasourceFactory.register("sqlite", new MockDriver());
+    DatasourceFactory.register("memory", new MockDriver());
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
     expect(DatasourceFactory.default.provider).toBe("sqlite");
     expect(Datasource.default.provider).toBe("sqlite");
@@ -666,9 +668,7 @@ describe("published mocks", () => {
     await mockCommand.executeReader("");
     const provided = new MockConnection();
     expect(ds.createCommand(provided).connection).toBe(provided);
-    expect(ds.createRepository(provided)).toBeInstanceOf(
-      MockRepository,
-    );
+    expect(ds.createRepository(provided)).toBeInstanceOf(MockRepository);
     expect(ds.createRepository()).toBeInstanceOf(MockRepository);
 
     ds.command = new MockCommand(ds.connection);

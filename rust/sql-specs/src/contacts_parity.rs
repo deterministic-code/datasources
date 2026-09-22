@@ -8,7 +8,7 @@ use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     Command, Connection, ConsoleCommandMiddleware, FlatToNestedMapper, Mapper,
-    CRUDRepository, IReadonlyRepository, RepositoryBuilderOptions,
+    CRUDRepository, IReadonlyRepository, RepositoryBuilderOptions, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -39,6 +39,7 @@ pub async fn apply_sql(command: &dyn Command, statements: &[String]) -> datasour
 pub async fn contacts_parity(
     connection: Arc<dyn Connection>,
     verbose: bool,
+    field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> datasources::Result<(Vec<ContactView>, Vec<ContactView>)> {
     let mut options = HashMap::new();
     options.insert(
@@ -59,7 +60,7 @@ pub async fn contacts_parity(
         ),
     );
     let enriched = from_enriched_contacts(
-        &contacts_service_of(connection, verbose.then_some(middleware))
+        &contacts_service_of(connection, verbose.then_some(middleware), field)
             .read(None)
             .await?,
     );

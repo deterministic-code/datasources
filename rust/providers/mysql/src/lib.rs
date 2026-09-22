@@ -4,6 +4,7 @@ mod connection;
 mod connection_driver;
 mod converters;
 mod driver;
+mod provider;
 mod mysql_async_driver;
 mod column;
 mod column_type;
@@ -13,6 +14,7 @@ mod transaction_driver;
 
 pub use command::MysqlCommand;
 pub use connection::MysqlConnection;
+pub use provider::MysqlProvider;
 pub use driver::{isolation_sql, require_driver, to_mysql, MysqlDriver, MysqlExecuteResult};
 pub use mysql_async_driver::MysqlAsyncDriver;
 pub use column::MysqlColumn;
@@ -32,11 +34,39 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use datasources::{
-        create, register, reset, BuiltDatasource, Command, Connection, Datasource, IsolationLevel,
-        Result, Row, Value,
+        create, register, reset, BuiltDatasource, Command, Connection, Datasource, Driver,
+        IsolationLevel, Transaction, Result, Row, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
+
+    struct With(Arc<dyn MysqlDriver>, Option<String>);
+
+    impl Driver for With {
+        fn connection(&self, _: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+            Arc::new(MysqlConnection::new(self.1.clone(), self.0.clone()))
+        }
+
+        fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
+            connection.create_command()
+        }
+
+        fn transaction(
+            &self,
+            connection: Arc<dyn Connection>,
+            isolation: IsolationLevel,
+        ) -> Arc<dyn Transaction> {
+            let conn = datasources::downcast_connection::<MysqlConnection>(connection).expect("mysql");
+            Arc::new(MysqlTransaction::new(conn.driver.clone(), isolation))
+        }
+
+        fn types(
+            &self,
+        ) -> HashMap<String, Box<dyn datasources::TypeConverter<datasources::Value, datasources::Value> + Send + Sync>>
+        {
+            crate::converters::types()
+        }
+    }
 
     struct FakeDriver;
 
@@ -144,13 +174,7 @@ mod tests {
         let driver_for_ds = driver.clone();
         register(
             "mysql",
-            move |_| {
-                Arc::new(MysqlConnection::new(
-                    Some("mysql://db/app".into()),
-                    driver_for_ds.clone(),
-                ))
-            },
-            MysqlConnection::repository,
+            Arc::new(With(driver_for_ds, Some("mysql://db/app".into()))),
         );
         let ds = create(Some(&HashMap::from([("provider".into(), "mysql".into())]))).unwrap();
         assert_eq!(ds.provider(), "mysql");
@@ -159,18 +183,11 @@ mod tests {
         assert!(command.execute("DELETE FROM items", None).await.is_err());
         assert!(command.execute_reader("SELECT 1", None).await.is_err());
         ds.create_repository(None);
-        let factory = BuiltDatasource::new(
-            "mysql",
-            {
-                let driver = driver.clone();
-                move || Arc::new(MysqlConnection::new(None, driver.clone()))
-            },
-            MysqlConnection::repository,
-        );
+        let factory = BuiltDatasource::new("mysql", Arc::new(With(driver.clone(), None)), None);
         factory.create_connection().await.unwrap();
         let closed = Arc::new(MysqlConnection::new(None, driver));
         assert!(MysqlCommand::new(closed).execute("x", None).await.is_err());
     }
 }
 
-pub use converters::{register as register_converters, types as converter_types};
+pub use converters::types as converter_types;

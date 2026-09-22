@@ -4,9 +4,8 @@ using Datasources.Yaml;
 public partial class RegisterCreateTests
 {
     const string Provider = "yaml";
-    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new YamlConnection(options);
-    static object Repository(IConnection connection) => YamlConnection.Repository(connection);
-    static IDatasource Ds() => new Datasource(Provider, () => new YamlConnection(), YamlConnection.Repository);
+    static readonly IDriver Driver = new YamlProvider();
+    static IDatasource Ds() => new Datasource(Provider, new YamlProvider());
 
     [Fact]
     public async Task CreatesConnection()

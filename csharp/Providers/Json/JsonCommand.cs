@@ -19,6 +19,18 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
             return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
         });
 
+    public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        ExecuteReader(FilterText(statement), parameters);
+
+    public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        statement switch
+        {
+            IInsertStatement => Execute("insert", parameters),
+            IUpdateStatement update => Execute("update", WithWhere(parameters, update.Where)),
+            IDeleteStatement delete => Execute("delete", WithWhere(parameters, delete.Where)),
+            _ => Execute(statement.GetText(), parameters)
+        };
+
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, async (query, paramsList) =>
         {
@@ -116,6 +128,21 @@ public sealed class JsonCommand : CommandMiddlewareHost, ICommand
         row is JsonObject obj
             ? new Row(obj.ToDictionary(k => k.Key, v => JsonValueToValue(v.Value)))
             : new Row();
+
+    static string FilterText(IStatement statement)
+    {
+        var where = statement is IQuery query ? query.Where?.GetText() : null;
+        if (LooksJson(where)) return where!;
+        var text = statement.GetText();
+        return LooksJson(text) || string.IsNullOrWhiteSpace(text) ? text : "";
+    }
+
+    static IReadOnlyList<Parameter>? WithWhere(IReadOnlyList<Parameter>? parameters, IWhere? where) =>
+        LooksJson(where?.GetText())
+            ? [.. parameters ?? [], new Parameter("$where", where!.GetText())]
+            : parameters;
+
+    static bool LooksJson(string? text) => text?.TrimStart().StartsWith('{') == true;
 
     private static IReadOnlyList<Row> EmptyRows() => [];
 }

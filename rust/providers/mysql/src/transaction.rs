@@ -8,6 +8,12 @@ pub struct MysqlTransaction {
     pub(crate) isolation: IsolationLevel,
 }
 
+impl MysqlTransaction {
+    pub fn new(driver: Arc<dyn MysqlDriver>, isolation: IsolationLevel) -> Self {
+        Self { driver, isolation }
+    }
+}
+
 #[async_trait]
 impl Transaction for MysqlTransaction {
     fn isolation(&self) -> IsolationLevel {

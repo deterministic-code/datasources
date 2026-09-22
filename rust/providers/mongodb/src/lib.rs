@@ -3,30 +3,23 @@ mod connection;
 mod converters;
 
 pub use command::MongoDbCommand;
-pub use connection::MongoDbConnection;
+pub use connection::{MongoDbConnection, MongoDbProvider};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, register, reset, BuiltDatasource, Datasource};
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new(
-            "mongodb",
-            || MongoDbConnection::from_options(None),
-            MongoDbConnection::repository,
-        )
+        BuiltDatasource::new("mongodb", Arc::new(MongoDbProvider), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register(
-            "mongodb",
-            MongoDbConnection::from_options,
-            MongoDbConnection::repository,
-        );
+        register("mongodb", Arc::new(MongoDbProvider));
         assert_eq!(
             create(Some(&HashMap::from([(
                 "provider".into(),

@@ -1,21 +1,10 @@
-use crate::connection::Connection;
+use crate::driver::Driver;
 use crate::registry_state::{registry, FactoryPair};
-use crate::repository::ICRUDRepository;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub fn register(
-    provider: impl Into<String>,
-    connection: impl Fn(Option<&HashMap<String, String>>) -> Arc<dyn Connection> + Send + Sync + 'static,
-    repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static,
-) {
+pub fn register(provider: impl Into<String>, driver: Arc<dyn Driver>) {
     let mut guard = registry();
     let map = guard.get_or_insert_with(HashMap::new);
-    map.insert(
-        provider.into(),
-        FactoryPair {
-            connection: Arc::new(connection),
-            repository: Arc::new(repository),
-        },
-    );
+    map.insert(provider.into(), FactoryPair { driver });
 }

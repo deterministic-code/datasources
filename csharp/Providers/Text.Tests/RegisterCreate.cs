@@ -4,9 +4,8 @@ using Datasources.Text;
 public partial class RegisterCreateTests
 {
     const string Provider = "text";
-    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new TextConnection(options);
-    static object Repository(IConnection connection) => TextConnection.Repository(connection);
-    static IDatasource Ds() => new Datasource(Provider, () => new TextConnection(), TextConnection.Repository);
+    static readonly IDriver Driver = new TextProvider();
+    static IDatasource Ds() => new Datasource(Provider, new TextProvider());
 
     [Fact]
     public async Task CreatesConnection()

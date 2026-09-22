@@ -56,7 +56,7 @@ impl Connection for StubConnection {
 
 #[macro_export]
 macro_rules! named_stub_connection {
-    ($name:ident, $provider:literal) => {
+    ($name:ident, $driver:ident, $provider:literal) => {
         pub struct $name {
             inner: $crate::StubConnection,
         }
@@ -73,11 +73,40 @@ macro_rules! named_stub_connection {
             ) -> std::sync::Arc<dyn $crate::Connection> {
                 std::sync::Arc::new(Self::new())
             }
+        }
 
-            pub fn repository(
+        pub struct $driver;
+
+        impl $crate::Driver for $driver {
+            fn connection(
+                &self,
+                options: Option<&std::collections::HashMap<String, String>>,
+            ) -> std::sync::Arc<dyn $crate::Connection> {
+                $name::from_options(options)
+            }
+
+            fn command(
+                &self,
                 connection: std::sync::Arc<dyn $crate::Connection>,
-            ) -> std::sync::Arc<dyn $crate::CRUDRepository> {
-                std::sync::Arc::new($crate::StubRepository::new(connection.provider()))
+            ) -> std::sync::Arc<dyn $crate::Command> {
+                connection.create_command()
+            }
+
+            fn transaction(
+                &self,
+                _: std::sync::Arc<dyn $crate::Connection>,
+                _: $crate::IsolationLevel,
+            ) -> std::sync::Arc<dyn $crate::Transaction> {
+                std::sync::Arc::new($crate::StubTransaction::new($provider))
+            }
+
+            fn types(
+                &self,
+            ) -> std::collections::HashMap<
+                String,
+                Box<dyn $crate::TypeConverter<$crate::Value, $crate::Value> + Send + Sync>,
+            > {
+                std::collections::HashMap::new()
             }
         }
 

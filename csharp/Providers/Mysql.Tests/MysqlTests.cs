@@ -8,7 +8,7 @@ public class MysqlTests
     public MysqlTests()
     {
         DatasourceFactory.Reset();
-        DatasourceFactory.Register("mysql", opts => new MysqlConnection(opts), MysqlConnection.Repository);
+        DatasourceFactory.Register("mysql", new MysqlProvider());
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class MysqlTests
         var defaulted = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
         Assert.Equal("", defaulted.Url);
 
-        var ds = new Datasource("mysql", () => new MysqlConnection(new MysqlConnectionOptions { Driver = driver }), MysqlConnection.Repository);
+        var ds = new Datasource("mysql", new Of(() => new MysqlConnection(new MysqlConnectionOptions { Driver = driver })));
         Assert.Equal("mysql", ds.Provider);
         var created = await ds.CreateConnection();
         await ((MysqlConnection)created).Open();
@@ -61,11 +61,11 @@ public class MysqlTests
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
         Assert.Throws<DatasourceException>(() =>
-            new Datasource("mysql", () => new MysqlConnection(), MysqlConnection.Repository)
+            new Datasource("mysql", new MysqlProvider())
                 .CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("mysql", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "mysql" }).Provider);
         await Assert.ThrowsAsync<DatasourceException>(() =>
-            new Datasource("mysql", () => new MysqlConnection(), MysqlConnection.Repository).CreateConnection());
+            new Datasource("mysql", new MysqlProvider()).CreateConnection());
 
         var closed = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));
@@ -90,5 +90,14 @@ public class MysqlTests
         public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => Task.CompletedTask;
         public Task Commit() => Task.CompletedTask;
         public Task Rollback() => Task.CompletedTask;
+    }
+
+    sealed class Of(Func<IConnection> connection) : IDriver
+    {
+        public IConnection Connection(IReadOnlyDictionary<string, string?>? _) => connection();
+        public ICommand Command(IConnection c) => c.CreateCommand();
+        public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
+            new MysqlTransaction((MysqlConnection)c, isolation);
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types => MysqlTypes.All;
     }
 }

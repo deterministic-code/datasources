@@ -1,18 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { TextCommand, TextConnection } from "./index.ts";
+import { TextCommand, TextConnection, TextProvider } from "./index.ts";
 
 afterEach(() => DatasourceFactory.reset());
 
 describe("text", () => {
   it("creates", () => {
-    DatasourceFactory.register("text", TextConnection.from, TextConnection.repository);
+    DatasourceFactory.register("text", new TextProvider());
     expect(TextConnection.from()).toBeInstanceOf(TextConnection);
     expect(Datasource.create({ provider: "text" }).provider).toBe("text");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new Datasource("text", () => new TextConnection(), TextConnection.repository);
+    const ds = new Datasource("text", new TextProvider());
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(TextConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
@@ -29,5 +29,6 @@ describe("text", () => {
     ds.createRepository(connection);
     ds.createReadonlyRepository();
     ds.createReadonlyRepository(connection);
+    expect(new TextProvider().transaction(connection).isolation).toBe("serializable");
   });
 });

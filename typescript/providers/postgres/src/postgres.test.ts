@@ -11,13 +11,16 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
 import {
   bindParameters,
   loadPgDriver,
   PgDriver,
   PostgresCommand,
   PostgresConnection,
+  PostgresProvider,
+  PostgresTransaction,
+  PostgresTypes,
   requireDriver,
   toPostgres,
   withReturning,
@@ -60,7 +63,7 @@ function fakeDriver(url = "postgres://localhost/app", schema?: string) {
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("postgres", PostgresConnection.from, PostgresConnection.repository);
+  DatasourceFactory.register("postgres", new PostgresProvider());
 });
 
 describe("requireDriver and bind", () => {
@@ -255,14 +258,17 @@ describe("Postgres datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
     expect(() =>
-      new Datasource("postgres", () => new PostgresConnection(), PostgresConnection.repository)
+      new Datasource("postgres", new PostgresProvider())
         .createConnection(),
     ).toThrow(DatasourceError);
-    const ds = new Datasource(
-      "postgres",
-      () => new PostgresConnection({ driver }),
-      PostgresConnection.repository,
-    );
+    const of = (engine = driver): IDriver => ({
+      connection: () => new PostgresConnection({ driver: engine }),
+      command: (c) => c.createCommand(),
+      transaction: (c, isolation = "serializable") =>
+        new PostgresTransaction(c as PostgresConnection, isolation),
+      types: PostgresTypes,
+    });
+    const ds = new Datasource("postgres", of());
     expect(ds.provider).toBe("postgres");
     const connection = await ds.createConnection();
     await (connection as PostgresConnection).open();
@@ -281,15 +287,16 @@ describe("Postgres datasource", () => {
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
     expect(
-      new Datasource(
-        "postgres",
-        () => new PostgresConnection({ driver }),
-        PostgresConnection.repository,
-      ).createRepository(),
+      new Datasource("postgres", of()).createRepository(),
     ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "postgres" }).provider).toBe("postgres");
     expect(() =>
       PostgresConnection.from({ database_url: "postgres://db/app", database_schema: "s" }),
     ).toThrow(DatasourceError);
+    const provider = new PostgresProvider();
+    expect(provider.command(connection)).toBeInstanceOf(PostgresCommand);
+    expect(provider.transaction(connection as PostgresConnection).isolation).toBe(
+      "serializable",
+    );
   });
 });

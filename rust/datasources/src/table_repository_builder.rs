@@ -1,5 +1,5 @@
 use crate::built_repository::BuiltRepository;
-use crate::converters::{Cells, DefaultTypeConverters, RowTypeConverter};
+use crate::converters::{Cells, RowTypeConverter};
 use crate::crud_mapper::CRUDMapper;
 use crate::mappers::{Mapper, TransformMapper};
 use crate::result::Result;
@@ -15,9 +15,6 @@ impl RepositoryBuilder {
             Some(mapping) => mapping,
             None => RowTypeConverter::of::<Cells>(),
         }
-        .with_types(DefaultTypeConverters::for_provider(
-            options.connection.provider(),
-        ))
         .with_types(options.types)
         .with_fields(options.fields);
         let crud_mapper = match (options.crud_mapper, options.mapper) {

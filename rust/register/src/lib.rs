@@ -1,5 +1,6 @@
 use datasources::{bind_install, defaults, register, DatasourceError, Result};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
     options
@@ -28,13 +29,13 @@ pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
 }
 
 macro_rules! register_named {
-    ($name:expr, $($feat:literal => $ty:ty),+ $(,)?) => {
+    ($name:expr, $($feat:literal => $ty:path),+ $(,)?) => {
         match $name {
             $(
                 $feat => {
                     #[cfg(feature = $feat)]
                     {
-                        register($feat, <$ty>::from_options, <$ty>::repository);
+                        register($feat, Arc::new($ty));
                         Ok(())
                     }
                     #[cfg(not(feature = $feat))]
@@ -51,18 +52,18 @@ macro_rules! register_named {
 fn register_named(name: &str) -> Result<()> {
     register_named!(
         name,
-        "json" => datasources_json::JsonConnection,
-        "memory" => datasources_memory::MemoryConnection,
-        "sqlite" => datasources_sqlite::SqliteConnection,
-        "text" => datasources_text::TextConnection,
-        "xml" => datasources_xml::XmlConnection,
-        "yaml" => datasources_yaml::YamlConnection,
-        "mysql" => datasources_mysql::MysqlConnection,
-        "sqlserver" => datasources_sqlserver::SqlServerConnection,
-        "postgres" => datasources_postgres::PostgresConnection,
-        "oracle" => datasources_oracle::OracleConnection,
-        "mongodb" => datasources_mongodb::MongoDbConnection,
-        "dynamodb" => datasources_dynamodb::DynamoDbConnection,
+        "json" => datasources_json::JsonProvider,
+        "memory" => datasources_memory::MemoryProvider,
+        "sqlite" => datasources_sqlite::SqliteProvider,
+        "text" => datasources_text::TextProvider,
+        "xml" => datasources_xml::XmlProvider,
+        "yaml" => datasources_yaml::YamlProvider,
+        "mysql" => datasources_mysql::MysqlProvider,
+        "sqlserver" => datasources_sqlserver::SqlServerProvider,
+        "postgres" => datasources_postgres::PostgresProvider,
+        "oracle" => datasources_oracle::OracleProvider,
+        "mongodb" => datasources_mongodb::MongoDbProvider,
+        "dynamodb" => datasources_dynamodb::DynamoDbProvider,
     )
 }
 

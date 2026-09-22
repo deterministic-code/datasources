@@ -1,7 +1,7 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
     as_readonly, CRUDRepository, CommandMiddleware, Connection, EnrichedCRUDRepository,
-    DefaultTypeConverters, ICRUDRepository, RepositoryBuilderOptions,
+    ICRUDRepository, RepositoryBuilderOptions,
     TypeConverter, Value,
 };
 use std::collections::HashMap;
@@ -11,12 +11,8 @@ fn columns(names: &[&str]) -> Vec<String> {
     names.iter().map(|name| (*name).to_string()).collect()
 }
 
-fn take(provider: &str, key: &str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
-    DefaultTypeConverters::for_provider(provider).remove(key)
-}
-
 fn stamp_fields(
-    provider: &str,
+    field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
     [
         ("uuid", "uuid"),
@@ -25,9 +21,7 @@ fn stamp_fields(
         ("version", "binary"),
     ]
     .into_iter()
-    .filter_map(|(column, key)| {
-        take(provider, key).map(|converter| (column.to_string(), converter))
-    })
+    .filter_map(|(column, key)| field(key).map(|converter| (column.to_string(), converter)))
     .collect()
 }
 
@@ -36,12 +30,11 @@ fn repo(
     entity: &str,
     names: &[&str],
     middleware: Option<Arc<dyn CommandMiddleware>>,
+    field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> Arc<dyn ICRUDRepository> {
     let mut options = RepositoryBuilderOptions::with_factory(connection.clone());
     options.entity = entity.into();
-    options.mapping = Some(
-        RowTypeConverter::new(columns(names)).with_fields(stamp_fields(&connection.provider())),
-    );
+    options.mapping = Some(RowTypeConverter::new(columns(names)).with_fields(stamp_fields(field)));
     let mut repo = CRUDRepository::new(options).expect("contacts repo");
     if let Some(middleware) = middleware {
         repo.add_middleware(middleware);
@@ -52,6 +45,7 @@ fn repo(
 pub fn contacts_service_of(
     connection: Arc<dyn Connection>,
     middleware: Option<Arc<dyn CommandMiddleware>>,
+    field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> EnrichedCRUDRepository {
     let base = [
         "id",
@@ -105,18 +99,21 @@ pub fn contacts_service_of(
         "address_type",
         &named,
         middleware.clone(),
+        field,
     ));
     let phone_types = as_readonly(repo(
         connection.clone(),
         "phone_type",
         &named,
         middleware.clone(),
+        field,
     ));
     let mut inner = EnrichedCRUDRepository::new(repo(
         connection.clone(),
         "contacts_base",
         &base,
         middleware.clone(),
+        field,
     ));
     inner
         .add_enriched(
@@ -127,6 +124,7 @@ pub fn contacts_service_of(
                 "contact_type",
                 &named,
                 middleware.clone(),
+                field,
             )),
             "id",
             Some("name".into()),
@@ -140,6 +138,7 @@ pub fn contacts_service_of(
                 "contact_source",
                 &named,
                 middleware.clone(),
+                field,
             )),
             "id",
             Some("name".into()),
@@ -148,7 +147,7 @@ pub fn contacts_service_of(
         .add_enriched_repo_with(
             "addresses",
             "id",
-            repo(connection.clone(), "address", &address, middleware.clone()),
+            repo(connection.clone(), "address", &address, middleware.clone(), field),
             "contact_id",
             None,
             true,
@@ -166,7 +165,7 @@ pub fn contacts_service_of(
         .add_enriched_repo_with(
             "phones",
             "id",
-            repo(connection, "phone", &phone, middleware),
+            repo(connection, "phone", &phone, middleware, field),
             "contact_id",
             None,
             true,

@@ -3,30 +3,23 @@ mod connection;
 mod converters;
 
 pub use command::XmlCommand;
-pub use connection::XmlConnection;
+pub use connection::{XmlConnection, XmlProvider};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, register, reset, BuiltDatasource, Datasource};
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new(
-            "xml",
-            || XmlConnection::from_options(None),
-            XmlConnection::repository,
-        )
+        BuiltDatasource::new("xml", Arc::new(XmlProvider), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register(
-            "xml",
-            XmlConnection::from_options,
-            XmlConnection::repository,
-        );
+        register("xml", Arc::new(XmlProvider));
         assert_eq!(
             create(Some(&HashMap::from([("provider".into(), "xml".into())])))
                 .unwrap()

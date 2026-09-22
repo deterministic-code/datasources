@@ -27,7 +27,7 @@ public static class RepositorySpec
         var session = open();
         await session.Connection.Open();
         await session.Command.Execute(createTable(PhysicalTable(spec.Type), Columns(spec.Type)));
-        var types = DefaultTypeConverters.For(session.Connection.Provider);
+        var types = session.Types;
         var fields = FieldsOf(spec.Type, types);
         if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");
         var logs = new List<string>();
@@ -388,7 +388,10 @@ public static class RepositorySpec
     static bool Verbose() =>
         Environment.GetEnvironmentVariable("VERBOSE") is "1" or "true";
 
-    public sealed record Session(IConnection Connection, ICommand Command);
+    public sealed record Session(
+        IConnection Connection,
+        ICommand Command,
+        IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types);
 
     sealed class SpecUser
     {

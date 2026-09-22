@@ -5,6 +5,7 @@ mod connection_driver;
 mod connection_string;
 mod converters;
 mod driver;
+mod provider;
 mod rusqlite_driver;
 mod sqlite_path;
 mod column;
@@ -15,6 +16,7 @@ mod transaction_driver;
 
 pub use command::SqliteCommand;
 pub use connection::SqliteConnection;
+pub use provider::SqliteProvider;
 pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
 pub use rusqlite_driver::RusqliteDriver;
 pub use column::SqliteColumn;
@@ -36,10 +38,40 @@ mod repository_spec;
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, BuiltDatasource, Command, Connection, Datasource, IsolationLevel,
+        create, register, reset, BuiltDatasource, Command, Connection, Datasource, Driver,
+        IsolationLevel, Transaction,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
+
+    struct With(Arc<dyn SqliteDriver>, Option<String>);
+
+    impl Driver for With {
+        fn connection(&self, _: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+            Arc::new(SqliteConnection::new(self.1.clone(), self.0.clone()))
+        }
+
+        fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
+            connection.create_command()
+        }
+
+        fn transaction(
+            &self,
+            connection: Arc<dyn Connection>,
+            isolation: IsolationLevel,
+        ) -> Arc<dyn Transaction> {
+            let conn = datasources::downcast_connection::<SqliteConnection>(connection)
+                .expect("sqlite");
+            Arc::new(SqliteTransaction::new(conn.driver.clone(), isolation))
+        }
+
+        fn types(
+            &self,
+        ) -> HashMap<String, Box<dyn datasources::TypeConverter<datasources::Value, datasources::Value> + Send + Sync>>
+        {
+            crate::converters::types()
+        }
+    }
 
     #[tokio::test]
     async fn sqlite_command_and_repository() {
@@ -105,13 +137,7 @@ mod tests {
         let driver_for_ds = driver.clone();
         register(
             "sqlite",
-            move |_| {
-                Arc::new(SqliteConnection::new(
-                    Some(":memory:".into()),
-                    driver_for_ds.clone(),
-                ))
-            },
-            SqliteConnection::repository,
+            Arc::new(With(driver_for_ds, Some(":memory:".into()))),
         );
         let ds = create(Some(&HashMap::from([("provider".into(), "sqlite".into())]))).unwrap();
         assert_eq!(ds.provider(), "sqlite");
@@ -122,11 +148,8 @@ mod tests {
         ds.create_repository(None);
         let factory = BuiltDatasource::new(
             "sqlite",
-            {
-                let driver = driver.clone();
-                move || Arc::new(SqliteConnection::new(None, driver.clone()))
-            },
-            SqliteConnection::repository,
+            Arc::new(With(driver.clone(), None)),
+            None,
         );
         factory.create_connection().await.unwrap();
         let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
@@ -154,4 +177,4 @@ mod tests {
     }
 }
 
-pub use converters::{register as register_converters, types as converter_types};
+pub use converters::types as converter_types;

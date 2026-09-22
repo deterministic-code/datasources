@@ -8,6 +8,12 @@ pub struct MemoryTransaction {
     pub(crate) isolation: IsolationLevel,
 }
 
+impl MemoryTransaction {
+    pub(crate) fn new(state: Arc<MemoryState>, isolation: IsolationLevel) -> Self {
+        Self { state, isolation }
+    }
+}
+
 #[async_trait]
 impl Transaction for MemoryTransaction {
     fn isolation(&self) -> IsolationLevel {

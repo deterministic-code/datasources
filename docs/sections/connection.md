@@ -222,7 +222,7 @@ Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFil
 ::: example
 ```csharp csharp/Datasources.Tests/ConnectionTests.cs#L27-L33
 ```
-```rust rust/datasources/src/tests/connection.rs#L25-L31
+```rust rust/datasources/src/tests/connection.rs#L21-L26
 ```
 ```typescript typescript/datasources/src/Connection.test.ts#L31-L35
 ```
@@ -233,7 +233,7 @@ Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFil
 ::: example
 ```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L7-L14
 ```
-```rust rust/providers/memory/src/lib.rs#L48-L54
+```rust rust/providers/memory/src/lib.rs#L47-L52
 ```
 ```typescript typescript/providers/memory/src/index.test.ts#L36-L41
 ```
@@ -244,7 +244,7 @@ Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFil
 ::: example
 ```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L16-L23
 ```
-```rust rust/providers/memory/src/lib.rs#L56-L62
+```rust rust/providers/memory/src/lib.rs#L54-L60
 ```
 ```typescript typescript/providers/memory/src/index.test.ts#L43-L48
 ```

@@ -14,6 +14,7 @@ export type RepositoryBuilderOptions<T = Cells> = {
   crudMapper?: CRUDMapper<T>;
   type?: Constructable<T>;
   converters?: Record<string, TypeConverter<Cell, Cell>>;
+  types?: Record<string, TypeConverter<Cell, Cell>>;
   fields?: Record<string, TypeConverter<Cell, Cell>>;
   columns?: string[];
 };

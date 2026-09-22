@@ -8,6 +8,12 @@ pub struct PostgresTransaction {
     pub(crate) isolation: IsolationLevel,
 }
 
+impl PostgresTransaction {
+    pub fn new(driver: Arc<dyn PostgresDriver>, isolation: IsolationLevel) -> Self {
+        Self { driver, isolation }
+    }
+}
+
 #[async_trait]
 impl Transaction for PostgresTransaction {
     fn isolation(&self) -> IsolationLevel {

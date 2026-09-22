@@ -1,8 +1,12 @@
 use crate::command::Command;
 use crate::connection::Connection;
+use crate::crud_repository::CRUDRepository;
+use crate::driver::Driver;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
+use crate::table_repository_builder_options::RepositoryBuilderOptions;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 #[async_trait]
@@ -22,28 +26,29 @@ pub trait Datasource: Send + Sync {
 
 pub struct BuiltDatasource {
     provider: String,
-    new_connection: Arc<dyn Fn() -> Arc<dyn Connection> + Send + Sync>,
-    new_repository: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync>,
+    driver: Arc<dyn Driver>,
+    options: Option<HashMap<String, String>>,
     connection: Mutex<Option<Arc<dyn Connection>>>,
 }
 
 impl BuiltDatasource {
     pub fn new(
         provider: impl Into<String>,
-        new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static,
-        new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static,
+        driver: Arc<dyn Driver>,
+        options: Option<HashMap<String, String>>,
     ) -> Self {
         Self {
             provider: provider.into(),
-            new_connection: Arc::new(new_connection),
-            new_repository: Arc::new(new_repository),
+            driver,
+            options,
             connection: Mutex::new(None),
         }
     }
 
     fn default_connection(&self) -> Arc<dyn Connection> {
         let mut slot = self.connection.lock().expect("connection");
-        slot.get_or_insert_with(|| (self.new_connection)()).clone()
+        slot.get_or_insert_with(|| self.driver.connection(self.options.as_ref()))
+            .clone()
     }
 }
 
@@ -58,15 +63,17 @@ impl Datasource for BuiltDatasource {
     }
 
     fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        connection
-            .unwrap_or_else(|| self.default_connection())
-            .create_command()
+        self.driver
+            .command(connection.unwrap_or_else(|| self.default_connection()))
     }
 
     fn create_repository(
         &self,
         connection: Option<Arc<dyn Connection>>,
     ) -> Arc<dyn ICRUDRepository> {
-        (self.new_repository)(connection.unwrap_or_else(|| self.default_connection()))
+        let connection = connection.unwrap_or_else(|| self.default_connection());
+        let mut options = RepositoryBuilderOptions::with_factory(connection);
+        options.types = self.driver.types();
+        Arc::new(CRUDRepository::new(options).expect("repository"))
     }
 }

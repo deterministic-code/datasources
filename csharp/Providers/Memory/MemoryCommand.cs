@@ -18,6 +18,18 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
         });
 
+    public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        ExecuteReader(FilterText(statement), parameters);
+
+    public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        statement switch
+        {
+            IInsertStatement => Execute("insert", parameters),
+            IUpdateStatement update => Execute("update", WithWhere(parameters, update.Where)),
+            IDeleteStatement delete => Execute("delete", WithWhere(parameters, delete.Where)),
+            _ => Execute(statement.GetText(), parameters)
+        };
+
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
@@ -90,6 +102,21 @@ public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         if (value.TryGetValue<string>(out var s)) return s;
         return value.ToString();
     }
+
+    static string FilterText(IStatement statement)
+    {
+        var where = statement is IQuery query ? query.Where?.GetText() : null;
+        if (LooksJson(where)) return where!;
+        var text = statement.GetText();
+        return LooksJson(text) || string.IsNullOrWhiteSpace(text) ? text : "";
+    }
+
+    static IReadOnlyList<Parameter>? WithWhere(IReadOnlyList<Parameter>? parameters, IWhere? where) =>
+        LooksJson(where?.GetText())
+            ? [.. parameters ?? [], new Parameter("$where", where!.GetText())]
+            : parameters;
+
+    static bool LooksJson(string? text) => text?.TrimStart().StartsWith('{') == true;
 
     private static IReadOnlyList<Row> EmptyRows() => [];
 }

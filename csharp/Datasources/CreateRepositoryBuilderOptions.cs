@@ -5,16 +5,22 @@ namespace Datasources;
 
 public static class CreateRepositoryBuilderOptions
 {
-    public static RepositoryBuilderOptions<T> FromType<T>(IConnection connection)
+    public static RepositoryBuilderOptions<T> FromType<T>(
+        IConnection connection,
+        IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null)
         where T : new() =>
-        FromType<T>(typeof(T), connection);
+        FromType<T>(typeof(T), connection, types);
 
-    public static RepositoryBuilderOptions<T> FromType<T>(Type type, IConnection connection)
+    public static RepositoryBuilderOptions<T> FromType<T>(
+        Type type,
+        IConnection connection,
+        IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null)
         where T : new() =>
         new()
         {
             Ids = DefaultId(type),
-            Connection = connection
+            Connection = connection,
+            Types = types
         };
 
     static IReadOnlyList<string> DefaultId(Type type)

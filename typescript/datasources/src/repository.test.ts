@@ -121,6 +121,29 @@ describe("CRUDRepository", () => {
     expect(item.Id).toBe(9);
   });
 
+  it("skips apply when create identity is missing", async () => {
+    const { repo, command } = create({
+      crudMapper: new CRUDMapper({
+        create: new TransformMapper(() => undefined as never, () => null),
+      }),
+    });
+    command.response = { result: 9, rowsAffected: 1 };
+    const obj = { id: 1, name: "a" };
+    await repo.create(obj);
+    expect(obj.id).toBe(1);
+  });
+
+  it("updates without id columns using a tautology", async () => {
+    const { repo, command } = create({ ids: [] });
+    await repo.update({ id: 1, name: "a" });
+    expect(command.executeCalls[0]?.text).toContain("1 = 1");
+    await repo.delete({ id: 1, name: "a" });
+    expect(command.executeCalls[1]?.parameters).toEqual([
+      { name: "id", value: 1 },
+      { name: "name", value: "a" },
+    ]);
+  });
+
   it("supports composite id and omits ids on create", async () => {
     const { repo, command } = create({
       ids: ["org_id", "user_id"],

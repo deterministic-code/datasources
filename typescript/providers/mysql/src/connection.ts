@@ -26,12 +26,7 @@ export class MysqlConnection implements IConnection {
       url: options?.url ?? options?.database_url,
     });
 
-  static repository = (connection: IConnection) =>
-    new CRUDRepository({
-      connection: connection as MysqlConnection,
-      entity: "items",
-      mapping: new RowTypeConverter(),
-    });
+
 
   constructor(options: MysqlConnectionOptions = {}) {
     this.url = options.url ?? "";

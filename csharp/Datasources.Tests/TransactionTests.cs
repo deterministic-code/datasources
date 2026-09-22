@@ -19,7 +19,7 @@ public class TransactionTests
         DatasourceFactory.Reset();
         foreach (var key in EnvKeys)
             Environment.SetEnvironmentVariable(key, null);
-        DatasourceFactory.Register("sqlite", _ => new MockConnection(), c => new MockRepository<object>(c));
+        DatasourceFactory.Register("sqlite", new MockDriver());
         Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
     }

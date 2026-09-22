@@ -3,8 +3,7 @@ use crate::driver::{require_driver, MysqlDriver};
 use crate::transaction::MysqlTransaction;
 use async_trait::async_trait;
 use datasources::{
-    CRUDRepository, Command, Connection, DatasourceError, IsolationLevel, ICRUDRepository,
-    RepositoryBuilderOptions, Result, RowTypeConverter, Transaction,
+    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -17,7 +16,6 @@ pub struct MysqlConnection {
 
 impl MysqlConnection {
     pub fn new(url: Option<String>, driver: Arc<dyn MysqlDriver>) -> Self {
-        crate::converters::register();
         Self {
             url: url.unwrap_or_default(),
             driver,
@@ -31,12 +29,6 @@ impl MysqlConnection {
             url,
             require_driver(None).expect("MySQL driver is required"),
         ))
-    }
-
-    pub fn repository(connection: Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> {
-        let mut options = RepositoryBuilderOptions::with_factory(connection);
-        options.mapping = Some(RowTypeConverter::new(vec![]));
-        Arc::new(CRUDRepository::new(options).expect("repository"))
     }
 
     pub fn ensure_open(&self) -> Result<()> {

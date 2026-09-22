@@ -1,5 +1,6 @@
 export { SqliteCommand } from "./command.ts";
 export { SqliteConnection } from "./connection.ts";
+export { SqliteProvider } from "./SqliteProvider.ts";
 export type { SqliteConnectionOptions } from "./connection-options.ts";
 export { BetterSqliteDriver } from "./better-sqlite-driver.ts";
 export {

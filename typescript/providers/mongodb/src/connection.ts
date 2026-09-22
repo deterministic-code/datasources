@@ -1,6 +1,5 @@
 import {
   StubConnection,
-  StubRepository,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
@@ -17,6 +16,5 @@ export class MongoDbConnection extends StubConnection {
   static from = (options?: DatasourceOptions): MongoDbConnection =>
     new MongoDbConnection(options);
 
-  static repository = (connection: IConnection) =>
-    new StubRepository(connection.provider, connection);
+
 }

@@ -266,7 +266,7 @@ Omitted isolation is `Serializable` (TypeScript omits the argument, C# defaults,
 ::: example
 ```csharp csharp/Datasources.Tests/TransactionTests.cs#L27-L35
 ```
-```rust rust/datasources/src/tests/transaction.rs#L25-L33
+```rust rust/datasources/src/tests/transaction.rs#L21-L28
 ```
 ```typescript typescript/datasources/src/Transaction.test.ts#L31-L37
 ```
@@ -277,7 +277,7 @@ Omitted isolation is `Serializable` (TypeScript omits the argument, C# defaults,
 ::: example
 ```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L7-L15
 ```
-```rust rust/providers/memory/src/lib.rs#L64-L71
+```rust rust/providers/memory/src/lib.rs#L63-L69
 ```
 ```typescript typescript/providers/memory/src/index.test.ts#L52-L58
 ```
@@ -288,7 +288,7 @@ Omitted isolation is `Serializable` (TypeScript omits the argument, C# defaults,
 ::: example
 ```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L17-L25
 ```
-```rust rust/providers/memory/src/lib.rs#L73-L80
+```rust rust/providers/memory/src/lib.rs#L72-L78
 ```
 ```typescript typescript/providers/memory/src/index.test.ts#L60-L66
 ```

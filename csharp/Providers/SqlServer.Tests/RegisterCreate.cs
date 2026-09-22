@@ -4,9 +4,8 @@ using Datasources.SqlServer;
 public partial class RegisterCreateTests
 {
     const string Provider = "sqlserver";
-    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new SqlServerConnection(options);
-    static object Repository(IConnection connection) => SqlServerConnection.Repository(connection);
-    static IDatasource Ds() => new Datasource(Provider, () => new SqlServerConnection(), SqlServerConnection.Repository);
+    static readonly IDriver Driver = new SqlServerProvider();
+    static IDatasource Ds() => new Datasource(Provider, new SqlServerProvider());
 
     [Fact]
     public async Task CreatesConnection()

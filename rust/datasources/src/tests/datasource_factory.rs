@@ -1,8 +1,7 @@
 use crate::{
-    create, default, register, reset, Datasource, DatasourceError, MockConnection, MockRepository,
+    create, default, register, reset, Datasource, DatasourceError, MockDriver,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
 
 fn clear_env() {
     reset();
@@ -21,11 +20,7 @@ fn clear_env() {
 #[test]
 fn default_from_environment() {
     clear_env();
-    register(
-        "sqlite",
-        |_| MockConnection::new(),
-        |_| Arc::new(MockRepository::new()),
-    );
+    register("sqlite", MockDriver::arc());
     std::env::set_var("PROVIDER", "sqlite");
     std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
     let ds = default().expect("default");

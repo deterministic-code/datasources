@@ -39,7 +39,14 @@ impl Text for MockQuery {
     }
 }
 
-impl Statement for MockQuery {}
+impl Statement for MockQuery {
+    fn kind(&self) -> crate::statements::StatementKind {
+        crate::statements::StatementKind::Query
+    }
+    fn predicate(&self) -> Option<&dyn Where> {
+        self.where_clause.as_deref()
+    }
+}
 
 impl Query for MockQuery {
     fn where_clause(&self) -> Option<&dyn Where> {

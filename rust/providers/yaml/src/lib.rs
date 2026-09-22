@@ -3,30 +3,23 @@ mod connection;
 mod converters;
 
 pub use command::YamlCommand;
-pub use connection::YamlConnection;
+pub use connection::{YamlConnection, YamlProvider};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, register, reset, BuiltDatasource, Datasource};
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new(
-            "yaml",
-            || YamlConnection::from_options(None),
-            YamlConnection::repository,
-        )
+        BuiltDatasource::new("yaml", Arc::new(YamlProvider), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register(
-            "yaml",
-            YamlConnection::from_options,
-            YamlConnection::repository,
-        );
+        register("yaml", Arc::new(YamlProvider));
         assert_eq!(
             create(Some(&HashMap::from([("provider".into(), "yaml".into())])))
                 .unwrap()

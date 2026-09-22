@@ -4,17 +4,14 @@ namespace Datasources;
 
 public sealed class DatasourceFactory : IDatasourceFactory
 {
-    static readonly Dictionary<string, (Func<IReadOnlyDictionary<string, string?>?, IConnection> Connection, Func<IConnection, object> Repository)> Factories = new();
+    static readonly Dictionary<string, IDriver> Factories = new();
 
     public static IDatasource Default => Create();
 
     public static void Defaults(IReadOnlyDictionary<string, string?> options) => RegisterInstalled(options);
 
-    public static void Register(
-        string provider,
-        Func<IReadOnlyDictionary<string, string?>?, IConnection> connection,
-        Func<IConnection, object> repository) =>
-        Factories[provider] = (connection, repository);
+    public static void Register(string provider, IDriver driver) =>
+        Factories[provider] = driver;
 
     public static IDatasource Create(IReadOnlyDictionary<string, string?>? options = null) =>
         Resolve(options);
@@ -31,8 +28,8 @@ public sealed class DatasourceFactory : IDatasourceFactory
         }
         var name = Get(options, "provider") ?? ProviderFromUrl.From(Get(options, "database_url"))
             ?? throw new DatasourceException("Datasource defaults are not specified");
-        return Factories.TryGetValue(name, out var pair)
-            ? new Datasource(name, () => pair.Connection(options), pair.Repository)
+        return Factories.TryGetValue(name, out var driver)
+            ? new Datasource(name, driver, options)
             : throw new ProviderNotInstalledException(name);
     }
 

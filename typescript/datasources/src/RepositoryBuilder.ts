@@ -1,11 +1,10 @@
 import type { IConnection } from "./IConnection.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { CRUDMapper } from "./CRUDMapper.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
-import { createRepositoryBuilderOptions, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
+import { createRepositoryBuilderOptions, defaultId, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
 import { statementsOf } from "./RepositoryStatements.ts";
@@ -17,7 +16,7 @@ export const parts = <T>(
   options: RepositoryBuilderOptions<T>,
 ): BuiltRepository<T> => {
   const types = {
-    ...DefaultTypeConverters.for(options.connection.provider),
+    ...options.types,
     ...options.converters,
   };
   const rowConverter =
@@ -42,7 +41,7 @@ export const parts = <T>(
     crudMapper,
     statements: statementsOf(entity, columns, crudMapper),
     columns,
-    ids: options.ids ?? ["id"],
+    ids: options.ids ?? (options.type ? defaultId(fieldNamesOf(options.type)) : []),
     type: options.type ?? (Object as never as Constructable<T>),
   };
 };

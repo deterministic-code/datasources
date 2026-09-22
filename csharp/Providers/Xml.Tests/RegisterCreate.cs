@@ -4,9 +4,8 @@ using Datasources.Xml;
 public partial class RegisterCreateTests
 {
     const string Provider = "xml";
-    static IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new XmlConnection(options);
-    static object Repository(IConnection connection) => XmlConnection.Repository(connection);
-    static IDatasource Ds() => new Datasource(Provider, () => new XmlConnection(), XmlConnection.Repository);
+    static readonly IDriver Driver = new XmlProvider();
+    static IDatasource Ds() => new Datasource(Provider, new XmlProvider());
 
     [Fact]
     public async Task CreatesConnection()

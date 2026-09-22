@@ -3,13 +3,13 @@ mod connection;
 mod converters;
 mod file_store;
 mod filter;
-mod repository;
+mod provider;
 mod transaction;
 
 pub use command::JsonCommand;
 pub use connection::JsonConnection;
+pub use provider::JsonProvider;
 pub use file_store::{FileStore, MemoryFileStore};
-pub use repository::JsonRepository;
 pub use transaction::JsonTransaction;
 
 #[cfg(test)]
@@ -19,12 +19,19 @@ pub(crate) use filter::{json_from_record, json_to_value, matches, parse_filter, 
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, ICRUDRepository, IReadonlyRepository,
-        Parameter, Row, QueryStatement, TextWhere, Value,
+        create, register, reset, Command, Connection, CRUDRepository, ICRUDRepository,
+        IReadonlyRepository, Parameter, RepositoryBuilderOptions, Row, QueryStatement, TextWhere,
+        Value,
     };
     use serde_json::{Map, Value as JsonValue};
     use std::collections::HashMap;
     use std::sync::Arc;
+
+    fn crud(conn: Arc<JsonConnection>) -> CRUDRepository {
+        let mut options = RepositoryBuilderOptions::with_factory(conn);
+        options.ids = vec![];
+        CRUDRepository::new(options).expect("repo")
+    }
 
     fn rec(id: i64, name: &str) -> Row {
         let mut r = Row::new();
@@ -43,7 +50,7 @@ mod tests {
         conn.open().await.unwrap();
         conn.open().await.unwrap();
         assert_eq!(conn.path(), "db.json");
-        let repo = JsonRepository::new(conn.clone());
+        let repo = crud(conn.clone());
         assert!(repo.read_single(None).await.unwrap().is_some());
         assert!(repo
             .read_single(Some(&QueryStatement::text("{\"id\":9}")))
@@ -120,7 +127,7 @@ mod tests {
             Some(serde_json::json!({})),
         ));
         memory.open().await.unwrap();
-        JsonRepository::new(memory.clone())
+        crud(memory.clone())
             .create(&mut rec(1, "a"))
             .await
             .unwrap();
@@ -132,11 +139,7 @@ mod tests {
         txn.commit().await.unwrap();
 
         reset();
-        register(
-            "json",
-            JsonConnection::from_options,
-            JsonConnection::repository,
-        );
+        register("json", Arc::new(JsonProvider));
         let ds = create(Some(&HashMap::from([("provider".into(), "json".into())]))).unwrap();
         assert_eq!(ds.provider(), "json");
         ds.create_connection().await.unwrap();
@@ -190,15 +193,15 @@ mod tests {
             .execute("insert", None)
             .await
             .is_err());
-        assert!(JsonRepository::new(closed.clone())
+        assert!(crud(closed.clone())
             .create(&mut rec(1, "a"))
             .await
             .is_err());
-        assert!(JsonRepository::new(closed.clone())
+        assert!(crud(closed.clone())
             .update(&rec(1, "a"), None)
             .await
             .is_err());
-        assert!(JsonRepository::new(closed)
+        assert!(crud(closed)
             .delete(&rec(1, "a"), None)
             .await
             .is_err());
