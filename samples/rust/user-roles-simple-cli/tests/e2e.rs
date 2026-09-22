@@ -82,9 +82,24 @@ fn docker(args: &[&str]) {
     assert!(status.success(), "docker {}", args.join(" "));
 }
 
+fn docker_ok(args: &[&str]) {
+    if skip_docker() {
+        return;
+    }
+    let _ = Command::new("docker")
+        .args(args)
+        .current_dir(repo())
+        .status();
+}
+
+fn remove_compose(service: &str) {
+    docker_ok(&["compose", "rm", "-sf", "-v", service]);
+    docker_ok(&["rm", "-f", &format!("datasources-{service}-1")]);
+}
+
 fn fresh_compose(service: &str) {
-    docker(&["compose", "rm", "-sf", "-v", service]);
-    docker(&["compose", "up", "-d", "--wait", service]);
+    remove_compose(service);
+    docker(&["compose", "up", "-d", "--force-recreate", "--wait", service]);
     if service == "mysql" {
         docker(&[
             "compose",
@@ -101,7 +116,7 @@ fn fresh_compose(service: &str) {
 }
 
 fn stop_compose(service: &str) {
-    docker(&["compose", "rm", "-sf", "-v", service]);
+    remove_compose(service);
 }
 
 struct StopCompose(&'static str);

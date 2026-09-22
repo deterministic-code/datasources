@@ -7,6 +7,19 @@ const root = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const compose = (...args: string[]) =>
   execFileSync("docker", ["compose", ...args], { cwd: root, stdio: "inherit" });
 
+const remove = (service: "mysql" | "postgres") => {
+  try {
+    compose("rm", "-sf", "-v", service);
+  } catch {
+    /* already gone */
+  }
+  try {
+    execFileSync("docker", ["rm", "-f", `datasources-${service}-1`], { stdio: "inherit" });
+  } catch {
+    /* already gone */
+  }
+};
+
 const grantMysql = () =>
   compose(
     "exec",
@@ -27,12 +40,12 @@ export const ensureCompose = (service: "mysql" | "postgres") => {
 
 export const freshCompose = (service: "mysql" | "postgres") => {
   if (process.env.SKIP_DOCKER) return;
-  compose("rm", "-sf", "-v", service);
-  compose("up", "-d", "--wait", service);
+  remove(service);
+  compose("up", "-d", "--force-recreate", "--wait", service);
   if (service === "mysql") grantMysql();
 };
 
 export const stopCompose = (service: "mysql" | "postgres") => {
   if (process.env.SKIP_DOCKER) return;
-  compose("rm", "-sf", "-v", service);
+  remove(service);
 };

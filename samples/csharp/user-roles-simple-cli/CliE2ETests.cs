@@ -161,8 +161,8 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     static void FreshCompose(string service)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        Require(Exec("docker", $"compose rm -sf -v {service}", RepoRoot()));
-        Require(Exec("docker", $"compose up -d --wait {service}", RepoRoot()));
+        RemoveCompose(service);
+        Require(Exec("docker", $"compose up -d --force-recreate --wait {service}", RepoRoot()));
         if (service == "mysql")
             Require(Exec(
                 "docker",
@@ -173,7 +173,13 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     static void StopCompose(string service)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        Require(Exec("docker", $"compose rm -sf -v {service}", RepoRoot()));
+        RemoveCompose(service);
+    }
+
+    static void RemoveCompose(string service)
+    {
+        Exec("docker", $"compose rm -sf -v {service}", RepoRoot());
+        Exec("docker", $"rm -f datasources-{service}-1", RepoRoot());
     }
 
     static (string Leftover, List<string> Sql) Commands(string stderr)
