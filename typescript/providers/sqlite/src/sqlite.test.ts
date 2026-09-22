@@ -14,7 +14,7 @@ vi.mock("better-sqlite3", () => {
   }
   return { default: Database };
 });
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository } from "@datasources/core";
 import {
   BetterSqliteDriver,
   bindParameters,
@@ -235,7 +235,7 @@ describe("SqliteConnection", () => {
   });
 });
 
-describe("SqliteCommand and Repository", () => {
+describe("SqliteCommand and CRUDRepository", () => {
   async function setup() {
     const { driver, db } = fakeDriver();
     const connection = new SqliteConnection({ driver });
@@ -296,12 +296,12 @@ describe("Sqlite datasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
-    expect(repo).toBeInstanceOf(Repository);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
+    expect(repo).toBeInstanceOf(CRUDRepository);
     expect(
       new Datasource("sqlite", () => new SqliteConnection({ driver }), SqliteConnection.repository)
         .createRepository(),
-    ).toBeInstanceOf(Repository);
+    ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "sqlite" }).provider).toBe("sqlite");
     expect(() => SqliteConnection.from({ filename: ":memory:" })).toThrow(DatasourceError);
     expect(() =>

@@ -33,7 +33,7 @@ public class RepositoryTests
         public int name { get; set; }
     }
 
-    static (Repository<T> Repo, MockCommand Command) Create<T>(
+    static (CRUDRepository<T> Repo, MockCommand Command) Create<T>(
         IReadOnlyList<string>? id = null,
         bool assignIdentityOnCreate = true)
         where T : new()
@@ -41,7 +41,7 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        return (new Repository<T>(new RepositoryBuilderOptions<T>
+        return (new CRUDRepository<T>(new RepositoryBuilderOptions<T>
         {
             Connection = connection,
             Ids = id ?? ["id"],
@@ -50,7 +50,7 @@ public class RepositoryTests
         }), command);
     }
 
-    static (Repository<UserRow> Repo, MockCommand Command) Create(
+    static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(
         IReadOnlyList<string>? id = null,
         bool assignIdentityOnCreate = true) =>
         Create<UserRow>(id, assignIdentityOnCreate);
@@ -140,7 +140,7 @@ public class RepositoryTests
         var connection2 = new MockConnection { Provider = "memory" };
         var command2 = new MockCommand(connection2);
         connection2.Command = command2;
-        var typed = new Repository<Item>(new RepositoryBuilderOptions<Item>
+        var typed = new CRUDRepository<Item>(new RepositoryBuilderOptions<Item>
         {
             Connection = connection2,
             Entity = "users"
@@ -191,7 +191,7 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new Repository<UserRow>(new RepositoryBuilderOptions<UserRow>
+        var repo = new CRUDRepository<UserRow>(new RepositoryBuilderOptions<UserRow>
         {
             Connection = connection,
             Entity = "users",
@@ -209,7 +209,7 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new Repository<User>(new RepositoryBuilderOptions<User>
+        var repo = new CRUDRepository<User>(new RepositoryBuilderOptions<User>
         {
             Connection = connection,
             Entity = "users",
@@ -250,7 +250,7 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new Repository<User>(new RepositoryBuilderOptions<User>
+        var repo = new CRUDRepository<User>(new RepositoryBuilderOptions<User>
         {
             Connection = connection,
             Entity = "users",
@@ -285,8 +285,8 @@ public class RepositoryTests
         Assert.Equal(new[] { "Id" }, fromId.Ids);
         Assert.Same(connection, fromId.Connection);
         Assert.Empty(CreateRepositoryBuilderOptions.FromType<Label>(connection).Ids);
-        Assert.NotNull(new Repository<Item>(fromId));
-        Assert.NotNull(new Repository<Item>(connection));
+        Assert.NotNull(new CRUDRepository<Item>(fromId));
+        Assert.NotNull(new CRUDRepository<Item>(connection));
         Assert.Same(connection, RepositoryBuilder<Item>.Parts(fromId).Connection);
     }
 

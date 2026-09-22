@@ -2,7 +2,6 @@ use crate::built_repository::BuiltRepository;
 use crate::converters::{Cells, DefaultTypeConverters, RowTypeConverter};
 use crate::mappers::{Mapper, StatementMapper, TransformMapper};
 use crate::result::Result;
-use crate::table_repository::Repository;
 use crate::table_repository_builder_options::RepositoryBuilderOptions;
 use crate::table_repository_statements::RepositoryStatements;
 use std::sync::Arc;
@@ -46,7 +45,4 @@ impl RepositoryBuilder {
         })
     }
 
-    pub fn build(options: RepositoryBuilderOptions) -> Result<Repository> {
-        Ok(Repository::from_built(Self::parts(options)?))
-    }
 }

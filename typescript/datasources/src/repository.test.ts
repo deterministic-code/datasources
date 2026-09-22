@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  Repository,
+  CRUDRepository,
   QueryStatement,
   RowTypeConverter,
   StatementMapper,
@@ -48,7 +48,7 @@ const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
   const command = new MockCommand(connection);
   connection.command = command;
   const type = overrides.type ?? asType(Item);
-  const repo = new Repository<Cells>({
+  const repo = new CRUDRepository<Cells>({
     ...overrides,
     connection,
     type,
@@ -58,7 +58,7 @@ const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
   return { repo, command };
 };
 
-describe("Repository", () => {
+describe("CRUDRepository", () => {
   it("builds select and maps rows", async () => {
     const { repo, command } = create();
     repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
@@ -147,7 +147,7 @@ describe("Repository", () => {
       }
     }).rejects.toThrow("Reader current must be a row");
     await repo.update({ id: 1, name: "a" }, new Where("id = 1"));
-    const typed = new Repository({
+    const typed = new CRUDRepository({
       connection,
       type: asType(Item),
       entity: "users",
@@ -203,7 +203,7 @@ describe("Repository", () => {
     const connection = new MockConnection(undefined, "memory");
     const command = new MockCommand(connection);
     connection.command = command;
-    const repo = new Repository<User>({
+    const repo = new CRUDRepository<User>({
       connection,
       type: User,
       entity: "users",
@@ -231,7 +231,7 @@ describe("Repository", () => {
     const connection = new MockConnection(undefined, "memory");
     const command = new MockCommand(connection);
     connection.command = command;
-    const repo = new Repository<User>({
+    const repo = new CRUDRepository<User>({
       connection,
       type: User,
       entity: "users",
@@ -273,9 +273,9 @@ describe("Repository", () => {
     expect(fromId.connection).toBe(connection);
     expect(createRepositoryBuilderOptions(asType(Label), connection).ids).toEqual([]);
     expect(createRepositoryBuilderOptions(asType(PascalId), connection).ids).toEqual(["Id"]);
-    expect(new Repository(fromId)).toBeInstanceOf(Repository);
-    expect(new Repository(asType(Item), connection)).toBeInstanceOf(Repository);
-    expect(new Repository(parts(fromId))).toBeInstanceOf(Repository);
+    expect(new CRUDRepository(fromId)).toBeInstanceOf(CRUDRepository);
+    expect(new CRUDRepository(asType(Item), connection)).toBeInstanceOf(CRUDRepository);
+    expect(new CRUDRepository(parts(fromId))).toBeInstanceOf(CRUDRepository);
     expect(RepositoryBuilder.from(fromId).parts().connection).toBe(connection);
     expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
     expect(parts({ connection }).statements.query().getText()).toBe("SELECT * FROM ");

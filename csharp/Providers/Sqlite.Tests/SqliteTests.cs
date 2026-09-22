@@ -67,7 +67,7 @@ public class SqliteTests
         await implicitCommand.Execute("");
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
-        Assert.IsType<Repository<Dictionary<string, Value>>>(repo2);
+        Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
         Assert.Throws<DatasourceException>(() =>
             new Datasource("sqlite", () => new SqliteConnection(), SqliteConnection.Repository)
                 .CreateRepository<Dictionary<string, Value>>());

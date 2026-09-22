@@ -31,7 +31,7 @@ public sealed class PostgresConnection : IConnection
     }
 
     public static object Repository(IConnection connection) =>
-        new Repository<Dictionary<string, Value>>(
+        new CRUDRepository<Dictionary<string, Value>>(
             new RepositoryBuilderOptions<Dictionary<string, Value>>
             {
                 Connection = (PostgresConnection)connection,

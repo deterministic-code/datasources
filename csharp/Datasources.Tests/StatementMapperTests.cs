@@ -20,12 +20,12 @@ public class StatementMapperTests
         },
         static name => name);
 
-    static (Repository<UserRow> Repo, MockCommand Command) Create(StatementMapper<UserRow> mapper)
+    static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(StatementMapper<UserRow> mapper)
     {
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        return (new Repository<UserRow>(new RepositoryBuilderOptions<UserRow>
+        return (new CRUDRepository<UserRow>(new RepositoryBuilderOptions<UserRow>
         {
             Connection = connection,
             Entity = "users",

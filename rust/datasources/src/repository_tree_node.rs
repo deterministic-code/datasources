@@ -1,7 +1,7 @@
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::repository::{as_readonly, CRUDRepository, ReadonlyRepository};
+use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -10,8 +10,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 pub struct RepositoryTreeNode {
-    pub value: Arc<dyn ReadonlyRepository>,
-    pub write: Option<Arc<dyn CRUDRepository>>,
+    pub value: Arc<dyn IReadonlyRepository>,
+    pub write: Option<Arc<dyn ICRUDRepository>>,
     pub property_name: String,
     pub items: Vec<RepositoryTreeNode>,
     pub enrichment: Option<Enrichment>,
@@ -19,7 +19,7 @@ pub struct RepositoryTreeNode {
 }
 
 impl RepositoryTreeNode {
-    pub fn new(value: Arc<dyn ReadonlyRepository>, property_name: impl Into<String>) -> Self {
+    pub fn new(value: Arc<dyn IReadonlyRepository>, property_name: impl Into<String>) -> Self {
         Self::with_strategy(
             value,
             property_name,
@@ -28,7 +28,7 @@ impl RepositoryTreeNode {
     }
 
     pub fn with_strategy(
-        value: Arc<dyn ReadonlyRepository>,
+        value: Arc<dyn IReadonlyRepository>,
         property_name: impl Into<String>,
         strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
     ) -> Self {
@@ -44,7 +44,7 @@ impl RepositoryTreeNode {
 
     pub fn include(
         &mut self,
-        via: Arc<dyn ReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository>,
         into: impl Into<String>,
         from: impl Into<String>,
         by: impl Into<String>,
@@ -66,7 +66,7 @@ impl RepositoryTreeNode {
 
     pub fn include_repo(
         &mut self,
-        via: Arc<dyn CRUDRepository>,
+        via: Arc<dyn ICRUDRepository>,
         into: impl Into<String>,
         from: impl Into<String>,
         by: impl Into<String>,

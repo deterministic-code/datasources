@@ -1,7 +1,7 @@
 import {
   DatasourceError,
   IsolationLevel,
-  Repository,
+  CRUDRepository,
   RowTypeConverter,
   type DatasourceOptions,
   type ICommand,
@@ -29,7 +29,7 @@ export class SqliteConnection implements IConnection {
     });
 
   static repository = (connection: IConnection) =>
-    new Repository({
+    new CRUDRepository({
       connection: connection as SqliteConnection,
       entity: "items",
       mapping: new RowTypeConverter(),

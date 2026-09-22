@@ -305,22 +305,22 @@ fn entity_type(&self) -> TypeId
 #### datasources
 
 ```rust
-pub fn as_readonly(repo: Arc<dyn CRUDRepository>) -> Arc<dyn ReadonlyRepository>
+pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository>
 ```
 
 **Methods**
 
 ##### as_readonly(repo)
 
-Views a [CRUDRepository](./crud-repository.md) as a [ReadonlyRepository](./readonly-repository.md).
+Views a [ICRUDRepository](./crud-repository.md) as a [IReadonlyRepository](./readonly-repository.md).
 
 ```rust
-pub fn as_readonly(repo: Arc<dyn CRUDRepository>) -> Arc<dyn ReadonlyRepository>
+pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository>
 ```
 
-- `repo` — [CRUDRepository](./crud-repository.md)
+- `repo` — [ICRUDRepository](./crud-repository.md)
 
-**Returns** `Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>`
+**Returns** `Arc<dyn `[IReadonlyRepository](./readonly-repository.md)`>`
 
 #### ReadonlyRepositoryFactory
 
@@ -335,20 +335,20 @@ pub trait ReadonlyRepositoryFactory
 Registers a readonly repository by [entity_type](#irepository-entity_type).
 
 ```rust
-fn register(&self, repository: Arc<dyn ReadonlyRepository>)
+fn register(&self, repository: Arc<dyn IReadonlyRepository>)
 ```
 
-- `repository` — [ReadonlyRepository](./readonly-repository.md) to look up by `entity_type`
+- `repository` — [IReadonlyRepository](./readonly-repository.md) to look up by `entity_type`
 
 ##### create()
 
 Creates a readonly repository by `T`.
 
 ```rust
-fn create<T: 'static>(&self) -> Result<Arc<dyn ReadonlyRepository>>
+fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>>
 ```
 
-**Returns** `Result<Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>>`
+**Returns** `Result<Arc<dyn `[IReadonlyRepository](./readonly-repository.md)`>>`
 
 #### CRUDRepositoryFactory
 
@@ -363,20 +363,20 @@ pub trait CRUDRepositoryFactory
 Registers a CRUD repository by [entity_type](#irepository-entity_type).
 
 ```rust
-fn register(&self, repository: Arc<dyn CRUDRepository>)
+fn register(&self, repository: Arc<dyn ICRUDRepository>)
 ```
 
-- `repository` — [CRUDRepository](./crud-repository.md) to look up by `entity_type`
+- `repository` — [ICRUDRepository](./crud-repository.md) to look up by `entity_type`
 
 ##### create()
 
 Creates a CRUD repository by `T`.
 
 ```rust
-fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>
+fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
 ```
 
-**Returns** `Result<Arc<dyn `[CRUDRepository](./crud-repository.md)`>>`
+**Returns** `Result<Arc<dyn `[ICRUDRepository](./crud-repository.md)`>>`
 
 #### RepositoryFactory
 
@@ -403,20 +403,20 @@ pub fn new() -> Self
 Registers CRUD and readonly for the same repository.
 
 ```rust
-pub fn register(&self, repository: Arc<dyn CRUDRepository>)
+pub fn register(&self, repository: Arc<dyn ICRUDRepository>)
 ```
 
-- `repository` — [CRUDRepository](./crud-repository.md) to look up by `entity_type`
+- `repository` — [ICRUDRepository](./crud-repository.md) to look up by `entity_type`
 
 ##### create()
 
 Creates a CRUD repository by `T`.
 
 ```rust
-pub fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>
+pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
 ```
 
-**Returns** `Result<Arc<dyn `[CRUDRepository](./crud-repository.md)`>>`
+**Returns** `Result<Arc<dyn `[ICRUDRepository](./crud-repository.md)`>>`
 :::
 
 ## Remarks

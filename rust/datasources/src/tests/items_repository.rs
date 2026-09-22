@@ -1,6 +1,6 @@
 use crate::i_repository::IRepository;
 use crate::query::Query;
-use crate::repository::ReadonlyRepository;
+use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
 use crate::statements::{StatementEvaluator, WhereClause};
@@ -43,7 +43,7 @@ impl ItemsRepository {
 impl IRepository for ItemsRepository {}
 
 #[async_trait]
-impl ReadonlyRepository for ItemsRepository {
+impl IReadonlyRepository for ItemsRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         Ok(self
             .filter(query.and_then(Query::where_clause))

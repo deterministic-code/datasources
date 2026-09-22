@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, Repository } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository } from "@datasources/core";
 import {
   bindParameters,
   loadPgDriver,
@@ -278,15 +278,15 @@ describe("Postgres datasource", () => {
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(Repository);
-    expect(repo).toBeInstanceOf(Repository);
+    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
+    expect(repo).toBeInstanceOf(CRUDRepository);
     expect(
       new Datasource(
         "postgres",
         () => new PostgresConnection({ driver }),
         PostgresConnection.repository,
       ).createRepository(),
-    ).toBeInstanceOf(Repository);
+    ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "postgres" }).provider).toBe("postgres");
     expect(() =>
       PostgresConnection.from({ database_url: "postgres://db/app", database_schema: "s" }),

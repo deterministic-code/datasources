@@ -1,6 +1,6 @@
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::repository::{as_readonly, CRUDRepository, ReadonlyRepository};
+use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
@@ -11,11 +11,11 @@ pub trait Datasource: Send + Sync {
     async fn create_connection(&self) -> Result<Arc<dyn Connection>>;
     fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command>;
     fn create_repository(&self, connection: Option<Arc<dyn Connection>>)
-        -> Arc<dyn CRUDRepository>;
+        -> Arc<dyn ICRUDRepository>;
     fn create_readonly_repository(
         &self,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn ReadonlyRepository> {
+    ) -> Arc<dyn IReadonlyRepository> {
         as_readonly(self.create_repository(connection))
     }
 }
@@ -23,7 +23,7 @@ pub trait Datasource: Send + Sync {
 pub struct BuiltDatasource {
     provider: String,
     new_connection: Arc<dyn Fn() -> Arc<dyn Connection> + Send + Sync>,
-    new_repository: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync>,
+    new_repository: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync>,
     connection: Mutex<Option<Arc<dyn Connection>>>,
 }
 
@@ -31,7 +31,7 @@ impl BuiltDatasource {
     pub fn new(
         provider: impl Into<String>,
         new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static,
-        new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static,
+        new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static,
     ) -> Self {
         Self {
             provider: provider.into(),
@@ -66,7 +66,7 @@ impl Datasource for BuiltDatasource {
     fn create_repository(
         &self,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Arc<dyn CRUDRepository> {
+    ) -> Arc<dyn ICRUDRepository> {
         (self.new_repository)(connection.unwrap_or_else(|| self.default_connection()))
     }
 }

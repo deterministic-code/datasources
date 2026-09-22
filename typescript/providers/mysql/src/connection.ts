@@ -1,7 +1,7 @@
 import {
   DatasourceError,
   IsolationLevel,
-  Repository,
+  CRUDRepository,
   RowTypeConverter,
   type DatasourceOptions,
   type ICommand,
@@ -27,7 +27,7 @@ export class MysqlConnection implements IConnection {
     });
 
   static repository = (connection: IConnection) =>
-    new Repository({
+    new CRUDRepository({
       connection: connection as MysqlConnection,
       entity: "items",
       mapping: new RowTypeConverter(),

@@ -271,7 +271,7 @@ pub struct BuiltDatasource
 Builds a datasource from a connection factory and a repository factory.
 
 ```rust
-pub fn new(provider: impl Into<String>, new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static, new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static) -> Self
+pub fn new(provider: impl Into<String>, new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static, new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static) -> Self
 ```
 
 - `provider` — registered provider name
@@ -323,7 +323,7 @@ fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Com
 Creates a CRUD repository bound to an optional open connection.
 
 ```rust
-fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository>
+fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ICRUDRepository>
 ```
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one
@@ -335,7 +335,7 @@ fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn 
 Creates a read-only repository bound to an optional open connection. Defaults to `create_repository`.
 
 ```rust
-fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository>
+fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn IReadonlyRepository>
 ```
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one

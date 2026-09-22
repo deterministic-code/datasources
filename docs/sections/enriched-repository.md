@@ -4,7 +4,7 @@ A read-only wrapper fills properties already on `T` from related repositories. T
 
 Lookups use `ReadSingle` / `read_single_where` (cached per distinct key). Lists use `Read` / `read_where`. Missing lookups leave the destination default.
 
-`DeepCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
+`EnrichedCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
 
 - **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
@@ -127,15 +127,15 @@ read(query?: IQuery | IWhere): AsyncIterable<T>
 
 **Returns** `AsyncIterable<T>`
 
-#### DeepCRUDRepository
+#### EnrichedCRUDRepository
 
 ```typescript
-class DeepCRUDRepository<T extends object> extends EnrichedReadonlyRepository<T> implements ICRUDRepository<T>
+class EnrichedCRUDRepository<T extends object> extends EnrichedReadonlyRepository<T> implements ICRUDRepository<T>
 ```
 
 **Constructor**
 
-##### DeepCRUDRepository(inner, strategy?)
+##### EnrichedCRUDRepository(inner, strategy?)
 
 Wraps an inner [ICRUDRepository](./crud-repository.md). Omitted strategy uses the default.
 
@@ -470,20 +470,20 @@ public override IAsyncEnumerable<T> Read(IStatement? query = null)
 
 **Returns** `IAsyncEnumerable<T>`
 
-#### DeepCRUDRepository
+#### EnrichedCRUDRepository
 
 ```csharp
-public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
+public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
 ```
 
 **Constructor**
 
-##### DeepCRUDRepository(inner, strategy)
+##### EnrichedCRUDRepository(inner, strategy)
 
 Wraps an inner [ICRUDRepository](./crud-repository.md). Omitted strategy uses the default.
 
 ```csharp
-public DeepCRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
+public EnrichedCRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
 - `inner` — [ICRUDRepository](./crud-repository.md)
@@ -841,10 +841,10 @@ pub fn add_enriched_repo_with(&mut self, into: impl Into<String>, from: impl Int
 
 **Returns** `&mut Self`
 
-#### DeepCRUDRepository
+#### EnrichedCRUDRepository
 
 ```rust
-pub struct DeepCRUDRepository
+pub struct EnrichedCRUDRepository
 ```
 
 **Constructor**
@@ -859,7 +859,7 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 - `inner` — [CRUDRepository](./crud-repository.md)
 
-**Returns** [DeepCRUDRepository](#deepcrudrepository)
+**Returns** [EnrichedCRUDRepository](#deepcrudrepository)
 
 ##### with_strategy(inner, strategy)
 
@@ -872,7 +872,7 @@ pub fn with_strategy(inner: Arc<dyn CRUDRepository>, strategy: Arc<dyn ReadonlyE
 - `inner` — [CRUDRepository](./crud-repository.md)
 - `strategy` — [ReadonlyEnrichmentStrategy](#readonlyenrichmentstrategy)
 
-**Returns** [DeepCRUDRepository](#deepcrudrepository)
+**Returns** [EnrichedCRUDRepository](#deepcrudrepository)
 
 **Methods**
 

@@ -7,7 +7,7 @@ use crate::enrichment::Enrichment;
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::i_repository::IRepository;
-use crate::repository::{as_readonly, CRUDRepository, ReadonlyRepository};
+use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
 use crate::result::Result;
@@ -28,18 +28,18 @@ enum Mode {
     Delete,
 }
 
-pub struct DeepCRUDRepository {
-    inner: Arc<dyn CRUDRepository>,
+pub struct EnrichedCRUDRepository {
+    inner: Arc<dyn ICRUDRepository>,
     enriched: EnrichedReadonlyRepository,
 }
 
-impl DeepCRUDRepository {
-    pub fn new(inner: Arc<dyn CRUDRepository>) -> Self {
+impl EnrichedCRUDRepository {
+    pub fn new(inner: Arc<dyn ICRUDRepository>) -> Self {
         Self::with_strategy(inner, Arc::new(DefaultReadonlyEnrichmentStrategy))
     }
 
     pub fn with_strategy(
-        inner: Arc<dyn CRUDRepository>,
+        inner: Arc<dyn ICRUDRepository>,
         strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
     ) -> Self {
         Self {
@@ -55,7 +55,7 @@ impl DeepCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn ReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -69,7 +69,7 @@ impl DeepCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn ReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -84,7 +84,7 @@ impl DeepCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn CRUDRepository>,
+        via: Arc<dyn ICRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -98,7 +98,7 @@ impl DeepCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn CRUDRepository>,
+        via: Arc<dyn ICRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -165,7 +165,7 @@ impl DeepCRUDRepository {
     async fn create_children(
         &self,
         node: &RepositoryTreeNode,
-        writer: &dyn CRUDRepository,
+        writer: &dyn ICRUDRepository,
         enrichment: &Enrichment,
         parent: &mut Row,
     ) -> Result<()> {
@@ -187,7 +187,7 @@ impl DeepCRUDRepository {
     async fn sync_children(
         &self,
         node: &RepositoryTreeNode,
-        writer: &dyn CRUDRepository,
+        writer: &dyn ICRUDRepository,
         enrichment: &Enrichment,
         parent: &mut Row,
     ) -> Result<()> {
@@ -240,7 +240,7 @@ impl DeepCRUDRepository {
     async fn delete_children(
         &self,
         node: &RepositoryTreeNode,
-        writer: &dyn CRUDRepository,
+        writer: &dyn ICRUDRepository,
         enrichment: &Enrichment,
         parent: &Row,
     ) -> Result<()> {
@@ -292,7 +292,7 @@ fn id_key(id: Value) -> String {
 }
 
 async fn load(
-    writer: &dyn CRUDRepository,
+    writer: &dyn ICRUDRepository,
     enrichment: &Enrichment,
     parent: &Row,
 ) -> Result<Vec<Row>> {
@@ -332,20 +332,20 @@ fn parse_value(text: &str) -> Value {
 }
 
 #[async_trait]
-impl Enriched for DeepCRUDRepository {
+impl Enriched for EnrichedCRUDRepository {
     async fn enrich(&self, items: &mut [Row]) -> Result<()> {
         self.enriched.enrich(items).await
     }
 }
 
-impl IRepository for DeepCRUDRepository {
+impl IRepository for EnrichedCRUDRepository {
     fn entity_type(&self) -> TypeId {
         self.inner.entity_type()
     }
 }
 
 #[async_trait]
-impl ReadonlyRepository for DeepCRUDRepository {
+impl IReadonlyRepository for EnrichedCRUDRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.enriched.read_single(query).await
     }
@@ -364,7 +364,7 @@ impl ReadonlyRepository for DeepCRUDRepository {
 }
 
 #[async_trait]
-impl CRUDRepository for DeepCRUDRepository {
+impl ICRUDRepository for EnrichedCRUDRepository {
     async fn create(&self, item: &Row) -> Result<Response> {
         let mut parent = item.clone();
         let response = self

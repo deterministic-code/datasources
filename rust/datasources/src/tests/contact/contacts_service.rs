@@ -1,7 +1,7 @@
-use crate::deep_crud_repository::DeepCRUDRepository;
+use crate::enriched_crud_repository::EnrichedCRUDRepository;
 use crate::i_repository::IRepository;
 use crate::query::Query;
-use crate::repository::{CRUDRepository, ReadonlyRepository};
+use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -11,20 +11,20 @@ use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct ContactsService {
-    inner: DeepCRUDRepository,
+    inner: EnrichedCRUDRepository,
 }
 
 impl ContactsService {
     pub fn new(
-        contacts: Arc<dyn CRUDRepository>,
-        types: Arc<dyn ReadonlyRepository>,
-        sources: Arc<dyn ReadonlyRepository>,
-        address_types: Arc<dyn ReadonlyRepository>,
-        phone_types: Arc<dyn ReadonlyRepository>,
-        addresses: Arc<dyn CRUDRepository>,
-        phones: Arc<dyn CRUDRepository>,
+        contacts: Arc<dyn ICRUDRepository>,
+        types: Arc<dyn IReadonlyRepository>,
+        sources: Arc<dyn IReadonlyRepository>,
+        address_types: Arc<dyn IReadonlyRepository>,
+        phone_types: Arc<dyn IReadonlyRepository>,
+        addresses: Arc<dyn ICRUDRepository>,
+        phones: Arc<dyn ICRUDRepository>,
     ) -> Self {
-        let mut inner = DeepCRUDRepository::new(contacts);
+        let mut inner = EnrichedCRUDRepository::new(contacts);
         inner
             .add_enriched(
                 "contact_type_name",
@@ -81,7 +81,7 @@ impl IRepository for ContactsService {
 }
 
 #[async_trait]
-impl ReadonlyRepository for ContactsService {
+impl IReadonlyRepository for ContactsService {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }
@@ -100,7 +100,7 @@ impl ReadonlyRepository for ContactsService {
 }
 
 #[async_trait]
-impl CRUDRepository for ContactsService {
+impl ICRUDRepository for ContactsService {
     async fn create(&self, item: &Row) -> Result<Response> {
         self.inner.create(item).await
     }

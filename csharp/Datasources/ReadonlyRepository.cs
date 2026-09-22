@@ -1,13 +1,55 @@
 namespace Datasources;
 
-public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
+public class ReadonlyRepository<T> : IReadonlyRepository<T>
 {
-    public Type Type => typeof(T);
+    readonly IConnection? connection;
+    readonly List<ICommandMiddleware> middlewares = [];
+    readonly TypeConverter<T, Row>? rowConverter;
+    readonly RepositoryStatements? statements;
 
-    public abstract IAsyncEnumerable<T> Read(IStatement? query = null);
+    public Type Type => typeof(T);
+    public IMapper<T, T>? Mapper { get; }
+
+    protected ReadonlyRepository() { }
+
+    protected ReadonlyRepository(
+        IConnection connection,
+        TypeConverter<T, Row> rowConverter,
+        IMapper<T, T> mapper,
+        RepositoryStatements statements)
+    {
+        this.connection = connection;
+        this.rowConverter = rowConverter;
+        Mapper = mapper;
+        this.statements = statements;
+    }
+
+    public ReadonlyRepository<T> AddMiddleware(ICommandMiddleware middleware)
+    {
+        middlewares.Add(middleware);
+        return this;
+    }
 
     public virtual IAsyncEnumerable<T> Read(IWhere where) =>
-        Read(new QueryStatement(where.GetText(), where));
+        Read(statements is { } sql ? sql.Query(where) : new QueryStatement(where.GetText(), where));
+
+    public virtual Task<T?> ReadSingle(IWhere where) =>
+        ReadSingle(statements is { } sql ? sql.Query(where) : new QueryStatement(where.GetText(), where));
+
+    public virtual async IAsyncEnumerable<T> Read(IStatement? query = null)
+    {
+        var statement = query switch
+        {
+            IQuery q => q,
+            null => Statements.Query(),
+            _ => throw new DatasourceException("Read requires IQuery or IWhere")
+        };
+        var reader = await Command().ExecuteReader(
+            statement.GetText(), statement.Where?.Parameters ?? statement.Parameters);
+        while (await reader.Next())
+            yield return Mapper!.Map(RowConverter.Convert(reader.Current
+                ?? throw new DatasourceException("Reader current must be a row")));
+    }
 
     public virtual async Task<T?> ReadSingle(IStatement? query = null)
     {
@@ -16,6 +58,14 @@ public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
         return default;
     }
 
-    public virtual Task<T?> ReadSingle(IWhere where) =>
-        ReadSingle(new QueryStatement(where.GetText(), where));
+    protected ICommand Command() =>
+        middlewares.Aggregate(
+            (connection ?? throw new DatasourceException("Connection required")).CreateCommand(),
+            (command, middleware) => command.AddMiddleware(middleware));
+
+    protected RepositoryStatements Statements =>
+        statements ?? throw new DatasourceException("Statements required");
+
+    protected TypeConverter<T, Row> RowConverter =>
+        rowConverter ?? throw new DatasourceException("Row converter required");
 }

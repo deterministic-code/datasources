@@ -1,95 +1,65 @@
 use crate::{Expression, Literal, Operator, WhereClause};
 use crate::built_repository::BuiltRepository;
-use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::datasource_error::DatasourceError;
-use crate::mappers::{Mapper, StatementMapper};
+use crate::i_repository::IRepository;
 use crate::parameter::Parameter;
 use crate::query::Query;
-use crate::i_repository::IRepository;
-use crate::repository::{CRUDRepository, ReadonlyRepository};
+use crate::readonly_repository::ReadonlyRepository;
+use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::table_repository_builder_options::RepositoryBuilderOptions;
-use crate::table_repository_statements::RepositoryStatements;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-pub struct Repository {
-    connection: Arc<dyn Connection>,
-    middlewares: Vec<Arc<dyn CommandMiddleware>>,
-    row_converter: RowTypeConverter,
-    statement_mapper: Arc<StatementMapper>,
-    statements: RepositoryStatements,
+pub struct CRUDRepository {
+    inner: ReadonlyRepository,
     id: Vec<String>,
     ids: HashSet<String>,
     assign_identity_on_create: bool,
-    entity_type: TypeId,
 }
 
-impl Repository {
+impl RepositoryBuilder {
+    pub fn build(options: RepositoryBuilderOptions) -> Result<CRUDRepository> {
+        CRUDRepository::new(options)
+    }
+}
+
+impl CRUDRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_builder_options::<T>(connection.clone());
         options.mapping = Some(RowTypeConverter::of::<T>());
         let mut repo = Self::new(options)?;
-        repo.entity_type = TypeId::of::<T>();
+        repo.inner.entity_type = TypeId::of::<T>();
         Ok(repo)
     }
 
     pub fn new(options: RepositoryBuilderOptions) -> Result<Self> {
-        RepositoryBuilder::build(options)
+        Ok(Self::from_built(RepositoryBuilder::parts(options)?))
     }
 
     pub fn from_built(built: BuiltRepository) -> Self {
-        Self::from_parts(
-            built.connection,
-            built.row_converter,
-            built.statement_mapper,
-            built.statements,
-            built.ids,
-            built.assign_identity_on_create,
-        )
-    }
-
-    pub fn from_parts(
-        connection: Arc<dyn Connection>,
-        row_converter: RowTypeConverter,
-        statement_mapper: Arc<StatementMapper>,
-        statements: RepositoryStatements,
-        ids: Vec<String>,
-        assign_identity_on_create: bool,
-    ) -> Self {
+        let id = built.ids.clone();
+        let assign_identity_on_create = built.assign_identity_on_create;
         Self {
-            connection,
-            middlewares: Vec::new(),
-            row_converter,
-            statement_mapper,
-            statements,
-            ids: ids.iter().cloned().collect(),
-            id: ids,
+            inner: ReadonlyRepository::from_built(built),
+            ids: id.iter().cloned().collect(),
+            id,
             assign_identity_on_create,
-            entity_type: TypeId::of::<Row>(),
         }
     }
 
     pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
-        self.middlewares.push(middleware);
-    }
-
-    fn command(&self) -> Arc<dyn Command> {
-        let command = self.connection.create_command();
-        for middleware in &self.middlewares {
-            command.add_middleware(middleware.clone());
-        }
-        command
+        self.inner.add_middleware(middleware);
     }
 
     fn params(&self, record: &Row, include_id: bool) -> Vec<Parameter> {
@@ -118,96 +88,44 @@ impl Repository {
             .collect::<Result<Vec<_>>>()?;
         Ok(WhereClause::new(and_all(children)))
     }
-
-    fn query_parts(&self, query: Option<&dyn Query>) -> (String, Vec<Parameter>) {
-        if let Some(query) = query {
-            let params = query
-                .where_clause()
-                .map(|predicate| predicate.parameters())
-                .unwrap_or_else(|| query.parameters());
-            (query.get_text(), params)
-        } else {
-            self.statements.query(None)
-        }
-    }
-
-    async fn fetch_one(&self, text: String, params: Vec<Parameter>) -> Result<Option<Row>> {
-        let reader = self.command().execute_reader(&text, Some(&params)).await?;
-        if !reader.next().await? {
-            return Ok(None);
-        }
-        reader
-            .current()
-            .map(|row| {
-                self.row_converter
-                    .convert(&row)
-                    .map(|converted| Mapper::map(&self.statement_mapper.rows, converted))
-            })
-            .transpose()
-    }
-
-    async fn fetch_all(&self, text: String, params: Vec<Parameter>) -> Result<Vec<Row>> {
-        let reader = self.command().execute_reader(&text, Some(&params)).await?;
-        let mut items = Vec::new();
-        while reader.next().await? {
-            if let Some(row) = reader.current() {
-                items.push(Mapper::map(
-                    &self.statement_mapper.rows,
-                    self.row_converter.convert(&row)?,
-                ));
-            }
-        }
-        Ok(items)
-    }
-
-    fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        self.row_converter.reverse_convert(&Mapper::reverse_map(
-            &self.statement_mapper.rows,
-            item.clone(),
-        ))
-    }
 }
 
-impl IRepository for Repository {
+impl IRepository for CRUDRepository {
     fn entity_type(&self) -> TypeId {
-        self.entity_type
+        self.inner.entity_type()
     }
 }
 
 #[async_trait]
-impl ReadonlyRepository for Repository {
+impl IReadonlyRepository for CRUDRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
-        let (text, params) = self.query_parts(query);
-        self.fetch_one(text, params).await
+        self.inner.read_single(query).await
     }
 
     async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
-        let (text, params) = self.query_parts(query);
-        self.fetch_all(text, params).await
+        self.inner.read(query).await
     }
 
     async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        let (text, params) = self.statements.query(Some(where_clause));
-        self.fetch_one(text, params).await
+        self.inner.read_single_where(where_clause).await
     }
 
     async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        let (text, params) = self.statements.query(Some(where_clause));
-        self.fetch_all(text, params).await
+        self.inner.read_where(where_clause).await
     }
 }
 
 #[async_trait]
-impl CRUDRepository for Repository {
+impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &Row) -> Result<Response> {
-        let record = self.reverse_convert(item)?;
+        let record = self.inner.reverse_convert(item)?;
         let fields = self.params(&record, !self.assign_identity_on_create);
-        let text = self.statements.insert(&fields);
-        self.command().execute(&text, Some(&fields)).await
+        let text = self.inner.statements.insert(&fields);
+        self.inner.command().execute(&text, Some(&fields)).await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
-        let record = self.reverse_convert(item)?;
+        let record = self.inner.reverse_convert(item)?;
         let owned = if by_where.is_none() {
             Some(self.id_where(&record)?)
         } else {
@@ -224,14 +142,14 @@ impl CRUDRepository for Repository {
                 "Update requires at least one non-Id field",
             ));
         }
-        let text = self.statements.update(&fields, predicate);
+        let text = self.inner.statements.update(&fields, predicate);
         let mut parameters = fields;
         parameters.extend(predicate.parameters());
-        self.command().execute(&text, Some(&parameters)).await
+        self.inner.command().execute(&text, Some(&parameters)).await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
-        let record = self.reverse_convert(item)?;
+        let record = self.inner.reverse_convert(item)?;
         let owned = if by_where.is_none() {
             Some(self.id_where(&record)?)
         } else {
@@ -242,9 +160,9 @@ impl CRUDRepository for Repository {
             (_, Some(where_clause)) => where_clause,
             _ => unreachable!(),
         };
-        let text = self.statements.delete(predicate);
+        let text = self.inner.statements.delete(predicate);
         let parameters = predicate.parameters();
-        self.command().execute(&text, Some(&parameters)).await
+        self.inner.command().execute(&text, Some(&parameters)).await
     }
 }
 

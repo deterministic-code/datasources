@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-public class DeepCRUDRepositoryTests
+public class EnrichedCRUDRepositoryTests
 {
     sealed class Parent
     {
@@ -60,7 +60,7 @@ public class DeepCRUDRepositoryTests
     {
         var parents = new ListCRUDRepository<Parent>(new Parent { id = 4 });
         var children = new ListCRUDRepository<Child>();
-        var repo = new DeepCRUDRepository<Parent>(parents);
+        var repo = new EnrichedCRUDRepository<Parent>(parents);
         repo.AddEnriched("children", "id", children, "parent_id", many: true);
         await repo.Create(new Parent { children = [new Child { label = "n" }] });
         Assert.Equal(5, Assert.Single(children.Items).parent_id);
@@ -73,7 +73,7 @@ public class DeepCRUDRepositoryTests
         var children = new ListCRUDRepository<Child>(
             new Child { id = 1, parent_id = 1, label = "a" },
             new Child { id = 2, parent_id = 1, label = "b" });
-        var repo = new DeepCRUDRepository<Parent>(parents);
+        var repo = new EnrichedCRUDRepository<Parent>(parents);
         repo.AddEnriched("children", "id", children, "parent_id", many: true);
         await repo.Update(new Parent
         {
@@ -99,7 +99,7 @@ public class DeepCRUDRepositoryTests
         var notes = new ListCRUDRepository<Note>(
             new Note { id = 8, child_id = 3, text = "n" },
             new Note { id = 9, child_id = 9, text = "other" });
-        var repo = new DeepCRUDRepository<Parent>(parents);
+        var repo = new EnrichedCRUDRepository<Parent>(parents);
         repo.AddEnriched("children", "id", children, "parent_id", many: true,
             nest: node => node.Include(notes, "notes", "id", "child_id", many: true));
         await repo.Delete(new Parent { id = 1 });
@@ -115,7 +115,7 @@ public class DeepCRUDRepositoryTests
         var children = new ListCRUDRepository<Child>();
         var notes = new ListCRUDRepository<Note>();
         var childTypes = new ListCRUDRepository<TypeRow>(new TypeRow { id = 3, name = "home" });
-        var repo = new DeepCRUDRepository<Parent>(parents);
+        var repo = new EnrichedCRUDRepository<Parent>(parents);
         repo.AddEnriched("children", "id", children, "parent_id", many: true,
             nest: node =>
             {
@@ -142,7 +142,7 @@ public class DeepCRUDRepositoryTests
     [Fact]
     public async Task ManyReadonlyViaThrows()
     {
-        var repo = new DeepCRUDRepository<Parent>(new ListCRUDRepository<Parent>());
+        var repo = new EnrichedCRUDRepository<Parent>(new ListCRUDRepository<Parent>());
         repo.AddEnriched("children", "id", new ListReadonlyRepository<Child>(), "parent_id", many: true);
         var error = await Assert.ThrowsAsync<DatasourceException>(() =>
             repo.Create(new Parent { children = [new Child { label = "a" }] }));
@@ -161,12 +161,12 @@ public class DeepCRUDRepositoryTests
         Assert.Equal("a", Assert.Single(item.children).label);
     }
 
-    static DeepCRUDRepository<Parent> Repo(
+    static EnrichedCRUDRepository<Parent> Repo(
         ListCRUDRepository<Parent> parents,
         ListCRUDRepository<TypeRow> types,
         ListCRUDRepository<Child> children)
     {
-        var repo = new DeepCRUDRepository<Parent>(parents);
+        var repo = new EnrichedCRUDRepository<Parent>(parents);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         repo.AddEnriched("children", "id", children, "parent_id", many: true);
         return repo;

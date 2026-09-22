@@ -1,7 +1,7 @@
 use crate::mappers::{FlatToNestedMapper, MappedRow, Mapper};
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::repository::ReadonlyRepository;
+use crate::repository::IReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 
 pub struct FlatToNestedReadonlyEnrichmentStrategy {
-    source: Arc<dyn ReadonlyRepository>,
+    source: Arc<dyn IReadonlyRepository>,
     mapper: FlatToNestedMapper,
     hydrate: Arc<dyn Fn(MappedRow) -> Row + Send + Sync>,
     command: Option<Arc<dyn Query>>,
@@ -19,7 +19,7 @@ pub struct FlatToNestedReadonlyEnrichmentStrategy {
 
 impl FlatToNestedReadonlyEnrichmentStrategy {
     pub fn new(
-        source: Arc<dyn ReadonlyRepository>,
+        source: Arc<dyn IReadonlyRepository>,
         mapper: FlatToNestedMapper,
         hydrate: impl Fn(MappedRow) -> Row + Send + Sync + 'static,
         command: Option<Arc<dyn Query>>,
@@ -37,7 +37,7 @@ impl FlatToNestedReadonlyEnrichmentStrategy {
 impl ReadonlyEnrichmentStrategy for FlatToNestedReadonlyEnrichmentStrategy {
     async fn read(
         &self,
-        _inner: &dyn ReadonlyRepository,
+        _inner: &dyn IReadonlyRepository,
         _tree: &RepositoryTree,
         query: Option<&dyn Query>,
     ) -> Result<Vec<Row>> {
@@ -55,7 +55,7 @@ impl ReadonlyEnrichmentStrategy for FlatToNestedReadonlyEnrichmentStrategy {
 
     async fn read_where(
         &self,
-        _inner: &dyn ReadonlyRepository,
+        _inner: &dyn IReadonlyRepository,
         _tree: &RepositoryTree,
         where_clause: &dyn Where,
     ) -> Result<Vec<Row>> {

@@ -9,7 +9,7 @@ use std::any::TypeId;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait ReadonlyRepository: IRepository {
+pub trait IReadonlyRepository: IRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>;
     async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>;
     async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>>;
@@ -17,13 +17,13 @@ pub trait ReadonlyRepository: IRepository {
 }
 
 #[async_trait]
-pub trait CRUDRepository: ReadonlyRepository {
+pub trait ICRUDRepository: IReadonlyRepository {
     async fn create(&self, item: &Row) -> Result<Response>;
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
 }
 
-struct AsReadonly(Arc<dyn CRUDRepository>);
+struct AsReadonly(Arc<dyn ICRUDRepository>);
 
 impl IRepository for AsReadonly {
     fn entity_type(&self) -> TypeId {
@@ -32,7 +32,7 @@ impl IRepository for AsReadonly {
 }
 
 #[async_trait]
-impl ReadonlyRepository for AsReadonly {
+impl IReadonlyRepository for AsReadonly {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         self.0.read_single(query).await
     }
@@ -50,6 +50,6 @@ impl ReadonlyRepository for AsReadonly {
     }
 }
 
-pub fn as_readonly(repo: Arc<dyn CRUDRepository>) -> Arc<dyn ReadonlyRepository> {
+pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository> {
     Arc::new(AsReadonly(repo))
 }

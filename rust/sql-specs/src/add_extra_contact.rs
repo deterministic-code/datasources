@@ -1,7 +1,8 @@
 use crate::contact_lookups::ContactLookups;
 use chrono::{DateTime, Utc};
 use datasources::{
-    encode_rows, CRUDRepository, DatasourceError, DeepCRUDRepository, ReadonlyRepository, Result,
+    encode_rows, DatasourceError, EnrichedCRUDRepository, ICRUDRepository, IReadonlyRepository,
+    Result,
     Operator, Row, Value, WhereClause,
 };
 use uuid::Uuid;
@@ -13,7 +14,7 @@ fn record(pairs: &[(&str, Value)]) -> Row {
         .collect()
 }
 
-pub async fn add_extra_contact(service: &DeepCRUDRepository, ids: &ContactLookups) -> Result<Row> {
+pub async fn add_extra_contact(service: &EnrichedCRUDRepository, ids: &ContactLookups) -> Result<Row> {
     let stamp = Value::DateTime(
         DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
             .expect("stamp")

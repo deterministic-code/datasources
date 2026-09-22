@@ -3,7 +3,7 @@ use crate::enriched::Enriched;
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::i_repository::IRepository;
-use crate::repository::ReadonlyRepository;
+use crate::repository::IReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
@@ -14,18 +14,18 @@ use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct EnrichedReadonlyRepository {
-    inner: Arc<dyn ReadonlyRepository>,
+    inner: Arc<dyn IReadonlyRepository>,
     pub tree: RepositoryTree,
     strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
 }
 
 impl EnrichedReadonlyRepository {
-    pub fn new(inner: Arc<dyn ReadonlyRepository>) -> Self {
+    pub fn new(inner: Arc<dyn IReadonlyRepository>) -> Self {
         Self::with_strategy(inner, Arc::new(DefaultReadonlyEnrichmentStrategy))
     }
 
     pub fn with_strategy(
-        inner: Arc<dyn ReadonlyRepository>,
+        inner: Arc<dyn IReadonlyRepository>,
         strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
     ) -> Self {
         Self {
@@ -43,7 +43,7 @@ impl EnrichedReadonlyRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn ReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -56,7 +56,7 @@ impl EnrichedReadonlyRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn ReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -70,7 +70,7 @@ impl EnrichedReadonlyRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn crate::repository::CRUDRepository>,
+        via: Arc<dyn crate::repository::ICRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -85,7 +85,7 @@ impl EnrichedReadonlyRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn crate::repository::CRUDRepository>,
+        via: Arc<dyn crate::repository::ICRUDRepository>,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
@@ -114,7 +114,7 @@ impl IRepository for EnrichedReadonlyRepository {
 }
 
 #[async_trait]
-impl ReadonlyRepository for EnrichedReadonlyRepository {
+impl IReadonlyRepository for EnrichedReadonlyRepository {
     async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
         Ok(self.read(query).await?.into_iter().next())
     }

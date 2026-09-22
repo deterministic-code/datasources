@@ -3,7 +3,7 @@ import { ConsoleCommandMiddleware } from "../../ConsoleCommandMiddleware.ts";
 import type { Cells } from "../../converters/Cell.ts";
 import { FlatToNestedMapper } from "../../mappers/FlatToNestedMapper.ts";
 import type { IConnection } from "../../IConnection.ts";
-import { Repository } from "../../Repository.ts";
+import { CRUDRepository } from "../../CRUDRepository.ts";
 import type { ContactsView } from "./asContactsView.ts";
 import { contactsJoinQuery } from "./contactsJoinQuery.ts";
 import { contactsServiceOf } from "./contactsServiceOf.ts";
@@ -18,7 +18,7 @@ export const contactsParity = async (
   });
   const eager = new FlatToNestedMapper(contactsView).map(
     await collectAsync(
-      new Repository<Cells>({ connection, entity: "contacts_base" })
+      new CRUDRepository<Cells>({ connection, entity: "contacts_base" })
         .addMiddleware(middleware)
         .read(contactsJoinQuery()),
     ),

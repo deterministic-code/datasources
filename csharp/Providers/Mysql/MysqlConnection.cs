@@ -27,7 +27,7 @@ public sealed class MysqlConnection : IConnection
     }
 
     public static object Repository(IConnection connection) =>
-        new Repository<Dictionary<string, Value>>(
+        new CRUDRepository<Dictionary<string, Value>>(
             new RepositoryBuilderOptions<Dictionary<string, Value>>
             {
                 Connection = (MysqlConnection)connection,

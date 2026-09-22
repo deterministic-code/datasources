@@ -1,6 +1,6 @@
 # CRUD repository
 
-[Readonly repository](./readonly-repository.md) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](./row-type-converter.md).
+[Readonly repository](./readonly-repository.md) plus `create`, `update`, and `delete`. SQL providers typically build a table `CRUDRepository` from `RepositoryBuilder` and a [RowTypeConverter](./row-type-converter.md).
 
 Read is convert, then map. Writes reverse-map, then reverse-convert.
 
@@ -54,15 +54,15 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 **Returns** `Promise<Response>`
 
-#### Repository
+#### CRUDRepository
 
 ```typescript
-class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>
+class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>
 ```
 
 **Constructor**
 
-##### Repository(type, connection)
+##### CRUDRepository(type, connection)
 
 Builds a table repository from a type and [IConnection](./connection.md).
 
@@ -73,7 +73,7 @@ constructor(type: Constructable<T>, connection: IConnection)
 - `type` — item constructor
 - `connection` — open [IConnection](./connection.md)
 
-##### Repository(options)
+##### CRUDRepository(options)
 
 Builds a table repository from [RepositoryBuilderOptions](#repositorybuilderoptions).
 
@@ -83,7 +83,7 @@ constructor(options: RepositoryBuilderOptions<T>)
 
 - `options` — [RepositoryBuilderOptions](#repositorybuilderoptions)
 
-##### Repository(built)
+##### CRUDRepository(built)
 
 Builds a table repository from [BuiltRepository](#builtrepository).
 
@@ -197,7 +197,7 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 type RepositoryBuilderOptions<T = Cells>
 ```
 
-Constructor bag for [Repository](#repository).
+Constructor bag for [CRUDRepository](#repository).
 
 **Properties**
 
@@ -271,7 +271,7 @@ columns?: string[]
 type BuiltRepository<T = Cells>
 ```
 
-Builder output used by [Repository](#repository).
+Builder output used by [CRUDRepository](#repository).
 
 **Properties**
 
@@ -378,15 +378,15 @@ Task<Response> Delete(T item, IWhere? byWhere = null)
 
 **Returns** `Task<Response>`
 
-#### Repository
+#### CRUDRepository
 
 ```csharp
-public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
+public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 ```
 
 **Constructor**
 
-##### Repository(connection)
+##### CRUDRepository(connection)
 
 Builds a table repository from an [IConnection](./connection.md).
 
@@ -396,7 +396,7 @@ public Repository(IConnection connection)
 
 - `connection` — open [IConnection](./connection.md)
 
-##### Repository(options)
+##### CRUDRepository(options)
 
 Builds a table repository from [RepositoryBuilderOptions](#repositorybuilderoptions).
 
@@ -406,7 +406,7 @@ public Repository(RepositoryBuilderOptions<T> options)
 
 - `options` — [RepositoryBuilderOptions](#repositorybuilderoptions)
 
-##### Repository(built)
+##### CRUDRepository(built)
 
 Builds a table repository from [BuiltRepository](#builtrepository).
 
@@ -446,7 +446,7 @@ public Repository<T> AddMiddleware(ICommandMiddleware middleware)
 
 - `middleware` — command middleware
 
-**Returns** [Repository](#repository)`<T>`
+**Returns** [CRUDRepository](#crudrepository)`<T>`
 
 ##### Read(query)
 
@@ -504,7 +504,7 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 public sealed class RepositoryBuilderOptions<T> where T : new()
 ```
 
-Constructor bag for [Repository](#repository).
+Constructor bag for [CRUDRepository](#repository).
 
 **Properties**
 
@@ -578,7 +578,7 @@ IReadOnlyList<string>? Columns { get; init; }
 public sealed record BuiltRepository<T> where T : new()
 ```
 
-Builder output used by [Repository](#repository).
+Builder output used by [CRUDRepository](#repository).
 
 **Properties**
 
@@ -631,10 +631,10 @@ bool AssignIdentityOnCreate { get; init; }
 ```
 
 ### rust
-#### CRUDRepository
+#### ICRUDRepository
 
 ```rust
-pub trait CRUDRepository: ReadonlyRepository
+pub trait ICRUDRepository: IReadonlyRepository
 ```
 
 **Methods**
@@ -677,10 +677,10 @@ async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Respo
 
 **Returns** `Result<Response>`
 
-#### Repository
+#### CRUDRepository
 
 ```rust
-pub struct Repository
+pub struct CRUDRepository
 ```
 
 **Constructor**
@@ -695,7 +695,7 @@ pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) ->
 
 - `connection` — [Connection](./connection.md)
 
-**Returns** `Result<`[Repository](#repository)`>`
+**Returns** `Result<`[CRUDRepository](#crudrepository)`>`
 
 ##### new(options)
 
@@ -707,7 +707,7 @@ pub fn new(options: RepositoryBuilderOptions) -> Result<Self>
 
 - `options` — [RepositoryBuilderOptions](#repositorybuilderoptions)
 
-**Returns** `Result<`[Repository](#repository)`>`
+**Returns** `Result<`[CRUDRepository](#crudrepository)`>`
 
 ##### from_built(built)
 
@@ -719,7 +719,7 @@ pub fn from_built(built: BuiltRepository) -> Self
 
 - `built` — [BuiltRepository](#builtrepository)
 
-**Returns** [Repository](#repository)
+**Returns** [CRUDRepository](#crudrepository)
 
 **Methods**
 
@@ -739,7 +739,7 @@ pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>)
 pub struct RepositoryBuilderOptions
 ```
 
-Constructor bag for [Repository](#repository).
+Constructor bag for [CRUDRepository](#repository).
 
 **Constructor**
 
@@ -819,7 +819,7 @@ pub statement_mapper: Option<StatementMapper>
 pub struct BuiltRepository
 ```
 
-Builder output used by [Repository](#repository).
+Builder output used by [CRUDRepository](#repository).
 
 **Properties**
 

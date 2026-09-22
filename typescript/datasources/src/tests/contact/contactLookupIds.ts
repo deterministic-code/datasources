@@ -1,6 +1,6 @@
 import { Operator, WhereClause } from "../../statements/index.ts";
 import type { IConnection } from "../../IConnection.ts";
-import { Repository } from "../../Repository.ts";
+import { CRUDRepository } from "../../CRUDRepository.ts";
 import type { Constructable } from "../../converters/Constructable.ts";
 import { AddressType } from "./AddressType.ts";
 import type { ContactLookups } from "./contactLookups.ts";
@@ -14,7 +14,7 @@ const of = async <T extends { id: number; name: string }>(
   entity: string,
   name: string,
 ): Promise<number> => {
-  const row = await new Repository({ type, entity, connection, columns: ["id", "name"] }).readSingle(
+  const row = await new CRUDRepository({ type, entity, connection, columns: ["id", "name"] }).readSingle(
     new WhereClause(new Operator.Equals("name", name)),
   );
   if (!row) throw new Error(`${entity} '${name}' missing`);

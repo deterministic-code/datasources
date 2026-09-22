@@ -144,12 +144,12 @@ See [Command](#command) for middleware and `execute`.
 
 ### Enriched CRUD repository
 
-A `DeepCRUDRepository` wraps a CRUD repository, fills related fields after `read`, and writes nested `many` children on create / update / delete.
+A `EnrichedCRUDRepository` wraps a CRUD repository, fills related fields after `read`, and writes nested `many` children on create / update / delete.
 
 ##### C#
 
 ```csharp
-var contacts = new DeepCRUDRepository<Contact>(contactRepo);
+var contacts = new EnrichedCRUDRepository<Contact>(contactRepo);
 contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
 contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
     nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
@@ -161,7 +161,7 @@ await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address
 ##### Rust
 
 ```rust
-let mut contacts = DeepCRUDRepository::new(contact_repo);
+let mut contacts = EnrichedCRUDRepository::new(contact_repo);
 contacts
     .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false)
     .add_enriched_repo_with("addresses", "id", addresses, "contact_id", None, true, |node| {
@@ -175,7 +175,7 @@ contacts.create(contact).await?;
 ##### TypeScript
 
 ```typescript
-const contacts = new DeepCRUDRepository(contactRepo);
+const contacts = new EnrichedCRUDRepository(contactRepo);
 contacts.addEnriched("contact_type_name", "contact_type_id", types, "id", "name");
 contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true, (node) =>
   node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
@@ -1177,7 +1177,7 @@ Builds a datasource from a connection factory and a repository factory.
 **Definition**
 
 ```rust
-pub fn new(provider: impl Into<String>, new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static, new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn CRUDRepository> + Send + Sync + 'static) -> Self
+pub fn new(provider: impl Into<String>, new_connection: impl Fn() -> Arc<dyn Connection> + Send + Sync + 'static, new_repository: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static) -> Self
 ```
 
 **Parameters**
@@ -1259,7 +1259,7 @@ Creates a CRUD repository bound to an optional open connection.
 **Definition**
 
 ```rust
-fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn CRUDRepository>
+fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ICRUDRepository>
 ```
 
 **Parameters**
@@ -1279,7 +1279,7 @@ Creates a read-only repository bound to an optional open connection. Defaults to
 **Definition**
 
 ```rust
-fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ReadonlyRepository>
+fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn IReadonlyRepository>
 ```
 
 **Parameters**
@@ -8231,34 +8231,34 @@ fn entity_type(&self) -> TypeId
 ##### datasources {#rust-datasources}
 
 ```rust
-pub fn as_readonly(repo: Arc<dyn CRUDRepository>) -> Arc<dyn ReadonlyRepository>
+pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository>
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [as_readonly(repo)](#rust-datasources-as_readonly-repo) | Views a [CRUDRepository](#crud-repository) as a [ReadonlyRepository](#readonly-repository). |
+| [as_readonly(repo)](#rust-datasources-as_readonly-repo) | Views a [ICRUDRepository](#crud-repository) as a [IReadonlyRepository](#readonly-repository). |
 
 ###### as_readonly(repo) {#rust-datasources-as_readonly-repo}
 
-Views a [CRUDRepository](#crud-repository) as a [ReadonlyRepository](#readonly-repository).
+Views a [ICRUDRepository](#crud-repository) as a [IReadonlyRepository](#readonly-repository).
 
 **Definition**
 
 ```rust
-pub fn as_readonly(repo: Arc<dyn CRUDRepository>) -> Arc<dyn ReadonlyRepository>
+pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `repo` | [CRUDRepository](#crud-repository) |
+| `repo` | [ICRUDRepository](#crud-repository) |
 
 **Returns**
 
-`Arc<dyn `[ReadonlyRepository](#readonly-repository)`>`
+`Arc<dyn `[IReadonlyRepository](#readonly-repository)`>`
 
 ##### ReadonlyRepositoryFactory {#rust-readonlyrepositoryfactory}
 
@@ -8280,14 +8280,14 @@ Registers a readonly repository by [entity_type](#rust-irepository-entity_type).
 **Definition**
 
 ```rust
-fn register(&self, repository: Arc<dyn ReadonlyRepository>)
+fn register(&self, repository: Arc<dyn IReadonlyRepository>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `repository` | [ReadonlyRepository](#readonly-repository) to look up by `entity_type` |
+| `repository` | [IReadonlyRepository](#readonly-repository) to look up by `entity_type` |
 
 ###### create() {#rust-readonlyrepositoryfactory-create}
 
@@ -8296,12 +8296,12 @@ Creates a readonly repository by `T`.
 **Definition**
 
 ```rust
-fn create<T: 'static>(&self) -> Result<Arc<dyn ReadonlyRepository>>
+fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>>
 ```
 
 **Returns**
 
-`Result<Arc<dyn `[ReadonlyRepository](#readonly-repository)`>>`
+`Result<Arc<dyn `[IReadonlyRepository](#readonly-repository)`>>`
 
 ##### CRUDRepositoryFactory {#rust-crudrepositoryfactory}
 
@@ -8323,14 +8323,14 @@ Registers a CRUD repository by [entity_type](#rust-irepository-entity_type).
 **Definition**
 
 ```rust
-fn register(&self, repository: Arc<dyn CRUDRepository>)
+fn register(&self, repository: Arc<dyn ICRUDRepository>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `repository` | [CRUDRepository](#crud-repository) to look up by `entity_type` |
+| `repository` | [ICRUDRepository](#crud-repository) to look up by `entity_type` |
 
 ###### create() {#rust-crudrepositoryfactory-create}
 
@@ -8339,12 +8339,12 @@ Creates a CRUD repository by `T`.
 **Definition**
 
 ```rust
-fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>
+fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
 ```
 
 **Returns**
 
-`Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
+`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
 
 ##### RepositoryFactory {#rust-repositoryfactory}
 
@@ -8386,14 +8386,14 @@ Registers CRUD and readonly for the same repository.
 **Definition**
 
 ```rust
-pub fn register(&self, repository: Arc<dyn CRUDRepository>)
+pub fn register(&self, repository: Arc<dyn ICRUDRepository>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `repository` | [CRUDRepository](#crud-repository) to look up by `entity_type` |
+| `repository` | [ICRUDRepository](#crud-repository) to look up by `entity_type` |
 
 ###### create() {#rust-repositoryfactory-create}
 
@@ -8402,12 +8402,12 @@ Creates a CRUD repository by `T`.
 **Definition**
 
 ```rust
-pub fn create<T: 'static>(&self) -> Result<Arc<dyn CRUDRepository>>
+pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
 ```
 
 **Returns**
 
-`Result<Arc<dyn `[CRUDRepository](#crud-repository)`>>`
+`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
 
 ### Remarks
 
@@ -8537,7 +8537,7 @@ abstract class ReadonlyRepository<T> implements IReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [read(query?)](#typescript-readonlyrepository-read-query) | Yields every item. Implement in a subclass. |
+| [read(query?)](#typescript-readonlyrepository-read-query) | Yields every item. Table repositories convert then map; subclasses may override. |
 | [readSingle(query?)](#typescript-readonlyrepository-readsingle-query) | Returns the first item from [read](#typescript-readonlyrepository-read-query), or `undefined`. |
 
 ###### ReadonlyRepository(type) {#typescript-readonlyrepository-readonlyrepository-type}
@@ -8558,7 +8558,7 @@ constructor(type: Constructable<T>)
 
 ###### read(query?) {#typescript-readonlyrepository-read-query}
 
-Yields every item. Implement in a subclass.
+Yields every item. Table repositories convert then map; subclasses may override.
 
 **Definition**
 
@@ -8654,7 +8654,7 @@ IAsyncEnumerable<T> Read(IStatement? query = null)
 ##### ReadonlyRepository {#csharp-readonlyrepository}
 
 ```csharp
-public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
+public class ReadonlyRepository<T> : IReadonlyRepository<T>
 ```
 
 **Properties**
@@ -8667,17 +8667,17 @@ public abstract class ReadonlyRepository<T> : IReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [Read(query)](#csharp-readonlyrepository-read-query) | Yields every item. Implement in a subclass. |
+| [Read(query)](#csharp-readonlyrepository-read-query) | Yields every item. Table repositories convert then map; subclasses may override. |
 | [ReadSingle(query)](#csharp-readonlyrepository-readsingle-query) | Returns the first item from [Read](#csharp-readonlyrepository-read-query), or `default`. |
 
 ###### Read(query) {#csharp-readonlyrepository-read-query}
 
-Yields every item. Implement in a subclass.
+Yields every item. Table repositories convert then map; subclasses may override.
 
 **Definition**
 
 ```csharp
-public abstract IAsyncEnumerable<T> Read(IStatement? query = null)
+public virtual IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
 **Parameters**
@@ -8712,22 +8712,22 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 
 ##### Rust
 
-##### ReadonlyRepository {#rust-readonlyrepository}
+##### IReadonlyRepository {#rust-ireadonlyrepository}
 
 ```rust
-pub trait ReadonlyRepository: IRepository
+pub trait IReadonlyRepository: IRepository
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [read_single(query)](#rust-readonlyrepository-read_single-query) | Returns the first row, or `None` when the result is empty. |
-| [read(query)](#rust-readonlyrepository-read-query) | Returns every row. |
-| [read_single_where(where_clause)](#rust-readonlyrepository-read_single_where-where_clause) | Returns the first row matching a where. |
-| [read_where(where_clause)](#rust-readonlyrepository-read_where-where_clause) | Returns every row matching a where. |
+| [read_single(query)](#rust-ireadonlyrepository-read_single-query) | Returns the first row, or `None` when the result is empty. |
+| [read(query)](#rust-ireadonlyrepository-read-query) | Returns every row. |
+| [read_single_where(where_clause)](#rust-ireadonlyrepository-read_single_where-where_clause) | Returns the first row matching a where. |
+| [read_where(where_clause)](#rust-ireadonlyrepository-read_where-where_clause) | Returns every row matching a where. |
 
-###### read_single(query) {#rust-readonlyrepository-read_single-query}
+###### read_single(query) {#rust-ireadonlyrepository-read_single-query}
 
 Returns the first row, or `None` when the result is empty.
 
@@ -8747,7 +8747,7 @@ async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>
 
 `Result<Option<Row>>`
 
-###### read(query) {#rust-readonlyrepository-read-query}
+###### read(query) {#rust-ireadonlyrepository-read-query}
 
 Returns every row.
 
@@ -8767,7 +8767,7 @@ async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>
 
 `Result<Vec<Row>>`
 
-###### read_single_where(where_clause) {#rust-readonlyrepository-read_single_where-where_clause}
+###### read_single_where(where_clause) {#rust-ireadonlyrepository-read_single_where-where_clause}
 
 Returns the first row matching a where.
 
@@ -8787,7 +8787,7 @@ async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row
 
 `Result<Option<Row>>`
 
-###### read_where(where_clause) {#rust-readonlyrepository-read_where-where_clause}
+###### read_where(where_clause) {#rust-ireadonlyrepository-read_where-where_clause}
 
 Returns every row matching a where.
 
@@ -8848,7 +8848,7 @@ for await (const row of repo.read()) rows.push(row);
 
 ## CRUD repository
 
-[Readonly repository](#readonly-repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `Repository` from `RepositoryBuilder` and a [RowTypeConverter](#row-type-converter).
+[Readonly repository](#readonly-repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `CRUDRepository` from `RepositoryBuilder` and a [RowTypeConverter](#row-type-converter).
 
 Read is convert, then map. Writes reverse-map, then reverse-convert.
 
@@ -8932,19 +8932,19 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 `Promise<Response>`
 
-##### Repository {#typescript-repository}
+##### CRUDRepository {#typescript-crudrepository}
 
 ```typescript
-class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>
+class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [Repository(type, connection)](#typescript-repository-repository-type-connection) | Builds a table repository from a type and [IConnection](#connection). |
-| [Repository(options)](#typescript-repository-repository-options) | Builds a table repository from [RepositoryBuilderOptions](#typescript-repositorybuilderoptions). |
-| [Repository(built)](#typescript-repository-repository-built) | Builds a table repository from [BuiltRepository](#typescript-builtrepository). |
+| [CRUDRepository(type, connection)](#typescript-crudrepository-crudrepository-type-connection) | Builds a table repository from a type and [IConnection](#connection). |
+| [CRUDRepository(options)](#typescript-crudrepository-crudrepository-options) | Builds a table repository from [RepositoryBuilderOptions](#typescript-repositorybuilderoptions). |
+| [CRUDRepository(built)](#typescript-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#typescript-builtrepository). |
 
 **Properties**
 
@@ -8959,13 +8959,13 @@ class Repository<T = Cells> extends ReadonlyRepository<T> implements ICRUDReposi
 
 | Name | Description |
 | --- | --- |
-| [addMiddleware(middleware)](#typescript-repository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
-| [read(query?)](#typescript-repository-read-query) | Reads rows through [rowConverter](#typescript-repository-rowconverter) then [mapper](#typescript-repository-mapper). |
-| [create(item)](#typescript-repository-create-item) | Inserts one item. |
-| [update(item, byWhere?)](#typescript-repository-update-item-bywhere) | Updates one item. |
-| [delete(item, byWhere?)](#typescript-repository-delete-item-bywhere) | Deletes one item. |
+| [addMiddleware(middleware)](#typescript-crudrepository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
+| [read(query?)](#typescript-crudrepository-read-query) | Reads rows through [rowConverter](#typescript-repository-rowconverter) then [mapper](#typescript-repository-mapper). |
+| [create(item)](#typescript-crudrepository-create-item) | Inserts one item. |
+| [update(item, byWhere?)](#typescript-crudrepository-update-item-bywhere) | Updates one item. |
+| [delete(item, byWhere?)](#typescript-crudrepository-delete-item-bywhere) | Deletes one item. |
 
-###### Repository(type, connection) {#typescript-repository-repository-type-connection}
+###### CRUDRepository(type, connection) {#typescript-crudrepository-crudrepository-type-connection}
 
 Builds a table repository from a type and [IConnection](#connection).
 
@@ -8982,7 +8982,7 @@ constructor(type: Constructable<T>, connection: IConnection)
 | `type` | item constructor |
 | `connection` | open [IConnection](#connection) |
 
-###### Repository(options) {#typescript-repository-repository-options}
+###### CRUDRepository(options) {#typescript-crudrepository-crudrepository-options}
 
 Builds a table repository from [RepositoryBuilderOptions](#typescript-repositorybuilderoptions).
 
@@ -8998,7 +8998,7 @@ constructor(options: RepositoryBuilderOptions<T>)
 | --- | --- |
 | `options` | [RepositoryBuilderOptions](#typescript-repositorybuilderoptions) |
 
-###### Repository(built) {#typescript-repository-repository-built}
+###### CRUDRepository(built) {#typescript-crudrepository-crudrepository-built}
 
 Builds a table repository from [BuiltRepository](#typescript-builtrepository).
 
@@ -9014,7 +9014,7 @@ constructor(built: BuiltRepository<T>)
 | --- | --- |
 | `built` | [BuiltRepository](#typescript-builtrepository) |
 
-###### addMiddleware(middleware) {#typescript-repository-addmiddleware-middleware}
+###### addMiddleware(middleware) {#typescript-crudrepository-addmiddleware-middleware}
 
 Adds command middleware. Returns this repository.
 
@@ -9034,7 +9034,7 @@ addMiddleware(middleware: ICommandMiddleware): this
 
 `this`
 
-###### read(query?) {#typescript-repository-read-query}
+###### read(query?) {#typescript-crudrepository-read-query}
 
 Reads rows through [rowConverter](#typescript-repository-rowconverter) then [mapper](#typescript-repository-mapper).
 
@@ -9054,7 +9054,7 @@ read(query?: IQuery | IWhere): AsyncIterable<T>
 
 `AsyncIterable<T>`
 
-###### create(item) {#typescript-repository-create-item}
+###### create(item) {#typescript-crudrepository-create-item}
 
 Inserts one item.
 
@@ -9074,7 +9074,7 @@ create(item: T): Promise<Response>
 
 `Promise<Response>`
 
-###### update(item, byWhere?) {#typescript-repository-update-item-bywhere}
+###### update(item, byWhere?) {#typescript-crudrepository-update-item-bywhere}
 
 Updates one item.
 
@@ -9095,7 +9095,7 @@ update(item: T, byWhere?: IWhere): Promise<Response>
 
 `Promise<Response>`
 
-###### delete(item, byWhere?) {#typescript-repository-delete-item-bywhere}
+###### delete(item, byWhere?) {#typescript-crudrepository-delete-item-bywhere}
 
 Deletes one item.
 
@@ -9231,19 +9231,19 @@ Task<Response> Delete(T item, IWhere? byWhere = null)
 
 `Task<Response>`
 
-##### Repository {#csharp-repository}
+##### CRUDRepository {#csharp-crudrepository}
 
 ```csharp
-public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
+public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [Repository(connection)](#csharp-repository-repository-connection) | Builds a table repository from an [IConnection](#connection). |
-| [Repository(options)](#csharp-repository-repository-options) | Builds a table repository from [RepositoryBuilderOptions](#csharp-repositorybuilderoptions). |
-| [Repository(built)](#csharp-repository-repository-built) | Builds a table repository from [BuiltRepository](#csharp-builtrepository). |
+| [CRUDRepository(connection)](#csharp-crudrepository-crudrepository-connection) | Builds a table repository from an [IConnection](#connection). |
+| [CRUDRepository(options)](#csharp-crudrepository-crudrepository-options) | Builds a table repository from [RepositoryBuilderOptions](#csharp-repositorybuilderoptions). |
+| [CRUDRepository(built)](#csharp-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#csharp-builtrepository). |
 
 **Properties**
 
@@ -9256,13 +9256,13 @@ public sealed class Repository<T> : ReadonlyRepository<T>, ICRUDRepository<T> wh
 
 | Name | Description |
 | --- | --- |
-| [AddMiddleware(middleware)](#csharp-repository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
-| [Read(query)](#csharp-repository-read-query) | Reads rows through the row converter then [Mapper](#csharp-repository-mapper). |
-| [Create(item)](#csharp-repository-create-item) | Inserts one item. |
-| [Update(item, byWhere)](#csharp-repository-update-item-bywhere) | Updates one item. |
-| [Delete(item, byWhere)](#csharp-repository-delete-item-bywhere) | Deletes one item. |
+| [AddMiddleware(middleware)](#csharp-crudrepository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
+| [Read(query)](#csharp-crudrepository-read-query) | Reads rows through the row converter then [Mapper](#csharp-repository-mapper). |
+| [Create(item)](#csharp-crudrepository-create-item) | Inserts one item. |
+| [Update(item, byWhere)](#csharp-crudrepository-update-item-bywhere) | Updates one item. |
+| [Delete(item, byWhere)](#csharp-crudrepository-delete-item-bywhere) | Deletes one item. |
 
-###### Repository(connection) {#csharp-repository-repository-connection}
+###### CRUDRepository(connection) {#csharp-crudrepository-crudrepository-connection}
 
 Builds a table repository from an [IConnection](#connection).
 
@@ -9278,7 +9278,7 @@ public Repository(IConnection connection)
 | --- | --- |
 | `connection` | open [IConnection](#connection) |
 
-###### Repository(options) {#csharp-repository-repository-options}
+###### CRUDRepository(options) {#csharp-crudrepository-crudrepository-options}
 
 Builds a table repository from [RepositoryBuilderOptions](#csharp-repositorybuilderoptions).
 
@@ -9294,7 +9294,7 @@ public Repository(RepositoryBuilderOptions<T> options)
 | --- | --- |
 | `options` | [RepositoryBuilderOptions](#csharp-repositorybuilderoptions) |
 
-###### Repository(built) {#csharp-repository-repository-built}
+###### CRUDRepository(built) {#csharp-crudrepository-crudrepository-built}
 
 Builds a table repository from [BuiltRepository](#csharp-builtrepository).
 
@@ -9310,7 +9310,7 @@ public Repository(BuiltRepository<T> built)
 | --- | --- |
 | `built` | [BuiltRepository](#csharp-builtrepository) |
 
-###### AddMiddleware(middleware) {#csharp-repository-addmiddleware-middleware}
+###### AddMiddleware(middleware) {#csharp-crudrepository-addmiddleware-middleware}
 
 Adds command middleware. Returns this repository.
 
@@ -9328,9 +9328,9 @@ public Repository<T> AddMiddleware(ICommandMiddleware middleware)
 
 **Returns**
 
-[Repository](#csharp-repository)`<T>`
+[CRUDRepository](#csharp-crudrepository)`<T>`
 
-###### Read(query) {#csharp-repository-read-query}
+###### Read(query) {#csharp-crudrepository-read-query}
 
 Reads rows through the row converter then [Mapper](#csharp-repository-mapper).
 
@@ -9350,7 +9350,7 @@ public override IAsyncEnumerable<T> Read(IStatement? query = null)
 
 `IAsyncEnumerable<T>`
 
-###### Create(item) {#csharp-repository-create-item}
+###### Create(item) {#csharp-crudrepository-create-item}
 
 Inserts one item.
 
@@ -9370,7 +9370,7 @@ public Task<Response> Create(T item)
 
 `Task<Response>`
 
-###### Update(item, byWhere) {#csharp-repository-update-item-bywhere}
+###### Update(item, byWhere) {#csharp-crudrepository-update-item-bywhere}
 
 Updates one item.
 
@@ -9391,7 +9391,7 @@ public Task<Response> Update(T item, IWhere? byWhere = null)
 
 `Task<Response>`
 
-###### Delete(item, byWhere) {#csharp-repository-delete-item-bywhere}
+###### Delete(item, byWhere) {#csharp-crudrepository-delete-item-bywhere}
 
 Deletes one item.
 
@@ -9450,21 +9450,21 @@ public sealed record BuiltRepository<T> where T : new()
 
 ##### Rust
 
-##### CRUDRepository {#rust-crudrepository}
+##### ICRUDRepository {#rust-icrudrepository}
 
 ```rust
-pub trait CRUDRepository: ReadonlyRepository
+pub trait ICRUDRepository: IReadonlyRepository
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [create(item)](#rust-crudrepository-create-item) | Inserts one row. |
-| [update(item, by_where)](#rust-crudrepository-update-item-by_where) | Updates one row. `None` `by_where` uses id columns. |
-| [delete(item, by_where)](#rust-crudrepository-delete-item-by_where) | Deletes one row. `None` `by_where` uses id columns. |
+| [create(item)](#rust-icrudrepository-create-item) | Inserts one row. |
+| [update(item, by_where)](#rust-icrudrepository-update-item-by_where) | Updates one row. `None` `by_where` uses id columns. |
+| [delete(item, by_where)](#rust-icrudrepository-delete-item-by_where) | Deletes one row. `None` `by_where` uses id columns. |
 
-###### create(item) {#rust-crudrepository-create-item}
+###### create(item) {#rust-icrudrepository-create-item}
 
 Inserts one row.
 
@@ -9484,7 +9484,7 @@ async fn create(&self, item: &Row) -> Result<Response>
 
 `Result<Response>`
 
-###### update(item, by_where) {#rust-crudrepository-update-item-by_where}
+###### update(item, by_where) {#rust-icrudrepository-update-item-by_where}
 
 Updates one row. `None` `by_where` uses id columns.
 
@@ -9505,7 +9505,7 @@ async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Respo
 
 `Result<Response>`
 
-###### delete(item, by_where) {#rust-crudrepository-delete-item-by_where}
+###### delete(item, by_where) {#rust-icrudrepository-delete-item-by_where}
 
 Deletes one row. `None` `by_where` uses id columns.
 
@@ -9526,27 +9526,27 @@ async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Respo
 
 `Result<Response>`
 
-##### Repository {#rust-repository}
+##### CRUDRepository {#rust-crudrepository}
 
 ```rust
-pub struct Repository
+pub struct CRUDRepository
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [from_type(connection)](#rust-repository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
-| [new(options)](#rust-repository-new-options) | Builds a table repository from [RepositoryBuilderOptions](#rust-repositorybuilderoptions). |
-| [from_built(built)](#rust-repository-from_built-built) | Builds a table repository from [BuiltRepository](#rust-builtrepository). |
+| [from_type(connection)](#rust-crudrepository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
+| [new(options)](#rust-crudrepository-new-options) | Builds a table repository from [RepositoryBuilderOptions](#rust-repositorybuilderoptions). |
+| [from_built(built)](#rust-crudrepository-from_built-built) | Builds a table repository from [BuiltRepository](#rust-builtrepository). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [add_middleware(middleware)](#rust-repository-add_middleware-middleware) | Adds command middleware. |
+| [add_middleware(middleware)](#rust-crudrepository-add_middleware-middleware) | Adds command middleware. |
 
-###### from_type(connection) {#rust-repository-from_type-connection}
+###### from_type(connection) {#rust-crudrepository-from_type-connection}
 
 Builds a table repository from `T: ConvertSchema`.
 
@@ -9564,9 +9564,9 @@ pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) ->
 
 **Returns**
 
-`Result<`[Repository](#rust-repository)`>`
+`Result<`[CRUDRepository](#rust-crudrepository)`>`
 
-###### new(options) {#rust-repository-new-options}
+###### new(options) {#rust-crudrepository-new-options}
 
 Builds a table repository from [RepositoryBuilderOptions](#rust-repositorybuilderoptions).
 
@@ -9584,9 +9584,9 @@ pub fn new(options: RepositoryBuilderOptions) -> Result<Self>
 
 **Returns**
 
-`Result<`[Repository](#rust-repository)`>`
+`Result<`[CRUDRepository](#rust-crudrepository)`>`
 
-###### from_built(built) {#rust-repository-from_built-built}
+###### from_built(built) {#rust-crudrepository-from_built-built}
 
 Builds a table repository from [BuiltRepository](#rust-builtrepository).
 
@@ -9604,9 +9604,9 @@ pub fn from_built(built: BuiltRepository) -> Self
 
 **Returns**
 
-[Repository](#rust-repository)
+[CRUDRepository](#rust-crudrepository)
 
-###### add_middleware(middleware) {#rust-repository-add_middleware-middleware}
+###### add_middleware(middleware) {#rust-crudrepository-add_middleware-middleware}
 
 Adds command middleware.
 
@@ -9724,7 +9724,7 @@ A read-only wrapper fills properties already on `T` from related repositories. T
 
 Lookups use `ReadSingle` / `read_single_where` (cached per distinct key). Lists use `Read` / `read_where`. Missing lookups leave the destination default.
 
-`DeepCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
+`EnrichedCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
 
 - **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
@@ -9904,27 +9904,27 @@ read(query?: IQuery | IWhere): AsyncIterable<T>
 
 `AsyncIterable<T>`
 
-##### DeepCRUDRepository {#typescript-deepcrudrepository}
+##### EnrichedCRUDRepository {#typescript-enrichedcrudrepository}
 
 ```typescript
-class DeepCRUDRepository<T extends object> extends EnrichedReadonlyRepository<T> implements ICRUDRepository<T>
+class EnrichedCRUDRepository<T extends object> extends EnrichedReadonlyRepository<T> implements ICRUDRepository<T>
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [DeepCRUDRepository(inner, strategy?)](#typescript-deepcrudrepository-deepcrudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default. |
+| [EnrichedCRUDRepository(inner, strategy?)](#typescript-enrichedcrudrepository-enrichedcrudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [create(item)](#typescript-deepcrudrepository-create-item) | Writes the parent, then nested `many` children. |
-| [update(item, byWhere?)](#typescript-deepcrudrepository-update-item-bywhere) | Writes the parent, then replace-syncs nested `many` lists. |
-| [delete(item, byWhere?)](#typescript-deepcrudrepository-delete-item-bywhere) | Deletes nested `many` rows, then the parent. |
+| [create(item)](#typescript-enrichedcrudrepository-create-item) | Writes the parent, then nested `many` children. |
+| [update(item, byWhere?)](#typescript-enrichedcrudrepository-update-item-bywhere) | Writes the parent, then replace-syncs nested `many` lists. |
+| [delete(item, byWhere?)](#typescript-enrichedcrudrepository-delete-item-bywhere) | Deletes nested `many` rows, then the parent. |
 
-###### DeepCRUDRepository(inner, strategy?) {#typescript-deepcrudrepository-deepcrudrepository-inner-strategy}
+###### EnrichedCRUDRepository(inner, strategy?) {#typescript-enrichedcrudrepository-enrichedcrudrepository-inner-strategy}
 
 Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default.
 
@@ -9941,7 +9941,7 @@ constructor(inner: ICRUDRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>
 | `inner` | [ICRUDRepository](#crud-repository) |
 | `strategy` | optional [IReadonlyEnrichmentStrategy](#typescript-ireadonlyenrichmentstrategy) |
 
-###### create(item) {#typescript-deepcrudrepository-create-item}
+###### create(item) {#typescript-enrichedcrudrepository-create-item}
 
 Writes the parent, then nested `many` children.
 
@@ -9961,7 +9961,7 @@ create(item: T): Promise<Response>
 
 `Promise<Response>`
 
-###### update(item, byWhere?) {#typescript-deepcrudrepository-update-item-bywhere}
+###### update(item, byWhere?) {#typescript-enrichedcrudrepository-update-item-bywhere}
 
 Writes the parent, then replace-syncs nested `many` lists.
 
@@ -9982,7 +9982,7 @@ update(item: T, byWhere?: IWhere): Promise<Response>
 
 `Promise<Response>`
 
-###### delete(item, byWhere?) {#typescript-deepcrudrepository-delete-item-bywhere}
+###### delete(item, byWhere?) {#typescript-enrichedcrudrepository-delete-item-bywhere}
 
 Deletes nested `many` rows, then the parent.
 
@@ -10309,34 +10309,34 @@ public override IAsyncEnumerable<T> Read(IStatement? query = null)
 
 `IAsyncEnumerable<T>`
 
-##### DeepCRUDRepository {#csharp-deepcrudrepository}
+##### EnrichedCRUDRepository {#csharp-enrichedcrudrepository}
 
 ```csharp
-public class DeepCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
+public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [DeepCRUDRepository(inner, strategy)](#csharp-deepcrudrepository-deepcrudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default. |
+| [EnrichedCRUDRepository(inner, strategy)](#csharp-enrichedcrudrepository-enrichedcrudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Create(item)](#csharp-deepcrudrepository-create-item) | Writes the parent, then nested `many` children. |
-| [Update(item, byWhere)](#csharp-deepcrudrepository-update-item-bywhere) | Writes the parent, then replace-syncs nested `many` lists. |
-| [Delete(item, byWhere)](#csharp-deepcrudrepository-delete-item-bywhere) | Deletes nested `many` rows, then the parent. |
+| [Create(item)](#csharp-enrichedcrudrepository-create-item) | Writes the parent, then nested `many` children. |
+| [Update(item, byWhere)](#csharp-enrichedcrudrepository-update-item-bywhere) | Writes the parent, then replace-syncs nested `many` lists. |
+| [Delete(item, byWhere)](#csharp-enrichedcrudrepository-delete-item-bywhere) | Deletes nested `many` rows, then the parent. |
 
-###### DeepCRUDRepository(inner, strategy) {#csharp-deepcrudrepository-deepcrudrepository-inner-strategy}
+###### EnrichedCRUDRepository(inner, strategy) {#csharp-enrichedcrudrepository-enrichedcrudrepository-inner-strategy}
 
 Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default.
 
 **Definition**
 
 ```csharp
-public DeepCRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
+public EnrichedCRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
 **Parameters**
@@ -10346,7 +10346,7 @@ public DeepCRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<
 | `inner` | [ICRUDRepository](#crud-repository) |
 | `strategy` | optional [IReadonlyEnrichmentStrategy](#csharp-ireadonlyenrichmentstrategy) |
 
-###### Create(item) {#csharp-deepcrudrepository-create-item}
+###### Create(item) {#csharp-enrichedcrudrepository-create-item}
 
 Writes the parent, then nested `many` children.
 
@@ -10366,7 +10366,7 @@ public Task<Response> Create(T item)
 
 `Task<Response>`
 
-###### Update(item, byWhere) {#csharp-deepcrudrepository-update-item-bywhere}
+###### Update(item, byWhere) {#csharp-enrichedcrudrepository-update-item-bywhere}
 
 Writes the parent, then replace-syncs nested `many` lists.
 
@@ -10387,7 +10387,7 @@ public Task<Response> Update(T item, IWhere? byWhere = null)
 
 `Task<Response>`
 
-###### Delete(item, byWhere) {#csharp-deepcrudrepository-delete-item-bywhere}
+###### Delete(item, byWhere) {#csharp-enrichedcrudrepository-delete-item-bywhere}
 
 Deletes nested `many` rows, then the parent.
 
@@ -10757,26 +10757,26 @@ pub fn add_enriched_repo_with(&mut self, into: impl Into<String>, from: impl Int
 
 `&mut Self`
 
-##### DeepCRUDRepository {#rust-deepcrudrepository}
+##### EnrichedCRUDRepository {#rust-enrichedcrudrepository}
 
 ```rust
-pub struct DeepCRUDRepository
+pub struct EnrichedCRUDRepository
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(inner)](#rust-deepcrudrepository-new-inner) | Wraps an inner [CRUDRepository](#crud-repository). Uses the default strategy. |
-| [with_strategy(inner, strategy)](#rust-deepcrudrepository-with_strategy-inner-strategy) | Wraps an inner repository with a [ReadonlyEnrichmentStrategy](#rust-readonlyenrichmentstrategy). |
+| [new(inner)](#rust-enrichedcrudrepository-new-inner) | Wraps an inner [CRUDRepository](#crud-repository). Uses the default strategy. |
+| [with_strategy(inner, strategy)](#rust-enrichedcrudrepository-with_strategy-inner-strategy) | Wraps an inner repository with a [ReadonlyEnrichmentStrategy](#rust-readonlyenrichmentstrategy). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [add_enriched / add_enriched_repo](#rust-deepcrudrepository-add_enriched-add_enriched_repo) | Forwards to the inner [EnrichedReadonlyRepository](#rust-enrichedreadonlyrepository). Use `add_enriched_repo` for `many` children that must persist. |
+| [add_enriched / add_enriched_repo](#rust-enrichedcrudrepository-add_enriched-add_enriched_repo) | Forwards to the inner [EnrichedReadonlyRepository](#rust-enrichedreadonlyrepository). Use `add_enriched_repo` for `many` children that must persist. |
 
-###### new(inner) {#rust-deepcrudrepository-new-inner}
+###### new(inner) {#rust-enrichedcrudrepository-new-inner}
 
 Wraps an inner [CRUDRepository](#crud-repository). Uses the default strategy.
 
@@ -10794,9 +10794,9 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 **Returns**
 
-[DeepCRUDRepository](#rust-deepcrudrepository)
+[EnrichedCRUDRepository](#rust-deepcrudrepository)
 
-###### with_strategy(inner, strategy) {#rust-deepcrudrepository-with_strategy-inner-strategy}
+###### with_strategy(inner, strategy) {#rust-enrichedcrudrepository-with_strategy-inner-strategy}
 
 Wraps an inner repository with a [ReadonlyEnrichmentStrategy](#rust-readonlyenrichmentstrategy).
 
@@ -10815,9 +10815,9 @@ pub fn with_strategy(inner: Arc<dyn CRUDRepository>, strategy: Arc<dyn ReadonlyE
 
 **Returns**
 
-[DeepCRUDRepository](#rust-deepcrudrepository)
+[EnrichedCRUDRepository](#rust-deepcrudrepository)
 
-###### add_enriched / add_enriched_repo {#rust-deepcrudrepository-add_enriched-add_enriched_repo}
+###### add_enriched / add_enriched_repo {#rust-enrichedcrudrepository-add_enriched-add_enriched_repo}
 
 Forwards to the inner [EnrichedReadonlyRepository](#rust-enrichedreadonlyrepository). Use `add_enriched_repo` for `many` children that must persist.
 
@@ -11058,7 +11058,7 @@ const items = await collectAsync(repo.read());
 
 ## Bulk repository
 
-[DeepCRUDRepository](#deepcrudrepository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+[EnrichedCRUDRepository](#deepcrudrepository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
 
 ### Classes
 
@@ -11067,7 +11067,7 @@ const items = await collectAsync(repo.read());
 ##### BulkCRUDRepository {#typescript-bulkcrudrepository}
 
 ```typescript
-class BulkCRUDRepository<T extends object> extends DeepCRUDRepository<T>
+class BulkCRUDRepository<T extends object> extends EnrichedCRUDRepository<T>
 ```
 
 **Constructor**
@@ -11167,7 +11167,7 @@ deleteBulk(items: T[], byWhere?: IWhere): Promise<Response>
 ##### BulkCRUDRepository {#csharp-bulkcrudrepository}
 
 ```csharp
-public class BulkCRUDRepository<T> : DeepCRUDRepository<T>
+public class BulkCRUDRepository<T> : EnrichedCRUDRepository<T>
 ```
 
 **Constructor**
@@ -11345,7 +11345,7 @@ pub struct BulkCRUDRepository
 
 | Name | Description |
 | --- | --- |
-| [add_enriched / add_enriched_repo](#rust-bulkcrudrepository-add_enriched-add_enriched_repo) | Forwards to the inner [DeepCRUDRepository](#rust-deepcrudrepository). Use `add_enriched_repo` for `many` children that must persist. |
+| [add_enriched / add_enriched_repo](#rust-bulkcrudrepository-add_enriched-add_enriched_repo) | Forwards to the inner [EnrichedCRUDRepository](#rust-deepcrudrepository). Use `add_enriched_repo` for `many` children that must persist. |
 | [create_bulk(items)](#rust-bulkcrudrepository-create_bulk-items) | Creates each item, including nested `many` children. |
 | [update_bulk(items, by_where)](#rust-bulkcrudrepository-update_bulk-items-by_where) | Updates each item, then replace-syncs nested `many` lists. |
 | [delete_bulk(items, by_where)](#rust-bulkcrudrepository-delete_bulk-items-by_where) | Deletes nested `many` rows for each item, then the parents. |
@@ -11372,7 +11372,7 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 ###### add_enriched / add_enriched_repo {#rust-bulkcrudrepository-add_enriched-add_enriched_repo}
 
-Forwards to the inner [DeepCRUDRepository](#rust-deepcrudrepository). Use `add_enriched_repo` for `many` children that must persist.
+Forwards to the inner [EnrichedCRUDRepository](#rust-deepcrudrepository). Use `add_enriched_repo` for `many` children that must persist.
 
 ###### create_bulk(items) {#rust-bulkcrudrepository-create_bulk-items}
 
@@ -11440,7 +11440,7 @@ pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn Where>) -> 
 
 C# exposes list overloads (`Create(IReadOnlyList<T>)`) and `Bulk*` aliases. TypeScript and Rust use `createBulk` / `create_bulk` only.
 
-Each item still runs the same deep persist as [DeepCRUDRepository](#deepcrudrepository).
+Each item still runs the same deep persist as [EnrichedCRUDRepository](#deepcrudrepository).
 
 ### Examples
 

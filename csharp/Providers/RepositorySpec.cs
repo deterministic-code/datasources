@@ -54,7 +54,7 @@ public static class RepositorySpec
             AssignIdentityOnCreate = spec.Type.AssignIdentityOnCreate,
             Columns = [.. spec.Type.Fields.Keys],
         });
-        var repo = new Repository<T>(built).AddMiddleware(new ConsoleCommandMiddleware(line =>
+        var repo = new CRUDRepository<T>(built).AddMiddleware(new ConsoleCommandMiddleware(line =>
         {
             logs.Add(line);
             if (Verbose()) Console.WriteLine(line);

@@ -1,7 +1,6 @@
 import type { IConnection } from "./IConnection.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import { untyped } from "./ReadonlyRepository.ts";
 import { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { StatementMapper } from "./mappers/StatementMapper.ts";
@@ -45,7 +44,7 @@ export const parts = <T>(
     columns,
     ids: options.ids ?? ["id"],
     assignIdentityOnCreate: options.assignIdentityOnCreate !== false,
-    type: options.type ?? untyped<T>(),
+    type: options.type ?? (Object as never as Constructable<T>),
   };
 };
 
