@@ -35,8 +35,7 @@ public static class RepositoryBuilder<T> where T : new()
                 crudMapper.Insert,
                 crudMapper.Update,
                 crudMapper.Delete),
-            options.Ids,
-            options.AssignIdentityOnCreate);
+            options.Ids);
     }
 
     public static CRUDRepository<T> Build(RepositoryBuilderOptions<T> options) => new(Parts(options));

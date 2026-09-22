@@ -90,6 +90,14 @@ Read-row [Mapper](./mappers.md).
 readonly rows: IMapper<T, T>
 ```
 
+##### create
+
+Maps `Response.result` onto a created item after insert. Default writes the value onto `id`.
+
+```typescript
+readonly create: IMapper<Scalar, T>
+```
+
 #### CRUDMapperOptions
 
 ```typescript
@@ -122,6 +130,14 @@ Read-row [Mapper](./mappers.md).
 
 ```typescript
 rows?: IMapper<T, T>
+```
+
+##### create
+
+Maps `Response.result` onto a created item after insert.
+
+```typescript
+create?: IMapper<Scalar, T>
 ```
 
 ##### query
@@ -229,6 +245,14 @@ Read-row [Mapper](./mappers.md).
 IMapper<T, T> Rows { get; init; }
 ```
 
+##### Create
+
+Maps `Response.Result` onto a created item after insert. Default writes the value onto `id` / `Id`.
+
+```csharp
+IMapper<Value, T> Create { get; init; }
+```
+
 ### rust
 #### CRUDMapper
 
@@ -302,6 +326,14 @@ Read-row [TransformMapper](./transform-mapper.md).
 pub rows: TransformMapper<Row, Row>
 ```
 
+##### create
+
+Maps `Response.result` onto a created row after insert. Default writes the value onto `id`.
+
+```rust
+pub create: TransformMapper<Value, Row>
+```
+
 **Methods**
 
 ##### identity(source, destination)
@@ -340,7 +372,7 @@ Apply mapping in either or both places:
 
 C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](./transform-mapper.md)`<String, String>` over SQL text via `CRUDMapper::map_sql`.
 
-`Repository.Mapper` / `mapper` aliases `Rows` / `rows`.
+`Repository.Mapper` / `mapper` aliases `Rows` / `rows`. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
 
 ## Examples
 

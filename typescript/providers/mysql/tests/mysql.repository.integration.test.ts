@@ -22,7 +22,7 @@ const dialect: RepositoryDialect = {
       columns.map((column) => ({
         name: MysqlQuote.quote(column.name),
         type: column.id
-          ? `${MysqlColumnType.map(column.type)} PRIMARY KEY`
+          ? `${MysqlColumnType.map(column.type)} PRIMARY KEY AUTO_INCREMENT`
           : MysqlColumnType.map(column.type),
       })),
     ),

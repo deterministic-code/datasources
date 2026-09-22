@@ -17,6 +17,8 @@ describe("CRUDMapper", () => {
     expect(mapper.entity.reverseMap("id")).toBe("id");
     expect(mapper.columns.map("id")).toBe("id");
     expect(mapper.columns.reverseMap("id")).toBe("id");
+    expect(mapper.create.map(null)).toEqual({});
+    expect(mapper.create.map(9)).toEqual({ id: 9 });
   });
 
   it("rewrites each finished statement", () => {

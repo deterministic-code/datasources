@@ -175,7 +175,8 @@ impl EnrichedCRUDRepository {
             if let Some(key) = &key {
                 row.insert(enrichment.by.clone(), key.clone());
             }
-            let response = writer.create(&strip_enriched(row, node)).await?;
+            let mut stripped = strip_enriched(row, node);
+            let response = writer.create(&mut stripped).await?;
             apply_identity(row, &response);
             self.persist(node, std::slice::from_mut(row), Mode::Create)
                 .await?;
@@ -226,7 +227,8 @@ impl EnrichedCRUDRepository {
                     writer.update(&strip_enriched(row, node), None).await?;
                 }
                 _ => {
-                    let response = writer.create(&strip_enriched(row, node)).await?;
+                    let mut stripped = strip_enriched(row, node);
+                    let response = writer.create(&mut stripped).await?;
                     apply_identity(row, &response);
                 }
             }
@@ -365,16 +367,13 @@ impl IReadonlyRepository for EnrichedCRUDRepository {
 
 #[async_trait]
 impl ICRUDRepository for EnrichedCRUDRepository {
-    async fn create(&self, item: &Row) -> Result<Response> {
-        let mut parent = item.clone();
-        let response = self
-            .inner
-            .create(&strip_enriched(&parent, &self.enriched.tree.parent))
-            .await?;
-        apply_identity(&mut parent, &response);
+    async fn create(&self, item: &mut Row) -> Result<Response> {
+        let mut stripped = strip_enriched(item, &self.enriched.tree.parent);
+        let response = self.inner.create(&mut stripped).await?;
+        apply_identity(item, &response);
         self.persist(
             &self.enriched.tree.parent,
-            std::slice::from_mut(&mut parent),
+            std::slice::from_mut(item),
             Mode::Create,
         )
         .await?;

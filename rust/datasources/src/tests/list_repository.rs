@@ -86,7 +86,7 @@ impl IReadonlyRepository for ListRepository {
 
 #[async_trait]
 impl ICRUDRepository for ListRepository {
-    async fn create(&self, item: &Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Response> {
         let mut row = item.clone();
         let id = match row.get("id") {
             Some(Value::Int(id)) if *id != 0 => *id,

@@ -193,7 +193,7 @@ Forwards to the inner [EnrichedCRUDRepository](./enriched-repository.md#deepcrud
 Creates each item, including nested `many` children.
 
 ```rust
-pub async fn create_bulk(&self, items: &[Row]) -> Result<Response>
+pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
 ```
 
 - `items` — parents to insert

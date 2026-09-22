@@ -81,8 +81,6 @@ struct Spec {
 struct TypeSpec {
     table: String,
     ids: Vec<String>,
-    #[serde(rename = "assignIdentityOnAdd")]
-    assign_identity_on_create: bool,
     fields: BTreeMap<String, String>,
     #[serde(default)]
     converters: BTreeMap<String, String>,
@@ -517,7 +515,7 @@ fn queries(spec: &Spec) -> Vec<String> {
                         &table,
                         &fields_of(
                             &flatten_yaml(&create.row, &spec.type_spec.mappings),
-                            |col| !spec.type_spec.assign_identity_on_create || !ids.contains(col),
+                            |col| !ids.contains(col),
                         ),
                     )
                     .get_text(),
@@ -664,7 +662,6 @@ pub async fn run(
     let options = RepositoryBuilderOptions {
         connection,
         ids: spec.type_spec.ids.clone(),
-        assign_identity_on_create: spec.type_spec.assign_identity_on_create,
         entity: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec, dialect)),
         mapper: None,
@@ -700,7 +697,7 @@ pub async fn run(
                 create: Some(create),
                 ..
             } => {
-                repo.create(&domain_record(&create.row, &spec.type_spec.mappings))
+                repo.create(&mut domain_record(&create.row, &spec.type_spec.mappings))
                     .await
                     .unwrap();
             }

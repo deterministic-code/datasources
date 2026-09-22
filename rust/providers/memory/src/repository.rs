@@ -55,7 +55,7 @@ impl IReadonlyRepository for MemoryRepository {
 
 #[async_trait]
 impl ICRUDRepository for MemoryRepository {
-    async fn create(&self, item: &Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Response> {
         self.connection.ensure_open()?;
         self.connection.collection(|items| items.push(item.clone()));
         Ok(Response::new(Value::Null, 1))

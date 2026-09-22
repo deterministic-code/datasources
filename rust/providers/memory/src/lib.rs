@@ -19,8 +19,8 @@ pub(crate) use filter::{json_to_value, matches, parse_filter};
 mod tests {
     use super::*;
     use datasources::{
-        create, register, reset, Command, Connection, IsolationLevel, Parameter,
-        Row, QueryStatement, TextWhere, Value,
+        create, register, reset, Command, Connection, ICRUDRepository, IReadonlyRepository,
+        IsolationLevel, Parameter, Row, QueryStatement, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -125,7 +125,7 @@ mod tests {
             .await
             .unwrap()
             .is_empty());
-        repo.create(&rec(2, "b")).await.unwrap();
+        repo.create(&mut rec(2, "b")).await.unwrap();
         repo.update(&rec(2, "B"), None).await.unwrap();
         repo.update(&rec(2, "C"), Some(&TextWhere::new("{\"id\":2}")))
             .await
@@ -171,10 +171,10 @@ mod tests {
             .unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
         assert!(conn.in_transaction());
-        repo.create(&rec(9, "t")).await.unwrap();
+        repo.create(&mut rec(9, "t")).await.unwrap();
         txn.abort().await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
-        repo.create(&rec(8, "c")).await.unwrap();
+        repo.create(&mut rec(8, "c")).await.unwrap();
         txn.commit().await.unwrap();
         let _ = conn.start_transaction(None).await.unwrap();
         conn.finish_abort();
@@ -194,7 +194,7 @@ mod tests {
         ));
         named_conn.open().await.unwrap();
         MemoryRepository::new(named_conn.clone())
-            .create(&rec(2, "b"))
+            .create(&mut rec(2, "b"))
             .await
             .unwrap();
 
@@ -258,7 +258,7 @@ mod tests {
             .await
             .is_err());
         assert!(MemoryRepository::new(closed.clone())
-            .create(&rec(1, "a"))
+            .create(&mut rec(1, "a"))
             .await
             .is_err());
         assert!(MemoryRepository::new(closed.clone())

@@ -34,7 +34,6 @@ export type RepositoryTypeSpec = {
   name: string;
   table: string;
   ids: string[];
-  assignIdentityOnAdd: boolean;
   fields: Record<string, CanonicalType>;
   converters?: Record<string, CanonicalType>;
   mappings?: RepositoryMappings;
@@ -120,7 +119,7 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
     if (step.CREATE) {
       const fields = fieldsOf(
         flattenRepositoryRow(step.CREATE.row, type.mappings),
-        (col) => !type.assignIdentityOnAdd || !ids.has(col),
+        (col) => !ids.has(col),
       );
       return withStatementSql(new InsertStatement(table, fields).getText(), true, type);
     }

@@ -34,8 +34,7 @@ public class RepositoryTests
     }
 
     static (CRUDRepository<T> Repo, MockCommand Command) Create<T>(
-        IReadOnlyList<string>? id = null,
-        bool assignIdentityOnCreate = true)
+        IReadOnlyList<string>? id = null)
         where T : new()
     {
         var connection = new MockConnection { Provider = "memory" };
@@ -45,15 +44,13 @@ public class RepositoryTests
         {
             Connection = connection,
             Ids = id ?? ["id"],
-            AssignIdentityOnCreate = assignIdentityOnCreate,
             Entity = "users"
         }), command);
     }
 
     static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(
-        IReadOnlyList<string>? id = null,
-        bool assignIdentityOnCreate = true) =>
-        Create<UserRow>(id, assignIdentityOnCreate);
+        IReadOnlyList<string>? id = null) =>
+        Create<UserRow>(id);
 
     [Fact]
     public async Task GetBuildsSelectAndMapsRows()
@@ -98,22 +95,24 @@ public class RepositoryTests
     [Fact]
     public async Task AddUpdateDeleteUseBuilders()
     {
-        var (repo, command) = Create(assignIdentityOnCreate: false);
+        var (repo, command) = Create();
+        command.Response = new Response(new Value.Int(9), 1);
         var obj = new UserRow { id = 1, name = "a" };
         await repo.Create(obj);
-        Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
+        Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
+        Assert.Equal(9, obj.id);
         await repo.Update(obj);
         Assert.Equal("UPDATE users SET name = $name WHERE id = $id", command.ExecuteCalls[1].Text);
         Assert.Equal(new Value.Text("a"), command.ExecuteCalls[1].Parameters![0].Value);
-        Assert.Equal(new Value.Int(1), command.ExecuteCalls[1].Parameters![1].Value);
+        Assert.Equal(new Value.Int(9), command.ExecuteCalls[1].Parameters![1].Value);
         await repo.Delete(obj);
         Assert.Equal("DELETE FROM users WHERE id = $id", command.ExecuteCalls[2].Text);
     }
 
     [Fact]
-    public async Task CompositeIdAndAssignIdentityOnCreateAndOverrides()
+    public async Task CompositeIdOmitsIdsOnCreate()
     {
-        var (repo, command) = Create<Composite>(id: ["org_id", "user_id"], assignIdentityOnCreate: true);
+        var (repo, command) = Create<Composite>(id: ["org_id", "user_id"]);
         await repo.Create(new Composite { org_id = 1, user_id = 2, name = 3 });
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
         Assert.Equal(new Value.Int(3), command.ExecuteCalls[0].Parameters![0].Value);
@@ -254,7 +253,6 @@ public class RepositoryTests
         {
             Connection = connection,
             Entity = "users",
-            AssignIdentityOnCreate = false,
             Mapper = UserContactsMapper()
         });
         var user = new User
@@ -266,7 +264,7 @@ public class RepositoryTests
         };
         await repo.Create(user);
         Assert.Equal(
-            "INSERT INTO users (contact_name1, contact_name2, email, id, username) VALUES ($contact_name1, $contact_name2, $email, $id, $username)",
+            "INSERT INTO users (contact_name1, contact_name2, email, username) VALUES ($contact_name1, $contact_name2, $email, $username)",
             command.ExecuteCalls[0].Text);
         var names = command.ExecuteCalls[0].Parameters!.ToDictionary(p => p.Name, p => p.Value);
         Assert.Equal(new Value.Text("bob"), names["contact_name1"]);

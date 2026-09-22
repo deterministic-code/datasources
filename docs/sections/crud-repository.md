@@ -217,14 +217,6 @@ Id column names. Default `["id"]`.
 ids?: string[]
 ```
 
-##### assignIdentityOnCreate
-
-When true, omit id columns on insert so the provider can generate them. Default `true`.
-
-```typescript
-assignIdentityOnCreate?: boolean
-```
-
 ##### entity
 
 Table or entity name.
@@ -313,14 +305,6 @@ Id column names.
 
 ```typescript
 ids: string[]
-```
-
-##### assignIdentityOnCreate
-
-When true, omit id columns on insert.
-
-```typescript
-assignIdentityOnCreate: boolean
 ```
 
 ##### type
@@ -524,14 +508,6 @@ Id column names. Default `["id"]`.
 IReadOnlyList<string> Ids { get; init; }
 ```
 
-##### AssignIdentityOnCreate
-
-When true, omit id columns on insert so the provider can generate them. Default `true`.
-
-```csharp
-bool AssignIdentityOnCreate { get; init; }
-```
-
 ##### Entity
 
 Table or entity name.
@@ -622,14 +598,6 @@ Id column names.
 IReadOnlyList<string> Ids { get; init; }
 ```
 
-##### AssignIdentityOnCreate
-
-When true, omit id columns on insert.
-
-```csharp
-bool AssignIdentityOnCreate { get; init; }
-```
-
 ### rust
 #### ICRUDRepository
 
@@ -644,7 +612,7 @@ pub trait ICRUDRepository: IReadonlyRepository
 Inserts one row.
 
 ```rust
-async fn create(&self, item: &Row) -> Result<Response>
+async fn create(&self, item: &mut Row) -> Result<Response>
 ```
 
 - `item` — row to insert
@@ -755,7 +723,7 @@ Constructor bag for [CRUDRepository](#repository).
 
 ##### with_factory(connection)
 
-Defaults: `ids = ["id"]`, `assign_identity_on_create = true`, `entity = "items"`.
+Defaults: `ids = ["id"]`, `entity = "items"`.
 
 ```rust
 pub fn with_factory(connection: Arc<dyn Connection>) -> Self
@@ -781,14 +749,6 @@ Id column names.
 
 ```rust
 pub ids: Vec<String>
-```
-
-##### assign_identity_on_create
-
-When true, omit id columns on insert.
-
-```rust
-pub assign_identity_on_create: bool
 ```
 
 ##### entity
@@ -872,19 +832,11 @@ Id column names.
 ```rust
 pub ids: Vec<String>
 ```
-
-##### assign_identity_on_create
-
-When true, omit id columns on insert.
-
-```rust
-pub assign_identity_on_create: bool
-```
 :::
 
 ## Remarks
 
-Update requires at least one non-id field. Missing id values throw.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `CRUDMapper.Create` / `create` maps `Response.Result` onto the created item.
 
 `Mapper` / `mapper` aliases `CRUDMapper.Rows` / `rows`. See [CRUDMapper](./crud-mapper.md).
 
@@ -893,10 +845,10 @@ Update requires at least one non-id field. Missing id values throw.
 ### Create, update, and delete
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L102-L111
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#L101-L109
 ```
-```rust rust/datasources/src/tests/mod.rs#L886-L899
+```rust rust/datasources/src/tests/mod.rs#L1376-L1390
 ```
-```typescript typescript/datasources/src/repository.test.ts#L100-L111
+```typescript typescript/datasources/src/repository.test.ts#L103-L113
 ```
 :::

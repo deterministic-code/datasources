@@ -21,7 +21,7 @@ fn dialect() -> RepositoryDialect {
                     Column::new(
                         MysqlQuote::quote(&column.name),
                         if column.id {
-                            format!("{affinity} PRIMARY KEY")
+                            format!("{affinity} PRIMARY KEY AUTO_INCREMENT")
                         } else {
                             affinity
                         },

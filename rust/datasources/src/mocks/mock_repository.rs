@@ -81,7 +81,7 @@ impl IReadonlyRepository for MockRepository {
 
 #[async_trait]
 impl ICRUDRepository for MockRepository {
-    async fn create(&self, item: &Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Response> {
         if let Some(error) = &*self.add_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }

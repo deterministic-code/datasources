@@ -16,8 +16,8 @@ describe("expected repository console", () => {
 
   it("expands user-crud into statement SQL", () => {
     expect(repositoryQueries(spec)).toEqual([
-      "INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)",
-      "INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)",
+      "INSERT INTO user (balance, created, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $is_enabled, $location, $username, $uuid, $version)",
+      "INSERT INTO user (balance, created, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $is_enabled, $location, $username, $uuid, $version)",
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE id = $id",
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE username = $username",
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM user WHERE uuid = $uuid",
@@ -39,8 +39,8 @@ describe("expected repository console", () => {
       readFileSync(join(repoRoot(), "specs", "repositories", "complex-crud-mappings.yaml"), "utf8"),
     ) as RepositorySpec;
     expect(repositoryQueries(mapped)).toEqual([
-      "INSERT INTO users (create_string, decimal_text, id, username, usertypename, uuid, version) VALUES ($create_string, $decimal_text, $id, $username, $usertypename, $uuid, $version)",
-      "INSERT INTO users (create_string, decimal_text, id, username, usertypename, uuid, version) VALUES ($create_string, $decimal_text, $id, $username, $usertypename, $uuid, $version)",
+      "INSERT INTO users (create_string, decimal_text, username, usertypename, uuid, version) VALUES ($create_string, $decimal_text, $username, $usertypename, $uuid, $version)",
+      "INSERT INTO users (create_string, decimal_text, username, usertypename, uuid, version) VALUES ($create_string, $decimal_text, $username, $usertypename, $uuid, $version)",
       "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE id = $id",
       "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE username = $username",
       "SELECT create_string, decimal_text, id, username, usertypename, uuid, version FROM users WHERE uuid = $uuid",
@@ -64,7 +64,7 @@ describe("expected repository console", () => {
     const select =
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM people";
     const insert =
-      "INSERT INTO people (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version) RETURNING id";
+      "INSERT INTO people (balance, created, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $is_enabled, $location, $username, $uuid, $version) RETURNING id";
     expect(repositoryQueries(mapped)).toEqual([
       insert,
       insert,
@@ -86,10 +86,10 @@ describe("expected repository console", () => {
     const signatures = expectedRepositoryConsoleSignatures(spec);
     expect(signatures).toHaveLength(30);
     expect(signatures[0]).toBe(
-      "[datasource][Start]-[INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)]",
+      "[datasource][Start]-[INSERT INTO user (balance, created, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $is_enabled, $location, $username, $uuid, $version)]",
     );
     expect(signatures[1]).toBe(
-      "[datasource][Finish]-[INSERT INTO user (balance, created, id, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $id, $is_enabled, $location, $username, $uuid, $version)]",
+      "[datasource][Finish]-[INSERT INTO user (balance, created, is_enabled, location, username, uuid, version) VALUES ($balance, $created, $is_enabled, $location, $username, $uuid, $version)]",
     );
   });
 });

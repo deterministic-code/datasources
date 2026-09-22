@@ -11,9 +11,11 @@ use crate::parameter::Parameter;
 use crate::query::Query;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
+use crate::mappers::Mapper;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::value::Value;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::table_repository_builder_options::RepositoryBuilderOptions;
 use crate::where_trait::Where;
@@ -27,7 +29,6 @@ pub struct CRUDRepository {
     pub crud_mapper: Arc<CRUDMapper>,
     id: Vec<String>,
     ids: HashSet<String>,
-    assign_identity_on_create: bool,
 }
 
 impl RepositoryBuilder {
@@ -51,14 +52,12 @@ impl CRUDRepository {
 
     pub fn from_built(built: BuiltRepository) -> Self {
         let id = built.ids.clone();
-        let assign_identity_on_create = built.assign_identity_on_create;
         let crud_mapper = built.crud_mapper.clone();
         Self {
             inner: ReadonlyRepository::from_built(built),
             crud_mapper,
             ids: id.iter().cloned().collect(),
             id,
-            assign_identity_on_create,
         }
     }
 
@@ -66,10 +65,10 @@ impl CRUDRepository {
         self.inner.add_middleware(middleware);
     }
 
-    fn params(&self, record: &Row, include_id: bool) -> Vec<Parameter> {
+    fn params(&self, record: &Row) -> Vec<Parameter> {
         let mut pairs: Vec<_> = record
             .iter()
-            .filter(|(key, _)| include_id || !self.ids.contains(*key))
+            .filter(|(key, _)| !self.ids.contains(*key))
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
         pairs.sort_by(|left, right| left.0.cmp(&right.0));
@@ -121,11 +120,15 @@ impl IReadonlyRepository for CRUDRepository {
 
 #[async_trait]
 impl ICRUDRepository for CRUDRepository {
-    async fn create(&self, item: &Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Response> {
         let record = self.inner.reverse_convert(item)?;
-        let fields = self.params(&record, !self.assign_identity_on_create);
+        let fields = self.params(&record);
         let text = self.inner.statements.insert(&fields);
-        self.inner.command().execute(&text, Some(&fields)).await
+        let response = self.inner.command().execute(&text, Some(&fields)).await?;
+        if response.result != Value::Null {
+            apply(item, Mapper::map(&self.crud_mapper.create, response.result.clone()));
+        }
+        Ok(response)
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
@@ -140,7 +143,7 @@ impl ICRUDRepository for CRUDRepository {
             (_, Some(where_clause)) => where_clause,
             _ => unreachable!(),
         };
-        let fields = self.params(&record, false);
+        let fields = self.params(&record);
         if fields.is_empty() {
             return Err(DatasourceError::message(
                 "Update requires at least one non-Id field",
@@ -167,6 +170,14 @@ impl ICRUDRepository for CRUDRepository {
         let text = self.inner.statements.delete(predicate);
         let parameters = predicate.parameters();
         self.inner.command().execute(&text, Some(&parameters)).await
+    }
+}
+
+fn apply(item: &mut Row, identity: Row) {
+    for (key, value) in identity {
+        if value != Value::Null {
+            item.insert(key, value);
+        }
     }
 }
 

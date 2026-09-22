@@ -81,8 +81,15 @@ impl BulkCRUDRepository {
         self
     }
 
-    pub async fn create_bulk(&self, items: &[Row]) -> Result<Response> {
-        fold(items, |item| self.inner.create(item)).await
+    pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response> {
+        let mut result = Value::Null;
+        let mut rows_affected = 0;
+        for item in items {
+            let response = self.inner.create(item).await?;
+            result = response.result;
+            rows_affected += response.rows_affected;
+        }
+        Ok(Response::new(result, rows_affected))
     }
 
     pub async fn update_bulk(
@@ -151,7 +158,7 @@ impl IReadonlyRepository for BulkCRUDRepository {
 
 #[async_trait]
 impl ICRUDRepository for BulkCRUDRepository {
-    async fn create(&self, item: &Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Response> {
         self.inner.create(item).await
     }
 

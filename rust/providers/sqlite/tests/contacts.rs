@@ -3,7 +3,7 @@ use super::connection::SqliteConnection;
 use super::rusqlite_driver::RusqliteDriver;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Connection, CRUDRepository, FlatToNestedMapper, Mapper,
+    Connection, CRUDRepository, FlatToNestedMapper, IReadonlyRepository, Mapper,
     RepositoryBuilderOptions,
 };
 use datasources_sql_specs::{

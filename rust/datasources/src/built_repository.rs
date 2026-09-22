@@ -10,5 +10,4 @@ pub struct BuiltRepository {
     pub crud_mapper: Arc<CRUDMapper>,
     pub statements: RepositoryStatements,
     pub ids: Vec<String>,
-    pub assign_identity_on_create: bool,
 }

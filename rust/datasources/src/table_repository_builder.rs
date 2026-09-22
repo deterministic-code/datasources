@@ -42,7 +42,6 @@ impl RepositoryBuilder {
             crud_mapper: crud_mapper.clone(),
             statements: RepositoryStatements::with_mapper(entity, columns, crud_mapper),
             ids: options.ids,
-            assign_identity_on_create: options.assign_identity_on_create,
         })
     }
 

@@ -8820,12 +8820,7 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L62-L72)
 
 ```csharp
-repo.AddMiddleware(new PassMiddleware());
-command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
-var rows = new List<UserRow>();
-await foreach (var row in repo.Read())
-    rows.Add(row);
-Assert.Single(rows);
+["id"] = 1, ["name"] = "a" 
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L845-L851)
@@ -9128,7 +9123,6 @@ type RepositoryBuilderOptions<T = Cells>
 | --- | --- |
 | connection | Open [IConnection](#connection). |
 | ids | Id column names. Default `["id"]`. |
-| assignIdentityOnCreate | When true, omit id columns on insert so the provider can generate them. Default `true`. |
 | entity | Table or entity name. |
 | mapping | Row [TypeConverter](#type-converter). |
 | mapper | Read-row [Mapper](#mapper). |
@@ -9150,7 +9144,6 @@ type BuiltRepository<T = Cells>
 | crudMapper | [CRUDMapper](#crud-mapper). |
 | statements | SQL fragments. |
 | ids | Id column names. |
-| assignIdentityOnCreate | When true, omit id columns on insert. |
 | type | Item constructor. |
 
 ##### C#
@@ -9424,7 +9417,6 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
 | --- | --- |
 | Connection | Open [IConnection](#connection). |
 | Ids | Id column names. Default `["id"]`. |
-| AssignIdentityOnCreate | When true, omit id columns on insert so the provider can generate them. Default `true`. |
 | Entity | Table or entity name. |
 | Mapping | Row [TypeConverter](#type-converter). |
 | Mapper | Read-row [Mapper](#mapper). |
@@ -9446,7 +9438,6 @@ public sealed record BuiltRepository<T> where T : new()
 | CRUDMapper | [CRUDMapper](#crud-mapper). |
 | Statements | SQL fragments. |
 | Ids | Id column names. |
-| AssignIdentityOnCreate | When true, omit id columns on insert. |
 
 ##### Rust
 
@@ -9471,7 +9462,7 @@ Inserts one row.
 **Definition**
 
 ```rust
-async fn create(&self, item: &Row) -> Result<Response>
+async fn create(&self, item: &mut Row) -> Result<Response>
 ```
 
 **Parameters**
@@ -9638,7 +9629,7 @@ pub struct RepositoryBuilderOptions
 
 | Name | Description |
 | --- | --- |
-| [with_factory(connection)](#rust-repositorybuilderoptions-with_factory-connection) | Defaults: `ids = ["id"]`, `assign_identity_on_create = true`, `entity = "items"`. |
+| [with_factory(connection)](#rust-repositorybuilderoptions-with_factory-connection) | Defaults: `ids = ["id"]`, `entity = "items"`. |
 
 **Properties**
 
@@ -9646,7 +9637,6 @@ pub struct RepositoryBuilderOptions
 | --- | --- |
 | connection | [Connection](#connection). |
 | ids | Id column names. |
-| assign_identity_on_create | When true, omit id columns on insert. |
 | entity | Table or entity name. |
 | mapping | Row [RowTypeConverter](#row-type-converter). |
 | mapper | Read-row [TransformMapper](#transform-mapper). |
@@ -9654,7 +9644,7 @@ pub struct RepositoryBuilderOptions
 
 ###### with_factory(connection) {#rust-repositorybuilderoptions-with_factory-connection}
 
-Defaults: `ids = ["id"]`, `assign_identity_on_create = true`, `entity = "items"`.
+Defaults: `ids = ["id"]`, `entity = "items"`.
 
 **Definition**
 
@@ -9687,11 +9677,10 @@ pub struct BuiltRepository
 | crud_mapper | [CRUDMapper](#crud-mapper). |
 | statements | SQL fragments. |
 | ids | Id column names. |
-| assign_identity_on_create | When true, omit id columns on insert. |
 
 ### Remarks
 
-Update requires at least one non-id field. Missing id values throw.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `CRUDMapper.Create` / `create` maps `Response.Result` onto the created item.
 
 `Mapper` / `mapper` aliases `CRUDMapper.Rows` / `rows`. See [CRUDMapper](#crud-mapper).
 
@@ -9699,28 +9688,21 @@ Update requires at least one non-id field. Missing id values throw.
 
 #### Create, update, and delete
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L102-L111)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L101-L109)
 
 ```csharp
-var obj = new UserRow { id = 1, name = "a" };
 await repo.Create(obj);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L886-L899)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1376-L1390)
 
 ```rust
-    "SELECT * FROM users"
-);
-assert!(QueryStatement::new("users", &[], None, &[])
-    .where_clause()
-    .is_none());
+repo.create(&mut obj).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L100-L111)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L103-L113)
 
 ```typescript
-const { repo, command } = create({ assignIdentityOnCreate: false });
-const obj = { id: 1, name: "a" };
 await repo.create(obj);
 ```
 
@@ -11387,7 +11369,7 @@ Creates each item, including nested `many` children.
 **Definition**
 
 ```rust
-pub async fn create_bulk(&self, items: &[Row]) -> Result<Response>
+pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
 ```
 
 **Parameters**
@@ -11468,24 +11450,24 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-#[tokio::test]
-async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
-    let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-        ("id", Value::Int(1)),
-        ("type_id", Value::Int(10)),
-    ])]));
-    let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-        ("id", Value::Int(10)),
-        ("name", Value::from("org")),
-    ])]));
-    let child_types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-        ("id", Value::Int(3)),
-        ("name", Value::from("home")),
-    ])]));
-    let children = Arc::new(items_repository::ItemsRepository::new(vec![
-        record(&[
-            ("parent_id", Value::Int(1)),
-            ("type_id", Value::Int(3)),
+let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+    ("id", Value::Int(1)),
+    ("type_id", Value::Int(10)),
+])]));
+let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+    ("id", Value::Int(10)),
+    ("name", Value::from("org")),
+])]));
+let child_types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+    ("id", Value::Int(3)),
+    ("name", Value::from("home")),
+])]));
+let children = Arc::new(items_repository::ItemsRepository::new(vec![
+    record(&[
+        ("parent_id", Value::Int(1)),
+        ("type_id", Value::Int(3)),
+        ("label", Value::from("a")),
+    ]),
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -12997,6 +12979,7 @@ class CRUDMapper<T>
 | delete | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
 | return | Rewrites a finished [IReturnStatement](#typescript-ireturnstatement). |
 | rows | Read-row [Mapper](#mapper). |
+| create | Maps `Response.result` onto a created item after insert. Default writes the value onto `id`. |
 
 ###### CRUDMapper(options?) {#typescript-crudmapper-crudmapper-options}
 
@@ -13027,6 +13010,7 @@ type CRUDMapperOptions<T>
 | entity | Maps the table or entity name. |
 | columns | Maps column names. |
 | rows | Read-row [Mapper](#mapper). |
+| create | Maps `Response.result` onto a created item after insert. |
 | query | Rewrites a finished [IQuery](#typescript-iquery). |
 | insert | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
 | update | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
@@ -13052,6 +13036,7 @@ public sealed class CRUDMapper<T> where T : new()
 | Delete | Rewrites a finished [IDeleteStatement](#csharp-ideletestatement). |
 | Return | Rewrites a finished [IReturnStatement](#csharp-ireturnstatement). |
 | Rows | Read-row [Mapper](#mapper). |
+| Create | Maps `Response.Result` onto a created item after insert. Default writes the value onto `id` / `Id`. |
 
 ##### Rust
 
@@ -13073,6 +13058,7 @@ pub struct CRUDMapper
 | delete | Rewrites finished delete SQL. |
 | return_ | Rewrites finished return-call SQL. |
 | rows | Read-row [TransformMapper](#transform-mapper). |
+| create | Maps `Response.result` onto a created row after insert. Default writes the value onto `id`. |
 
 **Methods**
 
@@ -13132,7 +13118,7 @@ Apply mapping in either or both places:
 
 C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](#transform-mapper)`<String, String>` over SQL text via `CRUDMapper::map_sql`.
 
-`Repository.Mapper` / `mapper` aliases `Rows` / `rows`.
+`Repository.Mapper` / `mapper` aliases `Rows` / `rows`. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
 
 ### Examples
 
@@ -13141,21 +13127,22 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L56-L81)
 
 ```csharp
-var statements = new RepositoryStatements(
-    "users",
-    ["id", "name"],
-    new TransformMapper<IQuery, IQuery>(
-        query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
-        query => query),
-    new TransformMapper<IInsertStatement, IInsertStatement>(
-        insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
-        insert => insert),
-    new TransformMapper<IUpdateStatement, IUpdateStatement>(
-        update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
-        update => update),
-    new TransformMapper<IDeleteStatement, IDeleteStatement>(
-        delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),
-        delete => delete));
+{
+    var statements = new RepositoryStatements(
+        "users",
+        ["id", "name"],
+        new TransformMapper<IQuery, IQuery>(
+            query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
+            query => query),
+        new TransformMapper<IInsertStatement, IInsertStatement>(
+            insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
+            insert => insert),
+        new TransformMapper<IUpdateStatement, IUpdateStatement>(
+            update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
+            update => update),
+        new TransformMapper<IDeleteStatement, IDeleteStatement>(
+            delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),
+            delete => delete));
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1615-L1677)
@@ -13196,7 +13183,6 @@ let mut options = RepositoryBuilderOptions::with_factory(
     MockConnection::with_command_provider(command.clone(), "memory"),
 );
 options.entity = "users".into();
-options.assign_identity_on_create = false;
 options.mapping = Some(users_mapping());
 options.crud_mapper = Some(mapper);
 let repo = CRUDRepository::new(options).unwrap();
@@ -13235,14 +13221,15 @@ const statements = statementsOf("users", ["id", "name"], mapper);
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L84-L95)
 
 ```csharp
-var mapper = new CRUDMapper<UserRow>
 {
-    Return = new TransformMapper<IReturnStatement, IReturnStatement>(
-        ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
-        ret => ret)
-};
-var built = new ReturnStatement("add", [new Parameter("id", 1)]);
-var statement = mapper.Return is { } map ? map.Map(built) : built;
+    var mapper = new CRUDMapper<UserRow>
+    {
+        Return = new TransformMapper<IReturnStatement, IReturnStatement>(
+            ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
+            ret => ret)
+    };
+    var built = new ReturnStatement("add", [new Parameter("id", 1)]);
+    var statement = mapper.Return is { } map ? map.Map(built) : built;
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1285-L1294)
