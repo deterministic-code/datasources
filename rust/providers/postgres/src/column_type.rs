@@ -1,7 +1,4 @@
-use datasources::{Column, CreateTableStatement, Result, Text};
-
-use crate::column::PostgresColumn;
-use crate::quote::PostgresQuote;
+use datasources::Result;
 
 pub struct PostgresColumnType;
 
@@ -29,6 +26,9 @@ impl PostgresColumnType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::column::PostgresColumn;
+    use crate::quote::PostgresQuote;
+    use datasources::{Column, CreateTableStatement, Text};
 
     fn user_columns() -> Vec<PostgresColumn> {
         vec![

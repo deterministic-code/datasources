@@ -7,6 +7,9 @@ import {
 } from "@datasources/core";
 import { JsonConnection } from "@datasources/json";
 import { MemoryConnection } from "@datasources/memory";
+import { MysqlConnection } from "@datasources/mysql";
+import { PostgresConnection } from "@datasources/postgres";
+import { SqliteConnection } from "@datasources/sqlite";
 import { packages } from "./packages.ts";
 import { providerNames } from "./providerNames.ts";
 
@@ -18,6 +21,9 @@ type Pair = {
 const listed: Record<string, Pair> = {
   json: JsonConnection,
   memory: MemoryConnection,
+  sqlite: SqliteConnection,
+  mysql: MysqlConnection,
+  postgres: PostgresConnection,
 };
 
 const load = (name: string): Pair => {

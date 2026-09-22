@@ -1,7 +1,4 @@
-use datasources::{Column, CreateTableStatement, Result, Text};
-
-use crate::column::SqliteColumn;
-use crate::quote::SqliteQuote;
+use datasources::Result;
 
 pub struct SqliteColumnType;
 
@@ -27,6 +24,9 @@ impl SqliteColumnType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::column::SqliteColumn;
+    use crate::quote::SqliteQuote;
+    use datasources::{Column, CreateTableStatement, Text};
 
     fn user_columns() -> Vec<SqliteColumn> {
         vec![

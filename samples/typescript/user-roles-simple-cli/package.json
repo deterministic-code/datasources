@@ -1,0 +1,39 @@
+{
+  "name": "user-roles-simple-cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "test": "vitest run --coverage --exclude tests/**/*.e2e.test.ts",
+    "test:e2e": "vitest run tests/*.e2e.test.ts"
+  },
+  "dependencies": {
+    "@datasources/core": "file:../../../typescript/datasources",
+    "@datasources/mysql": "file:../../../typescript/providers/mysql",
+    "@datasources/postgres": "file:../../../typescript/providers/postgres",
+    "@datasources/register": "file:../../../typescript/register",
+    "@datasources/sqlite": "file:../../../typescript/providers/sqlite",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.10.0",
+    "mysql2": "^3.14.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.15.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "@vitest/coverage-v8": "^3.1.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  },
+  "overrides": {
+    "@datasources/core": "file:../../../typescript/datasources",
+    "@datasources/json": "file:../../../typescript/providers/json",
+    "@datasources/memory": "file:../../../typescript/providers/memory",
+    "@datasources/mysql": "file:../../../typescript/providers/mysql",
+    "@datasources/postgres": "file:../../../typescript/providers/postgres",
+    "@datasources/register": "file:../../../typescript/register",
+    "@datasources/sqlite": "file:../../../typescript/providers/sqlite"
+  }
+}
