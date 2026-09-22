@@ -1,6 +1,9 @@
 use crate::app::App;
 use crate::as_user_view;
-use crate::cli_command::CliCommand;
+use crate::commands::{
+    AddGroup, AddRole, AddUser, AddUserGroup, AddUserRole, CliCommand, DisableUser, EnableUser,
+    ListUsersRolesGroups,
+};
 use crate::column_types;
 use crate::columns;
 use crate::migrate;
@@ -32,48 +35,48 @@ fn parses_commands() {
     let s = |value: &str| value.to_string();
     assert_eq!(
         parse::args(&[s("add-user"), s("a"), s("b")]).unwrap(),
-        CliCommand::AddUser {
+        CliCommand::AddUser(AddUser {
             username: "a".into(),
             password: "b".into()
-        }
+        })
     );
     assert_eq!(
         parse::args(&[s("add-role"), s("admin")]).unwrap(),
-        CliCommand::AddRole { name: "admin".into() }
+        CliCommand::AddRole(AddRole { name: "admin".into() })
     );
     assert_eq!(
         parse::args(&[s("add-group"), s("staff")]).unwrap(),
-        CliCommand::AddGroup { name: "staff".into() }
+        CliCommand::AddGroup(AddGroup { name: "staff".into() })
     );
     assert_eq!(
         parse::args(&[s("add-user-role"), s("a"), s("admin")]).unwrap(),
-        CliCommand::AddUserRole {
+        CliCommand::AddUserRole(AddUserRole {
             username: "a".into(),
             role: "admin".into()
-        }
+        })
     );
     assert_eq!(
         parse::args(&[s("add-user-group"), s("a"), s("staff")]).unwrap(),
-        CliCommand::AddUserGroup {
+        CliCommand::AddUserGroup(AddUserGroup {
             username: "a".into(),
             group: "staff".into()
-        }
+        })
     );
     assert_eq!(
         parse::args(&[s("enable-user"), s("a")]).unwrap(),
-        CliCommand::EnableUser {
+        CliCommand::EnableUser(EnableUser {
             username: "a".into()
-        }
+        })
     );
     assert_eq!(
         parse::args(&[s("disable-user"), s("a")]).unwrap(),
-        CliCommand::DisableUser {
+        CliCommand::DisableUser(DisableUser {
             username: "a".into()
-        }
+        })
     );
     assert_eq!(
         parse::args(&[s("list-users-roles-groups")]).unwrap(),
-        CliCommand::ListUsersRolesGroups
+        CliCommand::ListUsersRolesGroups(ListUsersRolesGroups)
     );
     for verb in [
         "add-user",
@@ -220,45 +223,45 @@ async fn writes_sqlite_and_lists() {
         |password| Ok(format!("#{password}")),
         || vec![1, 2, 3],
     );
-    app.run(CliCommand::AddUser {
+    app.run(CliCommand::AddUser(AddUser {
         username: "alice".into(),
         password: "secret".into(),
-    })
+    }))
     .await
     .unwrap();
-    app.run(CliCommand::AddRole {
+    app.run(CliCommand::AddRole(AddRole {
         name: "admin".into(),
-    })
+    }))
     .await
     .unwrap();
-    app.run(CliCommand::AddGroup {
+    app.run(CliCommand::AddGroup(AddGroup {
         name: "staff".into(),
-    })
+    }))
     .await
     .unwrap();
     *command.reader_rows.lock().expect("mock") = vec![
         row(&[("id", Value::Int(1))]),
         row(&[("id", Value::Int(2))]),
     ];
-    app.run(CliCommand::AddUserRole {
+    app.run(CliCommand::AddUserRole(AddUserRole {
         username: "alice".into(),
         role: "admin".into(),
-    })
+    }))
     .await
     .unwrap();
     *command.reader_rows.lock().expect("mock") = vec![
         row(&[("id", Value::Int(1))]),
         row(&[("id", Value::Int(3))]),
     ];
-    app.run(CliCommand::AddUserGroup {
+    app.run(CliCommand::AddUserGroup(AddUserGroup {
         username: "alice".into(),
         group: "staff".into(),
-    })
+    }))
     .await
     .unwrap();
-    app.run(CliCommand::DisableUser {
+    app.run(CliCommand::DisableUser(DisableUser {
         username: "alice".into(),
-    })
+    }))
     .await
     .unwrap();
     let logs = command.execute_logs.lock().expect("mock").clone();
@@ -277,7 +280,7 @@ async fn writes_sqlite_and_lists() {
         ("group_name", Value::Text("staff".into())),
         ("group_is_enabled", Value::Bool(true)),
     ])];
-    let json = app.run(CliCommand::ListUsersRolesGroups).await.unwrap();
+    let json = app.run(CliCommand::ListUsersRolesGroups(ListUsersRolesGroups)).await.unwrap();
     assert!(json.contains("\"username\":\"alice\""));
     assert!(!json.contains("password"));
     assert!(!json.contains("ugly_name"));
@@ -292,45 +295,45 @@ async fn writes_mysql_procedures() {
         |password| Ok(format!("#{password}")),
         || vec![1, 2, 3],
     );
-    app.run(CliCommand::AddUser {
+    app.run(CliCommand::AddUser(AddUser {
         username: "alice".into(),
         password: "secret".into(),
-    })
+    }))
     .await
     .unwrap();
-    app.run(CliCommand::AddRole {
+    app.run(CliCommand::AddRole(AddRole {
         name: "admin".into(),
-    })
+    }))
     .await
     .unwrap();
-    app.run(CliCommand::AddGroup {
+    app.run(CliCommand::AddGroup(AddGroup {
         name: "staff".into(),
-    })
+    }))
     .await
     .unwrap();
     *command.reader_rows.lock().expect("mock") = vec![
         row(&[("id", Value::Int(1))]),
         row(&[("id", Value::Int(2))]),
     ];
-    app.run(CliCommand::AddUserRole {
+    app.run(CliCommand::AddUserRole(AddUserRole {
         username: "alice".into(),
         role: "admin".into(),
-    })
+    }))
     .await
     .unwrap();
     *command.reader_rows.lock().expect("mock") = vec![
         row(&[("id", Value::Int(1))]),
         row(&[("id", Value::Int(3))]),
     ];
-    app.run(CliCommand::AddUserGroup {
+    app.run(CliCommand::AddUserGroup(AddUserGroup {
         username: "alice".into(),
         group: "staff".into(),
-    })
+    }))
     .await
     .unwrap();
-    app.run(CliCommand::EnableUser {
+    app.run(CliCommand::EnableUser(EnableUser {
         username: "alice".into(),
-    })
+    }))
     .await
     .unwrap();
     let logs = command.execute_logs.lock().expect("mock").clone();
@@ -359,16 +362,16 @@ async fn migrates_and_rejects_missing() {
     *command.reader_rows.lock().expect("mock") = vec![];
     let app = App::new(&command, "sqlite");
     assert!(app
-        .run(CliCommand::EnableUser {
+        .run(CliCommand::EnableUser(EnableUser {
             username: "missing".into()
-        })
+        }))
         .await
         .is_err());
     *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Text("x".into()))])];
     assert!(app
-        .run(CliCommand::EnableUser {
+        .run(CliCommand::EnableUser(EnableUser {
             username: "bad".into()
-        })
+        }))
         .await
         .is_err());
 }

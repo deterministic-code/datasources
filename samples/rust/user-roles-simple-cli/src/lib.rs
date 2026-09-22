@@ -1,6 +1,6 @@
 pub mod app;
 pub mod as_user_view;
-pub mod cli_command;
+pub mod commands;
 pub mod column_types;
 pub mod columns;
 pub mod group_view;

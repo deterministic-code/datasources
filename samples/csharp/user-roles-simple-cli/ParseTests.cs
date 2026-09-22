@@ -5,14 +5,14 @@ public sealed class ParseTests
     [Fact]
     public void ParsesCommands()
     {
-        Assert.Equal(new CliCommand.AddUser("a", "b"), Parse.Args(["add-user", "a", "b"]));
-        Assert.Equal(new CliCommand.AddRole("admin"), Parse.Args(["add-role", "admin"]));
-        Assert.Equal(new CliCommand.AddGroup("staff"), Parse.Args(["add-group", "staff"]));
-        Assert.Equal(new CliCommand.AddUserRole("a", "admin"), Parse.Args(["add-user-role", "a", "admin"]));
-        Assert.Equal(new CliCommand.AddUserGroup("a", "staff"), Parse.Args(["add-user-group", "a", "staff"]));
-        Assert.Equal(new CliCommand.EnableUser("a"), Parse.Args(["enable-user", "a"]));
-        Assert.Equal(new CliCommand.DisableUser("a"), Parse.Args(["disable-user", "a"]));
-        Assert.Equal(new CliCommand.ListUsersRolesGroups(), Parse.Args(["list-users-roles-groups"]));
+        Assert.Equal(new AddUser("a", "b"), Parse.Args(["add-user", "a", "b"]));
+        Assert.Equal(new AddRole("admin"), Parse.Args(["add-role", "admin"]));
+        Assert.Equal(new AddGroup("staff"), Parse.Args(["add-group", "staff"]));
+        Assert.Equal(new AddUserRole("a", "admin"), Parse.Args(["add-user-role", "a", "admin"]));
+        Assert.Equal(new AddUserGroup("a", "staff"), Parse.Args(["add-user-group", "a", "staff"]));
+        Assert.Equal(new EnableUser("a"), Parse.Args(["enable-user", "a"]));
+        Assert.Equal(new DisableUser("a"), Parse.Args(["disable-user", "a"]));
+        Assert.Equal(new ListUsersRolesGroups(), Parse.Args(["list-users-roles-groups"]));
     }
 
     [Theory]
