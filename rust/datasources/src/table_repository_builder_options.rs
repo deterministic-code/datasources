@@ -1,6 +1,7 @@
 use crate::connection::Connection;
 use crate::converters::{RowTypeConverter, TypeConverter};
-use crate::mappers::{StatementMapper, TransformMapper};
+use crate::crud_mapper::CRUDMapper;
+use crate::mappers::TransformMapper;
 use crate::row::Row;
 use crate::value::Value;
 use std::collections::HashMap;
@@ -13,7 +14,7 @@ pub struct RepositoryBuilderOptions {
     pub entity: String,
     pub mapping: Option<RowTypeConverter>,
     pub mapper: Option<TransformMapper<Row, Row>>,
-    pub statement_mapper: Option<StatementMapper>,
+    pub crud_mapper: Option<CRUDMapper>,
     pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
@@ -27,7 +28,7 @@ impl RepositoryBuilderOptions {
             entity: "items".into(),
             mapping: None,
             mapper: None,
-            statement_mapper: None,
+            crud_mapper: None,
             types: HashMap::new(),
             fields: HashMap::new(),
         }

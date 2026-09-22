@@ -3,7 +3,7 @@ import {
   CRUDRepository,
   QueryStatement,
   RowTypeConverter,
-  StatementMapper,
+  CRUDMapper,
   TransformMapper,
   Where,
   WhereClause,
@@ -289,7 +289,7 @@ describe("CRUDRepository", () => {
     );
     const { repo, command } = create({
       assignIdentityOnCreate: false,
-      statementMapper: new StatementMapper({
+      crudMapper: new CRUDMapper({
         entity: names,
         columns: names,
         query: new TransformMapper(

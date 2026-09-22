@@ -13,6 +13,7 @@ mod create;
 mod create_repository_builder_options;
 mod datasource;
 mod datasource_error;
+mod crud_mapper;
 mod crud_repository;
 mod enriched_crud_repository;
 mod default_readonly_enrichment_strategy;
@@ -87,6 +88,7 @@ pub use create::{create, create_default, default};
 pub use create_repository_builder_options::create_repository_builder_options;
 pub use datasource::{BuiltDatasource, Datasource};
 pub use datasource_error::DatasourceError;
+pub use crud_mapper::CRUDMapper;
 pub use crud_repository::CRUDRepository;
 pub use enriched_crud_repository::EnrichedCRUDRepository;
 pub use default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
@@ -103,7 +105,7 @@ pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
     FlatToNestedMapper, FlatToNestedMapperTrait, MappedRow, MappedValue, Mapper,
-    RowTypeMapper, StatementMapper,
+    RowTypeMapper,
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
 pub use mocks::{

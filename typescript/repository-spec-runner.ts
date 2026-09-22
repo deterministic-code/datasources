@@ -9,7 +9,7 @@ import {
   QueryStatement,
   CRUDRepository,
   RowTypeConverter,
-  StatementMapper,
+  CRUDMapper,
   TransformMapper,
   UpdateStatement,
   Literal,
@@ -31,7 +31,7 @@ import {
   type RepositoryRow,
   type RepositorySpec,
   type RepositoryTypeSpec,
-  type StatementMapperSpec,
+  type CRUDMapperSpec,
 } from "../specs/expected-repository-console.ts";
 import { consoleSignature } from "../specs/expected-console-output.ts";
 import { repoRoot, specVerbose } from "./sql-spec-runner.ts";
@@ -156,13 +156,13 @@ const suffix = <T extends { getText: () => string }>(
     ? new TransformMapper<T, T>((built) => rewrite(`${built.getText()}${value}`, built), (built) => built)
     : undefined;
 
-const statementMapperOf = (
+const crudMapperOf = (
   type: RepositoryTypeSpec,
   rows: TransformMapper<SpecRow, SpecRow>,
   quote: (id: string) => string,
 ) => {
-  const mapper: StatementMapperSpec = type.statementMapper ?? {};
-  return new StatementMapper<SpecRow>({
+  const mapper: CRUDMapperSpec = type.crudMapper ?? {};
+  return new CRUDMapper<SpecRow>({
     entity: new TransformMapper(
       (name) => quote(mapper.entity ?? name),
       (name) => name,
@@ -256,7 +256,7 @@ export const runRepositorySpec = async (
     type: typeOf(spec.type),
     entity: spec.type.table,
     mapping,
-    statementMapper: statementMapperOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
+    crudMapper: crudMapperOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
     columns: Object.keys(spec.type.fields),
   });
   const logs: string[] = [];

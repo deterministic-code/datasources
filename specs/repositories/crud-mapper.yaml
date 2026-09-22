@@ -1,4 +1,4 @@
-name: statement-mapper-crud
+name: crud-mapper
 type:
   name: user
   table: user
@@ -15,7 +15,7 @@ type:
     version: binary
   converters: {}
   mappings: {}
-  statementMapper:
+  crudMapper:
     entity: people
     querySuffix: " LIMIT 1"
     writeSuffix: " RETURNING id"

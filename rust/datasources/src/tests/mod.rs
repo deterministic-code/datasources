@@ -1282,26 +1282,14 @@ fn collect_in_non_literal_panics() {
 }
 
 #[test]
-fn stored_procedure_mapper_rewrites_finished_sql() {
-    let mut mapper = StatementMapper::identity("", "");
-    mapper.stored_procedure = Some(Arc::new(TransformMapper::new(
-        |text: String| format!("{text} /* mapped */"),
-        |text| text,
-    )));
-    let built = ExecuteStoredProcedureStatement::new("save", &[Parameter::new("id", 1_i64)]);
-    let text = StatementMapper::map_sql(&mapper.stored_procedure, built.get_text());
-    assert_eq!(text, "CALL save($id) /* mapped */");
-}
-
-#[test]
 fn return_mapper_rewrites_finished_sql() {
-    let mut mapper = StatementMapper::identity("", "");
+    let mut mapper = CRUDMapper::identity("", "");
     mapper.return_ = Some(Arc::new(TransformMapper::new(
         |text: String| format!("{text} /* mapped */"),
         |text| text,
     )));
     let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
-    let text = StatementMapper::map_sql(&mapper.return_, built.get_text());
+    let text = CRUDMapper::map_sql(&mapper.return_, built.get_text());
     assert_eq!(text, "SELECT add($id) /* mapped */");
 }
 
@@ -1624,7 +1612,7 @@ async fn table_repository_maps_flat_row_into_contacts() {
 }
 
 #[tokio::test]
-async fn table_repository_statement_mapper() {
+async fn table_repository_crud_mapper() {
     let command = Arc::new(MockCommand::new());
     let names = TransformMapper::new(
         |name: String| match name.as_str() {
@@ -1635,7 +1623,7 @@ async fn table_repository_statement_mapper() {
         },
         |name| name,
     );
-    let mut mapper = StatementMapper::identity("memory", "rust");
+    let mut mapper = CRUDMapper::identity("memory", "rust");
     mapper.entity = TransformMapper::new(
         |name: String| match name.as_str() {
             "users" => "people".into(),
@@ -1664,7 +1652,7 @@ async fn table_repository_statement_mapper() {
     options.entity = "users".into();
     options.assign_identity_on_create = false;
     options.mapping = Some(users_mapping());
-    options.statement_mapper = Some(mapper);
+    options.crud_mapper = Some(mapper);
     let repo = CRUDRepository::new(options).unwrap();
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.read_single(None).await.unwrap().is_none());

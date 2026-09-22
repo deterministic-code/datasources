@@ -223,7 +223,7 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and `StatementMapper`.
+See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and [CRUDMapper](#crud-mapper).
 
 ### Type Converter
 
@@ -8951,8 +8951,8 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | Name | Description |
 | --- | --- |
 | rowConverter | Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper). |
-| statementsMapper | Statement [StatementMapper](#statement-mapper). |
-| mapper | Read-row [Mapper](#mapper). Alias of `statementsMapper.rows`. |
+| crudMapper | [CRUDMapper](#crud-mapper). |
+| mapper | Read-row [Mapper](#mapper). Alias of `crudMapper.rows`. |
 | statements | SQL fragments for query / insert / update / delete. |
 
 **Methods**
@@ -9132,7 +9132,7 @@ type RepositoryBuilderOptions<T = Cells>
 | entity | Table or entity name. |
 | mapping | Row [TypeConverter](#type-converter). |
 | mapper | Read-row [Mapper](#mapper). |
-| statementMapper | [StatementMapper](#statement-mapper). |
+| crudMapper | [CRUDMapper](#crud-mapper). |
 | columns | Column names when mapping is omitted. |
 
 ##### BuiltRepository {#typescript-builtrepository}
@@ -9147,7 +9147,7 @@ type BuiltRepository<T = Cells>
 | --- | --- |
 | connection | Open [IConnection](#connection). |
 | rowConverter | Row [TypeConverter](#type-converter). |
-| statementMapper | [StatementMapper](#statement-mapper). |
+| crudMapper | [CRUDMapper](#crud-mapper). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 | assignIdentityOnCreate | When true, omit id columns on insert. |
@@ -9249,8 +9249,8 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 
 | Name | Description |
 | --- | --- |
-| StatementsMapper | Statement [StatementMapper](#statement-mapper). |
-| Mapper | Read-row [Mapper](#mapper). Alias of `StatementsMapper.Rows`. |
+| CRUDMapper | [CRUDMapper](#crud-mapper). |
+| Mapper | Read-row [Mapper](#mapper). Alias of `CRUDMapper.Rows`. |
 
 **Methods**
 
@@ -9428,7 +9428,7 @@ public sealed class RepositoryBuilderOptions<T> where T : new()
 | Entity | Table or entity name. |
 | Mapping | Row [TypeConverter](#type-converter). |
 | Mapper | Read-row [Mapper](#mapper). |
-| StatementMapper | [StatementMapper](#statement-mapper). |
+| CRUDMapper | [CRUDMapper](#crud-mapper). |
 | Columns | Column names when mapping is omitted. |
 
 ##### BuiltRepository {#csharp-builtrepository}
@@ -9443,7 +9443,7 @@ public sealed record BuiltRepository<T> where T : new()
 | --- | --- |
 | Connection | Open [IConnection](#connection). |
 | RowConverter | Row [TypeConverter](#type-converter). |
-| StatementMapper | [StatementMapper](#statement-mapper). |
+| CRUDMapper | [CRUDMapper](#crud-mapper). |
 | Statements | SQL fragments. |
 | Ids | Id column names. |
 | AssignIdentityOnCreate | When true, omit id columns on insert. |
@@ -9539,6 +9539,12 @@ pub struct CRUDRepository
 | [from_type(connection)](#rust-crudrepository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
 | [new(options)](#rust-crudrepository-new-options) | Builds a table repository from [RepositoryBuilderOptions](#rust-repositorybuilderoptions). |
 | [from_built(built)](#rust-crudrepository-from_built-built) | Builds a table repository from [BuiltRepository](#rust-builtrepository). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| crud_mapper | [CRUDMapper](#crud-mapper). |
 
 **Methods**
 
@@ -9644,7 +9650,7 @@ pub struct RepositoryBuilderOptions
 | entity | Table or entity name. |
 | mapping | Row [RowTypeConverter](#row-type-converter). |
 | mapper | Read-row [TransformMapper](#transform-mapper). |
-| statement_mapper | [StatementMapper](#statement-mapper). |
+| crud_mapper | [CRUDMapper](#crud-mapper). |
 
 ###### with_factory(connection) {#rust-repositorybuilderoptions-with_factory-connection}
 
@@ -9678,7 +9684,7 @@ pub struct BuiltRepository
 | --- | --- |
 | connection | [Connection](#connection). |
 | row_converter | [RowTypeConverter](#row-type-converter). |
-| statement_mapper | [StatementMapper](#statement-mapper). |
+| crud_mapper | [CRUDMapper](#crud-mapper). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 | assign_identity_on_create | When true, omit id columns on insert. |
@@ -9687,7 +9693,7 @@ pub struct BuiltRepository
 
 Update requires at least one non-id field. Missing id values throw.
 
-`Mapper` / `mapper` aliases `StatementMapper.Rows` / `rows`. See [StatementMapper](#statement-mapper).
+`Mapper` / `mapper` aliases `CRUDMapper.Rows` / `rows`. See [CRUDMapper](#crud-mapper).
 
 ### Examples
 
@@ -11462,14 +11468,24 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-    "type_id",
-    types,
-    "id",
-    Some("name".into()),
-    false,
-)
-.add_enriched("children", "id", children, "parent_id", None, true);
-let item = repo.read_single(None).await.unwrap().unwrap();
+}
+
+#[tokio::test]
+async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
+    let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(1)),
+        ("type_id", Value::Int(10)),
+    ])]));
+    let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(10)),
+        ("name", Value::from("org")),
+    ])]));
+    let child_types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+        ("id", Value::Int(3)),
+        ("name", Value::from("home")),
+    ])]));
+    let children = Arc::new(items_repository::ItemsRepository::new(vec![
+        record(&[
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -11659,13 +11675,13 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Repository read is convert, then map. `StatementMapper.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
+Repository read is convert, then map. `CRUDMapper.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
 
 ### See also
 
 - [TransformMapper](#transform-mapper)
 - [FlatToNestedMapper](#flat-to-nested-mapper)
-- [StatementMapper](#statement-mapper)
+- [CRUDMapper](#crud-mapper)
 
 ## TransformMapper
 
@@ -11913,7 +11929,7 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. StatementMapper uses this for entity, column, and row mapping.
+Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [CRUDMapper](#crud-mapper) uses this for entity, column, and row mapping.
 
 ### Examples
 
@@ -11954,7 +11970,6 @@ public void FlattensAndUnflattensUserAndContacts()
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L59-L94)
 
 ```rust
-let nested = Nested {
     user: User {
         id: 1,
         name: "Ada".into(),
@@ -12950,25 +12965,25 @@ const flat = mapper.reverseMap(nested);
 ]
 ```
 
-## StatementMapper
+## CRUDMapper
 
-Mapper for repository statements. `Map` / `ReverseMap` only touch `Rows`. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete.
+Collection of mappers for a CRUD repository. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete. [Rows](#crudmapper-rows) is the read-row mapper; [CRUDRepository.Mapper](#crud-repository) aliases it.
 
 ### Classes
 
 ##### TypeScript
 
-##### StatementMapper {#typescript-statementmapper}
+##### CRUDMapper {#typescript-crudmapper}
 
 ```typescript
-class StatementMapper<T> implements IMapper<T, T>
+class CRUDMapper<T>
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [StatementMapper(options?)](#typescript-statementmapper-statementmapper-options) | Builds a statement mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-statementmapper-rows) mapper. |
+| [CRUDMapper(options?)](#typescript-crudmapper-crudmapper-options) | Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-crudmapper-rows) mapper. |
 
 **Properties**
 
@@ -12980,77 +12995,29 @@ class StatementMapper<T> implements IMapper<T, T>
 | insert | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
 | update | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
 | delete | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
-| storedProcedure | Rewrites a finished [IExecuteStoredProcedureStatement](#typescript-iexecutestoredprocedurestatement). |
 | return | Rewrites a finished [IReturnStatement](#typescript-ireturnstatement). |
-| rows | Read-row Mapper. [map](#typescript-statementmapper-map-value) / [reverseMap](#typescript-statementmapper-reversemap-value) delegate here. |
+| rows | Read-row [Mapper](#mapper). |
 
-**Methods**
+###### CRUDMapper(options?) {#typescript-crudmapper-crudmapper-options}
 
-| Name | Description |
-| --- | --- |
-| [map(value)](#typescript-statementmapper-map-value) | Maps a row through [rows](#typescript-statementmapper-rows). |
-| [reverseMap(value)](#typescript-statementmapper-reversemap-value) | Reverse-maps a row through [rows](#typescript-statementmapper-rows). |
-
-###### StatementMapper(options?) {#typescript-statementmapper-statementmapper-options}
-
-Builds a statement mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-statementmapper-rows) mapper.
+Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-crudmapper-rows) mapper.
 
 **Definition**
 
 ```typescript
-constructor(options?: StatementMapperOptions<T>)
+constructor(options?: CRUDMapperOptions<T>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `options` | [StatementMapperOptions](#typescript-statementmapperoptions) |
+| `options` | [CRUDMapperOptions](#typescript-crudmapperoptions) |
 
-###### map(value) {#typescript-statementmapper-map-value}
-
-Maps a row through [rows](#typescript-statementmapper-rows).
-
-**Definition**
+##### CRUDMapperOptions {#typescript-crudmapperoptions}
 
 ```typescript
-map(value: T): T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | converted row |
-
-**Returns**
-
-`T`
-
-###### reverseMap(value) {#typescript-statementmapper-reversemap-value}
-
-Reverse-maps a row through [rows](#typescript-statementmapper-rows).
-
-**Definition**
-
-```typescript
-reverseMap(value: T): T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | shaped row |
-
-**Returns**
-
-`T`
-
-##### StatementMapperOptions {#typescript-statementmapperoptions}
-
-```typescript
-type StatementMapperOptions<T>
+type CRUDMapperOptions<T>
 ```
 
 **Properties**
@@ -13059,19 +13026,18 @@ type StatementMapperOptions<T>
 | --- | --- |
 | entity | Maps the table or entity name. |
 | columns | Maps column names. |
-| rows | Read-row Mapper. |
+| rows | Read-row [Mapper](#mapper). |
 | query | Rewrites a finished [IQuery](#typescript-iquery). |
 | insert | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
 | update | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
 | delete | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
-| storedProcedure | Rewrites a finished [IExecuteStoredProcedureStatement](#typescript-iexecutestoredprocedurestatement). |
 
 ##### C#
 
-##### StatementMapper {#csharp-statementmapper}
+##### CRUDMapper {#csharp-crudmapper}
 
 ```csharp
-public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
+public sealed class CRUDMapper<T> where T : new()
 ```
 
 **Properties**
@@ -13084,63 +13050,15 @@ public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
 | Insert | Rewrites a finished [IInsertStatement](#csharp-iinsertstatement). |
 | Update | Rewrites a finished [IUpdateStatement](#csharp-iupdatestatement). |
 | Delete | Rewrites a finished [IDeleteStatement](#csharp-ideletestatement). |
-| StoredProcedure | Rewrites a finished [IExecuteStoredProcedureStatement](#csharp-iexecutestoredprocedurestatement). |
 | Return | Rewrites a finished [IReturnStatement](#csharp-ireturnstatement). |
-| Rows | Read-row Mapper. [Map](#csharp-statementmapper-map-value) / [ReverseMap](#csharp-statementmapper-reversemap-value) delegate here. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(value)](#csharp-statementmapper-map-value) | Maps a row through [Rows](#csharp-statementmapper-rows). |
-| [ReverseMap(value)](#csharp-statementmapper-reversemap-value) | Reverse-maps a row through [Rows](#csharp-statementmapper-rows). |
-
-###### Map(value) {#csharp-statementmapper-map-value}
-
-Maps a row through [Rows](#csharp-statementmapper-rows).
-
-**Definition**
-
-```csharp
-T Map(T value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | converted row |
-
-**Returns**
-
-`T`
-
-###### ReverseMap(value) {#csharp-statementmapper-reversemap-value}
-
-Reverse-maps a row through [Rows](#csharp-statementmapper-rows).
-
-**Definition**
-
-```csharp
-T ReverseMap(T value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | shaped row |
-
-**Returns**
-
-`T`
+| Rows | Read-row [Mapper](#mapper). |
 
 ##### Rust
 
-##### StatementMapper {#rust-statementmapper}
+##### CRUDMapper {#rust-crudmapper}
 
 ```rust
-pub struct StatementMapper
+pub struct CRUDMapper
 ```
 
 **Properties**
@@ -13153,22 +13071,19 @@ pub struct StatementMapper
 | insert | Rewrites finished insert SQL. |
 | update | Rewrites finished update SQL. |
 | delete | Rewrites finished delete SQL. |
-| stored_procedure | Rewrites finished stored-procedure SQL. |
 | return_ | Rewrites finished return-call SQL. |
-| rows | Read-row mapper. [map](#rust-statementmapper-map-value) / [reverse_map](#rust-statementmapper-reverse_map-value) delegate here. |
+| rows | Read-row [TransformMapper](#transform-mapper). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [identity(source, destination)](#rust-statementmapper-identity-source-destination) | Identity statement mapper. Source and destination labels are unused. |
-| [map_sql(mapper, text)](#rust-statementmapper-map_sql-mapper-text) | Applies an optional SQL-text mapper. |
-| [map(value)](#rust-statementmapper-map-value) | Maps a row through [rows](#rust-statementmapper-rows). |
-| [reverse_map(value)](#rust-statementmapper-reverse_map-value) | Reverse-maps a row through [rows](#rust-statementmapper-rows). |
+| [identity(source, destination)](#rust-crudmapper-identity-source-destination) | Identity CRUD mapper. Source and destination labels are unused. |
+| [map_sql(mapper, text)](#rust-crudmapper-map_sql-mapper-text) | Applies an optional SQL-text mapper. |
 
-###### identity(source, destination) {#rust-statementmapper-identity-source-destination}
+###### identity(source, destination) {#rust-crudmapper-identity-source-destination}
 
-Identity statement mapper. Source and destination labels are unused.
+Identity CRUD mapper. Source and destination labels are unused.
 
 **Definition**
 
@@ -13185,9 +13100,9 @@ pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> 
 
 **Returns**
 
-[StatementMapper](#rust-statementmapper)
+[CRUDMapper](#rust-crudmapper)
 
-###### map_sql(mapper, text) {#rust-statementmapper-map_sql-mapper-text}
+###### map_sql(mapper, text) {#rust-crudmapper-map_sql-mapper-text}
 
 Applies an optional SQL-text mapper.
 
@@ -13208,54 +13123,14 @@ pub fn map_sql(mapper: &Option<Arc<TransformMapper<String, String>>>, text: Stri
 
 `String`
 
-###### map(value) {#rust-statementmapper-map-value}
-
-Maps a row through [rows](#rust-statementmapper-rows).
-
-**Definition**
-
-```rust
-fn map(&self, value: Row) -> Row
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | converted row |
-
-**Returns**
-
-`Row`
-
-###### reverse_map(value) {#rust-statementmapper-reverse_map-value}
-
-Reverse-maps a row through [rows](#rust-statementmapper-rows).
-
-**Definition**
-
-```rust
-fn reverse_map(&self, value: Row) -> Row
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | shaped row |
-
-**Returns**
-
-`Row`
-
 ### Remarks
 
-Apply statement mapping in either or both places:
+Apply mapping in either or both places:
 
 1. **Builder** — `RepositoryBuilder` maps `Entity` / `entity` and `Columns` / `columns` into `RepositoryStatements`.
-2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` / `StoredProcedure` / `Return` rewrite the finished statement.
+2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` / `Return` rewrite the finished statement.
 
-C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `stored_procedure` / `return_` are [TransformMapper](#transform-mapper)`<String, String>` over SQL text via `StatementMapper::map_sql`.
+C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](#transform-mapper)`<String, String>` over SQL text via `CRUDMapper::map_sql`.
 
 `Repository.Mapper` / `mapper` aliases `Rows` / `rows`.
 
@@ -13263,7 +13138,7 @@ C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `i
 
 #### Rewrite a finished statement
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementMapperTests.cs#L55-L81)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L54-L79)
 
 ```csharp
 var statements = new RepositoryStatements(
@@ -13283,49 +13158,88 @@ var statements = new RepositoryStatements(
         delete => delete));
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1567-L1609)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1615-L1679)
 
 ```rust
-row.insert("name".into(), Value::from(name.to_uppercase()));
+let command = Arc::new(MockCommand::new());
+let names = TransformMapper::new(
+    |name: String| match name.as_str() {
+        "users" => "people".into(),
+        "id" => "user_id".into(),
+        "name" => "full_name".into(),
+        _ => name,
+    },
+    |name| name,
+);
+let mut mapper = CRUDMapper::identity("memory", "rust");
+mapper.entity = TransformMapper::new(
+    |name: String| match name.as_str() {
+        "users" => "people".into(),
+        _ => name,
+    },
+    |name| name,
+);
+mapper.columns = names;
+mapper.query = Some(Arc::new(TransformMapper::new(
+    |text: String| format!("{text} LIMIT 1"),
+    |text| text,
+)));
+let returning = |text: String| format!("{text} RETURNING id");
+mapper.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
+mapper.update = Some(Arc::new(TransformMapper::new(
+    |text: String| format!("{text} RETURNING id"),
+    |text| text,
+)));
+mapper.delete = Some(Arc::new(TransformMapper::new(
+    |text: String| format!("{text} RETURNING id"),
+    |text| text,
+)));
+let mut options = RepositoryBuilderOptions::with_factory(
+    MockConnection::with_command_provider(command.clone(), "memory"),
+);
+options.entity = "users".into();
+options.assign_identity_on_create = false;
+options.mapping = Some(users_mapping());
+options.crud_mapper = Some(mapper);
+let repo = CRUDRepository::new(options).unwrap();
+command.reader_rows.lock().unwrap().clear();
+assert!(repo.read_single(None).await.unwrap().is_none());
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L29-L61)
 
 ```typescript
+const mapper = new CRUDMapper({
+  entity: names,
+  columns: names,
+  query: new TransformMapper(
+    (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
+    (query) => query,
+  ),
+  insert: new TransformMapper(
+    (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
+    (insert) => insert,
+  ),
+  update: new TransformMapper(
+    (update) =>
+      new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
+    (update) => update,
+  ),
+  delete: new TransformMapper(
+    (remove) =>
+      DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
+    (remove) => remove,
+  ),
 });
-
-it("rewrites each finished statement", () => {
-  const mapper = new StatementMapper({
-    entity: names,
-    columns: names,
-    query: new TransformMapper(
-      (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
-      (query) => query,
-    ),
-    insert: new TransformMapper(
-      (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
-      (insert) => insert,
-    ),
-    update: new TransformMapper(
-      (update) =>
-        new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
-      (update) => update,
-    ),
-    delete: new TransformMapper(
-      (remove) =>
-        DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
-      (remove) => remove,
-    ),
-  });
-  const statements = statementsOf("users", ["id", "name"], mapper);
+const statements = statementsOf("users", ["id", "name"], mapper);
 ```
 
 #### Rewrite a return call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementMapperTests.cs#L95-L107)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L82-L93)
 
 ```csharp
-var mapper = new StatementMapper<UserRow>
+var mapper = new CRUDMapper<UserRow>
 {
     Return = new TransformMapper<IReturnStatement, IReturnStatement>(
         ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
@@ -13335,23 +13249,22 @@ var built = new ReturnStatement("add", [new Parameter("id", 1)]);
 var statement = mapper.Return is { } map ? map.Map(built) : built;
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1216-L1226)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1285-L1294)
 
 ```rust
-        &Expression::Operator(Operator::GreaterThan {
-            left: Box::new(Expression::Literal(Literal::new(2_i64))),
-            right: Box::new(Expression::Literal(Literal::new(1.5_f64))),
-        }),
-        &row
-    ),
-    Value::Bool(true)
-);
+let mut mapper = CRUDMapper::identity("", "");
+mapper.return_ = Some(Arc::new(TransformMapper::new(
+    |text: String| format!("{text} /* mapped */"),
+    |text| text,
+)));
+let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
+let text = CRUDMapper::map_sql(&mapper.return_, built.get_text());
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/StatementMapper.test.ts#L75-L85)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L62-L72)
 
 ```typescript
-const mapper = new StatementMapper({
+const mapper = new CRUDMapper({
   return: new TransformMapper(
     (ret) => new ReturnStatement(`${ret.getText()} /* mapped */`),
     (ret) => ret,

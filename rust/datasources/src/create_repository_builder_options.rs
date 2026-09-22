@@ -16,7 +16,7 @@ pub fn create_repository_builder_options<T: ConvertSchema>(
             .into(),
         mapping: None,
         mapper: None,
-        statement_mapper: None,
+        crud_mapper: None,
         types: Default::default(),
         fields: Default::default(),
         connection,

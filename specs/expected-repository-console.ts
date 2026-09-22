@@ -24,7 +24,7 @@ export type CanonicalType =
 
 export type RepositoryMappings = Record<string, Record<string, string>>;
 
-export type StatementMapperSpec = {
+export type CRUDMapperSpec = {
   entity?: string;
   querySuffix?: string;
   writeSuffix?: string;
@@ -38,7 +38,7 @@ export type RepositoryTypeSpec = {
   fields: Record<string, CanonicalType>;
   converters?: Record<string, CanonicalType>;
   mappings?: RepositoryMappings;
-  statementMapper?: StatementMapperSpec;
+  crudMapper?: CRUDMapperSpec;
 };
 
 export type RepositoryRow = { [key: string]: Scalar | RepositoryRow };
@@ -102,13 +102,13 @@ const idWhere = (spec: RepositoryTypeSpec, id: Scalar) =>
   andAll(spec.ids.map((col) => new Operator.Equals(col, id)));
 
 export const physicalTableOf = (type: RepositoryTypeSpec): string =>
-  type.statementMapper?.entity ?? type.table;
+  type.crudMapper?.entity ?? type.table;
 
 const withStatementSql = (sql: string, write: boolean, type: RepositoryTypeSpec): string =>
   `${sql}${
     write
-      ? (type.statementMapper?.writeSuffix ?? "")
-      : (type.statementMapper?.querySuffix ?? "")
+      ? (type.crudMapper?.writeSuffix ?? "")
+      : (type.crudMapper?.querySuffix ?? "")
   }`;
 
 export const repositoryQueries = (spec: RepositorySpec): string[] => {

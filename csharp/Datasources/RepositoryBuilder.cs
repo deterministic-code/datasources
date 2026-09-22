@@ -13,28 +13,28 @@ public static class RepositoryBuilder<T> where T : new()
             foreach (var (key, converter) in types)
                 row.Types[key] = converter;
         var names = new TransformMapper<string, string>(static name => name, static name => name);
-        var statementMapper = options.StatementMapper ?? new StatementMapper<T>
+        var crudMapper = options.CRUDMapper ?? new CRUDMapper<T>
         {
             Entity = names,
             Columns = names,
             Rows = options.Mapper ?? new TransformMapper<T, T>(static value => value, static value => value)
         };
-        var entity = statementMapper.Entity.Map(options.Entity ?? typeof(T).Name);
+        var entity = crudMapper.Entity.Map(options.Entity ?? typeof(T).Name);
         var columns = (options.Columns is { Count: > 0 } listed ? listed : Columns())
-            .Select(statementMapper.Columns.Map)
+            .Select(crudMapper.Columns.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
         return new(
             options.Connection,
             rowConverter,
-            statementMapper,
+            crudMapper,
             new RepositoryStatements(
                 entity,
                 columns,
-                statementMapper.Query,
-                statementMapper.Insert,
-                statementMapper.Update,
-                statementMapper.Delete),
+                crudMapper.Query,
+                crudMapper.Insert,
+                crudMapper.Update,
+                crudMapper.Delete),
             options.Ids,
             options.AssignIdentityOnCreate);
     }

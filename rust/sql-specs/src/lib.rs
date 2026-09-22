@@ -6,7 +6,7 @@ use datasources::{
     ICRUDRepository, IReadonlyRepository,
     DefaultTypeConverters, DeleteStatement, Expression, InsertStatement, Literal, Operator,
     Parameter, QueryStatement, RepositoryBuilder,
-    RepositoryBuilderOptions, Result, Row, StatementMapper, Text, TransformMapper,
+    CRUDMapper, RepositoryBuilderOptions, Result, Row, Text, TransformMapper,
     TypeConverter, UpdateStatement, Value, WhereClause,
 };
 use rust_decimal::Decimal;
@@ -88,12 +88,12 @@ struct TypeSpec {
     converters: BTreeMap<String, String>,
     #[serde(default)]
     mappings: BTreeMap<String, BTreeMap<String, String>>,
-    #[serde(default, rename = "statementMapper")]
-    statement_mapper: Option<StatementMapperSpec>,
+    #[serde(default, rename = "crudMapper")]
+    crud_mapper: Option<CRUDMapperSpec>,
 }
 
 #[derive(Deserialize, Default)]
-struct StatementMapperSpec {
+struct CRUDMapperSpec {
     entity: Option<String>,
     #[serde(default, rename = "querySuffix")]
     query_suffix: Option<String>,
@@ -441,14 +441,14 @@ fn columns_of(type_spec: &TypeSpec) -> Vec<String> {
 
 fn physical_table(type_spec: &TypeSpec) -> String {
     type_spec
-        .statement_mapper
+        .crud_mapper
         .as_ref()
         .and_then(|mapper| mapper.entity.clone())
         .unwrap_or_else(|| type_spec.table.clone())
 }
 
 fn with_statement_sql(sql: String, write: bool, type_spec: &TypeSpec) -> String {
-    let Some(mapper) = &type_spec.statement_mapper else {
+    let Some(mapper) = &type_spec.crud_mapper else {
         return sql;
     };
     let suffix = if write {
@@ -462,11 +462,11 @@ fn with_statement_sql(sql: String, write: bool, type_spec: &TypeSpec) -> String 
     }
 }
 
-fn statement_mapper_of(spec: &Spec, dialect: &RepositoryDialect) -> StatementMapper {
-    let mut mapper = StatementMapper::identity(dialect.provider, "rust");
+fn crud_mapper_of(spec: &Spec, dialect: &RepositoryDialect) -> CRUDMapper {
+    let mut mapper = CRUDMapper::identity(dialect.provider, "rust");
     mapper.rows = mappings_mapper(&spec.type_spec.mappings);
     let quote = dialect.quote;
-    let Some(cfg) = &spec.type_spec.statement_mapper else {
+    let Some(cfg) = &spec.type_spec.crud_mapper else {
         mapper.entity = TransformMapper::new(move |name: String| quote(&name), |name| name);
         return mapper;
     };
@@ -668,7 +668,7 @@ pub async fn run(
         entity: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec, dialect)),
         mapper: None,
-        statement_mapper: Some(statement_mapper_of(&spec, dialect)),
+        crud_mapper: Some(crud_mapper_of(&spec, dialect)),
         types: Default::default(),
         fields: Default::default(),
     };

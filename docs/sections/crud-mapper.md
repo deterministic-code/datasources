@@ -1,28 +1,28 @@
-# StatementMapper
+# CRUDMapper
 
-Mapper for repository statements. `Map` / `ReverseMap` only touch `Rows`. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete.
+Collection of mappers for a CRUD repository. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete. [Rows](#crudmapper-rows) is the read-row mapper; [CRUDRepository.Mapper](./crud-repository.md) aliases it.
 
 ## Classes
 
 ::: reference
 ### typescript
-#### StatementMapper
+#### CRUDMapper
 
 ```typescript
-class StatementMapper<T> implements IMapper<T, T>
+class CRUDMapper<T>
 ```
 
 **Constructor**
 
-##### StatementMapper(options?)
+##### CRUDMapper(options?)
 
-Builds a statement mapper. Omitted fields default to identity name mappers and an identity [rows](#statementmapper-rows) mapper.
+Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#crudmapper-rows) mapper.
 
 ```typescript
-constructor(options?: StatementMapperOptions<T>)
+constructor(options?: CRUDMapperOptions<T>)
 ```
 
-- `options` — [StatementMapperOptions](#statementmapperoptions)
+- `options` — [CRUDMapperOptions](#crudmapperoptions)
 
 **Properties**
 
@@ -74,14 +74,6 @@ Rewrites a finished [IDeleteStatement](./delete-statement.md#ideletestatement).
 readonly delete?: IMapper<IDeleteStatement, IDeleteStatement>
 ```
 
-##### storedProcedure
-
-Rewrites a finished [IExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md#iexecutestoredprocedurestatement).
-
-```typescript
-readonly storedProcedure?: IMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>
-```
-
 ##### return
 
 Rewrites a finished [IReturnStatement](./return-statement.md#ireturnstatement).
@@ -92,45 +84,19 @@ readonly return?: IMapper<IReturnStatement, IReturnStatement>
 
 ##### rows
 
-Read-row Mapper. [map](#statementmapper-map-value) / [reverseMap](#statementmapper-reversemap-value) delegate here.
+Read-row [Mapper](./mappers.md).
 
 ```typescript
 readonly rows: IMapper<T, T>
 ```
 
-**Methods**
-
-##### map(value)
-
-Maps a row through [rows](#statementmapper-rows).
+#### CRUDMapperOptions
 
 ```typescript
-map(value: T): T
+type CRUDMapperOptions<T>
 ```
 
-- `value` — converted row
-
-**Returns** `T`
-
-##### reverseMap(value)
-
-Reverse-maps a row through [rows](#statementmapper-rows).
-
-```typescript
-reverseMap(value: T): T
-```
-
-- `value` — shaped row
-
-**Returns** `T`
-
-#### StatementMapperOptions
-
-```typescript
-type StatementMapperOptions<T>
-```
-
-Constructor bag for [StatementMapper](#statementmapper).
+Constructor bag for [CRUDMapper](#crudmapper).
 
 **Properties**
 
@@ -152,7 +118,7 @@ columns?: IMapper<string, string>
 
 ##### rows
 
-Read-row Mapper.
+Read-row [Mapper](./mappers.md).
 
 ```typescript
 rows?: IMapper<T, T>
@@ -190,19 +156,11 @@ Rewrites a finished [IDeleteStatement](./delete-statement.md#ideletestatement).
 delete?: IMapper<IDeleteStatement, IDeleteStatement>
 ```
 
-##### storedProcedure
-
-Rewrites a finished [IExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md#iexecutestoredprocedurestatement).
-
-```typescript
-storedProcedure?: IMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>
-```
-
 ### csharp
-#### StatementMapper
+#### CRUDMapper
 
 ```csharp
-public sealed class StatementMapper<T> : IMapper<T, T> where T : new()
+public sealed class CRUDMapper<T> where T : new()
 ```
 
 **Properties**
@@ -255,14 +213,6 @@ Rewrites a finished [IDeleteStatement](./delete-statement.md#ideletestatement).
 IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
 ```
 
-##### StoredProcedure
-
-Rewrites a finished [IExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md#iexecutestoredprocedurestatement).
-
-```csharp
-IMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>? StoredProcedure { get; init; }
-```
-
 ##### Return
 
 Rewrites a finished [IReturnStatement](./return-statement.md#ireturnstatement).
@@ -273,43 +223,17 @@ IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }
 
 ##### Rows
 
-Read-row Mapper. [Map](#statementmapper-map-value) / [ReverseMap](#statementmapper-reversemap-value) delegate here.
+Read-row [Mapper](./mappers.md).
 
 ```csharp
 IMapper<T, T> Rows { get; init; }
 ```
 
-**Methods**
-
-##### Map(value)
-
-Maps a row through [Rows](#statementmapper-rows).
-
-```csharp
-T Map(T value)
-```
-
-- `value` — converted row
-
-**Returns** `T`
-
-##### ReverseMap(value)
-
-Reverse-maps a row through [Rows](#statementmapper-rows).
-
-```csharp
-T ReverseMap(T value)
-```
-
-- `value` — shaped row
-
-**Returns** `T`
-
 ### rust
-#### StatementMapper
+#### CRUDMapper
 
 ```rust
-pub struct StatementMapper
+pub struct CRUDMapper
 ```
 
 **Properties**
@@ -362,14 +286,6 @@ Rewrites finished delete SQL.
 pub delete: Option<Arc<TransformMapper<String, String>>>
 ```
 
-##### stored_procedure
-
-Rewrites finished stored-procedure SQL.
-
-```rust
-pub stored_procedure: Option<Arc<TransformMapper<String, String>>>
-```
-
 ##### return_
 
 Rewrites finished return-call SQL.
@@ -380,7 +296,7 @@ pub return_: Option<Arc<TransformMapper<String, String>>>
 
 ##### rows
 
-Read-row mapper. [map](#statementmapper-map-value) / [reverse_map](#statementmapper-reverse_map-value) delegate here.
+Read-row [TransformMapper](./transform-mapper.md).
 
 ```rust
 pub rows: TransformMapper<Row, Row>
@@ -390,7 +306,7 @@ pub rows: TransformMapper<Row, Row>
 
 ##### identity(source, destination)
 
-Identity statement mapper. Source and destination labels are unused.
+Identity CRUD mapper. Source and destination labels are unused.
 
 ```rust
 pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> Self
@@ -399,7 +315,7 @@ pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> 
 - `source` — unused source label
 - `destination` — unused destination label
 
-**Returns** [StatementMapper](#statementmapper)
+**Returns** [CRUDMapper](#crudmapper)
 
 ##### map_sql(mapper, text)
 
@@ -413,40 +329,16 @@ pub fn map_sql(mapper: &Option<Arc<TransformMapper<String, String>>>, text: Stri
 - `text` — finished SQL
 
 **Returns** `String`
-
-##### map(value)
-
-Maps a row through [rows](#statementmapper-rows).
-
-```rust
-fn map(&self, value: Row) -> Row
-```
-
-- `value` — converted row
-
-**Returns** `Row`
-
-##### reverse_map(value)
-
-Reverse-maps a row through [rows](#statementmapper-rows).
-
-```rust
-fn reverse_map(&self, value: Row) -> Row
-```
-
-- `value` — shaped row
-
-**Returns** `Row`
 :::
 
 ## Remarks
 
-Apply statement mapping in either or both places:
+Apply mapping in either or both places:
 
 1. **Builder** — `RepositoryBuilder` maps `Entity` / `entity` and `Columns` / `columns` into `RepositoryStatements`.
-2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` / `StoredProcedure` / `Return` rewrite the finished statement.
+2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` / `Return` rewrite the finished statement.
 
-C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `stored_procedure` / `return_` are [TransformMapper](./transform-mapper.md)`<String, String>` over SQL text via `StatementMapper::map_sql`.
+C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](./transform-mapper.md)`<String, String>` over SQL text via `CRUDMapper::map_sql`.
 
 `Repository.Mapper` / `mapper` aliases `Rows` / `rows`.
 
@@ -455,21 +347,21 @@ C# and TypeScript statement mappers rewrite statement objects. Rust `query` / `i
 ### Rewrite a finished statement
 
 ::: example
-```csharp csharp/Datasources.Tests/StatementMapperTests.cs#L55-L81
+```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L54-L79
 ```
-```rust rust/datasources/src/tests/mod.rs#L1567-L1609
+```rust rust/datasources/src/tests/mod.rs#L1615-L1679
 ```
-```typescript typescript/datasources/src/mappers/StatementMapper.test.ts#L27-L59
+```typescript typescript/datasources/src/CRUDMapper.test.ts#L29-L61
 ```
 :::
 
 ### Rewrite a return call
 
 ::: example
-```csharp csharp/Datasources.Tests/StatementMapperTests.cs#L95-L107
+```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L82-L93
 ```
-```rust rust/datasources/src/tests/mod.rs#L1216-L1226
+```rust rust/datasources/src/tests/mod.rs#L1285-L1294
 ```
-```typescript typescript/datasources/src/mappers/StatementMapper.test.ts#L75-L85
+```typescript typescript/datasources/src/CRUDMapper.test.ts#L62-L72
 ```
 :::
