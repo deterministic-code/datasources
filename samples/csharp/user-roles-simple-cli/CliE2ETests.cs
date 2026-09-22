@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using MySqlConnector;
 using Npgsql;
 using Xunit.Abstractions;
@@ -118,15 +119,19 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         {
             var got = Cli(sample, env, [.. step.Argv]);
             var cmd = string.Join(" ", step.Argv);
+            var (leftover, sql) = Commands(got.Stderr);
+            var expectedSql = (step.Expect.Queries ?? []).Concat(provider == "mysql" ? step.Expect.Calls ?? [] : step.Expect.Inserts ?? []).ToList();
+            var actualSql = sql.Select(text => text.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) ? Unquote(text) : text).ToList();
             if (Verbose())
             {
                 Log($"{provider}: {cmd}");
                 Log($"  assert exit {got.Exit} == {step.Expect.Exit}");
                 Log($"  assert stdout [{got.Stdout}] == [{step.Expect.Stdout}]");
-                Log($"  assert stderr [{got.Stderr}] == [{step.Expect.Stderr}]");
+                Log($"  assert stderr [{leftover}] == [{step.Expect.Stderr}]");
+                Log($"  assert commands [{string.Join(" | ", actualSql)}] == [{string.Join(" | ", expectedSql)}]");
             }
-            if (got.Exit != step.Expect.Exit || got.Stdout != step.Expect.Stdout || got.Stderr != step.Expect.Stderr)
-                Assert.Fail($"{provider}: {cmd}: first mismatch\nexpected exit {step.Expect.Exit} stdout [{step.Expect.Stdout}] stderr [{step.Expect.Stderr}]\nactual exit {got.Exit} stdout [{got.Stdout}] stderr [{got.Stderr}]");
+            if (got.Exit != step.Expect.Exit || got.Stdout != step.Expect.Stdout || leftover != step.Expect.Stderr || !actualSql.SequenceEqual(expectedSql))
+                Assert.Fail($"{provider}: {cmd}: first mismatch\nexpected exit {step.Expect.Exit} stdout [{step.Expect.Stdout}] stderr [{step.Expect.Stderr}] commands [{string.Join(" | ", expectedSql)}]\nactual exit {got.Exit} stdout [{got.Stdout}] stderr [{leftover}] commands [{string.Join(" | ", actualSql)}]");
         }
     }
 
@@ -156,8 +161,8 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     static void FreshCompose(string service)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        Require(Exec("docker", $"compose rm -sf -v {service}", RepoRoot()));
-        Require(Exec("docker", $"compose up -d --wait {service}", RepoRoot()));
+        RemoveCompose(service);
+        Require(Exec("docker", $"compose up -d --force-recreate --wait {service}", RepoRoot()));
         if (service == "mysql")
             Require(Exec(
                 "docker",
@@ -168,8 +173,52 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     static void StopCompose(string service)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        Require(Exec("docker", $"compose rm -sf -v {service}", RepoRoot()));
+        RemoveCompose(service);
     }
+
+    static void RemoveCompose(string service)
+    {
+        Exec("docker", $"compose rm -sf -v {service}", RepoRoot());
+        Exec("docker", $"rm -f datasources-{service}-1", RepoRoot());
+    }
+
+    static (string Leftover, List<string> Sql) Commands(string stderr)
+    {
+        var leftover = new List<string>();
+        var sql = new List<string>();
+        foreach (var line in stderr.Replace("\r\n", "\n").Split('\n'))
+        {
+            if (line.Contains("[datasource][Start]", StringComparison.Ordinal) ||
+                line.Contains("[datasource][Finish]", StringComparison.Ordinal))
+            {
+                if (StartSql(Signature(line)) is { } text)
+                    sql.Add(text);
+            }
+            else if (line.Length > 0)
+                leftover.Add(line);
+        }
+        return (string.Join("\n", leftover), sql);
+    }
+
+    static string Signature(string line)
+    {
+        var body = line.Contains("]-", StringComparison.Ordinal) ? line[(line.IndexOf("]-", StringComparison.Ordinal) + 2)..] : line;
+        var duration = body.LastIndexOf("] ", StringComparison.Ordinal);
+        return duration >= 0 && (body.EndsWith("ms", StringComparison.Ordinal) || body.EndsWith("μs", StringComparison.Ordinal))
+            ? body[..(duration + 1)]
+            : body;
+    }
+
+    static string? StartSql(string signature)
+    {
+        const string prefix = "[datasource][Start]-[";
+        return signature.StartsWith(prefix, StringComparison.Ordinal) && signature.EndsWith(']')
+            ? signature[prefix.Length..^1]
+            : null;
+    }
+
+    static string Unquote(string text) =>
+        Regex.Replace(Regex.Replace(text, "`([^`]+)`", "$1"), "\"([^\"]+)\"", "$1");
 
     static string Quote(string value) =>
         value.Contains(' ') ? $"\"{value}\"" : value;
@@ -262,5 +311,8 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         public int Exit { get; set; }
         public string Stdout { get; set; } = "";
         public string Stderr { get; set; } = "";
+        public List<string> Queries { get; set; } = [];
+        public List<string> Inserts { get; set; } = [];
+        public List<string> Calls { get; set; } = [];
     }
 }

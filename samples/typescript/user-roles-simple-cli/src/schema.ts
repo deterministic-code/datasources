@@ -20,6 +20,9 @@ export const ident = (provider: string, name: string): string =>
     sqlite: SqliteQuote.quote,
   }[provider] ?? SqliteQuote.quote)(name);
 
+export const flag = (provider: string, value: boolean): number | boolean =>
+  provider === "sqlite" ? (value ? 1 : 0) : value;
+
 const required = new NotNull();
 
 const idType = (provider: string, mapped: string): string =>

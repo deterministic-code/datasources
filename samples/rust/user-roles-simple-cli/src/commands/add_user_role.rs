@@ -1,5 +1,6 @@
 use crate::app::App;
 use crate::columns;
+use crate::commands::write_link;
 use datasources::Result;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,7 +11,8 @@ pub struct AddUserRole {
 
 impl AddUserRole {
     pub async fn run(&self, app: &App<'_>) -> Result<String> {
-        app.write_link(
+        write_link::execute(
+            app,
             &self.username,
             "roles",
             "name",

@@ -1,4 +1,4 @@
-import { providerFromUrl, type IConnection } from "@datasources/core";
+import { ConsoleCommandMiddleware, providerFromUrl, type IConnection } from "@datasources/core";
 import "@datasources/register";
 import { loadMysql2Driver, MysqlConnection } from "@datasources/mysql";
 import { loadPgDriver, PostgresConnection } from "@datasources/postgres";
@@ -48,6 +48,7 @@ const run = async (args: string[]): Promise<number> => {
     await connection.open();
     const command = connection.createCommand();
     await migrate(command);
+    command.addMiddleware(new ConsoleCommandMiddleware((line) => console.error(line)));
     const frozen = env("CLI_NOW");
     process.stdout.write(await new App(command, frozen ? () => new Date(frozen) : undefined).run(parsed));
     return 0;

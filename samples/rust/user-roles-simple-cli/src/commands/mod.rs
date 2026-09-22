@@ -6,6 +6,10 @@ pub mod add_user_role;
 pub mod disable_user;
 pub mod enable_user;
 pub mod list_users_roles_groups;
+pub mod lookup_id;
+pub mod set_user_enabled;
+pub mod write_link;
+pub mod write_row;
 
 pub use add_group::AddGroup;
 pub use add_role::AddRole;
