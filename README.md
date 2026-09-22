@@ -11468,8 +11468,6 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
 
 ```rust
-}
-
 #[tokio::test]
 async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
     let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
@@ -11486,6 +11484,8 @@ async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
     ])]));
     let children = Arc::new(items_repository::ItemsRepository::new(vec![
         record(&[
+            ("parent_id", Value::Int(1)),
+            ("type_id", Value::Int(3)),
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -13138,7 +13138,7 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 
 #### Rewrite a finished statement
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L54-L79)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L56-L81)
 
 ```csharp
 var statements = new RepositoryStatements(
@@ -13158,19 +13158,10 @@ var statements = new RepositoryStatements(
         delete => delete));
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1615-L1679)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1615-L1677)
 
 ```rust
 let command = Arc::new(MockCommand::new());
-let names = TransformMapper::new(
-    |name: String| match name.as_str() {
-        "users" => "people".into(),
-        "id" => "user_id".into(),
-        "name" => "full_name".into(),
-        _ => name,
-    },
-    |name| name,
-);
 let mut mapper = CRUDMapper::identity("memory", "rust");
 mapper.entity = TransformMapper::new(
     |name: String| match name.as_str() {
@@ -13179,7 +13170,14 @@ mapper.entity = TransformMapper::new(
     },
     |name| name,
 );
-mapper.columns = names;
+mapper.columns = TransformMapper::new(
+    |name: String| match name.as_str() {
+        "id" => "user_id".into(),
+        "name" => "full_name".into(),
+        _ => name,
+    },
+    |name| name,
+);
 mapper.query = Some(Arc::new(TransformMapper::new(
     |text: String| format!("{text} LIMIT 1"),
     |text| text,
@@ -13206,12 +13204,10 @@ command.reader_rows.lock().unwrap().clear();
 assert!(repo.read_single(None).await.unwrap().is_none());
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L29-L61)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L22-L52)
 
 ```typescript
 const mapper = new CRUDMapper({
-  entity: names,
-  columns: names,
   query: new TransformMapper(
     (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
     (query) => query,
@@ -13236,7 +13232,7 @@ const statements = statementsOf("users", ["id", "name"], mapper);
 
 #### Rewrite a return call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L82-L93)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L84-L95)
 
 ```csharp
 var mapper = new CRUDMapper<UserRow>
@@ -13261,7 +13257,7 @@ let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
 let text = CRUDMapper::map_sql(&mapper.return_, built.get_text());
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L62-L72)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L54-L64)
 
 ```typescript
 const mapper = new CRUDMapper({

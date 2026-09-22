@@ -1614,15 +1614,6 @@ async fn table_repository_maps_flat_row_into_contacts() {
 #[tokio::test]
 async fn table_repository_crud_mapper() {
     let command = Arc::new(MockCommand::new());
-    let names = TransformMapper::new(
-        |name: String| match name.as_str() {
-            "users" => "people".into(),
-            "id" => "user_id".into(),
-            "name" => "full_name".into(),
-            _ => name,
-        },
-        |name| name,
-    );
     let mut mapper = CRUDMapper::identity("memory", "rust");
     mapper.entity = TransformMapper::new(
         |name: String| match name.as_str() {
@@ -1631,7 +1622,14 @@ async fn table_repository_crud_mapper() {
         },
         |name| name,
     );
-    mapper.columns = names;
+    mapper.columns = TransformMapper::new(
+        |name: String| match name.as_str() {
+            "id" => "user_id".into(),
+            "name" => "full_name".into(),
+            _ => name,
+        },
+        |name| name,
+    );
     mapper.query = Some(Arc::new(TransformMapper::new(
         |text: String| format!("{text} LIMIT 1"),
         |text| text,

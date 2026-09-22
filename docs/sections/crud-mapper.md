@@ -347,21 +347,21 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 ### Rewrite a finished statement
 
 ::: example
-```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L54-L79
+```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L56-L81
 ```
-```rust rust/datasources/src/tests/mod.rs#L1615-L1679
+```rust rust/datasources/src/tests/mod.rs#L1615-L1677
 ```
-```typescript typescript/datasources/src/CRUDMapper.test.ts#L29-L61
+```typescript typescript/datasources/src/CRUDMapper.test.ts#L22-L52
 ```
 :::
 
 ### Rewrite a return call
 
 ::: example
-```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L82-L93
+```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L84-L95
 ```
 ```rust rust/datasources/src/tests/mod.rs#L1285-L1294
 ```
-```typescript typescript/datasources/src/CRUDMapper.test.ts#L62-L72
+```typescript typescript/datasources/src/CRUDMapper.test.ts#L54-L64
 ```
 :::
