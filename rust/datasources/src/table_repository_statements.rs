@@ -1,4 +1,4 @@
-use crate::mappers::StatementMapper;
+use crate::crud_mapper::CRUDMapper;
 use crate::parameter::Parameter;
 use crate::statements::{DeleteStatement, InsertStatement, Statement, Text, UpdateStatement};
 use crate::QueryStatement;
@@ -8,18 +8,18 @@ use std::sync::Arc;
 pub struct RepositoryStatements {
     table: String,
     columns: Vec<String>,
-    mapper: Arc<StatementMapper>,
+    mapper: Arc<CRUDMapper>,
 }
 
 impl RepositoryStatements {
     pub fn new(table: impl Into<String>, columns: Vec<String>) -> Self {
-        Self::with_mapper(table, columns, Arc::new(StatementMapper::identity("", "")))
+        Self::with_mapper(table, columns, Arc::new(CRUDMapper::identity("", "")))
     }
 
     pub fn with_mapper(
         table: impl Into<String>,
         columns: Vec<String>,
-        mapper: Arc<StatementMapper>,
+        mapper: Arc<CRUDMapper>,
     ) -> Self {
         Self {
             table: table.into(),
@@ -31,7 +31,7 @@ impl RepositoryStatements {
     pub fn query(&self, where_clause: Option<&dyn Where>) -> (String, Vec<Parameter>) {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
         let built = QueryStatement::new(&self.table, &refs, where_clause, &[]);
-        let text = StatementMapper::map_sql(&self.mapper.query, built.get_text());
+        let text = CRUDMapper::map_sql(&self.mapper.query, built.get_text());
         (
             text,
             where_clause
@@ -41,21 +41,21 @@ impl RepositoryStatements {
     }
 
     pub fn insert(&self, fields: &[Parameter]) -> String {
-        StatementMapper::map_sql(
+        CRUDMapper::map_sql(
             &self.mapper.insert,
             InsertStatement::new(&self.table, fields).get_text(),
         )
     }
 
     pub fn update(&self, fields: &[Parameter], where_clause: &dyn Where) -> String {
-        StatementMapper::map_sql(
+        CRUDMapper::map_sql(
             &self.mapper.update,
             UpdateStatement::new(&self.table, fields, Some(where_clause)).get_text(),
         )
     }
 
     pub fn delete(&self, where_clause: &dyn Where) -> String {
-        StatementMapper::map_sql(
+        CRUDMapper::map_sql(
             &self.mapper.delete,
             DeleteStatement::new(&self.table, Some(where_clause)).get_text(),
         )

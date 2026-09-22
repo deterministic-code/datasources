@@ -103,17 +103,17 @@ Row [TypeConverter](./type-converters.md). Convert uses this, then [mapper](#rep
 readonly rowConverter: TypeConverter<T, Cells>
 ```
 
-##### statementsMapper
+##### crudMapper
 
-Statement [StatementMapper](./statement-mapper.md).
+[CRUDMapper](./crud-mapper.md).
 
 ```typescript
-readonly statementsMapper: StatementMapper<T>
+readonly crudMapper: CRUDMapper<T>
 ```
 
 ##### mapper
 
-Read-row [Mapper](./mappers.md). Alias of `statementsMapper.rows`.
+Read-row [Mapper](./mappers.md). Alias of `crudMapper.rows`.
 
 ```typescript
 readonly mapper: IMapper<T, T>
@@ -249,12 +249,12 @@ Read-row [Mapper](./mappers.md).
 mapper?: IMapper<T, T>
 ```
 
-##### statementMapper
+##### crudMapper
 
-[StatementMapper](./statement-mapper.md).
+[CRUDMapper](./crud-mapper.md).
 
 ```typescript
-statementMapper?: StatementMapper<T>
+crudMapper?: CRUDMapper<T>
 ```
 
 ##### columns
@@ -291,12 +291,12 @@ Row [TypeConverter](./type-converters.md).
 rowConverter: TypeConverter<T, Cells>
 ```
 
-##### statementMapper
+##### crudMapper
 
-[StatementMapper](./statement-mapper.md).
+[CRUDMapper](./crud-mapper.md).
 
 ```typescript
-statementMapper: StatementMapper<T>
+crudMapper: CRUDMapper<T>
 ```
 
 ##### statements
@@ -418,17 +418,17 @@ public Repository(BuiltRepository<T> built)
 
 **Properties**
 
-##### StatementsMapper
+##### CRUDMapper
 
-Statement [StatementMapper](./statement-mapper.md).
+[CRUDMapper](./crud-mapper.md).
 
 ```csharp
-StatementMapper<T> StatementsMapper { get; }
+CRUDMapper<T> CRUDMapper { get; }
 ```
 
 ##### Mapper
 
-Read-row [Mapper](./mappers.md). Alias of `StatementsMapper.Rows`.
+Read-row [Mapper](./mappers.md). Alias of `CRUDMapper.Rows`.
 
 ```csharp
 IMapper<T, T> Mapper { get; }
@@ -556,12 +556,12 @@ Read-row [Mapper](./mappers.md).
 IMapper<T, T>? Mapper { get; init; }
 ```
 
-##### StatementMapper
+##### CRUDMapper
 
-[StatementMapper](./statement-mapper.md).
+[CRUDMapper](./crud-mapper.md).
 
 ```csharp
-StatementMapper<T>? StatementMapper { get; init; }
+CRUDMapper<T>? CRUDMapper { get; init; }
 ```
 
 ##### Columns
@@ -598,12 +598,12 @@ Row [TypeConverter](./type-converters.md).
 TypeConverter<T, Row> RowConverter { get; init; }
 ```
 
-##### StatementMapper
+##### CRUDMapper
 
-[StatementMapper](./statement-mapper.md).
+[CRUDMapper](./crud-mapper.md).
 
 ```csharp
-StatementMapper<T> StatementMapper { get; init; }
+CRUDMapper<T> CRUDMapper { get; init; }
 ```
 
 ##### Statements
@@ -721,6 +721,16 @@ pub fn from_built(built: BuiltRepository) -> Self
 
 **Returns** [CRUDRepository](#crudrepository)
 
+**Properties**
+
+##### crud_mapper
+
+[CRUDMapper](./crud-mapper.md).
+
+```rust
+pub crud_mapper: Arc<CRUDMapper>
+```
+
 **Methods**
 
 ##### add_middleware(middleware)
@@ -805,12 +815,12 @@ Read-row [TransformMapper](./transform-mapper.md).
 pub mapper: Option<TransformMapper<Row, Row>>
 ```
 
-##### statement_mapper
+##### crud_mapper
 
-[StatementMapper](./statement-mapper.md).
+[CRUDMapper](./crud-mapper.md).
 
 ```rust
-pub statement_mapper: Option<StatementMapper>
+pub crud_mapper: Option<CRUDMapper>
 ```
 
 #### BuiltRepository
@@ -839,12 +849,12 @@ pub connection: Arc<dyn Connection>
 pub row_converter: RowTypeConverter
 ```
 
-##### statement_mapper
+##### crud_mapper
 
-[StatementMapper](./statement-mapper.md).
+[CRUDMapper](./crud-mapper.md).
 
 ```rust
-pub statement_mapper: Arc<StatementMapper>
+pub crud_mapper: Arc<CRUDMapper>
 ```
 
 ##### statements
@@ -876,7 +886,7 @@ pub assign_identity_on_create: bool
 
 Update requires at least one non-id field. Missing id values throw.
 
-`Mapper` / `mapper` aliases `StatementMapper.Rows` / `rows`. See [StatementMapper](./statement-mapper.md).
+`Mapper` / `mapper` aliases `CRUDMapper.Rows` / `rows`. See [CRUDMapper](./crud-mapper.md).
 
 ## Examples
 

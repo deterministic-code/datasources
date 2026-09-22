@@ -49,7 +49,7 @@ public static class RepositorySpec
             Connection = session.Connection,
             Entity = spec.Type.Table,
             Mapping = mapping,
-            StatementMapper = StatementMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings), quote),
+            CRUDMapper = CRUDMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings), quote),
             Ids = spec.Type.Ids,
             AssignIdentityOnCreate = spec.Type.AssignIdentityOnCreate,
             Columns = [.. spec.Type.Fields.Keys],
@@ -183,34 +183,34 @@ public static class RepositorySpec
     };
 
     static string PhysicalTable(TypeSpec type) =>
-        type.StatementMapper?.Entity ?? type.Table;
+        type.CRUDMapper?.Entity ?? type.Table;
 
     static string WithStatementSql(string sql, bool write, TypeSpec type) =>
-        $"{sql}{(write ? type.StatementMapper?.WriteSuffix : type.StatementMapper?.QuerySuffix) ?? ""}";
+        $"{sql}{(write ? type.CRUDMapper?.WriteSuffix : type.CRUDMapper?.QuerySuffix) ?? ""}";
 
     static string Unquote(string text) =>
         Regex.Replace(Regex.Replace(text, "`([^`]+)`", "$1"), "\"([^\"]+)\"", "$1");
 
-    static StatementMapper<T> StatementMapperOf<T>(TypeSpec type, IMapper<T, T> rows, Func<string, string> quote)
+    static CRUDMapper<T> CRUDMapperOf<T>(TypeSpec type, IMapper<T, T> rows, Func<string, string> quote)
         where T : new() =>
         new()
         {
             Entity = new TransformMapper<string, string>(
-                name => quote(type.StatementMapper?.Entity ?? name),
+                name => quote(type.CRUDMapper?.Entity ?? name),
                 name => name),
             Rows = rows,
             Query = Suffix<IQuery>(
                 (text, query) => new QueryStatement(text, query.Where),
-                type.StatementMapper?.QuerySuffix),
+                type.CRUDMapper?.QuerySuffix),
             Insert = Suffix<IInsertStatement>(
                 (text, _) => new InsertStatement(text),
-                type.StatementMapper?.WriteSuffix),
+                type.CRUDMapper?.WriteSuffix),
             Update = Suffix<IUpdateStatement>(
                 (text, update) => new UpdateStatement(text, update.Where),
-                type.StatementMapper?.WriteSuffix),
+                type.CRUDMapper?.WriteSuffix),
             Delete = Suffix<IDeleteStatement>(
                 (text, delete) => DeleteStatement.Raw(text, delete.Where),
-                type.StatementMapper?.WriteSuffix)
+                type.CRUDMapper?.WriteSuffix)
         };
 
     static IMapper<T, T>? Suffix<T>(Func<string, T, T> rewrite, string? suffix)
@@ -436,10 +436,10 @@ public static class RepositorySpec
         [YamlMember(Alias = "fields")] public Dictionary<string, string> Fields { get; set; } = [];
         [YamlMember(Alias = "converters")] public Dictionary<string, string> Converters { get; set; } = [];
         [YamlMember(Alias = "mappings")] public Dictionary<string, Dictionary<string, string>> Mappings { get; set; } = [];
-        [YamlMember(Alias = "statementMapper")] public StatementMapperSpec? StatementMapper { get; set; }
+        [YamlMember(Alias = "crudMapper")] public CRUDMapperSpec? CRUDMapper { get; set; }
     }
 
-    sealed class StatementMapperSpec
+    sealed class CRUDMapperSpec
     {
         [YamlMember(Alias = "entity")] public string? Entity { get; set; }
         [YamlMember(Alias = "querySuffix")] public string? QuerySuffix { get; set; }

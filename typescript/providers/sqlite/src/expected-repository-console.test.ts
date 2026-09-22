@@ -57,9 +57,9 @@ describe("expected repository console", () => {
     ]);
   });
 
-  it("expands statement-mapper-crud into remapped statement SQL", () => {
+  it("expands crud-mapper into remapped statement SQL", () => {
     const mapped = parse(
-      readFileSync(join(repoRoot(), "specs", "repositories", "statement-mapper-crud.yaml"), "utf8"),
+      readFileSync(join(repoRoot(), "specs", "repositories", "crud-mapper.yaml"), "utf8"),
     ) as RepositorySpec;
     const select =
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM people";

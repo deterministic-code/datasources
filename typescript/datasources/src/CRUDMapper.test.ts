@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { DeleteStatement } from "../statements/DeleteStatement.ts";
-import { InsertStatement } from "../statements/InsertStatement.ts";
-import { ReturnStatement } from "../statements/ReturnStatement.ts";
-import { ExecuteStoredProcedureStatement } from "../statements/ExecuteStoredProcedureStatement.ts";
-import { QueryStatement } from "../statements/QueryStatement.ts";
-import { UpdateStatement } from "../statements/UpdateStatement.ts";
-import { statementsOf } from "../RepositoryStatements.ts";
-import { TransformMapper } from "./TransformMapper.ts";
-import { StatementMapper } from "./StatementMapper.ts";
+import { DeleteStatement } from "./statements/DeleteStatement.ts";
+import { InsertStatement } from "./statements/InsertStatement.ts";
+import { ReturnStatement } from "./statements/ReturnStatement.ts";
+import { QueryStatement } from "./statements/QueryStatement.ts";
+import { UpdateStatement } from "./statements/UpdateStatement.ts";
+import { statementsOf } from "./RepositoryStatements.ts";
+import { TransformMapper } from "./mappers/TransformMapper.ts";
+import { CRUDMapper } from "./CRUDMapper.ts";
 
 const names = new TransformMapper<string, string>(
   (name) =>
@@ -15,11 +14,11 @@ const names = new TransformMapper<string, string>(
   (name) => name,
 );
 
-describe("StatementMapper", () => {
+describe("CRUDMapper", () => {
   it("defaults are identity", () => {
-    const mapper = new StatementMapper<string>();
-    expect(mapper.map("x")).toBe("x");
-    expect(mapper.reverseMap("x")).toBe("x");
+    const mapper = new CRUDMapper<string>();
+    expect(mapper.rows.map("x")).toBe("x");
+    expect(mapper.rows.reverseMap("x")).toBe("x");
     expect(mapper.entity.map("id")).toBe("id");
     expect(mapper.entity.reverseMap("id")).toBe("id");
     expect(mapper.columns.map("id")).toBe("id");
@@ -27,7 +26,7 @@ describe("StatementMapper", () => {
   });
 
   it("rewrites each finished statement", () => {
-    const mapper = new StatementMapper({
+    const mapper = new CRUDMapper({
       entity: names,
       columns: names,
       query: new TransformMapper(
@@ -60,20 +59,8 @@ describe("StatementMapper", () => {
     expect(statements.delete().getText()).toBe("DELETE FROM users RETURNING id");
   });
 
-  it("rewrites a finished stored procedure", () => {
-    const mapper = new StatementMapper({
-      storedProcedure: new TransformMapper(
-        (proc) => new ExecuteStoredProcedureStatement(`${proc.getText()} /* mapped */`),
-        (proc) => proc,
-      ),
-    });
-    const built = new ExecuteStoredProcedureStatement("save", [{ name: "id", value: 1 }]);
-    const statement = mapper.storedProcedure?.map(built) ?? built;
-    expect(statement.getText()).toBe("CALL save($id) /* mapped */");
-  });
-
   it("rewrites a finished return call", () => {
-    const mapper = new StatementMapper({
+    const mapper = new CRUDMapper({
       return: new TransformMapper(
         (ret) => new ReturnStatement(`${ret.getText()} /* mapped */`),
         (ret) => ret,
@@ -84,14 +71,14 @@ describe("StatementMapper", () => {
     expect(statement.getText()).toBe("SELECT add($id) /* mapped */");
   });
 
-  it("delegates row map", () => {
-    const mapper = new StatementMapper({
+  it("maps rows through rows", () => {
+    const mapper = new CRUDMapper({
       rows: new TransformMapper(
         (row: { name: string }) => ({ name: row.name.toUpperCase() }),
         (row) => row,
       ),
     });
-    expect(mapper.map({ name: "a" }).name).toBe("A");
-    expect(mapper.reverseMap({ name: "A" }).name).toBe("A");
+    expect(mapper.rows.map({ name: "a" }).name).toBe("A");
+    expect(mapper.rows.reverseMap({ name: "A" }).name).toBe("A");
   });
 });

@@ -5,7 +5,8 @@ use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_builder_options::create_repository_builder_options;
 use crate::i_repository::IRepository;
-use crate::mappers::{Mapper, StatementMapper};
+use crate::crud_mapper::CRUDMapper;
+use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
 use crate::repository::IReadonlyRepository;
@@ -23,7 +24,7 @@ pub struct ReadonlyRepository {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: RowTypeConverter,
-    pub(crate) statement_mapper: Arc<StatementMapper>,
+    pub(crate) crud_mapper: Arc<CRUDMapper>,
     pub(crate) statements: RepositoryStatements,
     pub(crate) entity_type: TypeId,
 }
@@ -46,7 +47,7 @@ impl ReadonlyRepository {
             connection: built.connection,
             middlewares: Vec::new(),
             row_converter: built.row_converter,
-            statement_mapper: built.statement_mapper,
+            crud_mapper: built.crud_mapper,
             statements: built.statements,
             entity_type: TypeId::of::<Row>(),
         }
@@ -86,7 +87,7 @@ impl ReadonlyRepository {
             .map(|row| {
                 self.row_converter
                     .convert(&row)
-                    .map(|converted| Mapper::map(&self.statement_mapper.rows, converted))
+                    .map(|converted| Mapper::map(&self.crud_mapper.rows, converted))
             })
             .transpose()
     }
@@ -97,7 +98,7 @@ impl ReadonlyRepository {
         while reader.next().await? {
             if let Some(row) = reader.current() {
                 items.push(Mapper::map(
-                    &self.statement_mapper.rows,
+                    &self.crud_mapper.rows,
                     self.row_converter.convert(&row)?,
                 ));
             }
@@ -107,7 +108,7 @@ impl ReadonlyRepository {
 
     pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
         self.row_converter.reverse_convert(&Mapper::reverse_map(
-            &self.statement_mapper.rows,
+            &self.crud_mapper.rows,
             item.clone(),
         ))
     }

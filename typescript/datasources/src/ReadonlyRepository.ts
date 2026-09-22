@@ -13,7 +13,6 @@ import type { BuiltRepository } from "./BuiltRepository.ts";
 import { parts } from "./RepositoryBuilder.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
-import type { StatementMapper } from "./mappers/StatementMapper.ts";
 import type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 export const untyped = <T>(): Constructable<T> => Object as never as Constructable<T>;
@@ -25,7 +24,7 @@ export const isBuilt = <T>(
   value !== null &&
   "statements" in value &&
   "rowConverter" in value &&
-  "statementMapper" in value;
+  "crudMapper" in value;
 
 export const builtOf = <T>(
   typeOrOptions: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
@@ -45,7 +44,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
   readonly type: Constructable<T>;
   protected connection?: IConnection;
   readonly rowConverter?: TypeConverter<T, Cells>;
-  readonly statementsMapper?: StatementMapper<T>;
   readonly mapper?: IMapper<T, T>;
   readonly statements?: RepositoryStatements;
   protected readonly middlewares: ICommandMiddleware[] = [];
@@ -66,8 +64,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
     this.type = built.type;
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
-    this.statementsMapper = built.statementMapper;
-    this.mapper = built.statementMapper.rows;
+    this.mapper = built.crudMapper.rows;
     this.statements = built.statements;
   }
 

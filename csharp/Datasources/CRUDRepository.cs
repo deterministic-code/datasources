@@ -11,12 +11,12 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     public CRUDRepository(RepositoryBuilderOptions<T> options) :
         this(RepositoryBuilder<T>.Parts(options)) { }
 
-    public StatementMapper<T> StatementsMapper { get; }
+    public CRUDMapper<T> CRUDMapper { get; }
 
     public CRUDRepository(BuiltRepository<T> built) : base(
-        built.Connection, built.RowConverter, built.StatementMapper.Rows, built.Statements)
+        built.Connection, built.RowConverter, built.CRUDMapper.Rows, built.Statements)
     {
-        StatementsMapper = built.StatementMapper;
+        CRUDMapper = built.CRUDMapper;
         ids = new(built.Ids);
         assignIdentityOnCreate = built.AssignIdentityOnCreate;
     }

@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-public class StatementMapperTests
+public class CRUDMapperTests
 {
     sealed class UserRow
     {
@@ -20,7 +20,7 @@ public class StatementMapperTests
         },
         static name => name);
 
-    static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(StatementMapper<UserRow> mapper)
+    static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(CRUDMapper<UserRow> mapper)
     {
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
@@ -30,7 +30,7 @@ public class StatementMapperTests
             Connection = connection,
             Entity = "users",
             AssignIdentityOnCreate = false,
-            StatementMapper = mapper
+            CRUDMapper = mapper
         }), command);
     }
 
@@ -38,7 +38,7 @@ public class StatementMapperTests
     public async Task BuilderMapsEntityAndColumns()
     {
         var names = Names();
-        var (repo, command) = Create(new StatementMapper<UserRow> { Entity = names, Columns = names });
+        var (repo, command) = Create(new CRUDMapper<UserRow> { Entity = names, Columns = names });
         command.Reader = new MockReader<Row>([]);
         await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
@@ -79,23 +79,9 @@ public class StatementMapperTests
     }
 
     [Fact]
-    public void StoredProcedureMapperRewritesFinishedSql()
-    {
-        var mapper = new StatementMapper<UserRow>
-        {
-            StoredProcedure = new TransformMapper<IExecuteStoredProcedureStatement, IExecuteStoredProcedureStatement>(
-                proc => new ExecuteStoredProcedureStatement($"{proc.GetText()} /* mapped */"),
-                proc => proc)
-        };
-        var built = new ExecuteStoredProcedureStatement("save", [new Parameter("id", 1)]);
-        var statement = mapper.StoredProcedure is { } map ? map.Map(built) : built;
-        Assert.Equal("CALL save($id) /* mapped */", statement.GetText());
-    }
-
-    [Fact]
     public void ReturnMapperRewritesFinishedSql()
     {
-        var mapper = new StatementMapper<UserRow>
+        var mapper = new CRUDMapper<UserRow>
         {
             Return = new TransformMapper<IReturnStatement, IReturnStatement>(
                 ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
@@ -107,10 +93,10 @@ public class StatementMapperTests
     }
 
     [Fact]
-    public async Task BuilderThenStatementMapper()
+    public async Task BuilderThenCRUDMapper()
     {
         var names = Names();
-        var (repo, command) = Create(new StatementMapper<UserRow>
+        var (repo, command) = Create(new CRUDMapper<UserRow>
         {
             Entity = names,
             Columns = names,
@@ -137,18 +123,5 @@ public class StatementMapperTests
         Assert.Equal("UPDATE people SET name = $name WHERE id = $id RETURNING id", command.ExecuteCalls[1].Text);
         await repo.Delete(row);
         Assert.Equal("DELETE FROM people WHERE id = $id RETURNING id", command.ExecuteCalls[2].Text);
-    }
-
-    [Fact]
-    public void RowsDelegateOnStatementMapper()
-    {
-        var mapper = new StatementMapper<UserRow>
-        {
-            Rows = new TransformMapper<UserRow, UserRow>(
-                row => { row.name = row.name.ToUpperInvariant(); return row; },
-                row => row)
-        };
-        IMapper<UserRow, UserRow> rows = mapper;
-        Assert.Equal("A", rows.Map(new UserRow { name = "a" }).name);
     }
 }

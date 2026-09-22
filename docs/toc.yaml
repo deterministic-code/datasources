@@ -104,10 +104,10 @@ pages:
     title: Flat To Nested Mapper
     group: Code Reference
     parent: Mapper
-  - path: sections/statement-mapper.md
-    title: Statement Mapper
+  - path: sections/crud-mapper.md
+    title: CRUD Mapper
     group: Code Reference
-    parent: Mapper
+    parent: CRUD Repository
   - path: sections/type-converters.md
     title: Type Converter
     group: Code Reference

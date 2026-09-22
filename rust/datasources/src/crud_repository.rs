@@ -1,5 +1,6 @@
 use crate::{Expression, Literal, Operator, WhereClause};
 use crate::built_repository::BuiltRepository;
+use crate::crud_mapper::CRUDMapper;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
@@ -23,6 +24,7 @@ use std::sync::Arc;
 
 pub struct CRUDRepository {
     inner: ReadonlyRepository,
+    pub crud_mapper: Arc<CRUDMapper>,
     id: Vec<String>,
     ids: HashSet<String>,
     assign_identity_on_create: bool,
@@ -50,8 +52,10 @@ impl CRUDRepository {
     pub fn from_built(built: BuiltRepository) -> Self {
         let id = built.ids.clone();
         let assign_identity_on_create = built.assign_identity_on_create;
+        let crud_mapper = built.crud_mapper.clone();
         Self {
             inner: ReadonlyRepository::from_built(built),
+            crud_mapper,
             ids: id.iter().cloned().collect(),
             id,
             assign_identity_on_create,

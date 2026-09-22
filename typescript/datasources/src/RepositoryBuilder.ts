@@ -3,7 +3,7 @@ import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { DefaultTypeConverters } from "./converters/DefaultTypeConverters.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { StatementMapper } from "./mappers/StatementMapper.ts";
+import { CRUDMapper } from "./CRUDMapper.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
 import { createRepositoryBuilderOptions, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
@@ -25,22 +25,22 @@ export const parts = <T>(
   if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
     Object.assign(rowConverter.types, types);
   const names = new TransformMapper<string, string>((name) => name, (name) => name);
-  const statementMapper =
-    options.statementMapper ??
-    new StatementMapper({
+  const crudMapper =
+    options.crudMapper ??
+    new CRUDMapper({
       entity: names,
       columns: names,
       rows: options.mapper ?? new TransformMapper<T, T>((value) => value, (value) => value),
     });
-  const entity = statementMapper.entity.map(options.entity ?? options.type?.name ?? "");
+  const entity = crudMapper.entity.map(options.entity ?? options.type?.name ?? "");
   const columns = [...(options.columns ?? (options.type ? fieldNamesOf(options.type) : []))]
-    .map((name) => statementMapper.columns.map(name))
+    .map((name) => crudMapper.columns.map(name))
     .sort((left, right) => left.localeCompare(right));
   return {
     connection: options.connection,
     rowConverter,
-    statementMapper,
-    statements: statementsOf(entity, columns, statementMapper),
+    crudMapper,
+    statements: statementsOf(entity, columns, crudMapper),
     columns,
     ids: options.ids ?? ["id"],
     assignIdentityOnCreate: options.assignIdentityOnCreate !== false,

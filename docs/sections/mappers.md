@@ -107,10 +107,10 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ## Remarks
 
-Repository read is convert, then map. `StatementMapper.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
+Repository read is convert, then map. `CRUDMapper.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
 
 ## See also
 
 - [TransformMapper](./transform-mapper.md)
 - [FlatToNestedMapper](./flat-to-nested-mapper.md)
-- [StatementMapper](./statement-mapper.md)
+- [CRUDMapper](./crud-mapper.md)

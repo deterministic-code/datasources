@@ -9,7 +9,7 @@ import { QueryStatement } from "./statements/QueryStatement.ts";
 import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import type { Field } from "./builders/Field.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
-import type { StatementMapper } from "./mappers/StatementMapper.ts";
+import type { CRUDMapper } from "./CRUDMapper.ts";
 
 export type RepositoryStatements = {
   query: (where?: IWhere) => IQuery;
@@ -24,7 +24,7 @@ const mapped = <T>(built: T, mapper?: IMapper<T, T>): T =>
 export const statementsOf = <T>(
   table: string,
   columns: string[],
-  mapper?: StatementMapper<T>,
+  mapper?: CRUDMapper<T>,
 ): RepositoryStatements => ({
   query: (where) => mapped(new QueryStatement(table, columns, where), mapper?.query),
   insert: (fields) => mapped(new InsertStatement(table, fields), mapper?.insert),
