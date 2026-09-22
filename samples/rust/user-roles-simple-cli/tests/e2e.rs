@@ -57,20 +57,61 @@ fn env_or(key: &str, default: &str) -> String {
         .unwrap_or_else(|| default.to_string())
 }
 
-fn ensure_compose(service: &str) {
-    if std::env::var("SKIP_DOCKER")
+fn skip_docker() -> bool {
+    std::env::var("SKIP_DOCKER")
         .ok()
         .filter(|value| !value.is_empty())
         .is_some()
-    {
+}
+
+fn docker(args: &[&str]) {
+    if skip_docker() {
         return;
     }
     let status = Command::new("docker")
-        .args(["compose", "up", "-d", "--wait", service])
+        .args(args)
         .current_dir(repo())
         .status()
         .expect("docker");
-    assert!(status.success(), "docker compose up {service}");
+    assert!(status.success(), "docker {}", args.join(" "));
+}
+
+fn fresh_compose(service: &str) {
+    docker(&["compose", "rm", "-sf", "-v", service]);
+    docker(&["compose", "up", "-d", "--wait", service]);
+    if service == "mysql" {
+        docker(&[
+            "compose",
+            "exec",
+            "-T",
+            "mysql",
+            "mysql",
+            "-uroot",
+            "-proot",
+            "-e",
+            "GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;",
+        ]);
+    }
+}
+
+fn stop_compose(service: &str) {
+    docker(&["compose", "rm", "-sf", "-v", service]);
+}
+
+struct StopCompose(&'static str);
+
+impl Drop for StopCompose {
+    fn drop(&mut self) {
+        stop_compose(self.0);
+    }
+}
+
+struct TempDir(PathBuf);
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
 }
 
 fn setup() {
@@ -150,9 +191,9 @@ fn script(url: &str, schema: &str, provider: &str) {
 #[test]
 fn sqlite() {
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
-    let dir = std::env::temp_dir().join(format!("user-roles-{}", uuid()));
-    fs::create_dir_all(&dir).expect("tmp");
-    let url = format!("sqlite:///{}", dir.join("app.db").display());
+    let dir = TempDir(std::env::temp_dir().join(format!("user-roles-{}", uuid())));
+    fs::create_dir_all(&dir.0).expect("tmp");
+    let url = format!("sqlite:///{}", dir.0.join("app.db").display());
     write_env(&url, "");
     setup();
     script(&url, "", "sqlite");
@@ -161,7 +202,8 @@ fn sqlite() {
 #[tokio::test]
 async fn mysql() {
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
-    ensure_compose("mysql");
+    fresh_compose("mysql");
+    let _stop = StopCompose("mysql");
     let url = env_or("MYSQL_URL", "mysql://ds:ds@127.0.0.1:3306/datasources");
     let name = format!("ds_{}", &uuid()[..16]);
     let pool = mysql_async::Pool::new(url.as_str());
@@ -184,7 +226,8 @@ async fn mysql() {
 #[tokio::test]
 async fn postgres() {
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
-    ensure_compose("postgres");
+    fresh_compose("postgres");
+    let _stop = StopCompose("postgres");
     let url = env_or("POSTGRES_URL", "postgres://ds:ds@127.0.0.1:5432/datasources");
     let schema = format!("ds_{}", &uuid()[..16]);
     let (client, connection) = tokio_postgres::connect(&url, tokio_postgres::NoTls)

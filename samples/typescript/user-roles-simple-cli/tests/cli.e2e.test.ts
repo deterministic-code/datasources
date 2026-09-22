@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,7 +7,7 @@ import { createConnection } from "mysql2/promise";
 import pg from "pg";
 import { describe, it } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { ensureCompose } from "../../../../typescript/ensure-compose.ts";
+import { freshCompose, stopCompose } from "../../../../typescript/ensure-compose.ts";
 
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(sample, "../../..");
@@ -59,11 +59,16 @@ const script = ({ url, schema }: { url: string; schema: string }, provider: stri
 
 describe.sequential("cli e2e", () => {
   it("sqlite", () => {
-    script(setup(`sqlite:///${join(mkdtempSync(join(tmpdir(), "ur-")), "app.db")}`), "sqlite");
+    const dir = mkdtempSync(join(tmpdir(), "ur-"));
+    try {
+      script(setup(`sqlite:///${join(dir, "app.db")}`), "sqlite");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("mysql", async () => {
-    ensureCompose("mysql");
+    freshCompose("mysql");
     const url = process.env.MYSQL_URL || "mysql://ds:ds@127.0.0.1:3306/datasources";
     const name = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
     const admin = await createConnection(url);
@@ -75,11 +80,12 @@ describe.sequential("cli e2e", () => {
     } finally {
       await admin.query(`DROP DATABASE \`${name}\``);
       await admin.end();
+      stopCompose("mysql");
     }
-  }, 120_000);
+  }, 180_000);
 
   it("postgres", async () => {
-    ensureCompose("postgres");
+    freshCompose("postgres");
     const url = process.env.POSTGRES_URL || "postgres://ds:ds@127.0.0.1:5432/datasources";
     const schema = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
     const admin = new pg.Client({ connectionString: url });
@@ -90,6 +96,7 @@ describe.sequential("cli e2e", () => {
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.end();
+      stopCompose("postgres");
     }
-  }, 120_000);
+  }, 180_000);
 });
