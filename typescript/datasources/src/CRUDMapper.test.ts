@@ -8,12 +8,6 @@ import { statementsOf } from "./RepositoryStatements.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
 import { CRUDMapper } from "./CRUDMapper.ts";
 
-const names = new TransformMapper<string, string>(
-  (name) =>
-    ({ users: "people", id: "user_id", name: "full_name" }[name] ?? name),
-  (name) => name,
-);
-
 describe("CRUDMapper", () => {
   it("defaults are identity", () => {
     const mapper = new CRUDMapper<string>();
@@ -27,8 +21,6 @@ describe("CRUDMapper", () => {
 
   it("rewrites each finished statement", () => {
     const mapper = new CRUDMapper({
-      entity: names,
-      columns: names,
       query: new TransformMapper(
         (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
         (query) => query,

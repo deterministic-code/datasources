@@ -282,16 +282,19 @@ describe("CRUDRepository", () => {
   });
 
   it("builder maps entity and columns; statement mapper rewrites query", async () => {
-    const names = new TransformMapper<string, string>(
-      (name) =>
-        ({ users: "people", id: "user_id", name: "full_name" }[name] ?? name),
+    const entity = new TransformMapper<string, string>(
+      (name) => (name === "users" ? "people" : name),
+      (name) => name,
+    );
+    const columns = new TransformMapper<string, string>(
+      (name) => ({ id: "user_id", name: "full_name" }[name] ?? name),
       (name) => name,
     );
     const { repo, command } = create({
       assignIdentityOnCreate: false,
       crudMapper: new CRUDMapper({
-        entity: names,
-        columns: names,
+        entity,
+        columns,
         query: new TransformMapper(
           (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
           (query) => query,

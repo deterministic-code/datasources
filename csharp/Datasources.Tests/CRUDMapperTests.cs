@@ -10,10 +10,13 @@ public class CRUDMapperTests
         public string name { get; set; } = "";
     }
 
-    static IMapper<string, string> Names() => new TransformMapper<string, string>(
+    static IMapper<string, string> Entity() => new TransformMapper<string, string>(
+        static name => name == "users" ? "people" : name,
+        static name => name);
+
+    static IMapper<string, string> Columns() => new TransformMapper<string, string>(
         static name => name switch
         {
-            "users" => "people",
             "id" => "user_id",
             "name" => "full_name",
             _ => name
@@ -37,8 +40,7 @@ public class CRUDMapperTests
     [Fact]
     public async Task BuilderMapsEntityAndColumns()
     {
-        var names = Names();
-        var (repo, command) = Create(new CRUDMapper<UserRow> { Entity = names, Columns = names });
+        var (repo, command) = Create(new CRUDMapper<UserRow> { Entity = Entity(), Columns = Columns() });
         command.Reader = new MockReader<Row>([]);
         await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
@@ -95,11 +97,10 @@ public class CRUDMapperTests
     [Fact]
     public async Task BuilderThenCRUDMapper()
     {
-        var names = Names();
         var (repo, command) = Create(new CRUDMapper<UserRow>
         {
-            Entity = names,
-            Columns = names,
+            Entity = Entity(),
+            Columns = Columns(),
             Query = new TransformMapper<IQuery, IQuery>(
                 query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
                 query => query),
