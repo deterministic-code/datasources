@@ -131,3 +131,6 @@ pages:
     title: .env
     group: Command Line (CLI)
     hash: env
+  - path: writing-providers.md
+    title: Driver
+    group: Writing Providers

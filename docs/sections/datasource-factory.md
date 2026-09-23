@@ -38,14 +38,14 @@ static defaults(options: DatasourceOptions): void
 
 ##### register(provider, driver)
 
-Registers a provider [IDriver](#idriver) by name.
+Registers a provider [IDriver](../writing-providers.md#idriver) by name.
 
 ```typescript
 static register(provider: string, driver: IDriver): void
 ```
 
 - `provider` — registry key (`sqlite`, `mysql`, …)
-- `driver` — [IDriver](#idriver) that builds connections, commands, transactions, and row converters
+- `driver` — [IDriver](../writing-providers.md#idriver) that builds connections, commands, transactions, and row converters
 
 ##### create(options?)
 
@@ -76,61 +76,6 @@ static registered(): string[]
 ```
 
 **Returns** `string[]`
-
-#### IDriver
-
-```typescript
-interface IDriver
-```
-
-**Methods**
-
-##### connection(options?)
-
-Builds an [IConnection](./connection.md) from the options bag.
-
-```typescript
-connection(options?: DatasourceOptions): IConnection
-```
-
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions)
-
-**Returns** [IConnection](./connection.md)
-
-##### command(connection)
-
-Builds an [ICommand](./command.md) for the connection.
-
-```typescript
-command(connection: IConnection): ICommand
-```
-
-- `connection` — open or closed [IConnection](./connection.md)
-
-**Returns** [ICommand](./command.md)
-
-##### transaction(connection, isolation?)
-
-Builds an [ITransaction](./transaction.md) for the connection.
-
-```typescript
-transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
-```
-
-- `connection` — open or closed [IConnection](./connection.md)
-- `isolation` — defaults to `serializable`
-
-**Returns** [ITransaction](./transaction.md)
-
-##### rowTypeConverters
-
-Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
-
-```typescript
-rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
-```
-
-**Returns** `Record<string, TypeConverter<Cell, Cell>>`
 
 #### IDatasourceFactory
 
@@ -185,14 +130,14 @@ public static void Defaults(IReadOnlyDictionary<string, string?> options)
 
 ##### Register(provider, driver)
 
-Registers a provider [IDriver](#idriver) by name.
+Registers a provider [IDriver](../writing-providers.md#idriver) by name.
 
 ```csharp
 public static void Register(string provider, IDriver driver)
 ```
 
 - `provider` — registry key (`sqlite`, `mysql`, …)
-- `driver` — [IDriver](#idriver) that builds connections, commands, transactions, and row converters
+- `driver` — [IDriver](../writing-providers.md#idriver) that builds connections, commands, transactions, and row converters
 
 ##### Create(options)
 
@@ -223,61 +168,6 @@ public static IReadOnlyList<string> Registered()
 ```
 
 **Returns** `IReadOnlyList<string>`
-
-#### IDriver
-
-```csharp
-public interface IDriver
-```
-
-**Methods**
-
-##### Connection(options)
-
-Builds an [IConnection](./connection.md) from the options bag.
-
-```csharp
-IConnection Connection(IReadOnlyDictionary<string, string?>? options)
-```
-
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions)
-
-**Returns** [IConnection](./connection.md)
-
-##### Command(connection)
-
-Builds an [ICommand](./command.md) for the connection.
-
-```csharp
-ICommand Command(IConnection connection)
-```
-
-- `connection` — open or closed [IConnection](./connection.md)
-
-**Returns** [ICommand](./command.md)
-
-##### Transaction(connection, isolation)
-
-Builds an [ITransaction](./transaction.md) for the connection.
-
-```csharp
-ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
-```
-
-- `connection` — open or closed [IConnection](./connection.md)
-- `isolation` — defaults to `Serializable`
-
-**Returns** [ITransaction](./transaction.md)
-
-##### RowTypeConverters
-
-Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
-
-```csharp
-IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
-```
-
-**Returns** `IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
 
 #### IDatasourceFactory
 
@@ -322,14 +212,14 @@ pub fn defaults(options: HashMap<String, String>) -> Result<()>
 
 ##### register(provider, driver)
 
-Registers a provider [Driver](#driver) by name.
+Registers a provider [Driver](../writing-providers.md#driver) by name.
 
 ```rust
 pub fn register(provider: impl Into<String>, driver: Arc<dyn Driver>)
 ```
 
 - `provider` — registry key (`sqlite`, `mysql`, …)
-- `driver` — [Driver](#driver) that builds connections, commands, transactions, and row converters
+- `driver` — [Driver](../writing-providers.md#driver) that builds connections, commands, transactions, and row converters
 
 ##### create(options)
 
@@ -381,60 +271,6 @@ pub fn registered() -> Vec<String>
 
 **Returns** `Vec<String>`
 
-#### Driver
-
-```rust
-pub trait Driver
-```
-
-**Methods**
-
-##### connection(options)
-
-Builds a [Connection](./connection.md) from the options bag.
-
-```rust
-fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection>
-```
-
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions)
-
-**Returns** `Arc<dyn `[Connection](./connection.md)`>`
-
-##### command(connection)
-
-Builds a [Command](./command.md) for the connection.
-
-```rust
-fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command>
-```
-
-- `connection` — open or closed [Connection](./connection.md)
-
-**Returns** `Arc<dyn `[Command](./command.md)`>`
-
-##### transaction(connection, isolation)
-
-Builds a [Transaction](./transaction.md) for the connection.
-
-```rust
-fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel) -> Arc<dyn Transaction>
-```
-
-- `connection` — open or closed [Connection](./connection.md)
-- `isolation` — defaults to `Serializable` at the call site
-
-**Returns** `Arc<dyn `[Transaction](./transaction.md)`>`
-
-##### row_type_converters()
-
-Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
-
-```rust
-fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
-```
-
-**Returns** `HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`
 :::
 
 ## Remarks
@@ -443,7 +279,7 @@ fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Va
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryProvider`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](../writing-providers.md#idriver) (`MemoryProvider`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
 
 ## Examples
 
