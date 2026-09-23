@@ -8,7 +8,6 @@ import { CreateTableStatement } from "@datasources/core";
 import { MysqlCommand } from "../src/command.ts";
 import { MysqlConnection } from "../src/connection.ts";
 import { MysqlRowTypeConverters } from "../src/converters/MysqlRowTypeConverters.ts";
-import { loadMysql2Driver } from "../src/driver.ts";
 import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 
 const quote = (id: string): string => `\`${id.replaceAll("`", "``")}\``;
@@ -38,7 +37,7 @@ const dialect: RepositoryDialect = {
       })),
     ),
 };
-import type { Mysql2Module } from "../src/i-mysql-driver.ts";
+import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 
 const url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
@@ -79,10 +78,7 @@ describe("repository specs", () => {
     it(file.split("/").pop()!, async () => {
       const isolated = await isolate(url);
       try {
-        const connection = new MysqlConnection({
-          url: isolated.url,
-          driver: await loadMysql2Driver(isolated.url),
-        });
+        const connection = MysqlConnection.from({ url: isolated.url });
         await connection.open();
         const command = new MysqlCommand(connection);
         await runRepositorySpec(

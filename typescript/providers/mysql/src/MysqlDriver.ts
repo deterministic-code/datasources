@@ -12,7 +12,7 @@ import { MysqlConnection } from "./connection.ts";
 import { MysqlTransaction } from "./transaction.ts";
 import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
 
-export class MysqlProvider implements IDriver {
+export class MysqlDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = MysqlRowTypeConverters;
   connection = (options?: DatasourceOptions): IConnection =>
     MysqlConnection.from(options);

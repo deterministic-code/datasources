@@ -1,6 +1,5 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
-use super::tokio_postgres_driver::TokioPostgresDriver;
 use datasources::{
     utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
     IsolationLevel, Parameter, Reader, Transaction, Value,
@@ -183,7 +182,6 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
         let conn = Arc::new(PostgresConnection::new(
             Some(url.to_string()),
             Some(schema.to_string()),
-            Arc::new(TokioPostgresDriver::new(Some(schema.to_string()))),
         ));
         conn.open().await.unwrap();
         sessions.insert(
@@ -233,9 +231,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
         let fresh;
         let target = if op.open == Some(false) {
             fresh = attach(PostgresCommand::new(Arc::new(PostgresConnection::new(
-                None,
-                None,
-                Arc::new(TokioPostgresDriver::new(None)),
+                None, None,
             ))));
             &fresh
         } else {
@@ -340,7 +336,6 @@ async fn return_and_output_parameters() {
     let conn = Arc::new(PostgresConnection::new(
         Some(url.clone()),
         Some(schema.clone()),
-        Arc::new(TokioPostgresDriver::new(Some(schema.clone()))),
     ));
     conn.open().await.unwrap();
     let command = PostgresCommand::new(conn);

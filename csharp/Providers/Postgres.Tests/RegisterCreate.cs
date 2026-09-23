@@ -4,12 +4,12 @@ using Datasources.Postgres;
 public partial class RegisterCreateTests
 {
     const string Provider = "postgres";
-    static readonly IDriver Driver = new PostgresProvider();
+    static readonly IDriver Driver = new PostgresDriver();
 }
 
 public class PublicSurfaceTests
 {
     [Fact]
     public void ExportsOnlyTheProvider() =>
-        Assert.Equal(typeof(PostgresProvider), Assert.Single(typeof(PostgresProvider).Assembly.GetExportedTypes()));
+        Assert.Equal(typeof(PostgresDriver), Assert.Single(typeof(PostgresDriver).Assembly.GetExportedTypes()));
 }

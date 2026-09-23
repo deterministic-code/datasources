@@ -1,6 +1,6 @@
-import type { IMysqlDriver } from "./driver.ts";
+import type { MysqlCreateConnection } from "./i-mysql-engine.ts";
 
 export interface MysqlConnectionOptions {
   url?: string;
-  driver?: IMysqlDriver;
+  connect?: MysqlCreateConnection;
 }

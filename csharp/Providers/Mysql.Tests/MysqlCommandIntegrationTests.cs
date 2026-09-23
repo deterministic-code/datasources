@@ -18,7 +18,6 @@ public class MysqlCommandIntegrationTests
             var conn = new MysqlConnection(new MysqlConnectionOptions
             {
                 Url = isolated.Url,
-                Driver = new MysqlDriver(),
             });
             await conn.Open();
             var command = new MysqlCommand(conn);
@@ -62,10 +61,9 @@ public class MysqlCommandIntegrationTests
                     var conn = new MysqlConnection(new MysqlConnectionOptions
                     {
                         Url = isolated.Url,
-                        Driver = new MysqlDriver(),
                     });
                     return new SqlSpec.Session(conn, new MysqlCommand(conn));
-                }, () => new MysqlCommand(new MysqlConnection(new MysqlConnectionOptions { Driver = new MysqlDriver() })));
+                }, () => new MysqlCommand(new MysqlConnection()));
             }
             finally
             {

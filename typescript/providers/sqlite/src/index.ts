@@ -1,1 +1,1 @@
-export { SqliteProvider } from "./SqliteProvider.ts";
+export { SqliteDriver } from "./SqliteDriver.ts";

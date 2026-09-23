@@ -1,1 +1,1 @@
-export { MysqlProvider } from "./MysqlProvider.ts";
+export { MysqlDriver } from "./MysqlDriver.ts";

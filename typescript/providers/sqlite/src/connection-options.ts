@@ -1,7 +1,7 @@
-import type { ISqliteDriver } from "./driver.ts";
+import type { SqliteDatabaseCtor } from "./i-sqlite-driver.ts";
 
 export interface SqliteConnectionOptions {
   filename?: string;
   url?: string;
-  driver?: ISqliteDriver;
+  Database?: SqliteDatabaseCtor;
 }

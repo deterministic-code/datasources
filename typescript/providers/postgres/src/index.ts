@@ -1,1 +1,1 @@
-export { PostgresProvider } from "./PostgresProvider.ts";
+export { PostgresDriver } from "./PostgresDriver.ts";

@@ -1,24 +1,10 @@
-import type { IsolationLevelName, Parameter } from "@datasources/core";
+import type { Parameter } from "@datasources/core";
 import type { Cells, Scalar } from "./scalar.ts";
 
 export interface MysqlExecuteResult {
   rowsAffected: number;
   result?: Scalar;
   parameters?: Parameter[];
-}
-
-export interface IMysqlDriver {
-  open(url: string): Promise<void>;
-  close(): Promise<void>;
-  execute(
-    sql: string,
-    params?: Record<string, Scalar>,
-    parameters?: Parameter[],
-  ): Promise<MysqlExecuteResult>;
-  query(sql: string, params?: Record<string, Scalar>): Promise<Cells[]>;
-  begin(isolation?: IsolationLevelName): Promise<void>;
-  commit(): Promise<void>;
-  rollback(): Promise<void>;
 }
 
 export interface MysqlQueryHeader {
@@ -44,3 +30,6 @@ export type Mysql2Module = {
     options: { uri: string; namedPlaceholders: boolean },
   ) => Promise<IMysqlClient>;
 };
+
+export const mysql2Connect = (mysql: Mysql2Module): MysqlCreateConnection => (uri: string) =>
+  mysql.createConnection({ uri, namedPlaceholders: true });

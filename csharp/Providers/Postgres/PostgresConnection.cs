@@ -1,11 +1,13 @@
+using Npgsql;
+
 namespace Datasources.Postgres;
 
 internal sealed class PostgresConnection : IConnection
 {
+    NpgsqlConnection? _db;
 
     public string Url { get; }
     public string? Schema { get; }
-    public IPostgresDriver Driver { get; }
     public string Provider => "postgres";
     public ICommand CreateCommand() => new PostgresCommand(this);
     public bool IsOpen { get; private set; }
@@ -23,8 +25,7 @@ internal sealed class PostgresConnection : IConnection
         {
             Url = DatasourceOptions.Value(options, "url")
                 ?? DatasourceOptions.Value(options, "database_url"),
-            Schema = schema,
-            Driver = new PostgresDriver(schema)
+            Schema = schema
         };
     }
 
@@ -33,33 +34,45 @@ internal sealed class PostgresConnection : IConnection
         options ??= new PostgresConnectionOptions();
         Url = options.Url ?? "";
         Schema = options.Schema;
-        Driver = PostgresGuard.Require(options.Driver);
     }
-
-
 
     public async Task Open()
     {
         if (IsOpen) return;
-        await Driver.Open(Url);
+        _db = new NpgsqlConnection(PostgresConnectionString.ToConnectionString(Url));
+        await _db.OpenAsync();
+        if (!string.IsNullOrEmpty(Schema))
+            await Exec($"SET search_path TO {Schema}");
         IsOpen = true;
     }
 
     public async Task Close()
     {
-        await Driver.Close();
+        if (_db is not null)
+            await _db.DisposeAsync();
+        _db = null;
         IsOpen = false;
     }
 
     public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
     {
         EnsureOpen();
-        await Driver.Begin(isolation);
+        await Exec($"BEGIN ISOLATION LEVEL {PostgresBind.IsolationSql(isolation)}");
         return new PostgresTransaction(this, isolation);
     }
 
     public void EnsureOpen()
     {
         if (!IsOpen) throw new DatasourceException("Connection is not open");
+    }
+
+    internal NpgsqlConnection Require() =>
+        _db ?? throw new DatasourceException("Connection is not open");
+
+    internal async Task Exec(string sql)
+    {
+        using var command = Require().CreateCommand();
+        command.CommandText = sql;
+        await command.ExecuteNonQueryAsync();
     }
 }

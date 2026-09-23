@@ -10,15 +10,13 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ParameterDirection, type IDriver } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlConnection } from "./connection.ts";
 import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
-import { loadMysql2Driver, requireDriver } from "./driver.ts";
-import type { IMysqlClient, MysqlQueryHeader } from "./i-mysql-driver.ts";
-import { Mysql2Driver } from "./mysql2-driver.ts";
-import { MysqlProvider } from "./MysqlProvider.ts";
+import { mysql2Connect, type IMysqlClient, type MysqlQueryHeader } from "./i-mysql-engine.ts";
+import { MysqlDriver } from "./MysqlDriver.ts";
 import { MysqlTransaction } from "./transaction.ts";
 import type { Cells, Scalar } from "./scalar.ts";
 
@@ -52,26 +50,18 @@ class FakeClient implements IMysqlClient {
   }
 }
 
-function fakeDriver(url = "mysql://localhost/app") {
-  const client = new FakeClient();
-  return {
-    driver: new Mysql2Driver(url, async () => client),
-    client,
-  };
-}
+const opened = async (url = "mysql://localhost/app", client = new FakeClient()) => {
+  const connection = new MysqlConnection({ url, connect: async () => client });
+  await connection.open();
+  return { connection, client, command: new MysqlCommand(connection) };
+};
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("mysql", new MysqlProvider());
+  DatasourceFactory.register("mysql", new MysqlDriver());
 });
 
-describe("requireDriver and bindParameters", () => {
-  it("requires a driver", () => {
-    expect(() => requireDriver(undefined)).toThrow(DatasourceError);
-    const { driver } = fakeDriver();
-    expect(requireDriver(driver)).toBe(driver);
-  });
-
+describe("bindParameters", () => {
   it("binds and rewrites parameters", () => {
     expect(bindParameters()).toEqual({});
     expect(bindParameters(null)).toEqual({});
@@ -85,26 +75,25 @@ describe("requireDriver and bindParameters", () => {
   });
 });
 
-describe("Mysql2Driver", () => {
-  it("wraps a scripted client", async () => {
-    const { driver, client } = fakeDriver("mysql://db/app");
-    await driver.open("mysql://db/app");
-    await driver.open("mysql://db/app");
-    expect(await driver.execute("INSERT INTO items (id) VALUES ($id)", { id: 1 }))
-      .toEqual({ rowsAffected: 2, result: 5 });
-    expect(await driver.execute("   ")).toEqual({ rowsAffected: 0 });
+describe("MysqlConnection", () => {
+  it("opens, runs SQL, transacts, and closes", async () => {
+    const { connection, client, command } = await opened("mysql://db/app");
+    await connection.open();
+    expect(await command.execute("INSERT INTO items (id) VALUES ($id)", [{ name: "id", value: 1 }]))
+      .toMatchObject({ rowsAffected: 2, result: 5 });
+    expect(await command.execute("   ")).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
     client.arrayResult = true;
-    expect(await driver.query("SELECT * FROM items", { id: 1 })).toEqual([
-      { id: 1 },
-    ]);
-    expect(await driver.query("")).toEqual([]);
+    const reader = await command.executeReader("SELECT * FROM items");
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 1 });
+    expect(await (await command.executeReader("")).next()).toBe(false);
     client.arrayResult = false;
-    await driver.begin();
-    await driver.begin(IsolationLevel.ReadUncommitted);
-    await driver.begin(IsolationLevel.ReadCommitted);
-    await driver.begin(IsolationLevel.RepeatableRead);
-    await driver.commit();
-    await driver.rollback();
+    await connection.startTransaction();
+    await connection.startTransaction(IsolationLevel.ReadUncommitted);
+    await connection.startTransaction(IsolationLevel.ReadCommitted);
+    await connection.startTransaction(IsolationLevel.RepeatableRead);
+    await new MysqlTransaction(connection).commit();
+    await new MysqlTransaction(connection).abort();
     expect(client.begins).toBe(4);
     expect(client.commits).toBe(1);
     expect(client.rollbacks).toBe(1);
@@ -117,41 +106,32 @@ describe("Mysql2Driver", () => {
       "SET TRANSACTION ISOLATION LEVEL READ COMMITTED",
       "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
     ]);
-    await driver.close();
+    await connection.close();
     expect(client.ended).toBe(true);
-    await expect(driver.execute("x")).rejects.toThrow("not open");
+    expect(() => connection.require()).toThrow("not open");
+    await expect(command.execute("x")).rejects.toThrow("not open");
   });
 
-  it("loads a module and treats array execute results as row counts", async () => {
-    const named = await loadMysql2Driver("mysql://db/app", async () => ({
+  it("connects through mysql2 and treats array results as row counts", async () => {
+    const connect = mysql2Connect({
       createConnection: async () => new FakeClient(),
-    }));
-    await named.open("mysql://db/app");
+    });
+    const named = new MysqlConnection({ url: "mysql://db/app", connect });
+    await named.open();
     await named.close();
 
-    const viaDefaultImport = await loadMysql2Driver("mysql://db/app");
-    await viaDefaultImport.open("mysql://db/app");
-    await viaDefaultImport.close();
-
-    const { driver, client } = fakeDriver();
-    await driver.open("x");
+    const { command, client, connection } = await opened("x");
     client.arrayResult = true;
-    expect(await driver.execute("SELECT 1")).toMatchObject({ rowsAffected: 1, result: 1 });
+    expect(await command.execute("SELECT 1")).toMatchObject({ rowsAffected: 1, result: 1 });
     client.arrayResult = false;
     client.header = {};
-    expect(await driver.execute("UPDATE items")).toMatchObject({
-      rowsAffected: 0,
-    });
-    await driver.close();
-    await driver.close();
+    expect(await command.execute("UPDATE items")).toMatchObject({ rowsAffected: 0 });
+    await connection.close();
+    await connection.close();
   });
-});
 
-describe("MysqlConnection", () => {
   it("opens, reopens, transacts, and closes", async () => {
-    const { driver, client } = fakeDriver();
-    const connection = new MysqlConnection({ url: "mysql://db/app", driver });
-    await connection.open();
+    const { connection, client } = await opened("mysql://db/app");
     await connection.open();
     expect(connection.createCommand()).toBeInstanceOf(MysqlCommand);
     expect(connection.isOpen).toBe(true);
@@ -167,37 +147,25 @@ describe("MysqlConnection", () => {
     await expect(connection.startTransaction()).rejects.toThrow(DatasourceError);
   });
 
-  it("defaults url and requires a driver", () => {
-    expect(() => new MysqlConnection()).toThrow(DatasourceError);
-    const connection = new MysqlConnection({ driver: fakeDriver().driver });
+  it("defaults url and requires a client to open", async () => {
+    const connection = new MysqlConnection();
     expect(connection.url).toBe("");
+    await expect(connection.open()).rejects.toThrow(DatasourceError);
   });
 });
 
 describe("MysqlCommand", () => {
-  async function setup() {
-    const { driver, client } = fakeDriver();
-    const connection = new MysqlConnection({ driver });
-    await connection.open();
-    return {
-      client,
-      connection,
-      command: new MysqlCommand(connection),
-    };
-  }
-
-  it("executes SQL through the driver", async () => {
-    const { command, client } = await setup();
+  it("executes SQL through the client", async () => {
+    const { command, client } = await opened();
     client.arrayResult = true;
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
       .toEqual({ result: undefined, rowsAffected: 1, parameters: [{ name: "id", value: 1 }] });
-    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0 });
+    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
-    client.arrayResult = true;
     client.rows = [{ add_one: 5 }];
     expect(await command.execute("SELECT add_one($n)", [{ name: "n", value: 4 }]))
       .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });
@@ -205,8 +173,8 @@ describe("MysqlCommand", () => {
     expect(await command.execute("SELECT 1")).toEqual({
       result: undefined,
       rowsAffected: 0,
+      parameters: undefined,
     });
-    const { ParameterDirection } = await import("@datasources/core");
     client.rows = [{ result: 5 }];
     const start = { name: "start_n", value: 4 };
     const out = { name: "result", direction: ParameterDirection.Output };
@@ -226,17 +194,22 @@ describe("MysqlCommand", () => {
         { name: "result", direction: ParameterDirection.Output },
       ]),
     ).toMatchObject({ rowsAffected: 0 });
+    client.arrayResult = false;
+    expect(
+      await command.execute("CALL bump($result)", [
+        { name: "result", direction: ParameterDirection.Output },
+      ]),
+    ).toMatchObject({ rowsAffected: 0 });
   });
 });
 
 describe("Mysql datasource", () => {
   it("registers and constructs children", async () => {
-    const { driver } = fakeDriver();
     expect(
-      await new Datasource("mysql", new MysqlProvider()).createConnection(),
+      await new Datasource("mysql", new MysqlDriver()).createConnection(),
     ).toBeInstanceOf(MysqlConnection);
-    const of = (engine = driver): IDriver => ({
-      connection: () => new MysqlConnection({ driver: engine }),
+    const of = (): IDriver => ({
+      connection: () => new MysqlConnection({ connect: async () => new FakeClient() }),
       command: (c) => c.createCommand(),
       transaction: (c, isolation = "serializable") =>
         new MysqlTransaction(c as MysqlConnection, isolation),
@@ -260,18 +233,13 @@ describe("Mysql datasource", () => {
     const repo = ds.createRepository(connection);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
-    expect(
-      new Datasource("mysql", of())
-        .createRepository(),
-    ).toBeInstanceOf(CRUDRepository);
+    expect(new Datasource("mysql", of()).createRepository()).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "mysql" }).provider).toBe("mysql");
     expect(MysqlConnection.from({ url: "mysql://db/app" }).url).toBe("mysql://db/app");
     expect(MysqlConnection.from({ database_url: "mysql://db/app" }).url).toBe("mysql://db/app");
     expect(MysqlConnection.from().url).toBe("");
-    const provider = new MysqlProvider();
+    const provider = new MysqlDriver();
     expect(provider.command(connection)).toBeInstanceOf(MysqlCommand);
-    expect(provider.transaction(connection as MysqlConnection).isolation).toBe(
-      "serializable",
-    );
+    expect(provider.transaction(connection as MysqlConnection).isolation).toBe("serializable");
   });
 });

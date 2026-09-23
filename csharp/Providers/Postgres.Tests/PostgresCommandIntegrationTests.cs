@@ -26,7 +26,6 @@ public class PostgresCommandIntegrationTests
             {
                 Url = url,
                 Schema = schema,
-                Driver = new PostgresDriver(schema),
             });
             await conn.Open();
             var command = new PostgresCommand(conn);
@@ -80,7 +79,6 @@ public class PostgresCommandIntegrationTests
             {
                 Url = url,
                 Schema = schema,
-                Driver = new PostgresDriver(schema),
             });
             await conn.Open();
             var command = new PostgresCommand(conn);
@@ -129,10 +127,9 @@ public class PostgresCommandIntegrationTests
                     {
                         Url = url,
                         Schema = schema,
-                        Driver = new PostgresDriver(schema),
                     });
                     return new SqlSpec.Session(conn, new PostgresCommand(conn));
-                }, () => new PostgresCommand(new PostgresConnection(new PostgresConnectionOptions { Driver = new PostgresDriver() })));
+                }, () => new PostgresCommand(new PostgresConnection()));
             }
             finally
             {

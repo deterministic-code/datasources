@@ -213,7 +213,7 @@ async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<A
 
 `StartTransaction` requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
 
-Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`, `ISqliteDriver` / `SqliteDriver`). Stub dialects throw not-implemented on open, close, and start-transaction.
+Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`). SQLite, MySQL, and Postgres open the database client on the connection. Stub dialects throw not-implemented on open, close, and start-transaction.
 
 ## Examples
 

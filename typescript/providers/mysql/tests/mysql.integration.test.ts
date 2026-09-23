@@ -12,8 +12,7 @@ import {
 } from "../../sql-spec-runner.ts";
 import { MysqlCommand } from "../src/command.ts";
 import { MysqlConnection } from "../src/connection.ts";
-import { loadMysql2Driver } from "../src/driver.ts";
-import type { Mysql2Module } from "../src/i-mysql-driver.ts";
+import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 
 const dialect = loadDialect("mysql");
 const url = (process.env.MYSQL_URL ??=
@@ -57,26 +56,11 @@ describe("shared sql specs", () => {
       try {
         await runSpec(file, dialect, {
           openSession: async () => {
-            const connection = new MysqlConnection({
-              url: isolated.url,
-              driver: await loadMysql2Driver(isolated.url),
-            });
+            const connection = MysqlConnection.from({ url: isolated.url });
             return { connection, command: new MysqlCommand(connection) };
           },
           closedCommand: () =>
-            new MysqlCommand(
-              new MysqlConnection({
-                driver: {
-                  open: async () => {},
-                  close: async () => {},
-                  execute: async () => ({ rowsAffected: 0 }),
-                  query: async () => [],
-                  begin: async () => {},
-                  commit: async () => {},
-                  rollback: async () => {},
-                },
-              }),
-            ),
+            new MysqlCommand(new MysqlConnection()),
         });
       } finally {
         await isolated.cleanup();
@@ -89,10 +73,7 @@ describe("return and output parameters", () => {
   it("reads OUT and function results", async () => {
     const isolated = await isolate(url);
     try {
-      const connection = new MysqlConnection({
-        url: isolated.url,
-        driver: await loadMysql2Driver(isolated.url),
-      });
+      const connection = MysqlConnection.from({ url: isolated.url });
       await connection.open();
       const command = new MysqlCommand(connection);
       await command.execute(`

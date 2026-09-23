@@ -1,6 +1,5 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
-use super::tokio_postgres_driver::TokioPostgresDriver;
 use datasources::{Column, Connection, CreateTableStatement, Text};
 use datasources_sql_specs::RepositoryDialect;
 use std::sync::Arc;
@@ -73,11 +72,7 @@ async fn user_crud() {
             .batch_execute(&format!("CREATE SCHEMA {schema}"))
             .await
             .unwrap();
-        let conn = Arc::new(PostgresConnection::new(
-            Some(url.clone()),
-            Some(schema.clone()),
-            Arc::new(TokioPostgresDriver::new(Some(schema.clone()))),
-        ));
+        let conn = Arc::new(PostgresConnection::new(Some(url.clone()), Some(schema.clone())));
         conn.open().await.unwrap();
         let command = Arc::new(PostgresCommand::new(conn.clone()));
         datasources_sql_specs::run(&path, &dialect(), conn, command)

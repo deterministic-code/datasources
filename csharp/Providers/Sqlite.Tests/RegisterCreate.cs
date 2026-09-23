@@ -4,16 +4,16 @@ using Datasources.Sqlite;
 public partial class RegisterCreateTests
 {
     const string Provider = "sqlite";
-    static readonly IDriver Driver = new SqliteProvider();
+    static readonly IDriver Driver = new SqliteDriver();
 }
 
 public class PublicSurfaceTests
 {
     [Fact]
     public void ExportsOnlyTheProvider() =>
-        Assert.Equal(typeof(SqliteProvider), Assert.Single(typeof(SqliteProvider).Assembly.GetExportedTypes()));
+        Assert.Equal(typeof(SqliteDriver), Assert.Single(typeof(SqliteDriver).Assembly.GetExportedTypes()));
 
     [Fact]
     public void MicrosoftAssemblyExportsNothing() =>
-        Assert.Empty(typeof(SqliteDriver).Assembly.GetExportedTypes());
+        Assert.Empty(typeof(SqliteConnectionDriver).Assembly.GetExportedTypes());
 }

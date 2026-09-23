@@ -1,17 +1,12 @@
 mod command;
-mod command_driver;
 mod connection;
-mod connection_driver;
 mod connection_string;
 mod converters;
 mod driver;
-mod provider;
-mod rusqlite_driver;
 mod sqlite_path;
 mod transaction;
-mod transaction_driver;
 
-pub use provider::SqliteProvider;
+pub use driver::SqliteDriver;
 
 #[cfg(test)]
 #[path = "../tests/contacts.rs"]
@@ -27,21 +22,19 @@ mod repository_spec;
 mod tests {
     use crate::command::SqliteCommand;
     use crate::connection::SqliteConnection;
-    use crate::driver::{require_driver, SqliteDriver};
-    use crate::rusqlite_driver::RusqliteDriver;
     use crate::transaction::SqliteTransaction;
     use datasources::{
-        create, register, reset, BuiltDatasource, Command, Connection, Datasource, Driver,
-        IsolationLevel, Transaction,
+        create, downcast_connection, register, reset, BuiltDatasource, Command, Connection,
+        Datasource, Driver, IsolationLevel, Transaction,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    struct With(Arc<dyn SqliteDriver>, Option<String>);
+    struct With(Option<String>);
 
     impl Driver for With {
         fn connection(&self, _: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
-            Arc::new(SqliteConnection::new(self.1.clone(), self.0.clone()))
+            Arc::new(SqliteConnection::new(self.0.clone()))
         }
 
         fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
@@ -53,9 +46,8 @@ mod tests {
             connection: Arc<dyn Connection>,
             isolation: IsolationLevel,
         ) -> Arc<dyn Transaction> {
-            let conn = datasources::downcast_connection::<SqliteConnection>(connection)
-                .expect("sqlite");
-            Arc::new(SqliteTransaction::new(conn.driver.clone(), isolation))
+            let conn = downcast_connection::<SqliteConnection>(connection).expect("sqlite");
+            Arc::new(SqliteTransaction::new(conn.share(), isolation))
         }
 
         fn row_type_converters(
@@ -68,13 +60,7 @@ mod tests {
 
     #[tokio::test]
     async fn sqlite_command_and_repository() {
-        assert!(require_driver(None).is_err());
-        let driver: Arc<dyn SqliteDriver> = Arc::new(RusqliteDriver::new());
-        require_driver(Some(driver.clone())).unwrap();
-        let conn = Arc::new(SqliteConnection::new(
-            Some(":memory:".into()),
-            driver.clone(),
-        ));
+        let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
         conn.open().await.unwrap();
         conn.open().await.unwrap();
         let command = SqliteCommand::new(conn.clone());
@@ -108,10 +94,9 @@ mod tests {
         assert!(conn.ensure_open().is_err());
         assert!(conn.start_transaction(None).await.is_err());
 
-        let shared = Arc::new(SqliteConnection::new(
-            Some("file:iso?mode=memory&cache=shared".into()),
-            Arc::new(RusqliteDriver::new()),
-        ));
+        let shared = Arc::new(SqliteConnection::new(Some(
+            "file:iso?mode=memory&cache=shared".into(),
+        )));
         shared.open().await.unwrap();
         let read_committed = shared
             .start_transaction(Some(IsolationLevel::ReadCommitted))
@@ -124,14 +109,10 @@ mod tests {
         read_committed.abort().await.unwrap();
         shared.close().await.unwrap();
 
-        let defaulted = SqliteConnection::new(None, driver.clone());
+        let defaulted = SqliteConnection::new(None);
         assert_eq!(defaulted.filename, ":memory:");
         reset();
-        let driver_for_ds = driver.clone();
-        register(
-            "sqlite",
-            Arc::new(With(driver_for_ds, Some(":memory:".into()))),
-        );
+        register("sqlite", Arc::new(With(Some(":memory:".into()))));
         let ds = create(Some(&HashMap::from([("provider".into(), "sqlite".into())]))).unwrap();
         assert_eq!(ds.provider(), "sqlite");
         ds.create_connection().await.unwrap();
@@ -139,26 +120,21 @@ mod tests {
         assert!(command.execute("DELETE FROM items", None).await.is_err());
         assert!(command.execute_reader("SELECT 1", None).await.is_err());
         ds.create_repository(None);
-        let factory = BuiltDatasource::new(
-            "sqlite",
-            Arc::new(With(driver.clone(), None)),
-            None,
-        );
+        let factory = BuiltDatasource::new("sqlite", Arc::new(With(None)), None);
         factory.create_connection().await.unwrap();
         let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
         assert!(bound.execute("DELETE FROM items", None).await.is_err());
         assert!(bound.execute_reader("SELECT 1", None).await.is_err());
         factory.create_repository(Some(factory.create_connection().await.unwrap()));
 
-        let closed = Arc::new(SqliteConnection::new(None, driver));
+        let closed = Arc::new(SqliteConnection::new(None));
         assert!(SqliteCommand::new(closed).execute("x", None).await.is_err());
     }
 
     #[tokio::test]
     async fn return_statement_selects_scalar() {
         use datasources::{Parameter, ReturnStatement, Text};
-        let driver: Arc<dyn SqliteDriver> = Arc::new(RusqliteDriver::new());
-        let conn = Arc::new(SqliteConnection::new(Some(":memory:".into()), driver));
+        let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
         conn.open().await.unwrap();
         let command = SqliteCommand::new(conn);
         let parameters = [Parameter::new("x", -3_i64)];

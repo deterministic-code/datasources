@@ -1,6 +1,5 @@
 use super::command::MysqlCommand;
 use super::connection::MysqlConnection;
-use super::mysql_async_driver::MysqlAsyncDriver;
 use datasources::{Column, Connection, CreateTableStatement, Text};
 use datasources_sql_specs::RepositoryDialect;
 use mysql_async::prelude::Queryable;
@@ -85,10 +84,7 @@ async fn user_crud() {
             .unwrap();
         drop(admin);
         let url = replace_db(&base, &name);
-        let conn = Arc::new(MysqlConnection::new(
-            Some(url),
-            Arc::new(MysqlAsyncDriver::new()),
-        ));
+        let conn = Arc::new(MysqlConnection::new(Some(url)));
         conn.open().await.unwrap();
         let command = Arc::new(MysqlCommand::new(conn.clone()));
         datasources_sql_specs::run(&path, &dialect(), conn, command)

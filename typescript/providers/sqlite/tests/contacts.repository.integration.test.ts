@@ -18,7 +18,6 @@ import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/ind
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
-import { loadBetterSqlite3Driver } from "../src/driver.ts";
 
 const schemaPath = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -33,10 +32,7 @@ const statementsOf = (sql: string) =>
 
 describe("contacts readonly repository", () => {
   it("matches enriched ContactsService to FlatToNestedMapper on the same seed", async () => {
-    const connection = new SqliteConnection({
-      filename: ":memory:",
-      driver: await loadBetterSqlite3Driver(":memory:"),
-    });
+    const connection = SqliteConnection.from({ filename: ":memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
     for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql()])
@@ -68,10 +64,7 @@ describe("contacts readonly repository", () => {
   });
 
   it("maps join rows to nested contacts", async () => {
-    const connection = new SqliteConnection({
-      filename: ":memory:",
-      driver: await loadBetterSqlite3Driver(":memory:"),
-    });
+    const connection = SqliteConnection.from({ filename: ":memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
     for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql()])

@@ -31,7 +31,6 @@ public class PostgresRepositorySpecTests
                     {
                         Url = url,
                         Schema = schema,
-                        Driver = new PostgresDriver(schema),
                     });
                     return new RepositorySpec.Session(conn, new PostgresCommand(conn), PostgresRowTypeConverters.All);
                 }, CreateTable, Quote);

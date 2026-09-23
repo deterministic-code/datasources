@@ -1,6 +1,5 @@
 use crate::command::PostgresCommand;
-use crate::driver::PostgresDriver;
-use crate::tokio_postgres_driver::TokioPostgresDriver;
+use crate::bind::isolation_sql;
 use crate::transaction::PostgresTransaction;
 use async_trait::async_trait;
 use datasources::{
@@ -8,25 +7,26 @@ use datasources::{
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use tokio_postgres::NoTls;
+
+pub(crate) fn map_err(error: tokio_postgres::Error) -> DatasourceError {
+    DatasourceError::message(error.to_string())
+}
 
 pub struct PostgresConnection {
     pub url: String,
     pub schema: Option<String>,
-    pub driver: Arc<dyn PostgresDriver>,
     opened: Arc<Mutex<bool>>,
+    pub(crate) client: Arc<tokio::sync::Mutex<Option<tokio_postgres::Client>>>,
 }
 
 impl PostgresConnection {
-    pub fn new(
-        url: Option<String>,
-        schema: Option<String>,
-        driver: Arc<dyn PostgresDriver>,
-    ) -> Self {
+    pub fn new(url: Option<String>, schema: Option<String>) -> Self {
         Self {
             url: url.unwrap_or_default(),
             schema,
-            driver,
             opened: Arc::new(Mutex::new(false)),
+            client: Arc::new(tokio::sync::Mutex::new(None)),
         }
     }
 
@@ -37,11 +37,16 @@ impl PostgresConnection {
                 .or_else(|| o.get("database_schema"))
                 .cloned()
         });
-        Arc::new(PostgresConnection::new(
-            url,
-            schema.clone(),
-            Arc::new(TokioPostgresDriver::new(schema)),
-        ))
+        Arc::new(PostgresConnection::new(url, schema))
+    }
+
+    pub(crate) fn share(&self) -> Self {
+        Self {
+            url: self.url.clone(),
+            schema: self.schema.clone(),
+            opened: self.opened.clone(),
+            client: self.client.clone(),
+        }
     }
 
     pub fn ensure_open(&self) -> Result<()> {
@@ -49,6 +54,14 @@ impl PostgresConnection {
             return Err(DatasourceError::message("Connection is not open"));
         }
         Ok(())
+    }
+
+    pub(crate) async fn exec(&self, sql: &str) -> Result<()> {
+        let slot = self.client.lock().await;
+        let client = slot
+            .as_ref()
+            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        client.batch_execute(sql).await.map_err(map_err)
     }
 }
 
@@ -67,25 +80,38 @@ impl Connection for PostgresConnection {
     }
 
     fn create_command(&self) -> Arc<dyn Command> {
-        Arc::new(PostgresCommand::new(Arc::new(PostgresConnection {
-            url: self.url.clone(),
-            schema: self.schema.clone(),
-            driver: self.driver.clone(),
-            opened: self.opened.clone(),
-        })))
+        Arc::new(PostgresCommand::new(Arc::new(self.share())))
     }
 
     async fn open(&self) -> Result<()> {
         if *self.opened.lock().unwrap() {
             return Ok(());
         }
-        self.driver.open(&self.url).await?;
+        let mut slot = self.client.lock().await;
+        if slot.is_some() {
+            *self.opened.lock().unwrap() = true;
+            return Ok(());
+        }
+        let (client, connection) = tokio_postgres::connect(&self.url, NoTls)
+            .await
+            .map_err(map_err)?;
+        tokio::spawn(async move {
+            let _ = connection.await;
+        });
+        if let Some(schema) = &self.schema {
+            client
+                .batch_execute(&format!("SET search_path TO {schema}"))
+                .await
+                .map_err(map_err)?;
+        }
+        *slot = Some(client);
+        drop(slot);
         *self.opened.lock().unwrap() = true;
         Ok(())
     }
 
     async fn close(&self) -> Result<()> {
-        self.driver.close().await?;
+        *self.client.lock().await = None;
         *self.opened.lock().unwrap() = false;
         Ok(())
     }
@@ -96,10 +122,11 @@ impl Connection for PostgresConnection {
     ) -> Result<Arc<dyn Transaction>> {
         self.ensure_open()?;
         let isolation = isolation.unwrap_or_default();
-        self.driver.begin(isolation).await?;
-        Ok(Arc::new(PostgresTransaction {
-            driver: self.driver.clone(),
-            isolation,
-        }) as Arc<dyn Transaction>)
+        self.exec(&format!(
+            "BEGIN ISOLATION LEVEL {}",
+            isolation_sql(isolation)
+        ))
+        .await?;
+        Ok(Arc::new(PostgresTransaction::new(self.share(), isolation)))
     }
 }

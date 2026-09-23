@@ -14,7 +14,6 @@ import { ensureCompose } from "../../../ensure-compose.ts";
 import { specVerbose } from "../../../sql-spec-runner.ts";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";
-import { loadPgDriver } from "../src/driver.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
 const url = (process.env.POSTGRES_URL ??=
@@ -56,11 +55,7 @@ describe("contacts readonly repository", () => {
   it("matches enriched ContactsService to FlatToNestedMapper on the same seed", async () => {
     const isolated = await isolate(url);
     try {
-      const connection = new PostgresConnection({
-        url,
-        schema: isolated.schema,
-        driver: await loadPgDriver(url, undefined, isolated.schema),
-      });
+      const connection = PostgresConnection.from({ url, schema: isolated.schema });
       await connection.open();
       const command = new PostgresCommand(connection);
       for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql(seedContactCount, "'\\x'")])

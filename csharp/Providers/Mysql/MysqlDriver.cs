@@ -1,24 +1,12 @@
+using Datasources;
+
 namespace Datasources.Mysql;
 
-internal sealed class MysqlDriver : IMysqlDriver
+public sealed class MysqlDriver : IDriver
 {
-    readonly MysqlConnectionDriver _connection = new();
-    readonly MysqlCommandDriver _commands;
-    readonly MysqlTransactionDriver _transactions;
-
-    public MysqlDriver()
-    {
-        _commands = new MysqlCommandDriver(_connection);
-        _transactions = new MysqlTransactionDriver(_commands);
-    }
-
-    public Task Open(string url) => _connection.Open(url);
-    public Task Close() => _connection.Close();
-    public Task<MysqlExecuteResult> Execute(string sql, Row parameters) => _commands.Execute(sql, parameters);
-    public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyList<Parameter>? parameters) =>
-        _commands.Execute(sql, parameters);
-    public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) => _commands.Query(sql, parameters);
-    public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => _transactions.Begin(isolation);
-    public Task Commit() => _transactions.Commit();
-    public Task Rollback() => _transactions.Rollback();
+    public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new MysqlConnection(options);
+    public ICommand Command(IConnection connection) => connection.CreateCommand();
+    public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
+        new MysqlTransaction((MysqlConnection)connection, isolation);
+    public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => MysqlRowTypeConverters.All;
 }

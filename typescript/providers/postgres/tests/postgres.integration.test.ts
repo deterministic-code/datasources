@@ -12,7 +12,6 @@ import {
 } from "../../sql-spec-runner.ts";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";
-import { loadPgDriver } from "../src/driver.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
 const dialect = loadDialect("postgres");
@@ -47,27 +46,11 @@ describe("shared sql specs", () => {
       try {
         await runSpec(file, dialect, {
           openSession: async () => {
-            const connection = new PostgresConnection({
-              url,
-              schema: isolated.schema,
-              driver: await loadPgDriver(url, undefined, isolated.schema),
-            });
+            const connection = PostgresConnection.from({ url, schema: isolated.schema });
             return { connection, command: new PostgresCommand(connection) };
           },
           closedCommand: () =>
-            new PostgresCommand(
-              new PostgresConnection({
-                driver: {
-                  open: async () => {},
-                  close: async () => {},
-                  execute: async () => ({ rowsAffected: 0 }),
-                  query: async () => [],
-                  begin: async () => {},
-                  commit: async () => {},
-                  rollback: async () => {},
-                },
-              }),
-            ),
+            new PostgresCommand(new PostgresConnection()),
         });
       } finally {
         await isolated.cleanup();
@@ -80,11 +63,7 @@ describe("return and output parameters", () => {
   it("reads INOUT and function results", async () => {
     const isolated = await isolate(url);
     try {
-      const connection = new PostgresConnection({
-        url,
-        schema: isolated.schema,
-        driver: await loadPgDriver(url, undefined, isolated.schema),
-      });
+      const connection = PostgresConnection.from({ url, schema: isolated.schema });
       await connection.open();
       const command = new PostgresCommand(connection);
       await command.execute(`

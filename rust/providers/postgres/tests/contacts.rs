@@ -1,6 +1,5 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
-use super::tokio_postgres_driver::TokioPostgresDriver;
 use datasources::Connection;
 use datasources_sql_specs::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
@@ -35,11 +34,7 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
         .batch_execute(&format!("CREATE SCHEMA {schema}"))
         .await
         .unwrap();
-    let conn = Arc::new(PostgresConnection::new(
-        Some(url),
-        Some(schema.clone()),
-        Arc::new(TokioPostgresDriver::new(Some(schema.clone()))),
-    ));
+    let conn = Arc::new(PostgresConnection::new(Some(url), Some(schema.clone())));
     conn.open().await.unwrap();
     let command = PostgresCommand::new(conn.clone());
     let mut sql = statements_of(&contact_schema("postgres"));

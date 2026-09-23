@@ -10,45 +10,58 @@ import {
 import { createRequire } from "node:module";
 import { MysqlCommand } from "./command.ts";
 import type { MysqlConnectionOptions } from "./connection-options.ts";
-import { mysql2Connect, requireDriver, type IMysqlDriver } from "./driver.ts";
-import type { Mysql2Module } from "./i-mysql-driver.ts";
-import { Mysql2Driver } from "./mysql2-driver.ts";
+import {
+  mysql2Connect,
+  type IMysqlClient,
+  type Mysql2Module,
+  type MysqlCreateConnection,
+} from "./i-mysql-engine.ts";
 import { MysqlTransaction } from "./transaction.ts";
 
 const require = createRequire(import.meta.url);
 
+const isoSql = (isolation: IsolationLevelName): string =>
+  isolation === IsolationLevel.ReadUncommitted
+    ? "READ UNCOMMITTED"
+    : isolation === IsolationLevel.ReadCommitted
+      ? "READ COMMITTED"
+      : "REPEATABLE READ";
+
 export class MysqlConnection implements IConnection {
   readonly provider = "mysql";
   url: string;
-  driver: IMysqlDriver;
   isOpen = false;
+  private client?: IMysqlClient;
+  private readonly connect?: MysqlCreateConnection;
 
   static from = (options?: DatasourceOptions): MysqlConnection => {
     const url = options?.url ?? options?.database_url ?? "";
-    const mysql = require("mysql2/promise") as Mysql2Module;
     return new MysqlConnection({
       url,
-      driver: new Mysql2Driver(url, mysql2Connect(mysql)),
+      connect: mysql2Connect(require("mysql2/promise") as Mysql2Module),
     });
   };
 
-
-
   constructor(options: MysqlConnectionOptions = {}) {
     this.url = options.url ?? "";
-    this.driver = requireDriver(options.driver);
+    this.connect = options.connect;
   }
 
   createCommand = (): ICommand => new MysqlCommand(this);
 
   async open(): Promise<void> {
     if (this.isOpen) return;
-    await this.driver.open(this.url);
+    if (!this.client) {
+      if (!this.connect) throw new DatasourceError("MySQL engine is required");
+      this.client = await this.connect(this.url);
+    }
+    await this.client.query("SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')");
     this.isOpen = true;
   }
 
   async close(): Promise<void> {
-    await this.driver.close();
+    await this.client?.end();
+    this.client = undefined;
     this.isOpen = false;
   }
 
@@ -56,11 +69,18 @@ export class MysqlConnection implements IConnection {
     isolation: IsolationLevelName = IsolationLevel.Serializable,
   ): Promise<ITransaction> {
     this.ensureOpen();
-    await this.driver.begin(isolation);
+    const client = this.require();
+    await client.query(`SET TRANSACTION ISOLATION LEVEL ${isoSql(isolation)}`);
+    await client.beginTransaction();
     return new MysqlTransaction(this, isolation);
   }
 
   ensureOpen(): void {
     if (!this.isOpen) throw new DatasourceError("Connection is not open");
+  }
+
+  require(): IMysqlClient {
+    if (!this.client) throw new DatasourceError("Connection is not open");
+    return this.client;
   }
 }

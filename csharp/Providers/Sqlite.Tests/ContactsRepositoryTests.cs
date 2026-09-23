@@ -13,7 +13,6 @@ public class ContactsRepositoryTests
         var conn = new SqliteConnection(new SqliteConnectionOptions
         {
             Filename = ":memory:",
-            Driver = new SqliteDriver()
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
@@ -51,7 +50,6 @@ public class ContactsRepositoryTests
         var conn = new SqliteConnection(new SqliteConnectionOptions
         {
             Filename = ":memory:",
-            Driver = new SqliteDriver()
         });
         await conn.Open();
         var command = new SqliteCommand(conn);

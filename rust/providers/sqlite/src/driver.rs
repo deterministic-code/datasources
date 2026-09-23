@@ -1,30 +1,34 @@
-use async_trait::async_trait;
-use datasources::{DatasourceError, IsolationLevel, Result, Row, Value};
+use crate::connection::SqliteConnection;
+use crate::converters;
+use crate::transaction::SqliteTransaction;
+use datasources::{
+    downcast_connection, Command, Connection, Driver, IsolationLevel, Transaction, TypeConverter,
+    Value,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct SqliteExecuteResult {
-    pub rows_affected: i64,
-    pub result: Value,
-}
+pub struct SqliteDriver;
 
-#[async_trait]
-pub trait SqliteDriver: Send + Sync {
-    async fn open(&self, filename: &str) -> Result<()>;
-    async fn close(&self) -> Result<()>;
-    async fn execute(
+impl Driver for SqliteDriver {
+    fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+        SqliteConnection::from_options(options)
+    }
+
+    fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
+        connection.create_command()
+    }
+
+    fn transaction(
         &self,
-        sql: &str,
-        params: &HashMap<String, Value>,
-    ) -> Result<SqliteExecuteResult>;
-    async fn query(&self, sql: &str, params: &HashMap<String, Value>) -> Result<Vec<Row>>;
-    async fn begin(&self, isolation: IsolationLevel) -> Result<()>;
-    async fn commit(&self) -> Result<()>;
-    async fn rollback(&self) -> Result<()>;
-}
+        connection: Arc<dyn Connection>,
+        isolation: IsolationLevel,
+    ) -> Arc<dyn Transaction> {
+        let conn = downcast_connection::<SqliteConnection>(connection).expect("sqlite");
+        Arc::new(SqliteTransaction::new(conn.share(), isolation))
+    }
 
-#[cfg_attr(not(test), allow(dead_code))]
-pub fn require_driver(driver: Option<Arc<dyn SqliteDriver>>) -> Result<Arc<dyn SqliteDriver>> {
-    driver.ok_or_else(|| DatasourceError::message("SQLite driver is required"))
+    fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+        converters::row_type_converters()
+    }
 }

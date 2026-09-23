@@ -1,5 +1,3 @@
-using Datasources;
-
 namespace Datasources.Sqlite;
 
 internal sealed class SqliteTransaction : ITransaction
@@ -9,8 +7,10 @@ internal sealed class SqliteTransaction : ITransaction
         Connection = connection;
         Isolation = isolation;
     }
+
     public IConnection Connection { get; }
     public IsolationLevel Isolation { get; }
-    public Task Commit() => ((SqliteConnection)Connection).Driver.Commit();
-    public Task Abort() => ((SqliteConnection)Connection).Driver.Rollback();
+    SqliteConnection Typed => (SqliteConnection)Connection;
+    public Task Commit() => Typed.Transactions.Commit();
+    public Task Abort() => Typed.Transactions.Rollback();
 }

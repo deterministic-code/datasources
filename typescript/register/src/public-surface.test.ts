@@ -14,10 +14,15 @@ describe("provider public surface", () => {
     for (const name of names) {
       const source = readFileSync(join(providers, name, "src/index.ts"), "utf8");
       const match = source.match(
-        /^export \{ ([A-Za-z0-9]+Provider) \} from "\.\/([A-Za-z0-9]+Provider)\.ts";\n$/,
+        /^export \{ ([A-Za-z0-9]+) \} from "\.\/\1\.ts";\n$/,
       );
       expect(match, name).not.toBeNull();
-      expect(match?.[1]).toBe(match?.[2]);
+      expect(
+        match?.[1]?.endsWith(
+          name === "mysql" || name === "postgres" || name === "sqlite" ? "Driver" : "Provider",
+        ),
+        name,
+      ).toBe(true);
     }
   });
 });

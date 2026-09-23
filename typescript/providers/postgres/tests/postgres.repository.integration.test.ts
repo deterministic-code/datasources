@@ -8,7 +8,6 @@ import { CreateTableStatement } from "@datasources/core";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";
 import { PostgresRowTypeConverters } from "../src/converters/PostgresRowTypeConverters.ts";
-import { loadPgDriver } from "../src/driver.ts";
 import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 
 const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
@@ -71,11 +70,7 @@ describe("repository specs", () => {
     it(file.split("/").pop()!, async () => {
       const isolated = await isolate(url);
       try {
-        const connection = new PostgresConnection({
-          url,
-          schema: isolated.schema,
-          driver: await loadPgDriver(url, undefined, isolated.schema),
-        });
+        const connection = PostgresConnection.from({ url, schema: isolated.schema });
         await connection.open();
         const command = new PostgresCommand(connection);
         await runRepositorySpec(

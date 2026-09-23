@@ -8,15 +8,12 @@ public class MysqlTests
     public MysqlTests()
     {
         DatasourceFactory.Reset();
-        DatasourceFactory.Register("mysql", new MysqlProvider());
+        DatasourceFactory.Register("mysql", new MysqlDriver());
     }
 
     [Fact]
     public async Task CommandRepositoryAndFactory()
     {
-        Assert.Throws<DatasourceException>(() => MysqlGuard.Require(null));
-        var driver = new FakeMysqlDriver();
-        Assert.Same(driver, MysqlGuard.Require(driver));
         Assert.Equal("SELECT * FROM t WHERE id = @id", MysqlBind.ToMysql("SELECT * FROM t WHERE id = $id"));
         Assert.Equal("INSERT INTO t (id) VALUES (@id)", MysqlBind.ToMysql("INSERT INTO t (id) VALUES ($id) RETURNING id"));
         Assert.Equal("READ UNCOMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadUncommitted));
@@ -24,79 +21,32 @@ public class MysqlTests
         Assert.Equal("REPEATABLE READ", MysqlBind.IsolationSql(IsolationLevel.RepeatableRead));
         Assert.Equal("REPEATABLE READ", MysqlBind.IsolationSql(IsolationLevel.Serializable));
 
-        var conn = new MysqlConnection(new MysqlConnectionOptions { Url = "mysql://db/app", Driver = driver });
-        await conn.Open();
-        await conn.Open();
+        var conn = new MysqlConnection(new MysqlConnectionOptions { Url = "mysql://db/app" });
+        Assert.Equal("mysql://db/app", conn.Url);
         var command = new MysqlCommand(conn);
         await command.Execute("");
-        await command.ExecuteReader("SELECT 1");
         await command.ExecuteReader("");
 
-        var txn = await conn.StartTransaction();
-        Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
-        await txn.Commit();
-        var dirty = await conn.StartTransaction(IsolationLevel.ReadUncommitted);
-        Assert.Equal(IsolationLevel.ReadUncommitted, dirty.Isolation);
-        await dirty.Abort();
-        await conn.Close();
+        Assert.False(conn.IsOpen);
         Assert.Throws<DatasourceException>(() => conn.EnsureOpen());
         await Assert.ThrowsAsync<DatasourceException>(() => conn.StartTransaction());
 
-        Assert.Throws<DatasourceException>(() => new MysqlConnection());
-        var defaulted = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
-        Assert.Equal("", defaulted.Url);
+        var created = new MysqlConnection();
+        Assert.Equal("", created.Url);
 
-        var ds = new Datasource("mysql", new Of(() => new MysqlConnection(new MysqlConnectionOptions { Driver = driver })));
+        var ds = new Datasource("mysql", new MysqlDriver());
         Assert.Equal("mysql", ds.Provider);
-        var created = await ds.CreateConnection();
-        await ((MysqlConnection)created).Open();
-        var bound = Assert.IsType<MysqlCommand>(ds.CreateCommand(created));
-        Assert.Same(created, bound.Connection);
+        var provided = Assert.IsType<MysqlConnection>(await ds.CreateConnection());
+        var bound = Assert.IsType<MysqlCommand>(ds.CreateCommand(provided));
+        Assert.Same(provided, bound.Connection);
         await bound.Execute("");
-        await bound.ExecuteReader("SELECT 1");
-        var implicitCommand = Assert.IsType<MysqlCommand>(ds.CreateCommand());
-        await implicitCommand.Connection.Open();
-        await implicitCommand.Execute("");
-        await implicitCommand.ExecuteReader("SELECT 1");
-        var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
-        Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
+        await bound.ExecuteReader("");
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
-            new Datasource("mysql", new MysqlProvider()).CreateRepository<Dictionary<string, Value>>());
+            ds.CreateRepository<Dictionary<string, Value>>(provided));
         Assert.Equal("mysql", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "mysql" }).Provider);
-        var provided = Assert.IsType<MysqlConnection>(await new Datasource("mysql", new MysqlProvider()).CreateConnection());
-        Assert.IsType<MysqlDriver>(provided.Driver);
 
-        var closed = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
+        var closed = new MysqlConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).ExecuteReader("x"));
-
-        await driver.Execute("   ", new Row());
-        await driver.Query("   ", new Row());
-    }
-
-    sealed class FakeMysqlDriver : IMysqlDriver
-    {
-        public bool Opened { get; private set; }
-        public Task Open(string url) { Opened = true; return Task.CompletedTask; }
-        public Task Close() { Opened = false; return Task.CompletedTask; }
-        public Task<MysqlExecuteResult> Execute(string sql, Row parameters) =>
-            Task.FromResult(string.IsNullOrWhiteSpace(sql) ? new MysqlExecuteResult(0, Value.Null.Instance) : new MysqlExecuteResult(2, 5));
-        public Task<MysqlExecuteResult> Execute(string sql, IReadOnlyList<Parameter>? parameters) =>
-            Execute(sql, Helpers.ParametersToRecord(parameters));
-        public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
-            Task.FromResult<IReadOnlyList<Row>>(
-                string.IsNullOrWhiteSpace(sql) ? [] : [new Row { ["id"] = 1 }]);
-        public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) => Task.CompletedTask;
-        public Task Commit() => Task.CompletedTask;
-        public Task Rollback() => Task.CompletedTask;
-    }
-
-    sealed class Of(Func<IConnection> connection) : IDriver
-    {
-        public IConnection Connection(IReadOnlyDictionary<string, string?>? _) => connection();
-        public ICommand Command(IConnection c) => c.CreateCommand();
-        public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
-            new MysqlTransaction((MysqlConnection)c, isolation);
-        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => MysqlRowTypeConverters.All;
     }
 }

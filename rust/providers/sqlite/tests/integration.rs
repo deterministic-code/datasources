@@ -1,6 +1,5 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
-use super::rusqlite_driver::RusqliteDriver;
 use datasources::{
     utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
     IsolationLevel, Parameter, Reader, Transaction, Value,
@@ -216,10 +215,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile) {
     };
     let mut sessions = HashMap::new();
     for name in &names {
-        let conn = Arc::new(SqliteConnection::new(
-            Some(filename.clone()),
-            Arc::new(RusqliteDriver::new()),
-        ));
+        let conn = Arc::new(SqliteConnection::new(Some(filename.clone())));
         conn.open().await.unwrap();
         sessions.insert(
             name.clone(),
@@ -267,10 +263,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile) {
         let expected_rows = resolve_rows(op.expect.as_ref().and_then(|e| e.rows.as_ref()), dialect);
         let fresh;
         let target = if op.open == Some(false) {
-            fresh = attach(SqliteCommand::new(Arc::new(SqliteConnection::new(
-                None,
-                Arc::new(RusqliteDriver::new()),
-            ))));
+            fresh = attach(SqliteCommand::new(Arc::new(SqliteConnection::new(None))));
             &fresh
         } else {
             &sessions[op.connection.as_deref().unwrap_or(&names[0])].command

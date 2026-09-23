@@ -7,8 +7,10 @@ internal sealed class PostgresTransaction : ITransaction
         Connection = connection;
         Isolation = isolation;
     }
+
     public IConnection Connection { get; }
     public IsolationLevel Isolation { get; }
-    public Task Commit() => ((PostgresConnection)Connection).Driver.Commit();
-    public Task Abort() => ((PostgresConnection)Connection).Driver.Rollback();
+    PostgresConnection Typed => (PostgresConnection)Connection;
+    public Task Commit() => Typed.Exec("COMMIT");
+    public Task Abort() => Typed.Exec("ROLLBACK");
 }

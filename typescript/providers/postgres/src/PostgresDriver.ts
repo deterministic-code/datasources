@@ -12,7 +12,7 @@ import { PostgresConnection } from "./connection.ts";
 import { PostgresTransaction } from "./transaction.ts";
 import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
 
-export class PostgresProvider implements IDriver {
+export class PostgresDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = PostgresRowTypeConverters;
   connection = (options?: DatasourceOptions): IConnection =>
     PostgresConnection.from(options);
