@@ -49,7 +49,7 @@ fn assemble(
     let ReadonlyRepositoryOptions {
         entity,
         entity_mapper,
-        columns,
+        column_mappings,
         query,
         rows_mapper,
         row_converter,
@@ -63,13 +63,14 @@ fn assemble(
     let mut names: Vec<String> = row_converter
         .column_names()
         .iter()
-        .map(|name| Mapper::map(&columns, name.clone()))
+        .map(|name| Mapper::map(&column_mappings, name.clone()))
         .collect();
     names.sort();
     Ok(BuiltRepository {
         connection,
         row_converter,
         rows_mapper,
+        column_mappings,
         statements: RepositoryStatements::with_mappers(
             Mapper::map(&entity_mapper, entity),
             names,

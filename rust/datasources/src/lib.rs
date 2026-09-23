@@ -97,8 +97,9 @@ pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
-    FlatToNestedMapper, FlatToNestedMapperTrait, IdentityMapper, MappedRow, MappedValue, Mapper,
-    RowTypeMapper, TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
+    DictionaryMapper, FlatToNestedMapper, FlatToNestedMapperTrait, IdentityMapper, MappedRow,
+    MappedValue, Mapper, PluralizerMapper, RowTypeMapper, TransformConverterMapper,
+    TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
 pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockDriver, MockQuery, MockReader, MockRepository,

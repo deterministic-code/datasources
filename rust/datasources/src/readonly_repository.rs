@@ -26,6 +26,7 @@ pub struct ReadonlyRepository {
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: RowTypeConverter,
     pub(crate) rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
+    pub(crate) column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
     pub(crate) statements: RepositoryStatements,
     pub(crate) entity_type: TypeId,
 }
@@ -54,6 +55,7 @@ impl ReadonlyRepository {
             middlewares: Vec::new(),
             row_converter: built.row_converter,
             rows_mapper: built.rows_mapper,
+            column_mappings: built.column_mappings,
             statements: built.statements,
             entity_type: TypeId::of::<Row>(),
         }
@@ -108,7 +110,7 @@ impl ReadonlyRepository {
             .current()
             .map(|row| {
                 self.row_converter
-                    .convert(&row)
+                    .convert(&self.renamed(row))
                     .map(|converted| Mapper::map(&self.rows_mapper, converted))
             })
             .transpose()
@@ -128,11 +130,17 @@ impl ReadonlyRepository {
             if let Some(row) = reader.current() {
                 items.push(Mapper::map(
                     &self.rows_mapper,
-                    self.row_converter.convert(&row)?,
+                    self.row_converter.convert(&self.renamed(row))?,
                 ));
             }
         }
         Ok(items)
+    }
+
+    fn renamed(&self, row: Row) -> Row {
+        row.into_iter()
+            .map(|(key, value)| (Mapper::reverse_map(&self.column_mappings, key), value))
+            .collect()
     }
 
     pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {

@@ -17,8 +17,8 @@ export const contactsServiceOf = (
   connection: IConnection,
   middleware?: ICommandMiddleware,
 ): ContactsService => {
-  const of = <T>(type: Constructable<T>, entity: string, columns?: string[]) => {
-    const repo = new CRUDRepository(connection, { type, entity, columns });
+  const of = <T>(type: Constructable<T>, entity: string, readColumns?: string[]) => {
+    const repo = new CRUDRepository(connection, { type, entity, readColumns });
     return middleware ? repo.addMiddleware(middleware) : repo;
   };
   return new ContactsService(

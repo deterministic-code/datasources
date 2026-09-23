@@ -100,6 +100,14 @@ pages:
     title: Identity Mapper
     group: Code Reference
     parent: Mapper
+  - path: sections/dictionary-mapper.md
+    title: Dictionary Mapper
+    group: Code Reference
+    parent: Mapper
+  - path: sections/pluralizer-mapper.md
+    title: Pluralizer Mapper
+    group: Code Reference
+    parent: Mapper
   - path: sections/transform-mapper.md
     title: Transform Mapper
     group: Code Reference

@@ -1706,7 +1706,7 @@ async fn table_repository_crud_mapper() {
         },
         |name| name,
     ));
-    options.columns = Box::new(TransformMapper::new(
+    options.column_mappings = Box::new(TransformMapper::new(
         |name: String| match name.as_str() {
             "id" => "user_id".into(),
             "name" => "full_name".into(),

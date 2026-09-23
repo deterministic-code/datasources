@@ -1,7 +1,9 @@
+mod dictionary_mapper;
 mod flat_to_nested_mapper;
 mod i_flat_to_nested_mapper;
 mod identity_mapper;
 mod mapped_value;
+mod pluralizer_mapper;
 mod row_type_mapper;
 mod transform_converter_mapper;
 mod transform_mapper;
@@ -9,10 +11,12 @@ mod type_map;
 mod type_map_field;
 mod type_map_group;
 
+pub use dictionary_mapper::DictionaryMapper;
 pub use flat_to_nested_mapper::FlatToNestedMapper;
 pub use i_flat_to_nested_mapper::FlatToNestedMapper as FlatToNestedMapperTrait;
 pub use identity_mapper::IdentityMapper;
 pub use mapped_value::{MappedRow, MappedValue};
+pub use pluralizer_mapper::PluralizerMapper;
 pub use row_type_mapper::RowTypeMapper;
 pub use transform_converter_mapper::TransformConverterMapper;
 pub use transform_mapper::TransformMapper;
