@@ -1,5 +1,6 @@
 mod array_expression;
 mod check_constraint;
+mod cmp;
 mod column_default;
 mod create_index_statement;
 mod create_table_statement;
@@ -24,6 +25,7 @@ mod where_clause;
 
 pub use array_expression::ArrayExpression;
 pub use check_constraint::CheckConstraint;
+pub use cmp::{eq, ge, gt, le, lt, ne};
 pub use column_default::ColumnDefault;
 pub use create_index_statement::CreateIndexStatement;
 pub use create_table_statement::CreateTableStatement;

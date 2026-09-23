@@ -1,5 +1,6 @@
 using Datasources;
 using Datasources.Sqlite;
+using static Datasources.Cmp;
 
 namespace Datasources.Sqlite.Tests;
 
@@ -42,11 +43,9 @@ public class ReadonlyRepositoryIntegrationTests
             EntityMapper = new PluralizerMapper(),
         });
 
-        var byId = await repo.ReadSingle(new WhereClause(new Operator.Equals("id", 1)));
+        var byId = await repo.ReadSingle(new WhereClause("id", eq, 1));
         var disabled = new List<User>();
-        await foreach (var row in repo.Read(new WhereClause(new Operator.And(
-            new Operator.Equals("username", "grace"),
-            new Operator.Equals("is_enabled", 0)))))
+        await foreach (var row in repo.Read(new WhereClause("username", eq, "grace").And("is_enabled", eq, 0)))
             disabled.Add(row);
 
         Assert.Equal("ada", byId!.username);
@@ -83,16 +82,13 @@ public class ReadonlyRepositoryIntegrationTests
             }),
         });
 
-        var byId = await repo.ReadSingle(new WhereClause(new Operator.Equals("id", Ada)));
+        var byId = await repo.ReadSingle(new WhereClause("id", eq, Ada));
         var byLogin = new List<UserAccount>();
-        await foreach (var row in repo.Read(new WhereClause(new Operator.And(
-            new Operator.Equals("username", "ada"),
-            new Operator.Equals("is_enabled", 1)))))
+        await foreach (var row in repo.Read(new WhereClause("username", eq, "ada").And("is_enabled", eq, 1)))
             byLogin.Add(row);
         var later = new List<UserAccount>();
-        await foreach (var row in repo.Read(new WhereClause(new Operator.And(
-            new Operator.Equals("is_enabled", 1),
-            new Operator.GreaterThan("created", "2024-01-01T00:00:00.000Z")))))
+        await foreach (var row in repo.Read(
+            new WhereClause("is_enabled", eq, 1).And("created", gt, "2024-01-01T00:00:00.000Z")))
             later.Add(row);
 
         Assert.Equal("ada", byId!.Login);

@@ -6,6 +6,8 @@ import type { IExpression } from "./IExpression.ts";
 import type { IWhere } from "./IWhere.ts";
 import { Literal } from "./Literal.ts";
 import { Operator } from "./Operator.ts";
+import type { Comparison } from "./Cmp.ts";
+import { eq } from "./Cmp.ts";
 
 const symbol = (op: Operator): string =>
   op instanceof Operator.Equals
@@ -118,7 +120,24 @@ const collect = (expression: IExpression): Parameter<Scalar>[] =>
             })();
 
 export class WhereClause implements IWhere {
-  constructor(readonly condition: IExpression) {}
+  readonly condition: IExpression;
+
+  constructor(condition: IExpression);
+  constructor(column: string, op: Comparison, value: Scalar);
+  constructor(columnOrCondition: IExpression | string, op: Comparison = eq, value: Scalar = null) {
+    this.condition =
+      typeof columnOrCondition === "string"
+        ? op(columnOrCondition, value)
+        : columnOrCondition;
+  }
+
+  and(column: string, op: Comparison, value: Scalar): WhereClause {
+    return new WhereClause(new Operator.And(this.condition, op(column, value)));
+  }
+
+  or(column: string, op: Comparison, value: Scalar): WhereClause {
+    return new WhereClause(new Operator.Or(this.condition, op(column, value)));
+  }
 
   getText = (): string => render(this.condition);
   get parameters(): Parameter<Scalar>[] {

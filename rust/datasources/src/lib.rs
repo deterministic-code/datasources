@@ -126,11 +126,11 @@ pub use result::Result;
 pub use row::Row;
 pub use statements::statement;
 pub use statements::{
-    ArrayExpression, CheckConstraint, ColumnDefault, CreateIndexStatement, CreateTableStatement,
-    DeleteStatement, ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier,
-    InsertStatement, Literal, NotNull, Operator, PrimaryKey, ReferentialAction, ReturnStatement,
-    Statement, StatementEvaluator, StatementKind, TableConstraint, Text, UniqueConstraint,
-    UpdateStatement, WhereClause,
+    eq, ge, gt, le, lt, ne, ArrayExpression, CheckConstraint, ColumnDefault, CreateIndexStatement,
+    CreateTableStatement, DeleteStatement, ExecuteStoredProcedureStatement, Expression, ForeignKey,
+    Identifier, InsertStatement, Literal, NotNull, Operator, PrimaryKey, ReferentialAction,
+    ReturnStatement, Statement, StatementEvaluator, StatementKind, TableConstraint, Text,
+    UniqueConstraint, UpdateStatement, WhereClause,
 };
 pub use stubs::{
     create_stub_datasource, StubCommand, StubConnection, StubDatasource, StubReader,

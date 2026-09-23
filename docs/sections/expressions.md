@@ -46,6 +46,34 @@ new Operator.In(left: IExpression, right: IExpression)
 new Operator.Not(argument: IExpression)
 ```
 
+#### Cmp
+
+Aliases for the comparison constructors. Pass one as the middle argument of [WhereClause](./where-clause.md#whereclause).
+
+```typescript
+function eq(column: string, value: Scalar): IExpression
+```
+
+**Methods**
+
+##### eq / ne / gt / lt / ge / le
+
+`eq` is [Operator.Equals](#operator). `ne` is not-equals. `gt` / `lt` are greater-than and less-than. `ge` / `le` are the or-equal forms.
+
+```typescript
+function eq(column: string, value: Scalar): IExpression
+function ne(column: string, value: Scalar): IExpression
+function gt(column: string, value: Scalar): IExpression
+function lt(column: string, value: Scalar): IExpression
+function ge(column: string, value: Scalar): IExpression
+function le(column: string, value: Scalar): IExpression
+```
+
+- `column` — column name
+- `value` — [Scalar](./where-clause.md#scalar)
+
+**Returns** [IExpression](#iexpression)
+
 #### Identifier
 
 ```typescript
@@ -146,6 +174,35 @@ public sealed record Not(IExpression Argument) : IExpression
 ```
 
 Same shape for `NotEquals`, `GreaterThan`, `LessThan`, `GreaterThanOrEqual`, and `LessThanOrEqual`.
+
+#### Cmp
+
+Aliases for the comparison constructors. `using static Datasources.Cmp` brings `eq` into scope. Pass one as the middle argument of [WhereClause](./where-clause.md#whereclause).
+
+```csharp
+public static class Cmp
+public delegate IExpression Comparison(string column, Value? value)
+```
+
+**Methods**
+
+##### eq / ne / gt / lt / ge / le
+
+`eq` is `Operator.Equals`. `ne` is not-equals. `gt` / `lt` are greater-than and less-than. `ge` / `le` are the or-equal forms.
+
+```csharp
+public static IExpression eq(string column, Value? value)
+public static IExpression ne(string column, Value? value)
+public static IExpression gt(string column, Value? value)
+public static IExpression lt(string column, Value? value)
+public static IExpression ge(string column, Value? value)
+public static IExpression le(string column, Value? value)
+```
+
+- `column` — column name
+- `value` — cell value
+
+**Returns** [IExpression](#iexpression)
 
 #### Identifier
 
@@ -251,6 +308,34 @@ pub fn in_list(field: impl Into<String>, values: Vec<Value>) -> Self
 
 Same field constructors for `not_equals`, `greater_than`, `less_than`, `greater_than_or_equal`, and `less_than_or_equal`.
 
+#### Cmp
+
+Aliases for the comparison constructors. Pass one as the middle argument of [WhereClause::binary](./where-clause.md#whereclause).
+
+```rust
+pub fn eq(column: &str, value: Value) -> Operator
+pub fn ne(column: &str, value: Value) -> Operator
+pub fn gt(column: &str, value: Value) -> Operator
+pub fn lt(column: &str, value: Value) -> Operator
+pub fn ge(column: &str, value: Value) -> Operator
+pub fn le(column: &str, value: Value) -> Operator
+```
+
+**Methods**
+
+##### eq / ne / gt / lt / ge / le
+
+`eq` calls `Operator::equals`. `ne` is not-equals. `gt` / `lt` are greater-than and less-than. `ge` / `le` are the or-equal forms.
+
+```rust
+pub fn eq(column: &str, value: Value) -> Operator
+```
+
+- `column` — column name
+- `value` — [Value](./where-clause.md#value)
+
+**Returns** [Operator](#operator)
+
 #### Identifier
 
 ```rust
@@ -308,7 +393,7 @@ pub fn new(elements: Vec<Expression>) -> Self
 
 ## Remarks
 
-A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operator records. `Not` holds one argument. `In` uses an `ArrayExpression` of literals.
+A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, `ge`, and `le` are aliases of those constructors. `And` / `Or` nest operator records. `Not` holds one argument. `In` uses an `ArrayExpression` of literals.
 
 ## Examples
 
@@ -320,5 +405,24 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operat
 ```rust rust/datasources/src/tests/mod.rs#L743-L758
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L63-L73
+```
+:::
+
+### Column, alias, literal
+
+::: example
+```csharp csharp/Datasources.Tests/ComparisonAliasTests.cs#L11-L17
+```
+```rust rust/datasources/src/tests/mod.rs#L2490-L2496
+```
+```typescript typescript/datasources/src/builders/builders.test.ts#L350-L356
+```
+
+```output [After: equals]
+username = $username
+```
+
+```output [After: and]
+username = $username AND is_enabled = $is_enabled
 ```
 :::
