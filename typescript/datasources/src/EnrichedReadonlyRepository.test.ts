@@ -7,6 +7,7 @@ import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedRe
 import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
+import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IWhere } from "./statements/IWhere.ts";
@@ -361,11 +362,11 @@ const counting = <T extends object>(
     get readSingles() {
       return state.readSingles;
     },
-    readSingle: async (query?: IQuery | IWhere) => {
+    readSingle: async (query?: IQuery | IWhere | IExecuteStoredProcedureStatement) => {
       state.readSingles += 1;
       return inner.readSingle(query);
     },
-    async *read(query?: IQuery | IWhere) {
+    async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement) {
       state.reads += 1;
       yield* inner.read(query);
     },

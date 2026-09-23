@@ -1,8 +1,8 @@
 use crate::i_repository::IRepository;
-use crate::query::Query;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 #[async_trait]
 pub trait IReadonlyRepository: IRepository {
-    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>;
-    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>;
+    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>>;
+    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>>;
     async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>>;
     async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>;
 }
@@ -33,11 +33,11 @@ impl IRepository for AsReadonly {
 
 #[async_trait]
 impl IReadonlyRepository for AsReadonly {
-    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
         self.0.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
         self.0.read(query).await
     }
 

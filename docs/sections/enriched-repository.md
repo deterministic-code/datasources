@@ -120,10 +120,10 @@ enrich(items: T[]): Promise<T[]>
 Reads through the inner repository, then enriches.
 
 ```typescript
-read(query?: IQuery | IWhere): AsyncIterable<T>
+read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
-- `query` — optional query or where
+- `query` — optional query, where, or stored procedure
 
 **Returns** `AsyncIterable<T>`
 
@@ -342,12 +342,12 @@ interface IReadonlyEnrichmentStrategy<T extends object> extends IReadonlyEnrichm
 Reads through `inner`, then enriches.
 
 ```typescript
-read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere): AsyncIterable<T>
+read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 - `inner` — [IReadonlyRepository](./readonly-repository.md)
 - `tree` — [IRepositoryTree](#irepositorytree)
-- `query` — optional query or where
+- `query` — optional query, where, or stored procedure
 
 **Returns** `AsyncIterable<T>`
 
@@ -1053,12 +1053,12 @@ pub trait ReadonlyEnrichmentStrategy
 Reads through `inner`, then enriches.
 
 ```rust
-async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn Query>) -> Result<Vec<Row>>
+async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn Statement>) -> Result<Vec<Row>>
 ```
 
 - `inner` — [ReadonlyRepository](./readonly-repository.md)
 - `tree` — [RepositoryTree](#repositorytree)
-- `query` — optional query
+- `query` — optional query or stored procedure
 
 **Returns** `Result<Vec<Row>>`
 

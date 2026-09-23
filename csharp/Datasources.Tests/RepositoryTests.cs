@@ -92,6 +92,23 @@ public class RepositoryTests
     }
 
     [Fact]
+    public async Task ReadCallsStoredProcedure()
+    {
+        var (repo, command) = Create();
+        command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
+        var call = new ExecuteStoredProcedureStatement("get_user", [new Parameter("id", 9)]);
+        var rows = new List<UserRow>();
+        await foreach (var row in repo.Read(call))
+            rows.Add(row);
+        Assert.Equal(1, rows[0].id);
+        Assert.Equal("a", rows[0].name);
+        Assert.Equal("CALL get_user($id)", command.ExecuteReaderCalls[0].Text);
+        Assert.Equal(new Value.Int(9), command.ExecuteReaderCalls[0].Parameters![0].Value);
+        command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
+        Assert.Equal(1, (await repo.ReadSingle(call))!.id);
+    }
+
+    [Fact]
     public async Task AddUpdateDeleteUseBuilders()
     {
         var (repo, command) = Create();

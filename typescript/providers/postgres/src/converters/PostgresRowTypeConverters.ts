@@ -13,3 +13,12 @@ export const PostgresRowTypeConverters: Record<string, TypeConverter<Cell, Cell>
   binary: new BinaryConverter(),
 };
 
+export const reverse = (value: Cell): Cell =>
+  typeof value === "boolean"
+    ? PostgresRowTypeConverters.bool.reverseConvert(value)
+    : value instanceof Date
+      ? PostgresRowTypeConverters.datetime.reverseConvert(value)
+      : value instanceof Uint8Array
+        ? PostgresRowTypeConverters.binary.reverseConvert(value)
+        : value;
+

@@ -1,7 +1,11 @@
+use super::array_expression::ArrayExpression;
 use super::expression::Expression;
+use super::identifier::Identifier;
+use super::literal::Literal;
 use super::operator::Operator;
 use super::text::Text;
 use crate::parameter::Parameter;
+use crate::result::Result;
 use crate::value::Value;
 use crate::where_trait::Where;
 
@@ -37,6 +41,14 @@ impl WhereClause {
         value: impl Into<Value>,
     ) -> Self {
         Self::new(Operator::or(self.condition, op(column, value.into())))
+    }
+
+    pub fn map<C, V>(&self, column: C, value: V) -> Result<Self>
+    where
+        C: Fn(&str) -> String,
+        V: Fn(&str, &Value) -> Result<Value>,
+    {
+        Ok(Self::new(rewrite(&self.condition, &column, &value)?))
     }
 }
 
@@ -208,5 +220,140 @@ fn collect(expression: &Expression) -> Vec<Parameter> {
             | Operator::LessThanOrEqual { left, right },
         ) => compare_parameters(left, right),
         Expression::Array(arr) => arr.elements.iter().flat_map(collect).collect(),
+    }
+}
+
+fn rewrite<C, V>(expression: &Expression, column: &C, value: &V) -> Result<Expression>
+where
+    C: Fn(&str) -> String,
+    V: Fn(&str, &Value) -> Result<Value>,
+{
+    Ok(match expression {
+        Expression::Identifier(id) => Expression::Identifier(Identifier::new(column(&id.name))),
+        Expression::Literal(lit) => Expression::Literal(lit.clone()),
+        Expression::Array(arr) => Expression::Array(ArrayExpression::new(
+            arr.elements
+                .iter()
+                .map(|element| rewrite(element, column, value))
+                .collect::<Result<_>>()?,
+        )),
+        Expression::Operator(op) => Expression::Operator(rewrite_op(op, column, value)?),
+    })
+}
+
+fn rewrite_op<C, V>(op: &Operator, column: &C, value: &V) -> Result<Operator>
+where
+    C: Fn(&str) -> String,
+    V: Fn(&str, &Value) -> Result<Value>,
+{
+    Ok(match op {
+        Operator::And { left, right } => Operator::and(
+            rewrite(left, column, value)?,
+            rewrite(right, column, value)?,
+        ),
+        Operator::Or { left, right } => Operator::or(
+            rewrite(left, column, value)?,
+            rewrite(right, column, value)?,
+        ),
+        Operator::Not { argument } => Operator::not(rewrite(argument, column, value)?),
+        Operator::In { left, right } => Operator::In {
+            left: Box::new(rewrite(left, column, value)?),
+            right: Box::new(in_right(left, right, column, value)?),
+        },
+        Operator::Equals { left, right } => binary(left, right, column, value, |left, right| {
+            Operator::Equals { left, right }
+        })?,
+        Operator::NotEquals { left, right } => {
+            binary(left, right, column, value, |left, right| {
+                Operator::NotEquals { left, right }
+            })?
+        }
+        Operator::GreaterThan { left, right } => {
+            binary(left, right, column, value, |left, right| {
+                Operator::GreaterThan { left, right }
+            })?
+        }
+        Operator::LessThan { left, right } => binary(left, right, column, value, |left, right| {
+            Operator::LessThan { left, right }
+        })?,
+        Operator::GreaterThanOrEqual { left, right } => {
+            binary(left, right, column, value, |left, right| {
+                Operator::GreaterThanOrEqual { left, right }
+            })?
+        }
+        Operator::LessThanOrEqual { left, right } => {
+            binary(left, right, column, value, |left, right| {
+                Operator::LessThanOrEqual { left, right }
+            })?
+        }
+    })
+}
+
+fn binary<C, V>(
+    left: &Expression,
+    right: &Expression,
+    column: &C,
+    value: &V,
+    build: impl FnOnce(Box<Expression>, Box<Expression>) -> Operator,
+) -> Result<Operator>
+where
+    C: Fn(&str) -> String,
+    V: Fn(&str, &Value) -> Result<Value>,
+{
+    let (left, right) = pair(left, right, column, value)?;
+    Ok(build(Box::new(left), Box::new(right)))
+}
+
+fn pair<C, V>(
+    left: &Expression,
+    right: &Expression,
+    column: &C,
+    value: &V,
+) -> Result<(Expression, Expression)>
+where
+    C: Fn(&str) -> String,
+    V: Fn(&str, &Value) -> Result<Value>,
+{
+    match (left, right) {
+        (Expression::Identifier(id), Expression::Literal(lit)) => Ok((
+            Expression::Identifier(Identifier::new(column(&id.name))),
+            Expression::Literal(Literal::new(value(&id.name, &lit.value)?)),
+        )),
+        (Expression::Literal(lit), Expression::Identifier(id)) => Ok((
+            Expression::Literal(Literal::new(value(&id.name, &lit.value)?)),
+            Expression::Identifier(Identifier::new(column(&id.name))),
+        )),
+        _ => Ok((
+            rewrite(left, column, value)?,
+            rewrite(right, column, value)?,
+        )),
+    }
+}
+
+fn in_right<C, V>(
+    left: &Expression,
+    right: &Expression,
+    column: &C,
+    value: &V,
+) -> Result<Expression>
+where
+    C: Fn(&str) -> String,
+    V: Fn(&str, &Value) -> Result<Value>,
+{
+    match (left, right) {
+        (Expression::Identifier(id), Expression::Array(arr)) => {
+            let elements = arr
+                .elements
+                .iter()
+                .map(|element| match element {
+                    Expression::Literal(lit) => Ok(Expression::Literal(Literal::new(value(
+                        &id.name, &lit.value,
+                    )?))),
+                    other => rewrite(other, column, value),
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok(Expression::Array(ArrayExpression::new(elements)))
+        }
+        _ => rewrite(right, column, value),
     }
 }

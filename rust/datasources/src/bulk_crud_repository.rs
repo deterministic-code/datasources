@@ -1,11 +1,11 @@
 use crate::enriched::Enriched;
 use crate::i_repository::IRepository;
-use crate::query::Query;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::value::Value;
 use crate::where_trait::Where;
 use crate::EnrichedCRUDRepository;
@@ -139,11 +139,11 @@ impl IRepository for BulkCRUDRepository {
 
 #[async_trait]
 impl IReadonlyRepository for BulkCRUDRepository {
-    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
         self.inner.read(query).await
     }
 

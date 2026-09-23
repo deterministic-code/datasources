@@ -1,4 +1,5 @@
 import type { Constructable } from "../converters/Constructable.ts";
+import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
@@ -10,13 +11,13 @@ type Props = Record<string, Scalar | object>;
 
 const props = (item: object): Props => item as Props;
 
-const matches = <T extends object>(item: T, query?: IQuery | IWhere): boolean =>
+const matches = <T extends object>(item: T, query?: IQuery | IWhere | IExecuteStoredProcedureStatement): boolean =>
   parametersOf(query).every(
     ({ name, value }) => String(props(item)[name]) === String(value),
   );
 
 const parametersOf = (
-  query?: IQuery | IWhere,
+  query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
 ): { name: string; value: Scalar }[] => {
   if (!query) return [];
   const where = "where" in query ? query.where : query;
@@ -61,7 +62,7 @@ export class ListCRUDRepository<T extends object>
       }, 0) + 1;
   }
 
-  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     for (const item of this.items) if (matches(item, query)) yield item;
   }
 

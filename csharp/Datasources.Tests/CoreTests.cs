@@ -213,6 +213,7 @@ public class CoreTests
             new CreateIndexStatement("uq_orders_code", "orders", ["code"], true).GetText());
         var call = new ExecuteStoredProcedureStatement("save", fields);
         Assert.Equal("CALL save($id, $name)", call.GetText());
+        Assert.Equal(fields, call.Parameters);
         Assert.Equal("CALL save()", new ExecuteStoredProcedureStatement("save", []).GetText());
         var ret = new ReturnStatement("add", fields);
         Assert.Equal("SELECT add($id, $name)", ret.GetText());
@@ -233,6 +234,7 @@ public class CoreTests
         Assert.Equal("x", new CreateTableStatement("x").GetText());
         Assert.Equal("x", new CreateIndexStatement("x").GetText());
         Assert.Equal("x", new ExecuteStoredProcedureStatement("x").GetText());
+        Assert.Empty(new ExecuteStoredProcedureStatement("x").Parameters);
         Assert.Equal("x", new ReturnStatement("x").GetText());
     }
 

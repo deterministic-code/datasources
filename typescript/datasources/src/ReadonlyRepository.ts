@@ -2,6 +2,8 @@ import type { ICommand } from "./ICommand.ts";
 import { executeReader } from "./ICommand.ts";
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
+import { ExecuteStoredProcedureStatement } from "./statements/ExecuteStoredProcedureStatement.ts";
+import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IWhere } from "./statements/IWhere.ts";
@@ -9,11 +11,6 @@ import { DatasourceError } from "./DatasourceError.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import type { IExpression } from "./statements/IExpression.ts";
-import { ArrayExpression } from "./statements/ArrayExpression.ts";
-import { Identifier } from "./statements/Identifier.ts";
-import { Literal } from "./statements/Literal.ts";
-import { Operator } from "./statements/Operator.ts";
 import { WhereClause } from "./statements/WhereClause.ts";
 import { createRepositoryOptions } from "./createRepositoryOptions.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
@@ -78,13 +75,14 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
     return this;
   };
 
-  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
-    const statement = this.readQuery(query);
-    const reader = await executeReader(
-      this.command(),
-      statement,
-      statement.where?.parameters ?? statement.parameters,
-    );
+  async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
+    const statement =
+      query instanceof ExecuteStoredProcedureStatement ? query : this.readQuery(query);
+    const parameters =
+      statement instanceof ExecuteStoredProcedureStatement
+        ? statement.parameters
+        : (statement.where?.parameters ?? statement.parameters);
+    const reader = await executeReader(this.command(), statement, parameters);
     while (await reader.next())
       yield this.mapper!.map(
         this.rowConverter!.convert(
@@ -98,7 +96,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
       );
   }
 
-  async readSingle(query?: IQuery | IWhere): Promise<T | undefined> {
+  async readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined> {
     for await (const item of this.read(query)) return item;
     return undefined;
   }
@@ -122,99 +120,15 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
         : this.statements!.query(this.stored(query));
 
   protected stored = (where: IWhere, fieldsApplied = false): IWhere =>
-    where instanceof WhereClause ? new WhereClause(this.rewrite(where.condition, fieldsApplied)) : where;
+    where instanceof WhereClause
+      ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied))
+      : where;
 
   protected column = (property: string): string => this.columnMappings.map(property);
 
   protected cell = (property: string, value: Cell, fieldsApplied: boolean): Cell => {
-    const typed = this.rowConverter instanceof RowTypeConverter ? this.rowConverter : undefined;
-    const field = typed?.fields[property];
-    if (field) return fieldsApplied ? value : field.reverseConvert(value);
-    const kind =
-      typeof value === "boolean"
-        ? "bool"
-        : value instanceof Date
-          ? "datetime"
-          : value instanceof Uint8Array
-            ? "binary"
-            : undefined;
-    const converter = kind ? typed?.types[kind] : undefined;
-    return converter ? converter.reverseConvert(value) : value;
+    const field =
+      this.rowConverter instanceof RowTypeConverter ? this.rowConverter.fields[property] : undefined;
+    return field && !fieldsApplied ? field.reverseConvert(value) : value;
   };
-
-  private rewrite = (expression: IExpression, fieldsApplied: boolean): IExpression =>
-    expression instanceof WhereClause
-      ? this.rewrite(expression.condition, fieldsApplied)
-      : expression instanceof Identifier
-        ? new Identifier(this.columnMappings.map(expression.name))
-        : expression instanceof Literal
-          ? expression
-          : expression instanceof ArrayExpression
-            ? new ArrayExpression(expression.elements.map((element) => this.rewrite(element, fieldsApplied)))
-            : expression instanceof Operator.Not
-              ? new Operator.Not(this.rewrite(expression.argument, fieldsApplied))
-              : expression instanceof Operator.And
-                ? new Operator.And(
-                    this.rewrite(expression.left, fieldsApplied),
-                    this.rewrite(expression.right, fieldsApplied),
-                  )
-                : expression instanceof Operator.Or
-                  ? new Operator.Or(
-                      this.rewrite(expression.left, fieldsApplied),
-                      this.rewrite(expression.right, fieldsApplied),
-                    )
-                  : expression instanceof Operator.In
-                    ? new Operator.In(
-                        this.rewrite(expression.left, fieldsApplied),
-                        this.inRight(expression.left, expression.right, fieldsApplied),
-                      )
-                    : expression instanceof Operator.Equals
-                      ? new Operator.Equals(
-                          this.side(expression.left, expression.right, fieldsApplied),
-                          this.side(expression.right, expression.left, fieldsApplied),
-                        )
-                      : expression instanceof Operator.NotEquals
-                        ? new Operator.NotEquals(
-                            this.side(expression.left, expression.right, fieldsApplied),
-                            this.side(expression.right, expression.left, fieldsApplied),
-                          )
-                        : expression instanceof Operator.GreaterThan
-                          ? new Operator.GreaterThan(
-                              this.side(expression.left, expression.right, fieldsApplied),
-                              this.side(expression.right, expression.left, fieldsApplied),
-                            )
-                          : expression instanceof Operator.LessThan
-                            ? new Operator.LessThan(
-                                this.side(expression.left, expression.right, fieldsApplied),
-                                this.side(expression.right, expression.left, fieldsApplied),
-                              )
-                            : expression instanceof Operator.GreaterThanOrEqual
-                              ? new Operator.GreaterThanOrEqual(
-                                  this.side(expression.left, expression.right, fieldsApplied),
-                                  this.side(expression.right, expression.left, fieldsApplied),
-                                )
-                              : expression instanceof Operator.LessThanOrEqual
-                                ? new Operator.LessThanOrEqual(
-                                    this.side(expression.left, expression.right, fieldsApplied),
-                                    this.side(expression.right, expression.left, fieldsApplied),
-                                  )
-                                : (() => {
-                                    throw new DatasourceError("empty expression");
-                                  })();
-
-  private side = (expression: IExpression, other: IExpression, fieldsApplied: boolean): IExpression =>
-    expression instanceof Literal && other instanceof Identifier
-      ? new Literal(this.cell(other.name, expression.value, fieldsApplied))
-      : this.rewrite(expression, fieldsApplied);
-
-  private inRight = (left: IExpression, right: IExpression, fieldsApplied: boolean): IExpression =>
-    left instanceof Identifier && right instanceof ArrayExpression
-      ? new ArrayExpression(
-          right.elements.map((element) =>
-            element instanceof Literal
-              ? new Literal(this.cell(left.name, element.value, fieldsApplied))
-              : this.rewrite(element, fieldsApplied),
-          ),
-        )
-      : this.rewrite(right, fieldsApplied);
 }
