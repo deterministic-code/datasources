@@ -57,7 +57,7 @@ fn repository_options<T: ConvertSchema + 'static>(
 ) -> RepositoryOptions {
     let mut options = create_repository_options::<T>();
     options.mapping = Some(RowTypeConverter::of::<T>());
-    options.types = datasource.row_type_converters();
+    options.row_type_converters = datasource.row_type_converters();
     options
 }
 

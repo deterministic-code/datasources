@@ -15,10 +15,10 @@ export const defaultId = (fields: string[]): string[] =>
 
 export const createRepositoryOptions = <T>(
   type: Constructable<T>,
-  types?: Record<string, TypeConverter<Cell, Cell>>,
+  rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>,
 ): RepositoryOptions<T> => ({
   type,
   ids: defaultId(fieldNamesOf(type)),
   entity: type.name,
-  types,
+  rowTypeConverters,
 });

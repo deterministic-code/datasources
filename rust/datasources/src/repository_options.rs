@@ -11,7 +11,7 @@ pub struct RepositoryOptions {
     pub mapping: Option<RowTypeConverter>,
     pub mapper: Option<TransformMapper<Row, Row>>,
     pub crud_mapper: Option<CRUDMapper>,
-    pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
+    pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
 
@@ -23,7 +23,7 @@ impl Default for RepositoryOptions {
             mapping: None,
             mapper: None,
             crud_mapper: None,
-            types: HashMap::new(),
+            row_type_converters: HashMap::new(),
             fields: HashMap::new(),
         }
     }

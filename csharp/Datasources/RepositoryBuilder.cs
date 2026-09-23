@@ -7,7 +7,7 @@ public static class RepositoryBuilder<T> where T : new()
 {
     public static BuiltRepository<T> Parts(IConnection connection, RepositoryOptions<T> options)
     {
-        var types = options.Types ?? new Dictionary<string, TypeConverter<Value, Value>>();
+        var types = options.RowTypeConverters ?? new Dictionary<string, TypeConverter<Value, Value>>();
         var rowConverter = options.Mapping ?? new RowTypeConverter<T>(types, options.Fields);
         if (rowConverter is RowTypeConverter<T> row && row.Types.Count == 0)
             foreach (var (key, converter) in types)

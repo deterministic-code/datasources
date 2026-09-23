@@ -16,10 +16,7 @@ export const parts = <T>(
   connection: IConnection,
   options: RepositoryOptions<T>,
 ): BuiltRepository<T> => {
-  const types = {
-    ...options.types,
-    ...options.converters,
-  };
+  const types = { ...options.rowTypeConverters };
   const rowConverter =
     options.mapping ?? new RowTypeConverter<T>(types, options.fields);
   if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)

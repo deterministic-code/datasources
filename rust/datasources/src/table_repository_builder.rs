@@ -19,7 +19,7 @@ impl RepositoryBuilder {
             Some(mapping) => mapping,
             None => RowTypeConverter::of::<Cells>(),
         }
-        .with_types(options.types)
+        .with_types(options.row_type_converters)
         .with_fields(options.fields);
         let crud_mapper = match (options.crud_mapper, options.mapper) {
             (Some(mapper), _) => mapper,
