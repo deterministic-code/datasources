@@ -17,14 +17,14 @@ mod tests {
     use datasources::{
         converters::Cells, create, register, reset, CRUDRepository, Command, Connection,
         ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter, QueryStatement,
-        RepositoryOptions, Row, TextWhere, Value,
+        CRUDRepositoryOptions, Row, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
     use std::sync::Arc;
 
     fn crud(conn: Arc<MemoryConnection>) -> CRUDRepository {
-        let mut options = RepositoryOptions::default();
+        let mut options = CRUDRepositoryOptions::default();
         options.ids = vec![];
         CRUDRepository::new(conn, options).expect("repo")
     }

@@ -8,7 +8,6 @@ import {
   QueryStatement,
   CRUDRepository,
   RowTypeConverter,
-  CRUDMapperOptions,
   TransformMapper,
   UpdateStatement,
   Literal,
@@ -155,23 +154,23 @@ const suffix = <T extends { getText: () => string }>(
     ? new TransformMapper<T, T>((built) => rewrite(`${built.getText()}${value}`, built), (built) => built)
     : undefined;
 
-const crudMapperOf = (
+const crudFieldsOf = (
   type: RepositoryTypeSpec,
   rows: TransformMapper<SpecRow, SpecRow>,
   quote: (id: string) => string,
 ) => {
   const mapper: CRUDMapperSpec = type.crudMapper ?? {};
-  return new CRUDMapperOptions<SpecRow>({
-    entity: new TransformMapper(
-      (name) => quote(mapper.entity ?? name),
-      (name) => name,
+  return {
+    entityMapper: new TransformMapper(
+      (name: string) => quote(mapper.entity ?? name),
+      (name: string) => name,
     ),
-    rows,
+    rowsMapper: rows,
     query: suffix((text, query) => new QueryStatement(text, query.where), mapper.querySuffix),
     insert: suffix((text) => new InsertStatement(text), mapper.writeSuffix),
     update: suffix((text, update) => new UpdateStatement(text, update.where), mapper.writeSuffix),
     delete: suffix((text, remove) => DeleteStatement.raw(text, remove.where), mapper.writeSuffix),
-  });
+  };
 };
 
 const mappingsMapper = (mappings: RepositoryMappings = {}) =>
@@ -254,7 +253,7 @@ export const runRepositorySpec = async (
     type: typeOf(spec.type),
     entity: spec.type.table,
     rowConverter: mapping,
-    crudMapper: crudMapperOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
+    ...crudFieldsOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
     readColumns: Object.keys(spec.type.fields),
   });
   const logs: string[] = [];

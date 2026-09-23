@@ -1,8 +1,8 @@
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enriched::Enriched;
+use crate::i_repository::IRepository;
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::i_repository::IRepository;
 use crate::repository::IReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;

@@ -2,7 +2,7 @@ use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CRUDRepository, Connection, FlatToNestedMapper, IReadonlyRepository, Mapper, RepositoryOptions,
+    CRUDRepository, Connection, FlatToNestedMapper, IReadonlyRepository, Mapper, CRUDRepositoryOptions,
 };
 use datasources_sql_specs::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
@@ -66,7 +66,7 @@ async fn maps_join_rows_to_nested_contacts() {
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 
-    let mut cells = RepositoryOptions::default();
+    let mut cells = CRUDRepositoryOptions::default();
     cells.entity = "contacts_base".into();
     cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
     let join_repo = CRUDRepository::new(conn, cells).expect("join repo");

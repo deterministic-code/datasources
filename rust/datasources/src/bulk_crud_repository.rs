@@ -1,6 +1,6 @@
 use crate::enriched::Enriched;
-use crate::query::Query;
 use crate::i_repository::IRepository;
+use crate::query::Query;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;

@@ -1,18 +1,12 @@
 namespace Datasources;
 
-public sealed class CRUDMapperOptions<T> where T : new()
+public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> where T : new()
 {
-    public IMapper<string, string> Entity { get; init; } =
-        new TransformMapper<string, string>(static name => name, static name => name);
-    public IMapper<string, string> Columns { get; init; } =
-        new TransformMapper<string, string>(static name => name, static name => name);
-    public IMapper<IQuery, IQuery>? Query { get; init; }
+    public IReadOnlyList<string> Ids { get; init; } = ["id"];
     public IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
     public IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
     public IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
     public IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }
-    public IMapper<T, T> Rows { get; init; } =
-        new TransformMapper<T, T>(static value => value, static value => value);
     public IMapper<Value, T> Create { get; init; } = DefaultCreate();
 
     static IMapper<Value, T> DefaultCreate() =>

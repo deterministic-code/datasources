@@ -13,11 +13,11 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
     public ReadonlyRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
 
-    public ReadonlyRepository(IConnection connection, RepositoryOptions<T> options) :
+    public ReadonlyRepository(IConnection connection, ReadonlyRepositoryOptions<T> options) :
         this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
     public ReadonlyRepository(BuiltRepository<T> built) :
-        this(built.Connection, built.RowConverter, built.CRUDMapper.Rows, built.Statements) { }
+        this(built.Connection, built.RowConverter, built.RowsMapper, built.Statements) { }
 
     protected ReadonlyRepository() { }
 

@@ -16,7 +16,11 @@ impl UpdateStatement {
         }
     }
 
-    pub fn new(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&dyn Where>) -> Self {
+    pub fn new(
+        table: impl AsRef<str>,
+        fields: &[Parameter],
+        where_clause: Option<&dyn Where>,
+    ) -> Self {
         let sql = format!(
             "UPDATE {} SET {}",
             table.as_ref(),

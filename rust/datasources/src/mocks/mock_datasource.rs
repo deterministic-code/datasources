@@ -4,9 +4,10 @@ use super::mock_repository::MockRepository;
 use crate::command::Command;
 use crate::connection::Connection;
 use crate::converters::TypeConverter;
+use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource::Datasource;
+use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
-use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
 use crate::value::Value;
 use async_trait::async_trait;
@@ -58,16 +59,16 @@ impl Datasource for MockDatasource {
     fn repository_from(
         &self,
         _connection: Arc<dyn Connection>,
-        _options: RepositoryOptions,
+        _options: CRUDRepositoryOptions,
     ) -> Arc<dyn ICRUDRepository> {
         self.repository.clone()
     }
 
     fn readonly_repository_from(
         &self,
-        connection: Arc<dyn Connection>,
-        options: RepositoryOptions,
+        _connection: Arc<dyn Connection>,
+        _options: ReadonlyRepositoryOptions,
     ) -> Arc<dyn IReadonlyRepository> {
-        as_readonly(self.repository_from(connection, options))
+        as_readonly(self.repository.clone())
     }
 }

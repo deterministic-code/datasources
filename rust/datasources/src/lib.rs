@@ -11,8 +11,8 @@ mod console_command_middleware;
 pub mod converters;
 mod create;
 mod create_repository_options;
-mod crud_mapper_options;
 mod crud_repository;
+mod crud_repository_options;
 mod datasource;
 mod datasource_error;
 mod default_readonly_enrichment_strategy;
@@ -40,12 +40,12 @@ mod query;
 mod reader;
 mod readonly_enrichment_strategy;
 mod readonly_repository;
+mod readonly_repository_options;
 mod register;
 mod registered;
 mod registry_state;
 mod repository;
 mod repository_factory;
-mod repository_options;
 mod repository_tree;
 mod repository_tree_node;
 mod reset;
@@ -78,8 +78,8 @@ pub use converters::{
 };
 pub use create::{create, create_default, default};
 pub use create_repository_options::create_repository_options;
-pub use crud_mapper_options::CRUDMapperOptions;
 pub use crud_repository::CRUDRepository;
+pub use crud_repository_options::CRUDRepositoryOptions;
 pub use datasource::{BuiltDatasource, Datasource};
 pub use datasource_error::DatasourceError;
 pub use default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
@@ -97,8 +97,8 @@ pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use mappers::{
-    FlatToNestedMapper, FlatToNestedMapperTrait, MappedRow, MappedValue, Mapper, RowTypeMapper,
-    TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
+    FlatToNestedMapper, FlatToNestedMapperTrait, IdentityMapper, MappedRow, MappedValue, Mapper,
+    RowTypeMapper, TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
 pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockDriver, MockQuery, MockReader, MockRepository,
@@ -112,11 +112,11 @@ pub use query::Query;
 pub use reader::Reader;
 pub use readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 pub use readonly_repository::ReadonlyRepository;
+pub use readonly_repository_options::ReadonlyRepositoryOptions;
 pub use register::register;
 pub use registered::registered;
 pub use repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 pub use repository_factory::{CRUDRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory};
-pub use repository_options::RepositoryOptions;
 pub use repository_tree::RepositoryTree;
 pub use repository_tree_node::{encode_rows, RepositoryTreeNode};
 pub use reset::reset;

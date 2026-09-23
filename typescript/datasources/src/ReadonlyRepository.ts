@@ -9,7 +9,7 @@ import { DatasourceError } from "./DatasourceError.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { createRepositoryOptions } from "./createRepositoryOptions.ts";
-import type { RepositoryOptions } from "./RepositoryOptions.ts";
+import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { parts } from "./RepositoryBuilder.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
@@ -21,11 +21,11 @@ export const untyped = <T>(): Constructable<T> => Object as never as Constructab
 export const isBuilt = <T>(
   value: IConnection | BuiltRepository<T>,
 ): value is BuiltRepository<T> =>
-  "statements" in value && "rowConverter" in value && "crudMapper" in value;
+  "statements" in value && "rowConverter" in value && "rowsMapper" in value;
 
 export const builtOf = <T>(
   typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
-  connectionOrOptions?: IConnection | RepositoryOptions<T>,
+  connectionOrOptions?: IConnection | ReadonlyRepositoryOptions<T>,
 ): BuiltRepository<T> | undefined =>
   typeof typeOrConnectionOrBuilt === "function"
     ? connectionOrOptions === undefined
@@ -33,7 +33,7 @@ export const builtOf = <T>(
       : parts(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnectionOrBuilt))
     : isBuilt(typeOrConnectionOrBuilt)
       ? typeOrConnectionOrBuilt
-      : parts(typeOrConnectionOrBuilt, connectionOrOptions as RepositoryOptions<T>);
+      : parts(typeOrConnectionOrBuilt, connectionOrOptions as ReadonlyRepositoryOptions<T>);
 
 export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
   readonly type: Constructable<T>;
@@ -45,11 +45,11 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
 
   constructor(type: Constructable<T>);
   constructor(type: Constructable<T>, connection: IConnection);
-  constructor(connection: IConnection, options: RepositoryOptions<T>);
+  constructor(connection: IConnection, options: ReadonlyRepositoryOptions<T>);
   constructor(built: BuiltRepository<T>);
   constructor(
     typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
-    connectionOrOptions?: IConnection | RepositoryOptions<T>,
+    connectionOrOptions?: IConnection | ReadonlyRepositoryOptions<T>,
   ) {
     const built = builtOf(typeOrConnectionOrBuilt, connectionOrOptions);
     if (!built) {
@@ -59,7 +59,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
     this.type = built.type;
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
-    this.mapper = built.crudMapper.rows;
+    this.mapper = built.rowsMapper;
     this.statements = built.statements;
   }
 

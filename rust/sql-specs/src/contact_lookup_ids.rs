@@ -1,13 +1,13 @@
 use crate::contact_lookups::ContactLookups;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CRUDRepository, Connection, DatasourceError, IReadonlyRepository, Operator, RepositoryOptions,
-    Result, Value, WhereClause,
+    CRUDRepository, CRUDRepositoryOptions, Connection, DatasourceError, IReadonlyRepository,
+    Operator, Result, Value, WhereClause,
 };
 use std::sync::Arc;
 
 async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> Result<i64> {
-    let mut options = RepositoryOptions::default();
+    let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.row_converter = Some(RowTypeConverter::new(vec!["id".into(), "name".into()]));
     let repo = CRUDRepository::new(connection, options)?;

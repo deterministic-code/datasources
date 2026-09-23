@@ -1,16 +1,15 @@
 use crate::converters::ConvertSchema;
-use crate::repository_options::RepositoryOptions;
+use crate::crud_repository_options::CRUDRepositoryOptions;
 
-pub fn create_repository_options<T: ConvertSchema>() -> RepositoryOptions {
-    RepositoryOptions {
-        ids: default_id::<T>(),
-        entity: std::any::type_name::<T>()
-            .rsplit("::")
-            .next()
-            .unwrap_or_default()
-            .into(),
-        ..Default::default()
-    }
+pub fn create_repository_options<T: ConvertSchema>() -> CRUDRepositoryOptions {
+    let mut options = CRUDRepositoryOptions::default();
+    options.ids = default_id::<T>();
+    options.entity = std::any::type_name::<T>()
+        .rsplit("::")
+        .next()
+        .unwrap_or_default()
+        .into();
+    options
 }
 
 fn default_id<T: ConvertSchema>() -> Vec<String> {

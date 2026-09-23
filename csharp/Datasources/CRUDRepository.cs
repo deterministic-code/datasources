@@ -3,19 +3,18 @@ namespace Datasources;
 public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 {
     readonly HashSet<string> ids;
+    readonly IMapper<Value, T>? create;
 
     public CRUDRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
 
-    public CRUDRepository(IConnection connection, RepositoryOptions<T> options) :
+    public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
-    public CRUDMapperOptions<T> CRUDMapper { get; }
-
     public CRUDRepository(BuiltRepository<T> built) : base(
-        built.Connection, built.RowConverter, built.CRUDMapper.Rows, built.Statements)
+        built.Connection, built.RowConverter, built.RowsMapper, built.Statements)
     {
-        CRUDMapper = built.CRUDMapper;
+        create = built.Create;
         ids = new(built.Ids);
     }
 
@@ -29,8 +28,8 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     {
         var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
         var response = await Command().Execute(Statements.Insert(fields), fields);
-        if (response.Result is not Value.Null)
-            Apply(item, CRUDMapper.Create.Map(response.Result));
+        if (response.Result is not Value.Null && create is { } map)
+            Apply(item, map.Map(response.Result));
         return response;
     }
 

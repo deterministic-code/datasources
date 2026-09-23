@@ -5,34 +5,33 @@ namespace Datasources;
 
 public static class RepositoryBuilder<T> where T : new()
 {
-    public static BuiltRepository<T> Parts(IConnection connection, RepositoryOptions<T> options)
+    public static BuiltRepository<T> Parts(IConnection connection, ReadonlyRepositoryOptions<T> options)
     {
         var types = options.RowTypeConverters ?? new Dictionary<string, TypeConverter<Value, Value>>();
         var rowConverter = options.RowConverter ?? new RowTypeConverter<T>(types);
         if (rowConverter is RowTypeConverter<T> row && row.Types.Count == 0)
             foreach (var (key, converter) in types)
                 row.Types[key] = converter;
-        var crudMapper = options.CRUDMapper ?? new CRUDMapperOptions<T>();
-        var entity = crudMapper.Entity.Map(options.Entity ?? typeof(T).Name);
+        var entity = options.EntityMapper.Map(options.Entity ?? typeof(T).Name);
         var columns = (options.ReadColumns is { Count: > 0 } listed ? listed : Columns())
-            .Select(crudMapper.Columns.Map)
+            .Select(options.Columns.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
+        var (ids, insert, update, delete, create) = options switch
+        {
+            CRUDRepositoryOptions<T> crud => (crud.Ids, crud.Insert, crud.Update, crud.Delete, crud.Create),
+            _ => (Array.Empty<string>(), null, null, null, null)
+        };
         return new(
             connection,
             rowConverter,
-            crudMapper,
-            new RepositoryStatements(
-                entity,
-                columns,
-                crudMapper.Query,
-                crudMapper.Insert,
-                crudMapper.Update,
-                crudMapper.Delete),
-            options.Ids);
+            options.RowsMapper,
+            new RepositoryStatements(entity, columns, options.Query, insert, update, delete),
+            ids,
+            create);
     }
 
-    public static CRUDRepository<T> Build(IConnection connection, RepositoryOptions<T> options) =>
+    public static CRUDRepository<T> Build(IConnection connection, CRUDRepositoryOptions<T> options) =>
         new(connection, options);
 
     static string[] Columns() =>

@@ -40,7 +40,7 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        return (new CRUDRepository<T>(connection, new RepositoryOptions<T>
+        return (new CRUDRepository<T>(connection, new CRUDRepositoryOptions<T>
         {
             Ids = id ?? ["id"],
             Entity = "users"
@@ -138,7 +138,7 @@ public class RepositoryTests
         var connection2 = new MockConnection { Provider = "memory" };
         var command2 = new MockCommand(connection2);
         connection2.Command = command2;
-        var typed = new CRUDRepository<Item>(connection2, new RepositoryOptions<Item>
+        var typed = new CRUDRepository<Item>(connection2, new CRUDRepositoryOptions<Item>
         {
             Entity = "users"
         });
@@ -188,15 +188,12 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new CRUDRepository<UserRow>(connection, new RepositoryOptions<UserRow>
+        var repo = new CRUDRepository<UserRow>(connection, new CRUDRepositoryOptions<UserRow>
         {
             Entity = "users",
-            CRUDMapper = new CRUDMapperOptions<UserRow>
-            {
-                Rows = new TransformMapper<UserRow, UserRow>(
-                    row => { row.name = row.name.ToUpperInvariant(); return row; },
-                    row => { row.name = row.name.ToLowerInvariant(); return row; })
-            }
+            RowsMapper = new TransformMapper<UserRow, UserRow>(
+                row => { row.name = row.name.ToUpperInvariant(); return row; },
+                row => { row.name = row.name.ToLowerInvariant(); return row; })
         });
         command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
         Assert.Equal("A", (await repo.ReadSingle())!.name);
@@ -208,10 +205,10 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new CRUDRepository<User>(connection, new RepositoryOptions<User>
+        var repo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
         {
             Entity = "users",
-            CRUDMapper = new CRUDMapperOptions<User> { Rows = UserContactsMapper() }
+            RowsMapper = UserContactsMapper()
         });
         command.Reader = new MockReader<Row>([new Row
         {
@@ -248,10 +245,10 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new CRUDRepository<User>(connection, new RepositoryOptions<User>
+        var repo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
         {
             Entity = "users",
-            CRUDMapper = new CRUDMapperOptions<User> { Rows = UserContactsMapper() }
+            RowsMapper = UserContactsMapper()
         });
         var user = new User
         {

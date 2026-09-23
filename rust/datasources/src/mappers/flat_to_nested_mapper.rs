@@ -109,7 +109,10 @@ impl Mapper<Vec<Row>, Vec<MappedRow>> for FlatToNestedMapper {
     }
 
     fn reverse_map(&self, values: Vec<MappedRow>) -> Vec<Row> {
-        values.into_iter().flat_map(|value| self.explode(value)).collect()
+        values
+            .into_iter()
+            .flat_map(|value| self.explode(value))
+            .collect()
     }
 }
 
@@ -536,10 +539,7 @@ mod tests {
     #[test]
     fn collapses_already_mapped_rows() {
         let mapper = FlatToNestedMapper::new(contacts_view());
-        let rows = mapper.collapse(vec![
-            mapper.map_row(ada_home()),
-            mapper.map_row(ada_work()),
-        ]);
+        let rows = mapper.collapse(vec![mapper.map_row(ada_home()), mapper.map_row(ada_work())]);
         assert_eq!(many(&rows[0], "addresses").len(), 2);
         assert_eq!(many(&rows[0], "phones").len(), 1);
     }
@@ -623,7 +623,7 @@ mod tests {
             &mapper,
             vec![cell(&[("id", Value::Int(1)), ("item_id", Value::Int(2))])],
         )[0]
-            .clone();
+        .clone();
         assert_eq!(text(&mapped, "id"), Value::Int(1));
         assert_eq!(many(&mapped, "items").len(), 1);
         assert_eq!(text(&many(&mapped, "items")[0], "id"), Value::Int(2));

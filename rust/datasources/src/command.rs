@@ -1,9 +1,9 @@
-use crate::statement::Statement;
 use crate::command_middleware::CommandMiddleware;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
 use crate::response::Response;
 use crate::result::Result;
+use crate::statement::Statement;
 use async_trait::async_trait;
 use std::sync::Arc;
 

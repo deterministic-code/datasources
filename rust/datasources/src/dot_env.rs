@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 pub fn load(path: &str) -> HashMap<String, String> {
-    std::fs::read_to_string(path).map(|text| parse(&text)).unwrap_or_default()
+    std::fs::read_to_string(path)
+        .map(|text| parse(&text))
+        .unwrap_or_default()
 }
 
 pub fn parse(text: &str) -> HashMap<String, String> {

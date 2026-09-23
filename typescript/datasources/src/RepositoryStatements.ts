@@ -9,7 +9,6 @@ import { QueryStatement } from "./statements/QueryStatement.ts";
 import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import type { Field } from "./builders/Field.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
-import type { CRUDMapperOptions } from "./CRUDMapperOptions.ts";
 
 export type RepositoryStatements = {
   query: (where?: IWhere) => IQuery;
@@ -21,14 +20,16 @@ export type RepositoryStatements = {
 const mapped = <T>(built: T, mapper?: IMapper<T, T>): T =>
   mapper?.map(built) ?? built;
 
-export const statementsOf = <T>(
+export const statementsOf = (
   table: string,
   columns: string[],
-  mapper?: CRUDMapperOptions<T>,
+  query?: IMapper<IQuery, IQuery>,
+  insert?: IMapper<IInsertStatement, IInsertStatement>,
+  update?: IMapper<IUpdateStatement, IUpdateStatement>,
+  deleteMapper?: IMapper<IDeleteStatement, IDeleteStatement>,
 ): RepositoryStatements => ({
-  query: (where) => mapped(new QueryStatement(table, columns, where), mapper?.query),
-  insert: (fields) => mapped(new InsertStatement(table, fields), mapper?.insert),
-  update: (fields, where) =>
-    mapped(new UpdateStatement(table, fields, where), mapper?.update),
-  delete: (where) => mapped(new DeleteStatement(table, where), mapper?.delete),
+  query: (where) => mapped(new QueryStatement(table, columns, where), query),
+  insert: (fields) => mapped(new InsertStatement(table, fields), insert),
+  update: (fields, where) => mapped(new UpdateStatement(table, fields, where), update),
+  delete: (where) => mapped(new DeleteStatement(table, where), deleteMapper),
 });

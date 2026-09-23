@@ -2,9 +2,9 @@ use base64::Engine;
 use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CRUDMapperOptions, CRUDRepository, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
-    DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository, InsertStatement, Literal,
-    Operator, Parameter, QueryStatement, RepositoryBuilder, RepositoryOptions, Result, Row, Text,
+    CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
+    ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
+    InsertStatement, Literal, Operator, Parameter, QueryStatement, Result, Row, Text,
     TransformMapper, TypeConverter, UpdateStatement, Value, WhereClause,
 };
 use rust_decimal::Decimal;
@@ -457,45 +457,52 @@ fn with_statement_sql(sql: String, write: bool, type_spec: &TypeSpec) -> String 
     }
 }
 
-fn crud_mapper_of(spec: &Spec, dialect: &RepositoryDialect) -> CRUDMapperOptions {
-    let mut mapper = CRUDMapperOptions::identity(dialect.provider, "rust");
-    mapper.rows = mappings_mapper(&spec.type_spec.mappings);
+fn apply_mappers(options: &mut CRUDRepositoryOptions, spec: &Spec, dialect: &RepositoryDialect) {
+    options.rows_mapper = Box::new(mappings_mapper(&spec.type_spec.mappings));
     let quote = dialect.quote;
     let Some(cfg) = &spec.type_spec.crud_mapper else {
-        mapper.entity = TransformMapper::new(move |name: String| quote(&name), |name| name);
-        return mapper;
+        options.entity_mapper = Box::new(TransformMapper::new(
+            move |name: String| quote(&name),
+            |name| name,
+        ));
+        return;
     };
     if let Some(entity) = &cfg.entity {
         let dest = entity.clone();
-        mapper.entity = TransformMapper::new(move |_: String| quote(&dest), |name| name);
+        options.entity_mapper = Box::new(TransformMapper::new(
+            move |_: String| quote(&dest),
+            |name| name,
+        ));
     } else {
-        mapper.entity = TransformMapper::new(move |name: String| quote(&name), |name| name);
+        options.entity_mapper = Box::new(TransformMapper::new(
+            move |name: String| quote(&name),
+            |name| name,
+        ));
     }
     if let Some(suffix) = &cfg.query_suffix {
         let suffix = suffix.clone();
-        mapper.query = Some(Arc::new(TransformMapper::new(
+        options.query = Some(Arc::new(TransformMapper::new(
             move |text| format!("{text}{suffix}"),
             |text| text,
         )));
     }
     if let Some(suffix) = &cfg.write_suffix {
         let insert = suffix.clone();
-        mapper.insert = Some(Arc::new(TransformMapper::new(
+        options.insert = Some(Arc::new(TransformMapper::new(
             move |text| format!("{text}{insert}"),
             |text| text,
         )));
         let update = suffix.clone();
-        mapper.update = Some(Arc::new(TransformMapper::new(
+        options.update = Some(Arc::new(TransformMapper::new(
             move |text| format!("{text}{update}"),
             |text| text,
         )));
         let delete = suffix.clone();
-        mapper.delete = Some(Arc::new(TransformMapper::new(
+        options.delete = Some(Arc::new(TransformMapper::new(
             move |text| format!("{text}{delete}"),
             |text| text,
         )));
     }
-    mapper
 }
 
 fn queries(spec: &Spec) -> Vec<String> {
@@ -653,14 +660,12 @@ pub async fn run(
         )
         .await?;
     let mapping = mapping_of(&spec, dialect);
-    let options = RepositoryOptions {
-        ids: spec.type_spec.ids.clone(),
-        entity: spec.type_spec.table.clone(),
-        row_converter: Some(mapping_of(&spec, dialect)),
-        crud_mapper: Some(crud_mapper_of(&spec, dialect)),
-        ..Default::default()
-    };
-    let built = RepositoryBuilder::parts(connection, options).unwrap();
+    let mut options = CRUDRepositoryOptions::default();
+    options.ids = spec.type_spec.ids.clone();
+    options.entity = spec.type_spec.table.clone();
+    options.row_converter = Some(mapping_of(&spec, dialect));
+    apply_mappers(&mut options, &spec, dialect);
+    let mut repo = CRUDRepository::new(connection, options).unwrap();
     let logs = Arc::new(Mutex::new(Vec::<String>::new()));
     let middleware: Arc<dyn CommandMiddleware> = Arc::new(
         ConsoleCommandMiddleware::with_sink(
@@ -680,7 +685,6 @@ pub async fn run(
             if verbose() { "true" } else { "false" }.into(),
         )])),
     );
-    let mut repo = CRUDRepository::from_built(built);
     repo.add_middleware(middleware);
     for step in &spec.steps {
         match step {

@@ -96,6 +96,10 @@ pages:
   - path: sections/mappers.md
     title: Mapper
     group: Code Reference
+  - path: sections/identity-mapper.md
+    title: Identity Mapper
+    group: Code Reference
+    parent: Mapper
   - path: sections/transform-mapper.md
     title: Transform Mapper
     group: Code Reference
@@ -104,10 +108,6 @@ pages:
     title: Flat To Nested Mapper
     group: Code Reference
     parent: Mapper
-  - path: sections/crud-mapper.md
-    title: CRUD Mapper Options
-    group: Code Reference
-    parent: CRUD Repository
   - path: sections/type-converters.md
     title: Type Converter
     group: Code Reference

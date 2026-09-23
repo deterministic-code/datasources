@@ -1,5 +1,6 @@
 mod flat_to_nested_mapper;
 mod i_flat_to_nested_mapper;
+mod identity_mapper;
 mod mapped_value;
 mod row_type_mapper;
 mod transform_converter_mapper;
@@ -10,6 +11,7 @@ mod type_map_group;
 
 pub use flat_to_nested_mapper::FlatToNestedMapper;
 pub use i_flat_to_nested_mapper::FlatToNestedMapper as FlatToNestedMapperTrait;
+pub use identity_mapper::IdentityMapper;
 pub use mapped_value::{MappedRow, MappedValue};
 pub use row_type_mapper::RowTypeMapper;
 pub use transform_converter_mapper::TransformConverterMapper;
@@ -21,6 +23,16 @@ pub use type_map_group::TypeMapGroup;
 pub trait Mapper<TFrom, TTo> {
     fn map(&self, value: TFrom) -> TTo;
     fn reverse_map(&self, value: TTo) -> TFrom;
+}
+
+impl<TFrom, TTo> Mapper<TFrom, TTo> for Box<dyn Mapper<TFrom, TTo> + Send + Sync> {
+    fn map(&self, value: TFrom) -> TTo {
+        (**self).map(value)
+    }
+
+    fn reverse_map(&self, value: TTo) -> TFrom {
+        (**self).reverse_map(value)
+    }
 }
 
 #[cfg(test)]

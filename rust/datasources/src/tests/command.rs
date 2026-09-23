@@ -60,14 +60,10 @@ fn user_contacts_mapper() -> TransformMapper<Row, Row> {
 #[tokio::test]
 async fn execute_reader_returns_name_value_objects() {
     let command = MockCommand::new();
-    command
-        .reader_rows
-        .lock()
-        .unwrap()
-        .push(row(&[
-            ("name", Value::from("theme")),
-            ("value", Value::from("dark")),
-        ]));
+    command.reader_rows.lock().unwrap().push(row(&[
+        ("name", Value::from("theme")),
+        ("value", Value::from("dark")),
+    ]));
     let reader = command
         .execute_reader("SELECT name, value FROM settings", None)
         .await

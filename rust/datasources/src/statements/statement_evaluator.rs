@@ -10,10 +10,7 @@ pub struct StatementEvaluator;
 impl StatementEvaluator {
     pub fn evaluate(&self, expression: &Expression, parameters: &Row) -> Value {
         match expression {
-            Expression::Identifier(id) => parameters
-                .get(&id.name)
-                .cloned()
-                .unwrap_or(Value::Null),
+            Expression::Identifier(id) => parameters.get(&id.name).cloned().unwrap_or(Value::Null),
             Expression::Literal(lit) => lit.value.clone(),
             Expression::Operator(Operator::Not { argument }) => {
                 Value::Bool(!is_true(&self.evaluate(argument, parameters)))
@@ -36,16 +33,28 @@ impl StatementEvaluator {
                 Value::Bool(self.evaluate(left, parameters) != self.evaluate(right, parameters))
             }
             Expression::Operator(Operator::GreaterThan { left, right }) => Value::Bool(
-                compare(&self.evaluate(left, parameters), &self.evaluate(right, parameters)) > 0,
+                compare(
+                    &self.evaluate(left, parameters),
+                    &self.evaluate(right, parameters),
+                ) > 0,
             ),
             Expression::Operator(Operator::LessThan { left, right }) => Value::Bool(
-                compare(&self.evaluate(left, parameters), &self.evaluate(right, parameters)) < 0,
+                compare(
+                    &self.evaluate(left, parameters),
+                    &self.evaluate(right, parameters),
+                ) < 0,
             ),
             Expression::Operator(Operator::GreaterThanOrEqual { left, right }) => Value::Bool(
-                compare(&self.evaluate(left, parameters), &self.evaluate(right, parameters)) >= 0,
+                compare(
+                    &self.evaluate(left, parameters),
+                    &self.evaluate(right, parameters),
+                ) >= 0,
             ),
             Expression::Operator(Operator::LessThanOrEqual { left, right }) => Value::Bool(
-                compare(&self.evaluate(left, parameters), &self.evaluate(right, parameters)) <= 0,
+                compare(
+                    &self.evaluate(left, parameters),
+                    &self.evaluate(right, parameters),
+                ) <= 0,
             ),
             Expression::Array(_) => panic!("array is not a scalar"),
         }

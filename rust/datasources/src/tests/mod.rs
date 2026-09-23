@@ -1377,13 +1377,13 @@ fn collect_in_non_literal_panics() {
 
 #[test]
 fn return_mapper_rewrites_finished_sql() {
-    let mut mapper = CRUDMapperOptions::identity("", "");
-    mapper.return_ = Some(Arc::new(TransformMapper::new(
+    let mut options = CRUDRepositoryOptions::default();
+    options.return_ = Some(Arc::new(TransformMapper::new(
         |text: String| format!("{text} /* mapped */"),
         |text| text,
     )));
     let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
-    let text = CRUDMapperOptions::map_sql(&mapper.return_, built.get_text());
+    let text = Mapper::map(options.return_.as_ref().unwrap().as_ref(), built.get_text());
     assert_eq!(text, "SELECT add($id) /* mapped */");
 }
 
@@ -1417,7 +1417,7 @@ async fn table_repository() {
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = RepositoryOptions::default();
+    let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
     options.row_converter = Some(users_mapping());
     let mut repo = CRUDRepository::new(connection, options).unwrap();
@@ -1460,7 +1460,7 @@ async fn table_repository() {
 
     let mut obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut include_id = RepositoryOptions::default();
+    let mut include_id = CRUDRepositoryOptions::default();
     include_id.entity = "users".into();
     include_id.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, include_id).unwrap();
@@ -1484,7 +1484,7 @@ async fn table_repository() {
 
     let generated = Arc::new(MockCommand::new());
     let connection = MockConnection::with_command_provider(generated.clone(), "memory");
-    let mut options = RepositoryOptions::default();
+    let mut options = CRUDRepositoryOptions::default();
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.entity = "users".into();
     options.row_converter = Some(RowTypeConverter::of::<Composite>());
@@ -1521,11 +1521,11 @@ async fn table_repository() {
     let command = Arc::new(MockCommand::new());
     CRUDRepository::new(
         MockConnection::with_command(command.clone()),
-        RepositoryOptions::default(),
+        CRUDRepositoryOptions::default(),
     )
     .unwrap();
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = RepositoryOptions::default();
+    let mut options = CRUDRepositoryOptions::default();
     options.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, options).unwrap();
     assert!(repo
@@ -1541,7 +1541,7 @@ async fn table_repository() {
         .await
         .is_err());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = RepositoryOptions::default();
+    let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
     options.row_converter = Some(RowTypeConverter::of::<Cells>());
     let repo = CRUDRepository::new(connection, options).unwrap();
@@ -1630,11 +1630,10 @@ async fn table_repository_maps_after_row_converter() {
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = RepositoryOptions::default();
+    let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
     options.row_converter = Some(users_mapping());
-    let mut crud = CRUDMapperOptions::identity("memory", "rust");
-    crud.rows = TransformMapper::new(
+    options.rows_mapper = Box::new(TransformMapper::new(
         |mut row: Row| {
             if let Some(Value::Text(name)) = row.get("name").cloned() {
                 row.insert("name".into(), Value::from(name.to_uppercase()));
@@ -1647,8 +1646,7 @@ async fn table_repository_maps_after_row_converter() {
             }
             row
         },
-    );
-    options.crud_mapper = Some(crud);
+    ));
     let repo = CRUDRepository::new(connection, options).unwrap();
     let rows = repo.read(None).await.unwrap();
     assert_eq!(rows[0]["name"], Value::from("A"));
@@ -1665,12 +1663,10 @@ async fn table_repository_maps_flat_row_into_contacts() {
         ("contact_name2", Value::from("roberta")),
     ]));
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = RepositoryOptions::default();
+    let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
     options.row_converter = Some(RowTypeConverter::of::<UserRow>());
-    let mut crud = CRUDMapperOptions::identity("memory", "rust");
-    crud.rows = user_contacts_mapper();
-    options.crud_mapper = Some(crud);
+    options.rows_mapper = Box::new(user_contacts_mapper());
     let repo = CRUDRepository::new(connection, options).unwrap();
     let mut user = repo.read_single(None).await.unwrap().unwrap();
     assert_eq!(user["username"], Value::from("bobby"));
@@ -1699,41 +1695,39 @@ async fn table_repository_maps_flat_row_into_contacts() {
 #[tokio::test]
 async fn table_repository_crud_mapper() {
     let command = Arc::new(MockCommand::new());
-    let mut mapper = CRUDMapperOptions::identity("memory", "rust");
-    mapper.entity = TransformMapper::new(
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "users".into();
+    options.row_converter = Some(users_mapping());
+    options.entity_mapper = Box::new(TransformMapper::new(
         |name: String| match name.as_str() {
             "users" => "people".into(),
             _ => name,
         },
         |name| name,
-    );
-    mapper.columns = TransformMapper::new(
+    ));
+    options.columns = Box::new(TransformMapper::new(
         |name: String| match name.as_str() {
             "id" => "user_id".into(),
             "name" => "full_name".into(),
             _ => name,
         },
         |name| name,
-    );
-    mapper.query = Some(Arc::new(TransformMapper::new(
+    ));
+    options.query = Some(Arc::new(TransformMapper::new(
         |text: String| format!("{text} LIMIT 1"),
         |text| text,
     )));
     let returning = |text: String| format!("{text} RETURNING id");
-    mapper.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
-    mapper.update = Some(Arc::new(TransformMapper::new(
+    options.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
+    options.update = Some(Arc::new(TransformMapper::new(
         |text: String| format!("{text} RETURNING id"),
         |text| text,
     )));
-    mapper.delete = Some(Arc::new(TransformMapper::new(
+    options.delete = Some(Arc::new(TransformMapper::new(
         |text: String| format!("{text} RETURNING id"),
         |text| text,
     )));
-    let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = RepositoryOptions::default();
-    options.entity = "users".into();
-    options.row_converter = Some(users_mapping());
-    options.crud_mapper = Some(mapper);
     let repo = CRUDRepository::new(connection, options).unwrap();
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.read_single(None).await.unwrap().is_none());
