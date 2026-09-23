@@ -21,8 +21,8 @@ mod tests {
     use crate::engine::{isolation_sql, to_mysql};
     use crate::transaction::MysqlTransaction;
     use datasources::{
-        create, downcast_connection, register, reset, BuiltDatasource, Command, Connection,
-        Datasource, Driver, IsolationLevel, Transaction,
+        converters::Cells, create, downcast_connection, register, reset, BuiltDatasource, Command,
+        Connection, Datasource, Driver, IsolationLevel, Transaction,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -49,8 +49,14 @@ mod tests {
 
         fn row_type_converters(
             &self,
-        ) -> HashMap<String, Box<dyn datasources::TypeConverter<datasources::Value, datasources::Value> + Send + Sync>>
-        {
+        ) -> HashMap<
+            String,
+            Box<
+                dyn datasources::TypeConverter<datasources::Value, datasources::Value>
+                    + Send
+                    + Sync,
+            >,
+        > {
             crate::converters::row_type_converters()
         }
     }
@@ -92,10 +98,9 @@ mod tests {
         let defaulted = MysqlConnection::new(None);
         assert_eq!(defaulted.url, "");
         let options = HashMap::from([("database_url".into(), "mysql://db/app".into())]);
-        let from = downcast_connection::<MysqlConnection>(MysqlConnection::from_options(Some(
-            &options,
-        )))
-        .expect("mysql");
+        let from =
+            downcast_connection::<MysqlConnection>(MysqlConnection::from_options(Some(&options)))
+                .expect("mysql");
         assert_eq!(from.url, "mysql://db/app");
         reset();
         register("mysql", Arc::new(With(Some("mysql://db/app".into()))));
@@ -104,11 +109,10 @@ mod tests {
         let command = ds.create_command(None);
         assert!(command.execute("DELETE FROM items", None).await.is_err());
         assert!(command.execute_reader("SELECT 1", None).await.is_err());
-        ds.create_repository(None);
+        ds.create_repository::<Cells>(None);
         let factory = BuiltDatasource::new("mysql", Arc::new(With(None)), None);
         assert_eq!(factory.provider(), "mysql");
         let closed = Arc::new(MysqlConnection::new(None));
         assert!(MysqlCommand::new(closed).execute("x", None).await.is_err());
     }
 }
-

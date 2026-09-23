@@ -8,9 +8,8 @@ internal static class ContactLookupIds
     {
         async Task<int> Of<T>(string entity, string name) where T : Base, new()
         {
-            var row = await new CRUDRepository<T>(new RepositoryBuilderOptions<T>
+            var row = await new CRUDRepository<T>(connection, new RepositoryOptions<T>
             {
-                Connection = connection,
                 Entity = entity,
                 Columns = ["id", "name"]
             }).ReadSingle(new WhereClause(new Operator.Equals("name", name)));

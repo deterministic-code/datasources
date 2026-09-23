@@ -276,7 +276,7 @@ Construct the predicate with [Operator](./expressions.md#operator) records, then
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L53-L55
 ```
-```rust rust/datasources/src/tests/mod.rs#L654-L658
+```rust rust/datasources/src/tests/mod.rs#L659-L663
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L31-L33
 ```
@@ -295,7 +295,7 @@ id IN ($id_0, $id_1)
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L127-L130
 ```
-```rust rust/datasources/src/tests/mod.rs#L877-L883
+```rust rust/datasources/src/tests/mod.rs#L929-L935
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L175-L180
 ```

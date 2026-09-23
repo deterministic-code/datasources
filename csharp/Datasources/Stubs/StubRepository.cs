@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class StubRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>
+public sealed class StubRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 {
     readonly string provider;
 

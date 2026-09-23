@@ -175,7 +175,7 @@ public class EnrichedReadonlyRepositoryTests
         Assert.Equal(["person", "org"], items.Select(item => item.type_name));
     }
 
-    sealed class CountingReadonlyRepository<T>(IReadonlyRepository<T> inner) : ReadonlyRepository<T>
+    sealed class CountingReadonlyRepository<T>(IReadonlyRepository<T> inner) : ReadonlyRepository<T> where T : new()
     {
         public int Reads { get; private set; }
         public int ReadSingles { get; private set; }

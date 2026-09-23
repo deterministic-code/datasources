@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
+public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T> where T : new()
 {
     readonly IReadonlyRepository<T> inner;
     readonly IReadonlyEnrichmentStrategy<T> strategy;

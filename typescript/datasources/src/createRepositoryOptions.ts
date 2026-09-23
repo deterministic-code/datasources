@@ -1,8 +1,7 @@
-import type { IConnection } from "./IConnection.ts";
 import type { Cell } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
-import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
+import type { RepositoryOptions } from "./RepositoryOptions.ts";
 
 type FieldSource = Record<string, string | number | boolean | bigint | null | object>;
 
@@ -14,13 +13,12 @@ export const fieldNamesOf = <T>(type: Constructable<T>): string[] => {
 export const defaultId = (fields: string[]): string[] =>
   fields.includes("id") ? ["id"] : fields.includes("Id") ? ["Id"] : [];
 
-export const createRepositoryBuilderOptions = <T>(
+export const createRepositoryOptions = <T>(
   type: Constructable<T>,
-  connection: IConnection,
   types?: Record<string, TypeConverter<Cell, Cell>>,
-): RepositoryBuilderOptions<T> => ({
+): RepositoryOptions<T> => ({
   type,
   ids: defaultId(fieldNamesOf(type)),
-  connection,
+  entity: type.name,
   types,
 });

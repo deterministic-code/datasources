@@ -916,8 +916,8 @@ interface IDatasource
 | --- | --- |
 | [createConnection()](#typescript-idatasource-createconnection) | Creates a closed connection. The caller opens it. |
 | [createCommand(connection?)](#typescript-idatasource-createcommand-connection) | Creates a command bound to an optional open connection. |
-| [createRepository(connection?)](#typescript-idatasource-createrepository-connection) | Creates a CRUD repository bound to an optional open connection. |
-| [createReadonlyRepository(connection?)](#typescript-idatasource-createreadonlyrepository-connection) | Creates a read-only repository bound to an optional open connection. |
+| [createRepository(type, connection?)](#typescript-idatasource-createrepository-type-connection) | Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class. |
+| [createReadonlyRepository(type, connection?)](#typescript-idatasource-createreadonlyrepository-type-connection) | Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. |
 
 ###### createConnection() {#typescript-idatasource-createconnection}
 
@@ -953,40 +953,42 @@ createCommand(connection?: IConnection): ICommand
 
 [ICommand](#command)
 
-###### createRepository(connection?) {#typescript-idatasource-createrepository-connection}
+###### createRepository(type, connection?) {#typescript-idatasource-createrepository-type-connection}
 
-Creates a CRUD repository bound to an optional open connection.
+Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class.
 
 **Definition**
 
 ```typescript
-createRepository<T>(connection?: IConnection): ICRUDRepository<T>
+createRepository<T>(type: Constructable<T>, connection?: IConnection): ICRUDRepository<T>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
+| `type` | class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity |
 | `connection` | optional open [IConnection](#connection); omitted constructs one |
 
 **Returns**
 
 [ICRUDRepository](#crud-repository)`<T>`
 
-###### createReadonlyRepository(connection?) {#typescript-idatasource-createreadonlyrepository-connection}
+###### createReadonlyRepository(type, connection?) {#typescript-idatasource-createreadonlyrepository-type-connection}
 
-Creates a read-only repository bound to an optional open connection.
+Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`.
 
 **Definition**
 
 ```typescript
-createReadonlyRepository<T>(connection?: IConnection): IReadonlyRepository<T>
+createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection): IReadonlyRepository<T>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
+| `type` | class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity |
 | `connection` | optional open [IConnection](#connection); omitted constructs one |
 
 **Returns**
@@ -1058,7 +1060,7 @@ public interface IDatasource
 | [CreateConnection()](#csharp-idatasource-createconnection) | Creates a closed connection. The caller opens it. |
 | [CreateCommand(connection)](#csharp-idatasource-createcommand-connection) | Creates a command bound to an optional open connection. |
 | [CreateRepository(connection)](#csharp-idatasource-createrepository-connection) | Creates a CRUD repository bound to an optional open connection. |
-| [CreateReadonlyRepository(connection)](#csharp-idatasource-createreadonlyrepository-connection) | Creates a read-only repository bound to an optional open connection. Defaults to `CreateRepository`. |
+| [CreateReadonlyRepository(connection)](#csharp-idatasource-createreadonlyrepository-connection) | Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method. |
 
 ###### CreateConnection() {#csharp-idatasource-createconnection}
 
@@ -1116,7 +1118,7 @@ ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null)
 
 ###### CreateReadonlyRepository(connection) {#csharp-idatasource-createreadonlyrepository-connection}
 
-Creates a read-only repository bound to an optional open connection. Defaults to `CreateRepository`.
+Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method.
 
 **Definition**
 
@@ -1193,8 +1195,8 @@ pub trait Datasource
 | [provider()](#rust-datasource-provider) | Registered provider name. |
 | [create_connection()](#rust-datasource-create_connection) | Creates a closed connection. The caller opens it. |
 | [create_command(connection)](#rust-datasource-create_command-connection) | Creates a command bound to an optional open connection. |
-| [create_repository(connection)](#rust-datasource-create_repository-connection) | Creates a CRUD repository bound to an optional open connection. |
-| [create_readonly_repository(connection)](#rust-datasource-create_readonly_repository-connection) | Creates a read-only repository bound to an optional open connection. Defaults to `create_repository`. |
+| [create_repository(connection)](#rust-datasource-create_repository-connection) | Creates a CRUD repository for `T`, bound to an optional open connection. |
+| [create_readonly_repository(connection)](#rust-datasource-create_readonly_repository-connection) | Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`. |
 
 ###### provider() {#rust-datasource-provider}
 
@@ -1246,12 +1248,12 @@ fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Com
 
 ###### create_repository(connection) {#rust-datasource-create_repository-connection}
 
-Creates a CRUD repository bound to an optional open connection.
+Creates a CRUD repository for `T`, bound to an optional open connection.
 
 **Definition**
 
 ```rust
-fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ICRUDRepository>
+fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ICRUDRepository>
 ```
 
 **Parameters**
@@ -1266,12 +1268,12 @@ fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn 
 
 ###### create_readonly_repository(connection) {#rust-datasource-create_readonly_repository-connection}
 
-Creates a read-only repository bound to an optional open connection. Defaults to `create_repository`.
+Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`.
 
 **Definition**
 
 ```rust
-fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn IReadonlyRepository>
+fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn IReadonlyRepository>
 ```
 
 **Parameters**
@@ -1657,6 +1659,7 @@ async fn open_and_close() {
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L36-L41)
 
 ```typescript
+const connection = new MemoryConnection();
 await connection.open();
 await connection.close();
 ```
@@ -1684,6 +1687,7 @@ async fn start_a_transaction() {
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L43-L48)
 
 ```typescript
+const connection = new MemoryConnection();
 await connection.open();
 const txn = await connection.startTransaction();
 ```
@@ -1945,6 +1949,7 @@ async fn commit() {
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L52-L58)
 
 ```typescript
+const connection = new MemoryConnection();
 await connection.open();
 const txn = await connection.startTransaction();
 await txn.commit();
@@ -1975,6 +1980,7 @@ async fn abort() {
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L60-L66)
 
 ```typescript
+const connection = new MemoryConnection();
 await connection.open();
 const txn = await connection.startTransaction();
 await txn.abort();
@@ -3134,7 +3140,7 @@ while (await reader.next()) {
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1062-L1068)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1114-L1124)
 
 ```rust
 
@@ -3941,7 +3947,7 @@ var byId = new Where("id = 1");
 var withWhere = new QueryStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1071-L1074)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1126-L1129)
 
 ```rust
 let mock = MockQuery::with_where("q", MockWhere::new("w"));
@@ -3971,7 +3977,7 @@ var query = new QueryStatement("users", ["id", "name"], where);
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L877-L883)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L935)
 
 ```rust
     "SELECT id, name FROM users WHERE id = $id AND age > $age"
@@ -4265,7 +4271,7 @@ var insert = new InsertStatement("users", fields);
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L923-L927)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L975-L979)
 
 ```rust
 );
@@ -4585,7 +4591,7 @@ var update = new UpdateStatement("users", fields, where);
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L928-L933)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L985)
 
 ```rust
 );
@@ -4914,7 +4920,7 @@ var delete = new DeleteStatement("users", where);
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L937-L942)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L994)
 
 ```rust
 );
@@ -5842,9 +5848,13 @@ var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER")
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L947-L955)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L995-L1003)
 
 ```rust
+let create_table = CreateTableStatement::new(
+    "users",
+    &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
+    &[],
 );
 ```
 
@@ -5896,7 +5906,7 @@ var namedTable = new CreateTableStatement(
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L956-L979)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1008-L1031)
 
 ```rust
             .default(ColumnDefault::new("0", Some("df_id")))
@@ -6209,10 +6219,10 @@ var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_i
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1028-L1031)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1076-L1083)
 
 ```rust
-);
+let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);
 ```
 
 **After: create index**
@@ -6247,7 +6257,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1033-L1035)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1085-L1087)
 
 ```rust
 let call = ExecuteStoredProcedureStatement::new("save", &fields);
@@ -6521,7 +6531,7 @@ var call = new ExecuteStoredProcedureStatement("save", fields);
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1037-L1038)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1089-L1090)
 
 ```rust
     "CALL save()"
@@ -6796,7 +6806,7 @@ var ret = new ReturnStatement("add", fields);
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1043-L1044)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1095-L1096)
 
 ```rust
 ExecuteStoredProcedureStatement::new(
@@ -7204,7 +7214,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L654-L658)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L659-L663)
 
 ```rust
 ));
@@ -7257,7 +7267,7 @@ var query = new QueryStatement("users", ["id", "name"], where);
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L877-L883)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L935)
 
 ```rust
     "SELECT id, name FROM users WHERE id = $id AND age > $age"
@@ -7650,16 +7660,16 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operat
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L704-L719)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L743-L758)
 
 ```rust
-        Operator::equals("name", "a")
-    ))
     .parameters()
     .len(),
     3
 );
-let not_where = WhereClause::new(Operator::not(WhereClause::new(Operator::equals("id", 1_i64))));
+let not_where = WhereClause::new(Operator::not(WhereClause::new(Operator::equals(
+    "id", 1_i64,
+))));
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L63-L73)
@@ -7798,7 +7808,7 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1092-L1093)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1166-L1170)
 
 ```rust
 
@@ -8819,13 +8829,13 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 
 #### Read and read single
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L62-L72)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L61-L71)
 
 ```csharp
 ["id"] = 1, ["name"] = "a" 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L845-L851)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L892-L898)
 
 ```rust
         Operator::equals("age", 18_i64)
@@ -8944,7 +8954,7 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | Name | Description |
 | --- | --- |
 | [CRUDRepository(type, connection)](#typescript-crudrepository-crudrepository-type-connection) | Builds a table repository from a type and [IConnection](#connection). |
-| [CRUDRepository(options)](#typescript-crudrepository-crudrepository-options) | Builds a table repository from [RepositoryBuilderOptions](#typescript-repositorybuilderoptions). |
+| [CRUDRepository(connection, options)](#typescript-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [RepositoryOptions](#typescript-repositoryoptions). |
 | [CRUDRepository(built)](#typescript-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#typescript-builtrepository). |
 
 **Properties**
@@ -8983,21 +8993,22 @@ constructor(type: Constructable<T>, connection: IConnection)
 | `type` | item constructor |
 | `connection` | open [IConnection](#connection) |
 
-###### CRUDRepository(options) {#typescript-crudrepository-crudrepository-options}
+###### CRUDRepository(connection, options) {#typescript-crudrepository-crudrepository-connection-options}
 
-Builds a table repository from [RepositoryBuilderOptions](#typescript-repositorybuilderoptions).
+Builds a table repository from an [IConnection](#connection) and [RepositoryOptions](#typescript-repositoryoptions).
 
 **Definition**
 
 ```typescript
-constructor(options: RepositoryBuilderOptions<T>)
+constructor(connection: IConnection, options: RepositoryOptions<T>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `options` | [RepositoryBuilderOptions](#typescript-repositorybuilderoptions) |
+| `connection` | open [IConnection](#connection) |
+| `options` | [RepositoryOptions](#typescript-repositoryoptions) |
 
 ###### CRUDRepository(built) {#typescript-crudrepository-crudrepository-built}
 
@@ -9117,17 +9128,16 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 `Promise<Response>`
 
-##### RepositoryBuilderOptions {#typescript-repositorybuilderoptions}
+##### RepositoryOptions {#typescript-repositoryoptions}
 
 ```typescript
-type RepositoryBuilderOptions<T = Cells>
+type RepositoryOptions<T = Cells>
 ```
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| connection | Open [IConnection](#connection). |
 | ids | Id column names. Default `["id"]`. |
 | entity | Table or entity name. |
 | mapping | Row [TypeConverter](#type-converter). |
@@ -9241,7 +9251,7 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 | Name | Description |
 | --- | --- |
 | [CRUDRepository(connection)](#csharp-crudrepository-crudrepository-connection) | Builds a table repository from an [IConnection](#connection). |
-| [CRUDRepository(options)](#csharp-crudrepository-crudrepository-options) | Builds a table repository from [RepositoryBuilderOptions](#csharp-repositorybuilderoptions). |
+| [CRUDRepository(connection, options)](#csharp-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [RepositoryOptions](#csharp-repositoryoptions). |
 | [CRUDRepository(built)](#csharp-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#csharp-builtrepository). |
 
 **Properties**
@@ -9277,21 +9287,22 @@ public Repository(IConnection connection)
 | --- | --- |
 | `connection` | open [IConnection](#connection) |
 
-###### CRUDRepository(options) {#csharp-crudrepository-crudrepository-options}
+###### CRUDRepository(connection, options) {#csharp-crudrepository-crudrepository-connection-options}
 
-Builds a table repository from [RepositoryBuilderOptions](#csharp-repositorybuilderoptions).
+Builds a table repository from an [IConnection](#connection) and [RepositoryOptions](#csharp-repositoryoptions).
 
 **Definition**
 
 ```csharp
-public Repository(RepositoryBuilderOptions<T> options)
+public Repository(IConnection connection, RepositoryOptions<T> options)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `options` | [RepositoryBuilderOptions](#csharp-repositorybuilderoptions) |
+| `connection` | open [IConnection](#connection) |
+| `options` | [RepositoryOptions](#csharp-repositoryoptions) |
 
 ###### CRUDRepository(built) {#csharp-crudrepository-crudrepository-built}
 
@@ -9411,17 +9422,16 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 
 `Task<Response>`
 
-##### RepositoryBuilderOptions {#csharp-repositorybuilderoptions}
+##### RepositoryOptions {#csharp-repositoryoptions}
 
 ```csharp
-public sealed class RepositoryBuilderOptions<T> where T : new()
+public sealed class RepositoryOptions<T> where T : new()
 ```
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| Connection | Open [IConnection](#connection). |
 | Ids | Id column names. Default `["id"]`. |
 | Entity | Table or entity name. |
 | Mapping | Row [TypeConverter](#type-converter). |
@@ -9534,7 +9544,7 @@ pub struct CRUDRepository
 | Name | Description |
 | --- | --- |
 | [from_type(connection)](#rust-crudrepository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
-| [new(options)](#rust-crudrepository-new-options) | Builds a table repository from [RepositoryBuilderOptions](#rust-repositorybuilderoptions). |
+| [new(connection, options)](#rust-crudrepository-new-connection-options) | Builds a table repository from a [Connection](#connection) and [RepositoryOptions](#rust-repositoryoptions). |
 | [from_built(built)](#rust-crudrepository-from_built-built) | Builds a table repository from [BuiltRepository](#rust-builtrepository). |
 
 **Properties**
@@ -9569,21 +9579,22 @@ pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) ->
 
 `Result<`[CRUDRepository](#rust-crudrepository)`>`
 
-###### new(options) {#rust-crudrepository-new-options}
+###### new(connection, options) {#rust-crudrepository-new-connection-options}
 
-Builds a table repository from [RepositoryBuilderOptions](#rust-repositorybuilderoptions).
+Builds a table repository from a [Connection](#connection) and [RepositoryOptions](#rust-repositoryoptions).
 
 **Definition**
 
 ```rust
-pub fn new(options: RepositoryBuilderOptions) -> Result<Self>
+pub fn new(connection: Arc<dyn Connection>, options: RepositoryOptions) -> Result<Self>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `options` | [RepositoryBuilderOptions](#rust-repositorybuilderoptions) |
+| `connection` | [Connection](#connection) |
+| `options` | [RepositoryOptions](#rust-repositoryoptions) |
 
 **Returns**
 
@@ -9625,48 +9636,21 @@ pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>)
 | --- | --- |
 | `middleware` | command middleware |
 
-##### RepositoryBuilderOptions {#rust-repositorybuilderoptions}
+##### RepositoryOptions {#rust-repositoryoptions}
 
 ```rust
-pub struct RepositoryBuilderOptions
+pub struct RepositoryOptions
 ```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [with_factory(connection)](#rust-repositorybuilderoptions-with_factory-connection) | Defaults: `ids = ["id"]`, `entity = "items"`. |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| connection | [Connection](#connection). |
-| ids | Id column names. |
-| entity | Table or entity name. |
+| ids | Id column names. Default `["id"]`. |
+| entity | Table or entity name. Default `"items"`. |
 | mapping | Row [RowTypeConverter](#row-type-converter). |
 | mapper | Read-row [TransformMapper](#transform-mapper). |
 | crud_mapper | [CRUDMapper](#crud-mapper). |
-
-###### with_factory(connection) {#rust-repositorybuilderoptions-with_factory-connection}
-
-Defaults: `ids = ["id"]`, `entity = "items"`.
-
-**Definition**
-
-```rust
-pub fn with_factory(connection: Arc<dyn Connection>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | [Connection](#connection) |
-
-**Returns**
-
-[RepositoryBuilderOptions](#rust-repositorybuilderoptions)
 
 ##### BuiltRepository {#rust-builtrepository}
 
@@ -9694,16 +9678,16 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 
 #### Create, update, and delete
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L101-L109)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L100-L108)
 
 ```csharp
 await repo.Create(obj);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1376-L1390)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1468-L1482)
 
 ```rust
-);
+repo.create(&mut obj).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L103-L113)
@@ -11026,7 +11010,7 @@ await foreach (var item in repo.Read())
     items.Add(item);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1235-L1244)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1333-L1342)
 
 ```rust
 StatementEvaluator.evaluate_where(&TextWhere::new("id = 1"), &Row::new());
@@ -11453,7 +11437,7 @@ var response = await repo.Create(
 ]);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1777-L1794)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1862-L1879)
 
 ```rust
 let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
@@ -13133,25 +13117,10 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L56-L81)
 
 ```csharp
-{
-    var statements = new RepositoryStatements(
-        "users",
-        ["id", "name"],
-        new TransformMapper<IQuery, IQuery>(
-            query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
-            query => query),
-        new TransformMapper<IInsertStatement, IInsertStatement>(
-            insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
-            insert => insert),
-        new TransformMapper<IUpdateStatement, IUpdateStatement>(
-            update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
-            update => update),
-        new TransformMapper<IDeleteStatement, IDeleteStatement>(
-            delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),
-            delete => delete));
+query.GetText()
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1615-L1677)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1701-L1763)
 
 ```rust
 "id" => "user_id".into(),
@@ -13193,18 +13162,12 @@ it("rewrites each finished statement", () => {
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L84-L95)
 
 ```csharp
-{
-    var mapper = new CRUDMapper<UserRow>
-    {
-        Return = new TransformMapper<IReturnStatement, IReturnStatement>(
-            ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
-            ret => ret)
-    };
-    var built = new ReturnStatement("add", [new Parameter("id", 1)]);
-    var statement = mapper.Return is { } map ? map.Map(built) : built;
+Return = new TransformMapper<IReturnStatement, IReturnStatement>(
+    ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
+    ret => ret)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1285-L1294)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1383-L1392)
 
 ```rust
     |text| text,

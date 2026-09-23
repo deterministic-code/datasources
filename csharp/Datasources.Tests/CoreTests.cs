@@ -484,6 +484,7 @@ public class CoreTests
         Assert.False(connection.IsOpen);
         Assert.Same(connection, ds.CreateCommand().Connection);
         Assert.IsType<CRUDRepository<object>>(ds.CreateRepository<object>());
+        Assert.IsType<ReadonlyRepository<object>>(ds.CreateReadonlyRepository<object>());
         DatasourceFactory.Reset();
         var error = Assert.Throws<DatasourceException>(() => DatasourceFactory.Create());
         Assert.Equal("Datasource defaults are not specified", error.Message);

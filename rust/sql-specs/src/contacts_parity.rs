@@ -7,8 +7,8 @@ use crate::from_mapped_contacts::from_mapped_contacts;
 use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Command, Connection, ConsoleCommandMiddleware, FlatToNestedMapper, Mapper,
-    CRUDRepository, IReadonlyRepository, RepositoryBuilderOptions, TypeConverter, Value,
+    CRUDRepository, Command, Connection, ConsoleCommandMiddleware, FlatToNestedMapper,
+    IReadonlyRepository, Mapper, RepositoryOptions, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -47,18 +47,16 @@ pub async fn contacts_parity(
         if verbose { "true" } else { "false" }.into(),
     );
     let middleware = Arc::new(ConsoleCommandMiddleware::new().options(options));
-    let mut cells = RepositoryBuilderOptions::with_factory(connection.clone());
+    let mut cells = RepositoryOptions::default();
     cells.entity = "contacts_base".into();
     cells.mapping = Some(RowTypeConverter::new(Vec::new()));
-    let mut join_repo = CRUDRepository::new(cells).expect("join repo");
+    let mut join_repo = CRUDRepository::new(connection.clone(), cells).expect("join repo");
     join_repo.add_middleware(middleware.clone());
     let query = contacts_join_query();
-    let eager = from_mapped_contacts(
-        &Mapper::map(
-            &FlatToNestedMapper::new(contacts_view()),
-            join_repo.read(Some(&query)).await?,
-        ),
-    );
+    let eager = from_mapped_contacts(&Mapper::map(
+        &FlatToNestedMapper::new(contacts_view()),
+        join_repo.read(Some(&query)).await?,
+    ));
     let enriched = from_enriched_contacts(
         &contacts_service_of(connection, verbose.then_some(middleware), field)
             .read(None)

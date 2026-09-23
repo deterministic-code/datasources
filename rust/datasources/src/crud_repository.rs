@@ -1,24 +1,24 @@
-use crate::{Expression, Literal, Operator, WhereClause};
 use crate::built_repository::BuiltRepository;
-use crate::crud_mapper::CRUDMapper;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
-use crate::create_repository_builder_options::create_repository_builder_options;
+use crate::create_repository_options::create_repository_options;
+use crate::crud_mapper::CRUDMapper;
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
+use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::mappers::Mapper;
+use crate::repository_options::RepositoryOptions;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::value::Value;
 use crate::table_repository_builder::RepositoryBuilder;
-use crate::table_repository_builder_options::RepositoryBuilderOptions;
+use crate::value::Value;
 use crate::where_trait::Where;
+use crate::{Expression, Literal, Operator, WhereClause};
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::collections::HashSet;
@@ -32,22 +32,27 @@ pub struct CRUDRepository {
 }
 
 impl RepositoryBuilder {
-    pub fn build(options: RepositoryBuilderOptions) -> Result<CRUDRepository> {
-        CRUDRepository::new(options)
+    pub fn build(
+        connection: Arc<dyn Connection>,
+        options: RepositoryOptions,
+    ) -> Result<CRUDRepository> {
+        CRUDRepository::new(connection, options)
     }
 }
 
 impl CRUDRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = create_repository_builder_options::<T>(connection.clone());
+        let mut options = create_repository_options::<T>();
         options.mapping = Some(RowTypeConverter::of::<T>());
-        let mut repo = Self::new(options)?;
+        let mut repo = Self::new(connection, options)?;
         repo.inner.entity_type = TypeId::of::<T>();
         Ok(repo)
     }
 
-    pub fn new(options: RepositoryBuilderOptions) -> Result<Self> {
-        Ok(Self::from_built(RepositoryBuilder::parts(options)?))
+    pub fn new(connection: Arc<dyn Connection>, options: RepositoryOptions) -> Result<Self> {
+        Ok(Self::from_built(RepositoryBuilder::parts(
+            connection, options,
+        )?))
     }
 
     pub fn from_built(built: BuiltRepository) -> Self {
@@ -86,7 +91,10 @@ impl CRUDRepository {
                 let value = record.get(col).ok_or_else(|| {
                     DatasourceError::message(format!("Missing Id value \"{col}\""))
                 })?;
-                Ok(Expression::from(Operator::equals(col.clone(), value.clone())))
+                Ok(Expression::from(Operator::equals(
+                    col.clone(),
+                    value.clone(),
+                )))
             })
             .collect::<Result<Vec<_>>>()?;
         Ok(WhereClause::new(and_all(children)))
@@ -130,7 +138,10 @@ impl ICRUDRepository for CRUDRepository {
             .execute_statement(&statement, Some(&fields))
             .await?;
         if response.result != Value::Null {
-            apply(item, Mapper::map(&self.crud_mapper.create, response.result.clone()));
+            apply(
+                item,
+                Mapper::map(&self.crud_mapper.create, response.result.clone()),
+            );
         }
         Ok(response)
     }

@@ -40,9 +40,8 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        return (new CRUDRepository<T>(new RepositoryBuilderOptions<T>
+        return (new CRUDRepository<T>(connection, new RepositoryOptions<T>
         {
-            Connection = connection,
             Ids = id ?? ["id"],
             Entity = "users"
         }), command);
@@ -139,9 +138,8 @@ public class RepositoryTests
         var connection2 = new MockConnection { Provider = "memory" };
         var command2 = new MockCommand(connection2);
         connection2.Command = command2;
-        var typed = new CRUDRepository<Item>(new RepositoryBuilderOptions<Item>
+        var typed = new CRUDRepository<Item>(connection2, new RepositoryOptions<Item>
         {
-            Connection = connection2,
             Entity = "users"
         });
         await typed.Create(new Item { Id = 1, Name = "a" });
@@ -190,9 +188,8 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new CRUDRepository<UserRow>(new RepositoryBuilderOptions<UserRow>
+        var repo = new CRUDRepository<UserRow>(connection, new RepositoryOptions<UserRow>
         {
-            Connection = connection,
             Entity = "users",
             Mapper = new TransformMapper<UserRow, UserRow>(
                 row => { row.name = row.name.ToUpperInvariant(); return row; },
@@ -208,9 +205,8 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new CRUDRepository<User>(new RepositoryBuilderOptions<User>
+        var repo = new CRUDRepository<User>(connection, new RepositoryOptions<User>
         {
-            Connection = connection,
             Entity = "users",
             Mapper = UserContactsMapper()
         });
@@ -249,9 +245,8 @@ public class RepositoryTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new CRUDRepository<User>(new RepositoryBuilderOptions<User>
+        var repo = new CRUDRepository<User>(connection, new RepositoryOptions<User>
         {
-            Connection = connection,
             Entity = "users",
             Mapper = UserContactsMapper()
         });
@@ -276,16 +271,18 @@ public class RepositoryTests
     }
 
     [Fact]
-    public void FromTypeBuildsOptionsFromConnection()
+    public void FromTypeBuildsOptions()
     {
         var connection = new MockConnection();
-        var fromId = CreateRepositoryBuilderOptions.FromType<Item>(typeof(Item), connection);
+        var fromId = CreateRepositoryOptions.FromType<Item>(typeof(Item));
         Assert.Equal(new[] { "Id" }, fromId.Ids);
-        Assert.Same(connection, fromId.Connection);
-        Assert.Empty(CreateRepositoryBuilderOptions.FromType<Label>(connection).Ids);
-        Assert.NotNull(new CRUDRepository<Item>(fromId));
+        Assert.Equal(nameof(Item), fromId.Entity);
+        Assert.Empty(CreateRepositoryOptions.FromType<Label>().Ids);
+        Assert.NotNull(new CRUDRepository<Item>(connection, fromId));
         Assert.NotNull(new CRUDRepository<Item>(connection));
-        Assert.Same(connection, RepositoryBuilder<Item>.Parts(fromId).Connection);
+        Assert.NotNull(new ReadonlyRepository<Item>(connection, fromId));
+        Assert.NotNull(new ReadonlyRepository<Item>(connection));
+        Assert.Same(connection, RepositoryBuilder<Item>.Parts(connection, fromId).Connection);
     }
 
     sealed class PassMiddleware : ICommandMiddleware

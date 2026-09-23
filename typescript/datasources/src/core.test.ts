@@ -6,6 +6,7 @@ import {
   ArrayReader,
   collectAsync,
   CRUDRepository,
+  ReadonlyRepository,
   createStubDatasource,
   Datasource,
   bindInstall,
@@ -41,6 +42,7 @@ import {
   StubReader,
   StubRepository,
   StubTransaction,
+  untyped,
   Where,
   type IReader,
 } from "./index.ts";
@@ -449,8 +451,24 @@ describe("Datasource registry", () => {
     const connection = await ds.createConnection();
     expect(connection.isOpen).toBe(false);
     expect(ds.createCommand().connection).toBe(connection);
-    expect(ds.createRepository()).toBeInstanceOf(CRUDRepository);
-    expect(ds.createReadonlyRepository()).toBeInstanceOf(CRUDRepository);
+    expect(ds.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
+    expect(ds.createReadonlyRepository(untyped()).constructor).toBe(ReadonlyRepository);
+    class Item {
+      id = 0;
+      name = "";
+    }
+    const typed = ds.createRepository(Item, connection);
+    const typedRead = ds.createReadonlyRepository(Item);
+    expect(typed).toBeInstanceOf(CRUDRepository);
+    expect(typed.type).toBe(Item);
+    expect(typed instanceof CRUDRepository && typed.statements?.query().getText()).toBe(
+      "SELECT id, name FROM Item",
+    );
+    expect(typedRead.constructor).toBe(ReadonlyRepository);
+    expect(typedRead.type).toBe(Item);
+    expect(typedRead instanceof ReadonlyRepository && typedRead.statements?.query().getText()).toBe(
+      "SELECT id, name FROM Item",
+    );
     expect(new DatasourceFactory().create({
       provider: "sqlite",
       database_schema: "main",
@@ -510,7 +528,7 @@ describe("stubs", () => {
     const bound = ds.createCommand(provided);
     expect(bound.connection).toBe(provided);
 
-    const repo = ds.createRepository(provided);
+    const repo = ds.createRepository(untyped(), provided);
     expect(repo).toBeInstanceOf(StubRepository);
     await expect(repo.readSingle()).rejects.toThrow(ProviderNotImplementedError);
     await expect(repo.readSingle(new Where("1=1"))).rejects.toThrow(
@@ -528,8 +546,8 @@ describe("stubs", () => {
       ProviderNotImplementedError,
     );
 
-    expect(ds.createRepository()).toBeInstanceOf(StubRepository);
-    expect(ds.createReadonlyRepository(provided)).toBeInstanceOf(StubRepository);
+    expect(ds.createRepository(untyped())).toBeInstanceOf(StubRepository);
+    expect(ds.createReadonlyRepository(untyped(), provided)).toBeInstanceOf(StubRepository);
 
     const txn = new StubTransaction("text", provided);
     await expect(txn.commit()).rejects.toThrow(ProviderNotImplementedError);
@@ -668,14 +686,14 @@ describe("published mocks", () => {
     await mockCommand.executeReader("");
     const provided = new MockConnection();
     expect(ds.createCommand(provided).connection).toBe(provided);
-    expect(ds.createRepository(provided)).toBeInstanceOf(MockRepository);
-    expect(ds.createRepository()).toBeInstanceOf(MockRepository);
+    expect(ds.createRepository(untyped(), provided)).toBeInstanceOf(MockRepository);
+    expect(ds.createRepository(untyped())).toBeInstanceOf(MockRepository);
 
     ds.command = new MockCommand(ds.connection);
     ds.repository = new MockRepository(ds.connection);
     expect(ds.createCommand()).toBe(ds.command);
-    expect(ds.createRepository()).toBe(ds.repository);
-    expect(ds.createReadonlyRepository()).toBe(ds.repository);
+    expect(ds.createRepository(untyped())).toBe(ds.repository);
+    expect(ds.createReadonlyRepository(untyped())).toBe(ds.repository);
 
     const named = new MockDatasource("custom");
     expect(named.provider).toBe("custom");

@@ -216,7 +216,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](./where-claus
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L158-L160
 ```
-```rust rust/datasources/src/tests/mod.rs#L937-L942
+```rust rust/datasources/src/tests/mod.rs#L989-L994
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L233-L235
 ```

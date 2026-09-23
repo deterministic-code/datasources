@@ -183,7 +183,7 @@ Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](./command.
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L151-L152
 ```
-```rust rust/datasources/src/tests/mod.rs#L923-L927
+```rust rust/datasources/src/tests/mod.rs#L975-L979
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L221-L224
 ```

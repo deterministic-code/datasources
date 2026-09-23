@@ -2,12 +2,10 @@ use base64::Engine;
 use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CRUDRepository, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
-    ICRUDRepository, IReadonlyRepository,
-    DeleteStatement, Expression, InsertStatement, Literal, Operator,
-    Parameter, QueryStatement, RepositoryBuilder,
-    CRUDMapper, RepositoryBuilderOptions, Result, Row, Text, TransformMapper,
-    TypeConverter, UpdateStatement, Value, WhereClause,
+    CRUDMapper, CRUDRepository, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
+    DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository, InsertStatement, Literal,
+    Operator, Parameter, QueryStatement, RepositoryBuilder, RepositoryOptions, Result, Row, Text,
+    TransformMapper, TypeConverter, UpdateStatement, Value, WhereClause,
 };
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -39,10 +37,10 @@ pub use contact_lookups::ContactLookups;
 pub use contact_view::{AddressView, ContactView, PhoneView};
 pub use contacts_join_query::contacts_join_query;
 pub use contacts_parity::{apply_sql, contact_schema, contacts_parity, statements_of};
-pub use contacts_view::contacts_view;
-pub use from_mapped_contacts::from_mapped_contacts;
 pub use contacts_service_of::contacts_service_of;
+pub use contacts_view::contacts_view;
 pub use expect_contacts_view::{contact_with, expect_contacts_view};
+pub use from_mapped_contacts::from_mapped_contacts;
 pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
 
 pub struct SpecColumn {
@@ -524,8 +522,7 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(read) = &step.read {
                 let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&read.id)));
                 with_statement_sql(
-                    QueryStatement::new(&table, &refs, Some(&where_clause), &[])
-                        .get_text(),
+                    QueryStatement::new(&table, &refs, Some(&where_clause), &[]).get_text(),
                     false,
                     &spec.type_spec,
                 )
@@ -545,18 +542,17 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(read_by) = &step.read_by {
                 let where_clause = where_sql(&read_by.where_clause);
                 with_statement_sql(
-                    QueryStatement::new(&table, &refs, Some(&where_clause), &[])
-                        .get_text(),
+                    QueryStatement::new(&table, &refs, Some(&where_clause), &[]).get_text(),
                     false,
                     &spec.type_spec,
                 )
             } else if let Some(update) = &step.update {
                 let flat = flatten_yaml(&update.row, &spec.type_spec.mappings);
                 let fields = fields_of(&flat, |col| !ids.contains(col));
-                let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&flat["id"])));
+                let where_clause =
+                    WhereClause::new(Operator::equals("id", yaml_value(&flat["id"])));
                 with_statement_sql(
-                    UpdateStatement::new(&table, &fields, Some(&where_clause))
-                        .get_text(),
+                    UpdateStatement::new(&table, &fields, Some(&where_clause)).get_text(),
                     true,
                     &spec.type_spec,
                 )
@@ -567,8 +563,7 @@ fn queries(spec: &Spec) -> Vec<String> {
                 );
                 let where_clause = where_sql(&update_by.where_clause);
                 with_statement_sql(
-                    UpdateStatement::new(&table, &fields, Some(&where_clause))
-                        .get_text(),
+                    UpdateStatement::new(&table, &fields, Some(&where_clause)).get_text(),
                     true,
                     &spec.type_spec,
                 )
@@ -658,17 +653,14 @@ pub async fn run(
         )
         .await?;
     let mapping = mapping_of(&spec, dialect);
-    let options = RepositoryBuilderOptions {
-        connection,
+    let options = RepositoryOptions {
         ids: spec.type_spec.ids.clone(),
         entity: spec.type_spec.table.clone(),
         mapping: Some(mapping_of(&spec, dialect)),
-        mapper: None,
         crud_mapper: Some(crud_mapper_of(&spec, dialect)),
-        types: Default::default(),
-        fields: Default::default(),
+        ..Default::default()
     };
-    let built = RepositoryBuilder::parts(options).unwrap();
+    let built = RepositoryBuilder::parts(connection, options).unwrap();
     let logs = Arc::new(Mutex::new(Vec::<String>::new()));
     let middleware: Arc<dyn CommandMiddleware> = Arc::new(
         ConsoleCommandMiddleware::with_sink(
@@ -700,7 +692,9 @@ pub async fn run(
                     .await
                     .unwrap();
             }
-            Step { read: Some(read), .. } => {
+            Step {
+                read: Some(read), ..
+            } => {
                 let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&read.id)));
                 let row = repo.read_single_where(&where_clause).await.unwrap();
                 if let Some(expect) = &read.expect {

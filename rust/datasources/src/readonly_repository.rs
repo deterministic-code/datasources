@@ -3,20 +3,20 @@ use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
-use crate::create_repository_builder_options::create_repository_builder_options;
-use crate::i_repository::IRepository;
+use crate::create_repository_options::create_repository_options;
 use crate::crud_mapper::CRUDMapper;
+use crate::i_repository::IRepository;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
-use crate::statement::Statement;
-use crate::text_query::QueryStatement;
 use crate::repository::IReadonlyRepository;
+use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::table_repository_builder::RepositoryBuilder;
-use crate::table_repository_builder_options::RepositoryBuilderOptions;
 use crate::table_repository_statements::RepositoryStatements;
+use crate::text_query::QueryStatement;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -33,15 +33,17 @@ pub struct ReadonlyRepository {
 
 impl ReadonlyRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = create_repository_builder_options::<T>(connection.clone());
+        let mut options = create_repository_options::<T>();
         options.mapping = Some(RowTypeConverter::of::<T>());
-        let mut repo = Self::new(options)?;
+        let mut repo = Self::new(connection, options)?;
         repo.entity_type = TypeId::of::<T>();
         Ok(repo)
     }
 
-    pub fn new(options: RepositoryBuilderOptions) -> Result<Self> {
-        Ok(Self::from_built(RepositoryBuilder::parts(options)?))
+    pub fn new(connection: Arc<dyn Connection>, options: RepositoryOptions) -> Result<Self> {
+        Ok(Self::from_built(RepositoryBuilder::parts(
+            connection, options,
+        )?))
     }
 
     pub fn from_built(built: BuiltRepository) -> Self {
@@ -74,9 +76,10 @@ impl ReadonlyRepository {
                 .map(|predicate| predicate.parameters())
                 .unwrap_or_else(|| query.parameters());
             let statement = match query.where_clause() {
-                Some(predicate) => {
-                    QueryStatement::with_where(query.get_text(), crate::text_where::TextWhere::new(predicate.get_text()))
-                }
+                Some(predicate) => QueryStatement::with_where(
+                    query.get_text(),
+                    crate::text_where::TextWhere::new(predicate.get_text()),
+                ),
                 None => QueryStatement::text(query.get_text()),
             };
             (statement, params)
@@ -131,10 +134,8 @@ impl ReadonlyRepository {
     }
 
     pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        self.row_converter.reverse_convert(&Mapper::reverse_map(
-            &self.crud_mapper.rows,
-            item.clone(),
-        ))
+        self.row_converter
+            .reverse_convert(&Mapper::reverse_map(&self.crud_mapper.rows, item.clone()))
     }
 }
 

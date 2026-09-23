@@ -73,15 +73,16 @@ constructor(type: Constructable<T>, connection: IConnection)
 - `type` — item constructor
 - `connection` — open [IConnection](./connection.md)
 
-##### CRUDRepository(options)
+##### CRUDRepository(connection, options)
 
-Builds a table repository from [RepositoryBuilderOptions](#repositorybuilderoptions).
+Builds a table repository from an [IConnection](./connection.md) and [RepositoryOptions](#repositoryoptions).
 
 ```typescript
-constructor(options: RepositoryBuilderOptions<T>)
+constructor(connection: IConnection, options: RepositoryOptions<T>)
 ```
 
-- `options` — [RepositoryBuilderOptions](#repositorybuilderoptions)
+- `connection` — open [IConnection](./connection.md)
+- `options` — [RepositoryOptions](#repositoryoptions)
 
 ##### CRUDRepository(built)
 
@@ -191,23 +192,15 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 **Returns** `Promise<Response>`
 
-#### RepositoryBuilderOptions
+#### RepositoryOptions
 
 ```typescript
-type RepositoryBuilderOptions<T = Cells>
+type RepositoryOptions<T = Cells>
 ```
 
 Constructor bag for [CRUDRepository](#repository).
 
 **Properties**
-
-##### connection
-
-Open [IConnection](./connection.md).
-
-```typescript
-connection: IConnection
-```
 
 ##### ids
 
@@ -380,15 +373,16 @@ public Repository(IConnection connection)
 
 - `connection` — open [IConnection](./connection.md)
 
-##### CRUDRepository(options)
+##### CRUDRepository(connection, options)
 
-Builds a table repository from [RepositoryBuilderOptions](#repositorybuilderoptions).
+Builds a table repository from an [IConnection](./connection.md) and [RepositoryOptions](#repositoryoptions).
 
 ```csharp
-public Repository(RepositoryBuilderOptions<T> options)
+public Repository(IConnection connection, RepositoryOptions<T> options)
 ```
 
-- `options` — [RepositoryBuilderOptions](#repositorybuilderoptions)
+- `connection` — open [IConnection](./connection.md)
+- `options` — [RepositoryOptions](#repositoryoptions)
 
 ##### CRUDRepository(built)
 
@@ -482,23 +476,15 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 
 **Returns** `Task<Response>`
 
-#### RepositoryBuilderOptions
+#### RepositoryOptions
 
 ```csharp
-public sealed class RepositoryBuilderOptions<T> where T : new()
+public sealed class RepositoryOptions<T> where T : new()
 ```
 
 Constructor bag for [CRUDRepository](#repository).
 
 **Properties**
-
-##### Connection
-
-Open [IConnection](./connection.md).
-
-```csharp
-required IConnection Connection { get; init; }
-```
 
 ##### Ids
 
@@ -665,15 +651,16 @@ pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) ->
 
 **Returns** `Result<`[CRUDRepository](#crudrepository)`>`
 
-##### new(options)
+##### new(connection, options)
 
-Builds a table repository from [RepositoryBuilderOptions](#repositorybuilderoptions).
+Builds a table repository from a [Connection](./connection.md) and [RepositoryOptions](#repositoryoptions).
 
 ```rust
-pub fn new(options: RepositoryBuilderOptions) -> Result<Self>
+pub fn new(connection: Arc<dyn Connection>, options: RepositoryOptions) -> Result<Self>
 ```
 
-- `options` — [RepositoryBuilderOptions](#repositorybuilderoptions)
+- `connection` — [Connection](./connection.md)
+- `options` — [RepositoryOptions](#repositoryoptions)
 
 **Returns** `Result<`[CRUDRepository](#crudrepository)`>`
 
@@ -711,41 +698,19 @@ pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>)
 
 - `middleware` — command middleware
 
-#### RepositoryBuilderOptions
+#### RepositoryOptions
 
 ```rust
-pub struct RepositoryBuilderOptions
+pub struct RepositoryOptions
 ```
 
-Constructor bag for [CRUDRepository](#repository).
-
-**Constructor**
-
-##### with_factory(connection)
-
-Defaults: `ids = ["id"]`, `entity = "items"`.
-
-```rust
-pub fn with_factory(connection: Arc<dyn Connection>) -> Self
-```
-
-- `connection` — [Connection](./connection.md)
-
-**Returns** [RepositoryBuilderOptions](#repositorybuilderoptions)
+Constructor bag for [CRUDRepository](#repository). `Default` sets `ids` to `["id"]` and `entity` to `"items"`.
 
 **Properties**
 
-##### connection
-
-[Connection](./connection.md).
-
-```rust
-pub connection: Arc<dyn Connection>
-```
-
 ##### ids
 
-Id column names.
+Id column names. Default `["id"]`.
 
 ```rust
 pub ids: Vec<String>
@@ -753,7 +718,7 @@ pub ids: Vec<String>
 
 ##### entity
 
-Table or entity name.
+Table or entity name. Default `"items"`.
 
 ```rust
 pub entity: String
@@ -845,9 +810,9 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 ### Create, update, and delete
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L101-L109
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#L100-L108
 ```
-```rust rust/datasources/src/tests/mod.rs#L1376-L1390
+```rust rust/datasources/src/tests/mod.rs#L1468-L1482
 ```
 ```typescript typescript/datasources/src/repository.test.ts#L103-L113
 ```

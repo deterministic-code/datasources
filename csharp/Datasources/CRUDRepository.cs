@@ -5,10 +5,10 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     readonly HashSet<string> ids;
 
     public CRUDRepository(IConnection connection) :
-        this(CreateRepositoryBuilderOptions.FromType<T>(connection)) { }
+        this(connection, CreateRepositoryOptions.FromType<T>()) { }
 
-    public CRUDRepository(RepositoryBuilderOptions<T> options) :
-        this(RepositoryBuilder<T>.Parts(options)) { }
+    public CRUDRepository(IConnection connection, RepositoryOptions<T> options) :
+        this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
     public CRUDMapper<T> CRUDMapper { get; }
 

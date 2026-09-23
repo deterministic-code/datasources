@@ -28,9 +28,8 @@ public class CRUDMapperTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        return (new CRUDRepository<UserRow>(new RepositoryBuilderOptions<UserRow>
+        return (new CRUDRepository<UserRow>(connection, new RepositoryOptions<UserRow>
         {
-            Connection = connection,
             Entity = "users",
             CRUDMapper = mapper
         }), command);

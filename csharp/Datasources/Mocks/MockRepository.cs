@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>
+public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 {
     public List<T> Items { get; } = new();
     public Exception? ReadSingleError { get; set; }

@@ -317,7 +317,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `And` / `Or` nest operat
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L78-L81
 ```
-```rust rust/datasources/src/tests/mod.rs#L704-L719
+```rust rust/datasources/src/tests/mod.rs#L743-L758
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L63-L73
 ```

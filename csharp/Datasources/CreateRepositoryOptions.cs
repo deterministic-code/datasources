@@ -3,23 +3,21 @@ using System.Reflection;
 
 namespace Datasources;
 
-public static class CreateRepositoryBuilderOptions
+public static class CreateRepositoryOptions
 {
-    public static RepositoryBuilderOptions<T> FromType<T>(
-        IConnection connection,
+    public static RepositoryOptions<T> FromType<T>(
         IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null)
         where T : new() =>
-        FromType<T>(typeof(T), connection, types);
+        FromType<T>(typeof(T), types);
 
-    public static RepositoryBuilderOptions<T> FromType<T>(
+    public static RepositoryOptions<T> FromType<T>(
         Type type,
-        IConnection connection,
         IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null)
         where T : new() =>
         new()
         {
             Ids = DefaultId(type),
-            Connection = connection,
+            Entity = type.Name,
             Types = types
         };
 

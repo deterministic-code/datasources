@@ -249,8 +249,7 @@ export const runRepositorySpec = async (
   await execute(dialect.createTable(physicalTableOf(spec.type), columnsOf(spec.type)).getText());
   const catalog = types;
   const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
-  const repo = new CRUDRepository<SpecRow>({
-    connection,
+  const repo = new CRUDRepository<SpecRow>(connection, {
     ids: spec.type.ids,
     type: typeOf(spec.type),
     entity: spec.type.table,

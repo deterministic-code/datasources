@@ -1,10 +1,14 @@
 use crate::command::Command;
 use crate::connection::Connection;
+use crate::converters::{ConvertSchema, RowTypeConverter, TypeConverter};
+use crate::create_repository_options::create_repository_options;
 use crate::crud_repository::CRUDRepository;
 use crate::driver::Driver;
-use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
+use crate::readonly_repository::ReadonlyRepository;
+use crate::repository::{ICRUDRepository, IReadonlyRepository};
+use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
-use crate::table_repository_builder_options::RepositoryBuilderOptions;
+use crate::value::Value;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -14,14 +18,47 @@ pub trait Datasource: Send + Sync {
     fn provider(&self) -> &str;
     async fn create_connection(&self) -> Result<Arc<dyn Connection>>;
     fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command>;
-    fn create_repository(&self, connection: Option<Arc<dyn Connection>>)
-        -> Arc<dyn ICRUDRepository>;
-    fn create_readonly_repository(
+    fn bind_connection(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Connection>;
+    fn row_type_converters(
+        &self,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>;
+    fn repository_from(
+        &self,
+        connection: Arc<dyn Connection>,
+        options: RepositoryOptions,
+    ) -> Arc<dyn ICRUDRepository>;
+    fn readonly_repository_from(
+        &self,
+        connection: Arc<dyn Connection>,
+        options: RepositoryOptions,
+    ) -> Arc<dyn IReadonlyRepository>;
+}
+
+impl dyn Datasource {
+    pub fn create_repository<T: ConvertSchema + 'static>(
+        &self,
+        connection: Option<Arc<dyn Connection>>,
+    ) -> Arc<dyn ICRUDRepository> {
+        let bound = self.bind_connection(connection);
+        self.repository_from(bound, repository_options::<T>(self))
+    }
+
+    pub fn create_readonly_repository<T: ConvertSchema + 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
     ) -> Arc<dyn IReadonlyRepository> {
-        as_readonly(self.create_repository(connection))
+        let bound = self.bind_connection(connection);
+        self.readonly_repository_from(bound, repository_options::<T>(self))
     }
+}
+
+fn repository_options<T: ConvertSchema + 'static>(
+    datasource: &dyn Datasource,
+) -> RepositoryOptions {
+    let mut options = create_repository_options::<T>();
+    options.mapping = Some(RowTypeConverter::of::<T>());
+    options.types = datasource.row_type_converters();
+    options
 }
 
 pub struct BuiltDatasource {
@@ -67,13 +104,29 @@ impl Datasource for BuiltDatasource {
             .command(connection.unwrap_or_else(|| self.default_connection()))
     }
 
-    fn create_repository(
+    fn bind_connection(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Connection> {
+        connection.unwrap_or_else(|| self.default_connection())
+    }
+
+    fn row_type_converters(
         &self,
-        connection: Option<Arc<dyn Connection>>,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+        self.driver.row_type_converters()
+    }
+
+    fn repository_from(
+        &self,
+        connection: Arc<dyn Connection>,
+        options: RepositoryOptions,
     ) -> Arc<dyn ICRUDRepository> {
-        let connection = connection.unwrap_or_else(|| self.default_connection());
-        let mut options = RepositoryBuilderOptions::with_factory(connection);
-        options.types = self.driver.row_type_converters();
-        Arc::new(CRUDRepository::new(options).expect("repository"))
+        Arc::new(CRUDRepository::new(connection, options).expect("repository"))
+    }
+
+    fn readonly_repository_from(
+        &self,
+        connection: Arc<dyn Connection>,
+        options: RepositoryOptions,
+    ) -> Arc<dyn IReadonlyRepository> {
+        Arc::new(ReadonlyRepository::new(connection, options).expect("repository"))
     }
 }

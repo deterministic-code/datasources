@@ -22,8 +22,7 @@ describe("repository type", () => {
   });
 
   it("untyped options report Object", () => {
-    const repo = new CRUDRepository({
-      connection: new MockConnection(),
+    const repo = new CRUDRepository(new MockConnection(), {
       entity: "items",
     });
     expect(repo.type).toBe(Object);

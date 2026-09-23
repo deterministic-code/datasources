@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Datasources;
 
-public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
+public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 {
     readonly ICRUDRepository<T> inner;
 

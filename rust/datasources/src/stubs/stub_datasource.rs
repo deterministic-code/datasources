@@ -2,10 +2,14 @@ use super::stub_connection::StubConnection;
 use super::stub_repository::StubRepository;
 use crate::command::Command;
 use crate::connection::Connection;
+use crate::converters::TypeConverter;
 use crate::datasource::Datasource;
-use crate::repository::ICRUDRepository;
+use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
+use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
+use crate::value::Value;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct StubDatasource {
@@ -40,10 +44,29 @@ impl Datasource for StubDatasource {
             .create_command()
     }
 
-    fn create_repository(
+    fn bind_connection(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Connection> {
+        connection.unwrap_or_else(|| self.new_connection())
+    }
+
+    fn row_type_converters(
         &self,
-        _connection: Option<Arc<dyn Connection>>,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+        HashMap::new()
+    }
+
+    fn repository_from(
+        &self,
+        _connection: Arc<dyn Connection>,
+        _options: RepositoryOptions,
     ) -> Arc<dyn ICRUDRepository> {
         Arc::new(StubRepository::new(self.provider.clone()))
+    }
+
+    fn readonly_repository_from(
+        &self,
+        connection: Arc<dyn Connection>,
+        options: RepositoryOptions,
+    ) -> Arc<dyn IReadonlyRepository> {
+        as_readonly(self.repository_from(connection, options))
     }
 }

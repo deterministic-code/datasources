@@ -909,7 +909,7 @@ Compiled form is `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTR
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L162-L163
 ```
-```rust rust/datasources/src/tests/mod.rs#L947-L955
+```rust rust/datasources/src/tests/mod.rs#L995-L1003
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L239-L243
 ```
@@ -924,7 +924,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L164-L177
 ```
-```rust rust/datasources/src/tests/mod.rs#L956-L979
+```rust rust/datasources/src/tests/mod.rs#L1008-L1031
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L244-L258
 ```

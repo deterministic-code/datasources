@@ -8,9 +8,8 @@ internal static class ContactsServiceOf
     {
         CRUDRepository<T> Of<T>(string entity, string[] columns) where T : new()
         {
-            var repo = new CRUDRepository<T>(new RepositoryBuilderOptions<T>
+            var repo = new CRUDRepository<T>(connection, new RepositoryOptions<T>
             {
-                Connection = connection,
                 Entity = entity,
                 Columns = columns
             });

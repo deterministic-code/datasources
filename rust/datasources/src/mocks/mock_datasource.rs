@@ -3,10 +3,14 @@ use super::mock_connection::MockConnection;
 use super::mock_repository::MockRepository;
 use crate::command::Command;
 use crate::connection::Connection;
+use crate::converters::TypeConverter;
 use crate::datasource::Datasource;
-use crate::repository::ICRUDRepository;
+use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
+use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
+use crate::value::Value;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct MockDatasource {
@@ -41,10 +45,29 @@ impl Datasource for MockDatasource {
         self.command.clone()
     }
 
-    fn create_repository(
+    fn bind_connection(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Connection> {
+        connection.unwrap_or_else(|| self.connection.clone())
+    }
+
+    fn row_type_converters(
         &self,
-        _connection: Option<Arc<dyn Connection>>,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+        HashMap::new()
+    }
+
+    fn repository_from(
+        &self,
+        _connection: Arc<dyn Connection>,
+        _options: RepositoryOptions,
     ) -> Arc<dyn ICRUDRepository> {
         self.repository.clone()
+    }
+
+    fn readonly_repository_from(
+        &self,
+        connection: Arc<dyn Connection>,
+        options: RepositoryOptions,
+    ) -> Arc<dyn IReadonlyRepository> {
+        as_readonly(self.repository_from(connection, options))
     }
 }

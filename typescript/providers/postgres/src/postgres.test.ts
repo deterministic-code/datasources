@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ParameterDirection, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, type IDriver } from "@datasources/core";
 import { bindParameters, toPostgres, withReturning } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
@@ -256,10 +256,10 @@ describe("Postgres datasource", () => {
     await implicit.connection.open();
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
-    const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
+    const repo = ds.createRepository(untyped(), connection);
+    expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
-    expect(new Datasource("postgres", of()).createRepository()).toBeInstanceOf(CRUDRepository);
+    expect(new Datasource("postgres", of()).createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "postgres" }).provider).toBe("postgres");
     const provided = PostgresConnection.from({
       database_url: "postgres://db/app",

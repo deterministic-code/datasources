@@ -165,7 +165,7 @@ Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX nam
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L209-L210
 ```
-```rust rust/datasources/src/tests/mod.rs#L1028-L1031
+```rust rust/datasources/src/tests/mod.rs#L1076-L1083
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L300-L301
 ```
@@ -180,7 +180,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L211-L213
 ```
-```rust rust/datasources/src/tests/mod.rs#L1033-L1035
+```rust rust/datasources/src/tests/mod.rs#L1085-L1087
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L302-L304
 ```
