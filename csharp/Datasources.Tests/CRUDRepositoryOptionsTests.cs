@@ -38,7 +38,7 @@ public class CRUDRepositoryOptionsTests
         {
             Entity = "users",
             EntityMapper = Entity(),
-            Columns = Columns()
+            ColumnMappings = Columns()
         });
         command.Reader = new MockReader<Row>([]);
         await repo.ReadSingle();
@@ -100,7 +100,7 @@ public class CRUDRepositoryOptionsTests
         {
             Entity = "users",
             EntityMapper = Entity(),
-            Columns = Columns(),
+            ColumnMappings = Columns(),
             Query = new TransformMapper<IQuery, IQuery>(
                 query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
                 query => query),

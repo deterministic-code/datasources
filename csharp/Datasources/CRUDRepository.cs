@@ -12,7 +12,7 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
         this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
     public CRUDRepository(BuiltRepository<T> built) : base(
-        built.Connection, built.RowConverter, built.RowsMapper, built.Statements)
+        built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
     {
         create = built.Create;
         ids = new(built.Ids);

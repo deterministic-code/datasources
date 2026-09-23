@@ -275,12 +275,12 @@ Maps the table name when the repository is built. Default is [IdentityMapper](./
 IMapper<string, string> EntityMapper { get; init; }
 ```
 
-##### Columns
+##### ColumnMappings
 
 Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
 
 ```csharp
-IMapper<string, string> Columns { get; init; }
+IMapper<string, string> ColumnMappings { get; init; }
 ```
 
 ##### Query

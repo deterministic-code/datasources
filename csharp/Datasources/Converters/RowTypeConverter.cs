@@ -21,43 +21,46 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
 
     public override T Convert(Row from)
     {
-        var native = Apply(from, reverse: false);
         var target = new T();
         if (target is IDictionary<string, Value> dict)
         {
-            foreach (var (key, value) in native)
-                dict[key] = value;
+            foreach (var (key, value) in from)
+                dict[key] = Converted(key, value, reverse: false);
             return target;
         }
-        foreach (var (key, value) in native)
+        foreach (var (key, value) in from)
         {
             var prop = typeof(T).GetProperty(key);
             if (prop is null || !prop.CanWrite || prop.GetIndexParameters().Length > 0
                 || !IsColumn(prop.PropertyType)) continue;
-            prop.SetValue(target, Assign(value, prop.PropertyType));
+            prop.SetValue(target, Assign(Converted(key, value, reverse: false), prop.PropertyType));
         }
         return target;
     }
 
     public override Row ReverseConvert(T to) => to switch
     {
-        IDictionary<string, Value> dict => Apply(new Row(dict), reverse: true),
-        _ => Apply(new Row(Props(typeof(T))
+        IDictionary<string, Value> dict => new(dict.Select(pair =>
+            KeyValuePair.Create(pair.Key, Converted(pair.Key, pair.Value, reverse: true)))),
+        _ => new(Props(typeof(T))
             .Where(prop => IsColumn(prop.PropertyType))
-            .Select(prop => (prop.Name, Value: prop.GetValue(to)))
-            .Where(pair => pair.Value is not null)
-            .Select(pair => KeyValuePair.Create(pair.Name, Value.From(pair.Value)))), reverse: true)
+            .Select(prop => (prop, Raw: prop.GetValue(to)))
+            .Where(pair => pair.Raw is not null)
+            .Select(pair => KeyValuePair.Create(
+                pair.prop.Name,
+                Converted(pair.prop.Name, Value.From(pair.Raw), reverse: true))))
     };
 
-    Row Apply(Row row, bool reverse) =>
-        new(row.Select(pair => KeyValuePair.Create(pair.Key, Cell(pair.Key, pair.Value, reverse))));
+    Value Converted(string key, Value value, bool reverse) =>
+        Converter(key) switch
+        {
+            null => value,
+            var converter when reverse => converter.ReverseConvert(value),
+            var converter => converter.Convert(value)
+        };
 
-    Value Cell(string key, Value value, bool reverse = false)
-    {
-        var converter = Fields.TryGetValue(key, out var field) ? field : null;
-        return converter is null ? value
-            : reverse ? converter.ReverseConvert(value) : converter.Convert(value);
-    }
+    TypeConverter<Value, Value>? Converter(string key) =>
+        Fields.TryGetValue(key, out var field) ? field : null;
 
     static bool IsColumn(Type type)
     {

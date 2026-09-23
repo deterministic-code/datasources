@@ -9,12 +9,12 @@ public static class RepositoryBuilder<T> where T : new()
     {
         var types = options.RowTypeConverters ?? new Dictionary<string, TypeConverter<Value, Value>>();
         var rowConverter = options.RowConverter ?? new RowTypeConverter<T>(types);
-        if (rowConverter is RowTypeConverter<T> row && row.Types.Count == 0)
+        if (rowConverter is RowTypeConverter<T> { Types.Count: 0 } row)
             foreach (var (key, converter) in types)
                 row.Types[key] = converter;
         var entity = options.EntityMapper.Map(options.Entity ?? typeof(T).Name);
         var columns = (options.ReadColumns is { Count: > 0 } listed ? listed : Columns())
-            .Select(options.Columns.Map)
+            .Select(options.ColumnMappings.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
         var (ids, insert, update, delete, create) = options switch
@@ -26,6 +26,7 @@ public static class RepositoryBuilder<T> where T : new()
             connection,
             rowConverter,
             options.RowsMapper,
+            options.ColumnMappings,
             new RepositoryStatements(entity, columns, options.Query, insert, update, delete),
             ids,
             create);

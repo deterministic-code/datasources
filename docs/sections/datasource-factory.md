@@ -310,7 +310,7 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 ::: example
 ```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L34-L40
 ```
-```rust rust/datasources/src/tests/datasource_factory.rs#L31-L37
+```rust rust/datasources/src/tests/datasource_factory.rs#L28-L35
 ```
 ```typescript typescript/datasources/src/DatasourceFactory.test.ts#L41-L45
 ```

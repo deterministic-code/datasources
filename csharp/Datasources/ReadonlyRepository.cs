@@ -5,6 +5,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
     readonly IConnection? connection;
     readonly List<ICommandMiddleware> middlewares = [];
     readonly TypeConverter<T, Row>? rowConverter;
+    readonly IMapper<string, string> columns = new IdentityMapper<string>();
     readonly RepositoryStatements? statements;
 
     public Type Type => typeof(T);
@@ -17,7 +18,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
         this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
     public ReadonlyRepository(BuiltRepository<T> built) :
-        this(built.Connection, built.RowConverter, built.RowsMapper, built.Statements) { }
+        this(built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements) { }
 
     protected ReadonlyRepository() { }
 
@@ -25,11 +26,13 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
         IConnection connection,
         TypeConverter<T, Row> rowConverter,
         IMapper<T, T> mapper,
+        IMapper<string, string> columns,
         RepositoryStatements statements)
     {
         this.connection = connection;
         this.rowConverter = rowConverter;
         Mapper = mapper;
+        this.columns = columns;
         this.statements = statements;
     }
 
@@ -56,8 +59,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
         var reader = await Command().ExecuteReader(
             statement, statement.Where?.Parameters ?? statement.Parameters);
         while (await reader.Next())
-            yield return Mapper!.Map(RowConverter.Convert(reader.Current
-                ?? throw new DatasourceException("Reader current must be a row")));
+            yield return Mapper!.Map(RowConverter.Convert(Renamed(reader.Current
+                ?? throw new DatasourceException("Reader current must be a row"))));
     }
 
     public virtual async Task<T?> ReadSingle(IStatement? query = null) =>
@@ -73,4 +76,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
 
     protected TypeConverter<T, Row> RowConverter =>
         rowConverter ?? throw new DatasourceException("Row converter required");
+
+    Row Renamed(Row row) =>
+        new(row.Select(pair => KeyValuePair.Create(columns.ReverseMap(pair.Key), pair.Value)));
 }
