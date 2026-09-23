@@ -60,12 +60,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
                 ?? throw new DatasourceException("Reader current must be a row")));
     }
 
-    public virtual async Task<T?> ReadSingle(IStatement? query = null)
-    {
-        await foreach (var item in Read(query))
-            return item;
-        return default;
-    }
+    public virtual async Task<T?> ReadSingle(IStatement? query = null) =>
+        await Read(query).FirstOrDefaultAsync() ?? default;
 
     protected ICommand Command() =>
         middlewares.Aggregate(
