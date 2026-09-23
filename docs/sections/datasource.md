@@ -16,14 +16,14 @@ class Datasource implements IDatasource
 
 ##### Datasource(provider, driver, options?)
 
-Builds a datasource from a provider [IDriver](./datasource-factory.md#idriver).
+Builds a datasource from a provider [IDriver](../writing-providers.md#idriver).
 
 ```typescript
 constructor(provider: string, driver: IDriver, options?: DatasourceOptions)
 ```
 
 - `provider` — registered provider name
-- `driver` — [IDriver](./datasource-factory.md#idriver) that builds connections, commands, transactions, and row converters
+- `driver` — [IDriver](../writing-providers.md#idriver) that builds connections, commands, transactions, and row converters
 - `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.connection`
 
 **Methods**
@@ -149,14 +149,14 @@ public sealed class Datasource : IDatasource
 
 ##### Datasource(provider, driver, options)
 
-Builds a datasource from a provider [IDriver](./datasource-factory.md#idriver).
+Builds a datasource from a provider [IDriver](../writing-providers.md#idriver).
 
 ```csharp
 public Datasource(string provider, IDriver driver, IReadOnlyDictionary<string, string?>? options = null)
 ```
 
 - `provider` — registered provider name
-- `driver` — [IDriver](./datasource-factory.md#idriver) that builds connections, commands, transactions, and row converters
+- `driver` — [IDriver](../writing-providers.md#idriver) that builds connections, commands, transactions, and row converters
 - `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.Connection`
 
 #### IDatasource
@@ -268,14 +268,14 @@ pub struct BuiltDatasource
 
 ##### new(provider, driver, options)
 
-Builds a datasource from a provider [Driver](./datasource-factory.md#driver).
+Builds a datasource from a provider [Driver](../writing-providers.md#driver).
 
 ```rust
 pub fn new(provider: impl Into<String>, driver: Arc<dyn Driver>, options: Option<HashMap<String, String>>) -> Self
 ```
 
 - `provider` — registered provider name
-- `driver` — [Driver](./datasource-factory.md#driver) that builds connections, commands, transactions, and row converters
+- `driver` — [Driver](../writing-providers.md#driver) that builds connections, commands, transactions, and row converters
 - `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.connection`
 
 #### Datasource

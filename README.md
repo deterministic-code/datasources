@@ -455,96 +455,6 @@ static registered(): string[]
 
 `string[]`
 
-##### IDriver {#typescript-idriver}
-
-```typescript
-interface IDriver
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [connection(options?)](#typescript-idriver-connection-options) | Builds an [IConnection](#connection) from the options bag. |
-| [command(connection)](#typescript-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
-| [transaction(connection, isolation?)](#typescript-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
-| [rowTypeConverters](#typescript-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
-
-###### connection(options?) {#typescript-idriver-connection-options}
-
-Builds an [IConnection](#connection) from the options bag.
-
-**Definition**
-
-```typescript
-connection(options?: DatasourceOptions): IConnection
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | [DatasourceOptions](#typescript-datasourceoptions) |
-
-**Returns**
-
-[IConnection](#connection)
-
-###### command(connection) {#typescript-idriver-command-connection}
-
-Builds an [ICommand](#command) for the connection.
-
-**Definition**
-
-```typescript
-command(connection: IConnection): ICommand
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open or closed [IConnection](#connection) |
-
-**Returns**
-
-[ICommand](#command)
-
-###### transaction(connection, isolation?) {#typescript-idriver-transaction-connection-isolation}
-
-Builds an [ITransaction](#transaction) for the connection.
-
-**Definition**
-
-```typescript
-transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open or closed [IConnection](#connection) |
-| `isolation` | defaults to `serializable` |
-
-**Returns**
-
-[ITransaction](#transaction)
-
-###### rowTypeConverters {#typescript-idriver-rowtypeconverters}
-
-Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
-
-**Definition**
-
-```typescript
-rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
-```
-
-**Returns**
-
-`Record<string, TypeConverter<Cell, Cell>>`
-
 ##### IDatasourceFactory {#typescript-idatasourcefactory}
 
 ```typescript
@@ -677,96 +587,6 @@ public static IReadOnlyList<string> Registered()
 **Returns**
 
 `IReadOnlyList<string>`
-
-##### IDriver {#csharp-idriver}
-
-```csharp
-public interface IDriver
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Connection(options)](#csharp-idriver-connection-options) | Builds an [IConnection](#connection) from the options bag. |
-| [Command(connection)](#csharp-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
-| [Transaction(connection, isolation)](#csharp-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
-| [RowTypeConverters](#csharp-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
-
-###### Connection(options) {#csharp-idriver-connection-options}
-
-Builds an [IConnection](#connection) from the options bag.
-
-**Definition**
-
-```csharp
-IConnection Connection(IReadOnlyDictionary<string, string?>? options)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | [DatasourceOptions](#csharp-datasourceoptions) |
-
-**Returns**
-
-[IConnection](#connection)
-
-###### Command(connection) {#csharp-idriver-command-connection}
-
-Builds an [ICommand](#command) for the connection.
-
-**Definition**
-
-```csharp
-ICommand Command(IConnection connection)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open or closed [IConnection](#connection) |
-
-**Returns**
-
-[ICommand](#command)
-
-###### Transaction(connection, isolation) {#csharp-idriver-transaction-connection-isolation}
-
-Builds an [ITransaction](#transaction) for the connection.
-
-**Definition**
-
-```csharp
-ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open or closed [IConnection](#connection) |
-| `isolation` | defaults to `Serializable` |
-
-**Returns**
-
-[ITransaction](#transaction)
-
-###### RowTypeConverters {#csharp-idriver-rowtypeconverters}
-
-Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
-
-**Definition**
-
-```csharp
-IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
-```
-
-**Returns**
-
-`IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
 
 ##### IDatasourceFactory {#csharp-idatasourcefactory}
 
@@ -929,96 +749,6 @@ pub fn registered() -> Vec<String>
 
 `Vec<String>`
 
-##### Driver {#rust-driver}
-
-```rust
-pub trait Driver
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [connection(options)](#rust-driver-connection-options) | Builds a [Connection](#connection) from the options bag. |
-| [command(connection)](#rust-driver-command-connection) | Builds a [Command](#command) for the connection. |
-| [transaction(connection, isolation)](#rust-driver-transaction-connection-isolation) | Builds a [Transaction](#transaction) for the connection. |
-| [row_type_converters()](#rust-driver-row_type_converters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
-
-###### connection(options) {#rust-driver-connection-options}
-
-Builds a [Connection](#connection) from the options bag.
-
-**Definition**
-
-```rust
-fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | [DatasourceOptions](#rust-datasourceoptions) |
-
-**Returns**
-
-`Arc<dyn `[Connection](#connection)`>`
-
-###### command(connection) {#rust-driver-command-connection}
-
-Builds a [Command](#command) for the connection.
-
-**Definition**
-
-```rust
-fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open or closed [Connection](#connection) |
-
-**Returns**
-
-`Arc<dyn `[Command](#command)`>`
-
-###### transaction(connection, isolation) {#rust-driver-transaction-connection-isolation}
-
-Builds a [Transaction](#transaction) for the connection.
-
-**Definition**
-
-```rust
-fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel) -> Arc<dyn Transaction>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open or closed [Connection](#connection) |
-| `isolation` | defaults to `Serializable` at the call site |
-
-**Returns**
-
-`Arc<dyn `[Transaction](#transaction)`>`
-
-###### row_type_converters() {#rust-driver-row_type_converters}
-
-Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
-
-**Definition**
-
-```rust
-fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
-```
-
-**Returns**
-
-`HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`
-
 ### Remarks
 
 `Default` requires `.env` `PROVIDER` and `DATASOURCE_URL`, or process `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` to override them. Missing both throws `DatasourceException` / `DatasourceError`.
@@ -1070,24 +800,18 @@ var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"]
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L38-L44)
 
 ```rust
-    r.insert("id".into(), Value::Int(id));
-    r.insert("name".into(), Value::from(name));
-    r
-}
-
 #[test]
 fn register_and_create() {
+    reset();
+    register("memory", Arc::new(MemoryProvider));
+    let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L27-L32)
 
 ```typescript
-});
-
-describe("DatasourceFactory", () => {
-  it("register and create", () => {
-    DatasourceFactory.reset();
-    DatasourceFactory.register("memory", new MemoryProvider());
+DatasourceFactory.register("memory", new MemoryProvider());
+const ds = DatasourceFactory.create({ provider: "memory" });
 ```
 
 #### Missing provider
@@ -1923,18 +1647,18 @@ await connection.Close();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L47-L52)
 
 ```rust
-let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+#[tokio::test]
+async fn open_and_close() {
+    let connection = MemoryConnection::from_options(None);
+    connection.open().await.unwrap();
+    connection.close().await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L36-L41)
 
 ```typescript
-});
-
-describe("Connection", () => {
-  it("open and close", async () => {
-    const connection = new MemoryConnection();
-    await connection.open();
+await connection.open();
+await connection.close();
 ```
 
 #### Start a transaction
@@ -1950,14 +1674,18 @@ var txn = await connection.StartTransaction();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L54-L60)
 
 ```rust
-connection.open().await.unwrap();
-connection.close().await.unwrap();
+#[tokio::test]
+async fn start_a_transaction() {
+    let connection = MemoryConnection::from_options(None);
+    connection.open().await.unwrap();
+    let txn = connection.start_transaction(None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L43-L48)
 
 ```typescript
-
+await connection.open();
+const txn = await connection.startTransaction();
 ```
 
 ## Transaction
@@ -2206,19 +1934,20 @@ await txn.Commit();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L63-L69)
 
 ```rust
-let txn = connection.start_transaction(None).await.unwrap();
+#[tokio::test]
+async fn commit() {
+    let connection = MemoryConnection::from_options(None);
+    connection.open().await.unwrap();
+    let txn = connection.start_transaction(None).await.unwrap();
+    txn.commit().await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L52-L58)
 
 ```typescript
-});
-
-describe("Transaction", () => {
-  it("commit", async () => {
-    const connection = new MemoryConnection();
-    await connection.open();
-    const txn = await connection.startTransaction();
+await connection.open();
+const txn = await connection.startTransaction();
+await txn.commit();
 ```
 
 #### Abort
@@ -2235,13 +1964,20 @@ await txn.Abort();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L72-L78)
 
 ```rust
-txn.commit().await.unwrap();
+#[tokio::test]
+async fn abort() {
+    let connection = MemoryConnection::from_options(None);
+    connection.open().await.unwrap();
+    let txn = connection.start_transaction(None).await.unwrap();
+    txn.abort().await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L60-L66)
 
 ```typescript
-
+await connection.open();
+const txn = await connection.startTransaction();
+await txn.abort();
 ```
 
 ## Command
@@ -14196,3 +13932,391 @@ Process overrides (not written by `setup`):
 | `DEFAULT_DATASOURCE_URL` | Overrides `.env` `DATASOURCE_URL`. |
 
 SQLAlchemy-style SQLite URLs: `sqlite:///:memory:`, `sqlite:///app.db`, `sqlite:////tmp/app.db`.
+
+## Writing Providers
+
+A provider package implements `IDriver` / `Driver` and exports only that type. `DatasourceFactory.Register` / `register` stores it by name. The driver builds the connection, command, and transaction, and supplies row cell converters when native values are not already canonical cells.
+
+`mysql`, `postgres`, and `sqlite` name the type `*Driver` (`SqliteDriver`). Every other package names it `*Provider` (`MemoryProvider`).
+
+### Classes
+
+##### TypeScript
+
+##### IDriver {#typescript-idriver}
+
+```typescript
+interface IDriver
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [connection(options?)](#typescript-idriver-connection-options) | Builds an [IConnection](#connection) from the options bag. |
+| [command(connection)](#typescript-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
+| [transaction(connection, isolation?)](#typescript-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
+| [rowTypeConverters](#typescript-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+
+###### connection(options?) {#typescript-idriver-connection-options}
+
+Builds an [IConnection](#connection) from the options bag.
+
+**Definition**
+
+```typescript
+connection(options?: DatasourceOptions): IConnection
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions) |
+
+**Returns**
+
+[IConnection](#connection)
+
+###### command(connection) {#typescript-idriver-command-connection}
+
+Builds an [ICommand](#command) for the connection.
+
+**Definition**
+
+```typescript
+command(connection: IConnection): ICommand
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [IConnection](#connection) |
+
+**Returns**
+
+[ICommand](#command)
+
+###### transaction(connection, isolation?) {#typescript-idriver-transaction-connection-isolation}
+
+Builds an [ITransaction](#transaction) for the connection.
+
+**Definition**
+
+```typescript
+transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [IConnection](#connection) |
+| `isolation` | defaults to `serializable` |
+
+**Returns**
+
+[ITransaction](#transaction)
+
+###### rowTypeConverters {#typescript-idriver-rowtypeconverters}
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+**Definition**
+
+```typescript
+rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
+```
+
+**Returns**
+
+`Record<string, TypeConverter<Cell, Cell>>`
+
+##### C#
+
+##### IDriver {#csharp-idriver}
+
+```csharp
+public interface IDriver
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Connection(options)](#csharp-idriver-connection-options) | Builds an [IConnection](#connection) from the options bag. |
+| [Command(connection)](#csharp-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
+| [Transaction(connection, isolation)](#csharp-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
+| [RowTypeConverters](#csharp-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+
+###### Connection(options) {#csharp-idriver-connection-options}
+
+Builds an [IConnection](#connection) from the options bag.
+
+**Definition**
+
+```csharp
+IConnection Connection(IReadOnlyDictionary<string, string?>? options)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions) |
+
+**Returns**
+
+[IConnection](#connection)
+
+###### Command(connection) {#csharp-idriver-command-connection}
+
+Builds an [ICommand](#command) for the connection.
+
+**Definition**
+
+```csharp
+ICommand Command(IConnection connection)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [IConnection](#connection) |
+
+**Returns**
+
+[ICommand](#command)
+
+###### Transaction(connection, isolation) {#csharp-idriver-transaction-connection-isolation}
+
+Builds an [ITransaction](#transaction) for the connection.
+
+**Definition**
+
+```csharp
+ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [IConnection](#connection) |
+| `isolation` | defaults to `Serializable` |
+
+**Returns**
+
+[ITransaction](#transaction)
+
+###### RowTypeConverters {#csharp-idriver-rowtypeconverters}
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+**Definition**
+
+```csharp
+IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
+```
+
+**Returns**
+
+`IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
+
+##### Rust
+
+##### Driver {#rust-driver}
+
+```rust
+pub trait Driver
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [connection(options)](#rust-driver-connection-options) | Builds a [Connection](#connection) from the options bag. |
+| [command(connection)](#rust-driver-command-connection) | Builds a [Command](#command) for the connection. |
+| [transaction(connection, isolation)](#rust-driver-transaction-connection-isolation) | Builds a [Transaction](#transaction) for the connection. |
+| [row_type_converters()](#rust-driver-row_type_converters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+
+###### connection(options) {#rust-driver-connection-options}
+
+Builds a [Connection](#connection) from the options bag.
+
+**Definition**
+
+```rust
+fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#rust-datasourceoptions) |
+
+**Returns**
+
+`Arc<dyn `[Connection](#connection)`>`
+
+###### command(connection) {#rust-driver-command-connection}
+
+Builds a [Command](#command) for the connection.
+
+**Definition**
+
+```rust
+fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [Connection](#connection) |
+
+**Returns**
+
+`Arc<dyn `[Command](#command)`>`
+
+###### transaction(connection, isolation) {#rust-driver-transaction-connection-isolation}
+
+Builds a [Transaction](#transaction) for the connection.
+
+**Definition**
+
+```rust
+fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel) -> Arc<dyn Transaction>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open or closed [Connection](#connection) |
+| `isolation` | defaults to `Serializable` at the call site |
+
+**Returns**
+
+`Arc<dyn `[Transaction](#transaction)`>`
+
+###### row_type_converters() {#rust-driver-row_type_converters}
+
+Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
+
+**Definition**
+
+```rust
+fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+```
+
+**Returns**
+
+`HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`
+
+### Remarks
+
+`connection` receives the options bag (`url`, `filename`, `host`, `database`, `schema`, …). `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
+
+`rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
+
+The package exports only the driver type.
+
+- C#: that class is `public`. Connection, command, transaction, options, and converters are `internal`. `InternalsVisibleTo` opens them to the test project and to an engine assembly such as `Datasources.Sqlite.Microsoft`. `GetExportedTypes()` is exactly the driver. The engine assembly exports nothing.
+- TypeScript: `src/index.ts` is one line, `export { SqliteDriver } from "./SqliteDriver.ts"`. `package.json` `exports` points only at that file.
+- Rust: `lib.rs` declares private modules and one `pub use` of the driver. `pub` items inside those modules stay crate-private.
+
+`PublicSurfaceTests` in each C# provider test project, the `exports only the provider` test in `typescript/register`, and `providers_export_only_their_provider` in `datasources-register` reject a second export.
+
+### Examples
+
+#### Register and Create
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
+
+```csharp
+DatasourceFactory.Register("memory", new MemoryProvider());
+var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L38-L44)
+
+```rust
+#[test]
+fn register_and_create() {
+    reset();
+    register("memory", Arc::new(MemoryProvider));
+    let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L27-L32)
+
+```typescript
+DatasourceFactory.register("memory", new MemoryProvider());
+const ds = DatasourceFactory.create({ provider: "memory" });
+```
+
+#### Mock driver
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources/Mocks/MockDriver.cs#L3-L11)
+
+```csharp
+public sealed class MockDriver : IDriver
+{
+    public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new MockConnection();
+    public ICommand Command(IConnection connection) => new MockCommand(connection);
+    public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
+        new MockTransaction(connection) { Isolation = isolation };
+    public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; } =
+        new Dictionary<string, TypeConverter<Value, Value>>();
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mocks/mock_driver.rs#L22-L44)
+
+```rust
+impl Driver for MockDriver {
+    fn connection(&self, _: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+        MockConnection::new()
+    }
+
+    fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
+        connection.create_command()
+    }
+
+    fn transaction(
+        &self,
+        _: Arc<dyn Connection>,
+        isolation: IsolationLevel,
+    ) -> Arc<dyn Transaction> {
+        let txn = MockTransaction::new_unbound();
+        txn.set_isolation(isolation);
+        Arc::new(txn)
+    }
+
+    fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+        HashMap::new()
+    }
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mocks/mock-driver.ts#L13-L25)
+
+```typescript
+export class MockDriver implements IDriver {
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
+  connection = (_options?: DatasourceOptions): IConnection => new MockConnection();
+  command = (connection: IConnection): ICommand => new MockCommand(connection);
+  transaction = (
+    connection: IConnection,
+    isolation: IsolationLevel = "serializable",
+  ): ITransaction => {
+    const txn = new MockTransaction(connection);
+    txn.isolation = isolation;
+    return txn;
+  };
+}
+```

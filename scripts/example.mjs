@@ -53,7 +53,11 @@ const VALUE_ASSERT =
   /^(Assert\.(Equal|True|False|Same|NotSame|Empty|NotEmpty|Null|NotNull|StartsWith|Contains|IsType)|assert_eq!|assert_ne!|expect\(.+\)\.(toBe|toEqual|toStrictEqual))/;
 
 const extractBody = (code) =>
-  /\[Fact\]|#\[test\]|\bit\(|public void |fn \w+\(/.test(code) ? (balanced(code, "{", "}") ?? code) : code;
+  /^(?:pub(?:\([^)]*\))? +)?impl\b/.test(code.trim())
+    ? code
+    : /\[Fact\]|#\[test\]|\bit\(|public void |fn \w+\(/.test(code)
+      ? (balanced(code, "{", "}") ?? code)
+      : code;
 
 const stripTrailingValueAsserts = (body) => {
   const lines = body.split("\n");
