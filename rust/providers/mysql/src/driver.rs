@@ -24,6 +24,7 @@ pub trait MysqlDriver: Send + Sync {
     async fn rollback(&self) -> Result<()>;
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn require_driver(driver: Option<Arc<dyn MysqlDriver>>) -> Result<Arc<dyn MysqlDriver>> {
     driver.ok_or_else(|| DatasourceError::message("MySQL driver is required"))
 }

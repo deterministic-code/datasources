@@ -3,7 +3,7 @@ using SqliteCmd = Microsoft.Data.Sqlite.SqliteCommand;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteCommandDriver(SqliteConnectionDriver connection)
+internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection)
 {
     public Task<SqliteExecuteResult> Execute(string sql, Row parameters) =>
         Execute(sql, parameters.Select(p => new Parameter(p.Key, p.Value)).ToArray());

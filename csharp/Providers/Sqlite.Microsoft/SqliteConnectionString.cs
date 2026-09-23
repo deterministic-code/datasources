@@ -1,6 +1,6 @@
 namespace Datasources.Sqlite;
 
-public static class SqliteConnectionString
+internal static class SqliteConnectionString
 {
     public static string ToConnectionString(string filename)
     {

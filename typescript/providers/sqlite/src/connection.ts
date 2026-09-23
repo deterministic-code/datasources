@@ -1,20 +1,22 @@
 import {
   DatasourceError,
   IsolationLevel,
-  CRUDRepository,
-  RowTypeConverter,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
-import "./converters/SqliteRowTypeConverters.ts";
+import { createRequire } from "node:module";
+import { BetterSqliteDriver } from "./better-sqlite-driver.ts";
 import { SqliteCommand } from "./command.ts";
 import type { SqliteConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type ISqliteDriver } from "./driver.ts";
+import type { SqliteDatabaseCtor } from "./i-sqlite-driver.ts";
 import { filenameOf } from "./sqlitePath.ts";
 import { SqliteTransaction } from "./transaction.ts";
+
+const require = createRequire(import.meta.url);
 
 export class SqliteConnection implements IConnection {
   readonly provider = "sqlite";
@@ -22,11 +24,18 @@ export class SqliteConnection implements IConnection {
   driver: ISqliteDriver;
   isOpen = false;
 
-  static from = (options?: DatasourceOptions): SqliteConnection =>
-    new SqliteConnection({
-      filename: options?.filename,
-      url: options?.url ?? options?.database_url,
+  static from = (options?: DatasourceOptions): SqliteConnection => {
+    const filename = options?.filename;
+    const url = options?.url ?? options?.database_url;
+    return new SqliteConnection({
+      filename,
+      url,
+      driver: new BetterSqliteDriver(
+        filenameOf({ filename, url }),
+        require("better-sqlite3") as SqliteDatabaseCtor,
+      ),
     });
+  };
 
 
 

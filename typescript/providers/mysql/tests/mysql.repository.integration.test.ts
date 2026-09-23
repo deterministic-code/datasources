@@ -5,26 +5,36 @@ import {
   runRepositorySpec,
 } from "../../repository-spec-runner.ts";
 import { CreateTableStatement } from "@datasources/core";
-import {
-  loadMysql2Driver,
-  MysqlColumnType,
-  MysqlCommand,
-  MysqlConnection,
-  MysqlQuote,
-  MysqlRowTypeConverters,
-} from "../src/index.ts";
+import { MysqlCommand } from "../src/command.ts";
+import { MysqlConnection } from "../src/connection.ts";
+import { MysqlRowTypeConverters } from "../src/converters/MysqlRowTypeConverters.ts";
+import { loadMysql2Driver } from "../src/driver.ts";
 import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 
+const quote = (id: string): string => `\`${id.replaceAll("`", "``")}\``;
+
+const map = (canonical: string): string => {
+  switch (canonical) {
+    case "int": return "INT";
+    case "uuid": return "CHAR(36)";
+    case "string":
+    case "datetime": return "TEXT";
+    case "bool": return "TINYINT";
+    case "decimal": return "DECIMAL(18,4)";
+    case "float": return "DOUBLE";
+    case "binary": return "BLOB";
+    default: throw new Error(`Unknown mysql type "${canonical}"`);
+  }
+};
+
 const dialect: RepositoryDialect = {
-  quote: MysqlQuote.quote,
+  quote,
   createTable: (table, columns) =>
     new CreateTableStatement(
-      MysqlQuote.quote(table),
+      quote(table),
       columns.map((column) => ({
-        name: MysqlQuote.quote(column.name),
-        type: column.id
-          ? `${MysqlColumnType.map(column.type)} PRIMARY KEY AUTO_INCREMENT`
-          : MysqlColumnType.map(column.type),
+        name: quote(column.name),
+        type: column.id ? `${map(column.type)} PRIMARY KEY AUTO_INCREMENT` : map(column.type),
       })),
     ),
 };

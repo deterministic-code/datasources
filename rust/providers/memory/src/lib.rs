@@ -1,23 +1,19 @@
 mod command;
 mod connection;
-mod converters;
 mod filter;
 mod provider;
 mod store;
 mod transaction;
 
-pub use command::MemoryCommand;
-pub use connection::MemoryConnection;
 pub use provider::MemoryProvider;
-pub use store::{MemoryData, MemoryStore};
-pub use transaction::MemoryTransaction;
-
-#[cfg(test)]
-pub(crate) use filter::{json_to_value, matches, parse_filter};
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::command::MemoryCommand;
+    use crate::connection::MemoryConnection;
+    use crate::filter::{json_to_value, matches, parse_filter};
+    use crate::store::{MemoryData, MemoryStore};
     use datasources::{
         create, register, reset, Command, Connection, CRUDRepository, ICRUDRepository,
         IReadonlyRepository, IsolationLevel, Parameter, RepositoryBuilderOptions, Row,
@@ -286,4 +282,3 @@ mod tests {
     }
 }
 
-pub use converters::{register as register_converters, row_type_converters as converter_types};

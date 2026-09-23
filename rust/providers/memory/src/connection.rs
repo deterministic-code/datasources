@@ -47,10 +47,6 @@ impl MemoryConnection {
         ))
     }
 
-    pub fn set_collection(&self, name: impl Into<String>) {
-        *self.state.collection.lock().unwrap() = name.into();
-    }
-
     pub fn collection_name(&self) -> String {
         self.state.collection.lock().unwrap().clone()
     }
@@ -66,11 +62,13 @@ impl MemoryConnection {
         self.state.store.collection(&self.collection_name(), f)
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn finish_commit(&self) {
         *self.state.in_transaction.lock().unwrap() = false;
         *self.state.snapshot.lock().unwrap() = None;
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn finish_abort(&self) {
         if let Some(snapshot) = self.state.snapshot.lock().unwrap().take() {
             self.state.store.restore(snapshot);
@@ -78,6 +76,7 @@ impl MemoryConnection {
         *self.state.in_transaction.lock().unwrap() = false;
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn in_transaction(&self) -> bool {
         *self.state.in_transaction.lock().unwrap()
     }

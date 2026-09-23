@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-public sealed class BinaryConverter : TypeConverter<Value, Value>
+internal sealed class BinaryConverter : TypeConverter<Value, Value>
 {
     public override Value Convert(Value from) => Bytes(from);
     public override Value ReverseConvert(Value to) => Bytes(to);

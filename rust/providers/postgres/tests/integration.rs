@@ -1,4 +1,6 @@
-use super::*;
+use super::command::PostgresCommand;
+use super::connection::PostgresConnection;
+use super::tokio_postgres_driver::TokioPostgresDriver;
 use datasources::{
     utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
     IsolationLevel, Parameter, Reader, Transaction, Value,

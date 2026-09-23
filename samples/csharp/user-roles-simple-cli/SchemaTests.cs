@@ -41,6 +41,73 @@ public sealed class SchemaTests
     }
 
     [Fact]
+    public void QuotesIdentifiersAndMapsColumnTypes()
+    {
+        Assert.Equal("\"user\"", Schema.Ident("sqlite", "user"));
+        Assert.Equal("\"a\"\"b\"", Schema.Ident("postgres", "a\"b"));
+        Assert.Equal("`a``b`", Schema.Ident("mysql", "a`b"));
+        Assert.Equal("\"users\".\"id\"", Schema.Qualified("sqlite", "users.id"));
+        Assert.Equal("`users`.`id`", Schema.Qualified("mysql", "users.id"));
+
+        Assert.Equal("TEXT", ColumnTypes.Map("sqlite")("uuid"));
+        Assert.Equal("TEXT", ColumnTypes.Map("sqlite")("string"));
+        Assert.Equal("INTEGER", ColumnTypes.Map("sqlite")("bool"));
+        Assert.Equal("NUMERIC", ColumnTypes.Map("sqlite")("decimal"));
+        Assert.Equal("REAL", ColumnTypes.Map("sqlite")("float"));
+        Assert.Equal("TEXT", ColumnTypes.Map("sqlite")("datetime"));
+        Assert.Equal("BLOB", ColumnTypes.Map("sqlite")("binary"));
+        Assert.Contains("Unknown sqlite type \"xml\"", Assert.Throws<DatasourceException>(() => ColumnTypes.Map("sqlite")("xml")).Message);
+
+        Assert.Equal("CHAR(36)", ColumnTypes.Map("mysql")("uuid"));
+        Assert.Equal("TEXT", ColumnTypes.Map("mysql")("string"));
+        Assert.Equal("TINYINT", ColumnTypes.Map("mysql")("bool"));
+        Assert.Equal("DECIMAL(18,4)", ColumnTypes.Map("mysql")("decimal"));
+        Assert.Equal("DOUBLE", ColumnTypes.Map("mysql")("float"));
+        Assert.Equal("TEXT", ColumnTypes.Map("mysql")("datetime"));
+        Assert.Equal("BLOB", ColumnTypes.Map("mysql")("binary"));
+        Assert.Contains("Unknown mysql type \"xml\"", Assert.Throws<DatasourceException>(() => ColumnTypes.Map("mysql")("xml")).Message);
+
+        Assert.Equal("UUID", ColumnTypes.Map("postgres")("uuid"));
+        Assert.Equal("TEXT", ColumnTypes.Map("postgres")("string"));
+        Assert.Equal("NUMERIC", ColumnTypes.Map("postgres")("decimal"));
+        Assert.Equal("DOUBLE PRECISION", ColumnTypes.Map("postgres")("float"));
+        Assert.Equal("TIMESTAMPTZ", ColumnTypes.Map("postgres")("datetime"));
+        Assert.Equal("BYTEA", ColumnTypes.Map("postgres")("binary"));
+        Assert.Contains("Unknown postgres type \"xml\"", Assert.Throws<DatasourceException>(() => ColumnTypes.Map("postgres")("xml")).Message);
+
+        Assert.Equal(
+            "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" TEXT, \"username\" TEXT, \"is_enabled\" INTEGER, \"balance\" NUMERIC, \"location\" REAL, \"created\" TEXT, \"version\" BLOB)",
+            UserTable("sqlite"));
+        Assert.Equal(
+            "CREATE TABLE `user` (`id` INT PRIMARY KEY, `uuid` CHAR(36), `username` TEXT, `is_enabled` TINYINT, `balance` DECIMAL(18,4), `location` DOUBLE, `created` TEXT, `version` BLOB)",
+            UserTable("mysql"));
+        Assert.Equal(
+            "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" UUID, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" DOUBLE PRECISION, \"created\" TIMESTAMPTZ, \"version\" BYTEA)",
+            UserTable("postgres"));
+    }
+
+    static string UserTable(string provider)
+    {
+        (string Name, string Type, bool Id)[] columns =
+        [
+            ("id", "int", true),
+            ("uuid", "uuid", false),
+            ("username", "string", false),
+            ("is_enabled", "bool", false),
+            ("balance", "decimal", false),
+            ("location", "float", false),
+            ("created", "datetime", false),
+            ("version", "binary", false),
+        ];
+        var map = ColumnTypes.Map(provider);
+        return new CreateTableStatement(
+            Schema.Ident(provider, "user"),
+            columns.Select(column => new Column(
+                Schema.Ident(provider, column.Name),
+                column.Id ? $"{map(column.Type)} PRIMARY KEY" : map(column.Type))).ToArray()).GetText();
+    }
+
+    [Fact]
     public void MapsUglyColumns()
     {
         Assert.Equal("ugly_name", Columns.Names.Map("name"));

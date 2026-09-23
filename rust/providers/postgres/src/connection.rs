@@ -1,5 +1,6 @@
 use crate::command::PostgresCommand;
-use crate::driver::{require_driver, PostgresDriver};
+use crate::driver::PostgresDriver;
+use crate::tokio_postgres_driver::TokioPostgresDriver;
 use crate::transaction::PostgresTransaction;
 use async_trait::async_trait;
 use datasources::{
@@ -38,8 +39,8 @@ impl PostgresConnection {
         });
         Arc::new(PostgresConnection::new(
             url,
-            schema,
-            require_driver(None).expect("Postgres driver is required"),
+            schema.clone(),
+            Arc::new(TokioPostgresDriver::new(schema)),
         ))
     }
 

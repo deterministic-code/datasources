@@ -1,6 +1,6 @@
 namespace Datasources.Postgres;
 
-public sealed class PostgresConnection : IConnection
+internal sealed class PostgresConnection : IConnection
 {
 
     public string Url { get; }
@@ -11,14 +11,21 @@ public sealed class PostgresConnection : IConnection
     public bool IsOpen { get; private set; }
 
     public PostgresConnection(IReadOnlyDictionary<string, string?>? options)
-        : this(new PostgresConnectionOptions
+        : this(Options(options))
+    {
+    }
+
+    static PostgresConnectionOptions Options(IReadOnlyDictionary<string, string?>? options)
+    {
+        var schema = DatasourceOptions.Value(options, "schema")
+            ?? DatasourceOptions.Value(options, "database_schema");
+        return new PostgresConnectionOptions
         {
             Url = DatasourceOptions.Value(options, "url")
                 ?? DatasourceOptions.Value(options, "database_url"),
-            Schema = DatasourceOptions.Value(options, "schema")
-                ?? DatasourceOptions.Value(options, "database_schema")
-        })
-    {
+            Schema = schema,
+            Driver = new PostgresDriver(schema)
+        };
     }
 
     public PostgresConnection(PostgresConnectionOptions? options = null)

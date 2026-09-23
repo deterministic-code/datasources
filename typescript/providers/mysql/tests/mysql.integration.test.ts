@@ -10,11 +10,9 @@ import {
   runSpec,
   specFiles,
 } from "../../sql-spec-runner.ts";
-import {
-  loadMysql2Driver,
-  MysqlCommand,
-  MysqlConnection,
-} from "../src/index.ts";
+import { MysqlCommand } from "../src/command.ts";
+import { MysqlConnection } from "../src/connection.ts";
+import { loadMysql2Driver } from "../src/driver.ts";
 import type { Mysql2Module } from "../src/i-mysql-driver.ts";
 
 const dialect = loadDialect("mysql");

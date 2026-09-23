@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Oracle;
 
-public sealed class OracleCommand : StubCommand
+internal sealed class OracleCommand : StubCommand
 {
     public OracleCommand(IConnection connection) : base("oracle", connection) { }
 }

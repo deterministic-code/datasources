@@ -1,6 +1,6 @@
 namespace Datasources.Sqlite;
 
-public static class SqlitePath
+internal static class SqlitePath
 {
     public static string? FromUrl(string? url)
     {

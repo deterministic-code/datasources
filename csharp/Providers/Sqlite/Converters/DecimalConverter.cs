@@ -3,7 +3,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class DecimalConverter : TypeConverter<Value, Value>
+internal sealed class DecimalConverter : TypeConverter<Value, Value>
 {
     public override Value Convert(Value from) => from switch
     {

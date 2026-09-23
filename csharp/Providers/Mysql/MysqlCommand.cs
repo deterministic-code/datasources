@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-public sealed class MysqlCommand : CommandMiddlewareHost, ICommand
+internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
 {
     public MysqlCommand(MysqlConnection connection) => Connection = connection;
     public IConnection Connection { get; }

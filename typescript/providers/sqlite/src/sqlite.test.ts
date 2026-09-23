@@ -15,18 +15,14 @@ vi.mock("better-sqlite3", () => {
   return { default: Database };
 });
 import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
-import {
-  BetterSqliteDriver,
-  bindParameters,
-  loadBetterSqlite3Driver,
-  requireDriver,
-  SqliteCommand,
-  SqliteConnection,
-  SqliteProvider,
-  SqliteTransaction,
-  SqliteRowTypeConverters,
-  type SqliteDatabase,
-} from "./index.ts";
+import { BetterSqliteDriver } from "./better-sqlite-driver.ts";
+import { SqliteCommand } from "./command.ts";
+import { SqliteConnection } from "./connection.ts";
+import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
+import { bindParameters, loadBetterSqlite3Driver, requireDriver } from "./driver.ts";
+import type { SqliteDatabase } from "./i-sqlite-driver.ts";
+import { SqliteProvider } from "./SqliteProvider.ts";
+import { SqliteTransaction } from "./transaction.ts";
 import { filenameOf, sqliteFilename } from "./sqlitePath.ts";
 
 class FakeStatement {
@@ -274,10 +270,9 @@ describe("SqliteCommand and CRUDRepository", () => {
 describe("Sqlite datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
-    expect(() =>
-      new Datasource("sqlite", new SqliteProvider())
-        .createConnection(),
-    ).toThrow(DatasourceError);
+    expect(
+      await new Datasource("sqlite", new SqliteProvider()).createConnection(),
+    ).toBeInstanceOf(SqliteConnection);
     const of = (engine = driver): IDriver => ({
       connection: () => new SqliteConnection({ driver: engine }),
       command: (c) => c.createCommand(),
@@ -309,10 +304,10 @@ describe("Sqlite datasource", () => {
         .createRepository(),
     ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "sqlite" }).provider).toBe("sqlite");
-    expect(() => SqliteConnection.from({ filename: ":memory:" })).toThrow(DatasourceError);
-    expect(() =>
-      SqliteConnection.from({ database_url: "sqlite:///:memory:" }),
-    ).toThrow(DatasourceError);
+    expect(SqliteConnection.from({ filename: ":memory:" }).filename).toBe(":memory:");
+    expect(SqliteConnection.from({ url: "sqlite:///:memory:" }).filename).toBe(":memory:");
+    expect(SqliteConnection.from({ database_url: "sqlite:///:memory:" }).filename).toBe(":memory:");
+    expect(SqliteConnection.from().filename).toBe(":memory:");
     const provider = new SqliteProvider();
     expect(provider.command(connection)).toBeInstanceOf(SqliteCommand);
     expect(provider.transaction(connection as SqliteConnection).isolation).toBe(

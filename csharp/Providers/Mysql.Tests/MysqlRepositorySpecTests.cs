@@ -26,7 +26,7 @@ public class MysqlRepositorySpecTests
                         Driver = new MysqlDriver(),
                     });
                     return new RepositorySpec.Session(conn, new MysqlCommand(conn), MysqlRowTypeConverters.All);
-                }, CreateTable, MysqlQuote.Quote);
+                }, CreateTable, Quote);
             }
             finally
             {
@@ -37,10 +37,25 @@ public class MysqlRepositorySpecTests
 
     static string CreateTable(string table, IReadOnlyList<SpecColumn> columns) =>
         new CreateTableStatement(
-            MysqlQuote.Quote(table),
+            Quote(table),
             [.. columns.Select(column => new Column(
-                MysqlQuote.Quote(column.Name),
-                column.Id ? $"{MysqlColumnType.Map(column.Type)} PRIMARY KEY AUTO_INCREMENT" : MysqlColumnType.Map(column.Type)))]).GetText();
+                Quote(column.Name),
+                column.Id ? $"{Map(column.Type)} PRIMARY KEY AUTO_INCREMENT" : Map(column.Type)))]).GetText();
+
+    static string Quote(string id) => $"`{id.Replace("`", "``")}`";
+
+    static string Map(string canonical) => canonical switch
+    {
+        "int" => "INT",
+        "uuid" => "CHAR(36)",
+        "string" => "TEXT",
+        "bool" => "TINYINT",
+        "decimal" => "DECIMAL(18,4)",
+        "float" => "DOUBLE",
+        "datetime" => "TEXT",
+        "binary" => "BLOB",
+        _ => throw new InvalidOperationException($"Unknown mysql type \"{canonical}\"")
+    };
 
     static async Task<(string Url, Func<Task> Cleanup)> Isolate(string baseUrl)
     {

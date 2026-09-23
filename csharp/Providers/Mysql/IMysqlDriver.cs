@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Mysql;
 
-public interface IMysqlDriver
+internal interface IMysqlDriver
 {
     Task Open(string url);
     Task Close();

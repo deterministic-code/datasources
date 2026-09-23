@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-public static class MysqlConnectionString
+internal static class MysqlConnectionString
 {
     public static string ToConnectionString(string url)
     {

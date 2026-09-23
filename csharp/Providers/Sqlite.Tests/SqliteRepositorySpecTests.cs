@@ -19,14 +19,29 @@ public class SqliteRepositorySpecTests
                     Driver = new SqliteDriver(),
                 });
                 return new RepositorySpec.Session(conn, new SqliteCommand(conn), SqliteRowTypeConverters.All);
-            }, CreateTable, SqliteQuote.Quote);
+            }, CreateTable, Quote);
         }
     }
 
     static string CreateTable(string table, IReadOnlyList<SpecColumn> columns) =>
         new CreateTableStatement(
-            SqliteQuote.Quote(table),
+            Quote(table),
             [.. columns.Select(column => new Column(
-                SqliteQuote.Quote(column.Name),
-                column.Id ? $"{SqliteColumnType.Map(column.Type)} PRIMARY KEY" : SqliteColumnType.Map(column.Type)))]).GetText();
+                Quote(column.Name),
+                column.Id ? $"{Map(column.Type)} PRIMARY KEY" : Map(column.Type)))]).GetText();
+
+    static string Quote(string id) => $"\"{id.Replace("\"", "\"\"")}\"";
+
+    static string Map(string canonical) => canonical switch
+    {
+        "int" => "INTEGER",
+        "uuid" => "TEXT",
+        "string" => "TEXT",
+        "bool" => "INTEGER",
+        "decimal" => "NUMERIC",
+        "float" => "REAL",
+        "datetime" => "TEXT",
+        "binary" => "BLOB",
+        _ => throw new InvalidOperationException($"Unknown sqlite type \"{canonical}\"")
+    };
 }

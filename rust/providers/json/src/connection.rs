@@ -58,12 +58,9 @@ impl JsonConnection {
         ))
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn path(&self) -> &str {
         &self.state.path
-    }
-
-    pub fn set_collection(&self, name: impl Into<String>) {
-        *self.state.collection.lock().unwrap() = Some(name.into());
     }
 
     pub fn ensure_open(&self) -> Result<()> {

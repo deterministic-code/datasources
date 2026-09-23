@@ -1,6 +1,6 @@
 namespace Datasources.Postgres;
 
-public sealed class PostgresTransaction : ITransaction
+internal sealed class PostgresTransaction : ITransaction
 {
     public PostgresTransaction(PostgresConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
     {

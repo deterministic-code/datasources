@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { SqlServerCommand, SqlServerConnection, SqlServerProvider } from "./index.ts";
+import { SqlServerCommand } from "./command.ts";
+import { SqlServerConnection } from "./connection.ts";
+import { SqlServerProvider } from "./SqlServerProvider.ts";
 
 afterEach(() => DatasourceFactory.reset());
 

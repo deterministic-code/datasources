@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { MongoDbCommand, MongoDbConnection, MongoDbProvider } from "./index.ts";
+import { MongoDbCommand } from "./command.ts";
+import { MongoDbConnection } from "./connection.ts";
+import { MongoDbProvider } from "./MongoDbProvider.ts";
 
 afterEach(() => DatasourceFactory.reset());
 

@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-public sealed class BoolConverter : TypeConverter<Value, Value>
+internal sealed class BoolConverter : TypeConverter<Value, Value>
 {
     public override Value Convert(Value from) => from switch
     {

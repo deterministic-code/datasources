@@ -1,6 +1,6 @@
 namespace Datasources.Postgres;
 
-public sealed class PostgresDriver : IPostgresDriver
+internal sealed class PostgresDriver : IPostgresDriver
 {
     readonly PostgresConnectionDriver _connection;
     readonly PostgresCommandDriver _commands;

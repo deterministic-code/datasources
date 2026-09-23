@@ -5,11 +5,9 @@ import {
   runSpec,
   specFiles,
 } from "../../sql-spec-runner.ts";
-import {
-  loadBetterSqlite3Driver,
-  SqliteCommand,
-  SqliteConnection,
-} from "../src/index.ts";
+import { SqliteCommand } from "../src/command.ts";
+import { SqliteConnection } from "../src/connection.ts";
+import { loadBetterSqlite3Driver } from "../src/driver.ts";
 
 const dialect = loadDialect("sqlite");
 

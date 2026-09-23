@@ -10,16 +10,11 @@ import {
   UpdateStatement,
   Where,
 } from "@datasources/core";
-import {
-  asRecord,
-  matches,
-  MemoryCommand,
-  MemoryConnection,
-  MemoryProvider,
-  MemoryStore,
-  parametersToObject,
-  parseFilter,
-} from "./index.ts";
+import { MemoryCommand } from "./command.ts";
+import { MemoryConnection } from "./connection.ts";
+import { asRecord, matches, parametersToObject, parseFilter } from "./filter.ts";
+import { MemoryProvider } from "./MemoryProvider.ts";
+import { MemoryStore } from "./store.ts";
 
 afterEach(() => {
   DatasourceFactory.reset();

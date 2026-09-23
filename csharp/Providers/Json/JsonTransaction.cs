@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Json;
 
-public sealed class JsonTransaction : ITransaction
+internal sealed class JsonTransaction : ITransaction
 {
     public JsonTransaction(JsonConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
     {

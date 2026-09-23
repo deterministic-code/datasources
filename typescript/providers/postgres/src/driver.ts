@@ -1,5 +1,4 @@
 import { DatasourceError } from "@datasources/core";
-import { bindParameters, toPostgres, withReturning } from "./bind.ts";
 import { PgDriver } from "./pg-driver.ts";
 import type { IPostgresDriver, PgModule } from "./i-postgres-driver.ts";
 

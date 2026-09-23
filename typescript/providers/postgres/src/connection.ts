@@ -1,19 +1,21 @@
 import {
   DatasourceError,
   IsolationLevel,
-  CRUDRepository,
-  RowTypeConverter,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
-import "./converters/PostgresRowTypeConverters.ts";
+import { createRequire } from "node:module";
 import { PostgresCommand } from "./command.ts";
 import type { PostgresConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type IPostgresDriver } from "./driver.ts";
+import type { PgModule } from "./i-postgres-driver.ts";
+import { PgDriver } from "./pg-driver.ts";
 import { PostgresTransaction } from "./transaction.ts";
+
+const require = createRequire(import.meta.url);
 
 export class PostgresConnection implements IConnection {
   readonly provider = "postgres";
@@ -22,11 +24,16 @@ export class PostgresConnection implements IConnection {
   driver: IPostgresDriver;
   isOpen = false;
 
-  static from = (options?: DatasourceOptions): PostgresConnection =>
-    new PostgresConnection({
-      url: options?.url ?? options?.database_url,
-      schema: options?.schema ?? options?.database_schema,
+  static from = (options?: DatasourceOptions): PostgresConnection => {
+    const url = options?.url ?? options?.database_url ?? "";
+    const schema = options?.schema ?? options?.database_schema;
+    const { Client } = require("pg") as PgModule;
+    return new PostgresConnection({
+      url,
+      schema,
+      driver: new PgDriver(url, Client, schema),
     });
+  };
 
 
 

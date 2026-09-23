@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { OracleCommand, OracleConnection, OracleProvider } from "./index.ts";
+import { OracleCommand } from "./command.ts";
+import { OracleConnection } from "./connection.ts";
+import { OracleProvider } from "./OracleProvider.ts";
 
 afterEach(() => DatasourceFactory.reset());
 

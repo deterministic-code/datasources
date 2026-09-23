@@ -12,21 +12,15 @@ vi.mock("pg", () => {
 });
 
 import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
-import {
-  bindParameters,
-  loadPgDriver,
-  PgDriver,
-  PostgresCommand,
-  PostgresConnection,
-  PostgresProvider,
-  PostgresTransaction,
-  PostgresRowTypeConverters,
-  requireDriver,
-  toPostgres,
-  withReturning,
-  type IPgClient,
-  type PgQueryResult,
-} from "./index.ts";
+import { bindParameters, toPostgres, withReturning } from "./bind.ts";
+import { PostgresCommand } from "./command.ts";
+import { PostgresConnection } from "./connection.ts";
+import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
+import { loadPgDriver, requireDriver } from "./driver.ts";
+import type { IPgClient, PgQueryResult } from "./i-postgres-driver.ts";
+import { PgDriver } from "./pg-driver.ts";
+import { PostgresProvider } from "./PostgresProvider.ts";
+import { PostgresTransaction } from "./transaction.ts";
 import type { Scalar } from "./scalar.ts";
 
 class FakeClient implements IPgClient {
@@ -257,10 +251,9 @@ describe("PostgresCommand", () => {
 describe("Postgres datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
-    expect(() =>
-      new Datasource("postgres", new PostgresProvider())
-        .createConnection(),
-    ).toThrow(DatasourceError);
+    expect(
+      await new Datasource("postgres", new PostgresProvider()).createConnection(),
+    ).toBeInstanceOf(PostgresConnection);
     const of = (engine = driver): IDriver => ({
       connection: () => new PostgresConnection({ driver: engine }),
       command: (c) => c.createCommand(),
@@ -290,9 +283,15 @@ describe("Postgres datasource", () => {
       new Datasource("postgres", of()).createRepository(),
     ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "postgres" }).provider).toBe("postgres");
-    expect(() =>
-      PostgresConnection.from({ database_url: "postgres://db/app", database_schema: "s" }),
-    ).toThrow(DatasourceError);
+    const provided = PostgresConnection.from({
+      database_url: "postgres://db/app",
+      database_schema: "s",
+    });
+    expect(provided.url).toBe("postgres://db/app");
+    expect(provided.schema).toBe("s");
+    expect(PostgresConnection.from({ url: "postgres://db/app", schema: "app" }).schema).toBe("app");
+    expect(PostgresConnection.from().url).toBe("");
+    expect(PostgresConnection.from().schema).toBeUndefined();
     const provider = new PostgresProvider();
     expect(provider.command(connection)).toBeInstanceOf(PostgresCommand);
     expect(provider.transaction(connection as PostgresConnection).isolation).toBe(

@@ -2,7 +2,7 @@ using MySqlConnector;
 
 namespace Datasources.Mysql;
 
-public sealed class MysqlConnectionDriver
+internal sealed class MysqlConnectionDriver
 {
     MySqlConnection? _db;
 

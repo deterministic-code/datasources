@@ -1,7 +1,10 @@
-use datasources::{provider_from_url, utc_iso_millis, Connection, ConsoleCommandMiddleware, DatasourceError};
-use datasources_mysql::{MysqlAsyncDriver, MysqlConnection};
-use datasources_postgres::{PostgresConnection, TokioPostgresDriver};
-use datasources_sqlite::{RusqliteDriver, SqliteConnection};
+use datasources::{
+    provider_from_url, utc_iso_millis, Connection, ConsoleCommandMiddleware, DatasourceError, Driver,
+};
+use datasources_mysql::MysqlProvider;
+use datasources_postgres::PostgresProvider;
+use datasources_sqlite::SqliteProvider;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::SystemTime;
 use user_roles_simple_cli::app::App;
@@ -25,20 +28,18 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     let schema = env("DATABASE_SCHEMA");
     let provider = provider_from_url(&url)
         .ok_or_else(|| DatasourceError::message("unknown provider"))?;
+    let options = |schema: Option<&str>| {
+        let mut map = HashMap::new();
+        map.insert("url".to_string(), url.clone());
+        if let Some(schema) = schema {
+            map.insert("schema".to_string(), schema.to_string());
+        }
+        map
+    };
     let connection: Arc<dyn Connection> = match provider.as_str() {
-        "sqlite" => Arc::new(SqliteConnection::new(
-            Some(sqlite_file(&url)),
-            Arc::new(RusqliteDriver::new()),
-        )),
-        "mysql" => Arc::new(MysqlConnection::new(
-            Some(url.clone()),
-            Arc::new(MysqlAsyncDriver::new()),
-        )),
-        "postgres" => Arc::new(PostgresConnection::new(
-            Some(url.clone()),
-            schema.clone(),
-            Arc::new(TokioPostgresDriver::new(schema)),
-        )),
+        "sqlite" => SqliteProvider.connection(Some(&options(None))),
+        "mysql" => MysqlProvider.connection(Some(&options(None))),
+        "postgres" => PostgresProvider.connection(Some(&options(schema.as_deref()))),
         name => {
             return Err(DatasourceError::message(format!("unknown provider {name}")));
         }
@@ -57,14 +58,6 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     };
     print!("{}", app.run(parsed).await?);
     Ok(())
-}
-
-fn sqlite_file(url: &str) -> String {
-    url.strip_prefix("sqlite:///")
-        .or_else(|| url.strip_prefix("sqlite://"))
-        .or_else(|| url.strip_prefix("sqlite:"))
-        .unwrap_or(":memory:")
-        .to_string()
 }
 
 fn env(key: &str) -> Option<String> {

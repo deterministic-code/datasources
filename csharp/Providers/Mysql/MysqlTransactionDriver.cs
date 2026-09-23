@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-public sealed class MysqlTransactionDriver(MysqlCommandDriver commands)
+internal sealed class MysqlTransactionDriver(MysqlCommandDriver commands)
 {
     public async Task Begin(IsolationLevel isolation = IsolationLevel.Serializable)
     {

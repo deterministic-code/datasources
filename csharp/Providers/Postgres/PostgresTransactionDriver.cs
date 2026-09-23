@@ -1,6 +1,6 @@
 namespace Datasources.Postgres;
 
-public sealed class PostgresTransactionDriver(PostgresCommandDriver commands)
+internal sealed class PostgresTransactionDriver(PostgresCommandDriver commands)
 {
     public Task Begin(IsolationLevel isolation = IsolationLevel.Serializable) =>
         commands.Exec($"BEGIN ISOLATION LEVEL {PostgresBind.IsolationSql(isolation)}");

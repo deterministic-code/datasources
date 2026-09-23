@@ -20,18 +20,13 @@ import {
   UpdateStatement,
   Where,
 } from "@datasources/core";
-import {
-  asRecord,
-  JsonCommand,
-  JsonConnection,
-  JsonProvider,
-  matches,
-  MemoryFileStore,
-  NodeFileStore,
-  parametersToObject,
-  parseFilter,
-  type FileSystemApi,
-} from "./index.ts";
+import { JsonCommand } from "./command.ts";
+import { JsonConnection } from "./connection.ts";
+import { asRecord, matches, parametersToObject, parseFilter } from "./filter.ts";
+import type { FileSystemApi } from "./i-file-store.ts";
+import { JsonProvider } from "./JsonProvider.ts";
+import { MemoryFileStore } from "./memory-file-store.ts";
+import { NodeFileStore } from "./node-file-store.ts";
 
 afterEach(() => {
   DatasourceFactory.reset();

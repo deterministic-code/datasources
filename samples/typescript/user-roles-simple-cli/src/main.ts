@@ -1,8 +1,8 @@
-import { ConsoleCommandMiddleware, providerFromUrl, type IConnection } from "@datasources/core";
+import { ConsoleCommandMiddleware, providerFromUrl, type DatasourceOptions, type IConnection } from "@datasources/core";
 import "@datasources/register";
-import { loadMysql2Driver, MysqlConnection } from "@datasources/mysql";
-import { loadPgDriver, PostgresConnection } from "@datasources/postgres";
-import { loadBetterSqlite3Driver, SqliteConnection } from "@datasources/sqlite";
+import { MysqlProvider } from "@datasources/mysql";
+import { PostgresProvider } from "@datasources/postgres";
+import { SqliteProvider } from "@datasources/sqlite";
 import { readFileSync, existsSync } from "node:fs";
 import { App } from "./app.ts";
 import { migrate } from "./migrate.ts";
@@ -19,26 +19,18 @@ const env = (key: string): string => {
   return "";
 };
 
-const connect = async (): Promise<IConnection> => {
+const connect = (): IConnection => {
   const url = env("DATASOURCE_URL");
-  const schema = env("DATABASE_SCHEMA") || undefined;
+  const schema = env("DATABASE_SCHEMA");
   const provider = providerFromUrl(url);
-  return provider === "sqlite"
-    ? new SqliteConnection({
-        url,
-        driver: await loadBetterSqlite3Driver(url.replace(/^sqlite:(?:\/\/\/|\/\/)?/i, "") || ":memory:"),
-      })
-    : provider === "mysql"
-      ? new MysqlConnection({ url, driver: await loadMysql2Driver(url) })
-      : provider === "postgres"
-        ? new PostgresConnection({
-            url,
-            schema,
-            driver: await loadPgDriver(url, () => import("pg"), schema),
-          })
-        : (() => {
-            throw new Error("DATASOURCE_URL is required");
-          })();
+  const options: DatasourceOptions = schema ? { url, schema } : { url };
+  return ({
+    sqlite: () => new SqliteProvider().connection(options),
+    mysql: () => new MysqlProvider().connection(options),
+    postgres: () => new PostgresProvider().connection(options),
+  }[provider] ?? (() => {
+    throw new Error("DATASOURCE_URL is required");
+  }))();
 };
 
 const run = async (args: string[]): Promise<number> => {

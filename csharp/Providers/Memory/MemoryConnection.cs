@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryConnection : IConnection
+internal sealed class MemoryConnection : IConnection
 {
     public MemoryStore Store { get; }
     public string Collection { get; set; }

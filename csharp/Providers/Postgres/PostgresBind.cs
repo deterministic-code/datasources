@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace Datasources.Postgres;
 
-public static class PostgresBind
+internal static class PostgresBind
 {
     static readonly Regex Name = new(@"\$([A-Za-z_][A-Za-z0-9_]*)", RegexOptions.Compiled);
 

@@ -71,12 +71,11 @@ public class PostgresTests
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
-        Assert.Throws<DatasourceException>(() =>
-            new Datasource("postgres", new PostgresProvider())
-                .CreateRepository<Dictionary<string, Value>>());
+        Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
+            new Datasource("postgres", new PostgresProvider()).CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("postgres", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "postgres" }).Provider);
-        await Assert.ThrowsAsync<DatasourceException>(() =>
-            new Datasource("postgres", new PostgresProvider()).CreateConnection());
+        var provided = Assert.IsType<PostgresConnection>(await new Datasource("postgres", new PostgresProvider()).CreateConnection());
+        Assert.IsType<PostgresDriver>(provided.Driver);
 
         var closed = new PostgresConnection(new PostgresConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute("x"));

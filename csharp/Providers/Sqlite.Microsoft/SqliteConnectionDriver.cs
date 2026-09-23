@@ -3,7 +3,7 @@ using SqliteDb = Microsoft.Data.Sqlite.SqliteConnection;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteConnectionDriver
+internal sealed class SqliteConnectionDriver
 {
     SqliteDb? _db;
 
