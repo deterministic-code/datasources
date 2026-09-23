@@ -1,16 +1,12 @@
+mod bind;
 mod command;
-mod command_driver;
 mod connection;
-mod connection_driver;
 mod converters;
 mod driver;
-mod provider;
 mod pg_value;
-mod tokio_postgres_driver;
 mod transaction;
-mod transaction_driver;
 
-pub use provider::PostgresProvider;
+pub use driver::PostgresDriver;
 
 #[cfg(test)]
 #[path = "../tests/contacts.rs"]
@@ -26,24 +22,20 @@ mod repository_spec;
 mod tests {
     use crate::command::PostgresCommand;
     use crate::connection::PostgresConnection;
-    use crate::driver::{
-        isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver,
-        PostgresExecuteResult,
-    };
+    use crate::bind::{isolation_sql, to_postgres, with_returning};
     use crate::transaction::PostgresTransaction;
-    use async_trait::async_trait;
     use datasources::{
-        create, register, reset, Command, Connection, Driver, IsolationLevel, Transaction,
-        Result, Row, Value,
+        create, downcast_connection, register, reset, Command, Connection, Driver, IsolationLevel,
+        Transaction, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    struct With(Arc<dyn PostgresDriver>, Option<String>);
+    struct With(Option<String>);
 
     impl Driver for With {
         fn connection(&self, _: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
-            Arc::new(PostgresConnection::new(self.1.clone(), None, self.0.clone()))
+            Arc::new(PostgresConnection::new(self.0.clone(), None))
         }
 
         fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
@@ -55,9 +47,8 @@ mod tests {
             connection: Arc<dyn Connection>,
             isolation: IsolationLevel,
         ) -> Arc<dyn Transaction> {
-            let conn = datasources::downcast_connection::<PostgresConnection>(connection)
-                .expect("postgres");
-            Arc::new(PostgresTransaction::new(conn.driver.clone(), isolation))
+            let conn = downcast_connection::<PostgresConnection>(connection).expect("postgres");
+            Arc::new(PostgresTransaction::new(conn.share(), isolation))
         }
 
         fn row_type_converters(
@@ -68,62 +59,16 @@ mod tests {
         }
     }
 
-    struct FakeDriver;
-
-    #[async_trait]
-    impl PostgresDriver for FakeDriver {
-        async fn open(&self, _url: &str) -> Result<()> {
-            Ok(())
-        }
-        async fn close(&self) -> Result<()> {
-            Ok(())
-        }
-        async fn execute(
-            &self,
-            sql: &str,
-            _params: &HashMap<String, Value>,
-        ) -> Result<PostgresExecuteResult> {
-            Ok(if sql.trim().is_empty() {
-                PostgresExecuteResult {
-                    rows_affected: 0,
-                    result: Value::Null,
-                }
-            } else {
-                PostgresExecuteResult {
-                    rows_affected: 2,
-                    result: Value::Int(5),
-                }
-            })
-        }
-        async fn query(&self, sql: &str, _params: &HashMap<String, Value>) -> Result<Vec<Row>> {
-            Ok(if sql.trim().is_empty() {
-                vec![]
-            } else {
-                let mut row = Row::new();
-                row.insert("id".into(), Value::Int(1));
-                vec![row]
-            })
-        }
-        async fn begin(&self, _isolation: IsolationLevel) -> Result<()> {
-            Ok(())
-        }
-        async fn commit(&self) -> Result<()> {
-            Ok(())
-        }
-        async fn rollback(&self) -> Result<()> {
-            Ok(())
-        }
-    }
-
     #[tokio::test]
     async fn postgres_command_and_repository() {
-        assert!(require_driver(None).is_err());
         let (sql, values) = to_postgres(
             "SELECT * FROM t WHERE id = $id AND n = $id",
             &HashMap::from([("id".into(), Value::Int(1))]),
         );
         assert_eq!(sql, "SELECT * FROM t WHERE id = $1 AND n = $1");
         assert_eq!(values, vec![Value::Int(1)]);
+        let (_, missing) = to_postgres("SELECT $missing", &HashMap::new());
+        assert_eq!(missing, vec![Value::Null]);
         assert_eq!(
             with_returning("INSERT INTO t (id) VALUES (1)"),
             "INSERT INTO t (id) VALUES (1) RETURNING id"
@@ -133,6 +78,7 @@ mod tests {
             "INSERT INTO t VALUES (1) RETURNING id"
         );
         assert_eq!(with_returning("UPDATE t SET x = 1"), "UPDATE t SET x = 1");
+        assert_eq!(with_returning("in"), "in");
         assert_eq!(
             isolation_sql(IsolationLevel::ReadUncommitted),
             "READ UNCOMMITTED"
@@ -146,36 +92,33 @@ mod tests {
             "REPEATABLE READ"
         );
         assert_eq!(isolation_sql(IsolationLevel::Serializable), "SERIALIZABLE");
-        let driver: Arc<dyn PostgresDriver> = Arc::new(FakeDriver);
         let conn = Arc::new(PostgresConnection::new(
             Some("postgres://db/app".into()),
             Some("s".into()),
-            driver.clone(),
         ));
-        conn.open().await.unwrap();
-        conn.open().await.unwrap();
         assert_eq!(conn.schema.as_deref(), Some("s"));
         let command = PostgresCommand::new(conn.clone());
         command.execute("", None).await.unwrap();
-        command.execute_reader("SELECT 1", None).await.unwrap();
         command.execute_reader("", None).await.unwrap();
-        let txn = conn.start_transaction(None).await.unwrap();
-        txn.commit().await.unwrap();
-        conn.start_transaction(Some(IsolationLevel::ReadUncommitted))
-            .await
-            .unwrap()
-            .abort()
-            .await
-            .unwrap();
+        assert!(conn.start_transaction(None).await.is_err());
         conn.close().await.unwrap();
         assert!(conn.ensure_open().is_err());
-        let defaulted = PostgresConnection::new(None, None, driver.clone());
+        let defaulted = PostgresConnection::new(None, None);
         assert_eq!(defaulted.url, "");
+        let options = HashMap::from([
+            ("database_url".into(), "postgres://db/app".into()),
+            ("database_schema".into(), "s".into()),
+        ]);
+        let from = downcast_connection::<PostgresConnection>(PostgresConnection::from_options(
+            Some(&options),
+        ))
+        .expect("postgres");
+        assert_eq!(from.url, "postgres://db/app");
+        assert_eq!(from.schema.as_deref(), Some("s"));
         reset();
-        let driver_for_ds = driver.clone();
         register(
             "postgres",
-            Arc::new(With(driver_for_ds, Some("postgres://db/app".into()))),
+            Arc::new(With(Some("postgres://db/app".into()))),
         );
         let ds = create(Some(&HashMap::from([(
             "provider".into(),
@@ -189,7 +132,7 @@ mod tests {
             .await
             .is_err());
         ds.create_repository(None);
-        let closed = Arc::new(PostgresConnection::new(None, None, driver));
+        let closed = Arc::new(PostgresConnection::new(None, None));
         assert!(PostgresCommand::new(closed)
             .execute("x", None)
             .await

@@ -1,6 +1,5 @@
 use super::command::MysqlCommand;
 use super::connection::MysqlConnection;
-use super::mysql_async_driver::MysqlAsyncDriver;
 use datasources::{
     utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
     IsolationLevel, Parameter, Reader, Transaction, Value,
@@ -194,10 +193,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str) {
     };
     let mut sessions = HashMap::new();
     for name in &names {
-        let conn = Arc::new(MysqlConnection::new(
-            Some(url.to_string()),
-            Arc::new(MysqlAsyncDriver::new()),
-        ));
+        let conn = Arc::new(MysqlConnection::new(Some(url.to_string())));
         conn.open().await.unwrap();
         sessions.insert(
             name.clone(),
@@ -245,10 +241,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str) {
         let expected_rows = resolve_rows(op.expect.as_ref().and_then(|e| e.rows.as_ref()), dialect);
         let fresh;
         let target = if op.open == Some(false) {
-            fresh = attach(MysqlCommand::new(Arc::new(MysqlConnection::new(
-                None,
-                Arc::new(MysqlAsyncDriver::new()),
-            ))));
+            fresh = attach(MysqlCommand::new(Arc::new(MysqlConnection::new(None))));
             &fresh
         } else {
             &sessions[op.connection.as_deref().unwrap_or(&names[0])].command
@@ -346,10 +339,7 @@ async fn return_statement_selects_scalar() {
         .unwrap();
     drop(admin);
     let url = replace_db(&base, &name);
-    let conn = Arc::new(MysqlConnection::new(
-        Some(url),
-        Arc::new(MysqlAsyncDriver::new()),
-    ));
+    let conn = Arc::new(MysqlConnection::new(Some(url)));
     conn.open().await.unwrap();
     let command = MysqlCommand::new(conn);
     command

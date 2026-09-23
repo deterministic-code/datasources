@@ -1,6 +1,5 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
-use super::rusqlite_driver::RusqliteDriver;
 use datasources::{Column, Connection, CreateTableStatement, Text};
 use datasources_sql_specs::RepositoryDialect;
 use std::sync::Arc;
@@ -51,10 +50,7 @@ fn dialect() -> RepositoryDialect {
 #[tokio::test]
 async fn user_crud() {
     for path in datasources_sql_specs::files() {
-        let conn = Arc::new(SqliteConnection::new(
-            Some(":memory:".into()),
-            Arc::new(RusqliteDriver::new()),
-        ));
+        let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
         conn.open().await.unwrap();
         let command = Arc::new(SqliteCommand::new(conn.clone()));
         datasources_sql_specs::run(&path, &dialect(), conn, command)

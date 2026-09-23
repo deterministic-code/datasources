@@ -12,7 +12,7 @@ import { SqliteConnection } from "./connection.ts";
 import { SqliteTransaction } from "./transaction.ts";
 import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
 
-export class SqliteProvider implements IDriver {
+export class SqliteDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
   connection = (options?: DatasourceOptions): IConnection =>
     SqliteConnection.from(options);

@@ -443,7 +443,7 @@ fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Va
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryProvider`, `SqliteProvider`, …) and that is what `register` stores. Dialect engine drivers (`ISqliteDriver`, `IMysqlDriver`) stay on the connection.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryProvider`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
 
 ## Examples
 

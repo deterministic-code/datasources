@@ -1,32 +1,45 @@
 use crate::command::MysqlCommand;
-use crate::driver::MysqlDriver;
-use crate::mysql_async_driver::MysqlAsyncDriver;
+use crate::engine::isolation_sql;
 use crate::transaction::MysqlTransaction;
 use async_trait::async_trait;
 use datasources::{
     Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
 };
+use mysql_async::prelude::Queryable;
+use mysql_async::Conn;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+pub(crate) fn map_err(error: mysql_async::Error) -> DatasourceError {
+    DatasourceError::message(error.to_string())
+}
+
 pub struct MysqlConnection {
     pub url: String,
-    pub driver: Arc<dyn MysqlDriver>,
     opened: Arc<Mutex<bool>>,
+    pub(crate) conn: Arc<tokio::sync::Mutex<Option<Conn>>>,
 }
 
 impl MysqlConnection {
-    pub fn new(url: Option<String>, driver: Arc<dyn MysqlDriver>) -> Self {
+    pub fn new(url: Option<String>) -> Self {
         Self {
             url: url.unwrap_or_default(),
-            driver,
             opened: Arc::new(Mutex::new(false)),
+            conn: Arc::new(tokio::sync::Mutex::new(None)),
         }
     }
 
     pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
         let url = options.and_then(|o| o.get("url").or_else(|| o.get("database_url")).cloned());
-        Arc::new(MysqlConnection::new(url, Arc::new(MysqlAsyncDriver::new())))
+        Arc::new(MysqlConnection::new(url))
+    }
+
+    pub(crate) fn share(&self) -> Self {
+        Self {
+            url: self.url.clone(),
+            opened: self.opened.clone(),
+            conn: self.conn.clone(),
+        }
     }
 
     pub fn ensure_open(&self) -> Result<()> {
@@ -34,6 +47,14 @@ impl MysqlConnection {
             return Err(DatasourceError::message("Connection is not open"));
         }
         Ok(())
+    }
+
+    pub(crate) async fn exec(&self, sql: &str) -> Result<()> {
+        let mut slot = self.conn.lock().await;
+        let conn = slot
+            .as_mut()
+            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        conn.query_drop(sql).await.map_err(map_err)
     }
 }
 
@@ -52,24 +73,30 @@ impl Connection for MysqlConnection {
     }
 
     fn create_command(&self) -> Arc<dyn Command> {
-        Arc::new(MysqlCommand::new(Arc::new(MysqlConnection {
-            url: self.url.clone(),
-            driver: self.driver.clone(),
-            opened: self.opened.clone(),
-        })))
+        Arc::new(MysqlCommand::new(Arc::new(self.share())))
     }
 
     async fn open(&self) -> Result<()> {
         if *self.opened.lock().unwrap() {
             return Ok(());
         }
-        self.driver.open(&self.url).await?;
+        let mut slot = self.conn.lock().await;
+        if slot.is_some() {
+            *self.opened.lock().unwrap() = true;
+            return Ok(());
+        }
+        let mut conn = Conn::from_url(self.url.clone()).await.map_err(map_err)?;
+        conn.query_drop("SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')")
+            .await
+            .map_err(map_err)?;
+        *slot = Some(conn);
+        drop(slot);
         *self.opened.lock().unwrap() = true;
         Ok(())
     }
 
     async fn close(&self) -> Result<()> {
-        self.driver.close().await?;
+        *self.conn.lock().await = None;
         *self.opened.lock().unwrap() = false;
         Ok(())
     }
@@ -80,10 +107,12 @@ impl Connection for MysqlConnection {
     ) -> Result<Arc<dyn Transaction>> {
         self.ensure_open()?;
         let isolation = isolation.unwrap_or_default();
-        self.driver.begin(isolation).await?;
-        Ok(Arc::new(MysqlTransaction {
-            driver: self.driver.clone(),
-            isolation,
-        }) as Arc<dyn Transaction>)
+        self.exec(&format!(
+            "SET TRANSACTION ISOLATION LEVEL {}",
+            isolation_sql(isolation)
+        ))
+        .await?;
+        self.exec("START TRANSACTION").await?;
+        Ok(Arc::new(MysqlTransaction::new(self.share(), isolation)))
     }
 }

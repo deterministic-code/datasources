@@ -1,16 +1,18 @@
-use crate::driver::SqliteDriver;
+use crate::connection::SqliteConnection;
 use async_trait::async_trait;
 use datasources::{IsolationLevel, Result, Transaction};
-use std::sync::Arc;
 
 pub struct SqliteTransaction {
-    pub(crate) driver: Arc<dyn SqliteDriver>,
+    connection: SqliteConnection,
     pub(crate) isolation: IsolationLevel,
 }
 
 impl SqliteTransaction {
-    pub fn new(driver: Arc<dyn SqliteDriver>, isolation: IsolationLevel) -> Self {
-        Self { driver, isolation }
+    pub fn new(connection: SqliteConnection, isolation: IsolationLevel) -> Self {
+        Self {
+            connection,
+            isolation,
+        }
     }
 }
 
@@ -21,10 +23,10 @@ impl Transaction for SqliteTransaction {
     }
 
     async fn commit(&self) -> Result<()> {
-        self.driver.commit().await
+        self.connection.exec("COMMIT")
     }
 
     async fn abort(&self) -> Result<()> {
-        self.driver.rollback().await
+        self.connection.exec("ROLLBACK")
     }
 }

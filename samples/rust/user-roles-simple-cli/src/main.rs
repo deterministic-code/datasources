@@ -1,9 +1,9 @@
 use datasources::{
     provider_from_url, utc_iso_millis, Connection, ConsoleCommandMiddleware, DatasourceError, Driver,
 };
-use datasources_mysql::MysqlProvider;
-use datasources_postgres::PostgresProvider;
-use datasources_sqlite::SqliteProvider;
+use datasources_mysql::MysqlDriver;
+use datasources_postgres::PostgresDriver;
+use datasources_sqlite::SqliteDriver;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -37,9 +37,9 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
         map
     };
     let connection: Arc<dyn Connection> = match provider.as_str() {
-        "sqlite" => SqliteProvider.connection(Some(&options(None))),
-        "mysql" => MysqlProvider.connection(Some(&options(None))),
-        "postgres" => PostgresProvider.connection(Some(&options(schema.as_deref()))),
+        "sqlite" => SqliteDriver.connection(Some(&options(None))),
+        "mysql" => MysqlDriver.connection(Some(&options(None))),
+        "postgres" => PostgresDriver.connection(Some(&options(schema.as_deref()))),
         name => {
             return Err(DatasourceError::message(format!("unknown provider {name}")));
         }

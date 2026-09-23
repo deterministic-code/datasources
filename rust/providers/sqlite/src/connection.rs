@@ -1,27 +1,32 @@
 use crate::command::SqliteCommand;
-use crate::driver::SqliteDriver;
-use crate::rusqlite_driver::RusqliteDriver;
+use crate::connection_string;
 use crate::sqlite_path::sqlite_filename;
 use crate::transaction::SqliteTransaction;
 use async_trait::async_trait;
 use datasources::{
     Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
 };
+use rusqlite::Connection as SqliteDb;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+pub(crate) fn map_err(error: rusqlite::Error) -> DatasourceError {
+    DatasourceError::message(error.to_string())
+}
 
 pub struct SqliteConnection {
     pub filename: String,
-    pub driver: Arc<dyn SqliteDriver>,
     opened: Arc<Mutex<bool>>,
+    pub(crate) db: Arc<Mutex<Option<SqliteDb>>>,
 }
 
 impl SqliteConnection {
-    pub fn new(filename: Option<String>, driver: Arc<dyn SqliteDriver>) -> Self {
+    pub fn new(filename: Option<String>) -> Self {
         Self {
             filename: filename.unwrap_or_else(|| ":memory:".to_string()),
-            driver,
             opened: Arc::new(Mutex::new(false)),
+            db: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -33,10 +38,15 @@ impl SqliteConnection {
                     .and_then(|url| sqlite_filename(url))
             })
         });
-        Arc::new(SqliteConnection::new(
-            filename,
-            Arc::new(RusqliteDriver::new()),
-        ))
+        Arc::new(SqliteConnection::new(filename))
+    }
+
+    pub(crate) fn share(&self) -> Self {
+        Self {
+            filename: self.filename.clone(),
+            opened: self.opened.clone(),
+            db: self.db.clone(),
+        }
     }
 
     pub fn ensure_open(&self) -> Result<()> {
@@ -44,6 +54,25 @@ impl SqliteConnection {
             return Err(DatasourceError::message("Connection is not open"));
         }
         Ok(())
+    }
+
+    pub(crate) fn exec(&self, sql: &str) -> Result<()> {
+        let db = self.db.lock().unwrap();
+        let conn = db
+            .as_ref()
+            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        conn.execute(sql, []).map_err(map_err).map(|_| ())
+    }
+
+    fn begin(&self, isolation: IsolationLevel) -> Result<()> {
+        let db = self.db.lock().unwrap();
+        let conn = db
+            .as_ref()
+            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        let flag = matches!(isolation, IsolationLevel::ReadUncommitted) as i64;
+        conn.pragma_update(None, "read_uncommitted", flag)
+            .map_err(map_err)?;
+        conn.execute("BEGIN", []).map_err(map_err).map(|_| ())
     }
 }
 
@@ -62,24 +91,28 @@ impl Connection for SqliteConnection {
     }
 
     fn create_command(&self) -> Arc<dyn Command> {
-        Arc::new(SqliteCommand::new(Arc::new(SqliteConnection {
-            filename: self.filename.clone(),
-            driver: self.driver.clone(),
-            opened: self.opened.clone(),
-        })))
+        Arc::new(SqliteCommand::new(Arc::new(self.share())))
     }
 
     async fn open(&self) -> Result<()> {
         if *self.opened.lock().unwrap() {
             return Ok(());
         }
-        self.driver.open(&self.filename).await?;
+        let mut db = self.db.lock().unwrap();
+        if db.is_some() {
+            *self.opened.lock().unwrap() = true;
+            return Ok(());
+        }
+        let conn = connection_string::open(&self.filename).map_err(map_err)?;
+        conn.busy_timeout(Duration::ZERO).map_err(map_err)?;
+        *db = Some(conn);
+        drop(db);
         *self.opened.lock().unwrap() = true;
         Ok(())
     }
 
     async fn close(&self) -> Result<()> {
-        self.driver.close().await?;
+        *self.db.lock().unwrap() = None;
         *self.opened.lock().unwrap() = false;
         Ok(())
     }
@@ -90,10 +123,7 @@ impl Connection for SqliteConnection {
     ) -> Result<Arc<dyn Transaction>> {
         self.ensure_open()?;
         let isolation = isolation.unwrap_or_default();
-        self.driver.begin(isolation).await?;
-        Ok(Arc::new(SqliteTransaction {
-            driver: self.driver.clone(),
-            isolation,
-        }) as Arc<dyn Transaction>)
+        self.begin(isolation)?;
+        Ok(Arc::new(SqliteTransaction::new(self.share(), isolation)))
     }
 }

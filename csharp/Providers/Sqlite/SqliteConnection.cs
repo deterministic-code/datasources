@@ -1,12 +1,12 @@
-using Datasources;
-
 namespace Datasources.Sqlite;
 
 internal sealed class SqliteConnection : IConnection
 {
+    readonly ISqliteConnectionSession _session;
+    readonly ISqliteCommands _commands;
+    readonly ISqliteTransactions _transactions;
 
     public string Filename { get; }
-    public ISqliteDriver Driver { get; }
     public string Provider => "sqlite";
     public ICommand CreateCommand() => new SqliteCommand(this);
     public bool IsOpen { get; private set; }
@@ -16,8 +16,7 @@ internal sealed class SqliteConnection : IConnection
         {
             Filename = DatasourceOptions.Value(options, "filename"),
             Url = DatasourceOptions.Value(options, "url")
-                ?? DatasourceOptions.Value(options, "database_url"),
-            Driver = SqliteGuard.Engine()
+                ?? DatasourceOptions.Value(options, "database_url")
         })
     {
     }
@@ -26,28 +25,26 @@ internal sealed class SqliteConnection : IConnection
     {
         options ??= new SqliteConnectionOptions();
         Filename = options.Filename ?? SqlitePath.FromUrl(options.Url) ?? ":memory:";
-        Driver = SqliteGuard.Require(options.Driver);
+        (_session, _commands, _transactions) = SqliteSessions.New();
     }
-
-
 
     public async Task Open()
     {
         if (IsOpen) return;
-        await Driver.Open(Filename);
+        await _session.Open(Filename);
         IsOpen = true;
     }
 
     public async Task Close()
     {
-        await Driver.Close();
+        await _session.Close();
         IsOpen = false;
     }
 
     public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
     {
         EnsureOpen();
-        await Driver.Begin(isolation);
+        await _transactions.Begin(isolation);
         return new SqliteTransaction(this, isolation);
     }
 
@@ -55,4 +52,7 @@ internal sealed class SqliteConnection : IConnection
     {
         if (!IsOpen) throw new DatasourceException("Connection is not open");
     }
+
+    internal ISqliteCommands Commands => _commands;
+    internal ISqliteTransactions Transactions => _transactions;
 }

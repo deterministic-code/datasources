@@ -54,13 +54,13 @@ fn register_named(name: &str) -> Result<()> {
         name,
         "json" => datasources_json::JsonProvider,
         "memory" => datasources_memory::MemoryProvider,
-        "sqlite" => datasources_sqlite::SqliteProvider,
+        "sqlite" => datasources_sqlite::SqliteDriver,
         "text" => datasources_text::TextProvider,
         "xml" => datasources_xml::XmlProvider,
         "yaml" => datasources_yaml::YamlProvider,
-        "mysql" => datasources_mysql::MysqlProvider,
+        "mysql" => datasources_mysql::MysqlDriver,
         "sqlserver" => datasources_sqlserver::SqlServerProvider,
-        "postgres" => datasources_postgres::PostgresProvider,
+        "postgres" => datasources_postgres::PostgresDriver,
         "oracle" => datasources_oracle::OracleProvider,
         "mongodb" => datasources_mongodb::MongoDbProvider,
         "dynamodb" => datasources_dynamodb::DynamoDbProvider,
@@ -254,8 +254,13 @@ mod tests {
                 .collect();
             assert_eq!(public.len(), 1, "{}: {public:?}", path.display());
             let line = public[0].trim_end_matches(';');
+            let driver = path.components().any(|c| {
+                let name = c.as_os_str();
+                name == "mysql" || name == "postgres" || name == "sqlite"
+            });
+            let suffix = if driver { "Driver" } else { "Provider" };
             assert!(
-                line.starts_with("pub use ") && line.ends_with("Provider"),
+                line.starts_with("pub use ") && line.ends_with(suffix),
                 "{}: {line}",
                 path.display()
             );

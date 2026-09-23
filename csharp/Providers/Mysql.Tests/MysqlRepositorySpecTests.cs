@@ -23,7 +23,6 @@ public class MysqlRepositorySpecTests
                     var conn = new MysqlConnection(new MysqlConnectionOptions
                     {
                         Url = isolated.Url,
-                        Driver = new MysqlDriver(),
                     });
                     return new RepositorySpec.Session(conn, new MysqlCommand(conn), MysqlRowTypeConverters.All);
                 }, CreateTable, Quote);

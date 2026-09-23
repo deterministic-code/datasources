@@ -1,8 +1,8 @@
 import { ConsoleCommandMiddleware, providerFromUrl, type DatasourceOptions, type IConnection } from "@datasources/core";
 import "@datasources/register";
-import { MysqlProvider } from "@datasources/mysql";
-import { PostgresProvider } from "@datasources/postgres";
-import { SqliteProvider } from "@datasources/sqlite";
+import { MysqlDriver } from "@datasources/mysql";
+import { PostgresDriver } from "@datasources/postgres";
+import { SqliteDriver } from "@datasources/sqlite";
 import { readFileSync, existsSync } from "node:fs";
 import { App } from "./app.ts";
 import { migrate } from "./migrate.ts";
@@ -25,9 +25,9 @@ const connect = (): IConnection => {
   const provider = providerFromUrl(url);
   const options: DatasourceOptions = schema ? { url, schema } : { url };
   return ({
-    sqlite: () => new SqliteProvider().connection(options),
-    mysql: () => new MysqlProvider().connection(options),
-    postgres: () => new PostgresProvider().connection(options),
+    sqlite: () => new SqliteDriver().connection(options),
+    mysql: () => new MysqlDriver().connection(options),
+    postgres: () => new PostgresDriver().connection(options),
   }[provider] ?? (() => {
     throw new Error("DATASOURCE_URL is required");
   }))();

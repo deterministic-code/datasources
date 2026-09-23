@@ -7,7 +7,6 @@ import {
 } from "../../sql-spec-runner.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
-import { loadBetterSqlite3Driver } from "../src/driver.ts";
 
 const dialect = loadDialect("sqlite");
 
@@ -16,26 +15,11 @@ describe("shared sql specs", () => {
     it(file.split("/").pop()!, async () => {
       await runSpec(file, dialect, {
         openSession: async (filename) => {
-          const connection = new SqliteConnection({
-            filename,
-            driver: await loadBetterSqlite3Driver(filename),
-          });
+          const connection = SqliteConnection.from({ filename });
           return { connection, command: new SqliteCommand(connection) };
         },
         closedCommand: () =>
-          new SqliteCommand(
-            new SqliteConnection({
-              driver: {
-                open: async () => {},
-                close: async () => {},
-                execute: async () => ({ rowsAffected: 0 }),
-                query: async () => [],
-                begin: async () => {},
-                commit: async () => {},
-                rollback: async () => {},
-              },
-            }),
-          ),
+          new SqliteCommand(new SqliteConnection()),
       });
     });
   }
@@ -43,10 +27,7 @@ describe("shared sql specs", () => {
 
 describe("return statement", () => {
   it("selects a scalar", async () => {
-    const connection = new SqliteConnection({
-      filename: ":memory:",
-      driver: await loadBetterSqlite3Driver(":memory:"),
-    });
+    const connection = SqliteConnection.from({ filename: ":memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
     const parameters = [{ name: "x", value: -3 }];

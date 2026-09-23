@@ -1,58 +1,46 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("better-sqlite3", () => {
-  class Database {
-    constructor(public filename: string) {}
-    prepare() {
-      return {
-        run: () => ({ changes: 0 }),
-        all: () => [],
-      };
-    }
-    exec(): void {}
-    close(): void {}
-  }
-  return { default: Database };
-});
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
-import { BetterSqliteDriver } from "./better-sqlite-driver.ts";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  CRUDRepository,
+  Datasource,
+  DatasourceError,
+  DatasourceFactory,
+  IsolationLevel,
+  type Cells,
+  type IDriver,
+  type Scalar,
+} from "@datasources/core";
 import { SqliteCommand } from "./command.ts";
 import { SqliteConnection } from "./connection.ts";
 import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
-import { bindParameters, loadBetterSqlite3Driver, requireDriver } from "./driver.ts";
-import type { SqliteDatabase } from "./i-sqlite-driver.ts";
-import { SqliteProvider } from "./SqliteProvider.ts";
-import { SqliteTransaction } from "./transaction.ts";
+import type { SqliteDatabase, SqliteStatement } from "./i-sqlite-driver.ts";
 import { filenameOf, sqliteFilename } from "./sqlitePath.ts";
-
-class FakeStatement {
-  constructor(
-    private readonly db: FakeDatabase,
-    private readonly sql: string,
-  ) {}
-
-  run(params?: Record<string, unknown>) {
-    this.db.runs.push({ sql: this.sql, params });
-    return { changes: 2, lastInsertRowid: 5 };
-  }
-
-  all(params?: Record<string, unknown>) {
-    this.db.alls.push({ sql: this.sql, params });
-    return this.db.rows;
-  }
-}
+import { SqliteDriver } from "./SqliteDriver.ts";
+import { SqliteTransaction } from "./transaction.ts";
 
 class FakeDatabase implements SqliteDatabase {
-  runs: Array<{ sql: string; params?: Record<string, unknown> }> = [];
-  alls: Array<{ sql: string; params?: Record<string, unknown> }> = [];
+  static latest: FakeDatabase | undefined;
+  runs: Array<{ sql: string; params?: Record<string, Scalar> }> = [];
+  alls: Array<{ sql: string; params?: Record<string, Scalar> }> = [];
   execs: string[] = [];
   closed = false;
-  rows: Record<string, unknown>[] = [{ id: 1 }];
+  rows: Cells[] = [{ id: 1 }];
+  omitRowid = false;
 
-  constructor(public filename: string) {}
+  constructor(public filename: string) {
+    FakeDatabase.latest = this;
+  }
 
-  prepare(sql: string) {
-    return new FakeStatement(this, sql);
+  prepare(sql: string): SqliteStatement {
+    return {
+      run: (params) => {
+        this.runs.push({ sql, params });
+        return this.omitRowid ? { changes: 1 } : { changes: 2, lastInsertRowid: 5 };
+      },
+      all: (params) => {
+        this.alls.push({ sql, params });
+        return this.rows;
+      },
+    };
   }
 
   exec(sql: string): void {
@@ -64,23 +52,15 @@ class FakeDatabase implements SqliteDatabase {
   }
 }
 
-function fakeDriver(filename = ":memory:") {
-  let instance: FakeDatabase | undefined;
-  const Database = class {
-    constructor(name: string) {
-      instance = new FakeDatabase(name);
-      return instance;
-    }
-  } as unknown as new (filename: string) => SqliteDatabase;
-  return {
-    driver: new BetterSqliteDriver(filename, Database),
-    db: () => instance,
-  };
-}
+const opened = async (filename = ":memory:"): Promise<SqliteConnection> => {
+  const connection = new SqliteConnection({ filename, Database: FakeDatabase });
+  await connection.open();
+  return connection;
+};
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("sqlite", new SqliteProvider());
+  DatasourceFactory.register("sqlite", new SqliteDriver());
 });
 
 describe("sqlitePath", () => {
@@ -97,122 +77,19 @@ describe("sqlitePath", () => {
   });
 });
 
-describe("requireDriver and bindParameters", () => {
-  it("requires a driver", () => {
-    expect(() => requireDriver(undefined)).toThrow(DatasourceError);
-    const { driver } = fakeDriver();
-    expect(requireDriver(driver)).toBe(driver);
-  });
-
-  it("binds parameters", () => {
-    expect(bindParameters()).toEqual({});
-    expect(bindParameters(null)).toEqual({});
-    expect(bindParameters([{ name: "id", value: 1 }])).toEqual({ id: 1 });
-  });
-});
-
-describe("BetterSqliteDriver", () => {
-  it("wraps a scripted database module", async () => {
-    let instance: FakeDatabase | undefined;
-    const Database = class {
-      constructor(filename: string) {
-        instance = new FakeDatabase(filename);
-        return instance;
-      }
-    } as unknown as new (filename: string) => SqliteDatabase;
-
-    const driver = new BetterSqliteDriver("app.db", Database);
-    await driver.open("app.db");
-    await driver.open("app.db");
-    expect(instance?.filename).toBe("app.db");
-    expect(await driver.execute("INSERT INTO items (id) VALUES ($id)", { id: 1 }))
-      .toEqual({ rowsAffected: 2, result: 5 });
-    expect(await driver.execute("   ")).toEqual({ rowsAffected: 0 });
-    expect(await driver.query("SELECT * FROM items", { id: 1 })).toEqual([
-      { id: 1 },
-    ]);
-    expect(await driver.query("")).toEqual([]);
-    await driver.begin();
-    await driver.begin(IsolationLevel.ReadUncommitted);
-    await driver.commit();
-    await driver.rollback();
-    expect(instance?.execs).toEqual([
-      "PRAGMA read_uncommitted = 0",
-      "BEGIN",
-      "PRAGMA read_uncommitted = 1",
-      "BEGIN",
-      "COMMIT",
-      "ROLLBACK",
-    ]);
-    await driver.close();
-    expect(instance?.closed).toBe(true);
-    await expect(driver.execute("x")).rejects.toThrow("not open");
-  });
-
-  it("loads default and named exports from an importer", async () => {
-    const Database = class {
-      constructor(public filename: string) {}
-      prepare() {
-        return {
-          run: () => ({ changes: 0 }),
-          all: () => [],
-        };
-      }
-      exec(): void {}
-      close(): void {}
-    };
-    const named = await loadBetterSqlite3Driver(
-      ":memory:",
-      async () => Database as never,
-    );
-    await named.open(":memory:");
-    await named.close();
-
-    const def = await loadBetterSqlite3Driver(":memory:", async () => ({
-      default: Database,
-    }));
-    await def.open(":memory:");
-    await def.close();
-
-    const viaDefaultImport = await loadBetterSqlite3Driver(":memory:");
-    await viaDefaultImport.open(":memory:");
-    await viaDefaultImport.close();
-  });
-
-  it("closes before open and omits lastInsertRowid", async () => {
-    const Database = class {
-      prepare() {
-        return {
-          run: () => ({ changes: 1 }),
-          all: () => [],
-        };
-      }
-      exec(): void {}
-      close(): void {}
-    } as unknown as new (filename: string) => SqliteDatabase;
-    const driver = new BetterSqliteDriver(":memory:", Database);
-    await driver.close();
-    await driver.open(":memory:");
-    expect(await driver.execute("INSERT INTO items DEFAULT VALUES")).toEqual({
-      rowsAffected: 1,
-      result: undefined,
-    });
-  });
-});
-
 describe("SqliteConnection", () => {
   it("opens, reopens, transacts, and closes", async () => {
-    const { driver, db } = fakeDriver("x.db");
-    const connection = new SqliteConnection({ filename: "x.db", driver });
-    await connection.open();
+    const connection = await opened("x.db");
+    const db = FakeDatabase.latest!;
     await connection.open();
     expect(connection.isOpen).toBe(true);
+    expect(db.filename).toBe("x.db");
     const txn = await connection.startTransaction();
     await txn.commit();
     const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);
     expect(txn2.isolation).toBe(IsolationLevel.ReadUncommitted);
     await txn2.abort();
-    expect(db()?.execs).toEqual([
+    expect(db.execs).toEqual([
       "PRAGMA read_uncommitted = 0",
       "BEGIN",
       "COMMIT",
@@ -222,59 +99,64 @@ describe("SqliteConnection", () => {
     ]);
     expect(txn.isolation).toBe("serializable");
     await connection.close();
-    expect(db()?.closed).toBe(true);
+    expect(db.closed).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);
+    expect(() => connection.require()).toThrow("not open");
     await expect(connection.startTransaction()).rejects.toThrow(DatasourceError);
+    await connection.close();
   });
 
-  it("defaults filename and requires a driver", () => {
-    expect(() => new SqliteConnection()).toThrow(DatasourceError);
-    const connection = new SqliteConnection({ driver: fakeDriver().driver });
+  it("defaults the filename and requires a database module to open", async () => {
+    const connection = new SqliteConnection();
     expect(connection.filename).toBe(":memory:");
+    await expect(connection.open()).rejects.toThrow("SQLite driver is required");
+    await connection.close();
   });
 });
 
-describe("SqliteCommand and CRUDRepository", () => {
-  async function setup() {
-    const { driver, db } = fakeDriver();
-    const connection = new SqliteConnection({ driver });
-    await connection.open();
-    return {
-      driver,
-      db,
-      connection,
-      command: new SqliteCommand(connection),
-    };
-  }
-
-  it("executes SQL through the driver", async () => {
-    const { command, db } = await setup();
-    db()!.rows = [{ id: 1, name: "a" }];
-    expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
-      .toEqual({ result: 5, rowsAffected: 2, parameters: [{ name: "id", value: 1 }] });
+describe("SqliteCommand", () => {
+  it("executes SQL on the open database", async () => {
+    const connection = await opened();
+    const db = FakeDatabase.latest!;
+    const command = new SqliteCommand(connection);
+    db.rows = [{ id: 1, name: "a" }];
+    expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }])).toEqual({
+      result: 5,
+      rowsAffected: 2,
+      parameters: [{ name: "id", value: 1 }],
+    });
     expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0 });
-    db()!.rows = [{ abs: 3 }];
-    expect(await command.execute("SELECT abs($x)", [{ name: "x", value: -3 }]))
-      .toEqual({ result: 3, rowsAffected: 1, parameters: [{ name: "x", value: -3 }] });
-    db()!.rows = [];
+    db.rows = [{ abs: 3 }];
+    expect(await command.execute("SELECT abs($x)", [{ name: "x", value: -3 }])).toEqual({
+      result: 3,
+      rowsAffected: 1,
+      parameters: [{ name: "x", value: -3 }],
+    });
+    db.rows = [];
     expect(await command.execute("SELECT 1")).toEqual({ result: null, rowsAffected: 0 });
-    db()!.rows = [{ id: 1, name: "a" }];
+    db.omitRowid = true;
+    expect(await command.execute("INSERT INTO items DEFAULT VALUES")).toEqual({
+      result: undefined,
+      rowsAffected: 1,
+    });
+    db.rows = [{ id: 1, name: "a" }];
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1, name: "a" });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
+    await connection.close();
+    await expect(command.execute("DELETE FROM items")).rejects.toThrow("not open");
   });
 });
 
 describe("Sqlite datasource", () => {
   it("registers and constructs children", async () => {
-    const { driver } = fakeDriver();
-    expect(
-      await new Datasource("sqlite", new SqliteProvider()).createConnection(),
-    ).toBeInstanceOf(SqliteConnection);
-    const of = (engine = driver): IDriver => ({
-      connection: () => new SqliteConnection({ driver: engine }),
+    expect(await new Datasource("sqlite", new SqliteDriver()).createConnection()).toBeInstanceOf(
+      SqliteConnection,
+    );
+    const of = (): IDriver => ({
+      connection: () => new SqliteConnection({ Database: FakeDatabase }),
       command: (c) => c.createCommand(),
       transaction: (c, isolation = "serializable") =>
         new SqliteTransaction(c as SqliteConnection, isolation),
@@ -299,19 +181,14 @@ describe("Sqlite datasource", () => {
     const repo = ds.createRepository(connection);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
-    expect(
-      new Datasource("sqlite", of())
-        .createRepository(),
-    ).toBeInstanceOf(CRUDRepository);
+    expect(new Datasource("sqlite", of()).createRepository()).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "sqlite" }).provider).toBe("sqlite");
     expect(SqliteConnection.from({ filename: ":memory:" }).filename).toBe(":memory:");
     expect(SqliteConnection.from({ url: "sqlite:///:memory:" }).filename).toBe(":memory:");
     expect(SqliteConnection.from({ database_url: "sqlite:///:memory:" }).filename).toBe(":memory:");
     expect(SqliteConnection.from().filename).toBe(":memory:");
-    const provider = new SqliteProvider();
+    const provider = new SqliteDriver();
     expect(provider.command(connection)).toBeInstanceOf(SqliteCommand);
-    expect(provider.transaction(connection as SqliteConnection).isolation).toBe(
-      "serializable",
-    );
+    expect(provider.transaction(connection as SqliteConnection).isolation).toBe("serializable");
   });
 });

@@ -7,18 +7,18 @@ import {
 } from "@datasources/core";
 import { JsonProvider } from "@datasources/json";
 import { MemoryProvider } from "@datasources/memory";
-import { MysqlProvider } from "@datasources/mysql";
-import { PostgresProvider } from "@datasources/postgres";
-import { SqliteProvider } from "@datasources/sqlite";
+import { MysqlDriver } from "@datasources/mysql";
+import { PostgresDriver } from "@datasources/postgres";
+import { SqliteDriver } from "@datasources/sqlite";
 import { packages } from "./packages.ts";
 import { providerNames } from "./providerNames.ts";
 
 const listed: Record<string, new () => IDriver> = {
   json: JsonProvider,
   memory: MemoryProvider,
-  sqlite: SqliteProvider,
-  mysql: MysqlProvider,
-  postgres: PostgresProvider,
+  sqlite: SqliteDriver,
+  mysql: MysqlDriver,
+  postgres: PostgresDriver,
 };
 
 const load = (name: string): IDriver => {

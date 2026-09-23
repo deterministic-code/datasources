@@ -9,7 +9,7 @@ public class SqliteCommandIntegrationTests
     [Fact]
     public async Task ReturnStatementSelectsScalar()
     {
-        var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:", Driver = new SqliteDriver() });
+        var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
         await conn.Open();
         var command = new SqliteCommand(conn);
         var parameters = new[] { new Parameter("x", -3) };
@@ -24,8 +24,8 @@ public class SqliteCommandIntegrationTests
         foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml"))
             await SqlSpec.Run(path, dialect, target =>
             {
-                var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = target, Driver = new SqliteDriver() });
+                var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = target });
                 return new SqlSpec.Session(conn, new SqliteCommand(conn));
-            }, () => new SqliteCommand(new SqliteConnection(new SqliteConnectionOptions { Driver = new SqliteDriver() })));
+            }, () => new SqliteCommand(new SqliteConnection()));
     }
 }

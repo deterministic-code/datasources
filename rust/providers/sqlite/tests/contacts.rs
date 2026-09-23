@@ -1,6 +1,5 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
-use super::rusqlite_driver::RusqliteDriver;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     Connection, CRUDRepository, FlatToNestedMapper, IReadonlyRepository, Mapper,
@@ -20,10 +19,7 @@ fn verbose() -> bool {
 
 #[tokio::test]
 async fn matches_enriched_contacts_service_to_flat_mapper() {
-    let conn = Arc::new(SqliteConnection::new(
-        Some(":memory:".into()),
-        Arc::new(RusqliteDriver::new()),
-    ));
+    let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
     let command = SqliteCommand::new(conn.clone());
     let mut sql = statements_of(&contact_schema("sqlite"));
@@ -61,10 +57,7 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
 
 #[tokio::test]
 async fn maps_join_rows_to_nested_contacts() {
-    let conn = Arc::new(SqliteConnection::new(
-        Some(":memory:".into()),
-        Arc::new(RusqliteDriver::new()),
-    ));
+    let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
     let command = SqliteCommand::new(conn.clone());
     let mut sql = statements_of(&contact_schema("sqlite"));

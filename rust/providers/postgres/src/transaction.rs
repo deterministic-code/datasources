@@ -1,16 +1,18 @@
-use crate::driver::PostgresDriver;
+use crate::connection::PostgresConnection;
 use async_trait::async_trait;
 use datasources::{IsolationLevel, Result, Transaction};
-use std::sync::Arc;
 
 pub struct PostgresTransaction {
-    pub(crate) driver: Arc<dyn PostgresDriver>,
+    connection: PostgresConnection,
     pub(crate) isolation: IsolationLevel,
 }
 
 impl PostgresTransaction {
-    pub fn new(driver: Arc<dyn PostgresDriver>, isolation: IsolationLevel) -> Self {
-        Self { driver, isolation }
+    pub fn new(connection: PostgresConnection, isolation: IsolationLevel) -> Self {
+        Self {
+            connection,
+            isolation,
+        }
     }
 }
 
@@ -21,10 +23,10 @@ impl Transaction for PostgresTransaction {
     }
 
     async fn commit(&self) -> Result<()> {
-        self.driver.commit().await
+        self.connection.exec("COMMIT").await
     }
 
     async fn abort(&self) -> Result<()> {
-        self.driver.rollback().await
+        self.connection.exec("ROLLBACK").await
     }
 }

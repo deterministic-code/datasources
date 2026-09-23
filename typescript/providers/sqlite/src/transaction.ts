@@ -12,10 +12,10 @@ export class SqliteTransaction implements ITransaction {
   ) {}
 
   async commit(): Promise<void> {
-    await this.connection.driver.commit();
+    this.connection.exec("COMMIT");
   }
 
   async abort(): Promise<void> {
-    await this.connection.driver.rollback();
+    this.connection.exec("ROLLBACK");
   }
 }

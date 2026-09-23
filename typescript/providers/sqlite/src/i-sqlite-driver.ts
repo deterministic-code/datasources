@@ -1,32 +1,11 @@
-import type { IsolationLevelName } from "@datasources/core";
-
-export interface SqliteExecuteResult {
-  rowsAffected: number;
-  result?: unknown;
-}
-
-export interface ISqliteDriver {
-  open(filename: string): Promise<void>;
-  close(): Promise<void>;
-  execute(
-    sql: string,
-    params?: Record<string, unknown>,
-  ): Promise<SqliteExecuteResult>;
-  query(
-    sql: string,
-    params?: Record<string, unknown>,
-  ): Promise<Record<string, unknown>[]>;
-  begin(isolation?: IsolationLevelName): Promise<void>;
-  commit(): Promise<void>;
-  rollback(): Promise<void>;
-}
+import type { Cell, Cells, Scalar } from "@datasources/core";
 
 export interface SqliteStatement {
-  run(params?: Record<string, unknown>): {
+  run(params?: Record<string, Scalar>): {
     changes: number;
-    lastInsertRowid?: unknown;
+    lastInsertRowid?: Cell;
   };
-  all(params?: Record<string, unknown>): Record<string, unknown>[];
+  all(params?: Record<string, Scalar>): Cells[];
 }
 
 export interface SqliteDatabase {
@@ -39,7 +18,3 @@ export type SqliteDatabaseCtor = new (
   filename: string,
   options?: { timeout?: number },
 ) => SqliteDatabase;
-
-export type BetterSqlite3Module = {
-  default?: SqliteDatabaseCtor;
-} & SqliteDatabaseCtor;

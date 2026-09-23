@@ -8,13 +8,13 @@ public static class DatasourceInstall
     {
         ["json"] = ("Datasources.Json", "Datasources.Json.JsonProvider"),
         ["memory"] = ("Datasources.Memory", "Datasources.Memory.MemoryProvider"),
-        ["sqlite"] = ("Datasources.Sqlite", "Datasources.Sqlite.SqliteProvider"),
+        ["sqlite"] = ("Datasources.Sqlite", "Datasources.Sqlite.SqliteDriver"),
         ["text"] = ("Datasources.Text", "Datasources.Text.TextProvider"),
         ["xml"] = ("Datasources.Xml", "Datasources.Xml.XmlProvider"),
         ["yaml"] = ("Datasources.Yaml", "Datasources.Yaml.YamlProvider"),
-        ["mysql"] = ("Datasources.Mysql", "Datasources.Mysql.MysqlProvider"),
+        ["mysql"] = ("Datasources.Mysql", "Datasources.Mysql.MysqlDriver"),
         ["sqlserver"] = ("Datasources.SqlServer", "Datasources.SqlServer.SqlServerProvider"),
-        ["postgres"] = ("Datasources.Postgres", "Datasources.Postgres.PostgresProvider"),
+        ["postgres"] = ("Datasources.Postgres", "Datasources.Postgres.PostgresDriver"),
         ["oracle"] = ("Datasources.Oracle", "Datasources.Oracle.OracleProvider"),
         ["mongodb"] = ("Datasources.MongoDb", "Datasources.MongoDb.MongoDbProvider"),
         ["dynamodb"] = ("Datasources.DynamoDb", "Datasources.DynamoDb.DynamoDbProvider")

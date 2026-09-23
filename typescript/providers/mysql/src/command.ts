@@ -1,15 +1,33 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  ParameterDirection,
   responseOf,
   type Cells,
   type ICommand,
   type IReader,
-  type Response,
   type Parameter,
+  type Response,
 } from "@datasources/core";
+import { bindParameters, toMysql } from "./bind.ts";
 import type { MysqlConnection } from "./connection.ts";
-import { bindParameters } from "./driver.ts";
+import type { MysqlExecuteResult, MysqlQueryHeader } from "./i-mysql-engine.ts";
+import type { Scalar } from "./scalar.ts";
+
+const isSelect = (sql: string) =>
+  sql.trimStart().toUpperCase().startsWith("SELECT");
+const isCall = (sql: string) =>
+  sql.trimStart().toUpperCase().startsWith("CALL");
+const outputs = (parameters?: Parameter[]) =>
+  parameters?.filter(
+    (parameter) =>
+      parameter.direction && parameter.direction !== ParameterDirection.Input,
+  ) ?? [];
+
+const scalarOf = (row: Cells | undefined): Scalar | undefined => {
+  const value = row ? Object.values(row)[0] : undefined;
+  return value;
+};
 
 export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: MysqlConnection) {
@@ -21,30 +39,75 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
     return this.run(text, parameters, async (query, params) => {
+      if (!query.trim()) return { value: new ArrayReader([]), rows: [] };
       this.connection.ensureOpen();
-      const rows = await this.connection.driver.query(
-        query,
-        bindParameters(params),
-      );
+      const rows = await this.query(query, bindParameters(params));
       return { value: new ArrayReader(rows), rows };
     });
   }
 
-  async execute(
-    text: string,
-    parameters?: Parameter[],
-  ): Promise<Response> {
+  async execute(text: string, parameters?: Parameter[]): Promise<Response> {
     return this.run(text, parameters, async (query, params) => {
+      if (!query.trim()) return { value: responseOf(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
-      const result = await this.connection.driver.execute(
-        query,
-        bindParameters(params),
-        params,
-      );
+      const result = await this.runSql(query, bindParameters(params), params);
       return {
         value: responseOf(result.result, result.rowsAffected, result.parameters ?? params),
         rows: [],
       };
     });
+  }
+
+  private async runSql(
+    sql: string,
+    params?: Record<string, Scalar>,
+    parameters?: Parameter[],
+  ): Promise<MysqlExecuteResult> {
+    if (isSelect(sql)) {
+      const rows = await this.query(sql, params);
+      return { rowsAffected: rows[0] ? 1 : 0, result: scalarOf(rows[0]), parameters };
+    }
+    const outs = outputs(parameters);
+    if (isCall(sql) && outs.length && parameters) {
+      const client = this.connection.require();
+      for (const parameter of parameters) {
+        if (
+          !parameter.direction ||
+          parameter.direction === ParameterDirection.Input ||
+          parameter.direction === ParameterDirection.InputOutput
+        )
+          await client.query(`SET @${parameter.name} = :${parameter.name}`, {
+            [parameter.name]: parameter.value ?? null,
+          });
+      }
+      await client.query(toMysql(sql).replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, "@$1"));
+      const [rows] = await client.query(
+        `SELECT ${outs.map((parameter) => `@${parameter.name} AS \`${parameter.name}\``).join(", ")}`,
+      );
+      const row = Array.isArray(rows) ? rows[0] : undefined;
+      return {
+        rowsAffected: 0,
+        parameters: parameters.map((parameter) =>
+          row &&
+          parameter.direction &&
+          parameter.direction !== ParameterDirection.Input
+            ? { ...parameter, value: row[parameter.name] }
+            : parameter,
+        ),
+      };
+    }
+    const [result] = await this.connection.require().query(toMysql(sql), params);
+    return Array.isArray(result)
+      ? { rowsAffected: result.length, parameters }
+      : {
+          rowsAffected: result.affectedRows ?? 0,
+          result: result.insertId,
+          parameters,
+        };
+  }
+
+  private async query(sql: string, params?: Record<string, Scalar>): Promise<Cells[]> {
+    const [rows] = await this.connection.require().query(toMysql(sql), params);
+    return Array.isArray(rows) ? rows : [];
   }
 }

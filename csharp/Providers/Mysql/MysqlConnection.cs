@@ -1,10 +1,12 @@
+using MySqlConnector;
+
 namespace Datasources.Mysql;
 
 internal sealed class MysqlConnection : IConnection
 {
+    MySqlConnection? _db;
 
     public string Url { get; }
-    public IMysqlDriver Driver { get; }
     public string Provider => "mysql";
     public ICommand CreateCommand() => new MysqlCommand(this);
     public bool IsOpen { get; private set; }
@@ -13,8 +15,7 @@ internal sealed class MysqlConnection : IConnection
         : this(new MysqlConnectionOptions
         {
             Url = DatasourceOptions.Value(options, "url")
-                ?? DatasourceOptions.Value(options, "database_url"),
-            Driver = new MysqlDriver()
+                ?? DatasourceOptions.Value(options, "database_url")
         })
     {
     }
@@ -23,33 +24,45 @@ internal sealed class MysqlConnection : IConnection
     {
         options ??= new MysqlConnectionOptions();
         Url = options.Url ?? "";
-        Driver = MysqlGuard.Require(options.Driver);
     }
-
-
 
     public async Task Open()
     {
         if (IsOpen) return;
-        await Driver.Open(Url);
+        _db = new MySqlConnection(MysqlConnectionString.ToConnectionString(Url));
+        await _db.OpenAsync();
+        await Exec("SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')");
         IsOpen = true;
     }
 
     public async Task Close()
     {
-        await Driver.Close();
+        if (_db is not null)
+            await _db.DisposeAsync();
+        _db = null;
         IsOpen = false;
     }
 
     public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
     {
         EnsureOpen();
-        await Driver.Begin(isolation);
+        await Exec($"SET TRANSACTION ISOLATION LEVEL {MysqlBind.IsolationSql(isolation)}");
+        await Exec("START TRANSACTION");
         return new MysqlTransaction(this, isolation);
     }
 
     public void EnsureOpen()
     {
         if (!IsOpen) throw new DatasourceException("Connection is not open");
+    }
+
+    internal MySqlConnection Require() =>
+        _db ?? throw new DatasourceException("Connection is not open");
+
+    internal async Task Exec(string sql)
+    {
+        using var command = Require().CreateCommand();
+        command.CommandText = sql;
+        await command.ExecuteNonQueryAsync();
     }
 }

@@ -7,8 +7,10 @@ internal sealed class MysqlTransaction : ITransaction
         Connection = connection;
         Isolation = isolation;
     }
+
     public IConnection Connection { get; }
     public IsolationLevel Isolation { get; }
-    public Task Commit() => ((MysqlConnection)Connection).Driver.Commit();
-    public Task Abort() => ((MysqlConnection)Connection).Driver.Rollback();
+    MysqlConnection Typed => (MysqlConnection)Connection;
+    public Task Commit() => Typed.Exec("COMMIT");
+    public Task Abort() => Typed.Exec("ROLLBACK");
 }

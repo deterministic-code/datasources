@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-internal sealed class SqliteTransactionDriver(SqliteCommandDriver commands)
+internal sealed class SqliteTransactionDriver(SqliteCommandDriver commands) : ISqliteTransactions
 {
     public async Task Begin(IsolationLevel isolation = IsolationLevel.Serializable)
     {

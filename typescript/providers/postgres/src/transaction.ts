@@ -12,10 +12,10 @@ export class PostgresTransaction implements ITransaction {
   ) {}
 
   async commit(): Promise<void> {
-    await this.connection.driver.commit();
+    await this.connection.exec("COMMIT");
   }
 
   async abort(): Promise<void> {
-    await this.connection.driver.rollback();
+    await this.connection.exec("ROLLBACK");
   }
 }

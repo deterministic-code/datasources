@@ -12,10 +12,10 @@ export class MysqlTransaction implements ITransaction {
   ) {}
 
   async commit(): Promise<void> {
-    await this.connection.driver.commit();
+    await this.connection.require().commit();
   }
 
   async abort(): Promise<void> {
-    await this.connection.driver.rollback();
+    await this.connection.require().rollback();
   }
 }

@@ -11,23 +11,26 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ParameterDirection, type IDriver } from "@datasources/core";
 import { bindParameters, toPostgres, withReturning } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
 import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
-import { loadPgDriver, requireDriver } from "./driver.ts";
-import type { IPgClient, PgQueryResult } from "./i-postgres-driver.ts";
-import { PgDriver } from "./pg-driver.ts";
-import { PostgresProvider } from "./PostgresProvider.ts";
+import { pgClient, type IPgClient, type PgQueryResult } from "./i-postgres-driver.ts";
+import { PostgresDriver } from "./PostgresDriver.ts";
 import { PostgresTransaction } from "./transaction.ts";
 import type { Scalar } from "./scalar.ts";
 
 class FakeClient implements IPgClient {
+  static latest: FakeClient;
   queries: Array<{ text: string; values?: Scalar[] }> = [];
   connected = false;
   ended = false;
   result: PgQueryResult = { rowCount: 2, rows: [{ id: 5 }] };
+
+  constructor(_options: { connectionString: string }) {
+    FakeClient.latest = this;
+  }
 
   async connect(): Promise<void> {
     this.connected = true;
@@ -41,32 +44,12 @@ class FakeClient implements IPgClient {
   }
 }
 
-function fakeDriver(url = "postgres://localhost/app", schema?: string) {
-  let instance: FakeClient | undefined;
-  const Client = class {
-    constructor() {
-      instance = new FakeClient();
-      return instance;
-    }
-  } as unknown as new (options: { connectionString: string }) => IPgClient;
-  return {
-    driver: new PgDriver(url, Client, schema),
-    client: () => instance,
-  };
-}
-
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("postgres", new PostgresProvider());
+  DatasourceFactory.register("postgres", new PostgresDriver());
 });
 
-describe("requireDriver and bind", () => {
-  it("requires a driver", () => {
-    expect(() => requireDriver(undefined)).toThrow(DatasourceError);
-    const { driver } = fakeDriver();
-    expect(requireDriver(driver)).toBe(driver);
-  });
-
+describe("bind", () => {
   it("rewrites named parameters and inserts", () => {
     expect(bindParameters()).toEqual({});
     expect(bindParameters([{ name: "id", value: 1 }])).toEqual({ id: 1 });
@@ -87,42 +70,48 @@ describe("requireDriver and bind", () => {
   });
 });
 
-describe("PgDriver", () => {
-  it("wraps a scripted client", async () => {
-    const { driver, client } = fakeDriver("postgres://db/app", "iso");
-    await driver.open("postgres://db/app");
-    await driver.open("postgres://db/app");
-    expect(client()?.connected).toBe(true);
-    expect(await driver.execute("INSERT INTO items (id) VALUES ($id)", { id: 1 }))
-      .toEqual({ rowsAffected: 2, result: 5 });
-    client()!.result = { rowCount: 0, rows: [] };
-    expect(await driver.execute("INSERT INTO items (id) VALUES (1)")).toEqual({
+describe("PostgresConnection", () => {
+  it("opens, runs SQL, transacts, and closes", async () => {
+    const connection = new PostgresConnection({
+      url: "postgres://db/app",
+      schema: "iso",
+      Client: FakeClient,
+    });
+    await connection.open();
+    await connection.open();
+    const client = FakeClient.latest;
+    expect(client.connected).toBe(true);
+    const command = new PostgresCommand(connection);
+    expect(await command.execute("INSERT INTO items (id) VALUES ($id)", [{ name: "id", value: 1 }]))
+      .toMatchObject({ rowsAffected: 2, result: 5 });
+    client.result = { rowCount: 0, rows: [] };
+    expect(await command.execute("INSERT INTO items (id) VALUES (1)")).toEqual({
       rowsAffected: 0,
       result: undefined,
+      parameters: undefined,
     });
-    client()!.result = { rowCount: null, rows: [{ id: 9 }] };
-    expect(await driver.execute("UPDATE items SET n = 1")).toEqual({
+    client.result = { rowCount: null, rows: [{ id: 9 }] };
+    expect(await command.execute("UPDATE items SET n = 1")).toMatchObject({
       rowsAffected: 1,
       result: 9,
     });
-    client()!.result = { rowCount: 2, rows: [{ id: 5 }] };
-    expect(await driver.execute("   ")).toEqual({ rowsAffected: 0 });
-    client()!.result = { rowCount: null, rows: [{ id: 1 }] };
-    expect(await driver.query("SELECT * FROM items", { id: 1 })).toEqual([
-      { id: 1 },
-    ]);
-    expect(await driver.query("")).toEqual([]);
-    await driver.begin();
-    await driver.begin(IsolationLevel.ReadUncommitted);
-    await driver.begin(IsolationLevel.ReadCommitted);
-    await driver.begin(IsolationLevel.RepeatableRead);
-    await driver.commit();
-    await driver.rollback();
-    expect(client()?.queries.map((q) => q.text)).toEqual([
+    expect(await command.execute("   ")).toEqual({ rowsAffected: 0, parameters: undefined });
+    client.result = { rowCount: null, rows: [{ id: 1 }] };
+    expect(await command.executeReader("SELECT * FROM items")).toBeInstanceOf(Object);
+    const reader = await command.executeReader("SELECT * FROM items");
+    expect(await reader.next()).toBe(true);
+    await connection.startTransaction();
+    await connection.startTransaction(IsolationLevel.ReadUncommitted);
+    await connection.startTransaction(IsolationLevel.ReadCommitted);
+    await connection.startTransaction(IsolationLevel.RepeatableRead);
+    await new PostgresTransaction(connection).commit();
+    await new PostgresTransaction(connection).abort();
+    expect(client.queries.map((q) => q.text)).toEqual([
       "SET search_path TO iso",
       "INSERT INTO items (id) VALUES ($1) RETURNING id",
       "INSERT INTO items (id) VALUES (1) RETURNING id",
       "UPDATE items SET n = 1",
+      "SELECT * FROM items",
       "SELECT * FROM items",
       "BEGIN ISOLATION LEVEL SERIALIZABLE",
       "BEGIN ISOLATION LEVEL READ UNCOMMITTED",
@@ -131,43 +120,40 @@ describe("PgDriver", () => {
       "COMMIT",
       "ROLLBACK",
     ]);
-    await driver.close();
-    expect(client()?.ended).toBe(true);
-    await expect(driver.execute("x")).rejects.toThrow("not open");
+    await connection.close();
+    expect(client.ended).toBe(true);
+    await expect(connection.exec("SELECT 1")).rejects.toThrow("not open");
+    await expect(command.execute("x")).rejects.toThrow("not open");
   });
 
-  it("loads default and named exports", async () => {
-    const Client = class {
+  it("loads the pg client from a module", async () => {
+    const Client = class implements IPgClient {
       async connect(): Promise<void> {}
       async query() {
         return { rowCount: 0, rows: [] };
       }
       async end(): Promise<void> {}
-    } as unknown as new (options: { connectionString: string }) => IPgClient;
-    const named = await loadPgDriver("postgres://db/app", async () => ({
-      Client,
-    }));
-    await named.open("postgres://db/app");
+    };
+    const named = new PostgresConnection({
+      url: "postgres://db/app",
+      Client: pgClient({ Client }),
+    });
+    await named.open();
     await named.close();
-    const def = await loadPgDriver("postgres://db/app", async () => ({
-      Client,
-      default: { Client },
-    }));
-    await def.open("postgres://db/app");
-    await def.close();
-    const viaDefaultImport = await loadPgDriver("postgres://db/app");
-    await viaDefaultImport.open("postgres://db/app");
-    await viaDefaultImport.close();
+    const viaDefault = new PostgresConnection({
+      url: "postgres://db/app",
+      Client: pgClient({ Client, default: { Client } }),
+    });
+    await viaDefault.open();
+    await viaDefault.close();
+    expect(PostgresConnection.from({ url: "postgres://db/app" }).url).toBe("postgres://db/app");
   });
-});
 
-describe("PostgresConnection", () => {
-  it("opens, reopens, transacts, and closes", async () => {
-    const { driver, client } = fakeDriver();
+  it("opens, reopens, transacts, and closes through the connection", async () => {
     const connection = new PostgresConnection({
       url: "postgres://db/app",
       schema: "s",
-      driver,
+      Client: FakeClient,
     });
     await connection.open();
     await connection.open();
@@ -181,63 +167,58 @@ describe("PostgresConnection", () => {
     await txn2.abort();
     expect(txn.isolation).toBe("serializable");
     await connection.close();
-    expect(client()?.ended).toBe(true);
+    expect(FakeClient.latest.ended).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);
     await expect(connection.startTransaction()).rejects.toThrow(DatasourceError);
   });
 
-  it("defaults url and requires a driver", () => {
-    expect(() => new PostgresConnection()).toThrow(DatasourceError);
-    const connection = new PostgresConnection({ driver: fakeDriver().driver });
+  it("defaults url and requires a client to open", async () => {
+    const connection = new PostgresConnection();
     expect(connection.url).toBe("");
+    await expect(connection.open()).rejects.toThrow(DatasourceError);
   });
 });
 
 describe("PostgresCommand", () => {
   async function setup() {
-    const { driver, client } = fakeDriver();
-    const connection = new PostgresConnection({ driver });
+    const connection = new PostgresConnection({ Client: FakeClient });
     await connection.open();
-    return {
-      connection,
-      command: new PostgresCommand(connection),
-      client,
-    };
+    return { connection, command: new PostgresCommand(connection), client: FakeClient.latest };
   }
 
-  it("executes SQL through the driver", async () => {
+  it("executes SQL through the client", async () => {
     const { command, client } = await setup();
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
       .toEqual({ result: 5, rowsAffected: 2, parameters: [{ name: "id", value: 1 }] });
-    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0 });
+    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 5 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
-    const { ParameterDirection } = await import("@datasources/core");
-    client()!.result = { rowCount: 1, rows: [{ add_one: 5 }] };
+    client.result = { rowCount: 1, rows: [{ add_one: 5 }] };
     expect(await command.execute("SELECT add_one($n)", [{ name: "n", value: 4 }]))
       .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });
-    client()!.result = { rowCount: 0, rows: [] };
+    client.result = { rowCount: 0, rows: [] };
     expect(await command.execute("SELECT 1")).toEqual({
       result: undefined,
       rowsAffected: 0,
+      parameters: undefined,
     });
     const inout = { name: "result", value: 4, direction: ParameterDirection.InputOutput };
-    client()!.result = { rowCount: 1, rows: [{ result: 5 }] };
+    client.result = { rowCount: 1, rows: [{ result: 5 }] };
     expect(await command.execute("CALL bump($result)", [inout])).toMatchObject({
       result: 5,
       parameters: [{ name: "result", value: 5, direction: ParameterDirection.InputOutput }],
     });
-    client()!.result = { rowCount: 1, rows: [{ id: 1 }] };
+    client.result = { rowCount: 1, rows: [{ id: 1 }] };
     expect(
       await command.execute("CALL noop($n)", [
         { name: "n", value: 1, direction: ParameterDirection.Input },
       ]),
     ).toMatchObject({ rowsAffected: 1 });
     expect(await command.execute("CALL noop()")).toMatchObject({ rowsAffected: 1 });
-    client()!.result = { rowCount: 1, rows: [{ other: 9 }] };
+    client.result = { rowCount: 1, rows: [{ other: 9 }] };
     expect(
       await command.execute("CALL bump($missing)", [
         { name: "missing", value: 1, direction: ParameterDirection.Output },
@@ -250,12 +231,11 @@ describe("PostgresCommand", () => {
 
 describe("Postgres datasource", () => {
   it("registers and constructs children", async () => {
-    const { driver } = fakeDriver();
     expect(
-      await new Datasource("postgres", new PostgresProvider()).createConnection(),
+      await new Datasource("postgres", new PostgresDriver()).createConnection(),
     ).toBeInstanceOf(PostgresConnection);
-    const of = (engine = driver): IDriver => ({
-      connection: () => new PostgresConnection({ driver: engine }),
+    const of = (): IDriver => ({
+      connection: () => new PostgresConnection({ Client: FakeClient }),
       command: (c) => c.createCommand(),
       transaction: (c, isolation = "serializable") =>
         new PostgresTransaction(c as PostgresConnection, isolation),
@@ -279,9 +259,7 @@ describe("Postgres datasource", () => {
     const repo = ds.createRepository(connection);
     expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
-    expect(
-      new Datasource("postgres", of()).createRepository(),
-    ).toBeInstanceOf(CRUDRepository);
+    expect(new Datasource("postgres", of()).createRepository()).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "postgres" }).provider).toBe("postgres");
     const provided = PostgresConnection.from({
       database_url: "postgres://db/app",
@@ -292,10 +270,8 @@ describe("Postgres datasource", () => {
     expect(PostgresConnection.from({ url: "postgres://db/app", schema: "app" }).schema).toBe("app");
     expect(PostgresConnection.from().url).toBe("");
     expect(PostgresConnection.from().schema).toBeUndefined();
-    const provider = new PostgresProvider();
+    const provider = new PostgresDriver();
     expect(provider.command(connection)).toBeInstanceOf(PostgresCommand);
-    expect(provider.transaction(connection as PostgresConnection).isolation).toBe(
-      "serializable",
-    );
+    expect(provider.transaction(connection as PostgresConnection).isolation).toBe("serializable");
   });
 });

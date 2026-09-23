@@ -1025,7 +1025,7 @@ fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Va
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryProvider`, `SqliteProvider`, …) and that is what `register` stores. Dialect engine drivers (`ISqliteDriver`, `IMysqlDriver`) stay on the connection.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryProvider`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
 
 ### Examples
 
@@ -1883,7 +1883,7 @@ async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<A
 
 `StartTransaction` requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
 
-Working dialects (`json`, `memory`, `sqlite`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`, `ISqliteDriver` / `SqliteDriver`). Stub dialects throw not-implemented on open, close, and start-transaction.
+Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`). SQLite, MySQL, and Postgres open the database client on the connection. Stub dialects throw not-implemented on open, close, and start-transaction.
 
 ### Examples
 
