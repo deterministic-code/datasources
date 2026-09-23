@@ -66,6 +66,7 @@ public class ReadonlyRepositoryIntegrationTests
                 created TEXT NOT NULL
             );
             INSERT INTO user (id, username, is_enabled, created) VALUES
+
                 ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
                 ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
                 ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
@@ -80,15 +81,16 @@ public class ReadonlyRepositoryIntegrationTests
                 ["Active"] = "is_enabled",
                 ["Opened"] = "created",
             }),
+            RowTypeConverters = new SqliteDriver().RowTypeConverters,
         });
 
-        var byId = await repo.ReadSingle(new WhereClause("id", eq, Ada));
+        var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var byId = await repo.ReadSingle(new WhereClause("Key", eq, Ada));
         var byLogin = new List<UserAccount>();
-        await foreach (var row in repo.Read(new WhereClause("username", eq, "ada").And("is_enabled", eq, 1)))
+        await foreach (var row in repo.Read(new WhereClause("Login", eq, "ada").And("Active", eq, true)))
             byLogin.Add(row);
         var later = new List<UserAccount>();
-        await foreach (var row in repo.Read(
-            new WhereClause("is_enabled", eq, 1).And("created", gt, "2024-01-01T00:00:00.000Z")))
+        await foreach (var row in repo.Read(new WhereClause("Active", eq, true).And("Opened", gt, opened)))
             later.Add(row);
 
         Assert.Equal("ada", byId!.Login);

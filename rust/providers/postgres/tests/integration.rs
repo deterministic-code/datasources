@@ -314,7 +314,7 @@ async fn shared_specs() {
 
 #[tokio::test]
 async fn return_and_output_parameters() {
-    use datasources::{ParameterDirection, ReturnStatement, ExecuteStoredProcedureStatement, Text};
+    use datasources::{ExecuteStoredProcedureStatement, ParameterDirection, ReturnStatement, Text};
     let Ok(url) = std::env::var("POSTGRES_URL") else {
         return;
     };

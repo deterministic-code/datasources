@@ -15,9 +15,9 @@ mod tests {
     use crate::filter::{json_to_value, matches, parse_filter};
     use crate::store::{MemoryData, MemoryStore};
     use datasources::{
-        converters::Cells, create, register, reset, CRUDRepository, Command, Connection,
-        ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter, QueryStatement,
-        CRUDRepositoryOptions, Row, TextWhere, Value,
+        converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
+        Connection, ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter,
+        QueryStatement, Row, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;

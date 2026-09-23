@@ -1,11 +1,13 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
+use chrono::{TimeZone, Utc};
 use datasources::{
     create_repository_options, eq, gt, Command, Connection, ConvertSchema, DictionaryMapper,
     IReadonlyRepository, PluralizerMapper, ReadonlyRepository, RowTypeConverter, Value,
     WhereClause,
 };
 use std::sync::Arc;
+use uuid::Uuid;
 
 const ADA: &str = "11111111-1111-1111-1111-111111111111";
 const GRACE: &str = "22222222-2222-2222-2222-222222222222";
@@ -97,22 +99,24 @@ async fn reads_user_by_guid_username_and_created() {
         ("Active".to_string(), "is_enabled".to_string()),
         ("Opened".to_string(), "created".to_string()),
     ]));
+    options.row_type_converters = crate::converters::row_type_converters();
     let repo = ReadonlyRepository::new(connection, options.read).unwrap();
+    let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
-        .read_single_where(&WhereClause::binary("id", eq, ADA))
+        .read_single_where(&WhereClause::binary(
+            "Key",
+            eq,
+            Uuid::parse_str(ADA).unwrap(),
+        ))
         .await
         .unwrap()
         .unwrap();
     let by_login = repo
-        .read_where(&WhereClause::binary("username", eq, "ada").and("is_enabled", eq, 1_i64))
+        .read_where(&WhereClause::binary("Login", eq, "ada").and("Active", eq, true))
         .await
         .unwrap();
     let later = repo
-        .read_where(&WhereClause::binary("is_enabled", eq, 1_i64).and(
-            "created",
-            gt,
-            "2024-01-01T00:00:00.000Z",
-        ))
+        .read_where(&WhereClause::binary("Active", eq, true).and("Opened", gt, opened))
         .await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));

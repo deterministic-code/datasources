@@ -1,4 +1,4 @@
-import type { Scalar } from "../builders/Scalar.ts";
+import type { Cell } from "../converters/Cell.ts";
 import { ArrayExpression } from "./ArrayExpression.ts";
 import { Identifier } from "./Identifier.ts";
 import type { IExpression } from "./IExpression.ts";
@@ -6,10 +6,10 @@ import { Literal } from "./Literal.ts";
 
 const pair = (
   left: string | IExpression,
-  right: IExpression | Scalar,
+  right: IExpression | Cell,
 ): [IExpression, IExpression] =>
   typeof left === "string"
-    ? [new Identifier(left), new Literal(right as Scalar)]
+    ? [new Identifier(left), new Literal(right as Cell)]
     : [left, right as IExpression];
 
 export abstract class Operator implements IExpression {}
@@ -18,9 +18,9 @@ export namespace Operator {
   export class Equals extends Operator {
     readonly left: IExpression;
     readonly right: IExpression;
-    constructor(field: string, value: Scalar);
+    constructor(field: string, value: Cell);
     constructor(left: IExpression, right: IExpression);
-    constructor(left: string | IExpression, right: IExpression | Scalar) {
+    constructor(left: string | IExpression, right: IExpression | Cell) {
       super();
       [this.left, this.right] = pair(left, right);
     }
@@ -29,9 +29,9 @@ export namespace Operator {
   export class NotEquals extends Operator {
     readonly left: IExpression;
     readonly right: IExpression;
-    constructor(field: string, value: Scalar);
+    constructor(field: string, value: Cell);
     constructor(left: IExpression, right: IExpression);
-    constructor(left: string | IExpression, right: IExpression | Scalar) {
+    constructor(left: string | IExpression, right: IExpression | Cell) {
       super();
       [this.left, this.right] = pair(left, right);
     }
@@ -40,9 +40,9 @@ export namespace Operator {
   export class GreaterThan extends Operator {
     readonly left: IExpression;
     readonly right: IExpression;
-    constructor(field: string, value: Scalar);
+    constructor(field: string, value: Cell);
     constructor(left: IExpression, right: IExpression);
-    constructor(left: string | IExpression, right: IExpression | Scalar) {
+    constructor(left: string | IExpression, right: IExpression | Cell) {
       super();
       [this.left, this.right] = pair(left, right);
     }
@@ -51,9 +51,9 @@ export namespace Operator {
   export class LessThan extends Operator {
     readonly left: IExpression;
     readonly right: IExpression;
-    constructor(field: string, value: Scalar);
+    constructor(field: string, value: Cell);
     constructor(left: IExpression, right: IExpression);
-    constructor(left: string | IExpression, right: IExpression | Scalar) {
+    constructor(left: string | IExpression, right: IExpression | Cell) {
       super();
       [this.left, this.right] = pair(left, right);
     }
@@ -62,9 +62,9 @@ export namespace Operator {
   export class GreaterThanOrEqual extends Operator {
     readonly left: IExpression;
     readonly right: IExpression;
-    constructor(field: string, value: Scalar);
+    constructor(field: string, value: Cell);
     constructor(left: IExpression, right: IExpression);
-    constructor(left: string | IExpression, right: IExpression | Scalar) {
+    constructor(left: string | IExpression, right: IExpression | Cell) {
       super();
       [this.left, this.right] = pair(left, right);
     }
@@ -73,9 +73,9 @@ export namespace Operator {
   export class LessThanOrEqual extends Operator {
     readonly left: IExpression;
     readonly right: IExpression;
-    constructor(field: string, value: Scalar);
+    constructor(field: string, value: Cell);
     constructor(left: IExpression, right: IExpression);
-    constructor(left: string | IExpression, right: IExpression | Scalar) {
+    constructor(left: string | IExpression, right: IExpression | Cell) {
       super();
       [this.left, this.right] = pair(left, right);
     }
@@ -102,14 +102,14 @@ export namespace Operator {
   export class In extends Operator {
     readonly left: IExpression;
     readonly right: IExpression;
-    constructor(field: string, values: Scalar[]);
+    constructor(field: string, values: Cell[]);
     constructor(left: IExpression, right: IExpression);
-    constructor(left: string | IExpression, right: Scalar[] | IExpression) {
+    constructor(left: string | IExpression, right: Cell[] | IExpression) {
       super();
       if (typeof left === "string") {
         this.left = new Identifier(left);
         this.right = new ArrayExpression(
-          (right as Scalar[]).map((value) => new Literal(value)),
+          (right as Cell[]).map((value) => new Literal(value)),
         );
       } else {
         this.left = left;

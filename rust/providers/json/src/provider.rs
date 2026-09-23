@@ -27,7 +27,9 @@ impl Driver for JsonProvider {
         Arc::new(JsonTransaction::new(conn.state.clone(), isolation))
     }
 
-    fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+    fn row_type_converters(
+        &self,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
         HashMap::new()
     }
 }

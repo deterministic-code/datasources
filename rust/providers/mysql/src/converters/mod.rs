@@ -13,7 +13,8 @@ pub use datetime_converter::DateTimeConverter;
 pub use decimal_converter::DecimalConverter;
 pub use uuid_converter::UuidConverter;
 
-pub fn row_type_converters() -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+pub fn row_type_converters() -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+{
     ["bool", "datetime", "uuid", "decimal", "binary"]
         .into_iter()
         .map(|key| (key.into(), field(key).unwrap_or_else(|| panic!("{key}"))))

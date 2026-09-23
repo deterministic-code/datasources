@@ -8,6 +8,7 @@ import {
   gt,
 } from "@datasources/core";
 import { SqliteConnection } from "../src/connection.ts";
+import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 const ada = "11111111-1111-1111-1111-111111111111";
 const grace = "22222222-2222-2222-2222-222222222222";
@@ -75,15 +76,15 @@ describe("readonly repository", () => {
         ["Active", "is_enabled"],
         ["Opened", "created"],
       ]),
+      rowTypeConverters: new SqliteDriver().rowTypeConverters,
     });
-    const byId = await repo.readSingle(new WhereClause("id", eq, ada));
+    const opened = new Date("2024-01-01T00:00:00.000Z");
+    const byId = await repo.readSingle(new WhereClause("Key", eq, ada));
     const byLogin: UserAccount[] = [];
-    for await (const row of repo.read(new WhereClause("username", eq, "ada").and("is_enabled", eq, 1)))
+    for await (const row of repo.read(new WhereClause("Login", eq, "ada").and("Active", eq, true)))
       byLogin.push(row);
     const later: UserAccount[] = [];
-    for await (const row of repo.read(
-      new WhereClause("is_enabled", eq, 1).and("created", gt, "2024-01-01T00:00:00.000Z"),
-    ))
+    for await (const row of repo.read(new WhereClause("Active", eq, true).and("Opened", gt, opened)))
       later.push(row);
     expect(byId?.Login).toBe("ada");
     expect(byId?.Key).toBe(ada);

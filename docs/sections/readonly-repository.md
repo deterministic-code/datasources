@@ -120,7 +120,7 @@ entityMapper?: IMapper<string, string>
 
 ##### columnMappings
 
-Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md). Read reverse-maps each result key before the row converter.
+Maps property names to stored columns. Default is [IdentityMapper](./identity-mapper.md). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter.
 
 ```typescript
 columnMappings?: IMapper<string, string>
@@ -160,7 +160,7 @@ type?: Constructable<T>
 
 ##### rowTypeConverters
 
-Per-column [TypeConverter](./type-converters.md)s merged into the row converter.
+Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The repository reverse-converts where literals and write values. A field converter wins for that property.
 
 ```typescript
 rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>
@@ -277,7 +277,7 @@ IMapper<string, string> EntityMapper { get; init; }
 
 ##### ColumnMappings
 
-Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md). Read reverse-maps each result key before the row converter.
+Maps property names to stored columns. Default is [IdentityMapper](./identity-mapper.md). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter.
 
 ```csharp
 IMapper<string, string> ColumnMappings { get; init; }
@@ -309,7 +309,7 @@ TypeConverter<T, Row>? RowConverter { get; init; }
 
 ##### RowTypeConverters
 
-Per-column [TypeConverter](./type-converters.md)s merged into the row converter.
+Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The repository reverse-converts where literals and write values. A field converter wins for that property.
 
 ```csharp
 IReadOnlyDictionary<string, TypeConverter<Value, Value>>? RowTypeConverters { get; init; }
@@ -408,7 +408,7 @@ pub entity_mapper: Box<dyn Mapper<String, String> + Send + Sync>
 
 ##### column_mappings
 
-Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md). Read reverse-maps each result key before the row converter.
+Maps property names to stored columns. Default is [IdentityMapper](./identity-mapper.md). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter.
 
 ```rust
 pub column_mappings: Box<dyn Mapper<String, String> + Send + Sync>
@@ -440,7 +440,7 @@ pub row_converter: Option<RowTypeConverter>
 
 ##### row_type_converters
 
-Per-column converters merged into the row converter.
+Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The repository reverse-converts where literals and write values. A field converter wins for that property.
 
 ```rust
 pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
@@ -469,11 +469,11 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 ### Read a user by guid, username, and created
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L59-L100
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L59-L102
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L75-L129
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L77-L129
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L56-L96
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L57-L97
 ```
 :::
 

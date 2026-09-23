@@ -72,7 +72,10 @@ async fn user_crud() {
             .batch_execute(&format!("CREATE SCHEMA {schema}"))
             .await
             .unwrap();
-        let conn = Arc::new(PostgresConnection::new(Some(url.clone()), Some(schema.clone())));
+        let conn = Arc::new(PostgresConnection::new(
+            Some(url.clone()),
+            Some(schema.clone()),
+        ));
         conn.open().await.unwrap();
         let command = Arc::new(PostgresCommand::new(conn.clone()));
         datasources_sql_specs::run(&path, &dialect(), conn, command)

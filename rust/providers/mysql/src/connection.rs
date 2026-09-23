@@ -2,9 +2,7 @@ use crate::command::MysqlCommand;
 use crate::engine::isolation_sql;
 use crate::transaction::MysqlTransaction;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
-};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
 use mysql_async::prelude::Queryable;
 use mysql_async::Conn;
 use std::collections::HashMap;

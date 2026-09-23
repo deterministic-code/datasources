@@ -2,9 +2,7 @@ use crate::command::MemoryCommand;
 use crate::store::{MemoryData, MemoryStore};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Result, Row, Transaction,
-};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Row, Transaction};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

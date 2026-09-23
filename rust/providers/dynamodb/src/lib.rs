@@ -47,4 +47,3 @@ mod tests {
         assert!(implicit.execute_reader("", None).await.is_err());
     }
 }
-

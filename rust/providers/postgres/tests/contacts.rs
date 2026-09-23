@@ -53,9 +53,12 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     assert_eq!(as_contacts_view(&enriched), as_contacts_view(&eager));
 
     let ids = contact_lookup_ids(conn.clone()).await.unwrap();
-    let extra = add_extra_contact(&contacts_service_of(conn, None, super::converters::field), &ids)
-        .await
-        .unwrap();
+    let extra = add_extra_contact(
+        &contacts_service_of(conn, None, super::converters::field),
+        &ids,
+    )
+    .await
+    .unwrap();
     assert_eq!(extra["first_name"], datasources::Value::from("Extra"));
     assert!(extra["addresses"].wire_text().contains("line1=9 Extra"));
     assert!(extra["addresses"]

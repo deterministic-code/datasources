@@ -36,7 +36,7 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     public async Task<Response> Update(T item, IWhere? byWhere = null)
     {
         var record = ReverseConvert(item);
-        var where = byWhere ?? IdWhere(record);
+        var where = byWhere is null ? Stored(IdWhere(record), fieldsApplied: true) : Stored(byWhere);
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
@@ -48,7 +48,7 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     public async Task<Response> Delete(T item, IWhere? byWhere = null)
     {
         var record = ReverseConvert(item);
-        var where = byWhere ?? IdWhere(record);
+        var where = byWhere is null ? Stored(IdWhere(record), fieldsApplied: true) : Stored(byWhere);
         return await Command().Execute(
             Statements.Delete(where),
             where.Parameters is { Count: > 0 } parameters ? parameters : Params(record, _ => true));
@@ -62,10 +62,9 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
         ).DefaultIfEmpty(new Operator.Equals(new Literal(1), new Literal(1)))
          .Aggregate((left, right) => new Operator.And(left, right)));
 
-    static IReadOnlyList<Parameter> Params(
-        Row record, Func<string, bool> include) =>
-        record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
-            .Select(pair => new Parameter(pair.Key, pair.Value)).ToArray();
+    IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include) =>
+        [.. record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
+            .Select(pair => new Parameter(Column(pair.Key), Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
     Row ReverseConvert(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));
 
