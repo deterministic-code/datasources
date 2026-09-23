@@ -10,7 +10,7 @@ import {
   SqliteCommand,
   SqliteConnection,
   SqliteQuote,
-  SqliteTypes,
+  SqliteRowTypeConverters,
 } from "../src/index.ts";
 import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 
@@ -37,7 +37,7 @@ describe("repository specs", () => {
       });
       await connection.open();
       const command = new SqliteCommand(connection);
-      await runRepositorySpec(file, connection, (sql) => command.execute(sql), dialect, SqliteTypes);
+      await runRepositorySpec(file, connection, (sql) => command.execute(sql), dialect, SqliteRowTypeConverters);
     });
   }
 });

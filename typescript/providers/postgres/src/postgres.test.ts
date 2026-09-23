@@ -20,7 +20,7 @@ import {
   PostgresConnection,
   PostgresProvider,
   PostgresTransaction,
-  PostgresTypes,
+  PostgresRowTypeConverters,
   requireDriver,
   toPostgres,
   withReturning,
@@ -266,7 +266,7 @@ describe("Postgres datasource", () => {
       command: (c) => c.createCommand(),
       transaction: (c, isolation = "serializable") =>
         new PostgresTransaction(c as PostgresConnection, isolation),
-      types: PostgresTypes,
+      rowTypeConverters: PostgresRowTypeConverters,
     });
     const ds = new Datasource("postgres", of());
     expect(ds.provider).toBe("postgres");

@@ -18,7 +18,7 @@ public class SqliteRepositorySpecTests
                     Filename = ":memory:",
                     Driver = new SqliteDriver(),
                 });
-                return new RepositorySpec.Session(conn, new SqliteCommand(conn), SqliteTypes.All);
+                return new RepositorySpec.Session(conn, new SqliteCommand(conn), SqliteRowTypeConverters.All);
             }, CreateTable, SqliteQuote.Quote);
         }
     }

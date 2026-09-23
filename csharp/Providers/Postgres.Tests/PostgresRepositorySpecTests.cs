@@ -12,7 +12,7 @@ public class PostgresRepositorySpecTests
     {
         var url = Environment.GetEnvironmentVariable("POSTGRES_URL");
         if (string.IsNullOrEmpty(url)) return;
-        _ = PostgresTypes.All;
+        _ = PostgresRowTypeConverters.All;
         foreach (var path in RepositorySpec.Files())
         {
             var schema = $"ds_{Guid.NewGuid():N}"[..18];
@@ -33,7 +33,7 @@ public class PostgresRepositorySpecTests
                         Schema = schema,
                         Driver = new PostgresDriver(schema),
                     });
-                    return new RepositorySpec.Session(conn, new PostgresCommand(conn), PostgresTypes.All);
+                    return new RepositorySpec.Session(conn, new PostgresCommand(conn), PostgresRowTypeConverters.All);
                 }, CreateTable, PostgresQuote.Quote);
             }
             finally

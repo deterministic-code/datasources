@@ -65,11 +65,11 @@ mod tests {
             Arc::new(SqliteTransaction::new(conn.driver.clone(), isolation))
         }
 
-        fn types(
+        fn row_type_converters(
             &self,
         ) -> HashMap<String, Box<dyn datasources::TypeConverter<datasources::Value, datasources::Value> + Send + Sync>>
         {
-            crate::converters::types()
+            crate::converters::row_type_converters()
         }
     }
 
@@ -177,4 +177,4 @@ mod tests {
     }
 }
 
-pub use converters::types as converter_types;
+pub use converters::row_type_converters as converter_types;

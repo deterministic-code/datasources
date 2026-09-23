@@ -12,5 +12,5 @@ public sealed class Datasource(
     public ICommand CreateCommand(IConnection? connection = null) =>
         driver.Command(connection ?? DefaultConnection());
     public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) where T : new() =>
-        new CRUDRepository<T>(CreateRepositoryBuilderOptions.FromType<T>(connection ?? DefaultConnection(), driver.Types));
+        new CRUDRepository<T>(CreateRepositoryBuilderOptions.FromType<T>(connection ?? DefaultConnection(), driver.RowTypeConverters));
 }

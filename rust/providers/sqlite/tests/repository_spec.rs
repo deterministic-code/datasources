@@ -28,7 +28,7 @@ fn dialect() -> RepositoryDialect {
             CreateTableStatement::new(SqliteQuote::quote(table), &mapped, &[]).get_text()
         },
         field: super::converters::field,
-        types: super::converters::types,
+        types: super::converters::row_type_converters,
     }
 }
 

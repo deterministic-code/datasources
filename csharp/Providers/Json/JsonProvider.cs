@@ -8,6 +8,6 @@ public sealed class JsonProvider : IDriver
     public ICommand Command(IConnection connection) => connection.CreateCommand();
     public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
         new JsonTransaction((JsonConnection)connection, isolation);
-    public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; } =
+    public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; } =
         new Dictionary<string, TypeConverter<Value, Value>>();
 }

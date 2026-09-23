@@ -108,6 +108,6 @@ public class PostgresTests
         public ICommand Command(IConnection c) => c.CreateCommand();
         public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
             new PostgresTransaction((PostgresConnection)c, isolation);
-        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types => PostgresTypes.All;
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => PostgresRowTypeConverters.All;
     }
 }

@@ -468,7 +468,7 @@ interface IDriver
 | [connection(options?)](#typescript-idriver-connection-options) | Builds an [IConnection](#connection) from the options bag. |
 | [command(connection)](#typescript-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
 | [transaction(connection, isolation?)](#typescript-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
-| [types](#typescript-idriver-types) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+| [rowTypeConverters](#typescript-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
 
 ###### connection(options?) {#typescript-idriver-connection-options}
 
@@ -531,14 +531,14 @@ transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
 
 [ITransaction](#transaction)
 
-###### types {#typescript-idriver-types}
+###### rowTypeConverters {#typescript-idriver-rowtypeconverters}
 
 Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
 
 **Definition**
 
 ```typescript
-types: Record<string, TypeConverter<Cell, Cell>>
+rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
 ```
 
 **Returns**
@@ -691,7 +691,7 @@ public interface IDriver
 | [Connection(options)](#csharp-idriver-connection-options) | Builds an [IConnection](#connection) from the options bag. |
 | [Command(connection)](#csharp-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
 | [Transaction(connection, isolation)](#csharp-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
-| [Types](#csharp-idriver-types) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+| [RowTypeConverters](#csharp-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
 
 ###### Connection(options) {#csharp-idriver-connection-options}
 
@@ -754,14 +754,14 @@ ITransaction Transaction(IConnection connection, IsolationLevel isolation = Isol
 
 [ITransaction](#transaction)
 
-###### Types {#csharp-idriver-types}
+###### RowTypeConverters {#csharp-idriver-rowtypeconverters}
 
 Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
 
 **Definition**
 
 ```csharp
-IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; }
+IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
 ```
 
 **Returns**
@@ -942,7 +942,7 @@ pub trait Driver
 | [connection(options)](#rust-driver-connection-options) | Builds a [Connection](#connection) from the options bag. |
 | [command(connection)](#rust-driver-command-connection) | Builds a [Command](#command) for the connection. |
 | [transaction(connection, isolation)](#rust-driver-transaction-connection-isolation) | Builds a [Transaction](#transaction) for the connection. |
-| [types()](#rust-driver-types) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+| [row_type_converters()](#rust-driver-row_type_converters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
 
 ###### connection(options) {#rust-driver-connection-options}
 
@@ -1005,14 +1005,14 @@ fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel
 
 `Arc<dyn `[Transaction](#transaction)`>`
 
-###### types() {#rust-driver-types}
+###### row_type_converters() {#rust-driver-row_type_converters}
 
 Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
 
 **Definition**
 
 ```rust
-fn types(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
 ```
 
 **Returns**
@@ -1052,6 +1052,7 @@ let ds = default().expect("default");
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L34-L38)
 
 ```typescript
+DatasourceFactory.register("sqlite", new MockDriver());
 process.env.PROVIDER = "sqlite";
 process.env.DATASOURCE_URL = "sqlite:///:memory:";
 const ds = DatasourceFactory.default;
@@ -1069,23 +1070,24 @@ var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"]
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L38-L44)
 
 ```rust
+    r.insert("id".into(), Value::Int(id));
+    r.insert("name".into(), Value::from(name));
     r
 }
 
 #[test]
 fn register_and_create() {
-    reset();
-    register("memory", Arc::new(MemoryProvider));
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L27-L32)
 
 ```typescript
+});
+
 describe("DatasourceFactory", () => {
   it("register and create", () => {
     DatasourceFactory.reset();
     DatasourceFactory.register("memory", new MemoryProvider());
-    const ds = DatasourceFactory.create({ provider: "memory" });
 ```
 
 #### Missing provider
@@ -1921,22 +1923,18 @@ await connection.Close();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L47-L52)
 
 ```rust
-}
-
-#[tokio::test]
-async fn open_and_close() {
-    let connection = MemoryConnection::from_options(None);
-    connection.open().await.unwrap();
+let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L36-L41)
 
 ```typescript
+});
+
 describe("Connection", () => {
   it("open and close", async () => {
     const connection = new MemoryConnection();
     await connection.open();
-    await connection.close();
 ```
 
 #### Start a transaction
@@ -1952,16 +1950,14 @@ var txn = await connection.StartTransaction();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L54-L60)
 
 ```rust
-
+connection.open().await.unwrap();
+connection.close().await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L43-L48)
 
 ```typescript
-it("start a transaction", async () => {
-  const connection = new MemoryConnection();
-  await connection.open();
-  const txn = await connection.startTransaction();
+
 ```
 
 ## Transaction
@@ -2210,24 +2206,19 @@ await txn.Commit();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L63-L69)
 
 ```rust
-}
-
-#[tokio::test]
-async fn commit() {
-    let connection = MemoryConnection::from_options(None);
-    connection.open().await.unwrap();
-    let txn = connection.start_transaction(None).await.unwrap();
+let txn = connection.start_transaction(None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L52-L58)
 
 ```typescript
+});
+
 describe("Transaction", () => {
   it("commit", async () => {
     const connection = new MemoryConnection();
     await connection.open();
     const txn = await connection.startTransaction();
-    await txn.commit();
 ```
 
 #### Abort
@@ -2244,23 +2235,13 @@ await txn.Abort();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L72-L78)
 
 ```rust
-}
-
-#[tokio::test]
-async fn abort() {
-    let connection = MemoryConnection::from_options(None);
-    connection.open().await.unwrap();
-    let txn = connection.start_transaction(None).await.unwrap();
+txn.commit().await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L60-L66)
 
 ```typescript
-it("abort", async () => {
-  const connection = new MemoryConnection();
-  await connection.open();
-  const txn = await connection.startTransaction();
-  await txn.abort();
+
 ```
 
 ## Command

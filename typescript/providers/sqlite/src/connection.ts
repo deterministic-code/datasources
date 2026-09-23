@@ -9,7 +9,7 @@ import {
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
-import "./converters/SqliteTypes.ts";
+import "./converters/SqliteRowTypeConverters.ts";
 import { SqliteCommand } from "./command.ts";
 import type { SqliteConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type ISqliteDriver } from "./driver.ts";

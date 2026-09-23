@@ -1,6 +1,6 @@
-namespace Datasources.Mysql;
+namespace Datasources.Postgres;
 
-public static class MysqlTypes
+public static class PostgresRowTypeConverters
 {
     public static readonly IReadOnlyDictionary<string, TypeConverter<Value, Value>> All =
         new Dictionary<string, TypeConverter<Value, Value>>

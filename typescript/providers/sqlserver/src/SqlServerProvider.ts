@@ -12,7 +12,7 @@ import {
 import { SqlServerConnection } from "./connection.ts";
 
 export class SqlServerProvider implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = {};
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   connection = (options?: DatasourceOptions): IConnection =>
     SqlServerConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

@@ -10,10 +10,10 @@ import type {
 } from "@datasources/core";
 import { PostgresConnection } from "./connection.ts";
 import { PostgresTransaction } from "./transaction.ts";
-import { PostgresTypes } from "./converters/PostgresTypes.ts";
+import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
 
 export class PostgresProvider implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = PostgresTypes;
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = PostgresRowTypeConverters;
   connection = (options?: DatasourceOptions): IConnection =>
     PostgresConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

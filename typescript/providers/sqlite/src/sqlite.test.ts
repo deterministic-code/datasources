@@ -24,7 +24,7 @@ import {
   SqliteConnection,
   SqliteProvider,
   SqliteTransaction,
-  SqliteTypes,
+  SqliteRowTypeConverters,
   type SqliteDatabase,
 } from "./index.ts";
 import { filenameOf, sqliteFilename } from "./sqlitePath.ts";
@@ -283,7 +283,7 @@ describe("Sqlite datasource", () => {
       command: (c) => c.createCommand(),
       transaction: (c, isolation = "serializable") =>
         new SqliteTransaction(c as SqliteConnection, isolation),
-      types: SqliteTypes,
+      rowTypeConverters: SqliteRowTypeConverters,
     });
     const ds = new Datasource("sqlite", of());
     expect(ds.provider).toBe("sqlite");

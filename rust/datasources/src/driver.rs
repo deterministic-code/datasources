@@ -15,5 +15,5 @@ pub trait Driver: Send + Sync {
         connection: Arc<dyn Connection>,
         isolation: IsolationLevel,
     ) -> Arc<dyn Transaction>;
-    fn types(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>;
+    fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>;
 }

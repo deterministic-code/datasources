@@ -12,7 +12,7 @@ import {
 import { TextConnection } from "./connection.ts";
 
 export class TextProvider implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = {};
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   connection = (options?: DatasourceOptions): IConnection =>
     TextConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

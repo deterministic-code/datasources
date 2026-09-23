@@ -12,7 +12,7 @@ import {
 import { MongoDbConnection } from "./connection.ts";
 
 export class MongoDbProvider implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = {};
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   connection = (options?: DatasourceOptions): IConnection =>
     MongoDbConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

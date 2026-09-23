@@ -1,8 +1,6 @@
-using Datasources;
+namespace Datasources.Mysql;
 
-namespace Datasources.Sqlite;
-
-public static class SqliteTypes
+public static class MysqlRowTypeConverters
 {
     public static readonly IReadOnlyDictionary<string, TypeConverter<Value, Value>> All =
         new Dictionary<string, TypeConverter<Value, Value>>

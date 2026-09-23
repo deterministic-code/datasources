@@ -98,6 +98,6 @@ public class MysqlTests
         public ICommand Command(IConnection c) => c.CreateCommand();
         public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
             new MysqlTransaction((MysqlConnection)c, isolation);
-        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types => MysqlTypes.All;
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => MysqlRowTypeConverters.All;
     }
 }

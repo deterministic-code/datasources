@@ -100,7 +100,7 @@ macro_rules! named_stub_connection {
                 std::sync::Arc::new($crate::StubTransaction::new($provider))
             }
 
-            fn types(
+            fn row_type_converters(
                 &self,
             ) -> std::collections::HashMap<
                 String,

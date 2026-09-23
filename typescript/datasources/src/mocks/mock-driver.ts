@@ -11,7 +11,7 @@ import { MockConnection } from "./mock-connection.ts";
 import { MockTransaction } from "./mock-transaction.ts";
 
 export class MockDriver implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = {};
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   connection = (_options?: DatasourceOptions): IConnection => new MockConnection();
   command = (connection: IConnection): ICommand => new MockCommand(connection);
   transaction = (

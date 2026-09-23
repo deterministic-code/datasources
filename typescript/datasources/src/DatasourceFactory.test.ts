@@ -46,7 +46,7 @@ describe("DatasourceFactory", () => {
 
   it("mock driver builds command and transaction", () => {
     const driver = new MockDriver();
-    expect(driver.types).toEqual({});
+    expect(driver.rowTypeConverters).toEqual({});
     const connection = driver.connection();
     expect(driver.command(connection)).toBeInstanceOf(MockCommand);
     expect(driver.transaction(connection).isolation).toBe("serializable");

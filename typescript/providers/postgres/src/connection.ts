@@ -9,7 +9,7 @@ import {
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
-import "./converters/PostgresTypes.ts";
+import "./converters/PostgresRowTypeConverters.ts";
 import { PostgresCommand } from "./command.ts";
 import type { PostgresConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type IPostgresDriver } from "./driver.ts";

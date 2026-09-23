@@ -19,7 +19,7 @@ import {
   MysqlConnection,
   MysqlProvider,
   MysqlTransaction,
-  MysqlTypes,
+  MysqlRowTypeConverters,
   requireDriver,
   toMysql,
   type IMysqlClient,
@@ -246,7 +246,7 @@ describe("Mysql datasource", () => {
       command: (c) => c.createCommand(),
       transaction: (c, isolation = "serializable") =>
         new MysqlTransaction(c as MysqlConnection, isolation),
-      types: MysqlTypes,
+      rowTypeConverters: MysqlRowTypeConverters,
     });
     const ds = new Datasource("mysql", of());
     expect(ds.provider).toBe("mysql");
