@@ -13,4 +13,14 @@ internal static class SqliteRowTypeConverters
             ["decimal"] = new DecimalConverter(),
             ["binary"] = new BinaryConverter(),
         };
+
+    public static Value Reverse(Value value) => value switch
+    {
+        Value.Bool => All["bool"].ReverseConvert(value),
+        Value.DateTime => All["datetime"].ReverseConvert(value),
+        Value.Guid => All["uuid"].ReverseConvert(value),
+        Value.Decimal => All["decimal"].ReverseConvert(value),
+        Value.Binary => All["binary"].ReverseConvert(value),
+        _ => value
+    };
 }

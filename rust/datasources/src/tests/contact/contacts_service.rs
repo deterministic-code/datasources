@@ -1,10 +1,10 @@
 use crate::enriched_crud_repository::EnrichedCRUDRepository;
 use crate::i_repository::IRepository;
-use crate::query::Query;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -82,11 +82,11 @@ impl IRepository for ContactsService {
 
 #[async_trait]
 impl IReadonlyRepository for ContactsService {
-    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
         self.inner.read(query).await
     }
 

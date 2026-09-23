@@ -8,12 +8,12 @@ use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
 use crate::mappers::{Mapper, TransformMapper};
 use crate::parameter::Parameter;
-use crate::query::Query;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::value::Value;
 use crate::where_trait::Where;
@@ -116,11 +116,11 @@ impl IRepository for CRUDRepository {
 
 #[async_trait]
 impl IReadonlyRepository for CRUDRepository {
-    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
         self.inner.read(query).await
     }
 

@@ -1,5 +1,6 @@
 import type { Cells } from "./converters/Cell.ts";
 import type { Enrichment } from "./Enrichment.ts";
+import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -15,13 +16,13 @@ export class FlatToNestedReadonlyEnrichmentStrategy<T extends object>
     private readonly source: IReadonlyRepository<Cells>,
     private readonly mapper: IFlatToNestedMapper<T>,
     private readonly hydrate: IMapper<T, T>,
-    private readonly command?: IQuery | IWhere,
+    private readonly command?: IQuery | IWhere | IExecuteStoredProcedureStatement,
   ) {}
 
   async *read(
     _inner: IReadonlyRepository<T>,
     _tree: IRepositoryTree,
-    query?: IQuery | IWhere,
+    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<T> {
     const rows: Cells[] = [];
     for await (const row of this.source.read(this.command ?? query)) rows.push(row);

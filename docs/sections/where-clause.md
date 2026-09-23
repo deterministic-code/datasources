@@ -82,6 +82,19 @@ or(column: string, op: Comparison, value: Cell): WhereClause
 
 **Returns** [WhereClause](#whereclause)
 
+##### map(column, value)
+
+Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
+
+```typescript
+map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): WhereClause
+```
+
+- `column` — property name to stored column
+- `value` — property name and domain cell to stored cell
+
+**Returns** [WhereClause](#whereclause)
+
 #### IWhere
 
 ```typescript
@@ -203,6 +216,19 @@ public WhereClause Or(string column, Comparison op, Value? value)
 
 **Returns** [WhereClause](#whereclause)
 
+##### Map(column, value)
+
+Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
+
+```csharp
+public WhereClause Map(Func<string, string> column, Func<string, Value, Value> value)
+```
+
+- `column` — property name to stored column
+- `value` — property name and domain cell to stored cell
+
+**Returns** [WhereClause](#whereclause)
+
 #### IWhere
 
 ```csharp
@@ -288,6 +314,22 @@ pub fn or(self, column: &str, op: fn(&str, Value) -> Operator, value: impl Into<
 - `value` — [Value](#value)
 
 **Returns** [WhereClause](#whereclause)
+
+##### map(column, value)
+
+Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
+
+```rust
+pub fn map<C, V>(&self, column: C, value: V) -> Result<Self>
+where
+    C: Fn(&str) -> String,
+    V: Fn(&str, &Value) -> Result<Value>,
+```
+
+- `column` — property name to stored column
+- `value` — property name and domain cell to stored cell
+
+**Returns** `Result<`[WhereClause](#whereclause)`>`
 
 ##### get_text()
 

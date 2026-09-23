@@ -10,10 +10,12 @@ const args = (parameters: Parameter[]): string =>
 
 export class ExecuteStoredProcedureStatement implements IExecuteStoredProcedureStatement {
   private readonly text: string;
+  readonly parameters: Parameter[];
 
   constructor(text: string);
   constructor(name: string, parameters: Parameter[]);
   constructor(nameOrText: string, parameters?: Parameter[]) {
+    this.parameters = parameters ?? [];
     this.text = parameters
       ? `CALL ${nameOrText}(${args(parameters)})`
       : nameOrText;

@@ -1084,6 +1084,7 @@ fn statements_and_builders() {
     );
     let call = ExecuteStoredProcedureStatement::new("save", &fields);
     assert_eq!(call.get_text(), "CALL save($id, $name)");
+    assert_eq!(call.parameters(), fields.to_vec());
     assert_eq!(
         ExecuteStoredProcedureStatement::new("save", &[]).get_text(),
         "CALL save()"
@@ -1131,6 +1132,9 @@ fn statements_and_builders() {
     assert_eq!(CreateTableStatement::text("x").get_text(), "x");
     assert_eq!(CreateIndexStatement::text("x").get_text(), "x");
     assert_eq!(ExecuteStoredProcedureStatement::text("x").get_text(), "x");
+    assert!(ExecuteStoredProcedureStatement::text("x")
+        .parameters()
+        .is_empty());
     assert_eq!(ReturnStatement::text("x").get_text(), "x");
 }
 
@@ -1406,6 +1410,39 @@ async fn executes_statement_helpers() {
 
 fn users_mapping() -> RowTypeConverter {
     RowTypeConverter::of::<Item>()
+}
+
+#[tokio::test]
+async fn read_calls_stored_procedure() {
+    let command = Arc::new(MockCommand::new());
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "users".into();
+    options.row_converter = Some(users_mapping());
+    let repo = CRUDRepository::new(connection, options).unwrap();
+    let call = ExecuteStoredProcedureStatement::new("get_user", &[Parameter::new("id", 9_i64)]);
+    let rows = repo.read(Some(&call)).await.unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["id"], Value::Int(1));
+    assert_eq!(rows[0]["name"], Value::from("a"));
+    let log = command.reader_logs.lock().unwrap()[0].clone();
+    assert_eq!(log.0, "CALL get_user($id)");
+    assert_eq!(log.1[0].name, "id");
+    assert_eq!(log.1[0].value, Value::Int(9));
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
+    assert_eq!(
+        repo.read_single(Some(&call)).await.unwrap().unwrap()["id"],
+        Value::Int(1)
+    );
 }
 
 #[tokio::test]
@@ -1926,12 +1963,12 @@ impl IRepository for CountingRepository {
 
 #[async_trait]
 impl IReadonlyRepository for CountingRepository {
-    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
         *self.read_singles.lock().unwrap() += 1;
         self.inner.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
         *self.reads.lock().unwrap() += 1;
         self.inner.read(query).await
     }

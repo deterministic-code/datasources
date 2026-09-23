@@ -1,4 +1,5 @@
 import type { Constructable } from "../converters/Constructable.ts";
+import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
@@ -14,7 +15,7 @@ export class ListReadonlyRepository<T extends object> extends ReadonlyRepository
     super(type);
   }
 
-  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     for (const item of this.items) if (matches(item, query)) yield item;
   }
 }
@@ -26,7 +27,7 @@ const fieldOf = (name: string): string => {
     : name;
 };
 
-const matches = <T extends object>(item: T, query?: IQuery | IWhere): boolean => {
+const matches = <T extends object>(item: T, query?: IQuery | IWhere | IExecuteStoredProcedureStatement): boolean => {
   if (query && "getText" in query && query.getText() === "1 = 0") return false;
   const groups = new Map<string, { name: string; value: Scalar }[]>();
   for (const parameter of parametersOf(query)) {
@@ -41,7 +42,7 @@ const matches = <T extends object>(item: T, query?: IQuery | IWhere): boolean =>
 };
 
 const parametersOf = (
-  query?: IQuery | IWhere,
+  query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
 ): { name: string; value: Scalar }[] => {
   if (!query) return [];
   const where = "where" in query ? query.where : query;

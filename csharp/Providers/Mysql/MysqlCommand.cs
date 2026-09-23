@@ -72,7 +72,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         foreach (var parameter in list)
         {
             var key = parameter.Name.TrimStart('$', '@', ':');
-            var native = command.Parameters.AddWithValue($"@{key}", parameter.Value.ToObject() ?? DBNull.Value);
+            var native = command.Parameters.AddWithValue($"@{key}", MysqlRowTypeConverters.Reverse(parameter.Value).ToObject() ?? DBNull.Value);
             native.Direction = Native(parameter.Direction);
         }
         return command;
@@ -85,7 +85,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         foreach (var (name, value) in parameters)
         {
             var key = name[0] is '@' or ':' or '$' ? name.TrimStart('$', '@', ':') : name;
-            command.Parameters.AddWithValue($"@{key}", value.ToObject() ?? DBNull.Value);
+            command.Parameters.AddWithValue($"@{key}", MysqlRowTypeConverters.Reverse(value).ToObject() ?? DBNull.Value);
         }
         return command;
     }

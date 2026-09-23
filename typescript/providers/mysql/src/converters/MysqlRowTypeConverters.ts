@@ -13,3 +13,12 @@ export const MysqlRowTypeConverters: Record<string, TypeConverter<Cell, Cell>> =
   binary: new BinaryConverter(),
 };
 
+export const reverse = (value: Cell): Cell =>
+  typeof value === "boolean"
+    ? MysqlRowTypeConverters.bool.reverseConvert(value)
+    : value instanceof Date
+      ? MysqlRowTypeConverters.datetime.reverseConvert(value)
+      : value instanceof Uint8Array
+        ? MysqlRowTypeConverters.binary.reverseConvert(value)
+        : value;
+

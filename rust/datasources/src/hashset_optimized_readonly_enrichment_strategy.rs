@@ -1,11 +1,11 @@
 use crate::enrichment::Enrichment;
-use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::{encode_row, encode_rows, RepositoryTreeNode};
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::value::Value;
 use crate::where_trait::Where;
 use crate::{Operator, WhereClause};
@@ -20,7 +20,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
         &self,
         inner: &dyn IReadonlyRepository,
         tree: &RepositoryTree,
-        query: Option<&dyn Query>,
+        query: Option<&dyn Statement>,
     ) -> Result<Vec<Row>> {
         let mut items = inner.read(query).await?;
         self.enrich(tree, &mut items).await?;

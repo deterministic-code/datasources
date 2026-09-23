@@ -1,5 +1,6 @@
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import type { IEnriched } from "./IEnriched.ts";
+import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -47,7 +48,7 @@ export class EnrichedReadonlyRepository<T extends object>
     return items;
   };
 
-  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     yield* this.strategy.read(this.inner, this.tree, query);
   }
 }

@@ -5,6 +5,7 @@ use crate::where_trait::Where;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StatementKind {
     Query,
+    Procedure,
     Insert,
     Update,
     Delete,

@@ -87,6 +87,69 @@ const render = (expression: IExpression): string =>
                               })();
                 })();
 
+const rewrite = (
+  expression: IExpression,
+  column: (name: string) => string,
+  value: (name: string, cell: Cell) => Cell,
+): IExpression =>
+  expression instanceof WhereClause
+    ? rewrite(expression.condition, column, value)
+    : expression instanceof Identifier
+      ? new Identifier(column(expression.name))
+      : expression instanceof Literal
+        ? expression
+        : expression instanceof ArrayExpression
+          ? new ArrayExpression(expression.elements.map((element) => rewrite(element, column, value)))
+          : expression instanceof Operator.Not
+            ? new Operator.Not(rewrite(expression.argument, column, value))
+            : expression instanceof Operator.And
+              ? new Operator.And(rewrite(expression.left, column, value), rewrite(expression.right, column, value))
+              : expression instanceof Operator.Or
+                ? new Operator.Or(rewrite(expression.left, column, value), rewrite(expression.right, column, value))
+                : expression instanceof Operator.In
+                  ? new Operator.In(rewrite(expression.left, column, value), inRight(expression.left, expression.right, column, value))
+                  : expression instanceof Operator.Equals
+                    ? new Operator.Equals(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                    : expression instanceof Operator.NotEquals
+                      ? new Operator.NotEquals(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                      : expression instanceof Operator.GreaterThan
+                        ? new Operator.GreaterThan(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                        : expression instanceof Operator.LessThan
+                          ? new Operator.LessThan(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                          : expression instanceof Operator.GreaterThanOrEqual
+                            ? new Operator.GreaterThanOrEqual(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                            : expression instanceof Operator.LessThanOrEqual
+                              ? new Operator.LessThanOrEqual(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                              : (() => {
+                                  throw new Error("empty expression");
+                                })();
+
+const side = (
+  expression: IExpression,
+  other: IExpression,
+  column: (name: string) => string,
+  value: (name: string, cell: Cell) => Cell,
+): IExpression =>
+  expression instanceof Literal && other instanceof Identifier
+    ? new Literal(value(other.name, expression.value))
+    : rewrite(expression, column, value);
+
+const inRight = (
+  left: IExpression,
+  right: IExpression,
+  column: (name: string) => string,
+  value: (name: string, cell: Cell) => Cell,
+): IExpression =>
+  left instanceof Identifier && right instanceof ArrayExpression
+    ? new ArrayExpression(
+        right.elements.map((element) =>
+          element instanceof Literal
+            ? new Literal(value(left.name, element.value))
+            : rewrite(element, column, value),
+        ),
+      )
+    : rewrite(right, column, value);
+
 const collect = (expression: IExpression): Parameter<Cell>[] =>
   expression instanceof WhereClause
     ? collect(expression.condition)
@@ -137,6 +200,10 @@ export class WhereClause implements IWhere {
 
   or(column: string, op: Comparison, value: Cell): WhereClause {
     return new WhereClause(new Operator.Or(this.condition, op(column, value)));
+  }
+
+  map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): WhereClause {
+    return new WhereClause(rewrite(this.condition, column, value));
   }
 
   getText = (): string => render(this.condition);
