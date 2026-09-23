@@ -118,12 +118,12 @@ Maps the table name when the repository is built. Default is [IdentityMapper](./
 entityMapper?: IMapper<string, string>
 ```
 
-##### columns
+##### columnMappings
 
-Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md). Read reverse-maps each result key before the row converter.
 
 ```typescript
-columns?: IMapper<string, string>
+columnMappings?: IMapper<string, string>
 ```
 
 ##### query
@@ -277,7 +277,7 @@ IMapper<string, string> EntityMapper { get; init; }
 
 ##### ColumnMappings
 
-Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md). Read reverse-maps each result key before the row converter.
 
 ```csharp
 IMapper<string, string> ColumnMappings { get; init; }
@@ -406,12 +406,12 @@ Maps the table name when the repository is built. Default is [IdentityMapper](./
 pub entity_mapper: Box<dyn Mapper<String, String> + Send + Sync>
 ```
 
-##### columns
+##### column_mappings
 
-Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md). Read reverse-maps each result key before the row converter.
 
 ```rust
-pub columns: Box<dyn Mapper<String, String> + Send + Sync>
+pub column_mappings: Box<dyn Mapper<String, String> + Send + Sync>
 ```
 
 ##### query
@@ -454,6 +454,28 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits where into `read_where` / `read_single_where`.
 
 ## Examples
+
+### Read users by id and by username
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L57
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L40-L75
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L29-L60
+```
+:::
+
+### Read a user by guid, username, and created
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L60-L104
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L78-L134
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L62-L114
+```
+:::
 
 ### Read and read single
 

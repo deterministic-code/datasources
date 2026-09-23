@@ -2,7 +2,8 @@ use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CRUDRepository, Connection, FlatToNestedMapper, IReadonlyRepository, Mapper, CRUDRepositoryOptions,
+    CRUDRepository, CRUDRepositoryOptions, Connection, FlatToNestedMapper, IReadonlyRepository,
+    Mapper,
 };
 use datasources_sql_specs::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,

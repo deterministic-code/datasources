@@ -314,13 +314,13 @@ describe("CRUDRepository", () => {
       (name) => (name === "users" ? "people" : name),
       (name) => name,
     );
-    const columns = new TransformMapper<string, string>(
+    const columnMappings = new TransformMapper<string, string>(
       (name) => ({ id: "user_id", name: "full_name" }[name] ?? name),
       (name) => name,
     );
     const { repo, command } = create({
       entityMapper: entity,
-      columns,
+      columnMappings,
       query: new TransformMapper(
         (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
         (query) => query,

@@ -10,6 +10,7 @@ pub struct BuiltRepository {
     pub connection: Arc<dyn Connection>,
     pub row_converter: RowTypeConverter,
     pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
+    pub column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
     pub statements: RepositoryStatements,
     pub ids: Vec<String>,
     pub create: Option<TransformMapper<Value, Row>>,

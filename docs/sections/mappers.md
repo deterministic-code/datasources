@@ -112,6 +112,8 @@ Repository read is convert, then map. [ReadonlyRepositoryOptions.RowsMapper](./r
 ## See also
 
 - [IdentityMapper](./identity-mapper.md)
+- [DictionaryMapper](./dictionary-mapper.md)
+- [PluralizerMapper](./pluralizer-mapper.md)
 - [TransformMapper](./transform-mapper.md)
 - [FlatToNestedMapper](./flat-to-nested-mapper.md)
 - [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions)

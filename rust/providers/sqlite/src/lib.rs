@@ -15,6 +15,9 @@ mod contacts;
 #[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]
+#[path = "../tests/readonly_repository.rs"]
+mod readonly_repository;
+#[cfg(test)]
 #[path = "../tests/repository_spec.rs"]
 mod repository_spec;
 

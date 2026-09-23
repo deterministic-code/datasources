@@ -41,17 +41,18 @@ export const parts = <T>(
   if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
     Object.assign(rowConverter.types, types);
   const entityMapper = options.entityMapper ?? new IdentityMapper<string>();
-  const columnsMapper = options.columns ?? new IdentityMapper<string>();
+  const columnMappings = options.columnMappings ?? new IdentityMapper<string>();
   const rowsMapper = options.rowsMapper ?? new IdentityMapper<T>();
   const entity = entityMapper.map(options.entity ?? options.type?.name ?? "");
   const columns = [...(options.readColumns ?? (options.type ? fieldNamesOf(options.type) : []))]
-    .map((name) => columnsMapper.map(name))
+    .map((name) => columnMappings.map(name))
     .sort((left, right) => left.localeCompare(right));
   const crud = isCrud(options) ? options : undefined;
   return {
     connection,
     rowConverter,
     rowsMapper,
+    columnMappings,
     statements: statementsOf(entity, columns, options.query, crud?.insert, crud?.update, crud?.delete),
     readColumns: columns,
     ids: crud

@@ -7,7 +7,7 @@ import type { IQuery } from "./statements/IQuery.ts";
 export type ReadonlyRepositoryOptions<T = Cells> = {
   entity?: string;
   entityMapper?: IMapper<string, string>;
-  columns?: IMapper<string, string>;
+  columnMappings?: IMapper<string, string>;
   query?: IMapper<IQuery, IQuery>;
   rowsMapper?: IMapper<T, T>;
   rowConverter?: TypeConverter<T, Cells>;

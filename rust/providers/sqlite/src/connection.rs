@@ -3,9 +3,7 @@ use crate::connection_string;
 use crate::sqlite_path::sqlite_filename;
 use crate::transaction::SqliteTransaction;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
-};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
 use rusqlite::Connection as SqliteDb;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

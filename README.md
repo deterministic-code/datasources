@@ -822,7 +822,7 @@ const ds = DatasourceFactory.create({ provider: "memory" });
 DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L31-L37)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L28-L35)
 
 ```rust
 create(Some(&HashMap::from([("provider".into(), "missing".into())])));
@@ -2972,14 +2972,10 @@ while (await reader.Next())
 
 ```rust
 let command = MockCommand::new();
-command
-    .reader_rows
-    .lock()
-    .unwrap()
-    .push(row(&[
-        ("name", Value::from("theme")),
-        ("value", Value::from("dark")),
-    ]));
+command.reader_rows.lock().unwrap().push(row(&[
+    ("name", Value::from("theme")),
+    ("value", Value::from("dark")),
+]));
 let reader = command
     .execute_reader("SELECT name, value FROM settings", None)
     .await
@@ -3018,8 +3014,6 @@ await command.Execute("delete", [new Parameter("id", 1)]);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L84-L116)
 
 ```rust
-let command = MockCommand::new();
-command
     .execute(
         "insert",
         Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "a")]),
@@ -3079,7 +3073,7 @@ while (await reader.Next())
     user = mapper.Map(converter.Convert(reader.Current!));
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L118-L150)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L115-L146)
 
 ```rust
 let command = MockCommand::new();
@@ -8620,7 +8614,7 @@ type ReadonlyRepositoryOptions<T = Cells>
 | --- | --- |
 | entity | Table or entity name. |
 | entityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| columns | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| columnMappings | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). Read reverse-maps each result key before the row converter. |
 | query | Rewrites the finished select. Omitted leaves the statement unchanged. |
 | rowsMapper | Maps each converted item. `Repository.mapper` is this mapper. Default is [IdentityMapper](#identity-mapper). |
 | rowConverter | Row [TypeConverter](#type-converter). |
@@ -8754,7 +8748,7 @@ public class ReadonlyRepositoryOptions<T> where T : new()
 | --- | --- |
 | Entity | Table or entity name. When omitted, `typeof(T).Name` is used. |
 | EntityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| Columns | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| ColumnMappings | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). Read reverse-maps each result key before the row converter. |
 | Query | Rewrites the finished select. Omitted leaves the statement unchanged. |
 | RowsMapper | Maps each converted item. `Repository.Mapper` is this mapper. Default is [IdentityMapper](#identity-mapper). |
 | RowConverter | Row [TypeConverter](#type-converter). |
@@ -8870,7 +8864,7 @@ pub struct ReadonlyRepositoryOptions
 | --- | --- |
 | entity | Table or entity name. Default `"items"`. |
 | entity_mapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| columns | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| column_mappings | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). Read reverse-maps each result key before the row converter. |
 | query | Rewrites finished select SQL. `None` leaves the statement unchanged. |
 | rows_mapper | Maps each converted row. Default is [IdentityMapper](#identity-mapper). |
 | row_converter | Row [RowTypeConverter](#row-type-converter). |
@@ -8883,6 +8877,241 @@ Repository read is convert, then map. See [TypeConverter](#type-converter) and [
 C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits where into `read_where` / `read_single_where`.
 
 ### Examples
+
+#### Read users by id and by username
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L57)
+
+```csharp
+public async Task ReadsUsersByIdAndByUsernameAndEnabled()
+{
+    var connection = await Open("""
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL,
+            is_enabled INTEGER NOT NULL
+        );
+        INSERT INTO users (id, username, is_enabled) VALUES
+            (1, 'ada', 1),
+            (2, 'grace', 0);
+        """);
+    var repo = new ReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+    {
+        EntityMapper = new PluralizerMapper(),
+    });
+
+    var byId = await repo.ReadSingle(new WhereClause(new Operator.Equals("id", 1)));
+    var disabled = new List<User>();
+    await foreach (var row in repo.Read(new WhereClause(new Operator.And(
+        new Operator.Equals("username", "grace"),
+        new Operator.Equals("is_enabled", 0)))))
+        disabled.Add(row);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L40-L75)
+
+```rust
+let connection = open(
+    "
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL
+    );
+    INSERT INTO users (id, username, is_enabled) VALUES
+        (1, 'ada', 1),
+        (2, 'grace', 0);
+    ",
+)
+.await;
+let mut options = create_repository_options::<User>();
+options.entity_mapper = Box::new(PluralizerMapper::new());
+options.row_converter = Some(RowTypeConverter::of::<User>());
+let repo = ReadonlyRepository::new(connection, options.read).unwrap();
+let by_id = repo
+    .read_single_where(&WhereClause::new(Operator::equals("id", 1_i64)))
+    .await
+    .unwrap()
+    .unwrap();
+let disabled = repo
+    .read_where(&WhereClause::new(Operator::and(
+        Operator::equals("username", "grace"),
+        Operator::equals("is_enabled", 0_i64),
+    )))
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L29-L60)
+
+```typescript
+const connection = await open(`
+  CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL
+  );
+  INSERT INTO users (id, username, is_enabled) VALUES
+    (1, 'ada', 1),
+    (2, 'grace', 0);
+`);
+const repo = new ReadonlyRepository(connection, {
+  type: User,
+  entityMapper: new PluralizerMapper(),
+});
+const byId = await repo.readSingle(new WhereClause(new Operator.Equals("id", 1)));
+const disabled: User[] = [];
+for await (const row of repo.read(
+  new WhereClause(
+    new Operator.And(
+      new Operator.Equals("username", "grace"),
+      new Operator.Equals("is_enabled", 0),
+    ),
+  ),
+))
+  disabled.push(row);
+```
+
+#### Read a user by guid, username, and created
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L60-L104)
+
+```csharp
+public async Task ReadsUserByGuidUsernameAndCreated()
+{
+    var connection = await Open($"""
+        CREATE TABLE user (
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            is_enabled INTEGER NOT NULL,
+            created TEXT NOT NULL
+        );
+        INSERT INTO user (id, username, is_enabled, created) VALUES
+            ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+            ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+            ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+        """);
+    var repo = new ReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+    {
+        Entity = "user",
+        ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+        {
+            ["Key"] = "id",
+            ["Login"] = "username",
+            ["Active"] = "is_enabled",
+            ["Opened"] = "created",
+        }),
+    });
+
+    var byId = await repo.ReadSingle(new WhereClause(new Operator.Equals("id", Ada)));
+    var byLogin = new List<UserAccount>();
+    await foreach (var row in repo.Read(new WhereClause(new Operator.And(
+        new Operator.Equals("username", "ada"),
+        new Operator.Equals("is_enabled", 1)))))
+        byLogin.Add(row);
+    var later = new List<UserAccount>();
+    await foreach (var row in repo.Read(new WhereClause(new Operator.And(
+        new Operator.Equals("is_enabled", 1),
+        new Operator.GreaterThan("created", "2024-01-01T00:00:00.000Z")))))
+        later.Add(row);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L78-L134)
+
+```rust
+let connection = open(&format!(
+    "
+    CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL
+    );
+    INSERT INTO user (id, username, is_enabled, created) VALUES
+        ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+        ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+        ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+    "
+))
+.await;
+let mut options = create_repository_options::<UserAccount>();
+options.entity = "user".into();
+options.row_converter = Some(RowTypeConverter::of::<UserAccount>());
+options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+]));
+let repo = ReadonlyRepository::new(connection, options.read).unwrap();
+let by_id = repo
+    .read_single_where(&WhereClause::new(Operator::equals("id", ADA)))
+    .await
+    .unwrap()
+    .unwrap();
+let by_login = repo
+    .read_where(&WhereClause::new(Operator::and(
+        Operator::equals("username", "ada"),
+        Operator::equals("is_enabled", 1_i64),
+    )))
+    .await
+    .unwrap();
+let later = repo
+    .read_where(&WhereClause::new(Operator::and(
+        Operator::equals("is_enabled", 1_i64),
+        Operator::greater_than("created", "2024-01-01T00:00:00.000Z"),
+    )))
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L62-L114)
+
+```typescript
+const connection = await open(`
+  CREATE TABLE user (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL,
+    created TEXT NOT NULL
+  );
+  INSERT INTO user (id, username, is_enabled, created) VALUES
+    ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+    ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+    ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+`);
+const repo = new ReadonlyRepository(connection, {
+  type: UserAccount,
+  entity: "user",
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+  ]),
+});
+const byId = await repo.readSingle(new WhereClause(new Operator.Equals("id", ada)));
+const byLogin: UserAccount[] = [];
+for await (const row of repo.read(
+  new WhereClause(
+    new Operator.And(
+      new Operator.Equals("username", "ada"),
+      new Operator.Equals("is_enabled", 1),
+    ),
+  ),
+))
+  byLogin.push(row);
+const later: UserAccount[] = [];
+for await (const row of repo.read(
+  new WhereClause(
+    new Operator.And(
+      new Operator.Equals("is_enabled", 1),
+      new Operator.GreaterThan("created", "2024-01-01T00:00:00.000Z"),
+    ),
+  ),
+))
+  later.push(row);
+```
 
 #### Read and read single
 
@@ -11702,6 +11931,8 @@ Repository read is convert, then map. [ReadonlyRepositoryOptions.RowsMapper](#ro
 ### See also
 
 - [IdentityMapper](#identity-mapper)
+- [DictionaryMapper](#dictionary-mapper)
+- [PluralizerMapper](#pluralizer-mapper)
 - [TransformMapper](#transform-mapper)
 - [FlatToNestedMapper](#flat-to-nested-mapper)
 - [ReadonlyRepositoryOptions](#readonlyrepositoryoptions)
@@ -11917,6 +12148,506 @@ let mapper = IdentityMapper::<String>::new();
 
 ```typescript
 const mapper = new IdentityMapper<string>();
+```
+
+## DictionaryMapper
+
+Mapper that rewrites known keys and passes the rest through. Reverse lookup uses the mapped value. When two keys share a value, the first one wins on reverse.
+
+### Classes
+
+##### TypeScript
+
+##### DictionaryMapper {#typescript-dictionarymapper}
+
+```typescript
+class DictionaryMapper<T extends string | number> implements IMapper<T, T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DictionaryMapper(map)](#typescript-dictionarymapper-dictionarymapper-map) | Builds the forward map and its reverse. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
+| [reverseMap(value)](#typescript-dictionarymapper-reversemap-value) | Returns the source key for a stored name, or `value`. |
+
+###### DictionaryMapper(map) {#typescript-dictionarymapper-dictionarymapper-map}
+
+Builds the forward map and its reverse.
+
+**Definition**
+
+```typescript
+constructor(map: readonly (readonly [T, T])[])
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | pairs of source key and stored name |
+
+**Returns**
+
+[DictionaryMapper](#typescript-dictionarymapper)
+
+###### map(value) {#typescript-dictionarymapper-map-value}
+
+Returns the stored name for a known key, or `value`.
+
+**Definition**
+
+```typescript
+map(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source key |
+
+**Returns**
+
+`T`
+
+###### reverseMap(value) {#typescript-dictionarymapper-reversemap-value}
+
+Returns the source key for a stored name, or `value`.
+
+**Definition**
+
+```typescript
+reverseMap(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`T`
+
+##### C#
+
+##### DictionaryMapper {#csharp-dictionarymapper}
+
+```csharp
+public sealed class DictionaryMapper<T> : IMapper<T, T> where T : notnull
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DictionaryMapper(map)](#csharp-dictionarymapper-dictionarymapper-map) | Builds the forward map and its reverse. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
+| [ReverseMap(value)](#csharp-dictionarymapper-reversemap-value) | Returns the source key for a stored name, or `value`. |
+
+###### DictionaryMapper(map) {#csharp-dictionarymapper-dictionarymapper-map}
+
+Builds the forward map and its reverse.
+
+**Definition**
+
+```csharp
+public DictionaryMapper(IReadOnlyDictionary<T, T> map)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | pairs of source key and stored name |
+
+###### Map(value) {#csharp-dictionarymapper-map-value}
+
+Returns the stored name for a known key, or `value`.
+
+**Definition**
+
+```csharp
+T Map(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source key |
+
+**Returns**
+
+`T`
+
+###### ReverseMap(value) {#csharp-dictionarymapper-reversemap-value}
+
+Returns the source key for a stored name, or `value`.
+
+**Definition**
+
+```csharp
+T ReverseMap(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`T`
+
+##### Rust
+
+##### DictionaryMapper {#rust-dictionarymapper}
+
+```rust
+pub struct DictionaryMapper<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(map)](#rust-dictionarymapper-new-map) | Builds the forward map and its reverse. `T: Clone + Eq + Hash`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
+| [reverse_map(value)](#rust-dictionarymapper-reverse_map-value) | Returns the source key for a stored name, or `value`. |
+
+###### new(map) {#rust-dictionarymapper-new-map}
+
+Builds the forward map and its reverse. `T: Clone + Eq + Hash`.
+
+**Definition**
+
+```rust
+pub fn new(map: impl IntoIterator<Item = (T, T)>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | pairs of source key and stored name, in first-wins order |
+
+**Returns**
+
+[DictionaryMapper](#rust-dictionarymapper)
+
+###### map(value) {#rust-dictionarymapper-map-value}
+
+Returns the stored name for a known key, or `value`.
+
+**Definition**
+
+```rust
+fn map(&self, value: T) -> T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source key |
+
+**Returns**
+
+`T`
+
+###### reverse_map(value) {#rust-dictionarymapper-reverse_map-value}
+
+Returns the source key for a stored name, or `value`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: T) -> T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`T`
+
+### Remarks
+
+Use this for [ColumnMappings](#columnmappings) when property names and stored column names differ. `Map` rewrites the SELECT list. `ReverseMap` restores property names on each result key before the row converter.
+
+### Examples
+
+#### Map and reverse map
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DictionaryMapperTests.cs#L14-L25)
+
+```csharp
+var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
+{
+    ["Key"] = "id",
+    ["Login"] = "username",
+});
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/dictionary_mapper.rs#L51-L61)
+
+```rust
+let mapper = DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+]);
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/DictionaryMapper.test.ts#L14-L23)
+
+```typescript
+const mapper = new DictionaryMapper([
+  ["Key", "id"],
+  ["Login", "username"],
+]);
+```
+
+## PluralizerMapper
+
+Mapper that pluralizes a name and lowercases it. Reverse singularizes and keeps the first letter's case.
+
+### Classes
+
+##### TypeScript
+
+##### PluralizerMapper {#typescript-pluralizermapper}
+
+```typescript
+class PluralizerMapper implements IMapper<string, string>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-pluralizermapper-map-value) | Pluralizes `value` and lowercases it. `User` becomes `users`. |
+| [reverseMap(value)](#typescript-pluralizermapper-reversemap-value) | Singularizes `value`. `users` becomes `user`. |
+
+###### map(value) {#typescript-pluralizermapper-map-value}
+
+Pluralizes `value` and lowercases it. `User` becomes `users`.
+
+**Definition**
+
+```typescript
+map(value: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source name |
+
+**Returns**
+
+`string`
+
+###### reverseMap(value) {#typescript-pluralizermapper-reversemap-value}
+
+Singularizes `value`. `users` becomes `user`.
+
+**Definition**
+
+```typescript
+reverseMap(value: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | plural name |
+
+**Returns**
+
+`string`
+
+##### C#
+
+##### PluralizerMapper {#csharp-pluralizermapper}
+
+```csharp
+public sealed class PluralizerMapper : IMapper<string, string>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-pluralizermapper-map-value) | Pluralizes `value` and lowercases it. `User` becomes `users`. |
+| [ReverseMap(value)](#csharp-pluralizermapper-reversemap-value) | Singularizes `value`. `users` becomes `user`. |
+
+###### Map(value) {#csharp-pluralizermapper-map-value}
+
+Pluralizes `value` and lowercases it. `User` becomes `users`.
+
+**Definition**
+
+```csharp
+string Map(string value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source name |
+
+**Returns**
+
+`string`
+
+###### ReverseMap(value) {#csharp-pluralizermapper-reversemap-value}
+
+Singularizes `value`. `users` becomes `user`.
+
+**Definition**
+
+```csharp
+string ReverseMap(string value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | plural name |
+
+**Returns**
+
+`string`
+
+##### Rust
+
+##### PluralizerMapper {#rust-pluralizermapper}
+
+```rust
+pub struct PluralizerMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new()](#rust-pluralizermapper-new) | Builds a pluralizer mapper. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-pluralizermapper-map-value) | Pluralizes `value` and lowercases it. `User` becomes `users`. |
+| [reverse_map(value)](#rust-pluralizermapper-reverse_map-value) | Singularizes `value`. `users` becomes `user`. |
+
+###### new() {#rust-pluralizermapper-new}
+
+Builds a pluralizer mapper.
+
+**Definition**
+
+```rust
+pub fn new() -> Self
+```
+
+**Returns**
+
+[PluralizerMapper](#rust-pluralizermapper)
+
+###### map(value) {#rust-pluralizermapper-map-value}
+
+Pluralizes `value` and lowercases it. `User` becomes `users`.
+
+**Definition**
+
+```rust
+fn map(&self, value: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source name |
+
+**Returns**
+
+`String`
+
+###### reverse_map(value) {#rust-pluralizermapper-reverse_map-value}
+
+Singularizes `value`. `users` becomes `user`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | plural name |
+
+**Returns**
+
+`String`
+
+### Remarks
+
+Use this as [EntityMapper](#entitymapper) when the type name is singular and the table name is a lowercase plural. Setting `Entity` / `entity` skips the mapper.
+
+### Examples
+
+#### Pluralize and lowercase
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/PluralizerMapperTests.cs#L8-L14)
+
+```csharp
+var mapper = new PluralizerMapper();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/pluralizer_mapper.rs#L37-L42)
+
+```rust
+let mapper = PluralizerMapper::new();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/PluralizerMapper.test.ts#L4-L9)
+
+```typescript
+describe("PluralizerMapper", () => {
+  it("pluralizes and lowercases the table name", () => {
+    const mapper = new PluralizerMapper();
 ```
 
 ## TransformMapper
@@ -12206,10 +12937,8 @@ public void FlattensAndUnflattensUserAndContacts()
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L59-L94)
 
 ```rust
-user_id: i32,
-user_name: String,
-contact_email: String,
-contact_phone: String,
+user: User,
+contacts: Contacts,
 ```
 
 **Before: nested value**
@@ -12944,72 +13673,76 @@ var flat = mapper.ReverseMap(nested);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L383-L453)
 
 ```rust
-let mapper = FlatToNestedMapper::new(TypeMap::new(
-    "id",
-    vec![
-        ("id".into(), TypeMapField::column("id")),
-        ("first_name".into(), TypeMapField::column("first_name")),
-        ("last_name".into(), TypeMapField::column("last_name")),
-        ("email".into(), TypeMapField::column("email")),
-        (
-            "contact_source_name".into(),
-            TypeMapField::column("contact_source_name"),
-        ),
-        (
-            "contact_type_name".into(),
-            TypeMapField::column("contact_type_name"),
-        ),
-        (
-            "addresses".into(),
-            TypeMapField::Group(TypeMapGroup::new(
-                "address_id",
-                vec![
-                    ("id".into(), TypeMapField::column("address_id")),
-                    ("line1".into(), TypeMapField::column("address_line1")),
-                    ("city".into(), TypeMapField::column("address_city")),
-                    (
-                        "address_type_name".into(),
-                        TypeMapField::column("address_type_name"),
-                    ),
-                ],
-            )),
-        ),
-        (
-            "phones".into(),
-            TypeMapField::Group(TypeMapGroup::new(
-                "phone_id",
-                vec![
-                    ("id".into(), TypeMapField::column("phone_id")),
-                    ("number".into(), TypeMapField::column("phone_number")),
-                    (
-                        "phone_type_name".into(),
-                        TypeMapField::column("phone_type_name"),
-                    ),
-                ],
-            )),
-        ),
-    ],
-));
-let ada_home = cell(&[
-    ("id", Value::Int(7)),
-    ("first_name", Value::from("Ada")),
-    ("last_name", Value::from("Lovelace")),
-    ("email", Value::from("ada@ex.com")),
-    ("contact_source_name", Value::from("Web")),
-    ("contact_type_name", Value::from("Person")),
-    ("address_id", Value::Int(101)),
-    ("address_line1", Value::from("10 Downing St")),
-    ("address_city", Value::from("London")),
-    ("address_type_name", Value::from("Home")),
-    ("phone_id", Value::Int(201)),
-    ("phone_number", Value::from("+44")),
-    ("phone_type_name", Value::from("Mobile")),
-]);
-let mut ada_work = ada_home.clone();
-ada_work.insert("address_id".into(), Value::Int(102));
-ada_work.insert("address_line1".into(), Value::from("1 Parliament Sq"));
-let nested = Mapper::map(&mapper, vec![ada_home.clone(), ada_work.clone()]);
-let flat = Mapper::reverse_map(&mapper, nested.clone());
+}
+
+#[test]
+fn maps_join_rows_to_a_nested_contact() {
+    let mapper = FlatToNestedMapper::new(TypeMap::new(
+        "id",
+        vec![
+            ("id".into(), TypeMapField::column("id")),
+            ("first_name".into(), TypeMapField::column("first_name")),
+            ("last_name".into(), TypeMapField::column("last_name")),
+            ("email".into(), TypeMapField::column("email")),
+            (
+                "contact_source_name".into(),
+                TypeMapField::column("contact_source_name"),
+            ),
+            (
+                "contact_type_name".into(),
+                TypeMapField::column("contact_type_name"),
+            ),
+            (
+                "addresses".into(),
+                TypeMapField::Group(TypeMapGroup::new(
+                    "address_id",
+                    vec![
+                        ("id".into(), TypeMapField::column("address_id")),
+                        ("line1".into(), TypeMapField::column("address_line1")),
+                        ("city".into(), TypeMapField::column("address_city")),
+                        (
+                            "address_type_name".into(),
+                            TypeMapField::column("address_type_name"),
+                        ),
+                    ],
+                )),
+            ),
+            (
+                "phones".into(),
+                TypeMapField::Group(TypeMapGroup::new(
+                    "phone_id",
+                    vec![
+                        ("id".into(), TypeMapField::column("phone_id")),
+                        ("number".into(), TypeMapField::column("phone_number")),
+                        (
+                            "phone_type_name".into(),
+                            TypeMapField::column("phone_type_name"),
+                        ),
+                    ],
+                )),
+            ),
+        ],
+    ));
+    let ada_home = cell(&[
+        ("id", Value::Int(7)),
+        ("first_name", Value::from("Ada")),
+        ("last_name", Value::from("Lovelace")),
+        ("email", Value::from("ada@ex.com")),
+        ("contact_source_name", Value::from("Web")),
+        ("contact_type_name", Value::from("Person")),
+        ("address_id", Value::Int(101)),
+        ("address_line1", Value::from("10 Downing St")),
+        ("address_city", Value::from("London")),
+        ("address_type_name", Value::from("Home")),
+        ("phone_id", Value::Int(201)),
+        ("phone_number", Value::from("+44")),
+        ("phone_type_name", Value::from("Mobile")),
+    ]);
+    let mut ada_work = ada_home.clone();
+    ada_work.insert("address_id".into(), Value::Int(102));
+    ada_work.insert("address_line1".into(), Value::from("1 Parliament Sq"));
+    let nested = Mapper::map(&mapper, vec![ada_home.clone(), ada_work.clone()]);
+    let flat = Mapper::reverse_map(&mapper, nested.clone());
 ```
 
 **After: nested contact**
@@ -14245,10 +14978,10 @@ impl Driver for MockDriver {
         Arc::new(txn)
     }
 
-    fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+    fn row_type_converters(
+        &self,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
         HashMap::new()
-    }
-}
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mocks/mock-driver.ts#L13-L25)
