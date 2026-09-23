@@ -1094,7 +1094,7 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 ::: example
 ```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L43-L47
 ```
-```rust rust/datasources/src/tests/mod.rs#L1235-L1244
+```rust rust/datasources/src/tests/mod.rs#L1333-L1342
 ```
 ```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51
 ```

@@ -44,9 +44,8 @@ public static class RepositorySpec
     static async Task Run<T>(Spec spec, Session session, RowTypeConverter<T> mapping, List<string> logs, Func<string, string> quote)
         where T : new()
     {
-        var built = RepositoryBuilder<T>.Parts(new()
+        var built = RepositoryBuilder<T>.Parts(session.Connection, new()
         {
-            Connection = session.Connection,
             Entity = spec.Type.Table,
             Mapping = mapping,
             CRUDMapper = CRUDMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings), quote),

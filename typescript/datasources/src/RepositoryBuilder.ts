@@ -4,16 +4,17 @@ import type { Constructable } from "./converters/Constructable.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { CRUDMapper } from "./CRUDMapper.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
-import { createRepositoryBuilderOptions, defaultId, fieldNamesOf } from "./createRepositoryBuilderOptions.ts";
+import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
-import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
+import type { RepositoryOptions } from "./RepositoryOptions.ts";
 import { statementsOf } from "./RepositoryStatements.ts";
 
 export type { BuiltRepository } from "./BuiltRepository.ts";
 export type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 export const parts = <T>(
-  options: RepositoryBuilderOptions<T>,
+  connection: IConnection,
+  options: RepositoryOptions<T>,
 ): BuiltRepository<T> => {
   const types = {
     ...options.types,
@@ -36,7 +37,7 @@ export const parts = <T>(
     .map((name) => crudMapper.columns.map(name))
     .sort((left, right) => left.localeCompare(right));
   return {
-    connection: options.connection,
+    connection,
     rowConverter,
     crudMapper,
     statements: statementsOf(entity, columns, crudMapper),
@@ -47,20 +48,21 @@ export const parts = <T>(
 };
 
 export class RepositoryBuilder<T = Cells> {
-  constructor(private readonly options: RepositoryBuilderOptions<T>) {}
+  constructor(
+    private readonly connection: IConnection,
+    private readonly options: RepositoryOptions<T>,
+  ) {}
 
   static from<T>(type: Constructable<T>, connection: IConnection): RepositoryBuilder<T>;
-  static from<T>(options: RepositoryBuilderOptions<T>): RepositoryBuilder<T>;
+  static from<T>(connection: IConnection, options: RepositoryOptions<T>): RepositoryBuilder<T>;
   static from<T>(
-    typeOrOptions: Constructable<T> | RepositoryBuilderOptions<T>,
-    connection?: IConnection,
+    typeOrConnection: Constructable<T> | IConnection,
+    connectionOrOptions: IConnection | RepositoryOptions<T>,
   ): RepositoryBuilder<T> {
-    return new RepositoryBuilder(
-      connection === undefined
-        ? (typeOrOptions as RepositoryBuilderOptions<T>)
-        : createRepositoryBuilderOptions(typeOrOptions as Constructable<T>, connection),
-    );
+    return typeof typeOrConnection === "function"
+      ? new RepositoryBuilder(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnection))
+      : new RepositoryBuilder(typeOrConnection, connectionOrOptions as RepositoryOptions<T>);
   }
 
-  parts = (): BuiltRepository<T> => parts(this.options);
+  parts = (): BuiltRepository<T> => parts(this.connection, this.options);
 }

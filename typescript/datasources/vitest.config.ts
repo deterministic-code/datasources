@@ -46,7 +46,7 @@ export default defineConfig({
         "src/Response.ts",
         "src/ITransaction.ts",
         "src/BuiltRepository.ts",
-        "src/RepositoryBuilderOptions.ts",
+        "src/RepositoryOptions.ts",
         "src/builders/index.ts",
         "src/builders/Field.ts",
         "src/builders/Scalar.ts",

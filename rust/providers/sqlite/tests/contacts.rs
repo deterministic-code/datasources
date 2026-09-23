@@ -2,8 +2,7 @@ use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    Connection, CRUDRepository, FlatToNestedMapper, IReadonlyRepository, Mapper,
-    RepositoryBuilderOptions,
+    CRUDRepository, Connection, FlatToNestedMapper, IReadonlyRepository, Mapper, RepositoryOptions,
 };
 use datasources_sql_specs::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
@@ -38,9 +37,12 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     assert_eq!(as_contacts_view(&enriched), as_contacts_view(&eager));
 
     let ids = contact_lookup_ids(conn.clone()).await.unwrap();
-    let extra = add_extra_contact(&contacts_service_of(conn, None, super::converters::field), &ids)
-        .await
-        .unwrap();
+    let extra = add_extra_contact(
+        &contacts_service_of(conn, None, super::converters::field),
+        &ids,
+    )
+    .await
+    .unwrap();
     assert_eq!(extra["first_name"], datasources::Value::from("Extra"));
     assert!(extra["addresses"].wire_text().contains("line1=9 Extra"));
     assert!(extra["addresses"]
@@ -64,19 +66,14 @@ async fn maps_join_rows_to_nested_contacts() {
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 
-    let mut cells = RepositoryBuilderOptions::with_factory(conn);
+    let mut cells = RepositoryOptions::default();
     cells.entity = "contacts_base".into();
     cells.mapping = Some(RowTypeConverter::new(Vec::new()));
-    let join_repo = CRUDRepository::new(cells).expect("join repo");
-    let contacts = from_mapped_contacts(
-        &Mapper::map(
-            &FlatToNestedMapper::new(contacts_view()),
-            join_repo
-                .read(Some(&contacts_join_query()))
-                .await
-                .unwrap(),
-        ),
-    );
+    let join_repo = CRUDRepository::new(conn, cells).expect("join repo");
+    let contacts = from_mapped_contacts(&Mapper::map(
+        &FlatToNestedMapper::new(contacts_view()),
+        join_repo.read(Some(&contacts_join_query())).await.unwrap(),
+    ));
     let mapped = contact_with(&contacts, 2, 1);
     assert_eq!(mapped.addresses.len(), 2);
     assert!(!mapped.contact_source_name.is_empty());

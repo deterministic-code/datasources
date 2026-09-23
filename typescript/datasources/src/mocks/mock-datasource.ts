@@ -1,3 +1,4 @@
+import type { Constructable } from "../converters/Constructable.ts";
 import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
@@ -29,15 +30,16 @@ export class MockDatasource implements IDatasource {
     return this.command ?? new MockCommand(connection ?? this.connection);
   }
 
-  createRepository<T>(connection?: IConnection): ICRUDRepository<T> {
+  createRepository<T>(type: Constructable<T>, connection?: IConnection): ICRUDRepository<T> {
     this.createRepositoryCalls.push(connection);
     return (this.repository as ICRUDRepository<T> | undefined) ??
-      new MockRepository<T>(connection ?? this.connection);
+      new MockRepository<T>(connection ?? this.connection, type);
   }
 
   createReadonlyRepository<T>(
+    type: Constructable<T>,
     connection?: IConnection,
   ): IReadonlyRepository<T> {
-    return this.createRepository(connection);
+    return this.createRepository(type, connection);
   }
 }

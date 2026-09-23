@@ -15,18 +15,18 @@ mod tests {
     use crate::filter::{json_to_value, matches, parse_filter};
     use crate::store::{MemoryData, MemoryStore};
     use datasources::{
-        create, register, reset, Command, Connection, CRUDRepository, ICRUDRepository,
-        IReadonlyRepository, IsolationLevel, Parameter, RepositoryBuilderOptions, Row,
-        QueryStatement, TextWhere, Value,
+        converters::Cells, create, register, reset, CRUDRepository, Command, Connection,
+        ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter, QueryStatement,
+        RepositoryOptions, Row, TextWhere, Value,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
     use std::sync::Arc;
 
     fn crud(conn: Arc<MemoryConnection>) -> CRUDRepository {
-        let mut options = RepositoryBuilderOptions::with_factory(conn);
+        let mut options = RepositoryOptions::default();
         options.ids = vec![];
-        CRUDRepository::new(options).expect("repo")
+        CRUDRepository::new(conn, options).expect("repo")
     }
 
     fn rec(id: i64, name: &str) -> Row {
@@ -208,8 +208,8 @@ mod tests {
         let bound = ds.create_command(Some(ds.create_connection().await.unwrap()));
         assert!(bound.execute("insert", None).await.is_err());
         assert!(bound.execute_reader("", None).await.is_err());
-        ds.create_repository(None);
-        ds.create_repository(Some(ds.create_connection().await.unwrap()));
+        ds.create_repository::<Cells>(None);
+        ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()));
         assert_eq!(
             create(Some(&HashMap::from([("provider".into(), "memory".into())])))
                 .unwrap()
@@ -252,18 +252,12 @@ mod tests {
             .execute("insert", None)
             .await
             .is_err());
-        assert!(crud(closed.clone())
-            .create(&mut rec(1, "a"))
-            .await
-            .is_err());
+        assert!(crud(closed.clone()).create(&mut rec(1, "a")).await.is_err());
         assert!(crud(closed.clone())
             .update(&rec(1, "a"), None)
             .await
             .is_err());
-        assert!(crud(closed)
-            .delete(&rec(1, "a"), None)
-            .await
-            .is_err());
+        assert!(crud(closed).delete(&rec(1, "a"), None).await.is_err());
         assert!(
             MemoryConnection::new(Arc::new(MemoryStore::new()), "", None)
                 .start_transaction(None)
@@ -281,4 +275,3 @@ mod tests {
         empty.finish_abort();
     }
 }
-

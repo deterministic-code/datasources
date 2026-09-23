@@ -18,7 +18,7 @@ export const contactsParity = async (
   });
   const eager = new FlatToNestedMapper(contactsView).map(
     await collectAsync(
-      new CRUDRepository<Cells>({ connection, entity: "contacts_base" })
+      new CRUDRepository<Cells>(connection, { entity: "contacts_base" })
         .addMiddleware(middleware)
         .read(contactsJoinQuery()),
     ),

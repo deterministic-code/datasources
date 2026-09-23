@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T>
+internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T> where T : new()
 {
     readonly IReadOnlyList<T> items;
     public ListReadonlyRepository(params T[] items) => this.items = items;

@@ -20,13 +20,13 @@ mod repository_spec;
 
 #[cfg(test)]
 mod tests {
+    use crate::bind::{isolation_sql, to_postgres, with_returning};
     use crate::command::PostgresCommand;
     use crate::connection::PostgresConnection;
-    use crate::bind::{isolation_sql, to_postgres, with_returning};
     use crate::transaction::PostgresTransaction;
     use datasources::{
-        create, downcast_connection, register, reset, Command, Connection, Driver, IsolationLevel,
-        Transaction, Value,
+        converters::Cells, create, downcast_connection, register, reset, Command, Connection,
+        Driver, IsolationLevel, Transaction, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -53,8 +53,14 @@ mod tests {
 
         fn row_type_converters(
             &self,
-        ) -> HashMap<String, Box<dyn datasources::TypeConverter<datasources::Value, datasources::Value> + Send + Sync>>
-        {
+        ) -> HashMap<
+            String,
+            Box<
+                dyn datasources::TypeConverter<datasources::Value, datasources::Value>
+                    + Send
+                    + Sync,
+            >,
+        > {
             crate::converters::row_type_converters()
         }
     }
@@ -116,10 +122,7 @@ mod tests {
         assert_eq!(from.url, "postgres://db/app");
         assert_eq!(from.schema.as_deref(), Some("s"));
         reset();
-        register(
-            "postgres",
-            Arc::new(With(Some("postgres://db/app".into()))),
-        );
+        register("postgres", Arc::new(With(Some("postgres://db/app".into()))));
         let ds = create(Some(&HashMap::from([(
             "provider".into(),
             "postgres".into(),
@@ -131,7 +134,7 @@ mod tests {
             .execute("DELETE FROM items", None)
             .await
             .is_err());
-        ds.create_repository(None);
+        ds.create_repository::<Cells>(None);
         let closed = Arc::new(PostgresConnection::new(None, None));
         assert!(PostgresCommand::new(closed)
             .execute("x", None)
@@ -139,4 +142,3 @@ mod tests {
             .is_err());
     }
 }
-

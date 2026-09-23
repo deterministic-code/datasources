@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public class ReadonlyRepository<T> : IReadonlyRepository<T>
+public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
 {
     readonly IConnection? connection;
     readonly List<ICommandMiddleware> middlewares = [];
@@ -9,6 +9,15 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>
 
     public Type Type => typeof(T);
     public IMapper<T, T>? Mapper { get; }
+
+    public ReadonlyRepository(IConnection connection) :
+        this(connection, CreateRepositoryOptions.FromType<T>()) { }
+
+    public ReadonlyRepository(IConnection connection, RepositoryOptions<T> options) :
+        this(RepositoryBuilder<T>.Parts(connection, options)) { }
+
+    public ReadonlyRepository(BuiltRepository<T> built) :
+        this(built.Connection, built.RowConverter, built.CRUDMapper.Rows, built.Statements) { }
 
     protected ReadonlyRepository() { }
 

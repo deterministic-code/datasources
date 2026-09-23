@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError, untyped } from "@datasources/core";
 import { SqlServerCommand } from "./command.ts";
 import { SqlServerConnection } from "./connection.ts";
 import { SqlServerProvider } from "./SqlServerProvider.ts";
@@ -27,10 +27,10 @@ describe("sqlserver", () => {
     expect(implicit).toBeInstanceOf(SqlServerCommand);
     await expect(implicit.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(implicit.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
-    ds.createRepository();
-    ds.createRepository(connection);
-    ds.createReadonlyRepository();
-    ds.createReadonlyRepository(connection);
+    ds.createRepository(untyped());
+    ds.createRepository(untyped(), connection);
+    ds.createReadonlyRepository(untyped());
+    ds.createReadonlyRepository(untyped(), connection);
     expect(new SqlServerProvider().transaction(connection).isolation).toBe("serializable");
   });
 });

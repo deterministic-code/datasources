@@ -8,8 +8,8 @@ import type { IWhere } from "./statements/IWhere.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import { createRepositoryBuilderOptions } from "./createRepositoryBuilderOptions.ts";
-import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
+import { createRepositoryOptions } from "./createRepositoryOptions.ts";
+import type { RepositoryOptions } from "./RepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { parts } from "./RepositoryBuilder.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
@@ -19,27 +19,21 @@ import type { RepositoryStatements } from "./RepositoryStatements.ts";
 export const untyped = <T>(): Constructable<T> => Object as never as Constructable<T>;
 
 export const isBuilt = <T>(
-  value: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
+  value: IConnection | BuiltRepository<T>,
 ): value is BuiltRepository<T> =>
-  typeof value === "object" &&
-  value !== null &&
-  "statements" in value &&
-  "rowConverter" in value &&
-  "crudMapper" in value;
+  "statements" in value && "rowConverter" in value && "crudMapper" in value;
 
 export const builtOf = <T>(
-  typeOrOptions: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
-  connection?: IConnection,
+  typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
+  connectionOrOptions?: IConnection | RepositoryOptions<T>,
 ): BuiltRepository<T> | undefined =>
-  typeof typeOrOptions === "function" && connection === undefined
-    ? undefined
-    : isBuilt(typeOrOptions)
-      ? typeOrOptions
-      : parts(
-          connection === undefined
-            ? (typeOrOptions as RepositoryBuilderOptions<T>)
-            : createRepositoryBuilderOptions(typeOrOptions as Constructable<T>, connection),
-        );
+  typeof typeOrConnectionOrBuilt === "function"
+    ? connectionOrOptions === undefined
+      ? undefined
+      : parts(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnectionOrBuilt))
+    : isBuilt(typeOrConnectionOrBuilt)
+      ? typeOrConnectionOrBuilt
+      : parts(typeOrConnectionOrBuilt, connectionOrOptions as RepositoryOptions<T>);
 
 export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
   readonly type: Constructable<T>;
@@ -50,16 +44,16 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
   protected readonly middlewares: ICommandMiddleware[] = [];
 
   constructor(type: Constructable<T>);
-  constructor(options: RepositoryBuilderOptions<T>);
-  constructor(built: BuiltRepository<T>);
   constructor(type: Constructable<T>, connection: IConnection);
+  constructor(connection: IConnection, options: RepositoryOptions<T>);
+  constructor(built: BuiltRepository<T>);
   constructor(
-    typeOrOptions: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
-    connection?: IConnection,
+    typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
+    connectionOrOptions?: IConnection | RepositoryOptions<T>,
   ) {
-    const built = builtOf(typeOrOptions, connection);
+    const built = builtOf(typeOrConnectionOrBuilt, connectionOrOptions);
     if (!built) {
-      this.type = typeOrOptions as Constructable<T>;
+      this.type = typeOrConnectionOrBuilt as Constructable<T>;
       return;
     }
     this.type = built.type;

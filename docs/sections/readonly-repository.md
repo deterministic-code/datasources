@@ -236,9 +236,9 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 ### Read and read single
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L62-L72
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#L61-L71
 ```
-```rust rust/datasources/src/tests/mod.rs#L845-L851
+```rust rust/datasources/src/tests/mod.rs#L892-L898
 ```
 ```typescript typescript/datasources/src/repository.test.ts#L63-L73
 ```

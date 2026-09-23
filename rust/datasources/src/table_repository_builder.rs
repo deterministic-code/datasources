@@ -1,16 +1,20 @@
 use crate::built_repository::BuiltRepository;
+use crate::connection::Connection;
 use crate::converters::{Cells, RowTypeConverter};
 use crate::crud_mapper::CRUDMapper;
 use crate::mappers::{Mapper, TransformMapper};
+use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
-use crate::table_repository_builder_options::RepositoryBuilderOptions;
 use crate::table_repository_statements::RepositoryStatements;
 use std::sync::Arc;
 
 pub struct RepositoryBuilder;
 
 impl RepositoryBuilder {
-    pub fn parts(options: RepositoryBuilderOptions) -> Result<BuiltRepository> {
+    pub fn parts(
+        connection: Arc<dyn Connection>,
+        options: RepositoryOptions,
+    ) -> Result<BuiltRepository> {
         let row_converter = match options.mapping {
             Some(mapping) => mapping,
             None => RowTypeConverter::of::<Cells>(),
@@ -20,7 +24,7 @@ impl RepositoryBuilder {
         let crud_mapper = match (options.crud_mapper, options.mapper) {
             (Some(mapper), _) => mapper,
             (None, rows) => {
-                let mut mapper = CRUDMapper::identity(options.connection.provider(), "rust");
+                let mut mapper = CRUDMapper::identity(connection.provider(), "rust");
                 mapper.rows = rows.unwrap_or_else(|| TransformMapper::new(|row| row, |row| row));
                 mapper
             }
@@ -34,12 +38,11 @@ impl RepositoryBuilder {
         let entity = Mapper::map(&crud_mapper.entity, options.entity);
         let crud_mapper = Arc::new(crud_mapper);
         Ok(BuiltRepository {
-            connection: options.connection,
+            connection,
             row_converter,
             crud_mapper: crud_mapper.clone(),
             statements: RepositoryStatements::with_mapper(entity, columns, crud_mapper),
             ids: options.ids,
         })
     }
-
 }

@@ -381,7 +381,7 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 ::: example
 ```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L56-L81
 ```
-```rust rust/datasources/src/tests/mod.rs#L1615-L1677
+```rust rust/datasources/src/tests/mod.rs#L1701-L1763
 ```
 ```typescript typescript/datasources/src/CRUDMapper.test.ts#L22-L52
 ```
@@ -392,7 +392,7 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 ::: example
 ```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L84-L95
 ```
-```rust rust/datasources/src/tests/mod.rs#L1285-L1294
+```rust rust/datasources/src/tests/mod.rs#L1383-L1392
 ```
 ```typescript typescript/datasources/src/CRUDMapper.test.ts#L54-L64
 ```

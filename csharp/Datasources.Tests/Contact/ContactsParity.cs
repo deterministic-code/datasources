@@ -12,9 +12,8 @@ internal static class ContactsParity
             ? new ConsoleCommandMiddleware(options: new Dictionary<string, string> { ["isVerbose"] = "true" })
             : null;
         var rows = new List<Row>();
-        var join = new CRUDRepository<Row>(new RepositoryBuilderOptions<Row>
+        var join = new CRUDRepository<Row>(connection, new RepositoryOptions<Row>
         {
-            Connection = connection,
             Entity = "contacts_base"
         });
         if (middleware is not null)

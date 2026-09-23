@@ -1,8 +1,7 @@
 namespace Datasources;
 
-public sealed class RepositoryBuilderOptions<T> where T : new()
+public sealed class RepositoryOptions<T> where T : new()
 {
-    public required IConnection Connection { get; init; }
     public IReadOnlyList<string> Ids { get; init; } = ["id"];
     public string? Entity { get; init; }
     public TypeConverter<T, Row>? Mapping { get; init; }

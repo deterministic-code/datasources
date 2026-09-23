@@ -5,7 +5,7 @@ namespace Datasources;
 
 public static class RepositoryBuilder<T> where T : new()
 {
-    public static BuiltRepository<T> Parts(RepositoryBuilderOptions<T> options)
+    public static BuiltRepository<T> Parts(IConnection connection, RepositoryOptions<T> options)
     {
         var types = options.Types ?? new Dictionary<string, TypeConverter<Value, Value>>();
         var rowConverter = options.Mapping ?? new RowTypeConverter<T>(types, options.Fields);
@@ -25,7 +25,7 @@ public static class RepositoryBuilder<T> where T : new()
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
         return new(
-            options.Connection,
+            connection,
             rowConverter,
             crudMapper,
             new RepositoryStatements(
@@ -38,7 +38,8 @@ public static class RepositoryBuilder<T> where T : new()
             options.Ids);
     }
 
-    public static CRUDRepository<T> Build(RepositoryBuilderOptions<T> options) => new(Parts(options));
+    public static CRUDRepository<T> Build(IConnection connection, RepositoryOptions<T> options) =>
+        new(connection, options);
 
     static string[] Columns() =>
         typeof(IDictionary).IsAssignableFrom(typeof(T))

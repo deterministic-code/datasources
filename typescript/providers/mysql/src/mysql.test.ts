@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ParameterDirection, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, type IDriver } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlConnection } from "./connection.ts";
@@ -230,10 +230,10 @@ describe("Mysql datasource", () => {
     await implicit.connection.open();
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
-    const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
+    const repo = ds.createRepository(untyped(), connection);
+    expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
-    expect(new Datasource("mysql", of()).createRepository()).toBeInstanceOf(CRUDRepository);
+    expect(new Datasource("mysql", of()).createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "mysql" }).provider).toBe("mysql");
     expect(MysqlConnection.from({ url: "mysql://db/app" }).url).toBe("mysql://db/app");
     expect(MysqlConnection.from({ database_url: "mysql://db/app" }).url).toBe("mysql://db/app");

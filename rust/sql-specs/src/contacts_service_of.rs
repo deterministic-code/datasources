@@ -1,8 +1,7 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
     as_readonly, CRUDRepository, CommandMiddleware, Connection, EnrichedCRUDRepository,
-    ICRUDRepository, RepositoryBuilderOptions,
-    TypeConverter, Value,
+    ICRUDRepository, RepositoryOptions, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -32,10 +31,10 @@ fn repo(
     middleware: Option<Arc<dyn CommandMiddleware>>,
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> Arc<dyn ICRUDRepository> {
-    let mut options = RepositoryBuilderOptions::with_factory(connection.clone());
+    let mut options = RepositoryOptions::default();
     options.entity = entity.into();
     options.mapping = Some(RowTypeConverter::new(columns(names)).with_fields(stamp_fields(field)));
-    let mut repo = CRUDRepository::new(options).expect("contacts repo");
+    let mut repo = CRUDRepository::new(connection, options).expect("contacts repo");
     if let Some(middleware) = middleware {
         repo.add_middleware(middleware);
     }
@@ -147,7 +146,13 @@ pub fn contacts_service_of(
         .add_enriched_repo_with(
             "addresses",
             "id",
-            repo(connection.clone(), "address", &address, middleware.clone(), field),
+            repo(
+                connection.clone(),
+                "address",
+                &address,
+                middleware.clone(),
+                field,
+            ),
             "contact_id",
             None,
             true,

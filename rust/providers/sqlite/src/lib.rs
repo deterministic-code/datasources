@@ -24,8 +24,8 @@ mod tests {
     use crate::connection::SqliteConnection;
     use crate::transaction::SqliteTransaction;
     use datasources::{
-        create, downcast_connection, register, reset, BuiltDatasource, Command, Connection,
-        Datasource, Driver, IsolationLevel, Transaction,
+        converters::Cells, create, downcast_connection, register, reset, BuiltDatasource, Command,
+        Connection, Datasource, Driver, IsolationLevel, Transaction,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -52,8 +52,14 @@ mod tests {
 
         fn row_type_converters(
             &self,
-        ) -> HashMap<String, Box<dyn datasources::TypeConverter<datasources::Value, datasources::Value> + Send + Sync>>
-        {
+        ) -> HashMap<
+            String,
+            Box<
+                dyn datasources::TypeConverter<datasources::Value, datasources::Value>
+                    + Send
+                    + Sync,
+            >,
+        > {
             crate::converters::row_type_converters()
         }
     }
@@ -119,13 +125,14 @@ mod tests {
         let command = ds.create_command(None);
         assert!(command.execute("DELETE FROM items", None).await.is_err());
         assert!(command.execute_reader("SELECT 1", None).await.is_err());
-        ds.create_repository(None);
+        ds.create_repository::<Cells>(None);
         let factory = BuiltDatasource::new("sqlite", Arc::new(With(None)), None);
         factory.create_connection().await.unwrap();
         let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
         assert!(bound.execute("DELETE FROM items", None).await.is_err());
         assert!(bound.execute_reader("SELECT 1", None).await.is_err());
-        factory.create_repository(Some(factory.create_connection().await.unwrap()));
+        (&factory as &dyn Datasource)
+            .create_repository::<Cells>(Some(factory.create_connection().await.unwrap()));
 
         let closed = Arc::new(SqliteConnection::new(None));
         assert!(SqliteCommand::new(closed).execute("x", None).await.is_err());
@@ -139,10 +146,12 @@ mod tests {
         let command = SqliteCommand::new(conn);
         let parameters = [Parameter::new("x", -3_i64)];
         let response = command
-            .execute(&ReturnStatement::new("abs", &parameters).get_text(), Some(&parameters))
+            .execute(
+                &ReturnStatement::new("abs", &parameters).get_text(),
+                Some(&parameters),
+            )
             .await
             .unwrap();
         assert_eq!(response.result, datasources::Value::Int(3));
     }
 }
-

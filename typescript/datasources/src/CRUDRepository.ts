@@ -10,7 +10,7 @@ import { Operator } from "./statements/Operator.ts";
 import { WhereClause } from "./statements/WhereClause.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
+import type { RepositoryOptions } from "./RepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { CRUDMapper } from "./CRUDMapper.ts";
 import { builtOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
@@ -39,13 +39,13 @@ export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements 
   private readonly ids: Set<string>;
 
   constructor(type: Constructable<T>, connection: IConnection);
-  constructor(options: RepositoryBuilderOptions<T>);
+  constructor(connection: IConnection, options: RepositoryOptions<T>);
   constructor(built: BuiltRepository<T>);
   constructor(
-    typeOrOptions: Constructable<T> | RepositoryBuilderOptions<T> | BuiltRepository<T>,
-    connection?: IConnection,
+    typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
+    connectionOrOptions?: IConnection | RepositoryOptions<T>,
   ) {
-    const built = builtOf(typeOrOptions, connection)!;
+    const built = builtOf(typeOrConnectionOrBuilt, connectionOrOptions)!;
     super(built);
     this.crudMapper = built.crudMapper;
     this.ids = new Set(built.ids);

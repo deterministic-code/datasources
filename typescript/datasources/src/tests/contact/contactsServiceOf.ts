@@ -2,7 +2,7 @@ import type { ICommandMiddleware } from "../../ICommandMiddleware.ts";
 import type { IConnection } from "../../IConnection.ts";
 import { CRUDRepository } from "../../CRUDRepository.ts";
 import type { Constructable } from "../../converters/Constructable.ts";
-import { fieldNamesOf } from "../../createRepositoryBuilderOptions.ts";
+import { fieldNamesOf } from "../../createRepositoryOptions.ts";
 import { Address } from "./Address.ts";
 import { AddressType } from "./AddressType.ts";
 import { Contact } from "./Contact.ts";
@@ -18,7 +18,7 @@ export const contactsServiceOf = (
   middleware?: ICommandMiddleware,
 ): ContactsService => {
   const of = <T>(type: Constructable<T>, entity: string, columns?: string[]) => {
-    const repo = new CRUDRepository({ type, entity, connection, columns });
+    const repo = new CRUDRepository(connection, { type, entity, columns });
     return middleware ? repo.addMiddleware(middleware) : repo;
   };
   return new ContactsService(

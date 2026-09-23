@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError, untyped } from "@datasources/core";
 import { YamlCommand } from "./command.ts";
 import { YamlConnection } from "./connection.ts";
 import { YamlProvider } from "./YamlProvider.ts";
@@ -27,10 +27,10 @@ describe("yaml", () => {
     expect(implicit).toBeInstanceOf(YamlCommand);
     await expect(implicit.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(implicit.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
-    ds.createRepository();
-    ds.createRepository(connection);
-    ds.createReadonlyRepository();
-    ds.createReadonlyRepository(connection);
+    ds.createRepository(untyped());
+    ds.createRepository(untyped(), connection);
+    ds.createReadonlyRepository(untyped());
+    ds.createReadonlyRepository(untyped(), connection);
     expect(new YamlProvider().transaction(connection).isolation).toBe("serializable");
   });
 });

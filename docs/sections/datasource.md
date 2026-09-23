@@ -80,26 +80,28 @@ createCommand(connection?: IConnection): ICommand
 
 **Returns** [ICommand](./command.md)
 
-##### createRepository(connection?)
+##### createRepository(type, connection?)
 
-Creates a CRUD repository bound to an optional open connection.
+Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class.
 
 ```typescript
-createRepository<T>(connection?: IConnection): ICRUDRepository<T>
+createRepository<T>(type: Constructable<T>, connection?: IConnection): ICRUDRepository<T>
 ```
 
+- `type` — class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
-##### createReadonlyRepository(connection?)
+##### createReadonlyRepository(type, connection?)
 
-Creates a read-only repository bound to an optional open connection.
+Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`.
 
 ```typescript
-createReadonlyRepository<T>(connection?: IConnection): IReadonlyRepository<T>
+createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection): IReadonlyRepository<T>
 ```
 
+- `type` — class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
@@ -213,7 +215,7 @@ ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null)
 
 ##### CreateReadonlyRepository(connection)
 
-Creates a read-only repository bound to an optional open connection. Defaults to `CreateRepository`.
+Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method.
 
 ```csharp
 IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null)
@@ -320,10 +322,10 @@ fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Com
 
 ##### create_repository(connection)
 
-Creates a CRUD repository bound to an optional open connection.
+Creates a CRUD repository for `T`, bound to an optional open connection.
 
 ```rust
-fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ICRUDRepository>
+fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ICRUDRepository>
 ```
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one
@@ -332,10 +334,10 @@ fn create_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn 
 
 ##### create_readonly_repository(connection)
 
-Creates a read-only repository bound to an optional open connection. Defaults to `create_repository`.
+Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`.
 
 ```rust
-fn create_readonly_repository(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn IReadonlyRepository>
+fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn IReadonlyRepository>
 ```
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one

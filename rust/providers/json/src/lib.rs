@@ -15,18 +15,18 @@ mod tests {
     use crate::file_store::{FileStore, MemoryFileStore};
     use crate::filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
     use datasources::{
-        create, register, reset, Command, Connection, CRUDRepository, ICRUDRepository,
-        IReadonlyRepository, Parameter, RepositoryBuilderOptions, Row, QueryStatement, TextWhere,
-        Value,
+        converters::Cells, create, register, reset, CRUDRepository, Command, Connection,
+        ICRUDRepository, IReadonlyRepository, Parameter, QueryStatement, RepositoryOptions, Row,
+        TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
     use std::collections::HashMap;
     use std::sync::Arc;
 
     fn crud(conn: Arc<JsonConnection>) -> CRUDRepository {
-        let mut options = RepositoryBuilderOptions::with_factory(conn);
+        let mut options = RepositoryOptions::default();
         options.ids = vec![];
-        CRUDRepository::new(options).expect("repo")
+        CRUDRepository::new(conn, options).expect("repo")
     }
 
     fn rec(id: i64, name: &str) -> Row {
@@ -123,10 +123,7 @@ mod tests {
             Some(serde_json::json!({})),
         ));
         memory.open().await.unwrap();
-        crud(memory.clone())
-            .create(&mut rec(1, "a"))
-            .await
-            .unwrap();
+        crud(memory.clone()).create(&mut rec(1, "a")).await.unwrap();
         *memory.state.data.lock().unwrap() = JsonValue::Null;
         memory.collection_mut(|_| {});
         *memory.state.data.lock().unwrap() = JsonValue::Array(vec![]);
@@ -145,8 +142,8 @@ mod tests {
         let bound = ds.create_command(Some(ds.create_connection().await.unwrap()));
         assert!(bound.execute("insert", None).await.is_err());
         assert!(bound.execute_reader("", None).await.is_err());
-        ds.create_repository(None);
-        ds.create_repository(Some(ds.create_connection().await.unwrap()));
+        ds.create_repository::<Cells>(None);
+        ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()));
 
         let missing = MemoryFileStore::new();
         assert!(!missing.exists("x"));
@@ -189,18 +186,12 @@ mod tests {
             .execute("insert", None)
             .await
             .is_err());
-        assert!(crud(closed.clone())
-            .create(&mut rec(1, "a"))
-            .await
-            .is_err());
+        assert!(crud(closed.clone()).create(&mut rec(1, "a")).await.is_err());
         assert!(crud(closed.clone())
             .update(&rec(1, "a"), None)
             .await
             .is_err());
-        assert!(crud(closed)
-            .delete(&rec(1, "a"), None)
-            .await
-            .is_err());
+        assert!(crud(closed).delete(&rec(1, "a"), None).await.is_err());
         assert!(
             JsonConnection::new("", None, Arc::new(MemoryFileStore::new()), None)
                 .start_transaction(None)
@@ -245,4 +236,3 @@ mod tests {
         }
     }
 }
-

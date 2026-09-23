@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   collectAsync,
   CRUDRepository,
+  ReadonlyRepository,
+  untyped,
   Datasource,
   DatasourceFactory,
   DatasourceError,
@@ -168,7 +170,7 @@ describe("MemoryCommand and CRUDRepository", () => {
     return {
       connection,
       command: new MemoryCommand(connection),
-      repo: new CRUDRepository({ connection }),
+      repo: new CRUDRepository(connection, {}),
     };
   }
 
@@ -262,7 +264,7 @@ describe("MemoryCommand and CRUDRepository", () => {
   it("rejects command and repository IO when closed", async () => {
     const connection = new MemoryConnection({ data: [{ id: 1 }] });
     const command = new MemoryCommand(connection);
-    const repo = new CRUDRepository({ connection });
+    const repo = new CRUDRepository(connection, {});
     await expect(command.executeReader("")).rejects.toThrow(DatasourceError);
     await expect(command.execute("insert")).rejects.toThrow(DatasourceError);
     await expect(repo.create({ id: 2 })).rejects.toThrow(DatasourceError);
@@ -293,15 +295,15 @@ describe("Memory datasource", () => {
     await implicit.connection.open();
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader("");
-    const repo = ds.createRepository(connection);
+    const repo = ds.createRepository(untyped(), connection);
     expect(repo).toBeInstanceOf(CRUDRepository);
-    expect(ds.createRepository()).toBeInstanceOf(CRUDRepository);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
+    expect(ds.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
+    expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(MemoryConnection.from().provider).toBe("memory");
     const registered = Datasource.create({ provider: "memory" });
     expect(registered.provider).toBe("memory");
     expect(await registered.createConnection()).toBeInstanceOf(MemoryConnection);
-    expect(registered.createRepository()).toBeInstanceOf(CRUDRepository);
+    expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     const provider = new MemoryProvider();
     expect(provider.transaction(connection).isolation).toBe("serializable");
     await expect(command.executeStatement(new QueryStatement("nope"))).rejects.toThrow(

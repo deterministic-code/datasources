@@ -215,7 +215,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](./w
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L153-L155
 ```
-```rust rust/datasources/src/tests/mod.rs#L928-L933
+```rust rust/datasources/src/tests/mod.rs#L980-L985
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L225-L229
 ```

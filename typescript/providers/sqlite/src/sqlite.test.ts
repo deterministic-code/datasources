@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   CRUDRepository,
+  ReadonlyRepository,
+  untyped,
   Datasource,
   DatasourceError,
   DatasourceFactory,
@@ -178,10 +180,10 @@ describe("Sqlite datasource", () => {
     await implicit.connection.open();
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
-    const repo = ds.createRepository(connection);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
+    const repo = ds.createRepository(untyped(), connection);
+    expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
-    expect(new Datasource("sqlite", of()).createRepository()).toBeInstanceOf(CRUDRepository);
+    expect(new Datasource("sqlite", of()).createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "sqlite" }).provider).toBe("sqlite");
     expect(SqliteConnection.from({ filename: ":memory:" }).filename).toBe(":memory:");
     expect(SqliteConnection.from({ url: "sqlite:///:memory:" }).filename).toBe(":memory:");

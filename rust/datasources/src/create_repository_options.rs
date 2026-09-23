@@ -1,24 +1,15 @@
-use crate::connection::Connection;
 use crate::converters::ConvertSchema;
-use crate::table_repository_builder_options::RepositoryBuilderOptions;
-use std::sync::Arc;
+use crate::repository_options::RepositoryOptions;
 
-pub fn create_repository_builder_options<T: ConvertSchema>(
-    connection: Arc<dyn Connection>,
-) -> RepositoryBuilderOptions {
-    RepositoryBuilderOptions {
+pub fn create_repository_options<T: ConvertSchema>() -> RepositoryOptions {
+    RepositoryOptions {
         ids: default_id::<T>(),
         entity: std::any::type_name::<T>()
             .rsplit("::")
             .next()
             .unwrap_or_default()
             .into(),
-        mapping: None,
-        mapper: None,
-        crud_mapper: None,
-        types: Default::default(),
-        fields: Default::default(),
-        connection,
+        ..Default::default()
     }
 }
 

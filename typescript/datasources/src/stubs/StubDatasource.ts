@@ -1,3 +1,4 @@
+import type { Constructable } from "../converters/Constructable.ts";
 import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
@@ -21,10 +22,14 @@ export class StubDatasource implements IDatasource {
   createCommand = (connection?: IConnection): ICommand =>
     new StubCommand(this.provider, connection ?? this.defaultConnection());
 
-  createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
-    new StubRepository<T>(this.provider, connection ?? this.defaultConnection());
+  createRepository = <T>(
+    type: Constructable<T>,
+    connection?: IConnection,
+  ): ICRUDRepository<T> =>
+    new StubRepository<T>(this.provider, connection ?? this.defaultConnection(), type);
 
   createReadonlyRepository = <T>(
+    type: Constructable<T>,
     connection?: IConnection,
-  ): IReadonlyRepository<T> => this.createRepository(connection);
+  ): IReadonlyRepository<T> => this.createRepository(type, connection);
 }

@@ -9,7 +9,7 @@ import {
   WhereClause,
   Operator,
   RepositoryBuilder,
-  createRepositoryBuilderOptions,
+  createRepositoryOptions,
   parts,
   InsertStatement,
   UpdateStatement,
@@ -20,7 +20,7 @@ import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import type { RepositoryBuilderOptions } from "./RepositoryBuilderOptions.ts";
+import type { RepositoryOptions } from "./RepositoryOptions.ts";
 
 class Item {
   id = 0;
@@ -43,18 +43,18 @@ class Composite {
 
 const asType = <T>(type: new () => T) => type as Constructable<Cells>;
 
-const create = (overrides: Partial<RepositoryBuilderOptions<Cells>> = {}) => {
+const create = (overrides: Partial<RepositoryOptions<Cells>> = {}) => {
   const connection = new MockConnection(undefined, "memory");
   const command = new MockCommand(connection);
   connection.command = command;
   const type = overrides.type ?? asType(Item);
-  const repo = new CRUDRepository<Cells>({
+  const options = {
     ...overrides,
-    connection,
     type,
     entity: overrides.entity ?? "users",
     mapping: overrides.mapping ?? new RowTypeConverter(),
-  });
+  };
+  const repo = new CRUDRepository<Cells>(connection, options);
   return { repo, command };
 };
 
@@ -179,8 +179,7 @@ describe("CRUDRepository", () => {
       }
     }).rejects.toThrow("Reader current must be a row");
     await repo.update({ id: 1, name: "a" }, new Where("id = 1"));
-    const typed = new CRUDRepository({
-      connection,
+    const typed = new CRUDRepository(connection, {
       type: asType(Item),
       entity: "users",
       mapping: new RowTypeConverter(),
@@ -235,8 +234,7 @@ describe("CRUDRepository", () => {
     const connection = new MockConnection(undefined, "memory");
     const command = new MockCommand(connection);
     connection.command = command;
-    const repo = new CRUDRepository<User>({
-      connection,
+    const repo = new CRUDRepository<User>(connection, {
       type: User,
       entity: "users",
       mapping: new RowTypeConverter<User>(),
@@ -263,8 +261,7 @@ describe("CRUDRepository", () => {
     const connection = new MockConnection(undefined, "memory");
     const command = new MockCommand(connection);
     connection.command = command;
-    const repo = new CRUDRepository<User>({
-      connection,
+    const repo = new CRUDRepository<User>(connection, {
       type: User,
       entity: "users",
       mapping: new RowTypeConverter<User>(),
@@ -297,19 +294,22 @@ describe("CRUDRepository", () => {
     expect(command.executeCalls[2]?.text).toBe("DELETE FROM users WHERE id = $id");
   });
 
-  it("builds repository options from a type and connection", () => {
+  it("builds repository options from a type", () => {
     const connection = new MockConnection();
-    const fromId = createRepositoryBuilderOptions(asType(Item), connection);
+    const fromId = createRepositoryOptions(asType(Item));
     expect(fromId.ids).toEqual(["id"]);
-    expect(fromId.connection).toBe(connection);
-    expect(createRepositoryBuilderOptions(asType(Label), connection).ids).toEqual([]);
-    expect(createRepositoryBuilderOptions(asType(PascalId), connection).ids).toEqual(["Id"]);
-    expect(new CRUDRepository(fromId)).toBeInstanceOf(CRUDRepository);
+    expect(fromId.entity).toBe("Item");
+    expect(createRepositoryOptions(asType(Label)).ids).toEqual([]);
+    expect(createRepositoryOptions(asType(PascalId)).ids).toEqual(["Id"]);
+    expect(new CRUDRepository(connection, fromId)).toBeInstanceOf(CRUDRepository);
     expect(new CRUDRepository(asType(Item), connection)).toBeInstanceOf(CRUDRepository);
-    expect(new CRUDRepository(parts(fromId))).toBeInstanceOf(CRUDRepository);
-    expect(RepositoryBuilder.from(fromId).parts().connection).toBe(connection);
+    expect(new CRUDRepository(parts(connection, fromId))).toBeInstanceOf(CRUDRepository);
+    expect(RepositoryBuilder.from(connection, fromId).parts().connection).toBe(connection);
     expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
-    expect(parts({ connection }).statements.query().getText()).toBe("SELECT * FROM ");
+    expect(parts(connection, {}).statements.query().getText()).toBe("SELECT * FROM ");
+    expect(parts(connection, { type: asType(Item) }).statements.query().getText()).toBe(
+      "SELECT id, name FROM Item",
+    );
   });
 
   it("builder maps entity and columns; statement mapper rewrites query", async () => {

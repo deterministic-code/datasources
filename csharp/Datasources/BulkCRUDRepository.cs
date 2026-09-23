@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public class BulkCRUDRepository<T> : EnrichedCRUDRepository<T>
+public class BulkCRUDRepository<T> : EnrichedCRUDRepository<T> where T : new()
 {
     public BulkCRUDRepository(ICRUDRepository<T> inner) : base(inner) { }
 

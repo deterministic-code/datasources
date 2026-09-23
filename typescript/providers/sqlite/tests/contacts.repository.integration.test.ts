@@ -72,7 +72,7 @@ describe("contacts readonly repository", () => {
 
     const contacts = new FlatToNestedMapper(contactsView).map(
       await collectAsync(
-        new CRUDRepository<Cells>({ connection, entity: "contacts_base" }).read(contactsJoinQuery()),
+        new CRUDRepository<Cells>(connection, { entity: "contacts_base" }).read(contactsJoinQuery()),
       ),
     );
     const mapped = contactWith(contacts, 2, 1);

@@ -425,7 +425,7 @@ pub enum JoinKind
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L33-L38
 ```
-```rust rust/datasources/src/tests/mod.rs#L1071-L1074
+```rust rust/datasources/src/tests/mod.rs#L1126-L1129
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L33-L35
 ```
@@ -436,7 +436,7 @@ pub enum JoinKind
 ::: example
 ```csharp csharp/Datasources.Tests/CoreTests.cs#L127-L130
 ```
-```rust rust/datasources/src/tests/mod.rs#L877-L883
+```rust rust/datasources/src/tests/mod.rs#L929-L935
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L175-L180
 ```

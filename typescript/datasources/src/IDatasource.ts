@@ -1,3 +1,4 @@
+import type { Constructable } from "./converters/Constructable.ts";
 import type { ICommand } from "./ICommand.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -7,8 +8,9 @@ export interface IDatasource {
   readonly provider: string;
   createConnection(): Promise<IConnection>;
   createCommand(connection?: IConnection): ICommand;
-  createRepository<T>(connection?: IConnection): ICRUDRepository<T>;
+  createRepository<T>(type: Constructable<T>, connection?: IConnection): ICRUDRepository<T>;
   createReadonlyRepository<T>(
+    type: Constructable<T>,
     connection?: IConnection,
   ): IReadonlyRepository<T>;
 }

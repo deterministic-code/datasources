@@ -240,7 +240,7 @@ Each item still runs the same deep persist as [EnrichedCRUDRepository](./enriche
 ::: example
 ```csharp csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L23-L30
 ```
-```rust rust/datasources/src/tests/mod.rs#L1777-L1794
+```rust rust/datasources/src/tests/mod.rs#L1862-L1879
 ```
 ```typescript typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37
 ```

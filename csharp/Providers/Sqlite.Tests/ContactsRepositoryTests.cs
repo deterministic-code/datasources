@@ -57,9 +57,8 @@ public class ContactsRepositoryTests
             await command.Execute(sql);
 
         var rows = new List<Row>();
-        await foreach (var row in new CRUDRepository<Row>(new RepositoryBuilderOptions<Row>
+        await foreach (var row in new CRUDRepository<Row>(conn, new RepositoryOptions<Row>
         {
-            Connection = conn,
             Entity = "contacts_base"
         }).Read(ContactsJoinQuery.Create()))
             rows.Add(row);

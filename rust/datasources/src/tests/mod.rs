@@ -3,9 +3,9 @@ mod command;
 mod connection;
 mod contact;
 mod datasource_factory;
-mod transaction;
 mod items_repository;
 mod list_repository;
+mod transaction;
 
 use crate::converters::{Cells, RowTypeConverter};
 use crate::repository_tree_node::encode_rows;
@@ -474,16 +474,20 @@ async fn stubs_throw() {
         .execute_reader("select", Some(&[Parameter::new("id", 1_i64)]))
         .await
         .is_err());
-    let repo = ds.create_repository(None);
+    let ds: &dyn Datasource = &*ds;
+    let repo = ds.create_repository::<Cells>(None);
     let mut empty = Row::new();
     assert!(repo.read_single(None).await.is_err());
     assert!(repo.read(None).await.is_err());
-    assert!(repo.read_single_where(&TextWhere::new("1=1")).await.is_err());
+    assert!(repo
+        .read_single_where(&TextWhere::new("1=1"))
+        .await
+        .is_err());
     assert!(repo.read_where(&TextWhere::new("1=1")).await.is_err());
     assert!(repo.create(&mut empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
-    let readonly = ds.create_readonly_repository(None);
+    let readonly = ds.create_readonly_repository::<Cells>(None);
     assert!(readonly.read_single(None).await.is_err());
     assert!(readonly.read(None).await.is_err());
     assert!(readonly
@@ -605,13 +609,14 @@ async fn published_mocks() {
     assert!(repo.delete(&Row::new(), None).await.is_err());
 
     let ds = MockDatasource::new("mock");
-    assert_eq!(Datasource::provider(&ds), "mock");
+    let ds: &dyn Datasource = &ds;
+    assert_eq!(Datasource::provider(ds), "mock");
     ds.create_connection().await.unwrap();
     let command = ds.create_command(None);
     command.execute("", None).await.unwrap();
     command.execute_reader("", None).await.unwrap();
-    ds.create_repository(None);
-    ds.create_readonly_repository(None);
+    ds.create_repository::<Cells>(None);
+    ds.create_readonly_repository::<Cells>(None);
 
     let q = MockQuery::new("q");
     let w = MockWhere::new("w");
@@ -654,10 +659,30 @@ fn statements_and_builders() {
     ));
     assert_eq!(where_clause.get_text(), "id = $id AND age > $age");
     assert_eq!(where_clause.parameters().len(), 2);
-    assert_eq!(WhereClause::new(Operator::not_equals("id", 2_i64)).parameters().len(), 1);
-    assert_eq!(WhereClause::new(Operator::less_than("n", 0_i64)).parameters().len(), 1);
-    assert_eq!(WhereClause::new(Operator::greater_than_or_equal("n", 0_i64)).parameters().len(), 1);
-    assert_eq!(WhereClause::new(Operator::less_than_or_equal("n", 0_i64)).parameters().len(), 1);
+    assert_eq!(
+        WhereClause::new(Operator::not_equals("id", 2_i64))
+            .parameters()
+            .len(),
+        1
+    );
+    assert_eq!(
+        WhereClause::new(Operator::less_than("n", 0_i64))
+            .parameters()
+            .len(),
+        1
+    );
+    assert_eq!(
+        WhereClause::new(Operator::greater_than_or_equal("n", 0_i64))
+            .parameters()
+            .len(),
+        1
+    );
+    assert_eq!(
+        WhereClause::new(Operator::less_than_or_equal("n", 0_i64))
+            .parameters()
+            .len(),
+        1
+    );
     assert!(WhereClause::new(Operator::Equals {
         left: Box::new(Expression::Literal(Literal::new(1_i64))),
         right: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -666,10 +691,22 @@ fn statements_and_builders() {
     .is_empty());
     assert_eq!(where_clause.parameters()[0].value, Value::Int(1));
     assert_eq!(where_clause.parameters()[1].value, Value::Int(18));
-    assert_eq!(WhereClause::new(Operator::not_equals("id", 2_i64)).get_text(), "id <> $id");
-    assert_eq!(WhereClause::new(Operator::less_than("n", 0_i64)).get_text(), "n < $n");
-    assert_eq!(WhereClause::new(Operator::greater_than_or_equal("n", 0_i64)).get_text(), "n >= $n");
-    assert_eq!(WhereClause::new(Operator::less_than_or_equal("n", 0_i64)).get_text(), "n <= $n");
+    assert_eq!(
+        WhereClause::new(Operator::not_equals("id", 2_i64)).get_text(),
+        "id <> $id"
+    );
+    assert_eq!(
+        WhereClause::new(Operator::less_than("n", 0_i64)).get_text(),
+        "n < $n"
+    );
+    assert_eq!(
+        WhereClause::new(Operator::greater_than_or_equal("n", 0_i64)).get_text(),
+        "n >= $n"
+    );
+    assert_eq!(
+        WhereClause::new(Operator::less_than_or_equal("n", 0_i64)).get_text(),
+        "n <= $n"
+    );
     assert_eq!(
         WhereClause::new(Operator::Equals {
             left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -707,7 +744,9 @@ fn statements_and_builders() {
         .len(),
         3
     );
-    let not_where = WhereClause::new(Operator::not(WhereClause::new(Operator::equals("id", 1_i64))));
+    let not_where = WhereClause::new(Operator::not(WhereClause::new(Operator::equals(
+        "id", 1_i64,
+    ))));
     assert_eq!(not_where.get_text(), "NOT (id = $id)");
     assert_eq!(not_where.parameters()[0].name, "id");
     assert_eq!(
@@ -730,9 +769,11 @@ fn statements_and_builders() {
         WhereClause::new(Expression::Identifier(Identifier::new("id"))).get_text(),
         "id"
     );
-    assert!(WhereClause::new(Expression::Identifier(Identifier::new("id")))
-        .parameters()
-        .is_empty());
+    assert!(
+        WhereClause::new(Expression::Identifier(Identifier::new("id")))
+            .parameters()
+            .is_empty()
+    );
     assert_eq!(
         WhereClause::new(Expression::Array(ArrayExpression::new(vec![
             Expression::Literal(Literal::new(1_i64))
@@ -740,11 +781,13 @@ fn statements_and_builders() {
         .get_text(),
         "1"
     );
-    assert!(WhereClause::new(Expression::Array(ArrayExpression::new(vec![
-        Expression::Literal(Literal::new(1_i64))
-    ])))
-    .parameters()
-    .is_empty());
+    assert!(
+        WhereClause::new(Expression::Array(ArrayExpression::new(vec![
+            Expression::Literal(Literal::new(1_i64))
+        ])))
+        .parameters()
+        .is_empty()
+    );
     assert_eq!(
         WhereClause::new(Operator::Equals {
             left: Box::new(Expression::Identifier(Identifier::new("a"))),
@@ -812,8 +855,12 @@ fn statements_and_builders() {
         "a = b"
     );
     assert!(WhereClause::new(Operator::Equals {
-        left: Box::new(Expression::Literal(Literal::new(Value::Uuid(uuid::Uuid::nil())))),
-        right: Box::new(Expression::Literal(Literal::new(Value::Uuid(uuid::Uuid::nil())))),
+        left: Box::new(Expression::Literal(Literal::new(Value::Uuid(
+            uuid::Uuid::nil()
+        )))),
+        right: Box::new(Expression::Literal(Literal::new(Value::Uuid(
+            uuid::Uuid::nil()
+        )))),
     })
     .get_text()
     .contains('='));
@@ -847,8 +894,13 @@ fn statements_and_builders() {
         .get_text(),
         "(NOT (id = $id)) AND age = $age"
     );
-    assert_eq!(WhereClause::new(Operator::in_list("id", vec![])).get_text(), "1 = 0");
-    assert!(WhereClause::new(Operator::in_list("id", vec![])).parameters().is_empty());
+    assert_eq!(
+        WhereClause::new(Operator::in_list("id", vec![])).get_text(),
+        "1 = 0"
+    );
+    assert!(WhereClause::new(Operator::in_list("id", vec![]))
+        .parameters()
+        .is_empty());
     let in_ids = WhereClause::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)]));
     assert_eq!(in_ids.get_text(), "id IN ($id_0, $id_1)");
     assert_eq!(in_ids.parameters()[0].name, "id_0");
@@ -1059,7 +1111,10 @@ fn statements_and_builders() {
         Parameter::new("id", 1_i64).direction,
         ParameterDirection::Input
     );
-    assert_eq!(Parameter::output("count").direction, ParameterDirection::Output);
+    assert_eq!(
+        Parameter::output("count").direction,
+        ParameterDirection::Output
+    );
     assert_eq!(Parameter::output("count").value, Value::Null);
     assert!(Response::new(1_i64, 2).parameters.is_none());
     assert_eq!(ReturnStatement::text("x").get_text(), "x");
@@ -1082,20 +1137,48 @@ fn statements_and_builders() {
 #[test]
 fn evaluates_where_statement() {
     let evaluator = StatementEvaluator;
-    let row = record(&[("id", Value::Int(1)), ("age", Value::Int(21)), ("name", Value::Text("a".into()))]);
+    let row = record(&[
+        ("id", Value::Int(1)),
+        ("age", Value::Int(21)),
+        ("name", Value::Text("a".into())),
+    ]);
     let yes = Value::Bool(true);
     let no = Value::Bool(false);
-    assert_eq!(evaluator.evaluate_where(&WhereClause::new(Operator::equals("id", 1_i64)), &row), yes);
-    assert_eq!(evaluator.evaluate_where(&WhereClause::new(Operator::equals("id", 2_i64)), &row), no);
-    assert_eq!(evaluator.evaluate_where(&WhereClause::new(Operator::not_equals("id", 2_i64)), &row), yes);
-    assert_eq!(evaluator.evaluate_where(&WhereClause::new(Operator::greater_than("age", 18_i64)), &row), yes);
-    assert_eq!(evaluator.evaluate_where(&WhereClause::new(Operator::less_than("age", 30_i64)), &row), yes);
     assert_eq!(
-        evaluator.evaluate_where(&WhereClause::new(Operator::greater_than_or_equal("age", 21_i64)), &row),
+        evaluator.evaluate_where(&WhereClause::new(Operator::equals("id", 1_i64)), &row),
         yes
     );
     assert_eq!(
-        evaluator.evaluate_where(&WhereClause::new(Operator::less_than_or_equal("age", 21_i64)), &row),
+        evaluator.evaluate_where(&WhereClause::new(Operator::equals("id", 2_i64)), &row),
+        no
+    );
+    assert_eq!(
+        evaluator.evaluate_where(&WhereClause::new(Operator::not_equals("id", 2_i64)), &row),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereClause::new(Operator::greater_than("age", 18_i64)),
+            &row
+        ),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(&WhereClause::new(Operator::less_than("age", 30_i64)), &row),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereClause::new(Operator::greater_than_or_equal("age", 21_i64)),
+            &row
+        ),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereClause::new(Operator::less_than_or_equal("age", 21_i64)),
+            &row
+        ),
         yes
     );
     assert_eq!(
@@ -1139,7 +1222,10 @@ fn evaluates_where_statement() {
         yes
     );
     assert_eq!(
-        evaluator.evaluate_where(&WhereClause::new(Operator::not(Operator::equals("id", 1_i64))), &row),
+        evaluator.evaluate_where(
+            &WhereClause::new(Operator::not(Operator::equals("id", 1_i64))),
+            &row
+        ),
         no
     );
     assert_eq!(
@@ -1177,12 +1263,21 @@ fn evaluates_where_statement() {
         evaluator.evaluate(&Expression::Literal(Literal::new(Value::Null)), &row),
         Value::Null
     );
-    assert_eq!(evaluator.evaluate_where(&WhereClause::new(Operator::less_than("name", "b")), &row), yes);
     assert_eq!(
-        evaluator.evaluate_where(&WhereClause::new(Operator::greater_than_or_equal("name", "a")), &row),
+        evaluator.evaluate_where(&WhereClause::new(Operator::less_than("name", "b")), &row),
         yes
     );
-    assert_eq!(evaluator.evaluate_where(&WhereClause::new(Operator::greater_than("name", "Z")), &row), yes);
+    assert_eq!(
+        evaluator.evaluate_where(
+            &WhereClause::new(Operator::greater_than_or_equal("name", "a")),
+            &row
+        ),
+        yes
+    );
+    assert_eq!(
+        evaluator.evaluate_where(&WhereClause::new(Operator::greater_than("name", "Z")), &row),
+        yes
+    );
     assert_eq!(
         evaluator.evaluate(
             &Expression::Operator(Operator::GreaterThan {
@@ -1232,7 +1327,10 @@ fn evaluates_where_statement() {
 #[test]
 #[should_panic(expected = "array is not a scalar")]
 fn evaluate_array_panics() {
-    StatementEvaluator.evaluate(&Expression::Array(ArrayExpression::new(vec![])), &Row::new());
+    StatementEvaluator.evaluate(
+        &Expression::Array(ArrayExpression::new(vec![])),
+        &Row::new(),
+    );
 }
 
 #[test]
@@ -1318,12 +1416,11 @@ async fn table_repository() {
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
-    let mut options = RepositoryBuilderOptions::with_factory(
-        MockConnection::with_command_provider(command.clone(), "memory"),
-    );
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = RepositoryOptions::default();
     options.entity = "users".into();
     options.mapping = Some(users_mapping());
-    let mut repo = CRUDRepository::new(options).unwrap();
+    let mut repo = CRUDRepository::new(connection, options).unwrap();
     repo.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
@@ -1362,12 +1459,11 @@ async fn table_repository() {
         .is_empty());
 
     let mut obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
-    let mut include_id = RepositoryBuilderOptions::with_factory(
-        MockConnection::with_command_provider(command.clone(), "memory"),
-    );
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut include_id = RepositoryOptions::default();
     include_id.entity = "users".into();
     include_id.mapping = Some(users_mapping());
-    let repo = CRUDRepository::new(include_id).unwrap();
+    let repo = CRUDRepository::new(connection, include_id).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Int(9), 1);
     repo.create(&mut obj).await.unwrap();
     assert_eq!(
@@ -1387,13 +1483,12 @@ async fn table_repository() {
     );
 
     let generated = Arc::new(MockCommand::new());
-    let mut options = RepositoryBuilderOptions::with_factory(
-        MockConnection::with_command_provider(generated.clone(), "memory"),
-    );
+    let connection = MockConnection::with_command_provider(generated.clone(), "memory");
+    let mut options = RepositoryOptions::default();
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Composite>());
-    let repo = CRUDRepository::new(options).unwrap();
+    let repo = CRUDRepository::new(connection, options).unwrap();
     repo.create(&mut record(&[
         ("org_id", Value::Int(1)),
         ("user_id", Value::Int(2)),
@@ -1424,15 +1519,15 @@ async fn table_repository() {
         .contains("org_id = $org_id AND user_id = $user_id"));
 
     let command = Arc::new(MockCommand::new());
-    CRUDRepository::new(RepositoryBuilderOptions::with_factory(
+    CRUDRepository::new(
         MockConnection::with_command(command.clone()),
-    ))
+        RepositoryOptions::default(),
+    )
     .unwrap();
-    let mut options = RepositoryBuilderOptions::with_factory(
-        MockConnection::with_command_provider(command.clone(), "memory"),
-    );
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = RepositoryOptions::default();
     options.mapping = Some(users_mapping());
-    let repo = CRUDRepository::new(options).unwrap();
+    let repo = CRUDRepository::new(connection, options).unwrap();
     assert!(repo
         .update(&record(&[("name", Value::from("a"))]), None)
         .await
@@ -1445,12 +1540,11 @@ async fn table_repository() {
         .update(&record(&[("id", Value::Int(1))]), None)
         .await
         .is_err());
-    let mut options = RepositoryBuilderOptions::with_factory(
-        MockConnection::with_command_provider(command.clone(), "memory"),
-    );
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = RepositoryOptions::default();
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<Cells>());
-    let repo = CRUDRepository::new(options).unwrap();
+    let repo = CRUDRepository::new(connection, options).unwrap();
     repo.create(&mut record(&[("id", Value::Int(1))]))
         .await
         .unwrap();
@@ -1461,14 +1555,10 @@ async fn table_repository() {
     .await
     .unwrap();
 
-    let from_id = create_repository_builder_options::<Item>(MockConnection::new());
+    let from_id = create_repository_options::<Item>();
     assert_eq!(from_id.ids, vec!["id".to_string()]);
-    assert!(
-        create_repository_builder_options::<Label>(MockConnection::new())
-            .ids
-            .is_empty()
-    );
-    CRUDRepository::new(from_id).unwrap();
+    assert!(create_repository_options::<Label>().ids.is_empty());
+    CRUDRepository::new(MockConnection::new(), from_id).unwrap();
     CRUDRepository::from_type::<Item>(MockConnection::new()).unwrap();
 }
 
@@ -1480,10 +1570,8 @@ fn repository_entity_type() {
         (&typed as &dyn IRepository).entity_type(),
         TypeId::of::<Item>()
     );
-    let untyped = CRUDRepository::new(create_repository_builder_options::<Item>(
-        MockConnection::new(),
-    ))
-    .unwrap();
+    let untyped =
+        CRUDRepository::new(MockConnection::new(), create_repository_options::<Item>()).unwrap();
     assert_eq!(untyped.entity_type(), TypeId::of::<Row>());
     assert_eq!(
         StubRepository::new("memory").entity_type(),
@@ -1541,9 +1629,8 @@ async fn table_repository_maps_after_row_converter() {
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
-    let mut options = RepositoryBuilderOptions::with_factory(
-        MockConnection::with_command_provider(command.clone(), "memory"),
-    );
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = RepositoryOptions::default();
     options.entity = "users".into();
     options.mapping = Some(users_mapping());
     options.mapper = Some(TransformMapper::new(
@@ -1560,7 +1647,7 @@ async fn table_repository_maps_after_row_converter() {
             row
         },
     ));
-    let repo = CRUDRepository::new(options).unwrap();
+    let repo = CRUDRepository::new(connection, options).unwrap();
     let rows = repo.read(None).await.unwrap();
     assert_eq!(rows[0]["name"], Value::from("A"));
 }
@@ -1575,13 +1662,12 @@ async fn table_repository_maps_flat_row_into_contacts() {
         ("contact_name1", Value::from("bob")),
         ("contact_name2", Value::from("roberta")),
     ]));
-    let mut options = RepositoryBuilderOptions::with_factory(
-        MockConnection::with_command_provider(command.clone(), "memory"),
-    );
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = RepositoryOptions::default();
     options.entity = "users".into();
     options.mapping = Some(RowTypeConverter::of::<UserRow>());
     options.mapper = Some(user_contacts_mapper());
-    let repo = CRUDRepository::new(options).unwrap();
+    let repo = CRUDRepository::new(connection, options).unwrap();
     let mut user = repo.read_single(None).await.unwrap().unwrap();
     assert_eq!(user["username"], Value::from("bobby"));
     assert_eq!(user["email"], Value::from("bob@asdf.com"));
@@ -1639,13 +1725,12 @@ async fn table_repository_crud_mapper() {
         |text: String| format!("{text} RETURNING id"),
         |text| text,
     )));
-    let mut options = RepositoryBuilderOptions::with_factory(
-        MockConnection::with_command_provider(command.clone(), "memory"),
-    );
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = RepositoryOptions::default();
     options.entity = "users".into();
     options.mapping = Some(users_mapping());
     options.crud_mapper = Some(mapper);
-    let repo = CRUDRepository::new(options).unwrap();
+    let repo = CRUDRepository::new(connection, options).unwrap();
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.read_single(None).await.unwrap().is_none());
     assert_eq!(
@@ -2001,7 +2086,13 @@ async fn contacts_service_fills_names_and_child_lists() {
         ]))
         .await
         .unwrap();
-    let contact = service.read(None).await.unwrap().into_iter().next().unwrap();
+    let contact = service
+        .read(None)
+        .await
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
     assert_eq!(contact["contact_type_name"], Value::from("person"));
     assert_eq!(contact["contact_source_name"], Value::from("import"));
     assert!(contact["addresses"].wire_text().contains("line1=1 Main"));
@@ -2216,7 +2307,8 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
 
 #[tokio::test]
 async fn deep_many_readonly_via_throws() {
-    let mut repo = EnrichedCRUDRepository::new(Arc::new(list_repository::ListRepository::new(vec![])));
+    let mut repo =
+        EnrichedCRUDRepository::new(Arc::new(list_repository::ListRepository::new(vec![])));
     repo.add_enriched(
         "children",
         "id",

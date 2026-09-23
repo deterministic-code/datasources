@@ -12,6 +12,8 @@ vi.mock("node:fs/promises", () => ({
 import {
   collectAsync,
   CRUDRepository,
+  ReadonlyRepository,
+  untyped,
   Datasource,
   DatasourceFactory,
   DatasourceError,
@@ -220,7 +222,7 @@ describe("JsonCommand and CRUDRepository", () => {
       connection,
       store,
       command: new JsonCommand(connection),
-      repo: new CRUDRepository({ connection }),
+      repo: new CRUDRepository(connection, {}),
     };
   }
 
@@ -310,7 +312,7 @@ describe("JsonCommand and CRUDRepository", () => {
   it("rejects command and repository IO when closed", async () => {
     const connection = new JsonConnection({ data: [{ id: 1 }] });
     const command = new JsonCommand(connection);
-    const repo = new CRUDRepository({ connection });
+    const repo = new CRUDRepository(connection, {});
     await expect(command.executeReader("")).rejects.toThrow(DatasourceError);
     await expect(command.execute("insert")).rejects.toThrow(DatasourceError);
     await expect(repo.create({ id: 2 })).rejects.toThrow(DatasourceError);
@@ -341,16 +343,16 @@ describe("Json datasource", () => {
     await implicit.connection.open();
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader("");
-    const repo = ds.createRepository(connection);
+    const repo = ds.createRepository(untyped(), connection);
     expect(repo).toBeInstanceOf(CRUDRepository);
-    expect(ds.createRepository()).toBeInstanceOf(CRUDRepository);
-    expect(ds.createReadonlyRepository(connection)).toBeInstanceOf(CRUDRepository);
+    expect(ds.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
+    expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(JsonConnection.from().path).toBe("");
     expect(JsonConnection.from({ path: "db.json" }).path).toBe("db.json");
     const registered = Datasource.create({ provider: "json" });
     expect(registered.provider).toBe("json");
     expect(await registered.createConnection()).toBeInstanceOf(JsonConnection);
-    expect(registered.createRepository()).toBeInstanceOf(CRUDRepository);
+    expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     const provider = new JsonProvider();
     expect(provider.transaction(connection).isolation).toBe("serializable");
     await expect(command.executeStatement(new QueryStatement("nope"))).rejects.toThrow(

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError, untyped } from "@datasources/core";
 import { OracleCommand } from "./command.ts";
 import { OracleConnection } from "./connection.ts";
 import { OracleProvider } from "./OracleProvider.ts";
@@ -27,10 +27,10 @@ describe("oracle", () => {
     expect(implicit).toBeInstanceOf(OracleCommand);
     await expect(implicit.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(implicit.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
-    ds.createRepository();
-    ds.createRepository(connection);
-    ds.createReadonlyRepository();
-    ds.createReadonlyRepository(connection);
+    ds.createRepository(untyped());
+    ds.createRepository(untyped(), connection);
+    ds.createReadonlyRepository(untyped());
+    ds.createReadonlyRepository(untyped(), connection);
     expect(new OracleProvider().transaction(connection).isolation).toBe("serializable");
   });
 });
