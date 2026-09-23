@@ -87,7 +87,12 @@ fn compare_text(op: &Operator, left: &Expression, right: &Expression) -> String 
             format!("{} {} ${}", id.name, symbol(op), id.name)
         }
         (Expression::Literal(left), Expression::Literal(right)) => {
-            format!("{} {} {}", inline(&left.value), symbol(op), inline(&right.value))
+            format!(
+                "{} {} {}",
+                inline(&left.value),
+                symbol(op),
+                inline(&right.value)
+            )
         }
         (left, right) => format!("{} {} {}", render(left), symbol(op), render(right)),
     }
@@ -154,7 +159,8 @@ fn collect(expression: &Expression) -> Vec<Parameter> {
     match expression {
         Expression::Literal(_) | Expression::Identifier(_) => vec![],
         Expression::Operator(Operator::Not { argument }) => collect(argument),
-        Expression::Operator(Operator::In { left, right }) => match (left.as_ref(), right.as_ref()) {
+        Expression::Operator(Operator::In { left, right }) => match (left.as_ref(), right.as_ref())
+        {
             (Expression::Identifier(id), Expression::Array(arr)) => arr
                 .elements
                 .iter()

@@ -1,6 +1,4 @@
-use crate::{
-    create, default, register, reset, Datasource, DatasourceError, MockDriver,
-};
+use crate::{create, default, register, reset, Datasource, DatasourceError, MockDriver};
 use std::collections::HashMap;
 
 fn clear_env() {

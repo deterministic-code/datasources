@@ -1,31 +1,28 @@
-use crate::mappers::{Mapper, TransformMapper};
+use crate::mappers::TransformMapper;
+use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::row::Row;
 use crate::value::Value;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
-pub struct CRUDMapperOptions {
-    pub entity: TransformMapper<String, String>,
-    pub columns: TransformMapper<String, String>,
-    pub query: Option<Arc<TransformMapper<String, String>>>,
+pub struct CRUDRepositoryOptions {
+    pub ids: Vec<String>,
     pub insert: Option<Arc<TransformMapper<String, String>>>,
     pub update: Option<Arc<TransformMapper<String, String>>>,
     pub delete: Option<Arc<TransformMapper<String, String>>>,
     pub return_: Option<Arc<TransformMapper<String, String>>>,
-    pub rows: TransformMapper<Row, Row>,
     pub create: TransformMapper<Value, Row>,
+    pub read: ReadonlyRepositoryOptions,
 }
 
-impl CRUDMapperOptions {
-    pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> Self {
+impl Default for CRUDRepositoryOptions {
+    fn default() -> Self {
         Self {
-            entity: TransformMapper::new(|name| name, |name| name),
-            columns: TransformMapper::new(|name| name, |name| name),
-            query: None,
+            ids: vec!["id".into()],
             insert: None,
             update: None,
             delete: None,
             return_: None,
-            rows: TransformMapper::new(|row| row, |row| row),
             create: TransformMapper::new(
                 |value| {
                     let mut row = Row::new();
@@ -36,13 +33,21 @@ impl CRUDMapperOptions {
                 },
                 |_| Value::Null,
             ),
+            read: ReadonlyRepositoryOptions::default(),
         }
     }
+}
 
-    pub fn map_sql(mapper: &Option<Arc<TransformMapper<String, String>>>, text: String) -> String {
-        match mapper {
-            Some(map) => Mapper::map(map.as_ref(), text),
-            None => text,
-        }
+impl Deref for CRUDRepositoryOptions {
+    type Target = ReadonlyRepositoryOptions;
+
+    fn deref(&self) -> &Self::Target {
+        &self.read
+    }
+}
+
+impl DerefMut for CRUDRepositoryOptions {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.read
     }
 }

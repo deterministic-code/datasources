@@ -1,7 +1,7 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    as_readonly, CRUDRepository, CommandMiddleware, Connection, EnrichedCRUDRepository,
-    ICRUDRepository, RepositoryOptions, TypeConverter, Value,
+    as_readonly, CRUDRepository, CRUDRepositoryOptions, CommandMiddleware, Connection,
+    EnrichedCRUDRepository, ICRUDRepository, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -31,9 +31,10 @@ fn repo(
     middleware: Option<Arc<dyn CommandMiddleware>>,
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> Arc<dyn ICRUDRepository> {
-    let mut options = RepositoryOptions::default();
+    let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
-    options.row_converter = Some(RowTypeConverter::new(columns(names)).with_fields(stamp_fields(field)));
+    options.row_converter =
+        Some(RowTypeConverter::new(columns(names)).with_fields(stamp_fields(field)));
     let mut repo = CRUDRepository::new(connection, options).expect("contacts repo");
     if let Some(middleware) = middleware {
         repo.add_middleware(middleware);

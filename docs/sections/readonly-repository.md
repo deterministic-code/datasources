@@ -92,6 +92,88 @@ readSingle(query?: IQuery | IWhere): Promise<T | undefined>
 
 **Returns** `Promise<T | undefined>`
 
+#### ReadonlyRepositoryOptions
+
+```typescript
+type ReadonlyRepositoryOptions<T = Cells>
+```
+
+Constructor bag for a read repository. [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions) extends it.
+
+**Properties**
+
+##### entity
+
+Table or entity name.
+
+```typescript
+entity?: string
+```
+
+##### entityMapper
+
+Maps the table name when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+
+```typescript
+entityMapper?: IMapper<string, string>
+```
+
+##### columns
+
+Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+
+```typescript
+columns?: IMapper<string, string>
+```
+
+##### query
+
+Rewrites the finished select. Omitted leaves the statement unchanged.
+
+```typescript
+query?: IMapper<IQuery, IQuery>
+```
+
+##### rowsMapper
+
+Maps each converted item. `Repository.mapper` is this mapper. Default is [IdentityMapper](./identity-mapper.md).
+
+```typescript
+rowsMapper?: IMapper<T, T>
+```
+
+##### rowConverter
+
+Row [TypeConverter](./type-converters.md).
+
+```typescript
+rowConverter?: TypeConverter<T, Cells>
+```
+
+##### type
+
+Item constructor. Supplies the default entity name and column list.
+
+```typescript
+type?: Constructable<T>
+```
+
+##### rowTypeConverters
+
+Per-column [TypeConverter](./type-converters.md)s merged into the row converter.
+
+```typescript
+rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>
+```
+
+##### readColumns
+
+SELECT column names. When omitted, public fields of `type` are used.
+
+```typescript
+readColumns?: string[]
+```
+
 ### csharp
 #### IReadonlyRepository
 
@@ -167,6 +249,80 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 
 **Returns** `Task<T?>`
 
+#### ReadonlyRepositoryOptions
+
+```csharp
+public class ReadonlyRepositoryOptions<T> where T : new()
+```
+
+Constructor bag for a read repository. [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions) extends it.
+
+**Properties**
+
+##### Entity
+
+Table or entity name. When omitted, `typeof(T).Name` is used.
+
+```csharp
+string? Entity { get; init; }
+```
+
+##### EntityMapper
+
+Maps the table name when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+
+```csharp
+IMapper<string, string> EntityMapper { get; init; }
+```
+
+##### Columns
+
+Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+
+```csharp
+IMapper<string, string> Columns { get; init; }
+```
+
+##### Query
+
+Rewrites the finished select. Omitted leaves the statement unchanged.
+
+```csharp
+IMapper<IQuery, IQuery>? Query { get; init; }
+```
+
+##### RowsMapper
+
+Maps each converted item. `Repository.Mapper` is this mapper. Default is [IdentityMapper](./identity-mapper.md).
+
+```csharp
+IMapper<T, T> RowsMapper { get; init; }
+```
+
+##### RowConverter
+
+Row [TypeConverter](./type-converters.md).
+
+```csharp
+TypeConverter<T, Row>? RowConverter { get; init; }
+```
+
+##### RowTypeConverters
+
+Per-column [TypeConverter](./type-converters.md)s merged into the row converter.
+
+```csharp
+IReadOnlyDictionary<string, TypeConverter<Value, Value>>? RowTypeConverters { get; init; }
+```
+
+##### ReadColumns
+
+SELECT column names. When omitted, public properties of `T` are used.
+
+```csharp
+IReadOnlyList<string>? ReadColumns { get; init; }
+```
+
 ### rust
 #### IReadonlyRepository
 
@@ -223,6 +379,72 @@ async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>
 - `where_clause` — predicate
 
 **Returns** `Result<Vec<Row>>`
+
+#### ReadonlyRepositoryOptions
+
+```rust
+pub struct ReadonlyRepositoryOptions
+```
+
+Constructor bag for a read repository. [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions) embeds this struct and derefs to it. `Default` sets `entity` to `"items"`.
+
+**Properties**
+
+##### entity
+
+Table or entity name. Default `"items"`.
+
+```rust
+pub entity: String
+```
+
+##### entity_mapper
+
+Maps the table name when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+
+```rust
+pub entity_mapper: Box<dyn Mapper<String, String> + Send + Sync>
+```
+
+##### columns
+
+Maps column names when the repository is built. Default is [IdentityMapper](./identity-mapper.md).
+
+```rust
+pub columns: Box<dyn Mapper<String, String> + Send + Sync>
+```
+
+##### query
+
+Rewrites finished select SQL. `None` leaves the statement unchanged.
+
+```rust
+pub query: Option<Arc<TransformMapper<String, String>>>
+```
+
+##### rows_mapper
+
+Maps each converted row. Default is [IdentityMapper](./identity-mapper.md).
+
+```rust
+pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>
+```
+
+##### row_converter
+
+Row [RowTypeConverter](./row-type-converter.md).
+
+```rust
+pub row_converter: Option<RowTypeConverter>
+```
+
+##### row_type_converters
+
+Per-column converters merged into the row converter.
+
+```rust
+pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+```
 :::
 
 ## Remarks

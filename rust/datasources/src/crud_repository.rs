@@ -3,15 +3,14 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
-use crate::crud_mapper_options::CRUDMapperOptions;
+use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
-use crate::mappers::Mapper;
+use crate::mappers::{Mapper, TransformMapper};
 use crate::parameter::Parameter;
 use crate::query::Query;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::repository_options::RepositoryOptions;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -26,7 +25,7 @@ use std::sync::Arc;
 
 pub struct CRUDRepository {
     inner: ReadonlyRepository,
-    pub crud_mapper: Arc<CRUDMapperOptions>,
+    create: TransformMapper<Value, Row>,
     id: Vec<String>,
     ids: HashSet<String>,
 }
@@ -34,7 +33,7 @@ pub struct CRUDRepository {
 impl RepositoryBuilder {
     pub fn build(
         connection: Arc<dyn Connection>,
-        options: RepositoryOptions,
+        options: CRUDRepositoryOptions,
     ) -> Result<CRUDRepository> {
         CRUDRepository::new(connection, options)
     }
@@ -49,18 +48,21 @@ impl CRUDRepository {
         Ok(repo)
     }
 
-    pub fn new(connection: Arc<dyn Connection>, options: RepositoryOptions) -> Result<Self> {
-        Ok(Self::from_built(RepositoryBuilder::parts(
+    pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
+        Ok(Self::from_built(RepositoryBuilder::parts_crud(
             connection, options,
         )?))
     }
 
-    pub fn from_built(built: BuiltRepository) -> Self {
+    pub fn from_built(mut built: BuiltRepository) -> Self {
         let id = built.ids.clone();
-        let crud_mapper = built.crud_mapper.clone();
+        let create = built
+            .create
+            .take()
+            .unwrap_or_else(|| CRUDRepositoryOptions::default().create);
         Self {
             inner: ReadonlyRepository::from_built(built),
-            crud_mapper,
+            create,
             ids: id.iter().cloned().collect(),
             id,
         }
@@ -138,10 +140,7 @@ impl ICRUDRepository for CRUDRepository {
             .execute_statement(&statement, Some(&fields))
             .await?;
         if response.result != Value::Null {
-            apply(
-                item,
-                Mapper::map(&self.crud_mapper.create, response.result.clone()),
-            );
+            apply(item, Mapper::map(&self.create, response.result.clone()));
         }
         Ok(response)
     }

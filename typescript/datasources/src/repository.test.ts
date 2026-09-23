@@ -3,7 +3,6 @@ import {
   CRUDRepository,
   QueryStatement,
   RowTypeConverter,
-  CRUDMapperOptions,
   TransformMapper,
   Where,
   WhereClause,
@@ -20,7 +19,7 @@ import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import type { RepositoryOptions } from "./RepositoryOptions.ts";
+import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 
 class Item {
   id = 0;
@@ -43,7 +42,7 @@ class Composite {
 
 const asType = <T>(type: new () => T) => type as Constructable<Cells>;
 
-const create = (overrides: Partial<RepositoryOptions<Cells>> = {}) => {
+const create = (overrides: Partial<CRUDRepositoryOptions<Cells>> = {}) => {
   const connection = new MockConnection(undefined, "memory");
   const command = new MockCommand(connection);
   connection.command = command;
@@ -123,9 +122,7 @@ describe("CRUDRepository", () => {
 
   it("skips apply when create identity is missing", async () => {
     const { repo, command } = create({
-      crudMapper: new CRUDMapperOptions({
-        create: new TransformMapper(() => undefined as never, () => null),
-      }),
+      create: new TransformMapper(() => undefined as never, () => null),
     });
     command.response = { result: 9, rowsAffected: 1 };
     const obj = { id: 1, name: "a" };
@@ -221,12 +218,10 @@ describe("CRUDRepository", () => {
 
   it("applies mapper after row converter", async () => {
     const { repo, command } = create({
-      crudMapper: new CRUDMapperOptions({
-        rows: new TransformMapper<Cells, Cells>(
-          (row) => ({ ...row, name: String(row.name).toUpperCase() }),
-          (row) => ({ ...row, name: String(row.name).toLowerCase() }),
-        ),
-      }),
+      rowsMapper: new TransformMapper<Cells, Cells>(
+        (row) => ({ ...row, name: String(row.name).toUpperCase() }),
+        (row) => ({ ...row, name: String(row.name).toLowerCase() }),
+      ),
     });
     command.reader = new MockReader([{ id: 1, name: "a" }]);
     expect(await repo.readSingle()).toEqual({ id: 1, name: "A" });
@@ -240,7 +235,7 @@ describe("CRUDRepository", () => {
       type: User,
       entity: "users",
       rowConverter: new RowTypeConverter<User>(),
-      crudMapper: new CRUDMapperOptions({ rows: userContactsMapper() }),
+      rowsMapper: userContactsMapper(),
     });
     const flat = {
       id: 1,
@@ -267,7 +262,7 @@ describe("CRUDRepository", () => {
       type: User,
       entity: "users",
       rowConverter: new RowTypeConverter<User>(),
-      crudMapper: new CRUDMapperOptions({ rows: userContactsMapper() }),
+      rowsMapper: userContactsMapper(),
     });
     const user = Object.assign(new User(), {
       id: 1,
@@ -324,28 +319,26 @@ describe("CRUDRepository", () => {
       (name) => name,
     );
     const { repo, command } = create({
-      crudMapper: new CRUDMapperOptions({
-        entity,
-        columns,
-        query: new TransformMapper(
-          (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
-          (query) => query,
-        ),
-        insert: new TransformMapper(
-          (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
-          (insert) => insert,
-        ),
-        update: new TransformMapper(
-          (update) =>
-            new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
-          (update) => update,
-        ),
-        delete: new TransformMapper(
-          (remove) =>
-            DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
-          (remove) => remove,
-        ),
-      }),
+      entityMapper: entity,
+      columns,
+      query: new TransformMapper(
+        (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
+        (query) => query,
+      ),
+      insert: new TransformMapper(
+        (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
+        (insert) => insert,
+      ),
+      update: new TransformMapper(
+        (update) =>
+          new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
+        (update) => update,
+      ),
+      delete: new TransformMapper(
+        (remove) =>
+          DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
+        (remove) => remove,
+      ),
     });
     command.reader = new MockReader([]);
     await repo.readSingle();

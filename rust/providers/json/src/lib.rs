@@ -16,7 +16,7 @@ mod tests {
     use crate::filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
     use datasources::{
         converters::Cells, create, register, reset, CRUDRepository, Command, Connection,
-        ICRUDRepository, IReadonlyRepository, Parameter, QueryStatement, RepositoryOptions, Row,
+        ICRUDRepository, IReadonlyRepository, Parameter, QueryStatement, CRUDRepositoryOptions, Row,
         TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};
@@ -24,7 +24,7 @@ mod tests {
     use std::sync::Arc;
 
     fn crud(conn: Arc<JsonConnection>) -> CRUDRepository {
-        let mut options = RepositoryOptions::default();
+        let mut options = CRUDRepositoryOptions::default();
         options.ids = vec![];
         CRUDRepository::new(conn, options).expect("repo")
     }

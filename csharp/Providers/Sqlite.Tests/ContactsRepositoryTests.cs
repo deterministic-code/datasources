@@ -57,7 +57,7 @@ public class ContactsRepositoryTests
             await command.Execute(sql);
 
         var rows = new List<Row>();
-        await foreach (var row in new CRUDRepository<Row>(conn, new RepositoryOptions<Row>
+        await foreach (var row in new CRUDRepository<Row>(conn, new CRUDRepositoryOptions<Row>
         {
             Entity = "contacts_base"
         }).Read(ContactsJoinQuery.Create()))

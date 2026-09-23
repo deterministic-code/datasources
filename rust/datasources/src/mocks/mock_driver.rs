@@ -38,7 +38,9 @@ impl Driver for MockDriver {
         Arc::new(txn)
     }
 
-    fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+    fn row_type_converters(
+        &self,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
         HashMap::new()
     }
 }

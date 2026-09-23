@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-public class CRUDMapperOptionsTests
+public class CRUDRepositoryOptionsTests
 {
     sealed class UserRow
     {
@@ -23,22 +23,23 @@ public class CRUDMapperOptionsTests
         },
         static name => name);
 
-    static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(CRUDMapperOptions<UserRow> mapper)
+    static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(CRUDRepositoryOptions<UserRow> options)
     {
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        return (new CRUDRepository<UserRow>(connection, new RepositoryOptions<UserRow>
-        {
-            Entity = "users",
-            CRUDMapper = mapper
-        }), command);
+        return (new CRUDRepository<UserRow>(connection, options), command);
     }
 
     [Fact]
     public async Task BuilderMapsEntityAndColumns()
     {
-        var (repo, command) = Create(new CRUDMapperOptions<UserRow> { Entity = Entity(), Columns = Columns() });
+        var (repo, command) = Create(new CRUDRepositoryOptions<UserRow>
+        {
+            Entity = "users",
+            EntityMapper = Entity(),
+            Columns = Columns()
+        });
         command.Reader = new MockReader<Row>([]);
         await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
@@ -81,23 +82,24 @@ public class CRUDMapperOptionsTests
     [Fact]
     public void ReturnMapperRewritesFinishedSql()
     {
-        var mapper = new CRUDMapperOptions<UserRow>
+        var options = new CRUDRepositoryOptions<UserRow>
         {
             Return = new TransformMapper<IReturnStatement, IReturnStatement>(
                 ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
                 ret => ret)
         };
         var built = new ReturnStatement("add", [new Parameter("id", 1)]);
-        var statement = mapper.Return is { } map ? map.Map(built) : built;
+        var statement = options.Return is { } map ? map.Map(built) : built;
         Assert.Equal("SELECT add($id) /* mapped */", statement.GetText());
     }
 
     [Fact]
-    public async Task BuilderThenCRUDMapper()
+    public async Task BuilderThenStatementMappers()
     {
-        var (repo, command) = Create(new CRUDMapperOptions<UserRow>
+        var (repo, command) = Create(new CRUDRepositoryOptions<UserRow>
         {
-            Entity = Entity(),
+            Entity = "users",
+            EntityMapper = Entity(),
             Columns = Columns(),
             Query = new TransformMapper<IQuery, IQuery>(
                 query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),

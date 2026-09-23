@@ -1,12 +1,11 @@
-use crate::{Operator, WhereClause};
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enriched::Enriched;
 use crate::enriched_readonly_repository::EnrichedReadonlyRepository;
 use crate::enrichment::Enrichment;
+use crate::i_repository::IRepository;
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::i_repository::IRepository;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
@@ -14,6 +13,7 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use crate::where_trait::Where;
+use crate::{Operator, WhereClause};
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::collections::HashSet;
@@ -302,7 +302,10 @@ async fn load(
         return Ok(Vec::new());
     };
     writer
-        .read_where(&WhereClause::new(Operator::equals(enrichment.by.clone(), key)))
+        .read_where(&WhereClause::new(Operator::equals(
+            enrichment.by.clone(),
+            key,
+        )))
         .await
 }
 

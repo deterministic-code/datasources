@@ -7,8 +7,8 @@ use crate::from_mapped_contacts::from_mapped_contacts;
 use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CRUDRepository, Command, Connection, ConsoleCommandMiddleware, FlatToNestedMapper,
-    IReadonlyRepository, Mapper, RepositoryOptions, TypeConverter, Value,
+    CRUDRepository, CRUDRepositoryOptions, Command, Connection, ConsoleCommandMiddleware,
+    FlatToNestedMapper, IReadonlyRepository, Mapper, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -47,7 +47,7 @@ pub async fn contacts_parity(
         if verbose { "true" } else { "false" }.into(),
     );
     let middleware = Arc::new(ConsoleCommandMiddleware::new().options(options));
-    let mut cells = RepositoryOptions::default();
+    let mut cells = CRUDRepositoryOptions::default();
     cells.entity = "contacts_base".into();
     cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
     let mut join_repo = CRUDRepository::new(connection.clone(), cells).expect("join repo");

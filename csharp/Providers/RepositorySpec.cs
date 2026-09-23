@@ -44,14 +44,7 @@ public static class RepositorySpec
     static async Task Run<T>(Spec spec, Session session, RowTypeConverter<T> mapping, List<string> logs, Func<string, string> quote)
         where T : new()
     {
-        var built = RepositoryBuilder<T>.Parts(session.Connection, new()
-        {
-            Entity = spec.Type.Table,
-            RowConverter = mapping,
-            CRUDMapper = CRUDMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings), quote),
-            Ids = spec.Type.Ids,
-            ReadColumns = [.. spec.Type.Fields.Keys],
-        });
+        var built = RepositoryBuilder<T>.Parts(session.Connection, OptionsOf(spec.Type, mapping, quote));
         var repo = new CRUDRepository<T>(built).AddMiddleware(new ConsoleCommandMiddleware(line =>
         {
             logs.Add(line);
@@ -189,14 +182,18 @@ public static class RepositorySpec
     static string Unquote(string text) =>
         Regex.Replace(Regex.Replace(text, "`([^`]+)`", "$1"), "\"([^\"]+)\"", "$1");
 
-    static CRUDMapperOptions<T> CRUDMapperOf<T>(TypeSpec type, IMapper<T, T> rows, Func<string, string> quote)
+    static CRUDRepositoryOptions<T> OptionsOf<T>(TypeSpec type, RowTypeConverter<T> mapping, Func<string, string> quote)
         where T : new() =>
         new()
         {
-            Entity = new TransformMapper<string, string>(
+            Entity = type.Table,
+            RowConverter = mapping,
+            Ids = type.Ids,
+            ReadColumns = [.. type.Fields.Keys],
+            EntityMapper = new TransformMapper<string, string>(
                 name => quote(type.CRUDMapper?.Entity ?? name),
                 name => name),
-            Rows = rows,
+            RowsMapper = MappingsMapper<T>(type.Mappings),
             Query = Suffix<IQuery>(
                 (text, query) => new QueryStatement(text, query.Where),
                 type.CRUDMapper?.QuerySuffix),
@@ -304,7 +301,7 @@ public static class RepositorySpec
     static IMapper<T, T> MappingsMapper<T>(Dictionary<string, Dictionary<string, string>> mappings)
         where T : new() =>
         mappings.Count == 0
-            ? new TransformMapper<T, T>(static value => value, static value => value)
+            ? new IdentityMapper<T>()
             : new TransformMapper<T, T>(
                 row =>
                 {

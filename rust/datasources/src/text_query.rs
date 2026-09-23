@@ -44,7 +44,9 @@ impl QueryStatement {
             where_clause,
         );
         match where_clause {
-            Some(predicate) => Self::with_where(sql, crate::text_where::TextWhere::new(predicate.get_text())),
+            Some(predicate) => {
+                Self::with_where(sql, crate::text_where::TextWhere::new(predicate.get_text()))
+            }
             None => Self::text(sql),
         }
     }

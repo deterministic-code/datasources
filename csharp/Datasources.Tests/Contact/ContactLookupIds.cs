@@ -8,7 +8,7 @@ internal static class ContactLookupIds
     {
         async Task<int> Of<T>(string entity, string name) where T : Base, new()
         {
-            var row = await new CRUDRepository<T>(connection, new RepositoryOptions<T>
+            var row = await new CRUDRepository<T>(connection, new CRUDRepositoryOptions<T>
             {
                 Entity = entity,
                 ReadColumns = ["id", "name"]

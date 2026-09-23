@@ -1,7 +1,7 @@
 import type { Cell } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
-import type { RepositoryOptions } from "./RepositoryOptions.ts";
+import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 
 type FieldSource = Record<string, string | number | boolean | bigint | null | object>;
 
@@ -16,7 +16,7 @@ export const defaultId = (fields: string[]): string[] =>
 export const createRepositoryOptions = <T>(
   type: Constructable<T>,
   rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>,
-): RepositoryOptions<T> => ({
+): CRUDRepositoryOptions<T> => ({
   type,
   ids: defaultId(fieldNamesOf(type)),
   entity: type.name,

@@ -1,4 +1,3 @@
-use crate::{Operator, WhereClause};
 use crate::enrichment::Enrichment;
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -9,6 +8,7 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use crate::where_trait::Where;
+use crate::{Operator, WhereClause};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
@@ -82,7 +82,10 @@ async fn apply_lookup(
         let cache_key = key.wire_text();
         if !cache.contains_key(&cache_key) {
             let related = via
-                .read_single_where(&WhereClause::new(Operator::equals(enrichment.by.clone(), key.clone())))
+                .read_single_where(&WhereClause::new(Operator::equals(
+                    enrichment.by.clone(),
+                    key.clone(),
+                )))
                 .await?;
             cache.insert(cache_key.clone(), related);
         }
@@ -112,7 +115,10 @@ async fn apply_many(
             continue;
         };
         let mut related = via
-            .read_where(&WhereClause::new(Operator::equals(enrichment.by.clone(), key)))
+            .read_where(&WhereClause::new(Operator::equals(
+                enrichment.by.clone(),
+                key,
+            )))
             .await?;
         for child in children {
             child.enrich_from(&mut related).await?;

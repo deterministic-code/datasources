@@ -107,10 +107,11 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ## Remarks
 
-Repository read is convert, then map. `CRUDMapperOptions.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
+Repository read is convert, then map. [ReadonlyRepositoryOptions.RowsMapper](./readonly-repository.md#rowsmapper) is the read-row mapper. `Repository.Mapper` / `mapper` is that mapper.
 
 ## See also
 
+- [IdentityMapper](./identity-mapper.md)
 - [TransformMapper](./transform-mapper.md)
 - [FlatToNestedMapper](./flat-to-nested-mapper.md)
-- [CRUDMapperOptions](./crud-mapper.md)
+- [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions)

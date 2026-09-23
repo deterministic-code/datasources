@@ -3,10 +3,11 @@ use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter, TypeConverter};
 use crate::create_repository_options::create_repository_options;
 use crate::crud_repository::CRUDRepository;
+use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::driver::Driver;
 use crate::readonly_repository::ReadonlyRepository;
+use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
 use crate::value::Value;
 use async_trait::async_trait;
@@ -25,12 +26,12 @@ pub trait Datasource: Send + Sync {
     fn repository_from(
         &self,
         connection: Arc<dyn Connection>,
-        options: RepositoryOptions,
+        options: CRUDRepositoryOptions,
     ) -> Arc<dyn ICRUDRepository>;
     fn readonly_repository_from(
         &self,
         connection: Arc<dyn Connection>,
-        options: RepositoryOptions,
+        options: ReadonlyRepositoryOptions,
     ) -> Arc<dyn IReadonlyRepository>;
 }
 
@@ -48,13 +49,13 @@ impl dyn Datasource {
         connection: Option<Arc<dyn Connection>>,
     ) -> Arc<dyn IReadonlyRepository> {
         let bound = self.bind_connection(connection);
-        self.readonly_repository_from(bound, repository_options::<T>(self))
+        self.readonly_repository_from(bound, repository_options::<T>(self).read)
     }
 }
 
 fn repository_options<T: ConvertSchema + 'static>(
     datasource: &dyn Datasource,
-) -> RepositoryOptions {
+) -> CRUDRepositoryOptions {
     let mut options = create_repository_options::<T>();
     options.row_converter = Some(RowTypeConverter::of::<T>());
     options.row_type_converters = datasource.row_type_converters();
@@ -117,7 +118,7 @@ impl Datasource for BuiltDatasource {
     fn repository_from(
         &self,
         connection: Arc<dyn Connection>,
-        options: RepositoryOptions,
+        options: CRUDRepositoryOptions,
     ) -> Arc<dyn ICRUDRepository> {
         Arc::new(CRUDRepository::new(connection, options).expect("repository"))
     }
@@ -125,7 +126,7 @@ impl Datasource for BuiltDatasource {
     fn readonly_repository_from(
         &self,
         connection: Arc<dyn Connection>,
-        options: RepositoryOptions,
+        options: ReadonlyRepositoryOptions,
     ) -> Arc<dyn IReadonlyRepository> {
         Arc::new(ReadonlyRepository::new(connection, options).expect("repository"))
     }

@@ -1,4 +1,3 @@
-use crate::{Operator, WhereClause};
 use crate::enrichment::Enrichment;
 use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -9,6 +8,7 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use crate::where_trait::Where;
+use crate::{Operator, WhereClause};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
@@ -89,7 +89,10 @@ async fn apply_lookup(
         return Ok(());
     }
     let loaded = via
-        .read_where(&WhereClause::new(Operator::in_list(enrichment.by.clone(), values)))
+        .read_where(&WhereClause::new(Operator::in_list(
+            enrichment.by.clone(),
+            values,
+        )))
         .await?;
     let mut index = HashMap::new();
     for mut related in loaded {
@@ -130,7 +133,10 @@ async fn apply_many(
         return Ok(());
     }
     let loaded = via
-        .read_where(&WhereClause::new(Operator::in_list(enrichment.by.clone(), values)))
+        .read_where(&WhereClause::new(Operator::in_list(
+            enrichment.by.clone(),
+            values,
+        )))
         .await?;
     let mut index: HashMap<String, Vec<Row>> = HashMap::new();
     for row in loaded {

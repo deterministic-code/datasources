@@ -10,10 +10,12 @@ import { Operator } from "./statements/Operator.ts";
 import { WhereClause } from "./statements/WhereClause.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import type { RepositoryOptions } from "./RepositoryOptions.ts";
+import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
-import type { CRUDMapperOptions } from "./CRUDMapperOptions.ts";
-import { builtOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
+import type { IMapper } from "./mappers/IMapper.ts";
+import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
+import { parts } from "./RepositoryBuilder.ts";
+import { isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 
@@ -34,20 +36,38 @@ const apply = <T>(item: T, identity: T): void => {
 const asScalar = (value: Scalar | undefined): Scalar | undefined =>
   value == null ? undefined : value;
 
+const crudBuilt = <T>(
+  typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
+  connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
+): BuiltRepository<T> =>
+  typeof typeOrConnectionOrBuilt === "function"
+    ? parts(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnectionOrBuilt))
+    : isBuilt(typeOrConnectionOrBuilt)
+      ? typeOrConnectionOrBuilt
+      : parts(typeOrConnectionOrBuilt, withIds(connectionOrOptions as CRUDRepositoryOptions<T>));
+
+const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T> =>
+  "ids" in options
+    ? options
+    : {
+        ...options,
+        ids: options.type ? defaultId(fieldNamesOf(options.type)) : ["id"],
+      };
+
 export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
-  readonly crudMapper?: CRUDMapperOptions<T>;
+  private readonly createMapper?: IMapper<Scalar, T>;
   private readonly ids: Set<string>;
 
   constructor(type: Constructable<T>, connection: IConnection);
-  constructor(connection: IConnection, options: RepositoryOptions<T>);
+  constructor(connection: IConnection, options: CRUDRepositoryOptions<T>);
   constructor(built: BuiltRepository<T>);
   constructor(
     typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
-    connectionOrOptions?: IConnection | RepositoryOptions<T>,
+    connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
   ) {
-    const built = builtOf(typeOrConnectionOrBuilt, connectionOrOptions)!;
+    const built = crudBuilt(typeOrConnectionOrBuilt, connectionOrOptions);
     super(built);
-    this.crudMapper = built.crudMapper;
+    this.createMapper = built.create;
     this.ids = new Set(built.ids);
   }
 
@@ -57,8 +77,8 @@ export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements 
     const scalar = asScalar(
       response.result as string | number | boolean | bigint | null | undefined,
     );
-    if (scalar !== undefined && this.crudMapper)
-      apply(item, this.crudMapper.create.map(scalar));
+    if (scalar !== undefined && this.createMapper)
+      apply(item, this.createMapper.map(scalar));
     return response;
   };
 

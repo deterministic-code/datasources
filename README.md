@@ -223,7 +223,7 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and [CRUDMapperOptions](#crud-mapper-options).
+See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper).
 
 ### Type Converter
 
@@ -8608,6 +8608,26 @@ readSingle(query?: IQuery | IWhere): Promise<T | undefined>
 
 `Promise<T | undefined>`
 
+##### ReadonlyRepositoryOptions {#typescript-readonlyrepositoryoptions}
+
+```typescript
+type ReadonlyRepositoryOptions<T = Cells>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| entity | Table or entity name. |
+| entityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| columns | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| query | Rewrites the finished select. Omitted leaves the statement unchanged. |
+| rowsMapper | Maps each converted item. `Repository.mapper` is this mapper. Default is [IdentityMapper](#identity-mapper). |
+| rowConverter | Row [TypeConverter](#type-converter). |
+| type | Item constructor. Supplies the default entity name and column list. |
+| rowTypeConverters | Per-column [TypeConverter](#type-converter)s merged into the row converter. |
+| readColumns | SELECT column names. When omitted, public fields of `type` are used. |
+
 ##### C#
 
 ##### IReadonlyRepository {#csharp-ireadonlyrepository}
@@ -8722,6 +8742,25 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 
 `Task<T?>`
 
+##### ReadonlyRepositoryOptions {#csharp-readonlyrepositoryoptions}
+
+```csharp
+public class ReadonlyRepositoryOptions<T> where T : new()
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Entity | Table or entity name. When omitted, `typeof(T).Name` is used. |
+| EntityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| Columns | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| Query | Rewrites the finished select. Omitted leaves the statement unchanged. |
+| RowsMapper | Maps each converted item. `Repository.Mapper` is this mapper. Default is [IdentityMapper](#identity-mapper). |
+| RowConverter | Row [TypeConverter](#type-converter). |
+| RowTypeConverters | Per-column [TypeConverter](#type-converter)s merged into the row converter. |
+| ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
+
 ##### Rust
 
 ##### IReadonlyRepository {#rust-ireadonlyrepository}
@@ -8819,6 +8858,24 @@ async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>
 
 `Result<Vec<Row>>`
 
+##### ReadonlyRepositoryOptions {#rust-readonlyrepositoryoptions}
+
+```rust
+pub struct ReadonlyRepositoryOptions
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| entity | Table or entity name. Default `"items"`. |
+| entity_mapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| columns | Maps column names when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| query | Rewrites finished select SQL. `None` leaves the statement unchanged. |
+| rows_mapper | Maps each converted row. Default is [IdentityMapper](#identity-mapper). |
+| row_converter | Row [RowTypeConverter](#row-type-converter). |
+| row_type_converters | Per-column converters merged into the row converter. |
+
 ### Remarks
 
 Repository read is convert, then map. See [TypeConverter](#type-converter) and [Mapper](#mapper).
@@ -8848,7 +8905,6 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
 
 ```typescript
-const { repo, command } = create();
 repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
 command.reader = new MockReader([
   { id: 1, name: "a" },
@@ -8954,7 +9010,7 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | Name | Description |
 | --- | --- |
 | [CRUDRepository(type, connection)](#typescript-crudrepository-crudrepository-type-connection) | Builds a table repository from a type and [IConnection](#connection). |
-| [CRUDRepository(connection, options)](#typescript-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [RepositoryOptions](#typescript-repositoryoptions). |
+| [CRUDRepository(connection, options)](#typescript-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#typescript-crudrepositoryoptions). |
 | [CRUDRepository(built)](#typescript-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#typescript-builtrepository). |
 
 **Properties**
@@ -8962,8 +9018,7 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | Name | Description |
 | --- | --- |
 | rowConverter | Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper). |
-| crudMapper | [CRUDMapperOptions](#crud-mapper-options). |
-| mapper | Read-row [Mapper](#mapper). Alias of `crudMapper.rows`. |
+| mapper | Read-row [Mapper](#mapper). This is [ReadonlyRepositoryOptions.rowsMapper](#typescript-rowsmapper). |
 | statements | SQL fragments for query / insert / update / delete. |
 
 **Methods**
@@ -8995,12 +9050,12 @@ constructor(type: Constructable<T>, connection: IConnection)
 
 ###### CRUDRepository(connection, options) {#typescript-crudrepository-crudrepository-connection-options}
 
-Builds a table repository from an [IConnection](#connection) and [RepositoryOptions](#typescript-repositoryoptions).
+Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#typescript-crudrepositoryoptions).
 
 **Definition**
 
 ```typescript
-constructor(connection: IConnection, options: RepositoryOptions<T>)
+constructor(connection: IConnection, options: CRUDRepositoryOptions<T>)
 ```
 
 **Parameters**
@@ -9008,7 +9063,7 @@ constructor(connection: IConnection, options: RepositoryOptions<T>)
 | Name | Description |
 | --- | --- |
 | `connection` | open [IConnection](#connection) |
-| `options` | [RepositoryOptions](#typescript-repositoryoptions) |
+| `options` | [CRUDRepositoryOptions](#typescript-crudrepositoryoptions) |
 
 ###### CRUDRepository(built) {#typescript-crudrepository-crudrepository-built}
 
@@ -9128,21 +9183,22 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 `Promise<Response>`
 
-##### RepositoryOptions {#typescript-repositoryoptions}
+##### CRUDRepositoryOptions {#typescript-crudrepositoryoptions}
 
 ```typescript
-type RepositoryOptions<T = Cells>
+type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & { ... }
 ```
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| ids | Id column names. Default `["id"]`. |
-| entity | Table or entity name. |
-| rowConverter | Row [TypeConverter](#type-converter). |
-| crudMapper | [CRUDMapperOptions](#crud-mapper-options). |
-| readColumns | SELECT column names. When omitted, public properties of `T` are used. |
+| ids | Id column names. When omitted, `["id"]`, or `["Id"]` when `type` has that field and no `id`. |
+| insert | Rewrites the finished insert. Omitted leaves the statement unchanged. |
+| update | Rewrites the finished update. Omitted leaves the statement unchanged. |
+| delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
+| return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
+| create | Maps `Response.result` onto the created item. Default writes the value to `id`. |
 
 ##### BuiltRepository {#typescript-builtrepository}
 
@@ -9156,7 +9212,7 @@ type BuiltRepository<T = Cells>
 | --- | --- |
 | connection | Open [IConnection](#connection). |
 | rowConverter | Row [TypeConverter](#type-converter). |
-| crudMapper | [CRUDMapperOptions](#crud-mapper-options). |
+| rowsMapper | Read-row [Mapper](#mapper). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 | type | Item constructor. |
@@ -9250,15 +9306,14 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 | Name | Description |
 | --- | --- |
 | [CRUDRepository(connection)](#csharp-crudrepository-crudrepository-connection) | Builds a table repository from an [IConnection](#connection). |
-| [CRUDRepository(connection, options)](#csharp-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [RepositoryOptions](#csharp-repositoryoptions). |
+| [CRUDRepository(connection, options)](#csharp-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#csharp-crudrepositoryoptions). |
 | [CRUDRepository(built)](#csharp-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#csharp-builtrepository). |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| CRUDMapper | [CRUDMapperOptions](#crud-mapper-options). |
-| Mapper | Read-row [Mapper](#mapper). Alias of `CRUDMapperOptions.Rows`. |
+| Mapper | Read-row [Mapper](#mapper). This is [ReadonlyRepositoryOptions.RowsMapper](#csharp-rowsmapper). |
 
 **Methods**
 
@@ -9288,12 +9343,12 @@ public Repository(IConnection connection)
 
 ###### CRUDRepository(connection, options) {#csharp-crudrepository-crudrepository-connection-options}
 
-Builds a table repository from an [IConnection](#connection) and [RepositoryOptions](#csharp-repositoryoptions).
+Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#csharp-crudrepositoryoptions).
 
 **Definition**
 
 ```csharp
-public Repository(IConnection connection, RepositoryOptions<T> options)
+public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options)
 ```
 
 **Parameters**
@@ -9301,7 +9356,7 @@ public Repository(IConnection connection, RepositoryOptions<T> options)
 | Name | Description |
 | --- | --- |
 | `connection` | open [IConnection](#connection) |
-| `options` | [RepositoryOptions](#csharp-repositoryoptions) |
+| `options` | [CRUDRepositoryOptions](#csharp-crudrepositoryoptions) |
 
 ###### CRUDRepository(built) {#csharp-crudrepository-crudrepository-built}
 
@@ -9421,10 +9476,10 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 
 `Task<Response>`
 
-##### RepositoryOptions {#csharp-repositoryoptions}
+##### CRUDRepositoryOptions {#csharp-crudrepositoryoptions}
 
 ```csharp
-public sealed class RepositoryOptions<T> where T : new()
+public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> where T : new()
 ```
 
 **Properties**
@@ -9432,10 +9487,11 @@ public sealed class RepositoryOptions<T> where T : new()
 | Name | Description |
 | --- | --- |
 | Ids | Id column names. Default `["id"]`. |
-| Entity | Table or entity name. |
-| RowConverter | Row [TypeConverter](#type-converter). |
-| CRUDMapper | [CRUDMapperOptions](#crud-mapper-options). |
-| ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
+| Insert | Rewrites the finished insert. Omitted leaves the statement unchanged. |
+| Update | Rewrites the finished update. Omitted leaves the statement unchanged. |
+| Delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
+| Return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
+| Create | Maps `Response.Result` onto the created item. Default writes the value to `id` or `Id`. |
 
 ##### BuiltRepository {#csharp-builtrepository}
 
@@ -9449,7 +9505,7 @@ public sealed record BuiltRepository<T> where T : new()
 | --- | --- |
 | Connection | Open [IConnection](#connection). |
 | RowConverter | Row [TypeConverter](#type-converter). |
-| CRUDMapper | [CRUDMapperOptions](#crud-mapper-options). |
+| RowsMapper | Read-row [Mapper](#mapper). |
 | Statements | SQL fragments. |
 | Ids | Id column names. |
 
@@ -9542,14 +9598,8 @@ pub struct CRUDRepository
 | Name | Description |
 | --- | --- |
 | [from_type(connection)](#rust-crudrepository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
-| [new(connection, options)](#rust-crudrepository-new-connection-options) | Builds a table repository from a [Connection](#connection) and [RepositoryOptions](#rust-repositoryoptions). |
+| [new(connection, options)](#rust-crudrepository-new-connection-options) | Builds a table repository from a [Connection](#connection) and [CRUDRepositoryOptions](#rust-crudrepositoryoptions). |
 | [from_built(built)](#rust-crudrepository-from_built-built) | Builds a table repository from [BuiltRepository](#rust-builtrepository). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| crud_mapper | [CRUDMapperOptions](#crud-mapper-options). |
 
 **Methods**
 
@@ -9579,12 +9629,12 @@ pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) ->
 
 ###### new(connection, options) {#rust-crudrepository-new-connection-options}
 
-Builds a table repository from a [Connection](#connection) and [RepositoryOptions](#rust-repositoryoptions).
+Builds a table repository from a [Connection](#connection) and [CRUDRepositoryOptions](#rust-crudrepositoryoptions).
 
 **Definition**
 
 ```rust
-pub fn new(connection: Arc<dyn Connection>, options: RepositoryOptions) -> Result<Self>
+pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self>
 ```
 
 **Parameters**
@@ -9592,7 +9642,7 @@ pub fn new(connection: Arc<dyn Connection>, options: RepositoryOptions) -> Resul
 | Name | Description |
 | --- | --- |
 | `connection` | [Connection](#connection) |
-| `options` | [RepositoryOptions](#rust-repositoryoptions) |
+| `options` | [CRUDRepositoryOptions](#rust-crudrepositoryoptions) |
 
 **Returns**
 
@@ -9634,10 +9684,10 @@ pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>)
 | --- | --- |
 | `middleware` | command middleware |
 
-##### RepositoryOptions {#rust-repositoryoptions}
+##### CRUDRepositoryOptions {#rust-crudrepositoryoptions}
 
 ```rust
-pub struct RepositoryOptions
+pub struct CRUDRepositoryOptions
 ```
 
 **Properties**
@@ -9645,9 +9695,12 @@ pub struct RepositoryOptions
 | Name | Description |
 | --- | --- |
 | ids | Id column names. Default `["id"]`. |
-| entity | Table or entity name. Default `"items"`. |
-| row_converter | Row [RowTypeConverter](#row-type-converter). |
-| crud_mapper | [CRUDMapperOptions](#crud-mapper-options). |
+| insert | Rewrites finished insert SQL. `None` leaves the statement unchanged. |
+| update | Rewrites finished update SQL. `None` leaves the statement unchanged. |
+| delete | Rewrites finished delete SQL. `None` leaves the statement unchanged. |
+| return_ | Rewrites finished return SQL. `None` leaves it unchanged. |
+| create | Maps `Response.result` onto the created row. Default writes the value to `id`. |
+| read | The embedded [ReadonlyRepositoryOptions](#rust-readonlyrepositoryoptions). Field access goes through `Deref`. |
 
 ##### BuiltRepository {#rust-builtrepository}
 
@@ -9661,15 +9714,15 @@ pub struct BuiltRepository
 | --- | --- |
 | connection | [Connection](#connection). |
 | row_converter | [RowTypeConverter](#row-type-converter). |
-| crud_mapper | [CRUDMapperOptions](#crud-mapper-options). |
+| rows_mapper | Read-row [Mapper](#mapper). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 
 ### Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `CRUDMapperOptions.Create` / `create` maps `Response.Result` onto the created item.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
 
-`Mapper` / `mapper` aliases `CRUDMapperOptions.Rows` / `rows`. See [CRUDMapperOptions](#crud-mapper-options).
+`Mapper` / `mapper` is [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper).
 
 ### Examples
 
@@ -9690,7 +9743,7 @@ repo.create(&mut obj).await.unwrap();
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L103-L113)
 
 ```typescript
-await repo.create(obj);
+
 ```
 
 ## Enriched repository
@@ -11437,12 +11490,6 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1862-L1879)
 
 ```rust
-let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-    ("id", Value::Int(1)),
-    ("type_id", Value::Int(10)),
-])]));
-let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-    ("id", Value::Int(10)),
     ("name", Value::from("org")),
 ])]));
 let child_types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
@@ -11455,6 +11502,12 @@ let children = Arc::new(items_repository::ItemsRepository::new(vec![
         ("type_id", Value::Int(3)),
         ("label", Value::from("a")),
     ]),
+    record(&[
+        ("parent_id", Value::Int(1)),
+        ("type_id", Value::Int(9)),
+        ("label", Value::from("b")),
+    ]),
+]));
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -11644,13 +11697,227 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Repository read is convert, then map. `CRUDMapperOptions.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
+Repository read is convert, then map. [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper) is the read-row mapper. `Repository.Mapper` / `mapper` is that mapper.
 
 ### See also
 
+- [IdentityMapper](#identity-mapper)
 - [TransformMapper](#transform-mapper)
 - [FlatToNestedMapper](#flat-to-nested-mapper)
-- [CRUDMapperOptions](#crud-mapper-options)
+- [ReadonlyRepositoryOptions](#readonlyrepositoryoptions)
+
+## IdentityMapper
+
+Mapper that returns the value unchanged, in both directions. This is the default entity, column, and row mapper on [ReadonlyRepositoryOptions](#readonlyrepositoryoptions).
+
+### Classes
+
+##### TypeScript
+
+##### IdentityMapper {#typescript-identitymapper}
+
+```typescript
+class IdentityMapper<T> implements IMapper<T, T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-identitymapper-map-value) | Returns `value`. |
+| [reverseMap(value)](#typescript-identitymapper-reversemap-value) | Returns `value`. |
+
+###### map(value) {#typescript-identitymapper-map-value}
+
+Returns `value`.
+
+**Definition**
+
+```typescript
+map(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`T`
+
+###### reverseMap(value) {#typescript-identitymapper-reversemap-value}
+
+Returns `value`.
+
+**Definition**
+
+```typescript
+reverseMap(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`T`
+
+##### C#
+
+##### IdentityMapper {#csharp-identitymapper}
+
+```csharp
+public class IdentityMapper<T> : IMapper<T, T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-identitymapper-map-value) | Returns `value`. |
+| [ReverseMap(value)](#csharp-identitymapper-reversemap-value) | Returns `value`. |
+
+###### Map(value) {#csharp-identitymapper-map-value}
+
+Returns `value`.
+
+**Definition**
+
+```csharp
+T Map(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`T`
+
+###### ReverseMap(value) {#csharp-identitymapper-reversemap-value}
+
+Returns `value`.
+
+**Definition**
+
+```csharp
+T ReverseMap(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`T`
+
+##### Rust
+
+##### IdentityMapper {#rust-identitymapper}
+
+```rust
+pub struct IdentityMapper<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new()](#rust-identitymapper-new) | Builds an identity mapper. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-identitymapper-map-value) | Returns `value`. |
+| [reverse_map(value)](#rust-identitymapper-reverse_map-value) | Returns `value`. |
+
+###### new() {#rust-identitymapper-new}
+
+Builds an identity mapper.
+
+**Definition**
+
+```rust
+pub fn new() -> Self
+```
+
+**Returns**
+
+[IdentityMapper](#rust-identitymapper)
+
+###### map(value) {#rust-identitymapper-map-value}
+
+Returns `value`.
+
+**Definition**
+
+```rust
+fn map(&self, value: T) -> T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`T`
+
+###### reverse_map(value) {#rust-identitymapper-reverse_map-value}
+
+Returns `value`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: T) -> T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`T`
+
+### Examples
+
+#### Map and reverse map
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/IdentityMapperTests.cs#L10-L12)
+
+```csharp
+var mapper = new IdentityMapper<string>();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/identity_mapper.rs#L39-L41)
+
+```rust
+let mapper = IdentityMapper::<String>::new();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/IdentityMapper.test.ts#L6-L8)
+
+```typescript
+const mapper = new IdentityMapper<string>();
+```
 
 ## TransformMapper
 
@@ -11898,7 +12165,7 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [CRUDMapperOptions](#crud-mapper-options) uses this for entity, column, and row mapping.
+Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [ReadonlyRepositoryOptions](#readonlyrepositoryoptions) accepts it for entity, column, and row mapping. The default is [IdentityMapper](#identity-mapper).
 
 ### Examples
 
@@ -11939,34 +12206,10 @@ public void FlattensAndUnflattensUserAndContacts()
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L59-L94)
 
 ```rust
-    user: User {
-        id: 1,
-        name: "Ada".into(),
-    },
-    contacts: Contacts {
-        email: "ada@x.dev".into(),
-        phone: "555".into(),
-    },
-};
-let mapper = TransformMapper::new(
-    |n: Nested| Flat {
-        user_id: n.user.id,
-        user_name: n.user.name,
-        contact_email: n.contacts.email,
-        contact_phone: n.contacts.phone,
-    },
-    |f: Flat| Nested {
-        user: User {
-            id: f.user_id,
-            name: f.user_name,
-        },
-        contacts: Contacts {
-            email: f.contact_email,
-            phone: f.contact_phone,
-        },
-    },
-);
-let flat = Mapper::map(&mapper, nested.clone());
+user_id: i32,
+user_name: String,
+contact_email: String,
+contact_phone: String,
 ```
 
 **Before: nested value**
@@ -12932,288 +13175,6 @@ const flat = mapper.reverseMap(nested);
     phone_type_name: "Mobile"
   }
 ]
-```
-
-## CRUDMapperOptions
-
-Collection of mappers for a CRUD repository. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete. [Rows](#crudmapperoptions-rows) is the read-row mapper; [CRUDRepository.Mapper](#crud-repository) aliases it.
-
-### Classes
-
-##### TypeScript
-
-##### CRUDMapperOptions {#typescript-crudmapperoptions}
-
-```typescript
-class CRUDMapperOptions<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [CRUDMapperOptions(options?)](#typescript-crudmapperoptions-crudmapperoptions-options) | Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-crudmapperoptions-rows) mapper. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| entity | Maps the table or entity name when the repository is built. |
-| columns | Maps column names when the repository is built. |
-| query | Rewrites a finished [IQuery](#typescript-iquery). |
-| insert | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
-| update | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
-| delete | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
-| return | Rewrites a finished [IReturnStatement](#typescript-ireturnstatement). |
-| rows | Read-row [Mapper](#mapper). |
-| create | Maps `Response.result` onto a created item after insert. Default writes the value onto `id`. |
-
-###### CRUDMapperOptions(options?) {#typescript-crudmapperoptions-crudmapperoptions-options}
-
-Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-crudmapperoptions-rows) mapper.
-
-**Definition**
-
-```typescript
-constructor(options?: {
-  entity?: IMapper<string, string>;
-  columns?: IMapper<string, string>;
-  rows?: IMapper<T, T>;
-  query?: IMapper<IQuery, IQuery>;
-  insert?: IMapper<IInsertStatement, IInsertStatement>;
-  update?: IMapper<IUpdateStatement, IUpdateStatement>;
-  delete?: IMapper<IDeleteStatement, IDeleteStatement>;
-  return?: IMapper<IReturnStatement, IReturnStatement>;
-  create?: IMapper<Scalar, T>;
-})
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | optional field overrides |
-
-##### C#
-
-##### CRUDMapperOptions {#csharp-crudmapperoptions}
-
-```csharp
-public sealed class CRUDMapperOptions<T> where T : new()
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Entity | Maps the table or entity name when the repository is built. |
-| Columns | Maps column names when the repository is built. |
-| Query | Rewrites a finished [IQuery](#csharp-iquery). |
-| Insert | Rewrites a finished [IInsertStatement](#csharp-iinsertstatement). |
-| Update | Rewrites a finished [IUpdateStatement](#csharp-iupdatestatement). |
-| Delete | Rewrites a finished [IDeleteStatement](#csharp-ideletestatement). |
-| Return | Rewrites a finished [IReturnStatement](#csharp-ireturnstatement). |
-| Rows | Read-row [Mapper](#mapper). |
-| Create | Maps `Response.Result` onto a created item after insert. Default writes the value onto `id` / `Id`. |
-
-##### Rust
-
-##### CRUDMapperOptions {#rust-crudmapperoptions}
-
-```rust
-pub struct CRUDMapperOptions
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| entity | Maps the table or entity name when the repository is built. |
-| columns | Maps column names when the repository is built. |
-| query | Rewrites finished query SQL. |
-| insert | Rewrites finished insert SQL. |
-| update | Rewrites finished update SQL. |
-| delete | Rewrites finished delete SQL. |
-| return_ | Rewrites finished return-call SQL. |
-| rows | Read-row [TransformMapper](#transform-mapper). |
-| create | Maps `Response.result` onto a created row after insert. Default writes the value onto `id`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [identity(source, destination)](#rust-crudmapperoptions-identity-source-destination) | Identity CRUD mapper. Source and destination labels are unused. |
-| [map_sql(mapper, text)](#rust-crudmapperoptions-map_sql-mapper-text) | Applies an optional SQL-text mapper. |
-
-###### identity(source, destination) {#rust-crudmapperoptions-identity-source-destination}
-
-Identity CRUD mapper. Source and destination labels are unused.
-
-**Definition**
-
-```rust
-pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `source` | unused source label |
-| `destination` | unused destination label |
-
-**Returns**
-
-[CRUDMapperOptions](#rust-crudmapperoptions)
-
-###### map_sql(mapper, text) {#rust-crudmapperoptions-map_sql-mapper-text}
-
-Applies an optional SQL-text mapper.
-
-**Definition**
-
-```rust
-pub fn map_sql(mapper: &Option<Arc<TransformMapper<String, String>>>, text: String) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `mapper` | optional SQL-text [TransformMapper](#transform-mapper) |
-| `text` | finished SQL |
-
-**Returns**
-
-`String`
-
-### Remarks
-
-Apply mapping in either or both places:
-
-1. **Builder** — `RepositoryBuilder` maps `Entity` / `entity` and `Columns` / `columns` into `RepositoryStatements`.
-2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` / `Return` rewrite the finished statement.
-
-C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](#transform-mapper)`<String, String>` over SQL text via `CRUDMapperOptions::map_sql`.
-
-`Repository.Mapper` / `mapper` aliases `Rows` / `rows`. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
-
-### Examples
-
-#### Rewrite a finished statement
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperOptionsTests.cs#L56-L81)
-
-```csharp
-query.GetText()
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1701-L1763)
-
-```rust
-let command = Arc::new(MockCommand::new());
-let mut mapper = CRUDMapperOptions::identity("memory", "rust");
-mapper.entity = TransformMapper::new(
-    |name: String| match name.as_str() {
-        "users" => "people".into(),
-        _ => name,
-    },
-    |name| name,
-);
-mapper.columns = TransformMapper::new(
-    |name: String| match name.as_str() {
-        "id" => "user_id".into(),
-        "name" => "full_name".into(),
-        _ => name,
-    },
-    |name| name,
-);
-mapper.query = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} LIMIT 1"),
-    |text| text,
-)));
-let returning = |text: String| format!("{text} RETURNING id");
-mapper.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
-mapper.update = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} RETURNING id"),
-    |text| text,
-)));
-mapper.delete = Some(Arc::new(TransformMapper::new(
-    |text: String| format!("{text} RETURNING id"),
-    |text| text,
-)));
-let connection = MockConnection::with_command_provider(command.clone(), "memory");
-let mut options = RepositoryOptions::default();
-options.entity = "users".into();
-options.row_converter = Some(users_mapping());
-options.crud_mapper = Some(mapper);
-let repo = CRUDRepository::new(connection, options).unwrap();
-command.reader_rows.lock().unwrap().clear();
-assert!(repo.read_single(None).await.unwrap().is_none());
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapperOptions.test.ts#L22-L52)
-
-```typescript
-});
-
-it("rewrites each finished statement", () => {
-  const mapper = new CRUDMapperOptions({
-    query: new TransformMapper(
-      (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
-      (query) => query,
-    ),
-    insert: new TransformMapper(
-      (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
-      (insert) => insert,
-    ),
-    update: new TransformMapper(
-      (update) =>
-        new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
-      (update) => update,
-    ),
-    delete: new TransformMapper(
-      (remove) =>
-        DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
-      (remove) => remove,
-    ),
-  });
-  const statements = statementsOf("users", ["id", "name"], mapper);
-```
-
-#### Rewrite a return call
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperOptionsTests.cs#L84-L95)
-
-```csharp
-Return = new TransformMapper<IReturnStatement, IReturnStatement>(
-    ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
-    ret => ret)
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1383-L1392)
-
-```rust
-    |text| text,
-)));
-let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
-let text = CRUDMapperOptions::map_sql(&mapper.return_, built.get_text());
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapperOptions.test.ts#L54-L64)
-
-```typescript
-});
-
-it("rewrites a finished return call", () => {
-  const mapper = new CRUDMapperOptions({
-    return: new TransformMapper(
-      (ret) => new ReturnStatement(`${ret.getText()} /* mapped */`),
-      (ret) => ret,
-    ),
-  });
-  const built = new ReturnStatement("add", [{ name: "id", value: 1 }]);
-  const statement = mapper.return?.map(built) ?? built;
 ```
 
 ## TypeConverter

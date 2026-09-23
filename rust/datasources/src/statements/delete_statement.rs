@@ -17,7 +17,11 @@ impl DeleteStatement {
 
     pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> Self {
         let sql = match where_clause {
-            Some(predicate) => format!("DELETE FROM {} WHERE {}", table.as_ref(), predicate.get_text()),
+            Some(predicate) => format!(
+                "DELETE FROM {} WHERE {}",
+                table.as_ref(),
+                predicate.get_text()
+            ),
             None => format!("DELETE FROM {}", table.as_ref()),
         };
         Self {

@@ -4,13 +4,12 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
-use crate::crud_mapper_options::CRUDMapperOptions;
 use crate::i_repository::IRepository;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::query::Query;
+use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::repository::IReadonlyRepository;
-use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
 use crate::row::Row;
 use crate::statement::Statement;
@@ -26,7 +25,7 @@ pub struct ReadonlyRepository {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: RowTypeConverter,
-    pub(crate) crud_mapper: Arc<CRUDMapperOptions>,
+    pub(crate) rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
     pub(crate) statements: RepositoryStatements,
     pub(crate) entity_type: TypeId,
 }
@@ -35,12 +34,15 @@ impl ReadonlyRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_options::<T>();
         options.row_converter = Some(RowTypeConverter::of::<T>());
-        let mut repo = Self::new(connection, options)?;
+        let mut repo = Self::new(connection, options.read)?;
         repo.entity_type = TypeId::of::<T>();
         Ok(repo)
     }
 
-    pub fn new(connection: Arc<dyn Connection>, options: RepositoryOptions) -> Result<Self> {
+    pub fn new(
+        connection: Arc<dyn Connection>,
+        options: ReadonlyRepositoryOptions,
+    ) -> Result<Self> {
         Ok(Self::from_built(RepositoryBuilder::parts(
             connection, options,
         )?))
@@ -51,7 +53,7 @@ impl ReadonlyRepository {
             connection: built.connection,
             middlewares: Vec::new(),
             row_converter: built.row_converter,
-            crud_mapper: built.crud_mapper,
+            rows_mapper: built.rows_mapper,
             statements: built.statements,
             entity_type: TypeId::of::<Row>(),
         }
@@ -107,7 +109,7 @@ impl ReadonlyRepository {
             .map(|row| {
                 self.row_converter
                     .convert(&row)
-                    .map(|converted| Mapper::map(&self.crud_mapper.rows, converted))
+                    .map(|converted| Mapper::map(&self.rows_mapper, converted))
             })
             .transpose()
     }
@@ -125,7 +127,7 @@ impl ReadonlyRepository {
         while reader.next().await? {
             if let Some(row) = reader.current() {
                 items.push(Mapper::map(
-                    &self.crud_mapper.rows,
+                    &self.rows_mapper,
                     self.row_converter.convert(&row)?,
                 ));
             }
@@ -135,7 +137,7 @@ impl ReadonlyRepository {
 
     pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
         self.row_converter
-            .reverse_convert(&Mapper::reverse_map(&self.crud_mapper.rows, item.clone()))
+            .reverse_convert(&Mapper::reverse_map(&self.rows_mapper, item.clone()))
     }
 }
 
