@@ -1739,17 +1739,17 @@ async fn table_repository_crud_mapper() {
     repo.create(&mut row).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO people (name) VALUES ($name) RETURNING id"
+        "INSERT INTO people (full_name) VALUES ($full_name) RETURNING id"
     );
     repo.update(&row, None).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
-        "UPDATE people SET name = $name WHERE id = $id RETURNING id"
+        "UPDATE people SET full_name = $full_name WHERE user_id = $user_id RETURNING id"
     );
     repo.delete(&row, None).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
-        "DELETE FROM people WHERE id = $id RETURNING id"
+        "DELETE FROM people WHERE user_id = $user_id RETURNING id"
     );
 }
 

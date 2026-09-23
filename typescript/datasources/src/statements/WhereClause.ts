@@ -1,5 +1,5 @@
 import type { Parameter } from "../Parameter.ts";
-import type { Scalar } from "../builders/Scalar.ts";
+import type { Cell } from "../converters/Cell.ts";
 import { ArrayExpression } from "./ArrayExpression.ts";
 import { Identifier } from "./Identifier.ts";
 import type { IExpression } from "./IExpression.ts";
@@ -24,7 +24,7 @@ const symbol = (op: Operator): string =>
               ? "<="
               : "IN";
 
-const inline = (value: Scalar): string =>
+const inline = (value: Cell): string =>
   value === null ? "null" : typeof value === "boolean" ? String(value) : String(value);
 
 const needsParens = (child: IExpression, and: boolean): boolean =>
@@ -87,7 +87,7 @@ const render = (expression: IExpression): string =>
                               })();
                 })();
 
-const collect = (expression: IExpression): Parameter<Scalar>[] =>
+const collect = (expression: IExpression): Parameter<Cell>[] =>
   expression instanceof WhereClause
     ? collect(expression.condition)
     : expression instanceof Literal || expression instanceof Identifier
@@ -123,24 +123,24 @@ export class WhereClause implements IWhere {
   readonly condition: IExpression;
 
   constructor(condition: IExpression);
-  constructor(column: string, op: Comparison, value: Scalar);
-  constructor(columnOrCondition: IExpression | string, op: Comparison = eq, value: Scalar = null) {
+  constructor(column: string, op: Comparison, value: Cell);
+  constructor(columnOrCondition: IExpression | string, op: Comparison = eq, value: Cell = null) {
     this.condition =
       typeof columnOrCondition === "string"
         ? op(columnOrCondition, value)
         : columnOrCondition;
   }
 
-  and(column: string, op: Comparison, value: Scalar): WhereClause {
+  and(column: string, op: Comparison, value: Cell): WhereClause {
     return new WhereClause(new Operator.And(this.condition, op(column, value)));
   }
 
-  or(column: string, op: Comparison, value: Scalar): WhereClause {
+  or(column: string, op: Comparison, value: Cell): WhereClause {
     return new WhereClause(new Operator.Or(this.condition, op(column, value)));
   }
 
   getText = (): string => render(this.condition);
-  get parameters(): Parameter<Scalar>[] {
-    return collect(this.condition);
+  get parameters(): Parameter[] {
+    return collect(this.condition) as Parameter[];
   }
 }

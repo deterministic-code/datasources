@@ -1,10 +1,8 @@
-use crate::command::PostgresCommand;
 use crate::bind::isolation_sql;
+use crate::command::PostgresCommand;
 use crate::transaction::PostgresTransaction;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
-};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio_postgres::NoTls;

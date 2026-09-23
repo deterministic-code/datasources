@@ -1,5 +1,5 @@
-use crate::connection::{map_err, PostgresConnection};
 use crate::bind::{to_postgres, with_returning};
+use crate::connection::{map_err, PostgresConnection};
 use crate::pg_value::PgValue;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
@@ -108,9 +108,12 @@ impl Command for PostgresCommand {
                         ));
                     }
                     connection.ensure_open()?;
-                    let rows =
-                        PostgresCommand::query_sql(&connection, &sql, &parameters_to_map(params.as_deref()))
-                            .await?;
+                    let rows = PostgresCommand::query_sql(
+                        &connection,
+                        &sql,
+                        &parameters_to_map(params.as_deref()),
+                    )
+                    .await?;
                     Ok((
                         Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
                         rows,

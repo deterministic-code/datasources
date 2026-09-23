@@ -348,15 +348,15 @@ describe("CRUDRepository", () => {
     const row = { id: 1, name: "a" };
     await repo.create(row);
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO people (name) VALUES ($name) RETURNING id",
+      "INSERT INTO people (full_name) VALUES ($full_name) RETURNING id",
     );
     await repo.update(row);
     expect(command.executeCalls[1]?.text).toBe(
-      "UPDATE people SET name = $name WHERE id = $id RETURNING id",
+      "UPDATE people SET full_name = $full_name WHERE user_id = $user_id RETURNING id",
     );
     await repo.delete(row);
     expect(command.executeCalls[2]?.text).toBe(
-      "DELETE FROM people WHERE id = $id RETURNING id",
+      "DELETE FROM people WHERE user_id = $user_id RETURNING id",
     );
   });
 });

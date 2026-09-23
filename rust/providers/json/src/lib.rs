@@ -15,8 +15,8 @@ mod tests {
     use crate::file_store::{FileStore, MemoryFileStore};
     use crate::filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
     use datasources::{
-        converters::Cells, create, register, reset, CRUDRepository, Command, Connection,
-        ICRUDRepository, IReadonlyRepository, Parameter, QueryStatement, CRUDRepositoryOptions, Row,
+        converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
+        Connection, ICRUDRepository, IReadonlyRepository, Parameter, QueryStatement, Row,
         TextWhere, Value,
     };
     use serde_json::{Map, Value as JsonValue};

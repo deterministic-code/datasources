@@ -140,7 +140,8 @@ impl Command for JsonCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        self.execute_reader(&filter_text(statement), parameters).await
+        self.execute_reader(&filter_text(statement), parameters)
+            .await
     }
 
     async fn execute_statement(
@@ -178,7 +179,10 @@ fn filter_text(statement: &dyn Statement) -> String {
     }
 }
 
-fn with_where(parameters: Option<&[Parameter]>, where_clause: Option<&dyn Where>) -> Vec<Parameter> {
+fn with_where(
+    parameters: Option<&[Parameter]>,
+    where_clause: Option<&dyn Where>,
+) -> Vec<Parameter> {
     let mut params = parameters.unwrap_or(&[]).to_vec();
     if let Some(text) = where_clause.map(|predicate| predicate.get_text()) {
         if text.trim_start().starts_with('{') {

@@ -29,12 +29,12 @@ constructor(condition: IExpression)
 Builds a comparison from a column, a [Cmp](./expressions.md#cmp) alias, and a literal.
 
 ```typescript
-constructor(column: string, op: Comparison, value: Scalar)
+constructor(column: string, op: Comparison, value: Cell)
 ```
 
 - `column` — column name
 - `op` — [Cmp](./expressions.md#cmp) alias such as `eq` or `gt`
-- `value` — [Scalar](#scalar)
+- `value` — [Cell](./flat-to-nested-mapper.md#cell)
 
 **Properties**
 
@@ -72,13 +72,13 @@ getText(): string
 Nests this clause with another comparison under [Operator.And](./expressions.md#operator) or `Operator.Or`.
 
 ```typescript
-and(column: string, op: Comparison, value: Scalar): WhereClause
-or(column: string, op: Comparison, value: Scalar): WhereClause
+and(column: string, op: Comparison, value: Cell): WhereClause
+or(column: string, op: Comparison, value: Cell): WhereClause
 ```
 
 - `column` — column name
 - `op` — [Cmp](./expressions.md#cmp) alias
-- `value` — [Scalar](#scalar)
+- `value` — [Cell](./flat-to-nested-mapper.md#cell)
 
 **Returns** [WhereClause](#whereclause)
 

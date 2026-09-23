@@ -2,9 +2,7 @@ use crate::command::JsonCommand;
 use crate::file_store::{FileStore, MemoryFileStore};
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
-use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Result, Transaction,
-};
+use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
 use serde_json::{Map, Value as JsonValue};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

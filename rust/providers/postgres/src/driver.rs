@@ -28,7 +28,9 @@ impl Driver for PostgresDriver {
         Arc::new(PostgresTransaction::new(conn.share(), isolation))
     }
 
-    fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+    fn row_type_converters(
+        &self,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
         converters::row_type_converters()
     }
 }

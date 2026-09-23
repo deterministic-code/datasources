@@ -13,9 +13,11 @@ use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
 use crate::statement::Statement;
+use crate::statements::{ArrayExpression, Expression, Identifier, Literal, Operator, WhereClause};
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::table_repository_statements::RepositoryStatements;
 use crate::text_query::QueryStatement;
+use crate::value::Value;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -147,6 +149,197 @@ impl ReadonlyRepository {
         self.row_converter
             .reverse_convert(&Mapper::reverse_map(&self.rows_mapper, item.clone()))
     }
+
+    fn stored_query(&self, where_clause: &dyn Where) -> Result<(QueryStatement, Vec<Parameter>)> {
+        match self.store_where(where_clause, false)? {
+            Some(stored) => Ok((self.statements.query(Some(&stored)), stored.parameters())),
+            None => Ok((
+                self.statements.query(Some(where_clause)),
+                where_clause.parameters(),
+            )),
+        }
+    }
+
+    pub(crate) fn store_where(
+        &self,
+        where_clause: &dyn Where,
+        fields_applied: bool,
+    ) -> Result<Option<WhereClause>> {
+        match where_clause.as_any().downcast_ref::<WhereClause>() {
+            Some(clause) => Ok(Some(self.store_clause(clause, fields_applied)?)),
+            None => Ok(None),
+        }
+    }
+
+    pub(crate) fn store_clause(
+        &self,
+        clause: &WhereClause,
+        fields_applied: bool,
+    ) -> Result<WhereClause> {
+        Ok(WhereClause::new(
+            self.rewrite(&clause.condition, fields_applied)?,
+        ))
+    }
+
+    pub(crate) fn column(&self, property: &str) -> String {
+        Mapper::map(&self.column_mappings, property.to_string())
+    }
+
+    pub(crate) fn cell(
+        &self,
+        property: &str,
+        value: &Value,
+        fields_applied: bool,
+    ) -> Result<Value> {
+        if let Some(field) = self.row_converter.fields.get(property) {
+            return if fields_applied {
+                Ok(value.clone())
+            } else {
+                field.reverse_convert(value)
+            };
+        }
+        let kind = match value {
+            Value::Bool(_) => Some("bool"),
+            Value::DateTime(_) => Some("datetime"),
+            Value::Uuid(_) => Some("uuid"),
+            Value::Decimal(_) => Some("decimal"),
+            Value::Binary(_) => Some("binary"),
+            _ => None,
+        };
+        match kind.and_then(|key| self.row_converter.types.get(key)) {
+            Some(converter) => converter.reverse_convert(value),
+            None => Ok(value.clone()),
+        }
+    }
+
+    fn rewrite(&self, expression: &Expression, fields_applied: bool) -> Result<Expression> {
+        Ok(match expression {
+            Expression::Identifier(id) => {
+                Expression::Identifier(Identifier::new(self.column(&id.name)))
+            }
+            Expression::Literal(lit) => Expression::Literal(lit.clone()),
+            Expression::Array(arr) => Expression::Array(ArrayExpression::new(
+                arr.elements
+                    .iter()
+                    .map(|element| self.rewrite(element, fields_applied))
+                    .collect::<Result<_>>()?,
+            )),
+            Expression::Operator(op) => Expression::Operator(self.rewrite_op(op, fields_applied)?),
+        })
+    }
+
+    fn rewrite_op(&self, op: &Operator, fields_applied: bool) -> Result<Operator> {
+        Ok(match op {
+            Operator::And { left, right } => Operator::and(
+                self.rewrite(left, fields_applied)?,
+                self.rewrite(right, fields_applied)?,
+            ),
+            Operator::Or { left, right } => Operator::or(
+                self.rewrite(left, fields_applied)?,
+                self.rewrite(right, fields_applied)?,
+            ),
+            Operator::Not { argument } => Operator::not(self.rewrite(argument, fields_applied)?),
+            Operator::In { left, right } => Operator::In {
+                left: Box::new(self.rewrite(left, fields_applied)?),
+                right: Box::new(self.in_right(left, right, fields_applied)?),
+            },
+            Operator::Equals { left, right } => {
+                self.binary(left, right, fields_applied, |left, right| {
+                    Operator::Equals { left, right }
+                })?
+            }
+            Operator::NotEquals { left, right } => {
+                self.binary(left, right, fields_applied, |left, right| {
+                    Operator::NotEquals { left, right }
+                })?
+            }
+            Operator::GreaterThan { left, right } => {
+                self.binary(left, right, fields_applied, |left, right| {
+                    Operator::GreaterThan { left, right }
+                })?
+            }
+            Operator::LessThan { left, right } => {
+                self.binary(left, right, fields_applied, |left, right| {
+                    Operator::LessThan { left, right }
+                })?
+            }
+            Operator::GreaterThanOrEqual { left, right } => {
+                self.binary(left, right, fields_applied, |left, right| {
+                    Operator::GreaterThanOrEqual { left, right }
+                })?
+            }
+            Operator::LessThanOrEqual { left, right } => {
+                self.binary(left, right, fields_applied, |left, right| {
+                    Operator::LessThanOrEqual { left, right }
+                })?
+            }
+        })
+    }
+
+    fn binary(
+        &self,
+        left: &Expression,
+        right: &Expression,
+        fields_applied: bool,
+        build: impl FnOnce(Box<Expression>, Box<Expression>) -> Operator,
+    ) -> Result<Operator> {
+        let (left, right) = self.pair(left, right, fields_applied)?;
+        Ok(build(Box::new(left), Box::new(right)))
+    }
+
+    fn pair(
+        &self,
+        left: &Expression,
+        right: &Expression,
+        fields_applied: bool,
+    ) -> Result<(Expression, Expression)> {
+        match (left, right) {
+            (Expression::Identifier(id), Expression::Literal(lit)) => Ok((
+                Expression::Identifier(Identifier::new(self.column(&id.name))),
+                Expression::Literal(Literal::new(self.cell(
+                    &id.name,
+                    &lit.value,
+                    fields_applied,
+                )?)),
+            )),
+            (Expression::Literal(lit), Expression::Identifier(id)) => Ok((
+                Expression::Literal(Literal::new(self.cell(
+                    &id.name,
+                    &lit.value,
+                    fields_applied,
+                )?)),
+                Expression::Identifier(Identifier::new(self.column(&id.name))),
+            )),
+            _ => Ok((
+                self.rewrite(left, fields_applied)?,
+                self.rewrite(right, fields_applied)?,
+            )),
+        }
+    }
+
+    fn in_right(
+        &self,
+        left: &Expression,
+        right: &Expression,
+        fields_applied: bool,
+    ) -> Result<Expression> {
+        match (left, right) {
+            (Expression::Identifier(id), Expression::Array(arr)) => {
+                let elements = arr
+                    .elements
+                    .iter()
+                    .map(|element| match element {
+                        Expression::Literal(lit) => Ok(Expression::Literal(Literal::new(
+                            self.cell(&id.name, &lit.value, fields_applied)?,
+                        ))),
+                        other => self.rewrite(other, fields_applied),
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(Expression::Array(ArrayExpression::new(elements)))
+            }
+            _ => self.rewrite(right, fields_applied),
+        }
+    }
 }
 
 impl IRepository for ReadonlyRepository {
@@ -168,12 +361,12 @@ impl IReadonlyRepository for ReadonlyRepository {
     }
 
     async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        let statement = self.statements.query(Some(where_clause));
-        self.fetch_one(&statement, where_clause.parameters()).await
+        let (statement, params) = self.stored_query(where_clause)?;
+        self.fetch_one(&statement, params).await
     }
 
     async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        let statement = self.statements.query(Some(where_clause));
-        self.fetch_all(&statement, where_clause.parameters()).await
+        let (statement, params) = self.stored_query(where_clause)?;
+        self.fetch_all(&statement, params).await
     }
 }

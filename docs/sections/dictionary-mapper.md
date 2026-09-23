@@ -147,7 +147,7 @@ fn reverse_map(&self, value: T) -> T
 
 ## Remarks
 
-Use this for [ColumnMappings](./readonly-repository.md#columnmappings) when property names and stored column names differ. `Map` rewrites the SELECT list. `ReverseMap` restores property names on each result key before the row converter.
+Use this for [ColumnMappings](./readonly-repository.md#columnmappings) when property names and stored column names differ. `Map` rewrites the SELECT list, where identifiers, and write parameters. `ReverseMap` restores property names on each result key before the row converter.
 
 ## Examples
 

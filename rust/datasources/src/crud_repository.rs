@@ -72,16 +72,21 @@ impl CRUDRepository {
         self.inner.add_middleware(middleware);
     }
 
-    fn params(&self, record: &Row) -> Vec<Parameter> {
+    fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
         let mut pairs: Vec<_> = record
             .iter()
-            .filter(|(key, _)| !self.ids.contains(*key))
+            .filter(|(key, _)| include_ids || !self.ids.contains(*key))
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
         pairs.sort_by(|left, right| left.0.cmp(&right.0));
         pairs
             .into_iter()
-            .map(|(name, value)| Parameter::new(name, value))
+            .map(|(name, value)| {
+                Ok(Parameter::new(
+                    self.inner.column(&name),
+                    self.inner.cell(&name, &value, true)?,
+                ))
+            })
             .collect()
     }
 
@@ -132,7 +137,7 @@ impl IReadonlyRepository for CRUDRepository {
 impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &mut Row) -> Result<Response> {
         let record = self.inner.reverse_convert(item)?;
-        let fields = self.params(&record);
+        let fields = self.params(&record, false)?;
         let statement = self.inner.statements.insert(&fields);
         let response = self
             .inner
@@ -147,22 +152,18 @@ impl ICRUDRepository for CRUDRepository {
 
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         let record = self.inner.reverse_convert(item)?;
-        let owned = if by_where.is_none() {
-            Some(self.id_where(&record)?)
-        } else {
-            None
-        };
-        let predicate: &dyn Where = match (by_where, owned.as_ref()) {
-            (Some(where_clause), _) => where_clause,
-            (_, Some(where_clause)) => where_clause,
-            _ => unreachable!(),
-        };
-        let fields = self.params(&record);
+        let fields = self.params(&record, false)?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
                 "Update requires at least one non-Id field",
             ));
         }
+        let (owned, raw) = self.stored_predicate(&record, by_where)?;
+        let predicate: &dyn Where = match (owned.as_ref(), raw) {
+            (Some(clause), _) => clause,
+            (None, Some(clause)) => clause,
+            _ => unreachable!(),
+        };
         let statement = self.inner.statements.update(&fields, predicate);
         let mut parameters = fields;
         parameters.extend(predicate.parameters());
@@ -174,23 +175,16 @@ impl ICRUDRepository for CRUDRepository {
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         let record = self.inner.reverse_convert(item)?;
-        let owned = if by_where.is_none() {
-            Some(self.id_where(&record)?)
-        } else {
-            None
-        };
-        let predicate: &dyn Where = match (by_where, owned.as_ref()) {
-            (Some(where_clause), _) => where_clause,
-            (_, Some(where_clause)) => where_clause,
+        let (owned, raw) = self.stored_predicate(&record, by_where)?;
+        let predicate: &dyn Where = match (owned.as_ref(), raw) {
+            (Some(clause), _) => clause,
+            (None, Some(clause)) => clause,
             _ => unreachable!(),
         };
         let statement = self.inner.statements.delete(predicate);
         let parameters = predicate.parameters();
         let parameters = if parameters.is_empty() {
-            record
-                .iter()
-                .map(|(name, value)| Parameter::new(name.clone(), value.clone()))
-                .collect()
+            self.params(&record, true)?
         } else {
             parameters
         };
@@ -198,6 +192,25 @@ impl ICRUDRepository for CRUDRepository {
             .command()
             .execute_statement(&statement, Some(&parameters))
             .await
+    }
+}
+
+impl CRUDRepository {
+    fn stored_predicate<'a>(
+        &'a self,
+        record: &Row,
+        by_where: Option<&'a dyn Where>,
+    ) -> Result<(Option<WhereClause>, Option<&'a dyn Where>)> {
+        match by_where {
+            Some(clause) => match self.inner.store_where(clause, false)? {
+                Some(stored) => Ok((Some(stored), None)),
+                None => Ok((None, Some(clause))),
+            },
+            None => Ok((
+                Some(self.inner.store_clause(&self.id_where(record)?, true)?),
+                None,
+            )),
+        }
     }
 }
 
