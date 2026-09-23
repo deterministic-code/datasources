@@ -6,11 +6,11 @@ import { QueryStatement } from "./statements/QueryStatement.ts";
 import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import { statementsOf } from "./RepositoryStatements.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
-import { CRUDMapper } from "./CRUDMapper.ts";
+import { CRUDMapperOptions } from "./CRUDMapperOptions.ts";
 
-describe("CRUDMapper", () => {
+describe("CRUDMapperOptions", () => {
   it("defaults are identity", () => {
-    const mapper = new CRUDMapper<string>();
+    const mapper = new CRUDMapperOptions<string>();
     expect(mapper.rows.map("x")).toBe("x");
     expect(mapper.rows.reverseMap("x")).toBe("x");
     expect(mapper.entity.map("id")).toBe("id");
@@ -22,7 +22,7 @@ describe("CRUDMapper", () => {
   });
 
   it("rewrites each finished statement", () => {
-    const mapper = new CRUDMapper({
+    const mapper = new CRUDMapperOptions({
       query: new TransformMapper(
         (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
         (query) => query,
@@ -54,7 +54,7 @@ describe("CRUDMapper", () => {
   });
 
   it("rewrites a finished return call", () => {
-    const mapper = new CRUDMapper({
+    const mapper = new CRUDMapperOptions({
       return: new TransformMapper(
         (ret) => new ReturnStatement(`${ret.getText()} /* mapped */`),
         (ret) => ret,
@@ -66,7 +66,7 @@ describe("CRUDMapper", () => {
   });
 
   it("maps rows through rows", () => {
-    const mapper = new CRUDMapper({
+    const mapper = new CRUDMapperOptions({
       rows: new TransformMapper(
         (row: { name: string }) => ({ name: row.name.toUpperCase() }),
         (row) => row,

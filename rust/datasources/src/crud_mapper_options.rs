@@ -3,7 +3,7 @@ use crate::row::Row;
 use crate::value::Value;
 use std::sync::Arc;
 
-pub struct CRUDMapper {
+pub struct CRUDMapperOptions {
     pub entity: TransformMapper<String, String>,
     pub columns: TransformMapper<String, String>,
     pub query: Option<Arc<TransformMapper<String, String>>>,
@@ -15,7 +15,7 @@ pub struct CRUDMapper {
     pub create: TransformMapper<Value, Row>,
 }
 
-impl CRUDMapper {
+impl CRUDMapperOptions {
     pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> Self {
         Self {
             entity: TransformMapper::new(|name| name, |name| name),

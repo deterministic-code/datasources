@@ -28,7 +28,7 @@ public sealed class RepositoryStatements
         this.delete = delete;
     }
 
-    public IReadOnlyList<string> Columns => columns;
+    public IReadOnlyList<string> ReadColumns => columns;
 
     public IQuery Query(IWhere? where = null) =>
         Mapped(new QueryStatement(table, columns, where), query);

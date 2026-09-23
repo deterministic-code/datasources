@@ -3,7 +3,7 @@ import {
   CRUDRepository,
   QueryStatement,
   RowTypeConverter,
-  CRUDMapper,
+  CRUDMapperOptions,
   TransformMapper,
   Where,
   WhereClause,
@@ -52,7 +52,7 @@ const create = (overrides: Partial<RepositoryOptions<Cells>> = {}) => {
     ...overrides,
     type,
     entity: overrides.entity ?? "users",
-    mapping: overrides.mapping ?? new RowTypeConverter(),
+    rowConverter: overrides.rowConverter ?? new RowTypeConverter(),
   };
   const repo = new CRUDRepository<Cells>(connection, options);
   return { repo, command };
@@ -123,7 +123,7 @@ describe("CRUDRepository", () => {
 
   it("skips apply when create identity is missing", async () => {
     const { repo, command } = create({
-      crudMapper: new CRUDMapper({
+      crudMapper: new CRUDMapperOptions({
         create: new TransformMapper(() => undefined as never, () => null),
       }),
     });
@@ -182,7 +182,7 @@ describe("CRUDRepository", () => {
     const typed = new CRUDRepository(connection, {
       type: asType(Item),
       entity: "users",
-      mapping: new RowTypeConverter(),
+      rowConverter: new RowTypeConverter(),
     });
     await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
@@ -221,10 +221,12 @@ describe("CRUDRepository", () => {
 
   it("applies mapper after row converter", async () => {
     const { repo, command } = create({
-      mapper: new TransformMapper<Cells, Cells>(
-        (row) => ({ ...row, name: String(row.name).toUpperCase() }),
-        (row) => ({ ...row, name: String(row.name).toLowerCase() }),
-      ),
+      crudMapper: new CRUDMapperOptions({
+        rows: new TransformMapper<Cells, Cells>(
+          (row) => ({ ...row, name: String(row.name).toUpperCase() }),
+          (row) => ({ ...row, name: String(row.name).toLowerCase() }),
+        ),
+      }),
     });
     command.reader = new MockReader([{ id: 1, name: "a" }]);
     expect(await repo.readSingle()).toEqual({ id: 1, name: "A" });
@@ -237,8 +239,8 @@ describe("CRUDRepository", () => {
     const repo = new CRUDRepository<User>(connection, {
       type: User,
       entity: "users",
-      mapping: new RowTypeConverter<User>(),
-      mapper: userContactsMapper(),
+      rowConverter: new RowTypeConverter<User>(),
+      crudMapper: new CRUDMapperOptions({ rows: userContactsMapper() }),
     });
     const flat = {
       id: 1,
@@ -264,8 +266,8 @@ describe("CRUDRepository", () => {
     const repo = new CRUDRepository<User>(connection, {
       type: User,
       entity: "users",
-      mapping: new RowTypeConverter<User>(),
-      mapper: userContactsMapper(),
+      rowConverter: new RowTypeConverter<User>(),
+      crudMapper: new CRUDMapperOptions({ rows: userContactsMapper() }),
     });
     const user = Object.assign(new User(), {
       id: 1,
@@ -322,7 +324,7 @@ describe("CRUDRepository", () => {
       (name) => name,
     );
     const { repo, command } = create({
-      crudMapper: new CRUDMapper({
+      crudMapper: new CRUDMapperOptions({
         entity,
         columns,
         query: new TransformMapper(

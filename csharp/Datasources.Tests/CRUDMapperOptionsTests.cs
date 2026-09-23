@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-public class CRUDMapperTests
+public class CRUDMapperOptionsTests
 {
     sealed class UserRow
     {
@@ -23,7 +23,7 @@ public class CRUDMapperTests
         },
         static name => name);
 
-    static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(CRUDMapper<UserRow> mapper)
+    static (CRUDRepository<UserRow> Repo, MockCommand Command) Create(CRUDMapperOptions<UserRow> mapper)
     {
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
@@ -38,7 +38,7 @@ public class CRUDMapperTests
     [Fact]
     public async Task BuilderMapsEntityAndColumns()
     {
-        var (repo, command) = Create(new CRUDMapper<UserRow> { Entity = Entity(), Columns = Columns() });
+        var (repo, command) = Create(new CRUDMapperOptions<UserRow> { Entity = Entity(), Columns = Columns() });
         command.Reader = new MockReader<Row>([]);
         await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
@@ -81,7 +81,7 @@ public class CRUDMapperTests
     [Fact]
     public void ReturnMapperRewritesFinishedSql()
     {
-        var mapper = new CRUDMapper<UserRow>
+        var mapper = new CRUDMapperOptions<UserRow>
         {
             Return = new TransformMapper<IReturnStatement, IReturnStatement>(
                 ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
@@ -95,7 +95,7 @@ public class CRUDMapperTests
     [Fact]
     public async Task BuilderThenCRUDMapper()
     {
-        var (repo, command) = Create(new CRUDMapper<UserRow>
+        var (repo, command) = Create(new CRUDMapperOptions<UserRow>
         {
             Entity = Entity(),
             Columns = Columns(),

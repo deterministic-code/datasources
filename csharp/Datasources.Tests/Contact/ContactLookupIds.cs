@@ -11,7 +11,7 @@ internal static class ContactLookupIds
             var row = await new CRUDRepository<T>(connection, new RepositoryOptions<T>
             {
                 Entity = entity,
-                Columns = ["id", "name"]
+                ReadColumns = ["id", "name"]
             }).ReadSingle(new WhereClause(new Operator.Equals("name", name)));
             return row?.id ?? throw new InvalidOperationException($"{entity} '{name}' missing");
         }

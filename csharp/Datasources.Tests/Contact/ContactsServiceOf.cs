@@ -11,7 +11,7 @@ internal static class ContactsServiceOf
             var repo = new CRUDRepository<T>(connection, new RepositoryOptions<T>
             {
                 Entity = entity,
-                Columns = columns
+                ReadColumns = columns
             });
             return middleware is null ? repo : repo.AddMiddleware(middleware);
         }

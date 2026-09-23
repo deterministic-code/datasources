@@ -1,28 +1,38 @@
-# CRUDMapper
+# CRUDMapperOptions
 
-Collection of mappers for a CRUD repository. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete. [Rows](#crudmapper-rows) is the read-row mapper; [CRUDRepository.Mapper](./crud-repository.md) aliases it.
+Collection of mappers for a CRUD repository. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete. [Rows](#crudmapperoptions-rows) is the read-row mapper; [CRUDRepository.Mapper](./crud-repository.md) aliases it.
 
 ## Classes
 
 ::: reference
 ### typescript
-#### CRUDMapper
+#### CRUDMapperOptions
 
 ```typescript
-class CRUDMapper<T>
+class CRUDMapperOptions<T>
 ```
 
 **Constructor**
 
-##### CRUDMapper(options?)
+##### CRUDMapperOptions(options?)
 
-Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#crudmapper-rows) mapper.
+Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#crudmapperoptions-rows) mapper.
 
 ```typescript
-constructor(options?: CRUDMapperOptions<T>)
+constructor(options?: {
+  entity?: IMapper<string, string>;
+  columns?: IMapper<string, string>;
+  rows?: IMapper<T, T>;
+  query?: IMapper<IQuery, IQuery>;
+  insert?: IMapper<IInsertStatement, IInsertStatement>;
+  update?: IMapper<IUpdateStatement, IUpdateStatement>;
+  delete?: IMapper<IDeleteStatement, IDeleteStatement>;
+  return?: IMapper<IReturnStatement, IReturnStatement>;
+  create?: IMapper<Scalar, T>;
+})
 ```
 
-- `options` — [CRUDMapperOptions](#crudmapperoptions)
+- `options` — optional field overrides
 
 **Properties**
 
@@ -98,85 +108,11 @@ Maps `Response.result` onto a created item after insert. Default writes the valu
 readonly create: IMapper<Scalar, T>
 ```
 
+### csharp
 #### CRUDMapperOptions
 
-```typescript
-type CRUDMapperOptions<T>
-```
-
-Constructor bag for [CRUDMapper](#crudmapper).
-
-**Properties**
-
-##### entity
-
-Maps the table or entity name.
-
-```typescript
-entity?: IMapper<string, string>
-```
-
-##### columns
-
-Maps column names.
-
-```typescript
-columns?: IMapper<string, string>
-```
-
-##### rows
-
-Read-row [Mapper](./mappers.md).
-
-```typescript
-rows?: IMapper<T, T>
-```
-
-##### create
-
-Maps `Response.result` onto a created item after insert.
-
-```typescript
-create?: IMapper<Scalar, T>
-```
-
-##### query
-
-Rewrites a finished [IQuery](./query-statement.md#iquery).
-
-```typescript
-query?: IMapper<IQuery, IQuery>
-```
-
-##### insert
-
-Rewrites a finished [IInsertStatement](./insert-statement.md#iinsertstatement).
-
-```typescript
-insert?: IMapper<IInsertStatement, IInsertStatement>
-```
-
-##### update
-
-Rewrites a finished [IUpdateStatement](./update-statement.md#iupdatestatement).
-
-```typescript
-update?: IMapper<IUpdateStatement, IUpdateStatement>
-```
-
-##### delete
-
-Rewrites a finished [IDeleteStatement](./delete-statement.md#ideletestatement).
-
-```typescript
-delete?: IMapper<IDeleteStatement, IDeleteStatement>
-```
-
-### csharp
-#### CRUDMapper
-
 ```csharp
-public sealed class CRUDMapper<T> where T : new()
+public sealed class CRUDMapperOptions<T> where T : new()
 ```
 
 **Properties**
@@ -254,10 +190,10 @@ IMapper<Value, T> Create { get; init; }
 ```
 
 ### rust
-#### CRUDMapper
+#### CRUDMapperOptions
 
 ```rust
-pub struct CRUDMapper
+pub struct CRUDMapperOptions
 ```
 
 **Properties**
@@ -347,7 +283,7 @@ pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> 
 - `source` — unused source label
 - `destination` — unused destination label
 
-**Returns** [CRUDMapper](#crudmapper)
+**Returns** [CRUDMapperOptions](#crudmapperoptions)
 
 ##### map_sql(mapper, text)
 
@@ -370,7 +306,7 @@ Apply mapping in either or both places:
 1. **Builder** — `RepositoryBuilder` maps `Entity` / `entity` and `Columns` / `columns` into `RepositoryStatements`.
 2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` / `Return` rewrite the finished statement.
 
-C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](./transform-mapper.md)`<String, String>` over SQL text via `CRUDMapper::map_sql`.
+C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](./transform-mapper.md)`<String, String>` over SQL text via `CRUDMapperOptions::map_sql`.
 
 `Repository.Mapper` / `mapper` aliases `Rows` / `rows`. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
 
@@ -379,21 +315,21 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 ### Rewrite a finished statement
 
 ::: example
-```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L56-L81
+```csharp csharp/Datasources.Tests/CRUDMapperOptionsTests.cs#L56-L81
 ```
 ```rust rust/datasources/src/tests/mod.rs#L1701-L1763
 ```
-```typescript typescript/datasources/src/CRUDMapper.test.ts#L22-L52
+```typescript typescript/datasources/src/CRUDMapperOptions.test.ts#L22-L52
 ```
 :::
 
 ### Rewrite a return call
 
 ::: example
-```csharp csharp/Datasources.Tests/CRUDMapperTests.cs#L84-L95
+```csharp csharp/Datasources.Tests/CRUDMapperOptionsTests.cs#L84-L95
 ```
 ```rust rust/datasources/src/tests/mod.rs#L1383-L1392
 ```
-```typescript typescript/datasources/src/CRUDMapper.test.ts#L54-L64
+```typescript typescript/datasources/src/CRUDMapperOptions.test.ts#L54-L64
 ```
 :::

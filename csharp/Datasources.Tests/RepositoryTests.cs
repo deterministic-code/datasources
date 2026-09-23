@@ -191,9 +191,12 @@ public class RepositoryTests
         var repo = new CRUDRepository<UserRow>(connection, new RepositoryOptions<UserRow>
         {
             Entity = "users",
-            Mapper = new TransformMapper<UserRow, UserRow>(
-                row => { row.name = row.name.ToUpperInvariant(); return row; },
-                row => { row.name = row.name.ToLowerInvariant(); return row; })
+            CRUDMapper = new CRUDMapperOptions<UserRow>
+            {
+                Rows = new TransformMapper<UserRow, UserRow>(
+                    row => { row.name = row.name.ToUpperInvariant(); return row; },
+                    row => { row.name = row.name.ToLowerInvariant(); return row; })
+            }
         });
         command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
         Assert.Equal("A", (await repo.ReadSingle())!.name);
@@ -208,7 +211,7 @@ public class RepositoryTests
         var repo = new CRUDRepository<User>(connection, new RepositoryOptions<User>
         {
             Entity = "users",
-            Mapper = UserContactsMapper()
+            CRUDMapper = new CRUDMapperOptions<User> { Rows = UserContactsMapper() }
         });
         command.Reader = new MockReader<Row>([new Row
         {
@@ -248,7 +251,7 @@ public class RepositoryTests
         var repo = new CRUDRepository<User>(connection, new RepositoryOptions<User>
         {
             Entity = "users",
-            Mapper = UserContactsMapper()
+            CRUDMapper = new CRUDMapperOptions<User> { Rows = UserContactsMapper() }
         });
         var user = new User
         {

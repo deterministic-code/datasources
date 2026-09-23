@@ -168,7 +168,7 @@ const back = mapper.reverseMap(flat);
 ```
 :::
 
-See [Mapper](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`, and [CRUDMapper](./sections/crud-mapper.md).
+See [Mapper](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`, and [CRUDMapperOptions](./sections/crud-mapper.md).
 
 ## Type Converter
 

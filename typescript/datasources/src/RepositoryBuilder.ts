@@ -2,8 +2,7 @@ import type { IConnection } from "./IConnection.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { CRUDMapper } from "./CRUDMapper.ts";
-import { TransformMapper } from "./mappers/TransformMapper.ts";
+import { CRUDMapperOptions } from "./CRUDMapperOptions.ts";
 import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { RepositoryOptions } from "./RepositoryOptions.ts";
@@ -18,19 +17,12 @@ export const parts = <T>(
 ): BuiltRepository<T> => {
   const types = { ...options.rowTypeConverters };
   const rowConverter =
-    options.mapping ?? new RowTypeConverter<T>(types, options.fields);
+    options.rowConverter ?? new RowTypeConverter<T>(types);
   if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
     Object.assign(rowConverter.types, types);
-  const names = new TransformMapper<string, string>((name) => name, (name) => name);
-  const crudMapper =
-    options.crudMapper ??
-    new CRUDMapper({
-      entity: names,
-      columns: names,
-      rows: options.mapper ?? new TransformMapper<T, T>((value) => value, (value) => value),
-    });
+  const crudMapper = options.crudMapper ?? new CRUDMapperOptions();
   const entity = crudMapper.entity.map(options.entity ?? options.type?.name ?? "");
-  const columns = [...(options.columns ?? (options.type ? fieldNamesOf(options.type) : []))]
+  const columns = [...(options.readColumns ?? (options.type ? fieldNamesOf(options.type) : []))]
     .map((name) => crudMapper.columns.map(name))
     .sort((left, right) => left.localeCompare(right));
   return {
@@ -38,7 +30,7 @@ export const parts = <T>(
     rowConverter,
     crudMapper,
     statements: statementsOf(entity, columns, crudMapper),
-    columns,
+    readColumns: columns,
     ids: options.ids ?? (options.type ? defaultId(fieldNamesOf(options.type)) : []),
     type: options.type ?? (Object as never as Constructable<T>),
   };

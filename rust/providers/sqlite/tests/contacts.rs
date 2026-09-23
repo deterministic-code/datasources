@@ -68,7 +68,7 @@ async fn maps_join_rows_to_nested_contacts() {
 
     let mut cells = RepositoryOptions::default();
     cells.entity = "contacts_base".into();
-    cells.mapping = Some(RowTypeConverter::new(Vec::new()));
+    cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
     let join_repo = CRUDRepository::new(conn, cells).expect("join repo");
     let contacts = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),

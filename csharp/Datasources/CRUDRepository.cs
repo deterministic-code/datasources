@@ -10,7 +10,7 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     public CRUDRepository(IConnection connection, RepositoryOptions<T> options) :
         this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
-    public CRUDMapper<T> CRUDMapper { get; }
+    public CRUDMapperOptions<T> CRUDMapper { get; }
 
     public CRUDRepository(BuiltRepository<T> built) : base(
         built.Connection, built.RowConverter, built.CRUDMapper.Rows, built.Statements)

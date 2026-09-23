@@ -8,19 +8,13 @@ public static class RepositoryBuilder<T> where T : new()
     public static BuiltRepository<T> Parts(IConnection connection, RepositoryOptions<T> options)
     {
         var types = options.RowTypeConverters ?? new Dictionary<string, TypeConverter<Value, Value>>();
-        var rowConverter = options.Mapping ?? new RowTypeConverter<T>(types, options.Fields);
+        var rowConverter = options.RowConverter ?? new RowTypeConverter<T>(types);
         if (rowConverter is RowTypeConverter<T> row && row.Types.Count == 0)
             foreach (var (key, converter) in types)
                 row.Types[key] = converter;
-        var names = new TransformMapper<string, string>(static name => name, static name => name);
-        var crudMapper = options.CRUDMapper ?? new CRUDMapper<T>
-        {
-            Entity = names,
-            Columns = names,
-            Rows = options.Mapper ?? new TransformMapper<T, T>(static value => value, static value => value)
-        };
+        var crudMapper = options.CRUDMapper ?? new CRUDMapperOptions<T>();
         var entity = crudMapper.Entity.Map(options.Entity ?? typeof(T).Name);
-        var columns = (options.Columns is { Count: > 0 } listed ? listed : Columns())
+        var columns = (options.ReadColumns is { Count: > 0 } listed ? listed : Columns())
             .Select(crudMapper.Columns.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();

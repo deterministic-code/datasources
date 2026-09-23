@@ -33,7 +33,7 @@ fn repo(
 ) -> Arc<dyn ICRUDRepository> {
     let mut options = RepositoryOptions::default();
     options.entity = entity.into();
-    options.mapping = Some(RowTypeConverter::new(columns(names)).with_fields(stamp_fields(field)));
+    options.row_converter = Some(RowTypeConverter::new(columns(names)).with_fields(stamp_fields(field)));
     let mut repo = CRUDRepository::new(connection, options).expect("contacts repo");
     if let Some(middleware) = middleware {
         repo.add_middleware(middleware);

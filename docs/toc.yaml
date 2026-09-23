@@ -105,7 +105,7 @@ pages:
     group: Code Reference
     parent: Mapper
   - path: sections/crud-mapper.md
-    title: CRUD Mapper
+    title: CRUD Mapper Options
     group: Code Reference
     parent: CRUD Repository
   - path: sections/type-converters.md

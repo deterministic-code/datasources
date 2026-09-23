@@ -1,8 +1,8 @@
 use crate::built_repository::BuiltRepository;
 use crate::connection::Connection;
 use crate::converters::{Cells, RowTypeConverter};
-use crate::crud_mapper::CRUDMapper;
-use crate::mappers::{Mapper, TransformMapper};
+use crate::crud_mapper_options::CRUDMapperOptions;
+use crate::mappers::Mapper;
 use crate::repository_options::RepositoryOptions;
 use crate::result::Result;
 use crate::table_repository_statements::RepositoryStatements;
@@ -15,20 +15,14 @@ impl RepositoryBuilder {
         connection: Arc<dyn Connection>,
         options: RepositoryOptions,
     ) -> Result<BuiltRepository> {
-        let row_converter = match options.mapping {
+        let row_converter = match options.row_converter {
             Some(mapping) => mapping,
             None => RowTypeConverter::of::<Cells>(),
         }
-        .with_types(options.row_type_converters)
-        .with_fields(options.fields);
-        let crud_mapper = match (options.crud_mapper, options.mapper) {
-            (Some(mapper), _) => mapper,
-            (None, rows) => {
-                let mut mapper = CRUDMapper::identity(connection.provider(), "rust");
-                mapper.rows = rows.unwrap_or_else(|| TransformMapper::new(|row| row, |row| row));
-                mapper
-            }
-        };
+        .with_types(options.row_type_converters);
+        let crud_mapper = options
+            .crud_mapper
+            .unwrap_or_else(|| CRUDMapperOptions::identity(connection.provider(), "rust"));
         let mut columns: Vec<String> = row_converter
             .column_names()
             .iter()

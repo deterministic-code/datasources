@@ -2,7 +2,7 @@ use base64::Engine;
 use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CRUDMapper, CRUDRepository, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
+    CRUDMapperOptions, CRUDRepository, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
     DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository, InsertStatement, Literal,
     Operator, Parameter, QueryStatement, RepositoryBuilder, RepositoryOptions, Result, Row, Text,
     TransformMapper, TypeConverter, UpdateStatement, Value, WhereClause,
@@ -457,8 +457,8 @@ fn with_statement_sql(sql: String, write: bool, type_spec: &TypeSpec) -> String 
     }
 }
 
-fn crud_mapper_of(spec: &Spec, dialect: &RepositoryDialect) -> CRUDMapper {
-    let mut mapper = CRUDMapper::identity(dialect.provider, "rust");
+fn crud_mapper_of(spec: &Spec, dialect: &RepositoryDialect) -> CRUDMapperOptions {
+    let mut mapper = CRUDMapperOptions::identity(dialect.provider, "rust");
     mapper.rows = mappings_mapper(&spec.type_spec.mappings);
     let quote = dialect.quote;
     let Some(cfg) = &spec.type_spec.crud_mapper else {
@@ -656,7 +656,7 @@ pub async fn run(
     let options = RepositoryOptions {
         ids: spec.type_spec.ids.clone(),
         entity: spec.type_spec.table.clone(),
-        mapping: Some(mapping_of(&spec, dialect)),
+        row_converter: Some(mapping_of(&spec, dialect)),
         crud_mapper: Some(crud_mapper_of(&spec, dialect)),
         ..Default::default()
     };
