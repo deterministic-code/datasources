@@ -56,6 +56,7 @@ export type { Response } from "./Response.ts";
 export type { ITransaction } from "./ITransaction.ts";
 export { IsolationLevel } from "./IsolationLevel.ts";
 export type { IsolationLevel as IsolationLevelName } from "./IsolationLevel.ts";
+export type { Comparison } from "./statements/index.ts";
 export {
   ArrayExpression,
   CheckConstraint,
@@ -69,6 +70,12 @@ export {
   Literal,
   NotNull,
   Operator,
+  eq,
+  ne,
+  gt,
+  lt,
+  ge,
+  le,
   PrimaryKey,
   QueryStatement,
   ReferentialAction,

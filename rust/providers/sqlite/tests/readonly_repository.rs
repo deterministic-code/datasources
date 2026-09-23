@@ -1,8 +1,8 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use datasources::{
-    create_repository_options, Command, Connection, ConvertSchema, DictionaryMapper,
-    IReadonlyRepository, Operator, PluralizerMapper, ReadonlyRepository, RowTypeConverter, Value,
+    create_repository_options, eq, gt, Command, Connection, ConvertSchema, DictionaryMapper,
+    IReadonlyRepository, PluralizerMapper, ReadonlyRepository, RowTypeConverter, Value,
     WhereClause,
 };
 use std::sync::Arc;
@@ -56,15 +56,12 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     options.row_converter = Some(RowTypeConverter::of::<User>());
     let repo = ReadonlyRepository::new(connection, options.read).unwrap();
     let by_id = repo
-        .read_single_where(&WhereClause::new(Operator::equals("id", 1_i64)))
+        .read_single_where(&WhereClause::binary("id", eq, 1_i64))
         .await
         .unwrap()
         .unwrap();
     let disabled = repo
-        .read_where(&WhereClause::new(Operator::and(
-            Operator::equals("username", "grace"),
-            Operator::equals("is_enabled", 0_i64),
-        )))
+        .read_where(&WhereClause::binary("username", eq, "grace").and("is_enabled", eq, 0_i64))
         .await
         .unwrap();
     assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
@@ -102,22 +99,20 @@ async fn reads_user_by_guid_username_and_created() {
     ]));
     let repo = ReadonlyRepository::new(connection, options.read).unwrap();
     let by_id = repo
-        .read_single_where(&WhereClause::new(Operator::equals("id", ADA)))
+        .read_single_where(&WhereClause::binary("id", eq, ADA))
         .await
         .unwrap()
         .unwrap();
     let by_login = repo
-        .read_where(&WhereClause::new(Operator::and(
-            Operator::equals("username", "ada"),
-            Operator::equals("is_enabled", 1_i64),
-        )))
+        .read_where(&WhereClause::binary("username", eq, "ada").and("is_enabled", eq, 1_i64))
         .await
         .unwrap();
     let later = repo
-        .read_where(&WhereClause::new(Operator::and(
-            Operator::equals("is_enabled", 1_i64),
-            Operator::greater_than("created", "2024-01-01T00:00:00.000Z"),
-        )))
+        .read_where(&WhereClause::binary("is_enabled", eq, 1_i64).and(
+            "created",
+            gt,
+            "2024-01-01T00:00:00.000Z",
+        ))
         .await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));

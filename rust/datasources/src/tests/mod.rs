@@ -2484,3 +2484,29 @@ async fn bulk_delete_cascades_each_parent() {
     assert!(parents.snapshot().is_empty());
     assert_eq!(children.snapshot()[0]["label"], Value::from("keep"));
 }
+
+#[test]
+fn comparison_aliases() {
+    let equals = WhereClause::binary("username", eq, "grace");
+    let not_equals = WhereClause::binary("id", ne, 2_i64);
+    let greater = WhereClause::binary("n", gt, 0);
+    let less = WhereClause::binary("n", lt, 0);
+    let greater_or_equal = WhereClause::binary("n", ge, 0);
+    let less_or_equal = WhereClause::binary("n", le, 0);
+    let both = equals.clone().and("is_enabled", eq, 0);
+    let either = equals.clone().or("is_enabled", eq, 0);
+    assert_eq!(equals.get_text(), "username = $username");
+    assert_eq!(not_equals.get_text(), "id <> $id");
+    assert_eq!(greater.get_text(), "n > $n");
+    assert_eq!(less.get_text(), "n < $n");
+    assert_eq!(greater_or_equal.get_text(), "n >= $n");
+    assert_eq!(less_or_equal.get_text(), "n <= $n");
+    assert_eq!(
+        both.get_text(),
+        "username = $username AND is_enabled = $is_enabled"
+    );
+    assert_eq!(
+        either.get_text(),
+        "username = $username OR is_enabled = $is_enabled"
+    );
+}

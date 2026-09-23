@@ -458,22 +458,22 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 ### Read users by id and by username
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L57
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L56
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L40-L75
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L40-L72
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L29-L60
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L30-L54
 ```
 :::
 
 ### Read a user by guid, username, and created
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L60-L104
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L59-L100
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L78-L134
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L75-L129
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L62-L114
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L56-L96
 ```
 :::
 

@@ -16,6 +16,28 @@ impl WhereClause {
             condition: condition.into(),
         }
     }
+
+    pub fn binary(column: &str, op: fn(&str, Value) -> Operator, value: impl Into<Value>) -> Self {
+        Self::new(op(column, value.into()))
+    }
+
+    pub fn and(
+        self,
+        column: &str,
+        op: fn(&str, Value) -> Operator,
+        value: impl Into<Value>,
+    ) -> Self {
+        Self::new(Operator::and(self.condition, op(column, value.into())))
+    }
+
+    pub fn or(
+        self,
+        column: &str,
+        op: fn(&str, Value) -> Operator,
+        value: impl Into<Value>,
+    ) -> Self {
+        Self::new(Operator::or(self.condition, op(column, value.into())))
+    }
 }
 
 impl Text for WhereClause {

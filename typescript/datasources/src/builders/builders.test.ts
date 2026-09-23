@@ -24,6 +24,12 @@ import {
   UpdateStatement,
   Where,
   WhereClause,
+  eq,
+  ne,
+  gt,
+  lt,
+  ge,
+  le,
 } from "../index.ts";
 import type { ITableConstraint, TableConstraintKind } from "../index.ts";
 import type { Parameter } from "../index.ts";
@@ -336,5 +342,26 @@ describe("statements", () => {
     expect(new CreateIndexStatement("x").getText()).toBe("x");
     expect(new ExecuteStoredProcedureStatement("x").getText()).toBe("x");
     expect(new ReturnStatement("x").getText()).toBe("x");
+  });
+});
+
+describe("comparison aliases", () => {
+  it("renders comparison symbols", () => {
+    const equals = new WhereClause("username", eq, "grace");
+    const notEquals = new WhereClause("id", ne, 2);
+    const greater = new WhereClause("n", gt, 0);
+    const less = new WhereClause("n", lt, 0);
+    const greaterOrEqual = new WhereClause("n", ge, 0);
+    const lessOrEqual = new WhereClause("n", le, 0);
+    const both = equals.and("is_enabled", eq, 0);
+    const either = equals.or("is_enabled", eq, 0);
+    expect(equals.getText()).toBe("username = $username");
+    expect(notEquals.getText()).toBe("id <> $id");
+    expect(greater.getText()).toBe("n > $n");
+    expect(less.getText()).toBe("n < $n");
+    expect(greaterOrEqual.getText()).toBe("n >= $n");
+    expect(lessOrEqual.getText()).toBe("n <= $n");
+    expect(both.getText()).toBe("username = $username AND is_enabled = $is_enabled");
+    expect(either.getText()).toBe("username = $username OR is_enabled = $is_enabled");
   });
 });

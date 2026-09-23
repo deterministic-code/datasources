@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   DictionaryMapper,
-  Operator,
   PluralizerMapper,
   ReadonlyRepository,
   WhereClause,
+  eq,
+  gt,
 } from "@datasources/core";
 import { SqliteConnection } from "../src/connection.ts";
 
@@ -41,16 +42,9 @@ describe("readonly repository", () => {
       type: User,
       entityMapper: new PluralizerMapper(),
     });
-    const byId = await repo.readSingle(new WhereClause(new Operator.Equals("id", 1)));
+    const byId = await repo.readSingle(new WhereClause("id", eq, 1));
     const disabled: User[] = [];
-    for await (const row of repo.read(
-      new WhereClause(
-        new Operator.And(
-          new Operator.Equals("username", "grace"),
-          new Operator.Equals("is_enabled", 0),
-        ),
-      ),
-    ))
+    for await (const row of repo.read(new WhereClause("username", eq, "grace").and("is_enabled", eq, 0)))
       disabled.push(row);
     expect(byId?.username).toBe("ada");
     expect(byId?.is_enabled).toBe(1);
@@ -82,25 +76,13 @@ describe("readonly repository", () => {
         ["Opened", "created"],
       ]),
     });
-    const byId = await repo.readSingle(new WhereClause(new Operator.Equals("id", ada)));
+    const byId = await repo.readSingle(new WhereClause("id", eq, ada));
     const byLogin: UserAccount[] = [];
-    for await (const row of repo.read(
-      new WhereClause(
-        new Operator.And(
-          new Operator.Equals("username", "ada"),
-          new Operator.Equals("is_enabled", 1),
-        ),
-      ),
-    ))
+    for await (const row of repo.read(new WhereClause("username", eq, "ada").and("is_enabled", eq, 1)))
       byLogin.push(row);
     const later: UserAccount[] = [];
     for await (const row of repo.read(
-      new WhereClause(
-        new Operator.And(
-          new Operator.Equals("is_enabled", 1),
-          new Operator.GreaterThan("created", "2024-01-01T00:00:00.000Z"),
-        ),
-      ),
+      new WhereClause("is_enabled", eq, 1).and("created", gt, "2024-01-01T00:00:00.000Z"),
     ))
       later.push(row);
     expect(byId?.Login).toBe("ada");

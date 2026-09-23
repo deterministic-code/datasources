@@ -24,6 +24,18 @@ constructor(condition: IExpression)
 
 - `condition` — [IExpression](./expressions.md#iexpression)
 
+##### WhereClause(column, op, value)
+
+Builds a comparison from a column, a [Cmp](./expressions.md#cmp) alias, and a literal.
+
+```typescript
+constructor(column: string, op: Comparison, value: Scalar)
+```
+
+- `column` — column name
+- `op` — [Cmp](./expressions.md#cmp) alias such as `eq` or `gt`
+- `value` — [Scalar](#scalar)
+
 **Properties**
 
 ##### condition
@@ -54,6 +66,21 @@ getText(): string
 ```
 
 **Returns** `string`
+
+##### and(column, op, value) / or(column, op, value)
+
+Nests this clause with another comparison under [Operator.And](./expressions.md#operator) or `Operator.Or`.
+
+```typescript
+and(column: string, op: Comparison, value: Scalar): WhereClause
+or(column: string, op: Comparison, value: Scalar): WhereClause
+```
+
+- `column` — column name
+- `op` — [Cmp](./expressions.md#cmp) alias
+- `value` — [Scalar](#scalar)
+
+**Returns** [WhereClause](#whereclause)
 
 #### IWhere
 
@@ -118,6 +145,18 @@ public WhereClause(IExpression Condition)
 
 - `condition` — [IExpression](./expressions.md#iexpression)
 
+##### WhereClause(column, op, value)
+
+Builds a comparison from a column, a [Cmp](./expressions.md#cmp) alias, and a literal.
+
+```csharp
+public WhereClause(string column, Comparison op, Value? value)
+```
+
+- `column` — column name
+- `op` — [Cmp](./expressions.md#cmp) alias such as `eq` or `gt`
+- `value` — cell value
+
 **Properties**
 
 ##### Condition
@@ -148,6 +187,21 @@ public string GetText()
 ```
 
 **Returns** `string`
+
+##### And(column, op, value) / Or(column, op, value)
+
+Nests this clause with another comparison under `Operator.And` or `Operator.Or`.
+
+```csharp
+public WhereClause And(string column, Comparison op, Value? value)
+public WhereClause Or(string column, Comparison op, Value? value)
+```
+
+- `column` — column name
+- `op` — [Cmp](./expressions.md#cmp) alias
+- `value` — cell value
+
+**Returns** [WhereClause](#whereclause)
 
 #### IWhere
 
@@ -203,6 +257,35 @@ pub fn new(condition: impl Into<Expression>) -> Self
 ```
 
 - `condition` — [Expression](./expressions.md#expression) or [Operator](./expressions.md#operator)
+
+**Returns** [WhereClause](#whereclause)
+
+##### binary(column, op, value)
+
+Builds a comparison from a column, a [Cmp](./expressions.md#cmp) alias, and a literal.
+
+```rust
+pub fn binary(column: &str, op: fn(&str, Value) -> Operator, value: impl Into<Value>) -> Self
+```
+
+- `column` — column name
+- `op` — [Cmp](./expressions.md#cmp) alias such as `eq` or `gt`
+- `value` — [Value](#value)
+
+**Returns** [WhereClause](#whereclause)
+
+##### and(column, op, value) / or(column, op, value)
+
+Nests this clause with another comparison under `Operator::and` or `Operator::or`.
+
+```rust
+pub fn and(self, column: &str, op: fn(&str, Value) -> Operator, value: impl Into<Value>) -> Self
+pub fn or(self, column: &str, op: fn(&str, Value) -> Operator, value: impl Into<Value>) -> Self
+```
+
+- `column` — column name
+- `op` — [Cmp](./expressions.md#cmp) alias
+- `value` — [Value](#value)
 
 **Returns** [WhereClause](#whereclause)
 
@@ -267,7 +350,7 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-Construct the predicate with [Operator](./expressions.md#operator) records, then wrap it: `new WhereClause(new Operator.Equals("id", 9))`. [QueryStatement](./query-statement.md) / [UpdateStatement](./update-statement.md) / [DeleteStatement](./delete-statement.md) embed `WhereClause.GetText()` in the command SQL. Keep the [WhereClause](#whereclause) when the caller needs bound parameters. [StatementEvaluator](./statement-evaluator.md) interprets the same tree against a parameter map. Raw text [Where](#where) is not evaluable.
+Construct the predicate with [Operator](./expressions.md#operator) records, then wrap it: `new WhereClause(new Operator.Equals("id", 9))`. A column, [Cmp](./expressions.md#cmp) alias, and literal is the same tree: `new WhereClause("id", eq, 9)`. [QueryStatement](./query-statement.md) / [UpdateStatement](./update-statement.md) / [DeleteStatement](./delete-statement.md) embed `WhereClause.GetText()` in the command SQL. Keep the [WhereClause](#whereclause) when the caller needs bound parameters. [StatementEvaluator](./statement-evaluator.md) interprets the same tree against a parameter map. Raw text [Where](#where) is not evaluable.
 
 ## Examples
 
@@ -287,6 +370,25 @@ id = $id AND age > $age
 
 ```output [After: in]
 id IN ($id_0, $id_1)
+```
+:::
+
+### Column, alias, literal
+
+::: example
+```csharp csharp/Datasources.Tests/ComparisonAliasTests.cs#L11-L17
+```
+```rust rust/datasources/src/tests/mod.rs#L2490-L2496
+```
+```typescript typescript/datasources/src/builders/builders.test.ts#L350-L356
+```
+
+```output [After: equals]
+username = $username
+```
+
+```output [After: and]
+username = $username AND is_enabled = $is_enabled
 ```
 :::
 

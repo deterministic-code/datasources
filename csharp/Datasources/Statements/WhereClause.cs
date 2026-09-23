@@ -4,6 +4,15 @@ namespace Datasources;
 
 public sealed record WhereClause(IExpression Condition) : IWhere
 {
+    public WhereClause(string column, Comparison op, Value? value)
+        : this(op(column, value)) { }
+
+    public WhereClause And(string column, Comparison op, Value? value) =>
+        new(new Operator.And(Condition, op(column, value)));
+
+    public WhereClause Or(string column, Comparison op, Value? value) =>
+        new(new Operator.Or(Condition, op(column, value)));
+
     public string GetText() => Render(Condition);
     public IReadOnlyList<Parameter> Parameters => Collect(Condition);
 

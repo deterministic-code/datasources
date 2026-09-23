@@ -15,6 +15,8 @@ export type { ITableConstraint, TableConstraintKind } from "./ITableConstraint.t
 export type { Join, JoinKind } from "./Join.ts";
 export { Join } from "./Join.ts";
 export { Operator } from "./Operator.ts";
+export { eq, ne, gt, lt, ge, le } from "./Cmp.ts";
+export type { Comparison } from "./Cmp.ts";
 export { Identifier } from "./Identifier.ts";
 export { Literal } from "./Literal.ts";
 export { ArrayExpression } from "./ArrayExpression.ts";
