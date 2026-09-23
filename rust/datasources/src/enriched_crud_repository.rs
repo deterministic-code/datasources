@@ -4,13 +4,13 @@ use crate::enriched::Enriched;
 use crate::enriched_readonly_repository::EnrichedReadonlyRepository;
 use crate::enrichment::Enrichment;
 use crate::i_repository::IRepository;
-use crate::query::Query;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::value::Value;
 use crate::where_trait::Where;
 use crate::{Operator, WhereClause};
@@ -351,11 +351,11 @@ impl IRepository for EnrichedCRUDRepository {
 
 #[async_trait]
 impl IReadonlyRepository for EnrichedCRUDRepository {
-    async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
         self.enriched.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
         self.enriched.read(query).await
     }
 

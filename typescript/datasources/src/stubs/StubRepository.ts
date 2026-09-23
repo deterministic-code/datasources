@@ -1,5 +1,6 @@
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
+import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
@@ -16,7 +17,7 @@ export class StubRepository<T = unknown> extends ReadonlyRepository<T> implement
     super(type);
   }
 
-  async *read(_query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(_query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     notImplemented(this.provider);
   }
 

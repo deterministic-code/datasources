@@ -150,7 +150,7 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](./command.md#parameterdirection) parameters are binds only and stay out of the argument list.
+Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](./command.md#parameterdirection) parameters are binds only and stay out of the argument list. The name constructor keeps the parameter list on the statement so [ReadonlyRepository](./readonly-repository.md) can bind it.
 
 ## Examples
 

@@ -1,11 +1,12 @@
 import type { Scalar } from "./builders/Scalar.ts";
 import { Operator, WhereClause } from "./statements/index.ts";
 import type { Enrichment } from "./Enrichment.ts";
-import type { IQuery } from "./IQuery.ts";
+import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
+import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
-import type { IWhere } from "./IWhere.ts";
+import type { IWhere } from "./statements/IWhere.ts";
 import { keyOf, props, scalar } from "./RepositoryTreeNode.ts";
 
 export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
@@ -14,7 +15,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
   async *read(
     inner: IReadonlyRepository<T>,
     tree: IRepositoryTree,
-    query?: IQuery | IWhere,
+    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<T> {
     const items: T[] = [];
     for await (const item of inner.read(query)) items.push(item);

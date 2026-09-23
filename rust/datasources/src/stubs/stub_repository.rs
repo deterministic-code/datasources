@@ -1,10 +1,10 @@
 use super::not_implemented::fail;
 use crate::i_repository::IRepository;
-use crate::query::Query;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -35,11 +35,11 @@ impl IRepository for StubRepository {
 
 #[async_trait]
 impl IReadonlyRepository for StubRepository {
-    async fn read_single(&self, _query: Option<&dyn Query>) -> Result<Option<Row>> {
+    async fn read_single(&self, _query: Option<&dyn Statement>) -> Result<Option<Row>> {
         Err(fail(&self.provider))
     }
 
-    async fn read(&self, _query: Option<&dyn Query>) -> Result<Vec<Row>> {
+    async fn read(&self, _query: Option<&dyn Statement>) -> Result<Vec<Row>> {
         Err(fail(&self.provider))
     }
 

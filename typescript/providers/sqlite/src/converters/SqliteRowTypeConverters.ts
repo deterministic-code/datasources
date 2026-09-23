@@ -13,3 +13,12 @@ export const SqliteRowTypeConverters: Record<string, TypeConverter<Cell, Cell>> 
   binary: new BinaryConverter(),
 };
 
+export const reverse = (value: Cell): Cell =>
+  typeof value === "boolean"
+    ? SqliteRowTypeConverters.bool.reverseConvert(value)
+    : value instanceof Date
+      ? SqliteRowTypeConverters.datetime.reverseConvert(value)
+      : value instanceof Uint8Array
+        ? SqliteRowTypeConverters.binary.reverseConvert(value)
+        : value;
+

@@ -19,10 +19,10 @@ interface IReadonlyRepository<T = unknown> extends IRepository<T>
 Returns the first item, or `undefined` when the result is empty.
 
 ```typescript
-readSingle(query?: IQuery | IWhere): Promise<T | undefined>
+readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
 ```
 
-- `query` — optional query or where; omitted uses the default select
+- `query` — optional query, where, or stored procedure; omitted uses the default select
 
 **Returns** `Promise<T | undefined>`
 
@@ -31,10 +31,10 @@ readSingle(query?: IQuery | IWhere): Promise<T | undefined>
 Yields every item.
 
 ```typescript
-read(query?: IQuery | IWhere): AsyncIterable<T>
+read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
-- `query` — optional query or where; omitted uses the default select
+- `query` — optional query, where, or stored procedure; omitted uses the default select
 
 **Returns** `AsyncIterable<T>`
 
@@ -73,10 +73,10 @@ readonly type: Constructable<T>
 Yields every item. Table repositories convert then map; subclasses may override.
 
 ```typescript
-abstract read(query?: IQuery | IWhere): AsyncIterable<T>
+abstract read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
-- `query` — optional query or where; omitted uses the default select
+- `query` — optional query, where, or stored procedure; omitted uses the default select
 
 **Returns** `AsyncIterable<T>`
 
@@ -85,10 +85,10 @@ abstract read(query?: IQuery | IWhere): AsyncIterable<T>
 Returns the first item from [read](#readonlyrepository-read-query), or `undefined`.
 
 ```typescript
-readSingle(query?: IQuery | IWhere): Promise<T | undefined>
+readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
 ```
 
-- `query` — optional query or where; omitted uses the default select
+- `query` — optional query, where, or stored procedure; omitted uses the default select
 
 **Returns** `Promise<T | undefined>`
 
@@ -160,7 +160,7 @@ type?: Constructable<T>
 
 ##### rowTypeConverters
 
-Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The repository reverse-converts where literals and write values. A field converter wins for that property.
+Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository.
 
 ```typescript
 rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>
@@ -191,7 +191,7 @@ Returns the first item, or `default` when the result is empty.
 Task<T?> ReadSingle(IStatement? query = null)
 ```
 
-- `query` — optional statement or where; omitted uses the default select
+- `query` — optional query, where, or stored-procedure statement; omitted uses the default select
 
 **Returns** `Task<T?>`
 
@@ -203,7 +203,7 @@ Yields every item.
 IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
-- `query` — optional statement or where; omitted uses the default select
+- `query` — optional query, where, or stored-procedure statement; omitted uses the default select
 
 **Returns** `IAsyncEnumerable<T>`
 
@@ -233,7 +233,7 @@ Yields every item. Table repositories convert then map; subclasses may override.
 public virtual IAsyncEnumerable<T> Read(IStatement? query = null)
 ```
 
-- `query` — optional statement or where; omitted uses the default select
+- `query` — optional query, where, or stored-procedure statement; omitted uses the default select
 
 **Returns** `IAsyncEnumerable<T>`
 
@@ -245,7 +245,7 @@ Returns the first item from [Read](#readonlyrepository-read-query), or `default`
 public virtual Task<T?> ReadSingle(IStatement? query = null)
 ```
 
-- `query` — optional statement or where; omitted uses the default select
+- `query` — optional query, where, or stored-procedure statement; omitted uses the default select
 
 **Returns** `Task<T?>`
 
@@ -309,7 +309,7 @@ TypeConverter<T, Row>? RowConverter { get; init; }
 
 ##### RowTypeConverters
 
-Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The repository reverse-converts where literals and write values. A field converter wins for that property.
+Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository.
 
 ```csharp
 IReadOnlyDictionary<string, TypeConverter<Value, Value>>? RowTypeConverters { get; init; }
@@ -337,10 +337,10 @@ pub trait IReadonlyRepository: IRepository
 Returns the first row, or `None` when the result is empty.
 
 ```rust
-async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>
+async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>>
 ```
 
-- `query` — optional query; omitted uses the default select
+- `query` — optional query or stored procedure; omitted uses the default select
 
 **Returns** `Result<Option<Row>>`
 
@@ -349,10 +349,10 @@ async fn read_single(&self, query: Option<&dyn Query>) -> Result<Option<Row>>
 Returns every row.
 
 ```rust
-async fn read(&self, query: Option<&dyn Query>) -> Result<Vec<Row>>
+async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>>
 ```
 
-- `query` — optional query; omitted uses the default select
+- `query` — optional query or stored procedure; omitted uses the default select
 
 **Returns** `Result<Vec<Row>>`
 
@@ -440,7 +440,7 @@ pub row_converter: Option<RowTypeConverter>
 
 ##### row_type_converters
 
-Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The repository reverse-converts where literals and write values. A field converter wins for that property.
+Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository.
 
 ```rust
 pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
@@ -451,7 +451,7 @@ pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + S
 
 Repository read is convert, then map. See [TypeConverter](./type-converters.md) and [Mapper](./mappers.md).
 
-C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits where into `read_where` / `read_single_where`.
+C# and TypeScript accept a query, a where, or an [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md) (C#: `IStatement`, plus an `IWhere` overload). Rust `read` accepts a query or procedure [Statement](./statements.md). Where stays on `read_where` / `read_single_where`. Result rows still convert, then map. Procedure argument names are not rewritten as columns.
 
 ## Examples
 
@@ -474,6 +474,17 @@ C# and TypeScript accept `IQuery` / `IWhere` (C#: `IStatement`). Rust splits whe
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#L77-L129
 ```
 ```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L57-L97
+```
+:::
+
+### Call a stored procedure
+
+::: example
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#L99-L108
+```
+```rust rust/datasources/src/tests/mod.rs#L1428-L1444
+```
+```typescript typescript/datasources/src/repository.test.ts#L102-L109
 ```
 :::
 

@@ -61,7 +61,7 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
         foreach (var (name, value) in parameters)
         {
             var key = name[0] is '$' or '@' or ':' ? name : $"${name}";
-            command.Parameters.AddWithValue(key, value.ToObject() ?? DBNull.Value);
+            command.Parameters.AddWithValue(key, SqliteRowTypeConverters.Reverse(value).ToObject() ?? DBNull.Value);
         }
         return command;
     }

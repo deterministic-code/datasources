@@ -6,6 +6,7 @@ use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -39,7 +40,7 @@ impl ReadonlyEnrichmentStrategy for FlatToNestedReadonlyEnrichmentStrategy {
         &self,
         _inner: &dyn IReadonlyRepository,
         _tree: &RepositoryTree,
-        query: Option<&dyn Query>,
+        query: Option<&dyn Statement>,
     ) -> Result<Vec<Row>> {
         let rows = match &self.command {
             Some(command) => self.source.read(Some(command.as_ref())).await?,

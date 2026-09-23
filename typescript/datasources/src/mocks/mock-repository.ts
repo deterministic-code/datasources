@@ -1,5 +1,6 @@
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
+import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
@@ -8,8 +9,8 @@ import type { IWhere } from "../statements/IWhere.ts";
 
 export class MockRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   items: T[] = [];
-  readSingleCalls: Array<IQuery | IWhere | undefined> = [];
-  readCalls: Array<IQuery | IWhere | undefined> = [];
+  readSingleCalls: Array<IQuery | IWhere | IExecuteStoredProcedureStatement | undefined> = [];
+  readCalls: Array<IQuery | IWhere | IExecuteStoredProcedureStatement | undefined> = [];
   addCalls: T[] = [];
   updateCalls: Array<{ item: T; byWhere?: IWhere }> = [];
   deleteCalls: Array<{ item: T; byWhere?: IWhere }> = [];
@@ -29,7 +30,7 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     super(type);
   }
 
-  async readSingle(query?: IQuery | IWhere): Promise<T | undefined> {
+  async readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined> {
     this.readSingleCalls.push(query);
     if (this.readSingleError) {
       throw this.readSingleError;
@@ -37,7 +38,7 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     return this.items[0];
   }
 
-  async *read(query?: IQuery | IWhere): AsyncIterable<T> {
+  async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     this.readCalls.push(query);
     if (this.readError) {
       throw this.readError;

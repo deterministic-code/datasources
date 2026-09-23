@@ -1,4 +1,5 @@
-import { parametersToRecord, type Parameter } from "@datasources/core";
+import { parametersToRecord, type Cell, type Parameter } from "@datasources/core";
+import { reverse } from "./converters/PostgresRowTypeConverters.ts";
 import type { Scalar } from "./scalar.ts";
 
 const NAME = /\$([A-Za-z_][A-Za-z0-9_]*)/g;
@@ -30,6 +31,6 @@ export const bindParameters = (
   const record = parametersToRecord(parameters);
   const bound: Record<string, Scalar> = {};
   for (const [name, value] of Object.entries(record))
-    bound[name] = value as Scalar;
+    bound[name] = reverse(value as Cell) as Scalar;
   return bound;
 };

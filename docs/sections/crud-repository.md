@@ -139,10 +139,10 @@ addMiddleware(middleware: ICommandMiddleware): this
 Reads rows through [rowConverter](#repository-rowconverter) then [mapper](#repository-mapper).
 
 ```typescript
-read(query?: IQuery | IWhere): AsyncIterable<T>
+read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
-- `query` — optional query or where; omitted uses the default select
+- `query` — optional query, where, or stored procedure; omitted uses the default select
 
 **Returns** `AsyncIterable<T>`
 

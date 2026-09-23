@@ -310,6 +310,7 @@ describe("statements", () => {
     );
     const call = new ExecuteStoredProcedureStatement("save", [...fields]);
     expect(call.getText()).toBe("CALL save($id, $name)");
+    expect(call.parameters).toEqual(fields);
     expect(new ExecuteStoredProcedureStatement("save", []).getText()).toBe(
       "CALL save()",
     );
@@ -341,6 +342,7 @@ describe("statements", () => {
     expect(new CreateTableStatement("x").getText()).toBe("x");
     expect(new CreateIndexStatement("x").getText()).toBe("x");
     expect(new ExecuteStoredProcedureStatement("x").getText()).toBe("x");
+    expect(new ExecuteStoredProcedureStatement("x").parameters).toEqual([]);
     expect(new ReturnStatement("x").getText()).toBe("x");
   });
 });

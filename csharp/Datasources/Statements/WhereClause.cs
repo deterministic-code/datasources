@@ -13,6 +13,9 @@ public sealed record WhereClause(IExpression Condition) : IWhere
     public WhereClause Or(string column, Comparison op, Value? value) =>
         new(new Operator.Or(Condition, op(column, value)));
 
+    public WhereClause Map(Func<string, string> column, Func<string, Value, Value> value) =>
+        new(Rewrite(Condition, column, value));
+
     public string GetText() => Render(Condition);
     public IReadOnlyList<Parameter> Parameters => Collect(Condition);
 
@@ -103,4 +106,39 @@ public sealed record WhereClause(IExpression Condition) : IWhere
         ArrayExpression arr => arr.Elements.SelectMany(Collect).ToArray(),
         _ => throw new InvalidOperationException("empty expression")
     };
+
+    static IExpression Rewrite(
+        IExpression expression, Func<string, string> column, Func<string, Value, Value> value) =>
+        expression switch
+        {
+            WhereClause where => Rewrite(where.Condition, column, value),
+            Identifier id => new Identifier(column(id.Name)),
+            Literal => expression,
+            ArrayExpression arr => new ArrayExpression([.. arr.Elements.Select(element => Rewrite(element, column, value))]),
+            Operator.Not not => new Operator.Not(Rewrite(not.Argument, column, value)),
+            Operator.And(var left, var right) => new Operator.And(Rewrite(left, column, value), Rewrite(right, column, value)),
+            Operator.Or(var left, var right) => new Operator.Or(Rewrite(left, column, value), Rewrite(right, column, value)),
+            Operator.In(var left, var right) => new Operator.In(Rewrite(left, column, value), InRight(left, right, column, value)),
+            Operator.Equals(var left, var right) => new Operator.Equals(Side(left, right, column, value), Side(right, left, column, value)),
+            Operator.NotEquals(var left, var right) => new Operator.NotEquals(Side(left, right, column, value), Side(right, left, column, value)),
+            Operator.GreaterThan(var left, var right) => new Operator.GreaterThan(Side(left, right, column, value), Side(right, left, column, value)),
+            Operator.LessThan(var left, var right) => new Operator.LessThan(Side(left, right, column, value), Side(right, left, column, value)),
+            Operator.GreaterThanOrEqual(var left, var right) => new Operator.GreaterThanOrEqual(Side(left, right, column, value), Side(right, left, column, value)),
+            Operator.LessThanOrEqual(var left, var right) => new Operator.LessThanOrEqual(Side(left, right, column, value), Side(right, left, column, value)),
+            _ => throw new InvalidOperationException("empty expression")
+        };
+
+    static IExpression Side(
+        IExpression expression, IExpression other, Func<string, string> column, Func<string, Value, Value> value) =>
+        expression is Literal lit && other is Identifier id
+            ? new Literal(value(id.Name, lit.Value))
+            : Rewrite(expression, column, value);
+
+    static IExpression InRight(
+        IExpression left, IExpression right, Func<string, string> column, Func<string, Value, Value> value) =>
+        left is Identifier id && right is ArrayExpression arr
+            ? new ArrayExpression([.. arr.Elements.Select(element => element is Literal lit
+                ? (IExpression)new Literal(value(id.Name, lit.Value))
+                : Rewrite(element, column, value))])
+            : Rewrite(right, column, value);
 }
