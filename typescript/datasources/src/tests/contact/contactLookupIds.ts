@@ -14,7 +14,7 @@ const of = async <T extends { id: number; name: string }>(
   entity: string,
   name: string,
 ): Promise<number> => {
-  const row = await new CRUDRepository(connection, { type, entity, columns: ["id", "name"] }).readSingle(
+  const row = await new CRUDRepository(connection, { type, entity, readColumns: ["id", "name"] }).readSingle(
     new WhereClause(new Operator.Equals("name", name)),
   );
   if (!row) throw new Error(`${entity} '${name}' missing`);

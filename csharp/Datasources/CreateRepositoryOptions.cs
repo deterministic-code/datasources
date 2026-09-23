@@ -18,7 +18,7 @@ public static class CreateRepositoryOptions
         {
             Ids = DefaultId(type),
             Entity = type.Name,
-            Types = types
+            RowTypeConverters = types
         };
 
     static IReadOnlyList<string> DefaultId(Type type)

@@ -7,7 +7,7 @@ import type { Scalar } from "./builders/Scalar.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 
-export type CRUDMapperOptions<T> = {
+type Options<T> = {
   entity?: IMapper<string, string>;
   columns?: IMapper<string, string>;
   rows?: IMapper<T, T>;
@@ -28,7 +28,7 @@ const defaultCreate = <T>(): IMapper<Scalar, T> =>
     () => null,
   );
 
-export class CRUDMapper<T> {
+export class CRUDMapperOptions<T> {
   readonly entity: IMapper<string, string>;
   readonly columns: IMapper<string, string>;
   readonly rows: IMapper<T, T>;
@@ -39,7 +39,7 @@ export class CRUDMapper<T> {
   readonly return?: IMapper<IReturnStatement, IReturnStatement>;
   readonly create: IMapper<Scalar, T>;
 
-  constructor(options: CRUDMapperOptions<T> = {}) {
+  constructor(options: Options<T> = {}) {
     this.entity = options.entity ?? new TransformMapper((name) => name, (name) => name);
     this.columns = options.columns ?? new TransformMapper((name) => name, (name) => name);
     this.rows =

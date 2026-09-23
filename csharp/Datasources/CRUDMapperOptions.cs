@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class CRUDMapper<T> where T : new()
+public sealed class CRUDMapperOptions<T> where T : new()
 {
     public IMapper<string, string> Entity { get; init; } =
         new TransformMapper<string, string>(static name => name, static name => name);

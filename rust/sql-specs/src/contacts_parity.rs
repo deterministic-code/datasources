@@ -49,7 +49,7 @@ pub async fn contacts_parity(
     let middleware = Arc::new(ConsoleCommandMiddleware::new().options(options));
     let mut cells = RepositoryOptions::default();
     cells.entity = "contacts_base".into();
-    cells.mapping = Some(RowTypeConverter::new(Vec::new()));
+    cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
     let mut join_repo = CRUDRepository::new(connection.clone(), cells).expect("join repo");
     join_repo.add_middleware(middleware.clone());
     let query = contacts_join_query();

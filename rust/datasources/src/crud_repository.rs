@@ -3,7 +3,7 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
-use crate::crud_mapper::CRUDMapper;
+use crate::crud_mapper_options::CRUDMapperOptions;
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
 use crate::mappers::Mapper;
@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 pub struct CRUDRepository {
     inner: ReadonlyRepository,
-    pub crud_mapper: Arc<CRUDMapper>,
+    pub crud_mapper: Arc<CRUDMapperOptions>,
     id: Vec<String>,
     ids: HashSet<String>,
 }
@@ -43,7 +43,7 @@ impl RepositoryBuilder {
 impl CRUDRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_options::<T>();
-        options.mapping = Some(RowTypeConverter::of::<T>());
+        options.row_converter = Some(RowTypeConverter::of::<T>());
         let mut repo = Self::new(connection, options)?;
         repo.inner.entity_type = TypeId::of::<T>();
         Ok(repo)

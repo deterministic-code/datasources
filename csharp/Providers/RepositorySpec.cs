@@ -47,10 +47,10 @@ public static class RepositorySpec
         var built = RepositoryBuilder<T>.Parts(session.Connection, new()
         {
             Entity = spec.Type.Table,
-            Mapping = mapping,
+            RowConverter = mapping,
             CRUDMapper = CRUDMapperOf(spec.Type, MappingsMapper<T>(spec.Type.Mappings), quote),
             Ids = spec.Type.Ids,
-            Columns = [.. spec.Type.Fields.Keys],
+            ReadColumns = [.. spec.Type.Fields.Keys],
         });
         var repo = new CRUDRepository<T>(built).AddMiddleware(new ConsoleCommandMiddleware(line =>
         {
@@ -189,7 +189,7 @@ public static class RepositorySpec
     static string Unquote(string text) =>
         Regex.Replace(Regex.Replace(text, "`([^`]+)`", "$1"), "\"([^\"]+)\"", "$1");
 
-    static CRUDMapper<T> CRUDMapperOf<T>(TypeSpec type, IMapper<T, T> rows, Func<string, string> quote)
+    static CRUDMapperOptions<T> CRUDMapperOf<T>(TypeSpec type, IMapper<T, T> rows, Func<string, string> quote)
         where T : new() =>
         new()
         {

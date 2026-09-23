@@ -114,7 +114,7 @@ export type { IFlatToNestedMapper } from "./mappers/IFlatToNestedMapper.ts";
 export type { TypeMap, TypeMapFields } from "./mappers/TypeMap.ts";
 export type { TypeMapGroup } from "./mappers/TypeMapGroup.ts";
 export { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";
-export { CRUDMapper, type CRUDMapperOptions } from "./CRUDMapper.ts";
+export { CRUDMapperOptions } from "./CRUDMapperOptions.ts";
 export { TransformMapper } from "./mappers/TransformMapper.ts";
 export { TransformConverterMapper } from "./mappers/TransformConverterMapper.ts";
 export { RowTypeMapper } from "./mappers/RowTypeMapper.ts";

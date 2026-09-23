@@ -9,7 +9,7 @@ use std::sync::Arc;
 async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> Result<i64> {
     let mut options = RepositoryOptions::default();
     options.entity = entity.into();
-    options.mapping = Some(RowTypeConverter::new(vec!["id".into(), "name".into()]));
+    options.row_converter = Some(RowTypeConverter::new(vec!["id".into(), "name".into()]));
     let repo = CRUDRepository::new(connection, options)?;
     let row = repo
         .read_single_where(&WhereClause::new(Operator::equals(

@@ -4,7 +4,7 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
-use crate::crud_mapper::CRUDMapper;
+use crate::crud_mapper_options::CRUDMapperOptions;
 use crate::i_repository::IRepository;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
@@ -26,7 +26,7 @@ pub struct ReadonlyRepository {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: RowTypeConverter,
-    pub(crate) crud_mapper: Arc<CRUDMapper>,
+    pub(crate) crud_mapper: Arc<CRUDMapperOptions>,
     pub(crate) statements: RepositoryStatements,
     pub(crate) entity_type: TypeId,
 }
@@ -34,7 +34,7 @@ pub struct ReadonlyRepository {
 impl ReadonlyRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_repository_options::<T>();
-        options.mapping = Some(RowTypeConverter::of::<T>());
+        options.row_converter = Some(RowTypeConverter::of::<T>());
         let mut repo = Self::new(connection, options)?;
         repo.entity_type = TypeId::of::<T>();
         Ok(repo)

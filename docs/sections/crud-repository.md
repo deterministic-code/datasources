@@ -106,10 +106,10 @@ readonly rowConverter: TypeConverter<T, Cells>
 
 ##### crudMapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```typescript
-readonly crudMapper: CRUDMapper<T>
+readonly crudMapper: CRUDMapperOptions<T>
 ```
 
 ##### mapper
@@ -218,36 +218,28 @@ Table or entity name.
 entity?: string
 ```
 
-##### mapping
+##### rowConverter
 
 Row [TypeConverter](./type-converters.md).
 
 ```typescript
-mapping?: TypeConverter<T, Cells>
-```
-
-##### mapper
-
-Read-row [Mapper](./mappers.md).
-
-```typescript
-mapper?: IMapper<T, T>
+rowConverter?: TypeConverter<T, Cells>
 ```
 
 ##### crudMapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```typescript
-crudMapper?: CRUDMapper<T>
+crudMapper?: CRUDMapperOptions<T>
 ```
 
-##### columns
+##### readColumns
 
-Column names when mapping is omitted.
+SELECT column names. When omitted, public properties of `T` are used.
 
 ```typescript
-columns?: string[]
+readColumns?: string[]
 ```
 
 #### BuiltRepository
@@ -278,10 +270,10 @@ rowConverter: TypeConverter<T, Cells>
 
 ##### crudMapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```typescript
-crudMapper: CRUDMapper<T>
+crudMapper: CRUDMapperOptions<T>
 ```
 
 ##### statements
@@ -398,15 +390,15 @@ public Repository(BuiltRepository<T> built)
 
 ##### CRUDMapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```csharp
-CRUDMapper<T> CRUDMapper { get; }
+CRUDMapperOptions<T> CRUDMapper { get; }
 ```
 
 ##### Mapper
 
-Read-row [Mapper](./mappers.md). Alias of `CRUDMapper.Rows`.
+Read-row [Mapper](./mappers.md). Alias of `CRUDMapperOptions.Rows`.
 
 ```csharp
 IMapper<T, T> Mapper { get; }
@@ -502,36 +494,28 @@ Table or entity name.
 string? Entity { get; init; }
 ```
 
-##### Mapping
+##### RowConverter
 
 Row [TypeConverter](./type-converters.md).
 
 ```csharp
-TypeConverter<T, Row>? Mapping { get; init; }
-```
-
-##### Mapper
-
-Read-row [Mapper](./mappers.md).
-
-```csharp
-IMapper<T, T>? Mapper { get; init; }
+TypeConverter<T, Row>? RowConverter { get; init; }
 ```
 
 ##### CRUDMapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```csharp
-CRUDMapper<T>? CRUDMapper { get; init; }
+CRUDMapperOptions<T>? CRUDMapper { get; init; }
 ```
 
-##### Columns
+##### ReadColumns
 
-Column names when mapping is omitted.
+SELECT column names. When omitted, public properties of `T` are used.
 
 ```csharp
-IReadOnlyList<string>? Columns { get; init; }
+IReadOnlyList<string>? ReadColumns { get; init; }
 ```
 
 #### BuiltRepository
@@ -562,10 +546,10 @@ TypeConverter<T, Row> RowConverter { get; init; }
 
 ##### CRUDMapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```csharp
-CRUDMapper<T> CRUDMapper { get; init; }
+CRUDMapperOptions<T> CRUDMapper { get; init; }
 ```
 
 ##### Statements
@@ -680,10 +664,10 @@ pub fn from_built(built: BuiltRepository) -> Self
 
 ##### crud_mapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```rust
-pub crud_mapper: Arc<CRUDMapper>
+pub crud_mapper: Arc<CRUDMapperOptions>
 ```
 
 **Methods**
@@ -724,28 +708,20 @@ Table or entity name. Default `"items"`.
 pub entity: String
 ```
 
-##### mapping
+##### row_converter
 
 Row [RowTypeConverter](./row-type-converter.md).
 
 ```rust
-pub mapping: Option<RowTypeConverter>
-```
-
-##### mapper
-
-Read-row [TransformMapper](./transform-mapper.md).
-
-```rust
-pub mapper: Option<TransformMapper<Row, Row>>
+pub row_converter: Option<RowTypeConverter>
 ```
 
 ##### crud_mapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```rust
-pub crud_mapper: Option<CRUDMapper>
+pub crud_mapper: Option<CRUDMapperOptions>
 ```
 
 #### BuiltRepository
@@ -776,10 +752,10 @@ pub row_converter: RowTypeConverter
 
 ##### crud_mapper
 
-[CRUDMapper](./crud-mapper.md).
+[CRUDMapperOptions](./crud-mapper.md).
 
 ```rust
-pub crud_mapper: Arc<CRUDMapper>
+pub crud_mapper: Arc<CRUDMapperOptions>
 ```
 
 ##### statements
@@ -801,9 +777,9 @@ pub ids: Vec<String>
 
 ## Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `CRUDMapper.Create` / `create` maps `Response.Result` onto the created item.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `CRUDMapperOptions.Create` / `create` maps `Response.Result` onto the created item.
 
-`Mapper` / `mapper` aliases `CRUDMapper.Rows` / `rows`. See [CRUDMapper](./crud-mapper.md).
+`Mapper` / `mapper` aliases `CRUDMapperOptions.Rows` / `rows`. See [CRUDMapperOptions](./crud-mapper.md).
 
 ## Examples
 

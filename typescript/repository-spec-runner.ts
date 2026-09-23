@@ -8,7 +8,7 @@ import {
   QueryStatement,
   CRUDRepository,
   RowTypeConverter,
-  CRUDMapper,
+  CRUDMapperOptions,
   TransformMapper,
   UpdateStatement,
   Literal,
@@ -161,7 +161,7 @@ const crudMapperOf = (
   quote: (id: string) => string,
 ) => {
   const mapper: CRUDMapperSpec = type.crudMapper ?? {};
-  return new CRUDMapper<SpecRow>({
+  return new CRUDMapperOptions<SpecRow>({
     entity: new TransformMapper(
       (name) => quote(mapper.entity ?? name),
       (name) => name,
@@ -253,9 +253,9 @@ export const runRepositorySpec = async (
     ids: spec.type.ids,
     type: typeOf(spec.type),
     entity: spec.type.table,
-    mapping,
+    rowConverter: mapping,
     crudMapper: crudMapperOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
-    columns: Object.keys(spec.type.fields),
+    readColumns: Object.keys(spec.type.fields),
   });
   const logs: string[] = [];
   attach(repo, logs);

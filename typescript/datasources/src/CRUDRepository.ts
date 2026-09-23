@@ -12,7 +12,7 @@ import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { RepositoryOptions } from "./RepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
-import type { CRUDMapper } from "./CRUDMapper.ts";
+import type { CRUDMapperOptions } from "./CRUDMapperOptions.ts";
 import { builtOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
@@ -35,7 +35,7 @@ const asScalar = (value: Scalar | undefined): Scalar | undefined =>
   value == null ? undefined : value;
 
 export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
-  readonly crudMapper?: CRUDMapper<T>;
+  readonly crudMapper?: CRUDMapperOptions<T>;
   private readonly ids: Set<string>;
 
   constructor(type: Constructable<T>, connection: IConnection);

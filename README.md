@@ -223,7 +223,7 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and [CRUDMapper](#crud-mapper).
+See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and [CRUDMapperOptions](#crud-mapper-options).
 
 ### Type Converter
 
@@ -8962,7 +8962,7 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | Name | Description |
 | --- | --- |
 | rowConverter | Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper). |
-| crudMapper | [CRUDMapper](#crud-mapper). |
+| crudMapper | [CRUDMapperOptions](#crud-mapper-options). |
 | mapper | Read-row [Mapper](#mapper). Alias of `crudMapper.rows`. |
 | statements | SQL fragments for query / insert / update / delete. |
 
@@ -9140,10 +9140,9 @@ type RepositoryOptions<T = Cells>
 | --- | --- |
 | ids | Id column names. Default `["id"]`. |
 | entity | Table or entity name. |
-| mapping | Row [TypeConverter](#type-converter). |
-| mapper | Read-row [Mapper](#mapper). |
-| crudMapper | [CRUDMapper](#crud-mapper). |
-| columns | Column names when mapping is omitted. |
+| rowConverter | Row [TypeConverter](#type-converter). |
+| crudMapper | [CRUDMapperOptions](#crud-mapper-options). |
+| readColumns | SELECT column names. When omitted, public properties of `T` are used. |
 
 ##### BuiltRepository {#typescript-builtrepository}
 
@@ -9157,7 +9156,7 @@ type BuiltRepository<T = Cells>
 | --- | --- |
 | connection | Open [IConnection](#connection). |
 | rowConverter | Row [TypeConverter](#type-converter). |
-| crudMapper | [CRUDMapper](#crud-mapper). |
+| crudMapper | [CRUDMapperOptions](#crud-mapper-options). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 | type | Item constructor. |
@@ -9258,8 +9257,8 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 
 | Name | Description |
 | --- | --- |
-| CRUDMapper | [CRUDMapper](#crud-mapper). |
-| Mapper | Read-row [Mapper](#mapper). Alias of `CRUDMapper.Rows`. |
+| CRUDMapper | [CRUDMapperOptions](#crud-mapper-options). |
+| Mapper | Read-row [Mapper](#mapper). Alias of `CRUDMapperOptions.Rows`. |
 
 **Methods**
 
@@ -9434,10 +9433,9 @@ public sealed class RepositoryOptions<T> where T : new()
 | --- | --- |
 | Ids | Id column names. Default `["id"]`. |
 | Entity | Table or entity name. |
-| Mapping | Row [TypeConverter](#type-converter). |
-| Mapper | Read-row [Mapper](#mapper). |
-| CRUDMapper | [CRUDMapper](#crud-mapper). |
-| Columns | Column names when mapping is omitted. |
+| RowConverter | Row [TypeConverter](#type-converter). |
+| CRUDMapper | [CRUDMapperOptions](#crud-mapper-options). |
+| ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
 
 ##### BuiltRepository {#csharp-builtrepository}
 
@@ -9451,7 +9449,7 @@ public sealed record BuiltRepository<T> where T : new()
 | --- | --- |
 | Connection | Open [IConnection](#connection). |
 | RowConverter | Row [TypeConverter](#type-converter). |
-| CRUDMapper | [CRUDMapper](#crud-mapper). |
+| CRUDMapper | [CRUDMapperOptions](#crud-mapper-options). |
 | Statements | SQL fragments. |
 | Ids | Id column names. |
 
@@ -9551,7 +9549,7 @@ pub struct CRUDRepository
 
 | Name | Description |
 | --- | --- |
-| crud_mapper | [CRUDMapper](#crud-mapper). |
+| crud_mapper | [CRUDMapperOptions](#crud-mapper-options). |
 
 **Methods**
 
@@ -9648,9 +9646,8 @@ pub struct RepositoryOptions
 | --- | --- |
 | ids | Id column names. Default `["id"]`. |
 | entity | Table or entity name. Default `"items"`. |
-| mapping | Row [RowTypeConverter](#row-type-converter). |
-| mapper | Read-row [TransformMapper](#transform-mapper). |
-| crud_mapper | [CRUDMapper](#crud-mapper). |
+| row_converter | Row [RowTypeConverter](#row-type-converter). |
+| crud_mapper | [CRUDMapperOptions](#crud-mapper-options). |
 
 ##### BuiltRepository {#rust-builtrepository}
 
@@ -9664,15 +9661,15 @@ pub struct BuiltRepository
 | --- | --- |
 | connection | [Connection](#connection). |
 | row_converter | [RowTypeConverter](#row-type-converter). |
-| crud_mapper | [CRUDMapper](#crud-mapper). |
+| crud_mapper | [CRUDMapperOptions](#crud-mapper-options). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 
 ### Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `CRUDMapper.Create` / `create` maps `Response.Result` onto the created item.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `CRUDMapperOptions.Create` / `create` maps `Response.Result` onto the created item.
 
-`Mapper` / `mapper` aliases `CRUDMapper.Rows` / `rows`. See [CRUDMapper](#crud-mapper).
+`Mapper` / `mapper` aliases `CRUDMapperOptions.Rows` / `rows`. See [CRUDMapperOptions](#crud-mapper-options).
 
 ### Examples
 
@@ -11440,6 +11437,10 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1862-L1879)
 
 ```rust
+let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
+    ("id", Value::Int(1)),
+    ("type_id", Value::Int(10)),
+])]));
 let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
     ("id", Value::Int(10)),
     ("name", Value::from("org")),
@@ -11454,10 +11455,6 @@ let children = Arc::new(items_repository::ItemsRepository::new(vec![
         ("type_id", Value::Int(3)),
         ("label", Value::from("a")),
     ]),
-    record(&[
-        ("parent_id", Value::Int(1)),
-        ("type_id", Value::Int(9)),
-        ("label", Value::from("b")),
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)
@@ -11647,13 +11644,13 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Repository read is convert, then map. `CRUDMapper.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
+Repository read is convert, then map. `CRUDMapperOptions.Rows` / `rows` is the read-row mapper. `Repository.Mapper` / `mapper` aliases it.
 
 ### See also
 
 - [TransformMapper](#transform-mapper)
 - [FlatToNestedMapper](#flat-to-nested-mapper)
-- [CRUDMapper](#crud-mapper)
+- [CRUDMapperOptions](#crud-mapper-options)
 
 ## TransformMapper
 
@@ -11901,7 +11898,7 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [CRUDMapper](#crud-mapper) uses this for entity, column, and row mapping.
+Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [CRUDMapperOptions](#crud-mapper-options) uses this for entity, column, and row mapping.
 
 ### Examples
 
@@ -12937,25 +12934,25 @@ const flat = mapper.reverseMap(nested);
 ]
 ```
 
-## CRUDMapper
+## CRUDMapperOptions
 
-Collection of mappers for a CRUD repository. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete. [Rows](#crudmapper-rows) is the read-row mapper; [CRUDRepository.Mapper](#crud-repository) aliases it.
+Collection of mappers for a CRUD repository. Entity and column mappers run when the repository is built. Per-statement mappers rewrite a finished query / insert / update / delete. [Rows](#crudmapperoptions-rows) is the read-row mapper; [CRUDRepository.Mapper](#crud-repository) aliases it.
 
 ### Classes
 
 ##### TypeScript
 
-##### CRUDMapper {#typescript-crudmapper}
+##### CRUDMapperOptions {#typescript-crudmapperoptions}
 
 ```typescript
-class CRUDMapper<T>
+class CRUDMapperOptions<T>
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [CRUDMapper(options?)](#typescript-crudmapper-crudmapper-options) | Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-crudmapper-rows) mapper. |
+| [CRUDMapperOptions(options?)](#typescript-crudmapperoptions-crudmapperoptions-options) | Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-crudmapperoptions-rows) mapper. |
 
 **Properties**
 
@@ -12971,47 +12968,38 @@ class CRUDMapper<T>
 | rows | Read-row [Mapper](#mapper). |
 | create | Maps `Response.result` onto a created item after insert. Default writes the value onto `id`. |
 
-###### CRUDMapper(options?) {#typescript-crudmapper-crudmapper-options}
+###### CRUDMapperOptions(options?) {#typescript-crudmapperoptions-crudmapperoptions-options}
 
-Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-crudmapper-rows) mapper.
+Builds a CRUD mapper. Omitted fields default to identity name mappers and an identity [rows](#typescript-crudmapperoptions-rows) mapper.
 
 **Definition**
 
 ```typescript
-constructor(options?: CRUDMapperOptions<T>)
+constructor(options?: {
+  entity?: IMapper<string, string>;
+  columns?: IMapper<string, string>;
+  rows?: IMapper<T, T>;
+  query?: IMapper<IQuery, IQuery>;
+  insert?: IMapper<IInsertStatement, IInsertStatement>;
+  update?: IMapper<IUpdateStatement, IUpdateStatement>;
+  delete?: IMapper<IDeleteStatement, IDeleteStatement>;
+  return?: IMapper<IReturnStatement, IReturnStatement>;
+  create?: IMapper<Scalar, T>;
+})
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `options` | [CRUDMapperOptions](#typescript-crudmapperoptions) |
-
-##### CRUDMapperOptions {#typescript-crudmapperoptions}
-
-```typescript
-type CRUDMapperOptions<T>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| entity | Maps the table or entity name. |
-| columns | Maps column names. |
-| rows | Read-row [Mapper](#mapper). |
-| create | Maps `Response.result` onto a created item after insert. |
-| query | Rewrites a finished [IQuery](#typescript-iquery). |
-| insert | Rewrites a finished [IInsertStatement](#typescript-iinsertstatement). |
-| update | Rewrites a finished [IUpdateStatement](#typescript-iupdatestatement). |
-| delete | Rewrites a finished [IDeleteStatement](#typescript-ideletestatement). |
+| `options` | optional field overrides |
 
 ##### C#
 
-##### CRUDMapper {#csharp-crudmapper}
+##### CRUDMapperOptions {#csharp-crudmapperoptions}
 
 ```csharp
-public sealed class CRUDMapper<T> where T : new()
+public sealed class CRUDMapperOptions<T> where T : new()
 ```
 
 **Properties**
@@ -13030,10 +13018,10 @@ public sealed class CRUDMapper<T> where T : new()
 
 ##### Rust
 
-##### CRUDMapper {#rust-crudmapper}
+##### CRUDMapperOptions {#rust-crudmapperoptions}
 
 ```rust
-pub struct CRUDMapper
+pub struct CRUDMapperOptions
 ```
 
 **Properties**
@@ -13054,10 +13042,10 @@ pub struct CRUDMapper
 
 | Name | Description |
 | --- | --- |
-| [identity(source, destination)](#rust-crudmapper-identity-source-destination) | Identity CRUD mapper. Source and destination labels are unused. |
-| [map_sql(mapper, text)](#rust-crudmapper-map_sql-mapper-text) | Applies an optional SQL-text mapper. |
+| [identity(source, destination)](#rust-crudmapperoptions-identity-source-destination) | Identity CRUD mapper. Source and destination labels are unused. |
+| [map_sql(mapper, text)](#rust-crudmapperoptions-map_sql-mapper-text) | Applies an optional SQL-text mapper. |
 
-###### identity(source, destination) {#rust-crudmapper-identity-source-destination}
+###### identity(source, destination) {#rust-crudmapperoptions-identity-source-destination}
 
 Identity CRUD mapper. Source and destination labels are unused.
 
@@ -13076,9 +13064,9 @@ pub fn identity(_source: impl Into<String>, _destination: impl Into<String>) -> 
 
 **Returns**
 
-[CRUDMapper](#rust-crudmapper)
+[CRUDMapperOptions](#rust-crudmapperoptions)
 
-###### map_sql(mapper, text) {#rust-crudmapper-map_sql-mapper-text}
+###### map_sql(mapper, text) {#rust-crudmapperoptions-map_sql-mapper-text}
 
 Applies an optional SQL-text mapper.
 
@@ -13106,7 +13094,7 @@ Apply mapping in either or both places:
 1. **Builder** — `RepositoryBuilder` maps `Entity` / `entity` and `Columns` / `columns` into `RepositoryStatements`.
 2. **Per-statement** — `Query` / `Insert` / `Update` / `Delete` / `Return` rewrite the finished statement.
 
-C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](#transform-mapper)`<String, String>` over SQL text via `CRUDMapper::map_sql`.
+C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` / `delete` / `return_` are [TransformMapper](#transform-mapper)`<String, String>` over SQL text via `CRUDMapperOptions::map_sql`.
 
 `Repository.Mapper` / `mapper` aliases `Rows` / `rows`. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
 
@@ -13114,7 +13102,7 @@ C# and TypeScript rewrite statement objects. Rust `query` / `insert` / `update` 
 
 #### Rewrite a finished statement
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L56-L81)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperOptionsTests.cs#L56-L81)
 
 ```csharp
 query.GetText()
@@ -13123,18 +13111,54 @@ query.GetText()
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1701-L1763)
 
 ```rust
-"id" => "user_id".into(),
-"name" => "full_name".into(),
-_ => name,
+let command = Arc::new(MockCommand::new());
+let mut mapper = CRUDMapperOptions::identity("memory", "rust");
+mapper.entity = TransformMapper::new(
+    |name: String| match name.as_str() {
+        "users" => "people".into(),
+        _ => name,
+    },
+    |name| name,
+);
+mapper.columns = TransformMapper::new(
+    |name: String| match name.as_str() {
+        "id" => "user_id".into(),
+        "name" => "full_name".into(),
+        _ => name,
+    },
+    |name| name,
+);
+mapper.query = Some(Arc::new(TransformMapper::new(
+    |text: String| format!("{text} LIMIT 1"),
+    |text| text,
+)));
+let returning = |text: String| format!("{text} RETURNING id");
+mapper.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
+mapper.update = Some(Arc::new(TransformMapper::new(
+    |text: String| format!("{text} RETURNING id"),
+    |text| text,
+)));
+mapper.delete = Some(Arc::new(TransformMapper::new(
+    |text: String| format!("{text} RETURNING id"),
+    |text| text,
+)));
+let connection = MockConnection::with_command_provider(command.clone(), "memory");
+let mut options = RepositoryOptions::default();
+options.entity = "users".into();
+options.row_converter = Some(users_mapping());
+options.crud_mapper = Some(mapper);
+let repo = CRUDRepository::new(connection, options).unwrap();
+command.reader_rows.lock().unwrap().clear();
+assert!(repo.read_single(None).await.unwrap().is_none());
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L22-L52)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapperOptions.test.ts#L22-L52)
 
 ```typescript
 });
 
 it("rewrites each finished statement", () => {
-  const mapper = new CRUDMapper({
+  const mapper = new CRUDMapperOptions({
     query: new TransformMapper(
       (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
       (query) => query,
@@ -13159,7 +13183,7 @@ it("rewrites each finished statement", () => {
 
 #### Rewrite a return call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperTests.cs#L84-L95)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDMapperOptionsTests.cs#L84-L95)
 
 ```csharp
 Return = new TransformMapper<IReturnStatement, IReturnStatement>(
@@ -13173,16 +13197,16 @@ Return = new TransformMapper<IReturnStatement, IReturnStatement>(
     |text| text,
 )));
 let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
-let text = CRUDMapper::map_sql(&mapper.return_, built.get_text());
+let text = CRUDMapperOptions::map_sql(&mapper.return_, built.get_text());
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapper.test.ts#L54-L64)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDMapperOptions.test.ts#L54-L64)
 
 ```typescript
 });
 
 it("rewrites a finished return call", () => {
-  const mapper = new CRUDMapper({
+  const mapper = new CRUDMapperOptions({
     return: new TransformMapper(
       (ret) => new ReturnStatement(`${ret.getText()} /* mapped */`),
       (ret) => ret,

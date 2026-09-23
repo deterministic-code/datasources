@@ -11,7 +11,7 @@ mod console_command_middleware;
 pub mod converters;
 mod create;
 mod create_repository_options;
-mod crud_mapper;
+mod crud_mapper_options;
 mod crud_repository;
 mod datasource;
 mod datasource_error;
@@ -78,7 +78,7 @@ pub use converters::{
 };
 pub use create::{create, create_default, default};
 pub use create_repository_options::create_repository_options;
-pub use crud_mapper::CRUDMapper;
+pub use crud_mapper_options::CRUDMapperOptions;
 pub use crud_repository::CRUDRepository;
 pub use datasource::{BuiltDatasource, Datasource};
 pub use datasource_error::DatasourceError;
