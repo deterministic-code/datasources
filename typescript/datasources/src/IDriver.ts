@@ -13,5 +13,5 @@ export interface IDriver {
     connection: IConnection,
     isolation?: IsolationLevel,
   ): ITransaction;
-  types: Record<string, TypeConverter<Cell, Cell>>;
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>;
 }

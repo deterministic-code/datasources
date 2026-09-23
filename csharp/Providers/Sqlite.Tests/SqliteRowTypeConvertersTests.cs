@@ -2,12 +2,12 @@ using Datasources.Sqlite;
 
 namespace Datasources.Sqlite.Tests;
 
-public class SqliteTypesTests
+public class SqliteRowTypeConvertersTests
 {
     [Fact]
-    public void RegistersSqliteTypes()
+    public void RegistersSqliteRowTypeConverters()
     {
-        var types = new SqliteProvider().Types;
+        var types = new SqliteProvider().RowTypeConverters;
         Assert.Equal(["bool", "datetime", "uuid", "decimal", "binary"], types.Keys);
     }
 }

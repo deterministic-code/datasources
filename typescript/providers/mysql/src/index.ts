@@ -19,7 +19,7 @@ export type {
   MysqlQueryHeader,
 } from "./i-mysql-driver.ts";
 export { MysqlTransaction } from "./transaction.ts";
-export { MysqlTypes } from "./converters/MysqlTypes.ts";
+export { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
 export { BoolConverter } from "./converters/BoolConverter.ts";
 export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
 export { UuidConverter } from "./converters/UuidConverter.ts";

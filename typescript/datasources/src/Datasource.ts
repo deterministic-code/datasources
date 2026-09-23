@@ -28,7 +28,7 @@ export class Datasource implements IDatasource {
   createRepository = <T>(connection?: IConnection): ICRUDRepository<T> =>
     new CRUDRepository({
       connection: connection ?? this.defaultConnection(),
-      types: this.driver.types,
+      types: this.driver.rowTypeConverters,
     });
 
   createReadonlyRepository = <T>(

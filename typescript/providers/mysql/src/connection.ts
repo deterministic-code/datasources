@@ -9,7 +9,7 @@ import {
   type IsolationLevelName,
   type ITransaction,
 } from "@datasources/core";
-import "./converters/MysqlTypes.ts";
+import "./converters/MysqlRowTypeConverters.ts";
 import { MysqlCommand } from "./command.ts";
 import type { MysqlConnectionOptions } from "./connection-options.ts";
 import { requireDriver, type IMysqlDriver } from "./driver.ts";

@@ -5,7 +5,7 @@ import { DateTimeConverter } from "./DateTimeConverter.ts";
 import { DecimalConverter } from "./DecimalConverter.ts";
 import { UuidConverter } from "./UuidConverter.ts";
 
-export const SqliteTypes: Record<string, TypeConverter<Cell, Cell>> = {
+export const MysqlRowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {
   bool: new BoolConverter(),
   datetime: new DateTimeConverter(),
   uuid: new UuidConverter(),

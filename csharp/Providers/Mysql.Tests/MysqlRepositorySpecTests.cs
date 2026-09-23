@@ -12,7 +12,7 @@ public class MysqlRepositorySpecTests
     {
         var url = Environment.GetEnvironmentVariable("MYSQL_URL");
         if (string.IsNullOrEmpty(url)) return;
-        _ = MysqlTypes.All;
+        _ = MysqlRowTypeConverters.All;
         foreach (var path in RepositorySpec.Files())
         {
             var isolated = await Isolate(url);
@@ -25,7 +25,7 @@ public class MysqlRepositorySpecTests
                         Url = isolated.Url,
                         Driver = new MysqlDriver(),
                     });
-                    return new RepositorySpec.Session(conn, new MysqlCommand(conn), MysqlTypes.All);
+                    return new RepositorySpec.Session(conn, new MysqlCommand(conn), MysqlRowTypeConverters.All);
                 }, CreateTable, MysqlQuote.Quote);
             }
             finally

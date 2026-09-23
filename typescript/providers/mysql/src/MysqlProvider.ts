@@ -10,10 +10,10 @@ import type {
 } from "@datasources/core";
 import { MysqlConnection } from "./connection.ts";
 import { MysqlTransaction } from "./transaction.ts";
-import { MysqlTypes } from "./converters/MysqlTypes.ts";
+import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
 
 export class MysqlProvider implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = MysqlTypes;
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = MysqlRowTypeConverters;
   connection = (options?: DatasourceOptions): IConnection =>
     MysqlConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

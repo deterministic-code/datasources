@@ -10,10 +10,10 @@ import type {
 } from "@datasources/core";
 import { SqliteConnection } from "./connection.ts";
 import { SqliteTransaction } from "./transaction.ts";
-import { SqliteTypes } from "./converters/SqliteTypes.ts";
+import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
 
 export class SqliteProvider implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = SqliteTypes;
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
   connection = (options?: DatasourceOptions): IConnection =>
     SqliteConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

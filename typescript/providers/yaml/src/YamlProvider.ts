@@ -12,7 +12,7 @@ import {
 import { YamlConnection } from "./connection.ts";
 
 export class YamlProvider implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = {};
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   connection = (options?: DatasourceOptions): IConnection =>
     YamlConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

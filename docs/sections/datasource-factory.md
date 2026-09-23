@@ -122,12 +122,12 @@ transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
 
 **Returns** [ITransaction](./transaction.md)
 
-##### types
+##### rowTypeConverters
 
 Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
 
 ```typescript
-types: Record<string, TypeConverter<Cell, Cell>>
+rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
 ```
 
 **Returns** `Record<string, TypeConverter<Cell, Cell>>`
@@ -269,12 +269,12 @@ ITransaction Transaction(IConnection connection, IsolationLevel isolation = Isol
 
 **Returns** [ITransaction](./transaction.md)
 
-##### Types
+##### RowTypeConverters
 
 Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
 
 ```csharp
-IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; }
+IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
 ```
 
 **Returns** `IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
@@ -426,12 +426,12 @@ fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel
 
 **Returns** `Arc<dyn `[Transaction](./transaction.md)`>`
 
-##### types()
+##### row_type_converters()
 
 Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
 
 ```rust
-fn types(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
 ```
 
 **Returns** `HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`

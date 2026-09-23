@@ -19,7 +19,7 @@ export type {
   PostgresExecuteResult,
 } from "./i-postgres-driver.ts";
 export { PostgresTransaction } from "./transaction.ts";
-export { PostgresTypes } from "./converters/PostgresTypes.ts";
+export { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
 export { BoolConverter } from "./converters/BoolConverter.ts";
 export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
 export { UuidConverter } from "./converters/UuidConverter.ts";

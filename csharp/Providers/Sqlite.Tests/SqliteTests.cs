@@ -86,6 +86,6 @@ public class SqliteTests
         public ICommand Command(IConnection c) => c.CreateCommand();
         public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
             new SqliteTransaction((SqliteConnection)c, isolation);
-        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types => SqliteTypes.All;
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => SqliteRowTypeConverters.All;
     }
 }

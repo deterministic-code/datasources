@@ -73,7 +73,7 @@ impl Datasource for BuiltDatasource {
     ) -> Arc<dyn ICRUDRepository> {
         let connection = connection.unwrap_or_else(|| self.default_connection());
         let mut options = RepositoryBuilderOptions::with_factory(connection);
-        options.types = self.driver.types();
+        options.types = self.driver.row_type_converters();
         Arc::new(CRUDRepository::new(options).expect("repository"))
     }
 }

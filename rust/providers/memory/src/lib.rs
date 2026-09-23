@@ -286,4 +286,4 @@ mod tests {
     }
 }
 
-pub use converters::{register as register_converters, types as converter_types};
+pub use converters::{register as register_converters, row_type_converters as converter_types};

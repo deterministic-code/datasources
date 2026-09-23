@@ -6,6 +6,6 @@ public sealed class MockDriver : IDriver
     public ICommand Command(IConnection connection) => new MockCommand(connection);
     public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
         new MockTransaction(connection) { Isolation = isolation };
-    public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; } =
+    public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; } =
         new Dictionary<string, TypeConverter<Value, Value>>();
 }

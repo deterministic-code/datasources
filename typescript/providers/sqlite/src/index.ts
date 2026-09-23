@@ -17,7 +17,7 @@ export type {
   SqliteStatement,
 } from "./i-sqlite-driver.ts";
 export { SqliteTransaction } from "./transaction.ts";
-export { SqliteTypes } from "./converters/SqliteTypes.ts";
+export { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
 export { BoolConverter } from "./converters/BoolConverter.ts";
 export { DateTimeConverter } from "./converters/DateTimeConverter.ts";
 export { UuidConverter } from "./converters/UuidConverter.ts";

@@ -2,12 +2,12 @@ using Datasources.Mysql;
 
 namespace Datasources.Mysql.Tests;
 
-public class MysqlTypesTests
+public class MysqlRowTypeConvertersTests
 {
     [Fact]
-    public void RegistersMysqlTypes()
+    public void RegistersMysqlRowTypeConverters()
     {
-        var types = new MysqlProvider().Types;
+        var types = new MysqlProvider().RowTypeConverters;
         Assert.Equal(["bool", "datetime", "uuid", "decimal", "binary"], types.Keys);
     }
 }

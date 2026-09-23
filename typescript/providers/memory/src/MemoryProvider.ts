@@ -11,7 +11,7 @@ import { MemoryConnection } from "./connection.ts";
 import { MemoryTransaction } from "./transaction.ts";
 
 export class MemoryProvider implements IDriver {
-  types: Record<string, TypeConverter<Cell, Cell>> = {};
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   connection = (options?: DatasourceOptions): IConnection =>
     MemoryConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

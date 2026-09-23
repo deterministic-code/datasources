@@ -2,12 +2,12 @@ using Datasources.Postgres;
 
 namespace Datasources.Postgres.Tests;
 
-public class PostgresTypesTests
+public class PostgresRowTypeConvertersTests
 {
     [Fact]
-    public void RegistersPostgresTypes()
+    public void RegistersPostgresRowTypeConverters()
     {
-        var types = new PostgresProvider().Types;
+        var types = new PostgresProvider().RowTypeConverters;
         Assert.Equal(["bool", "datetime", "uuid", "decimal", "binary"], types.Keys);
     }
 }

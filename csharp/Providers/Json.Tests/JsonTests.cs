@@ -145,7 +145,7 @@ public class JsonTests
         public ICommand Command(IConnection c) => c.CreateCommand();
         public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
             new JsonTransaction((JsonConnection)c, isolation);
-        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> Types { get; } =
+        public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; } =
             new Dictionary<string, TypeConverter<Value, Value>>();
     }
 }
