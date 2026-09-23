@@ -2,7 +2,6 @@ import {
   StubConnection,
   type DatasourceOptions,
   type ICommand,
-  type IConnection,
 } from "@datasources/core";
 import { MongoDbCommand } from "./command.ts";
 

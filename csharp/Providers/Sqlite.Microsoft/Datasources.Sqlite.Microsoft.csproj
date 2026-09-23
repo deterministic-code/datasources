@@ -9,4 +9,7 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <ProjectReference Include="..\Sqlite\Datasources.Sqlite.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Datasources.Sqlite.Tests" />
+  </ItemGroup>
 </Project>

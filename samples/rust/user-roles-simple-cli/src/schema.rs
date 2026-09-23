@@ -3,15 +3,22 @@ use datasources::{
     Column, ColumnDefault, CreateTableStatement, ForeignKey, NotNull, PrimaryKey, Result,
     TableConstraint,
 };
-use datasources_mysql::MysqlQuote;
-use datasources_postgres::PostgresQuote;
-use datasources_sqlite::SqliteQuote;
 
 pub fn ident(provider: &str, name: &str) -> String {
+    quote(provider, name)
+}
+
+pub fn qualified(provider: &str, name: &str) -> String {
+    name.split('.')
+        .map(|part| quote(provider, part))
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn quote(provider: &str, id: &str) -> String {
     match provider {
-        "mysql" => MysqlQuote::quote(name),
-        "postgres" => PostgresQuote::quote(name),
-        _ => SqliteQuote::quote(name),
+        "mysql" => format!("`{}`", id.replace('`', "``")),
+        _ => format!("\"{}\"", id.replace('"', "\"\"")),
     }
 }
 

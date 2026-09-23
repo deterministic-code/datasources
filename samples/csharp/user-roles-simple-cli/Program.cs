@@ -15,9 +15,9 @@ static async Task<int> Run(string[] args)
         var schema = Env("DATABASE_SCHEMA");
         var connection = (ProviderFromUrl.From(url) ?? throw new InvalidOperationException("unknown provider")) switch
         {
-            "sqlite" => (IConnection)new SqliteConnection(new SqliteConnectionOptions { Url = url, Driver = new SqliteDriver() }),
-            "mysql" => new MysqlConnection(new MysqlConnectionOptions { Url = url, Driver = new MysqlDriver() }),
-            "postgres" => new PostgresConnection(new PostgresConnectionOptions { Url = url, Schema = schema, Driver = new PostgresDriver(schema) }),
+            "sqlite" => new SqliteProvider().Connection(new Dictionary<string, string?> { ["url"] = url }),
+            "mysql" => new MysqlProvider().Connection(new Dictionary<string, string?> { ["url"] = url }),
+            "postgres" => new PostgresProvider().Connection(new Dictionary<string, string?> { ["url"] = url, ["schema"] = schema }),
             var provider => throw new InvalidOperationException($"unknown provider {provider}")
         };
         await connection.Open();

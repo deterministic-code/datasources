@@ -3,7 +3,7 @@ using Datasources;
 
 namespace Datasources.Json;
 
-public sealed class JsonConnection : IConnection
+internal sealed class JsonConnection : IConnection
 {
     public string Path { get; }
     public string? Collection { get; set; }

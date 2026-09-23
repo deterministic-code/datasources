@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-public sealed class MysqlConnection : IConnection
+internal sealed class MysqlConnection : IConnection
 {
 
     public string Url { get; }
@@ -13,7 +13,8 @@ public sealed class MysqlConnection : IConnection
         : this(new MysqlConnectionOptions
         {
             Url = DatasourceOptions.Value(options, "url")
-                ?? DatasourceOptions.Value(options, "database_url")
+                ?? DatasourceOptions.Value(options, "database_url"),
+            Driver = new MysqlDriver()
         })
     {
     }

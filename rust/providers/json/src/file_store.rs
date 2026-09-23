@@ -18,6 +18,7 @@ impl MemoryFileStore {
         Self::default()
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn seed(path: impl Into<String>, contents: impl Into<String>) -> Self {
         let store = Self::new();
         store

@@ -1,6 +1,6 @@
 namespace Datasources.Postgres;
 
-public static class PostgresRowTypeConverters
+internal static class PostgresRowTypeConverters
 {
     public static readonly IReadOnlyDictionary<string, TypeConverter<Value, Value>> All =
         new Dictionary<string, TypeConverter<Value, Value>>

@@ -4,7 +4,7 @@ using DataDirection = System.Data.ParameterDirection;
 
 namespace Datasources.Mysql;
 
-public sealed class MysqlCommandDriver(MysqlConnectionDriver connection)
+internal sealed class MysqlCommandDriver(MysqlConnectionDriver connection)
 {
     public Task<MysqlExecuteResult> Execute(string sql, Row parameters) =>
         Execute(sql, parameters.Select(p => new Parameter(p.Key, p.Value)).ToArray());

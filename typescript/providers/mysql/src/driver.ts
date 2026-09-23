@@ -1,5 +1,4 @@
 import { DatasourceError } from "@datasources/core";
-import { bindParameters, toMysql } from "./bind.ts";
 import { Mysql2Driver } from "./mysql2-driver.ts";
 import type { IMysqlDriver, Mysql2Module } from "./i-mysql-driver.ts";
 
@@ -14,14 +13,14 @@ export type {
 export { bindParameters, toMysql, withoutReturning } from "./bind.ts";
 export { Mysql2Driver } from "./mysql2-driver.ts";
 
+export const mysql2Connect = (mysql: Mysql2Module) => (uri: string) =>
+  mysql.createConnection({ uri, namedPlaceholders: true });
+
 export async function loadMysql2Driver(
   url: string,
   importer: () => Promise<Mysql2Module> = () => import("mysql2/promise"),
 ): Promise<IMysqlDriver> {
-  const mysql = await importer();
-  return new Mysql2Driver(url, (uri) =>
-    mysql.createConnection({ uri, namedPlaceholders: true }),
-  );
+  return new Mysql2Driver(url, mysql2Connect(await importer()));
 }
 
 export function requireDriver(driver?: IMysqlDriver): IMysqlDriver {

@@ -1,22 +1,38 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use super::rusqlite_driver::RusqliteDriver;
-use super::{SqliteColumnType, SqliteQuote};
 use datasources::{Column, Connection, CreateTableStatement, Text};
 use datasources_sql_specs::RepositoryDialect;
 use std::sync::Arc;
 
+fn quote(id: &str) -> String {
+    format!("\"{}\"", id.replace('"', "\"\""))
+}
+
+fn map(canonical: &str) -> String {
+    match canonical {
+        "int" => "INTEGER",
+        "uuid" | "string" | "datetime" => "TEXT",
+        "bool" => "INTEGER",
+        "decimal" => "NUMERIC",
+        "float" => "REAL",
+        "binary" => "BLOB",
+        _ => panic!("Unknown sqlite type \"{canonical}\""),
+    }
+    .into()
+}
+
 fn dialect() -> RepositoryDialect {
     RepositoryDialect {
         provider: "sqlite",
-        quote: SqliteQuote::quote,
+        quote: quote,
         create_table: |table, columns| {
             let mapped: Vec<Column> = columns
                 .iter()
                 .map(|column| {
-                    let affinity = SqliteColumnType::map(&column.type_name).expect("column type");
+                    let affinity = map(&column.type_name);
                     Column::new(
-                        SqliteQuote::quote(&column.name),
+                        quote(&column.name),
                         if column.id {
                             format!("{affinity} PRIMARY KEY")
                         } else {
@@ -25,7 +41,7 @@ fn dialect() -> RepositoryDialect {
                     )
                 })
                 .collect();
-            CreateTableStatement::new(SqliteQuote::quote(table), &mapped, &[]).get_text()
+            CreateTableStatement::new(quote(table), &mapped, &[]).get_text()
         },
         field: super::converters::field,
         types: super::converters::row_type_converters,

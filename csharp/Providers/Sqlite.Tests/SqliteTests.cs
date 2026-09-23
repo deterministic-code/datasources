@@ -68,12 +68,12 @@ public class SqliteTests
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
-        Assert.Throws<DatasourceException>(() =>
-            new Datasource("sqlite", new SqliteProvider())
-                .CreateRepository<Dictionary<string, Value>>());
+        Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
+            new Datasource("sqlite", new SqliteProvider()).CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("sqlite", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "sqlite" }).Provider);
-        await Assert.ThrowsAsync<DatasourceException>(() =>
-            new Datasource("sqlite", new SqliteProvider()).CreateConnection());
+        var provided = Assert.IsType<SqliteConnection>(await new Datasource("sqlite", new SqliteProvider()).CreateConnection());
+        Assert.Equal(":memory:", provided.Filename);
+        Assert.IsType<SqliteDriver>(provided.Driver);
 
         var closed = new SqliteConnection(new SqliteConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).Execute("x"));

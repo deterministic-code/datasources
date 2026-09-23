@@ -1,6 +1,6 @@
 namespace Datasources.Postgres;
 
-public sealed class PostgresConnectionOptions
+internal sealed class PostgresConnectionOptions
 {
     public string? Url { get; set; }
     public string? Schema { get; set; }

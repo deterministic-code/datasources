@@ -1,5 +1,6 @@
 use crate::command::MysqlCommand;
-use crate::driver::{require_driver, MysqlDriver};
+use crate::driver::MysqlDriver;
+use crate::mysql_async_driver::MysqlAsyncDriver;
 use crate::transaction::MysqlTransaction;
 use async_trait::async_trait;
 use datasources::{
@@ -25,10 +26,7 @@ impl MysqlConnection {
 
     pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
         let url = options.and_then(|o| o.get("url").or_else(|| o.get("database_url")).cloned());
-        Arc::new(MysqlConnection::new(
-            url,
-            require_driver(None).expect("MySQL driver is required"),
-        ))
+        Arc::new(MysqlConnection::new(url, Arc::new(MysqlAsyncDriver::new())))
     }
 
     pub fn ensure_open(&self) -> Result<()> {

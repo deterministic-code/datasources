@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { TextCommand, TextConnection, TextProvider } from "./index.ts";
+import { TextCommand } from "./command.ts";
+import { TextConnection } from "./connection.ts";
+import { TextProvider } from "./TextProvider.ts";
 
 afterEach(() => DatasourceFactory.reset());
 

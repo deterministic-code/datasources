@@ -6,25 +6,11 @@ mod converters;
 mod driver;
 mod provider;
 mod pg_value;
-mod column;
-mod column_type;
-mod quote;
 mod tokio_postgres_driver;
 mod transaction;
 mod transaction_driver;
 
-pub use command::PostgresCommand;
-pub use connection::PostgresConnection;
 pub use provider::PostgresProvider;
-pub use driver::{
-    isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver,
-    PostgresExecuteResult,
-};
-pub use column::PostgresColumn;
-pub use column_type::PostgresColumnType;
-pub use quote::PostgresQuote;
-pub use tokio_postgres_driver::TokioPostgresDriver;
-pub use transaction::PostgresTransaction;
 
 #[cfg(test)]
 #[path = "../tests/contacts.rs"]
@@ -38,7 +24,13 @@ mod repository_spec;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::command::PostgresCommand;
+    use crate::connection::PostgresConnection;
+    use crate::driver::{
+        isolation_sql, require_driver, to_postgres, with_returning, PostgresDriver,
+        PostgresExecuteResult,
+    };
+    use crate::transaction::PostgresTransaction;
     use async_trait::async_trait;
     use datasources::{
         create, register, reset, Command, Connection, Driver, IsolationLevel, Transaction,
@@ -205,4 +197,3 @@ mod tests {
     }
 }
 
-pub use converters::row_type_converters as converter_types;

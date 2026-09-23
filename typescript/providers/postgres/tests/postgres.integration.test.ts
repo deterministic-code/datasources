@@ -10,11 +10,9 @@ import {
   runSpec,
   specFiles,
 } from "../../sql-spec-runner.ts";
-import {
-  loadPgDriver,
-  PostgresCommand,
-  PostgresConnection,
-} from "../src/index.ts";
+import { PostgresCommand } from "../src/command.ts";
+import { PostgresConnection } from "../src/connection.ts";
+import { loadPgDriver } from "../src/driver.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
 const dialect = loadDialect("postgres");

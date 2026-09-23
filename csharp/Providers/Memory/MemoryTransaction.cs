@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryTransaction : ITransaction
+internal sealed class MemoryTransaction : ITransaction
 {
     public MemoryTransaction(MemoryConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
     {

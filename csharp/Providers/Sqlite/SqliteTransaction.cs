@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteTransaction : ITransaction
+internal sealed class SqliteTransaction : ITransaction
 {
     public SqliteTransaction(SqliteConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
     {

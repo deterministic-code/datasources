@@ -1,4 +1,6 @@
-use super::*;
+use super::command::SqliteCommand;
+use super::connection::SqliteConnection;
+use super::rusqlite_driver::RusqliteDriver;
 use datasources::{
     utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
     IsolationLevel, Parameter, Reader, Transaction, Value,

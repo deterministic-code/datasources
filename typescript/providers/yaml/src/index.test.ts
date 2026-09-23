@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { YamlCommand, YamlConnection, YamlProvider } from "./index.ts";
+import { YamlCommand } from "./command.ts";
+import { YamlConnection } from "./connection.ts";
+import { YamlProvider } from "./YamlProvider.ts";
 
 afterEach(() => DatasourceFactory.reset());
 

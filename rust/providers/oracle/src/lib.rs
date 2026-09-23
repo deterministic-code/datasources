@@ -1,9 +1,7 @@
 mod command;
 mod connection;
-mod converters;
 
-pub use command::OracleCommand;
-pub use connection::{OracleConnection, OracleProvider};
+pub use connection::OracleProvider;
 
 #[cfg(test)]
 mod tests {
@@ -47,4 +45,3 @@ mod tests {
     }
 }
 
-pub use converters::{register as register_converters, row_type_converters as converter_types};

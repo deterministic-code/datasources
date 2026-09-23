@@ -1,5 +1,6 @@
 use crate::command::SqliteCommand;
-use crate::driver::{require_driver, SqliteDriver};
+use crate::driver::SqliteDriver;
+use crate::rusqlite_driver::RusqliteDriver;
 use crate::sqlite_path::sqlite_filename;
 use crate::transaction::SqliteTransaction;
 use async_trait::async_trait;
@@ -34,7 +35,7 @@ impl SqliteConnection {
         });
         Arc::new(SqliteConnection::new(
             filename,
-            require_driver(None).expect("SQLite driver is required"),
+            Arc::new(RusqliteDriver::new()),
         ))
     }
 

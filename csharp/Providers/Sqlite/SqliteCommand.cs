@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteCommand : CommandMiddlewareHost, ICommand
+internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
 {
     public SqliteCommand(SqliteConnection connection) => Connection = connection;
     public IConnection Connection { get; }

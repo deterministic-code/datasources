@@ -16,11 +16,9 @@ import { seedContactCount, seedContactsSql } from "../../../datasources/src/test
 import { specVerbose } from "../../../sql-spec-runner.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";
-import {
-  loadBetterSqlite3Driver,
-  SqliteCommand,
-  SqliteConnection,
-} from "../src/index.ts";
+import { SqliteCommand } from "../src/command.ts";
+import { SqliteConnection } from "../src/connection.ts";
+import { loadBetterSqlite3Driver } from "../src/driver.ts";
 
 const schemaPath = join(
   dirname(fileURLToPath(import.meta.url)),

@@ -3,7 +3,7 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryCommand : CommandMiddlewareHost, ICommand
+internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
 {
     public MemoryCommand(MemoryConnection connection) => Connection = connection;
     public IConnection Connection { get; }

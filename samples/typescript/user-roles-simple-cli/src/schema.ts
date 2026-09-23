@@ -9,16 +9,13 @@ import {
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MysqlQuote } from "@datasources/mysql";
-import { PostgresQuote } from "@datasources/postgres";
-import { SqliteQuote } from "@datasources/sqlite";
+const quote = (provider: string, id: string): string =>
+  provider === "mysql" ? `\`${id.replaceAll("`", "``")}\`` : `"${id.replaceAll('"', '""')}"`;
 
-export const ident = (provider: string, name: string): string =>
-  ({
-    mysql: MysqlQuote.quote,
-    postgres: PostgresQuote.quote,
-    sqlite: SqliteQuote.quote,
-  }[provider] ?? SqliteQuote.quote)(name);
+export const ident = (provider: string, name: string): string => quote(provider, name);
+
+export const qualified = (provider: string, name: string): string =>
+  name.split(".").map((part) => quote(provider, part)).join(".");
 
 export const flag = (provider: string, value: boolean): number | boolean =>
   provider === "sqlite" ? (value ? 1 : 0) : value;

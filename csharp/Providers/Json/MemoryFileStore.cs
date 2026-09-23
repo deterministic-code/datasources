@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Json;
 
-public sealed class MemoryFileStore : IFileStore
+internal sealed class MemoryFileStore : IFileStore
 {
     public Dictionary<string, string> Files { get; } = new();
     public Task<string> Read(string path) =>

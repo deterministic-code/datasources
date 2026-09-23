@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Postgres;
 
-public interface IPostgresDriver
+internal interface IPostgresDriver
 {
     Task Open(string url);
     Task Close();

@@ -1,23 +1,19 @@
 mod command;
 mod connection;
-mod converters;
 mod file_store;
 mod filter;
 mod provider;
 mod transaction;
 
-pub use command::JsonCommand;
-pub use connection::JsonConnection;
 pub use provider::JsonProvider;
-pub use file_store::{FileStore, MemoryFileStore};
-pub use transaction::JsonTransaction;
-
-#[cfg(test)]
-pub(crate) use filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::command::JsonCommand;
+    use crate::connection::JsonConnection;
+    use crate::file_store::{FileStore, MemoryFileStore};
+    use crate::filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
     use datasources::{
         create, register, reset, Command, Connection, CRUDRepository, ICRUDRepository,
         IReadonlyRepository, Parameter, RepositoryBuilderOptions, Row, QueryStatement, TextWhere,
@@ -250,4 +246,3 @@ mod tests {
     }
 }
 
-pub use converters::{register as register_converters, row_type_converters as converter_types};

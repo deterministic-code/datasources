@@ -1,4 +1,6 @@
-use super::*;
+use super::command::MysqlCommand;
+use super::connection::MysqlConnection;
+use super::mysql_async_driver::MysqlAsyncDriver;
 use datasources::{
     utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
     IsolationLevel, Parameter, Reader, Transaction, Value,

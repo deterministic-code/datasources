@@ -8,21 +8,10 @@ mod driver;
 mod provider;
 mod rusqlite_driver;
 mod sqlite_path;
-mod column;
-mod column_type;
-mod quote;
 mod transaction;
 mod transaction_driver;
 
-pub use command::SqliteCommand;
-pub use connection::SqliteConnection;
 pub use provider::SqliteProvider;
-pub use driver::{require_driver, SqliteDriver, SqliteExecuteResult};
-pub use rusqlite_driver::RusqliteDriver;
-pub use column::SqliteColumn;
-pub use column_type::SqliteColumnType;
-pub use quote::SqliteQuote;
-pub use transaction::SqliteTransaction;
 
 #[cfg(test)]
 #[path = "../tests/contacts.rs"]
@@ -36,7 +25,11 @@ mod repository_spec;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::command::SqliteCommand;
+    use crate::connection::SqliteConnection;
+    use crate::driver::{require_driver, SqliteDriver};
+    use crate::rusqlite_driver::RusqliteDriver;
+    use crate::transaction::SqliteTransaction;
     use datasources::{
         create, register, reset, BuiltDatasource, Command, Connection, Datasource, Driver,
         IsolationLevel, Transaction,
@@ -177,4 +170,3 @@ mod tests {
     }
 }
 
-pub use converters::row_type_converters as converter_types;

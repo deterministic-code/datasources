@@ -5,7 +5,7 @@ using DataDirection = System.Data.ParameterDirection;
 
 namespace Datasources.Postgres;
 
-public sealed class PostgresCommandDriver(PostgresConnectionDriver connection)
+internal sealed class PostgresCommandDriver(PostgresConnectionDriver connection)
 {
     public Task<PostgresExecuteResult> Execute(string sql, Row parameters) =>
         Execute(sql, parameters.Select(p => new Parameter(p.Key, p.Value)).ToArray());

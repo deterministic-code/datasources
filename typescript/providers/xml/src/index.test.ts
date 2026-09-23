@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { XmlCommand, XmlConnection, XmlProvider } from "./index.ts";
+import { XmlCommand } from "./command.ts";
+import { XmlConnection } from "./connection.ts";
+import { XmlProvider } from "./XmlProvider.ts";
 
 afterEach(() => DatasourceFactory.reset());
 

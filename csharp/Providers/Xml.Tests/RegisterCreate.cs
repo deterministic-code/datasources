@@ -31,3 +31,10 @@ public partial class RegisterCreateTests
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => implicitCommand.ExecuteReader(""));
     }
 }
+
+public class PublicSurfaceTests
+{
+    [Fact]
+    public void ExportsOnlyTheProvider() =>
+        Assert.Equal(typeof(XmlProvider), Assert.Single(typeof(XmlProvider).Assembly.GetExportedTypes()));
+}

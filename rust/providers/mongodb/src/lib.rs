@@ -1,9 +1,7 @@
 mod command;
 mod connection;
-mod converters;
 
-pub use command::MongoDbCommand;
-pub use connection::{MongoDbConnection, MongoDbProvider};
+pub use connection::MongoDbProvider;
 
 #[cfg(test)]
 mod tests {
@@ -50,4 +48,3 @@ mod tests {
     }
 }
 
-pub use converters::{register as register_converters, row_type_converters as converter_types};

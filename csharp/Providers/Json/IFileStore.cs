@@ -1,6 +1,6 @@
 namespace Datasources.Json;
 
-public interface IFileStore
+internal interface IFileStore
 {
     Task<string> Read(string path);
     Task Write(string path, string contents);

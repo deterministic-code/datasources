@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError } from "@datasources/core";
-import { DynamoDbCommand, DynamoDbConnection, DynamoDbProvider } from "./index.ts";
+import { DynamoDbCommand } from "./command.ts";
+import { DynamoDbConnection } from "./connection.ts";
+import { DynamoDbProvider } from "./DynamoDbProvider.ts";
 
 afterEach(() => DatasourceFactory.reset());
 

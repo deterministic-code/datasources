@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public interface ISqliteDriver
+internal interface ISqliteDriver
 {
     Task Open(string filename);
     Task Close();

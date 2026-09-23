@@ -60,12 +60,11 @@ public class MysqlTests
         await implicitCommand.ExecuteReader("SELECT 1");
         var repo2 = ds.CreateRepository<Dictionary<string, Value>>(created);
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(repo2);
-        Assert.Throws<DatasourceException>(() =>
-            new Datasource("mysql", new MysqlProvider())
-                .CreateRepository<Dictionary<string, Value>>());
+        Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
+            new Datasource("mysql", new MysqlProvider()).CreateRepository<Dictionary<string, Value>>());
         Assert.Equal("mysql", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "mysql" }).Provider);
-        await Assert.ThrowsAsync<DatasourceException>(() =>
-            new Datasource("mysql", new MysqlProvider()).CreateConnection());
+        var provided = Assert.IsType<MysqlConnection>(await new Datasource("mysql", new MysqlProvider()).CreateConnection());
+        Assert.IsType<MysqlDriver>(provided.Driver);
 
         var closed = new MysqlConnection(new MysqlConnectionOptions { Driver = driver });
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));

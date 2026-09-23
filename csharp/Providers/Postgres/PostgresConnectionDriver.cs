@@ -2,7 +2,7 @@ using Npgsql;
 
 namespace Datasources.Postgres;
 
-public sealed class PostgresConnectionDriver(string? schema = null)
+internal sealed class PostgresConnectionDriver(string? schema = null)
 {
     NpgsqlConnection? _db;
 

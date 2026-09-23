@@ -1,6 +1,6 @@
 namespace Datasources.Postgres;
 
-public sealed class PostgresCommand : CommandMiddlewareHost, ICommand
+internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
 {
     public PostgresCommand(PostgresConnection connection) => Connection = connection;
     public IConnection Connection { get; }

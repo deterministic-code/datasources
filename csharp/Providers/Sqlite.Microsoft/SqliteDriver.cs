@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteDriver : ISqliteDriver
+internal sealed class SqliteDriver : ISqliteDriver
 {
     readonly SqliteConnectionDriver _connection = new();
     readonly SqliteCommandDriver _commands;

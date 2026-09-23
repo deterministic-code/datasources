@@ -6,21 +6,10 @@ mod converters;
 mod driver;
 mod provider;
 mod mysql_async_driver;
-mod column;
-mod column_type;
-mod quote;
 mod transaction;
 mod transaction_driver;
 
-pub use command::MysqlCommand;
-pub use connection::MysqlConnection;
 pub use provider::MysqlProvider;
-pub use driver::{isolation_sql, require_driver, to_mysql, MysqlDriver, MysqlExecuteResult};
-pub use mysql_async_driver::MysqlAsyncDriver;
-pub use column::MysqlColumn;
-pub use column_type::MysqlColumnType;
-pub use quote::MysqlQuote;
-pub use transaction::MysqlTransaction;
 
 #[cfg(test)]
 #[path = "../tests/integration.rs"]
@@ -31,7 +20,10 @@ mod repository_spec;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::command::MysqlCommand;
+    use crate::connection::MysqlConnection;
+    use crate::driver::{isolation_sql, require_driver, to_mysql, MysqlDriver, MysqlExecuteResult};
+    use crate::transaction::MysqlTransaction;
     use async_trait::async_trait;
     use datasources::{
         create, register, reset, BuiltDatasource, Command, Connection, Datasource, Driver,
@@ -190,4 +182,3 @@ mod tests {
     }
 }
 
-pub use converters::row_type_converters as converter_types;

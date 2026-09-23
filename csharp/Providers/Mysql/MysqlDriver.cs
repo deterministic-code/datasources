@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-public sealed class MysqlDriver : IMysqlDriver
+internal sealed class MysqlDriver : IMysqlDriver
 {
     readonly MysqlConnectionDriver _connection = new();
     readonly MysqlCommandDriver _commands;

@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class UuidConverter : TypeConverter<Value, Value>
+internal sealed class UuidConverter : TypeConverter<Value, Value>
 {
     public override Value Convert(Value from) => from switch
     {

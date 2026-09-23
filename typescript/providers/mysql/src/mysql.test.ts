@@ -11,20 +11,15 @@ vi.mock("mysql2/promise", () => ({
 }));
 
 import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, type IDriver } from "@datasources/core";
-import {
-  bindParameters,
-  loadMysql2Driver,
-  Mysql2Driver,
-  MysqlCommand,
-  MysqlConnection,
-  MysqlProvider,
-  MysqlTransaction,
-  MysqlRowTypeConverters,
-  requireDriver,
-  toMysql,
-  type IMysqlClient,
-  type MysqlQueryHeader,
-} from "./index.ts";
+import { bindParameters, toMysql } from "./bind.ts";
+import { MysqlCommand } from "./command.ts";
+import { MysqlConnection } from "./connection.ts";
+import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
+import { loadMysql2Driver, requireDriver } from "./driver.ts";
+import type { IMysqlClient, MysqlQueryHeader } from "./i-mysql-driver.ts";
+import { Mysql2Driver } from "./mysql2-driver.ts";
+import { MysqlProvider } from "./MysqlProvider.ts";
+import { MysqlTransaction } from "./transaction.ts";
 import type { Cells, Scalar } from "./scalar.ts";
 
 class FakeClient implements IMysqlClient {
@@ -237,10 +232,9 @@ describe("MysqlCommand", () => {
 describe("Mysql datasource", () => {
   it("registers and constructs children", async () => {
     const { driver } = fakeDriver();
-    expect(() =>
-      new Datasource("mysql", new MysqlProvider())
-        .createConnection(),
-    ).toThrow(DatasourceError);
+    expect(
+      await new Datasource("mysql", new MysqlProvider()).createConnection(),
+    ).toBeInstanceOf(MysqlConnection);
     const of = (engine = driver): IDriver => ({
       connection: () => new MysqlConnection({ driver: engine }),
       command: (c) => c.createCommand(),
@@ -271,9 +265,9 @@ describe("Mysql datasource", () => {
         .createRepository(),
     ).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ provider: "mysql" }).provider).toBe("mysql");
-    expect(() => MysqlConnection.from({ database_url: "mysql://db/app" })).toThrow(
-      DatasourceError,
-    );
+    expect(MysqlConnection.from({ url: "mysql://db/app" }).url).toBe("mysql://db/app");
+    expect(MysqlConnection.from({ database_url: "mysql://db/app" }).url).toBe("mysql://db/app");
+    expect(MysqlConnection.from().url).toBe("");
     const provider = new MysqlProvider();
     expect(provider.command(connection)).toBeInstanceOf(MysqlCommand);
     expect(provider.transaction(connection as MysqlConnection).isolation).toBe(

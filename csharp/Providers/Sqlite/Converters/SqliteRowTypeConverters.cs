@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public static class SqliteRowTypeConverters
+internal static class SqliteRowTypeConverters
 {
     public static readonly IReadOnlyDictionary<string, TypeConverter<Value, Value>> All =
         new Dictionary<string, TypeConverter<Value, Value>>

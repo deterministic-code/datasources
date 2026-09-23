@@ -7,4 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Datasources\Datasources.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Datasources.Oracle.Tests" />
+  </ItemGroup>
 </Project>

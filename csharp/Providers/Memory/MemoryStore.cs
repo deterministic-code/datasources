@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Memory;
 
-public sealed class MemoryStore
+internal sealed class MemoryStore
 {
     public Dictionary<string, List<Row>> Collections { get; } = new();
 

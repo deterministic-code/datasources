@@ -1,6 +1,6 @@
 namespace Datasources.Postgres;
 
-public static class PostgresConnectionString
+internal static class PostgresConnectionString
 {
     public static string ToConnectionString(string url)
     {

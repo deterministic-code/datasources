@@ -1,9 +1,7 @@
 mod command;
 mod connection;
-mod converters;
 
-pub use command::YamlCommand;
-pub use connection::{YamlConnection, YamlProvider};
+pub use connection::YamlProvider;
 
 #[cfg(test)]
 mod tests {
@@ -47,4 +45,3 @@ mod tests {
     }
 }
 
-pub use converters::{register as register_converters, row_type_converters as converter_types};

@@ -8,4 +8,7 @@
     <PackageReference Include="MySqlConnector" Version="2.4.0" />
     <ProjectReference Include="..\..\Datasources\Datasources.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Datasources.Mysql.Tests" />
+  </ItemGroup>
 </Project>

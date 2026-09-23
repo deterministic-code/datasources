@@ -24,6 +24,7 @@ pub trait PostgresDriver: Send + Sync {
     async fn rollback(&self) -> Result<()>;
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn require_driver(driver: Option<Arc<dyn PostgresDriver>>) -> Result<Arc<dyn PostgresDriver>> {
     driver.ok_or_else(|| DatasourceError::message("Postgres driver is required"))
 }

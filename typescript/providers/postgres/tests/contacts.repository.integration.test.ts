@@ -12,11 +12,9 @@ import { contactsServiceOf } from "../../../datasources/src/tests/contact/contac
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
 import { specVerbose } from "../../../sql-spec-runner.ts";
-import {
-  loadPgDriver,
-  PostgresCommand,
-  PostgresConnection,
-} from "../src/index.ts";
+import { PostgresCommand } from "../src/command.ts";
+import { PostgresConnection } from "../src/connection.ts";
+import { loadPgDriver } from "../src/driver.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
 const url = (process.env.POSTGRES_URL ??=

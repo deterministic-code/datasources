@@ -3,7 +3,7 @@ using Datasources;
 
 namespace Datasources.Json;
 
-public sealed class JsonCommand : CommandMiddlewareHost, ICommand
+internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
 {
     public JsonCommand(JsonConnection connection) => Connection = connection;
     public IConnection Connection { get; }

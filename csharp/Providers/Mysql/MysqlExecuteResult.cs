@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Mysql;
 
-public sealed record MysqlExecuteResult(
+internal sealed record MysqlExecuteResult(
     int RowsAffected,
     Value Result,
     IReadOnlyList<Parameter>? Parameters = null);

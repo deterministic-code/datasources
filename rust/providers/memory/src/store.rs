@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 #[derive(Clone)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub enum MemoryData {
     Rows(Vec<Row>),
     Collections(HashMap<String, Vec<Row>>),

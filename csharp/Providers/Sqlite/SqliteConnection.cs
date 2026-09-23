@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteConnection : IConnection
+internal sealed class SqliteConnection : IConnection
 {
 
     public string Filename { get; }
@@ -16,7 +16,8 @@ public sealed class SqliteConnection : IConnection
         {
             Filename = DatasourceOptions.Value(options, "filename"),
             Url = DatasourceOptions.Value(options, "url")
-                ?? DatasourceOptions.Value(options, "database_url")
+                ?? DatasourceOptions.Value(options, "database_url"),
+            Driver = SqliteGuard.Engine()
         })
     {
     }

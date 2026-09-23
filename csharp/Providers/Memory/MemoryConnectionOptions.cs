@@ -1,6 +1,6 @@
 namespace Datasources.Memory;
 
-public sealed class MemoryConnectionOptions
+internal sealed class MemoryConnectionOptions
 {
     public string? Collection { get; set; }
     public MemoryStore? Store { get; set; }
