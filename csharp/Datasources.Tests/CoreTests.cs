@@ -125,29 +125,56 @@ public class CoreTests
         Assert.Equal(new Value.Int(1), Assert.IsType<Literal>(idEquals.Right).Value);
 
         var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
-        var query = new QueryStatement("users", ["id", "name"], where);
+        var query = new QueryStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
         Assert.Equal("SELECT id, name FROM users WHERE id = $id AND age > $age", query.GetText());
         Assert.Same(where, query.Where);
-        Assert.Equal("SELECT * FROM users", new QueryStatement("users", []).GetText());
-        Assert.Null(new QueryStatement("users", []).Where);
-        Assert.Equal("SELECT id, name FROM users", new QueryStatement("users", ["id", "name"]).GetText());
+        Assert.Equal("SELECT * FROM users", new QueryStatement(new() { Table = "users", Fields = [] }).GetText());
+        Assert.Null(new QueryStatement(new() { Table = "users", Fields = [] }).Where);
+        Assert.Equal("SELECT id, name FROM users", new QueryStatement(new() { Table = "users", Fields = ["id", "name"] }).GetText());
         Assert.Equal(
             "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id",
-            new QueryStatement("users", ["users.id", "orders.total"], null, [
-                Join.Inner("orders", "users.id", "orders.user_id"),
-            ]).GetText());
+            new QueryStatement(new()
+            {
+                Table = "users",
+                Fields = ["users.id", "orders.total"],
+                Joins = [Join.Inner("orders", "users.id", "orders.user_id")],
+            }).GetText());
         Assert.Equal(
             "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
-            new QueryStatement(
-                "users",
-                ["users.id"],
-                new WhereClause(new Operator.Equals("users.id", 1)),
+            new QueryStatement(new()
+            {
+                Table = "users",
+                Fields = ["users.id"],
+                Where = new WhereClause(new Operator.Equals("users.id", 1)),
+                Joins =
                 [
                     Join.Inner("orders", "users.id", "orders.user_id"),
                     Join.Left("payments", "orders.id", "payments.order_id"),
                     Join.Right("profiles", "users.id", "profiles.user_id"),
-                ]).GetText());
-        Assert.Equal("SELECT id FROM users", new QueryStatement("users", ["id"], null, []).GetText());
+                ],
+            }).GetText());
+        Assert.Equal("SELECT id FROM users", new QueryStatement(new() { Table = "users", Fields = ["id"], Joins = [] }).GetText());
+        var grouped = new QueryStatement(new()
+        {
+            Table = "orders",
+            Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
+            Where = new WhereClause(new Operator.Equals("status", "open")),
+            Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
+            GroupBy = ["status"],
+            OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
+            Limit = 10,
+        });
+        Assert.Equal("SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10", grouped.GetText());
+        var byStatus = new QueryStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
+        Assert.Equal("SELECT id FROM users GROUP BY id", byStatus.GetText());
+        var bounds = new QueryStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
+        Assert.Equal("SELECT MIN(n), MAX(n) FROM users", bounds.GetText());
+        var ordered = new QueryStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
+        Assert.Equal("SELECT id FROM users ORDER BY id ASC, name DESC", ordered.GetText());
+        var limited = new QueryStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
+        Assert.Equal("SELECT id FROM users LIMIT 10", limited.GetText());
+        Assert.Equal("SELECT id FROM users LIMIT 0", new QueryStatement(new() { Table = "users", Fields = ["id"], Limit = 0 }).GetText());
+        Assert.Throws<InvalidOperationException>(() => new QueryStatement(new() { Table = "users", Fields = ["id"], Limit = -1 }));
         var insert = new InsertStatement("users", fields);
         Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", insert.GetText());
         var update = new UpdateStatement("users", fields, where);

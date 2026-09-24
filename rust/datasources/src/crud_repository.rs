@@ -24,6 +24,7 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::statements::Text;
+use crate::statement::Statement;
 use crate::stubs::StubRepository;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::value::Value;
@@ -46,8 +47,7 @@ enum Mode {
 pub struct CRUDRepository {
     inner: Option<ReadonlyRepository>,
     create: TransformMapper<Value, Row>,
-    id: Vec<String>,
-    ids: HashSet<String>,
+    ids: Vec<String>,
     delegate: Option<Arc<dyn ICRUDRepository>>,
     pub tree: RepositoryTree,
     strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
@@ -87,8 +87,7 @@ impl CRUDRepository {
         Self {
             inner: None,
             create: identity_mapper(&id),
-            id: id.clone(),
-            ids: id.into_iter().collect(),
+            ids: id,
             tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
                 as_readonly(inner.clone()),
                 "",
@@ -110,8 +109,7 @@ impl CRUDRepository {
         Self {
             inner: Some(ReadonlyRepository::from_built(built)),
             create,
-            ids: id.iter().cloned().collect(),
-            id,
+            ids: id,
             delegate: None,
             tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
                 Arc::new(StubRepository::new("crud")),
@@ -176,7 +174,7 @@ impl CRUDRepository {
 
     fn id_where(&self, record: &Row) -> Result<WhereClause> {
         let children = self
-            .id
+            .ids
             .iter()
             .map(|col| {
                 let value = record.get(col).ok_or_else(|| {
@@ -310,7 +308,7 @@ impl ICRUDRepository for CRUDRepository {
     }
 
     fn id_names(&self) -> Vec<String> {
-        self.id.clone()
+        self.ids.clone()
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
@@ -365,10 +363,10 @@ impl CRUDRepository {
             _ => unreachable!(),
         };
         let statement = self.sql().statements.update(&fields, predicate);
-        let (text, parameters) = distinct(&statement.get_text(), &fields, &predicate.parameters());
+        let parameters = statement.parameters();
         self.sql()
             .command()
-            .execute(&text, Some(&parameters))
+            .execute(&statement.get_text(), Some(&parameters))
             .await
     }
 
@@ -411,15 +409,15 @@ impl CRUDRepository {
     }
 
     fn id_record(&self, id: &dyn IdKey) -> Result<Row> {
-        if self.id.is_empty() {
+        if self.ids.is_empty() {
             return Err(DatasourceError::message(
                 "ReadSingleById requires an Id column",
             ));
         }
         match (id.as_value(), id.as_row()) {
-            (Some(value), _) if self.id.len() == 1 => {
+            (Some(value), _) if self.ids.len() == 1 => {
                 let mut row = Row::new();
-                row.insert(self.id[0].clone(), value.clone());
+                row.insert(self.ids[0].clone(), value.clone());
                 Ok(row)
             }
             (Some(_), _) => Err(DatasourceError::message(
@@ -662,47 +660,6 @@ fn parse_value(text: &str) -> Value {
             .map(Value::Int)
             .unwrap_or_else(|_| Value::Text(text.into())),
     }
-}
-
-fn distinct(text: &str, fields: &[Parameter], where_params: &[Parameter]) -> (String, Vec<Parameter>) {
-    let (head, mut tail) = match text.rfind(" WHERE ") {
-        Some(split) => (&text[..split], text[split..].to_string()),
-        None => (text, String::new()),
-    };
-    let mut bound = fields.to_vec();
-    for parameter in where_params {
-        let differs = fields.iter().any(|field| {
-            field.name == parameter.name && field.value != parameter.value
-        });
-        if differs {
-            let alias = format!("{}__where", parameter.name);
-            tail = alias_token(&tail, &parameter.name, &alias);
-            bound.push(Parameter::new(alias, parameter.value.clone()));
-        } else {
-            bound.push(parameter.clone());
-        }
-    }
-    (format!("{head}{tail}"), bound)
-}
-
-fn alias_token(text: &str, name: &str, alias: &str) -> String {
-    let token = format!("${name}");
-    let next = format!("${alias}");
-    let mut result = String::new();
-    let mut index = 0;
-    while let Some(at) = text[index..].find(&token) {
-        let at = index + at;
-        let end = at + token.len();
-        let boundary = match text[end..].chars().next() {
-            None => true,
-            Some(ch) => !ch.is_ascii_alphanumeric() && ch != '_',
-        };
-        result.push_str(&text[index..at]);
-        result.push_str(if boundary { &next } else { &token });
-        index = end;
-    }
-    result.push_str(&text[index..]);
-    result
 }
 
 fn and_all(parts: Vec<Expression>) -> Expression {

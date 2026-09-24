@@ -1,0 +1,40 @@
+---
+description: One fact, one field. Do not store the same data twice on a type.
+alwaysApply: true
+---
+
+# One source of truth
+
+A class, struct, or record stores each fact once. Do not keep a second field, set, cache, or copy that restates data another member already owns.
+
+Derive a lookup from the owner at the use site. Order, identity, and membership come from that one member.
+
+```csharp
+// ❌ BAD — the list is the ids, and the set is the same ids again
+readonly IReadOnlyList<string> idNames;
+readonly HashSet<string> ids;
+ids = [.. idNames];
+
+// ✅ GOOD
+readonly IReadOnlyList<string> ids;
+public IReadOnlyList<string> Ids => ids;
+```
+
+```typescript
+// ❌ BAD
+readonly ids: readonly string[];
+private readonly idSet = new Set(this.ids);
+
+// ✅ GOOD
+readonly ids: readonly string[];
+this.ids.includes(col);
+```
+
+```rust
+// ❌ BAD
+id: Vec<String>,
+ids: HashSet<String>,
+
+// ✅ GOOD
+ids: Vec<String>,
+```

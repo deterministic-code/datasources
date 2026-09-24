@@ -1,8 +1,11 @@
-use datasources::{Command, DatasourceError, Operator, QueryStatement, Result, Value, Where, WhereClause};
+use datasources::{Command, DatasourceError, Operator, QueryStatement, QueryStatementOptions, Result, Value, Where, WhereClause};
 
 pub async fn of(command: &dyn Command, table: &str, column: &str, value: &str) -> Result<i64> {
     let where_clause = WhereClause::new(Operator::equals(column, value));
-    let query = QueryStatement::new(table, &["id"], Some(&where_clause), &[]);
+    let query = QueryStatement::new(QueryStatementOptions {
+        where_clause: Some(&where_clause),
+        ..QueryStatementOptions::new(table, &["id"])
+    });
     let parameters = where_clause.parameters();
     let reader = command
         .execute_reader_statement(&query, Some(&parameters))

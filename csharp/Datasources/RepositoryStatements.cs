@@ -31,7 +31,7 @@ public sealed class RepositoryStatements
     public IReadOnlyList<string> ReadColumns => columns;
 
     public IQuery Query(IWhere? where = null) =>
-        Mapped(new QueryStatement(table, columns, where), query);
+        Mapped(new QueryStatement(new() { Table = table, Fields = columns, Where = where }), query);
     public IInsertStatement Insert(IReadOnlyList<Parameter> fields) =>
         Mapped(new InsertStatement(table, fields), insert);
     public IUpdateStatement Update(IReadOnlyList<Parameter> fields, IWhere? where = null) =>

@@ -1,9 +1,9 @@
 import { Join, QueryStatement, type IQuery } from "../../index.ts";
 
 export const contactsJoinQuery = (): IQuery =>
-  new QueryStatement(
-    "contacts_base",
-    [
+  new QueryStatement({
+    table: "contacts_base",
+    fields: [
       "contacts_base.id AS id",
       "contacts_base.first_name AS first_name",
       "contacts_base.last_name AS last_name",
@@ -18,8 +18,7 @@ export const contactsJoinQuery = (): IQuery =>
       "phone.number AS phone_number",
       "phone_type.name AS phone_type_name",
     ],
-    undefined,
-    [
+    joins: [
       Join.inner("contact_source", "contacts_base.contact_source_id", "contact_source.id"),
       Join.inner("contact_type", "contacts_base.contact_type_id", "contact_type.id"),
       Join.left("address", "contacts_base.id", "address.contact_id"),
@@ -27,4 +26,4 @@ export const contactsJoinQuery = (): IQuery =>
       Join.left("phone", "contacts_base.id", "phone.contact_id"),
       Join.left("phone_type", "phone.phone_type_id", "phone_type.id"),
     ],
-  );
+  });
