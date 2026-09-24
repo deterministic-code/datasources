@@ -192,7 +192,7 @@ public class EnrichedReadonlyRepositoryTests
 
     sealed class SourcedView : ReadonlyRepository<View>
     {
-        protected internal override async IAsyncEnumerable<(View Item, Row? Source)> ReadTracked(IStatement? query = null)
+        protected override async IAsyncEnumerable<(View Item, Row? Source)> ReadTracked(IStatement? query = null)
         {
             await Task.Yield();
             yield return (new View(), new Row { ["UserType"] = Value.From(1) });
@@ -220,7 +220,7 @@ public class EnrichedReadonlyRepositoryTests
                 yield return item;
         }
 
-        protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
+        protected override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
             WithoutSource(Read(query));
 
         public override async Task<T?> ReadSingle(IStatement? query = null)

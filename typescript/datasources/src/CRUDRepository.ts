@@ -41,6 +41,8 @@ const apply = <T>(item: T, identity: T): void => {
 const asScalar = (value: Scalar | undefined): Scalar | undefined =>
   value == null ? undefined : value;
 
+const isCells = (id: Scalar | Cells): id is Cells => typeof id === "object" && id !== null;
+
 const crudBuilt = <T>(
   typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
   connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
@@ -107,6 +109,17 @@ export class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements 
       this.statements!.delete(where),
       where.parameters?.length ? where.parameters : fieldsOf(record, () => true, this.column, this.cell),
     );
+  };
+
+  readSingleById = async (id: Scalar | Cells): Promise<T | undefined> =>
+    this.readSingle(this.byId(id));
+
+  private byId = (id: Scalar | Cells): IWhere => {
+    if (this.ids.size === 0) throw new DatasourceError("ReadSingleById requires an Id column");
+    if (isCells(id)) return this.idWhere(id);
+    if (this.ids.size !== 1)
+      throw new DatasourceError("Composite id requires a row keyed by each Id column");
+    return this.idWhere({ [[...this.ids][0]!]: id });
   };
 
   private reverseConvert = (item: T): Cells =>

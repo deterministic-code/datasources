@@ -37,4 +37,8 @@ public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 
     public Task<Response> Delete(T item, IWhere? byWhere = null) =>
         DeleteError is not null ? throw DeleteError : Task.FromResult(new Response(Value.Null.Instance, 1));
+
+    public Task<T?> ReadSingleById(Value id) => ReadSingle();
+
+    public Task<T?> ReadSingleById(Row ids) => ReadSingle();
 }

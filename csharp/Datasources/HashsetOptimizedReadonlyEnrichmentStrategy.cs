@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T>
+public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T>, ITrackedApply where T : new()
 {
     public async IAsyncEnumerable<T> Read(
         IReadonlyRepository<T> inner,
@@ -19,9 +19,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
             yield return item;
     }
 
-    public Task Enrich(IRepositoryTree tree, IList<T> items) => Enrich(tree, items, null);
-
-    internal Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources) =>
+    public Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null) =>
         ((RepositoryTreeNode)tree.Parent).EnrichFrom(items.Cast<object>().ToList(), sources);
 
     public Task Apply<TRelated>(
@@ -56,7 +54,8 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         }
         for (var i = 0; i < parents.Count; i++)
         {
-            var key = RepositoryTreeNode.Get(parent, enrichment.From);
+            var parent = parents[i];
+            var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
             if (key is null || !index.TryGetValue(RepositoryTreeNode.KeyOf(key), out var related))
                 continue;
             RepositoryTreeNode.Set(

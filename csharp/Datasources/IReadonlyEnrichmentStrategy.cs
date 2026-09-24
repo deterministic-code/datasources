@@ -7,5 +7,5 @@ public interface IReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentBinder
         IRepositoryTree tree,
         IStatement? query);
 
-    Task Enrich(IRepositoryTree tree, IList<T> items);
+    Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null);
 }

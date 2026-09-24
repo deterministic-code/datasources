@@ -6,6 +6,7 @@ use crate::create_repository_options::create_repository_options;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
+use crate::id_key::IdKey;
 use crate::mappers::{Mapper, TransformMapper};
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
@@ -189,6 +190,12 @@ impl ICRUDRepository for CRUDRepository {
             .execute_statement(&statement, Some(&parameters))
             .await
     }
+
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
+        let record = self.id_record(id)?;
+        let clause = self.id_where(&record)?;
+        self.read_single(Some(&clause)).await
+    }
 }
 
 impl CRUDRepository {
@@ -205,6 +212,28 @@ impl CRUDRepository {
             None => Ok((
                 Some(self.inner.store_clause(&self.id_where(record)?, true)?),
                 None,
+            )),
+        }
+    }
+
+    fn id_record(&self, id: &dyn IdKey) -> Result<Row> {
+        if self.id.is_empty() {
+            return Err(DatasourceError::message(
+                "ReadSingleById requires an Id column",
+            ));
+        }
+        match (id.as_value(), id.as_row()) {
+            (Some(value), _) if self.id.len() == 1 => {
+                let mut row = Row::new();
+                row.insert(self.id[0].clone(), value.clone());
+                Ok(row)
+            }
+            (Some(_), _) => Err(DatasourceError::message(
+                "Composite id requires a row keyed by each Id column",
+            )),
+            (_, Some(row)) => Ok(row.clone()),
+            _ => Err(DatasourceError::message(
+                "ReadSingleById requires an Id column",
             )),
         }
     }

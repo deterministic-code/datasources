@@ -33,6 +33,18 @@ public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRep
         return await inner.Delete(item, byWhere);
     }
 
+    public Task<T?> ReadSingleById(Value id) => Enriched(inner.ReadSingleById(id));
+
+    public Task<T?> ReadSingleById(Row ids) => Enriched(inner.ReadSingleById(ids));
+
+    async Task<T?> Enriched(Task<T?> read)
+    {
+        var item = await read;
+        if (item is null) return default;
+        await Enrich([item]);
+        return item;
+    }
+
     async Task Persist(IRepositoryTreeNode node, IReadOnlyList<object> parents, Mode mode)
     {
         foreach (var child in node.Items)

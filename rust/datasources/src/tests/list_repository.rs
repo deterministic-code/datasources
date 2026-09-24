@@ -1,10 +1,12 @@
+use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
+use crate::id_key::IdKey;
 use crate::read_input::{where_of, ReadInput};
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statements::{StatementEvaluator, WhereClause};
+use crate::statements::{Operator, StatementEvaluator, WhereClause};
 use crate::value::Value;
 use crate::where_trait::Where;
 use async_trait::async_trait;
@@ -111,5 +113,25 @@ impl ICRUDRepository for ListRepository {
             .expect("list")
             .retain(|row| row.get("id") != id.as_ref());
         Ok(Response::new(Value::Null, 1))
+    }
+
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
+        let clause = id_clause(id)?;
+        Ok(self.filter(Some(&clause)).into_iter().next())
+    }
+}
+
+fn id_clause(id: &dyn IdKey) -> Result<WhereClause> {
+    match (id.as_value(), id.as_row()) {
+        (Some(value), _) => Ok(WhereClause::new(Operator::equals("id", value.clone()))),
+        (_, Some(row)) => row
+            .iter()
+            .map(|(key, value)| Operator::equals(key.clone(), value.clone()))
+            .reduce(|left, right| Operator::and(left, right))
+            .map(WhereClause::new)
+            .ok_or_else(|| DatasourceError::message("ReadSingleById requires an Id column")),
+        _ => Err(DatasourceError::message(
+            "ReadSingleById requires an Id column",
+        )),
     }
 }

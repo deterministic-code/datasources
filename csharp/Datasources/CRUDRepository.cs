@@ -54,6 +54,21 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
             where.Parameters is { Count: > 0 } parameters ? parameters : Params(record, _ => true));
     }
 
+    public Task<T?> ReadSingleById(Value id) => ReadSingle(IdWhere(Single(id)));
+
+    public Task<T?> ReadSingleById(Row key) =>
+        ids.Count == 0
+            ? throw new DatasourceException("ReadSingleById requires an Id column")
+            : ReadSingle(IdWhere(key));
+
+    Row Single(Value id) =>
+        ids.Count switch
+        {
+            1 => new Row { [ids.Single()] = id },
+            0 => throw new DatasourceException("ReadSingleById requires an Id column"),
+            _ => throw new DatasourceException("Composite id requires a row keyed by each Id column")
+        };
+
     IWhere IdWhere(Row record) =>
         new WhereClause(ids.Select(col =>
             record.TryGetValue(col, out var value)

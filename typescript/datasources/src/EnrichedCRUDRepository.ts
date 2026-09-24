@@ -1,5 +1,6 @@
 import { Operator, WhereClause } from "./statements/index.ts";
 import type { Scalar } from "./builders/Scalar.ts";
+import type { Cells } from "./converters/Cell.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
@@ -120,6 +121,13 @@ export class EnrichedCRUDRepository<T extends object>
   delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
     await this.persist(this.tree.parent, [item], "delete");
     return this.crud.delete(item, byWhere);
+  };
+
+  readSingleById = async (id: Scalar | Cells): Promise<T | undefined> => {
+    const item = await this.crud.readSingleById(id);
+    if (!item) return undefined;
+    await this.enrich([item]);
+    return item;
   };
 
   private persist = async (

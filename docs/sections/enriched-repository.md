@@ -186,6 +186,18 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 **Returns** `Promise<Response>`
 
+##### readSingleById(id)
+
+Reads one row by id, then enriches it.
+
+```typescript
+readSingleById(id: Scalar | Cells): Promise<T | undefined>
+```
+
+- `id` — value of the single id column, or a row keyed by each id column
+
+**Returns** `Promise<T | undefined>`
+
 #### IRepositoryTree
 
 ```typescript
@@ -529,6 +541,30 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 
 **Returns** `Task<Response>`
 
+##### ReadSingleById(id)
+
+Reads one row by id, then enriches it.
+
+```csharp
+public Task<T?> ReadSingleById(Value id)
+```
+
+- `id` — value of the single id column
+
+**Returns** `Task<T?>`
+
+##### ReadSingleById(ids)
+
+Reads one row by composite id, then enriches it.
+
+```csharp
+public Task<T?> ReadSingleById(Row ids)
+```
+
+- `ids` — id column names and values
+
+**Returns** `Task<T?>`
+
 #### IRepositoryTree
 
 ```csharp
@@ -694,16 +730,17 @@ IAsyncEnumerable<T> Read(IReadonlyRepository<T> inner, IRepositoryTree tree, ISt
 
 **Returns** `IAsyncEnumerable<T>`
 
-##### Enrich(tree, items)
+##### Enrich(tree, items, sources)
 
-Fills `items` from the tree.
+Fills `items` from the tree. `sources` supplies the unread columns for each parent.
 
 ```csharp
-Task Enrich(IRepositoryTree tree, IList<T> items)
+Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null)
 ```
 
 - `tree` — [IRepositoryTree](#irepositorytree)
 - `items` — parents to fill
+- `sources` — optional source rows aligned with `items`
 
 ### rust
 #### Enriched
@@ -827,6 +864,18 @@ pub fn with_strategy(inner: Arc<dyn CRUDRepository>, strategy: Arc<dyn ReadonlyE
 ##### add_enriched(into, from, via, by, select, many, nest)
 
 Forwards to the inner [EnrichedReadonlyRepository](#enrichedreadonlyrepository). A CRUD `via` is kept so `many` children can be written.
+
+##### read_single_by_id(id)
+
+Reads one row by id, then enriches it.
+
+```rust
+async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
+```
+
+- `id` — `Value` for the single id column, or a `Row` keyed by each id column
+
+**Returns** `Result<Option<Row>>`
 
 #### RepositoryTree
 

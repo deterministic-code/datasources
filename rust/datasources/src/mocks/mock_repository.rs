@@ -1,5 +1,6 @@
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
+use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
@@ -97,5 +98,9 @@ impl ICRUDRepository for MockRepository {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(Response::new(Value::Null, 1))
+    }
+
+    async fn read_single_by_id(&self, _id: &dyn IdKey) -> Result<Option<Row>> {
+        self.read_single(None).await
     }
 }

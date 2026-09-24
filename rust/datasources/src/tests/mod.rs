@@ -1824,6 +1824,56 @@ impl ConvertSchema for Composite {
     }
 }
 
+#[tokio::test]
+async fn read_single_by_id_uses_id_columns() {
+    let command = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "users".into();
+    options.row_converter = Some(users_mapping());
+    let repo = CRUDRepository::new(connection, options).unwrap();
+    assert!(repo
+        .read_single_by_id(&Value::Int(9))
+        .await
+        .unwrap()
+        .is_none());
+    let log = command.reader_logs.lock().unwrap()[0].clone();
+    assert_eq!(log.0, "SELECT id, name FROM users WHERE id = $id");
+    assert_eq!(log.1[0].name, "id");
+    assert_eq!(log.1[0].value, Value::Int(9));
+
+    let generated = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(generated.clone(), "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.ids = vec!["org_id".into(), "user_id".into()];
+    options.entity = "users".into();
+    options.row_converter = Some(RowTypeConverter::of::<Composite>());
+    let repo = CRUDRepository::new(connection, options).unwrap();
+    assert!(repo
+        .read_single_by_id(&record(&[
+            ("org_id", Value::Int(1)),
+            ("user_id", Value::Int(2)),
+        ]))
+        .await
+        .unwrap()
+        .is_none());
+    assert!(generated.reader_logs.lock().unwrap()[0]
+        .0
+        .contains("org_id = $org_id AND user_id = $user_id"));
+    assert!(repo
+        .read_single_by_id(&Value::Int(1))
+        .await
+        .unwrap_err()
+        .to_string()
+        .contains("Composite id requires a row keyed by each Id column"));
+    assert!(repo
+        .read_single_by_id(&record(&[("org_id", Value::Int(1))]))
+        .await
+        .unwrap_err()
+        .to_string()
+        .contains("Missing Id value"));
+}
+
 struct Label;
 
 impl ConvertSchema for Label {

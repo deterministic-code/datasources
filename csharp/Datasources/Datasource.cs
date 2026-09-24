@@ -21,6 +21,11 @@ public sealed class Datasource(
         ReadonlyRepositoryOptions<T>? options = null) where T : new() =>
         new ReadonlyRepository<T>(connection ?? DefaultConnection(), Apply(options));
 
+    public EnrichedReadonlyRepository<T> CreateReadonlyEnrichedRepository<T>(
+        IConnection? connection = null,
+        ReadonlyRepositoryOptions<T>? options = null) where T : new() =>
+        new(CreateReadonlyRepository(connection, options));
+
     CRUDRepositoryOptions<T> Apply<T>(ReadonlyRepositoryOptions<T>? options) where T : new()
     {
         var built = CreateRepositoryOptions.FromType<T>(driver.RowTypeConverters);

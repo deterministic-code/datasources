@@ -1,4 +1,5 @@
 use crate::i_repository::IRepository;
+use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::response::Response;
 use crate::result::Result;
@@ -26,6 +27,7 @@ pub trait ICRUDRepository: IReadonlyRepository {
     async fn create(&self, item: &mut Row) -> Result<Response>;
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>;
 }
 
 struct AsReadonly(Arc<dyn ICRUDRepository>);

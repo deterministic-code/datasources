@@ -54,6 +54,18 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 **Returns** `Promise<Response>`
 
+##### readSingleById(id)
+
+Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `undefined`.
+
+```typescript
+readSingleById(id: Scalar | Cells): Promise<T | undefined>
+```
+
+- `id` — value of the single id column, or a row keyed by each id column
+
+**Returns** `Promise<T | undefined>`
+
 #### CRUDRepository
 
 ```typescript
@@ -183,6 +195,18 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 - `byWhere` — optional predicate; omitted uses id values on `item`
 
 **Returns** `Promise<Response>`
+
+##### readSingleById(id)
+
+Returns the row for one id column, or for a composite key.
+
+```typescript
+readSingleById(id: Scalar | Cells): Promise<T | undefined>
+```
+
+- `id` — value of the single id column, or a row keyed by each id column
+
+**Returns** `Promise<T | undefined>`
 
 #### CRUDRepositoryOptions
 
@@ -347,6 +371,30 @@ Task<Response> Delete(T item, IWhere? byWhere = null)
 
 **Returns** `Task<Response>`
 
+##### ReadSingleById(id)
+
+Returns the row for the single configured id column. Zero id columns, or more than one, throw.
+
+```csharp
+Task<T?> ReadSingleById(Value id)
+```
+
+- `id` — value of the single id column
+
+**Returns** `Task<T?>`
+
+##### ReadSingleById(ids)
+
+Returns the row whose configured id columns match `ids`. A missing id column throws. No match returns `null`.
+
+```csharp
+Task<T?> ReadSingleById(Row ids)
+```
+
+- `ids` — id column names and values
+
+**Returns** `Task<T?>`
+
 #### CRUDRepository
 
 ```csharp
@@ -459,6 +507,30 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 - `byWhere` — optional predicate; omitted uses id values on `item`
 
 **Returns** `Task<Response>`
+
+##### ReadSingleById(id)
+
+Returns the row for the single configured id column.
+
+```csharp
+public Task<T?> ReadSingleById(Value id)
+```
+
+- `id` — value of the single id column
+
+**Returns** `Task<T?>`
+
+##### ReadSingleById(ids)
+
+Returns the row whose configured id columns match `ids`.
+
+```csharp
+public Task<T?> ReadSingleById(Row ids)
+```
+
+- `ids` — id column names and values
+
+**Returns** `Task<T?>`
 
 #### CRUDRepositoryOptions
 
@@ -615,6 +687,18 @@ async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Respo
 
 **Returns** `Result<Response>`
 
+##### read_single_by_id(id)
+
+Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `None`.
+
+```rust
+async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
+```
+
+- `id` — `Value` for the single id column, or a `Row` keyed by each id column
+
+**Returns** `Result<Option<Row>>`
+
 #### CRUDRepository
 
 ```rust
@@ -671,6 +755,18 @@ pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>)
 ```
 
 - `middleware` — command middleware
+
+##### read_single_by_id(id)
+
+Returns the row for one id column, or for a composite key.
+
+```rust
+pub async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
+```
+
+- `id` — `Value` for the single id column, or a `Row` keyed by each id column
+
+**Returns** `Result<Option<Row>>`
 
 #### CRUDRepositoryOptions
 
@@ -793,6 +889,8 @@ pub ids: Vec<String>
 
 Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
 
+`ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
+
 `Mapper` / `mapper` is [ReadonlyRepositoryOptions.RowsMapper](./readonly-repository.md#rowsmapper).
 
 ## Examples
@@ -805,5 +903,16 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 ```rust rust/datasources/src/tests/mod.rs#L1468-L1482
 ```
 ```typescript typescript/datasources/src/repository.test.ts#L103-L113
+```
+:::
+
+### Read one row by id
+
+::: example
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#L144-L150
+```
+```rust rust/datasources/src/tests/mod.rs#L1835-L1855
+```
+```typescript typescript/datasources/src/repository.test.ts#L175-L183
 ```
 :::

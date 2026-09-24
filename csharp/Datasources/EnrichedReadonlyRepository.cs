@@ -34,7 +34,7 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
     public Task Enrich(IList<T> items) => strategy.Enrich(Tree, items);
 
     public override IAsyncEnumerable<T> Read(IStatement? query = null) =>
-        Items(ReadTracked(query));
+        strategy.Read(inner, Tree, query);
 
     public override IAsyncEnumerable<T> Read(IWhere where) =>
         Items(ReadTracked(where));
