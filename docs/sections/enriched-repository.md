@@ -4,11 +4,13 @@ A read-only wrapper fills properties already on `T` from related repositories. T
 
 Lookups use `ReadSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read`. Missing lookups leave the destination default.
 
-`EnrichedCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository.
+Writes use [CRUDRepository](./crud-repository.md). Register the same tree with `AddEnriched`. With no enrichments, create / update / delete / read stay the table SQL, and `Read` stays streaming. With enrichments, `Read` still fills related fields. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository.
 
-- **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
-- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
+- **Create** — write the parent, apply the generated identity through the create mapper, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
 - **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+
+[EnrichedReadonlyRepository](#enrichedreadonlyrepository) is the read-only wrapper.
 
 See [Bulk repository](./bulk-repository.md) for list writes.
 
@@ -127,76 +129,6 @@ read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<
 
 **Returns** `AsyncIterable<T>`
 
-#### EnrichedCRUDRepository
-
-```typescript
-class EnrichedCRUDRepository<T extends object> extends EnrichedReadonlyRepository<T> implements ICRUDRepository<T>
-```
-
-**Constructor**
-
-##### EnrichedCRUDRepository(inner, strategy?)
-
-Wraps an inner [ICRUDRepository](./crud-repository.md). Omitted strategy uses the default.
-
-```typescript
-constructor(inner: ICRUDRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
-```
-
-- `inner` — [ICRUDRepository](./crud-repository.md)
-- `strategy` — optional [IReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy)
-
-**Methods**
-
-##### create(item)
-
-Writes the parent, then nested `many` children.
-
-```typescript
-create(item: T): Promise<Response>
-```
-
-- `item` — parent to insert
-
-**Returns** `Promise<Response>`
-
-##### update(item, byWhere?)
-
-Writes the parent, then replace-syncs nested `many` lists.
-
-```typescript
-update(item: T, byWhere?: IWhere): Promise<Response>
-```
-
-- `item` — parent to update
-- `byWhere` — optional predicate
-
-**Returns** `Promise<Response>`
-
-##### delete(item, byWhere?)
-
-Deletes nested `many` rows, then the parent.
-
-```typescript
-delete(item: T, byWhere?: IWhere): Promise<Response>
-```
-
-- `item` — parent to delete
-- `byWhere` — optional predicate
-
-**Returns** `Promise<Response>`
-
-##### readSingleById(id)
-
-Reads one row by id, then enriches it.
-
-```typescript
-readSingleById(id: Scalar | Cells): Promise<T | undefined>
-```
-
-- `id` — value of the single id column, or a row keyed by each id column
-
-**Returns** `Promise<T | undefined>`
 
 #### IRepositoryTree
 
@@ -482,89 +414,6 @@ public override IAsyncEnumerable<T> Read(IStatement? query = null)
 
 **Returns** `IAsyncEnumerable<T>`
 
-#### EnrichedCRUDRepository
-
-```csharp
-public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
-```
-
-**Constructor**
-
-##### EnrichedCRUDRepository(inner, strategy)
-
-Wraps an inner [ICRUDRepository](./crud-repository.md). Omitted strategy uses the default.
-
-```csharp
-public EnrichedCRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-- `inner` — [ICRUDRepository](./crud-repository.md)
-- `strategy` — optional [IReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy)
-
-**Methods**
-
-##### Create(item)
-
-Writes the parent, then nested `many` children.
-
-```csharp
-public Task<Response> Create(T item)
-```
-
-- `item` — parent to insert
-
-**Returns** `Task<Response>`
-
-##### Update(item, byWhere)
-
-Writes the parent, then replace-syncs nested `many` lists.
-
-```csharp
-public Task<Response> Update(T item, IWhere? byWhere = null)
-```
-
-- `item` — parent to update
-- `byWhere` — optional predicate
-
-**Returns** `Task<Response>`
-
-##### Delete(item, byWhere)
-
-Deletes nested `many` rows, then the parent.
-
-```csharp
-public Task<Response> Delete(T item, IWhere? byWhere = null)
-```
-
-- `item` — parent to delete
-- `byWhere` — optional predicate
-
-**Returns** `Task<Response>`
-
-##### ReadSingleById(id)
-
-Reads one row by id, then enriches it.
-
-```csharp
-public Task<T?> ReadSingleById(Value id)
-```
-
-- `id` — value of the single id column
-
-**Returns** `Task<T?>`
-
-##### ReadSingleById(ids)
-
-Reads one row by composite id, then enriches it.
-
-```csharp
-public Task<T?> ReadSingleById(Row ids)
-```
-
-- `ids` — id column names and values
-
-**Returns** `Task<T?>`
-
 #### IRepositoryTree
 
 ```csharp
@@ -826,56 +675,6 @@ pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>,
 
 **Returns** `&mut Self`
 
-#### EnrichedCRUDRepository
-
-```rust
-pub struct EnrichedCRUDRepository
-```
-
-**Constructor**
-
-##### new(inner)
-
-Wraps an inner [CRUDRepository](./crud-repository.md). Uses the default strategy.
-
-```rust
-pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
-```
-
-- `inner` — [CRUDRepository](./crud-repository.md)
-
-**Returns** [EnrichedCRUDRepository](#deepcrudrepository)
-
-##### with_strategy(inner, strategy)
-
-Wraps an inner repository with a [ReadonlyEnrichmentStrategy](#readonlyenrichmentstrategy).
-
-```rust
-pub fn with_strategy(inner: Arc<dyn CRUDRepository>, strategy: Arc<dyn ReadonlyEnrichmentStrategy>) -> Self
-```
-
-- `inner` — [CRUDRepository](./crud-repository.md)
-- `strategy` — [ReadonlyEnrichmentStrategy](#readonlyenrichmentstrategy)
-
-**Returns** [EnrichedCRUDRepository](#deepcrudrepository)
-
-**Methods**
-
-##### add_enriched(into, from, via, by, select, many, nest)
-
-Forwards to the inner [EnrichedReadonlyRepository](#enrichedreadonlyrepository). A CRUD `via` is kept so `many` children can be written.
-
-##### read_single_by_id(id)
-
-Reads one row by id, then enriches it.
-
-```rust
-async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
-```
-
-- `id` — `Value` for the single id column, or a `Row` keyed by each id column
-
-**Returns** `Result<Option<Row>>`
 
 #### RepositoryTree
 
@@ -1089,7 +888,7 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#L198-L281
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L114-L160
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L116-L162
 ```
 
 ```output [User view]
@@ -1130,7 +929,7 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L280-L356
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L463-L564
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L465-L567
 ```
 ```typescript typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L133-L197
 ```

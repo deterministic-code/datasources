@@ -34,6 +34,43 @@ type Props = Record<string, Scalar | object>;
 type Mode = "create" | "update" | "delete";
 type ReadQuery = IQuery | IWhere | IExecuteStoredProcedureStatement;
 
+const alias = (text: string, name: string, next: string): string => {
+  const token = `$${name}`;
+  let index = 0;
+  let result = "";
+  while (text.indexOf(token, index) >= 0) {
+    const at = text.indexOf(token, index);
+    const end = at + token.length;
+    const nextChar = text.charAt(end);
+    const boundary = nextChar === "" || !/[A-Za-z0-9_]/.test(nextChar);
+    result += text.slice(index, at) + (boundary ? `$${next}` : token);
+    index = end;
+  }
+  return result + text.slice(index);
+};
+
+const distinct = (
+  text: string,
+  fields: Field[],
+  where: { name: string; value?: Scalar }[],
+): { text: string; parameters: Field[] } => {
+  const split = text.lastIndexOf(" WHERE ");
+  /* v8 ignore next 2 -- table updates always include WHERE */
+  const head = split < 0 ? text : text.slice(0, split);
+  let tail = split < 0 ? "" : text.slice(split);
+  const parameters = [...fields];
+  for (const parameter of where) {
+    if (parameter.value === undefined) continue;
+    const field = fields.find((item) => item.name === parameter.name);
+    if (field && field.value !== parameter.value) {
+      const renamed = `${parameter.name}__where`;
+      tail = alias(tail, parameter.name, renamed);
+      parameters.push({ name: renamed, value: parameter.value });
+    } else parameters.push({ name: parameter.name, value: parameter.value });
+  }
+  return { text: head + tail, parameters };
+};
+
 const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
@@ -282,19 +319,22 @@ export class CRUDRepository<T = Cells>
     const where = byWhere ? this.stored(byWhere) : this.stored(this.idWhere(record), true);
     const fields = fieldsOf(record, (col) => !this.idSet.has(col), this.column, this.cell);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    return execute(this.command(), this.statements!.update(fields, where), [
-      ...fields,
-      ...(where.parameters ?? []),
-    ]);
+    const statement = this.statements!.update(fields, where);
+    const bound = distinct(statement.getText(), fields, where.parameters ?? []);
+    return this.command().execute(bound.text, bound.parameters);
   };
 
   private remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ? this.stored(byWhere) : this.stored(this.idWhere(record), true);
+    const statement = this.statements!.delete(where);
+    const listed = where.parameters ?? [];
     return execute(
       this.command(),
-      this.statements!.delete(where),
-      where.parameters?.length ? where.parameters : fieldsOf(record, () => true, this.column, this.cell),
+      statement,
+      listed.length ? listed : statement.getText().includes("$")
+        ? fieldsOf(record, () => true, this.column, this.cell)
+        : [],
     );
   };
 

@@ -166,18 +166,20 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
-        return await Command().Execute(
-            Statements.Update(fields, where),
-            [.. fields, .. where.Parameters]);
+        var statement = Statements.Update(fields, where);
+        var (text, parameters) = Distinct(statement.GetText(), fields, where.Parameters);
+        return await Command().Execute(text, parameters);
     }
 
     async Task<Response> Remove(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
         var where = byWhere is null ? Stored(IdWhere(record), fieldsApplied: true) : Stored(byWhere);
-        return await Command().Execute(
-            Statements.Delete(where),
-            where.Parameters is { Count: > 0 } parameters ? parameters : Params(record, _ => true));
+        var statement = Statements.Delete(where);
+        var parameters = where.Parameters is { Count: > 0 } listed
+            ? listed
+            : statement.GetText().Contains('$') ? Params(record, _ => true) : [];
+        return await Command().Execute(statement, parameters);
     }
 
     IAsyncEnumerable<(T Item, Row? Source)> Source(IStatement? query) =>
@@ -421,6 +423,42 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     static PropertyInfo Prop(object obj, string name) =>
         obj.GetType().GetProperty(name)
         ?? throw new DatasourceException($"Unknown property \"{name}\"");
+
+    static (string Text, List<Parameter> Parameters) Distinct(
+        string text, IReadOnlyList<Parameter> fields, IReadOnlyList<Parameter> where)
+    {
+        var split = text.LastIndexOf(" WHERE ", StringComparison.Ordinal);
+        var head = split < 0 ? text : text[..split];
+        var tail = split < 0 ? "" : text[split..];
+        var bound = fields.ToList();
+        var values = fields.GroupBy(field => field.Name).ToDictionary(group => group.Key, group => group.Last().Value);
+        foreach (var parameter in where)
+            if (values.TryGetValue(parameter.Name, out var current) && !Equals(current, parameter.Value))
+            {
+                var alias = $"{parameter.Name}__where";
+                tail = Alias(tail, parameter.Name, alias);
+                bound.Add(new Parameter(alias, parameter.Value));
+            }
+            else
+                bound.Add(parameter);
+        return (head + tail, bound);
+    }
+
+    static string Alias(string text, string name, string alias)
+    {
+        var token = "$" + name;
+        var next = "$" + alias;
+        var index = 0;
+        var result = new System.Text.StringBuilder();
+        while (text.IndexOf(token, index, StringComparison.Ordinal) is var at && at >= 0)
+        {
+            var end = at + token.Length;
+            var boundary = end >= text.Length || !char.IsAsciiLetterOrDigit(text[end]) && text[end] != '_';
+            result.Append(text[index..at]).Append(boundary ? next : token);
+            index = end;
+        }
+        return result.Append(text[index..]).ToString();
+    }
 
     enum Mode { Create, Update, Delete }
 }

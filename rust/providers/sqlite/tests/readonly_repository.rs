@@ -286,9 +286,9 @@ mod users_view_roles {
     use datasources::{
         create_repository_options, encode_rows, eq, Casing, ChangeCasingMapper, ConvertSchema,
         Datasource, DictionaryMapper, EnrichedReadonlyRepository, FlatToNestedMapper,
-        FlatToNestedReadonlyEnrichmentStrategy, HashsetOptimizedReadonlyEnrichmentStrategy, Join,
-        MappedValue, Query, QueryStatement, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
-        Value, WhereClause,
+        FlatToNestedReadonlyEnrichmentStrategy, HashsetOptimizedReadonlyEnrichmentStrategy,
+        IReadonlyRepository, Join, MappedValue, Query, QueryStatement, TransformMapper, TypeMap,
+        TypeMapField, TypeMapGroup, Value, WhereClause,
     };
     use std::sync::Arc;
 
@@ -426,8 +426,10 @@ mod users_view_roles {
             Some(connection.clone()),
             Some(users_options.read),
         );
-        let types =
-            ds.create_readonly_repository::<UserType>(Some(connection.clone()), Some(type_options.read));
+        let types = ds.create_readonly_repository::<UserType>(
+            Some(connection.clone()),
+            Some(type_options.read),
+        );
         let roles =
             ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
         let mut users_repo = EnrichedReadonlyRepository::with_strategy(
@@ -561,5 +563,256 @@ mod users_view_roles {
             .contains(&format!("UserId={ADA}")));
         assert_eq!(role_names(grace.get("Roles").unwrap()), ["viewer"]);
         assert_eq!(lin.get("Roles"), Some(&Value::from("")));
+    }
+}
+
+mod user_crud {
+    use super::{datasource, open, User};
+    use datasources::{
+        create_repository_options, encode_rows, eq, CRUDRepository, Casing, ChangeCasingMapper,
+        ConvertSchema, Datasource, DictionaryMapper, ICRUDRepository, IReadonlyRepository,
+        RowTypeConverter, Value, WhereClause,
+    };
+    use std::sync::Arc;
+
+    struct UserType;
+
+    impl ConvertSchema for UserType {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![("Id", "INTEGER"), ("Name", "TEXT")]
+        }
+    }
+
+    struct UserRole;
+
+    impl ConvertSchema for UserRole {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![("UserId", "INTEGER"), ("Name", "TEXT")]
+        }
+    }
+
+    struct UsersView;
+
+    impl ConvertSchema for UsersView {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![
+                ("Key", "INTEGER"),
+                ("Login", "TEXT"),
+                ("Active", "INTEGER"),
+                ("Opened", "TEXT"),
+                ("UserTypeId", "INTEGER"),
+                ("Version", "INTEGER"),
+            ]
+        }
+    }
+
+    fn role_names(value: &Value) -> Vec<String> {
+        value
+            .wire_text()
+            .split('|')
+            .filter(|part| !part.is_empty())
+            .filter_map(|part| {
+                part.split(',')
+                    .find_map(|field| field.strip_prefix("Name="))
+                    .map(str::to_string)
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn writes_user_from_the_type() {
+        let built = datasource();
+        let ds: &dyn Datasource = &*built;
+        let connection = open(
+            ds,
+            "
+            CREATE TABLE User (
+                id INTEGER PRIMARY KEY,
+                is_enabled INTEGER NOT NULL,
+                username TEXT NOT NULL
+            );
+            ",
+        )
+        .await;
+        let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
+        let mut created = datasources::Row::new();
+        created.insert("username".into(), Value::from("ada"));
+        created.insert("is_enabled".into(), Value::Bool(true));
+        users_repo.create(&mut created).await.unwrap();
+        let by_id = users_repo
+            .read_single_by_id(created.get("id").unwrap())
+            .await
+            .unwrap()
+            .unwrap();
+        let matches = users_repo
+            .read(Some(&WhereClause::binary("username", eq, "ada").and(
+                "is_enabled",
+                eq,
+                Value::Bool(true),
+            )))
+            .await
+            .unwrap();
+        created.insert("username".into(), Value::from("ada-v2"));
+        users_repo.update(&created, None).await.unwrap();
+        let renamed = users_repo
+            .read_single_by_id(created.get("id").unwrap())
+            .await
+            .unwrap()
+            .unwrap();
+        users_repo.delete(&created, None).await.unwrap();
+        let gone = users_repo
+            .read_single_by_id(created.get("id").unwrap())
+            .await
+            .unwrap();
+        assert_eq!(created.get("id"), Some(&Value::Int(1)));
+        assert_eq!(by_id.get("id"), Some(&Value::Int(1)));
+        assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
+        assert_eq!(by_id.get("is_enabled"), Some(&Value::Int(1)));
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].get("username"), Some(&Value::from("ada")));
+        assert_eq!(renamed.get("username"), Some(&Value::from("ada-v2")));
+        assert!(gone.is_none());
+    }
+
+    #[tokio::test]
+    async fn updates_users_view_when_the_version_matches() {
+        let built = datasource();
+        let ds: &dyn Datasource = &*built;
+        let connection = open(
+            ds,
+            "
+            CREATE TABLE user_type (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+            CREATE TABLE user (
+                id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL,
+                is_enabled INTEGER NOT NULL,
+                created TEXT NOT NULL,
+                user_type_id INTEGER NOT NULL,
+                version INTEGER NOT NULL
+            );
+            CREATE TABLE user_role (
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL
+            );
+            ",
+        )
+        .await;
+        let mut users_options = create_repository_options::<UsersView>();
+        users_options.ids = vec!["Key".into()];
+        users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+            "UsersView".to_string(),
+            "user".to_string(),
+        )]));
+        users_options.column_mappings = Box::new(DictionaryMapper::new([
+            ("Key".to_string(), "id".to_string()),
+            ("Login".to_string(), "username".to_string()),
+            ("Active".to_string(), "is_enabled".to_string()),
+            ("Opened".to_string(), "created".to_string()),
+            ("UserTypeId".to_string(), "user_type_id".to_string()),
+            ("Version".to_string(), "version".to_string()),
+        ]));
+        users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+        let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+        let mut type_options = create_repository_options::<UserType>();
+        type_options.entity_mapper =
+            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        type_options.column_mappings = Box::new(casing);
+        type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+        let mut role_options = create_repository_options::<UserRole>();
+        role_options.entity_mapper =
+            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        role_options.column_mappings =
+            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
+        let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
+        let user_types_repo =
+            Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
+        let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
+        users_repo.add_enriched(
+            "UserType",
+            "UserTypeId",
+            user_types_repo.clone(),
+            "Id",
+            Some("Name".into()),
+            false,
+            (),
+        );
+        users_repo.add_enriched(
+            "Roles",
+            "Key",
+            user_roles_repo.clone(),
+            "UserId",
+            None,
+            true,
+            (),
+        );
+        let mut admin = datasources::Row::new();
+        admin.insert("Name".into(), Value::from("admin"));
+        user_types_repo.create(&mut admin).await.unwrap();
+        let mut admin_role = datasources::Row::new();
+        admin_role.insert("Name".into(), Value::from("admin"));
+        let mut editor_role = datasources::Row::new();
+        editor_role.insert("Name".into(), Value::from("editor"));
+        let mut user = datasources::Row::new();
+        user.insert("Login".into(), Value::from("ada"));
+        user.insert("Active".into(), Value::Bool(true));
+        user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
+        user.insert("UserTypeId".into(), admin.get("Id").cloned().unwrap());
+        user.insert("Version".into(), Value::Int(1));
+        user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
+        users_repo.create(&mut user).await.unwrap();
+        let key = user.get("Key").cloned().unwrap();
+        let mut loaded = users_repo
+            .read_single(Some(&WhereClause::binary("Key", eq, key.clone())))
+            .await
+            .unwrap()
+            .unwrap();
+        let version = loaded.get("Version").cloned().unwrap();
+        loaded.insert("Login".into(), Value::from("ada-v2"));
+        loaded.insert("Version".into(), Value::Int(2));
+        let updated = users_repo
+            .update(
+                &loaded,
+                Some(&WhereClause::binary("Key", eq, key.clone()).and(
+                    "Version",
+                    eq,
+                    version.clone(),
+                )),
+            )
+            .await
+            .unwrap();
+        let current = users_repo
+            .read_single(Some(&WhereClause::binary("Key", eq, key.clone())))
+            .await
+            .unwrap()
+            .unwrap();
+        let stale = users_repo
+            .update(
+                &loaded,
+                Some(&WhereClause::binary("Key", eq, key.clone()).and("Version", eq, version)),
+            )
+            .await
+            .unwrap();
+        users_repo.delete(&loaded, None).await.unwrap();
+        let gone = users_repo.read_single_by_id(&key).await.unwrap();
+        let roles = user_roles_repo
+            .read(Some(&WhereClause::binary("UserId", eq, key.clone())))
+            .await
+            .unwrap();
+        assert_eq!(admin.get("Id"), Some(&Value::Int(1)));
+        assert_eq!(user.get("Key"), Some(&Value::Int(1)));
+        assert_eq!(loaded.get("UserType"), Some(&Value::from("admin")));
+        let mut names = role_names(loaded.get("Roles").unwrap());
+        names.sort();
+        assert_eq!(names, ["admin", "editor"]);
+        assert_eq!(updated.rows_affected, 1);
+        assert_eq!(current.get("Version"), Some(&Value::Int(2)));
+        assert_eq!(current.get("Login"), Some(&Value::from("ada-v2")));
+        assert_eq!(stale.rows_affected, 0);
+        assert!(gone.is_none());
+        assert!(roles.is_empty());
     }
 }

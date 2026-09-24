@@ -144,12 +144,12 @@ See [Command](#command) for middleware and `execute`.
 
 ### Enriched CRUD repository
 
-A `EnrichedCRUDRepository` wraps a CRUD repository, fills related fields after `read`, and writes nested `many` children on create / update / delete.
+A `CRUDRepository` fills related fields after `read` once enrichments are registered, and writes nested `many` children on create / update / delete.
 
 ##### C#
 
 ```csharp
-var contacts = new EnrichedCRUDRepository<Contact>(contactRepo);
+var contacts = new CRUDRepository<Contact>(contactRepo);
 contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
 contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
     nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
@@ -161,7 +161,7 @@ await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address
 ##### Rust
 
 ```rust
-let mut contacts = EnrichedCRUDRepository::new(contact_repo);
+let mut contacts = CRUDRepository::from_repository(contact_repo);
 contacts
     .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false, ())
     .add_enriched("addresses", "id", addresses, "contact_id", None, true, |node| {
@@ -175,7 +175,7 @@ contacts.create(contact).await?;
 ##### TypeScript
 
 ```typescript
-const contacts = new EnrichedCRUDRepository(contactRepo);
+const contacts = new CRUDRepository(contactRepo);
 contacts.addEnriched("contact_type_name", "contact_type_id", types, "id", "name");
 contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true, (node) =>
   node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
@@ -9413,7 +9413,7 @@ let disabled = repo
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L32-L56)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L34-L58)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
@@ -9628,7 +9628,7 @@ let later = repo
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L58-L97)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L60-L99)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
@@ -9928,7 +9928,7 @@ readSingleById(id: Scalar | Cells): Promise<T | undefined>
 ##### CRUDRepository {#typescript-crudrepository}
 
 ```typescript
-class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>
+class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>, IEnriched<T>
 ```
 
 **Constructor**
@@ -9938,11 +9938,14 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | [CRUDRepository(type, connection)](#typescript-crudrepository-crudrepository-type-connection) | Builds a table repository from a type and [IConnection](#connection). |
 | [CRUDRepository(connection, options)](#typescript-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#typescript-crudrepositoryoptions). |
 | [CRUDRepository(built)](#typescript-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#typescript-builtrepository). |
+| [CRUDRepository(inner, strategy?)](#typescript-crudrepository-crudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#typescript-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default. |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
+| ids | Configured id property names. |
+| tree | Enrichment tree. Empty until `addEnriched`. |
 | rowConverter | Row [TypeConverter](#type-converter). Convert uses this, then [mapper](#typescript-repository-mapper). |
 | mapper | Read-row [Mapper](#mapper). This is [ReadonlyRepositoryOptions.rowsMapper](#typescript-rowsmapper). |
 | statements | SQL fragments for query / insert / update / delete. |
@@ -9957,6 +9960,8 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | [update(item, byWhere?)](#typescript-crudrepository-update-item-bywhere) | Updates one item. |
 | [delete(item, byWhere?)](#typescript-crudrepository-delete-item-bywhere) | Deletes one item. |
 | [readSingleById(id)](#typescript-crudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. |
+| [addEnriched(into, from, via, by, select?, many?, nest?)](#typescript-crudrepository-addenriched-into-from-via-by-select-many-nest) | Registers a lookup or a `many` list. Returns this repository. |
+| [enrich(items)](#typescript-crudrepository-enrich-items) | Fills `items` from the registered tree. |
 
 ###### CRUDRepository(type, connection) {#typescript-crudrepository-crudrepository-type-connection}
 
@@ -10007,6 +10012,23 @@ constructor(built: BuiltRepository<T>)
 | Name | Description |
 | --- | --- |
 | `built` | [BuiltRepository](#typescript-builtrepository) |
+
+###### CRUDRepository(inner, strategy?) {#typescript-crudrepository-crudrepository-inner-strategy}
+
+Wraps an inner [ICRUDRepository](#typescript-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
+
+**Definition**
+
+```typescript
+constructor(inner: ICRUDRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ICRUDRepository](#typescript-icrudrepository) |
+| `strategy` | optional read enrichment strategy |
 
 ###### addMiddleware(middleware) {#typescript-crudrepository-addmiddleware-middleware}
 
@@ -10129,6 +10151,52 @@ readSingleById(id: Scalar | Cells): Promise<T | undefined>
 **Returns**
 
 `Promise<T | undefined>`
+
+###### addEnriched(into, from, via, by, select?, many?, nest?) {#typescript-crudrepository-addenriched-into-from-via-by-select-many-nest}
+
+Registers a lookup or a `many` list. Returns this repository.
+
+**Definition**
+
+```typescript
+addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean, nest?: (node: IRepositoryTreeNode) => void): this
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `into` | destination field |
+| `from` | key on the parent |
+| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `by` | key on the related row |
+| `select` | optional related field to copy |
+| `many` | collect a list |
+| `nest` | child-node callback |
+
+**Returns**
+
+`this`
+
+###### enrich(items) {#typescript-crudrepository-enrich-items}
+
+Fills `items` from the registered tree.
+
+**Definition**
+
+```typescript
+enrich(items: T[]): Promise<T[]>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to fill |
+
+**Returns**
+
+`Promise<T[]>`
 
 ##### CRUDRepositoryOptions {#typescript-crudrepositoryoptions}
 
@@ -10287,7 +10355,7 @@ Task<T?> ReadSingleById(Row ids)
 ##### CRUDRepository {#csharp-crudrepository}
 
 ```csharp
-public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
+public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnriched<T> where T : new()
 ```
 
 **Constructor**
@@ -10297,11 +10365,14 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 | [CRUDRepository(connection)](#csharp-crudrepository-crudrepository-connection) | Builds a table repository from an [IConnection](#connection). |
 | [CRUDRepository(connection, options)](#csharp-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#csharp-crudrepositoryoptions). |
 | [CRUDRepository(built)](#csharp-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#csharp-builtrepository). |
+| [CRUDRepository(inner, strategy)](#csharp-crudrepository-crudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#csharp-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default. |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
+| Ids | Configured id property names. |
+| Tree | Enrichment tree. Empty until `AddEnriched`. |
 | Mapper | Read-row [Mapper](#mapper). This is [ReadonlyRepositoryOptions.RowsMapper](#csharp-rowsmapper). |
 
 **Methods**
@@ -10315,6 +10386,8 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 | [Delete(item, byWhere)](#csharp-crudrepository-delete-item-bywhere) | Deletes one item. |
 | [ReadSingleById(id)](#csharp-crudrepository-readsinglebyid-id) | Returns the row for the single configured id column. |
 | [ReadSingleById(ids)](#csharp-crudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. |
+| [AddEnriched(into, from, via, by, select, many, nest)](#csharp-crudrepository-addenriched-into-from-via-by-select-many-nest) | Registers a lookup or a `many` list. Returns this repository. |
+| [Enrich(items)](#csharp-crudrepository-enrich-items) | Fills `items` from the registered tree. |
 
 ###### CRUDRepository(connection) {#csharp-crudrepository-crudrepository-connection}
 
@@ -10364,6 +10437,23 @@ public Repository(BuiltRepository<T> built)
 | Name | Description |
 | --- | --- |
 | `built` | [BuiltRepository](#csharp-builtrepository) |
+
+###### CRUDRepository(inner, strategy) {#csharp-crudrepository-crudrepository-inner-strategy}
+
+Wraps an inner [ICRUDRepository](#csharp-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
+
+**Definition**
+
+```csharp
+public CRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ICRUDRepository](#csharp-icrudrepository) |
+| `strategy` | optional read enrichment strategy |
 
 ###### AddMiddleware(middleware) {#csharp-crudrepository-addmiddleware-middleware}
 
@@ -10506,6 +10596,52 @@ public Task<T?> ReadSingleById(Row ids)
 **Returns**
 
 `Task<T?>`
+
+###### AddEnriched(into, from, via, by, select, many, nest) {#csharp-crudrepository-addenriched-into-from-via-by-select-many-nest}
+
+Registers a lookup or a `many` list. Returns this repository.
+
+**Definition**
+
+```csharp
+public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, Action<IRepositoryTreeNode>? nest = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `into` | destination field |
+| `from` | key on the parent |
+| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `by` | key on the related row |
+| `select` | optional related field to copy |
+| `many` | collect a list |
+| `nest` | child-node callback |
+
+**Returns**
+
+[IEnriched](#csharp-ienriched)`<T>`
+
+###### Enrich(items) {#csharp-crudrepository-enrich-items}
+
+Fills `items` from the registered tree.
+
+**Definition**
+
+```csharp
+public Task Enrich(IList<T> items)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to fill |
+
+**Returns**
+
+`Task`
 
 ##### CRUDRepositoryOptions {#csharp-crudrepositoryoptions}
 
@@ -10652,11 +10788,13 @@ pub struct CRUDRepository
 | [from_type(connection)](#rust-crudrepository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
 | [new(connection, options)](#rust-crudrepository-new-connection-options) | Builds a table repository from a [Connection](#connection) and [CRUDRepositoryOptions](#rust-crudrepositoryoptions). |
 | [from_built(built)](#rust-crudrepository-from_built-built) | Builds a table repository from [BuiltRepository](#rust-builtrepository). |
+| [from_repository(inner)](#rust-crudrepository-from_repository-inner) | Wraps an inner [ICRUDRepository](#rust-icrudrepository). Parent writes delegate to `inner`. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
+| [add_enriched(into, from, via, by, select, many, nest)](#rust-crudrepository-add_enriched-into-from-via-by-select-many-nest) | Registers a lookup or a `many` list. |
 | [add_middleware(middleware)](#rust-crudrepository-add_middleware-middleware) | Adds command middleware. |
 | [read_single_by_id(id)](#rust-crudrepository-read_single_by_id-id) | Returns the row for one id column, or for a composite key. |
 
@@ -10720,6 +10858,52 @@ pub fn from_built(built: BuiltRepository) -> Self
 **Returns**
 
 [CRUDRepository](#rust-crudrepository)
+
+###### from_repository(inner) {#rust-crudrepository-from_repository-inner}
+
+Wraps an inner [ICRUDRepository](#rust-icrudrepository). Parent writes delegate to `inner`.
+
+**Definition**
+
+```rust
+pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ICRUDRepository](#rust-icrudrepository) |
+
+**Returns**
+
+[CRUDRepository](#rust-crudrepository)
+
+###### add_enriched(into, from, via, by, select, many, nest) {#rust-crudrepository-add_enriched-into-from-via-by-select-many-nest}
+
+Registers a lookup or a `many` list.
+
+**Definition**
+
+```rust
+pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool, nest: impl Nest) -> &mut Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `into` | destination field |
+| `from` | key on the parent |
+| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `by` | key on the related row |
+| `select` | optional related field to copy |
+| `many` | collect a list |
+| `nest` | child-node callback, or `()` |
+
+**Returns**
+
+`&mut Self`
 
 ###### add_middleware(middleware) {#rust-crudrepository-add_middleware-middleware}
 
@@ -10793,67 +10977,538 @@ pub struct BuiltRepository
 
 ### Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the configured id through the create mapper.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
 `Mapper` / `mapper` is [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper).
 
+`AddEnriched` registers a lookup or a `many` list on this repository. Lookups are filled on read and are not written. `many` children are created, replace-synced, and deleted with the parent. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+
 ### Examples
 
-#### Create, update, and delete
+#### User from the type
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L100-L108)
+The table, columns, and id come from `User`. Create omits `id`. SQLite writes `last_insert_rowid` back onto `user.id`.
 
-```csharp
-var rows = new List<UserRow>();
-await foreach (var row in repo.Read(call))
-    rows.Add(row);
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1468-L1482)
-
-```rust
-    command.reader_logs.lock().unwrap()[0].0,
-    "SELECT id, name FROM users"
-);
-assert!(repo.read_single(None).await.unwrap().is_some());
-
-let where_clause = WhereClause::new(Operator::equals("id", 9_i64));
-let query = QueryStatement::new("users", &["id"], Some(&where_clause), &[]);
-command.reader_rows.lock().unwrap().clear();
-assert!(repo.read_single(Some(&query)).await.unwrap().is_none());
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L103-L113)
-
-```typescript
-id: 1, name: "a" 
-```
-
-#### Read one row by id
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L144-L150)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L427-L438)
 
 ```csharp
-
+var usersRepo = new CRUDRepository<User>(connection);
+var created = new User { username = "ada", is_enabled = true };
+await usersRepo.Create(created);
+var byId = await usersRepo.ReadSingleById(created.id);
+var matches = new List<User>();
+await foreach (var row in usersRepo.Read(new WhereClause("username", eq, "ada").And("is_enabled", eq, true)))
+    matches.Add(row);
+created.username = "ada-v2";
+await usersRepo.Update(created);
+var renamed = await usersRepo.ReadSingleById(created.id);
+await usersRepo.Delete(created);
+var gone = await usersRepo.ReadSingleById(created.id);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1835-L1855)
+**Created**
+
+```
+id: 1
+```
+
+**Read by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
+```
+
+**Read by username and enabled**
+
+```
+ada
+```
+
+**After update**
+
+```
+ada-v2
+```
+
+**After delete**
+
+```
+no row
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L637-L666)
 
 ```rust
-assert!(repo
-    .read_single_by_id(&Value::Int(9))
+let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
+let mut created = datasources::Row::new();
+created.insert("username".into(), Value::from("ada"));
+created.insert("is_enabled".into(), Value::Bool(true));
+users_repo.create(&mut created).await.unwrap();
+let by_id = users_repo
+    .read_single_by_id(created.get("id").unwrap())
     .await
     .unwrap()
-    .is_none());
-let log = command.reader_logs.lock().unwrap()[0].clone();
+    .unwrap();
+let matches = users_repo
+    .read(Some(&WhereClause::binary("username", eq, "ada").and(
+        "is_enabled",
+        eq,
+        Value::Bool(true),
+    )))
+    .await
+    .unwrap();
+created.insert("username".into(), Value::from("ada-v2"));
+users_repo.update(&created, None).await.unwrap();
+let renamed = users_repo
+    .read_single_by_id(created.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+users_repo.delete(&created, None).await.unwrap();
+let gone = users_repo
+    .read_single_by_id(created.get("id").unwrap())
+    .await
+    .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L175-L183)
+**Created**
+
+```
+id: 1
+```
+
+**Read by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+**Read by username and enabled**
+
+```
+ada
+```
+
+**After update**
+
+```
+ada-v2
+```
+
+**After delete**
+
+```
+no row
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L184-L195)
 
 ```typescript
+const usersRepo = new CRUDRepository(User, connection);
+const created = Object.assign(new User(), { username: "ada", is_enabled: true });
+await usersRepo.create(created);
+const byId = await usersRepo.readSingleById(created.id);
+const matches: User[] = [];
+for await (const row of usersRepo.read(new WhereClause("username", eq, "ada").and("is_enabled", eq, true)))
+  matches.push(row);
+created.username = "ada-v2";
+await usersRepo.update(created);
+const renamed = await usersRepo.readSingleById(created.id);
+await usersRepo.delete(created);
+const gone = await usersRepo.readSingleById(created.id);
+```
 
+**Created**
+
+```
+id: 1
+```
+
+**Read by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+**Read by username and enabled**
+
+```
+ada
+```
+
+**After update**
+
+```
+ada-v2
+```
+
+**After delete**
+
+```
+no row
+```
+
+#### Users view with enrichment and a version
+
+`UsersView` maps onto `user`. `UserTypeId` is written to `user_type_id`. `UserType` is the enriched name from `user_type` and is not a column. `Roles` is a `many` list from `user_role`. Create writes the generated id back onto `Key`. `Update` passes a where on `Key` and `Version`, so a stale version changes no row. Delete removes the user and its roles.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L509-L561)
+
+```csharp
+var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
+{
+    Ids = ["Key"],
+    ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
+    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+        ["UserTypeId"] = "user_type_id",
+        ["Version"] = "version",
+    }),
+});
+var userTypesRepo = new CRUDRepository<UserType>(connection, new CRUDRepositoryOptions<UserType>
+{
+    Ids = ["Id"],
+    EntityMapper = casing,
+    ColumnMappings = casing,
+});
+var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
+{
+    Ids = [],
+    EntityMapper = casing,
+    ColumnMappings = casing,
+});
+usersRepo.AddEnriched("UserType", "UserTypeId", userTypesRepo, "Id", "Name");
+usersRepo.AddEnriched("Roles", "Key", userRolesRepo, "UserId", many: true);
+var admin = new UserType { Name = "admin" };
+await userTypesRepo.Create(admin);
+var user = new UsersView
+{
+    Login = "ada",
+    Active = true,
+    Opened = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+    UserTypeId = admin.Id,
+    Version = 1,
+    Roles = [new UserRole { Name = "admin" }, new UserRole { Name = "editor" }],
+};
+await usersRepo.Create(user);
+var loaded = await usersRepo.ReadSingle(new WhereClause("Key", eq, user.Key));
+var version = loaded!.Version;
+loaded.Login = "ada-v2";
+loaded.Version = version + 1;
+var updated = await usersRepo.Update(loaded, new WhereClause("Key", eq, loaded.Key).And("Version", eq, version));
+var current = await usersRepo.ReadSingle(new WhereClause("Key", eq, loaded.Key));
+var stale = await usersRepo.Update(loaded, new WhereClause("Key", eq, loaded.Key).And("Version", eq, version));
+await usersRepo.Delete(loaded);
+var gone = await usersRepo.ReadSingleById(loaded.Key);
+var roles = new List<UserRole>();
+await foreach (var role in userRolesRepo.Read(new WhereClause("UserId", eq, loaded.Key)))
+    roles.Add(role);
+```
+
+**Created**
+
+```
+{
+  id: 1,
+  Key: 1
+}
+```
+
+**Enriched Ada**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor']
+}
+```
+
+**Versioned update**
+
+```
+{
+  rowsAffected: 1,
+  version: 2,
+  Login: 'ada-v2'
+}
+```
+
+**Stale update**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**After delete**
+
+```
+no row
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L703-L804)
+
+```rust
+let mut users_options = create_repository_options::<UsersView>();
+users_options.ids = vec!["Key".into()];
+users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+    "UsersView".to_string(),
+    "user".to_string(),
+)]));
+users_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+    ("UserTypeId".to_string(), "user_type_id".to_string()),
+    ("Version".to_string(), "version".to_string()),
+]));
+users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let mut type_options = create_repository_options::<UserType>();
+type_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+type_options.column_mappings = Box::new(casing);
+type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+let mut role_options = create_repository_options::<UserRole>();
+role_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+role_options.column_mappings =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
+let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
+let user_types_repo =
+    Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
+let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
+users_repo.add_enriched(
+    "UserType",
+    "UserTypeId",
+    user_types_repo.clone(),
+    "Id",
+    Some("Name".into()),
+    false,
+    (),
+);
+users_repo.add_enriched(
+    "Roles",
+    "Key",
+    user_roles_repo.clone(),
+    "UserId",
+    None,
+    true,
+    (),
+);
+let mut admin = datasources::Row::new();
+admin.insert("Name".into(), Value::from("admin"));
+user_types_repo.create(&mut admin).await.unwrap();
+let mut admin_role = datasources::Row::new();
+admin_role.insert("Name".into(), Value::from("admin"));
+let mut editor_role = datasources::Row::new();
+editor_role.insert("Name".into(), Value::from("editor"));
+let mut user = datasources::Row::new();
+user.insert("Login".into(), Value::from("ada"));
+user.insert("Active".into(), Value::Bool(true));
+user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
+user.insert("UserTypeId".into(), admin.get("Id").cloned().unwrap());
+user.insert("Version".into(), Value::Int(1));
+user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
+users_repo.create(&mut user).await.unwrap();
+let key = user.get("Key").cloned().unwrap();
+let mut loaded = users_repo
+    .read_single(Some(&WhereClause::binary("Key", eq, key.clone())))
+    .await
+    .unwrap()
+    .unwrap();
+let version = loaded.get("Version").cloned().unwrap();
+loaded.insert("Login".into(), Value::from("ada-v2"));
+loaded.insert("Version".into(), Value::Int(2));
+let updated = users_repo
+    .update(
+        &loaded,
+        Some(&WhereClause::binary("Key", eq, key.clone()).and(
+            "Version",
+            eq,
+            version.clone(),
+        )),
+    )
+    .await
+    .unwrap();
+let current = users_repo
+    .read_single(Some(&WhereClause::binary("Key", eq, key.clone())))
+    .await
+    .unwrap()
+    .unwrap();
+let stale = users_repo
+    .update(
+        &loaded,
+        Some(&WhereClause::binary("Key", eq, key.clone()).and("Version", eq, version)),
+    )
+    .await
+    .unwrap();
+users_repo.delete(&loaded, None).await.unwrap();
+let gone = users_repo.read_single_by_id(&key).await.unwrap();
+let roles = user_roles_repo
+    .read(Some(&WhereClause::binary("UserId", eq, key.clone())))
+    .await
+    .unwrap();
+```
+
+**Created**
+
+```
+{
+  id: 1,
+  Key: 1
+}
+```
+
+**Enriched Ada**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor']
+}
+```
+
+**Versioned update**
+
+```
+{
+  rowsAffected: 1,
+  version: 2,
+  Login: 'ada-v2'
+}
+```
+
+**Stale update**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**After delete**
+
+```
+no row
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L247-L295)
+
+```typescript
+const usersRepo = new CRUDRepository(connection, {
+  ...createRepositoryOptions(UsersView),
+  ids: ["Key"],
+  readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
+  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserTypeId", "user_type_id"],
+    ["Version", "version"],
+  ]),
+});
+const userTypesRepo = new CRUDRepository(connection, {
+  ...createRepositoryOptions(UserType),
+  entityMapper: casing,
+  columnMappings: casing,
+});
+const userRolesRepo = new CRUDRepository(connection, {
+  ...createRepositoryOptions(UserRole),
+  entityMapper: casing,
+  columnMappings: casing,
+});
+usersRepo.addEnriched("UserType", "UserTypeId", userTypesRepo, "Id", "Name");
+usersRepo.addEnriched("Roles", "Key", userRolesRepo, "UserId", undefined, true);
+const admin = Object.assign(new UserType(), { Name: "admin" });
+await userTypesRepo.create(admin);
+const user = Object.assign(new UsersView(), {
+  Login: "ada",
+  Active: true,
+  Opened: "2020-01-01T00:00:00.000Z",
+  UserTypeId: admin.Id,
+  Version: 1,
+  Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
+});
+await usersRepo.create(user);
+const loaded = await usersRepo.readSingle(new WhereClause("Key", eq, user.Key));
+const version = loaded!.Version;
+loaded!.Login = "ada-v2";
+loaded!.Version = version + 1;
+const updated = await usersRepo.update(loaded!, new WhereClause("Key", eq, loaded!.Key).and("Version", eq, version));
+const current = await usersRepo.readSingle(new WhereClause("Key", eq, loaded!.Key));
+const stale = await usersRepo.update(loaded!, new WhereClause("Key", eq, loaded!.Key).and("Version", eq, version));
+await usersRepo.delete(loaded!);
+const gone = await usersRepo.readSingleById(loaded!.Key);
+const roles: UserRole[] = [];
+for await (const role of userRolesRepo.read(new WhereClause("UserId", eq, loaded!.Key)))
+  roles.push(role);
+```
+
+**Created**
+
+```
+{
+  id: 1,
+  Key: 1
+}
+```
+
+**Enriched Ada**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor']
+}
+```
+
+**Versioned update**
+
+```
+{
+  rowsAffected: 1,
+  version: 2,
+  Login: 'ada-v2'
+}
+```
+
+**Stale update**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**After delete**
+
+```
+no row
 ```
 
 ## Enriched repository
@@ -10862,11 +11517,13 @@ A read-only wrapper fills properties already on `T` from related repositories. T
 
 Lookups use `ReadSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read`. Missing lookups leave the destination default.
 
-`EnrichedCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository.
+Writes use [CRUDRepository](#crud-repository). Register the same tree with `AddEnriched`. With no enrichments, create / update / delete / read stay the table SQL, and `Read` stays streaming. With enrichments, `Read` still fills related fields. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository.
 
-- **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
-- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
+- **Create** — write the parent, apply the generated identity through the create mapper, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
 - **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+
+[EnrichedReadonlyRepository](#enrichedreadonlyrepository) is the read-only wrapper.
 
 See [Bulk repository](#bulk-repository) for list writes.
 
@@ -11041,126 +11698,6 @@ read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<
 **Returns**
 
 `AsyncIterable<T>`
-
-##### EnrichedCRUDRepository {#typescript-enrichedcrudrepository}
-
-```typescript
-class EnrichedCRUDRepository<T extends object> extends EnrichedReadonlyRepository<T> implements ICRUDRepository<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [EnrichedCRUDRepository(inner, strategy?)](#typescript-enrichedcrudrepository-enrichedcrudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [create(item)](#typescript-enrichedcrudrepository-create-item) | Writes the parent, then nested `many` children. |
-| [update(item, byWhere?)](#typescript-enrichedcrudrepository-update-item-bywhere) | Writes the parent, then replace-syncs nested `many` lists. |
-| [delete(item, byWhere?)](#typescript-enrichedcrudrepository-delete-item-bywhere) | Deletes nested `many` rows, then the parent. |
-| [readSingleById(id)](#typescript-enrichedcrudrepository-readsinglebyid-id) | Reads one row by id, then enriches it. |
-
-###### EnrichedCRUDRepository(inner, strategy?) {#typescript-enrichedcrudrepository-enrichedcrudrepository-inner-strategy}
-
-Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default.
-
-**Definition**
-
-```typescript
-constructor(inner: ICRUDRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [ICRUDRepository](#crud-repository) |
-| `strategy` | optional [IReadonlyEnrichmentStrategy](#typescript-ireadonlyenrichmentstrategy) |
-
-###### create(item) {#typescript-enrichedcrudrepository-create-item}
-
-Writes the parent, then nested `many` children.
-
-**Definition**
-
-```typescript
-create(item: T): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | parent to insert |
-
-**Returns**
-
-`Promise<Response>`
-
-###### update(item, byWhere?) {#typescript-enrichedcrudrepository-update-item-bywhere}
-
-Writes the parent, then replace-syncs nested `many` lists.
-
-**Definition**
-
-```typescript
-update(item: T, byWhere?: IWhere): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | parent to update |
-| `byWhere` | optional predicate |
-
-**Returns**
-
-`Promise<Response>`
-
-###### delete(item, byWhere?) {#typescript-enrichedcrudrepository-delete-item-bywhere}
-
-Deletes nested `many` rows, then the parent.
-
-**Definition**
-
-```typescript
-delete(item: T, byWhere?: IWhere): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | parent to delete |
-| `byWhere` | optional predicate |
-
-**Returns**
-
-`Promise<Response>`
-
-###### readSingleById(id) {#typescript-enrichedcrudrepository-readsinglebyid-id}
-
-Reads one row by id, then enriches it.
-
-**Definition**
-
-```typescript
-readSingleById(id: Scalar | Cells): Promise<T | undefined>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | value of the single id column, or a row keyed by each id column |
-
-**Returns**
-
-`Promise<T | undefined>`
 
 ##### IRepositoryTree {#typescript-irepositorytree}
 
@@ -11468,147 +12005,6 @@ public override IAsyncEnumerable<T> Read(IStatement? query = null)
 
 `IAsyncEnumerable<T>`
 
-##### EnrichedCRUDRepository {#csharp-enrichedcrudrepository}
-
-```csharp
-public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRepository<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [EnrichedCRUDRepository(inner, strategy)](#csharp-enrichedcrudrepository-enrichedcrudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Create(item)](#csharp-enrichedcrudrepository-create-item) | Writes the parent, then nested `many` children. |
-| [Update(item, byWhere)](#csharp-enrichedcrudrepository-update-item-bywhere) | Writes the parent, then replace-syncs nested `many` lists. |
-| [Delete(item, byWhere)](#csharp-enrichedcrudrepository-delete-item-bywhere) | Deletes nested `many` rows, then the parent. |
-| [ReadSingleById(id)](#csharp-enrichedcrudrepository-readsinglebyid-id) | Reads one row by id, then enriches it. |
-| [ReadSingleById(ids)](#csharp-enrichedcrudrepository-readsinglebyid-ids) | Reads one row by composite id, then enriches it. |
-
-###### EnrichedCRUDRepository(inner, strategy) {#csharp-enrichedcrudrepository-enrichedcrudrepository-inner-strategy}
-
-Wraps an inner [ICRUDRepository](#crud-repository). Omitted strategy uses the default.
-
-**Definition**
-
-```csharp
-public EnrichedCRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [ICRUDRepository](#crud-repository) |
-| `strategy` | optional [IReadonlyEnrichmentStrategy](#csharp-ireadonlyenrichmentstrategy) |
-
-###### Create(item) {#csharp-enrichedcrudrepository-create-item}
-
-Writes the parent, then nested `many` children.
-
-**Definition**
-
-```csharp
-public Task<Response> Create(T item)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | parent to insert |
-
-**Returns**
-
-`Task<Response>`
-
-###### Update(item, byWhere) {#csharp-enrichedcrudrepository-update-item-bywhere}
-
-Writes the parent, then replace-syncs nested `many` lists.
-
-**Definition**
-
-```csharp
-public Task<Response> Update(T item, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | parent to update |
-| `byWhere` | optional predicate |
-
-**Returns**
-
-`Task<Response>`
-
-###### Delete(item, byWhere) {#csharp-enrichedcrudrepository-delete-item-bywhere}
-
-Deletes nested `many` rows, then the parent.
-
-**Definition**
-
-```csharp
-public Task<Response> Delete(T item, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | parent to delete |
-| `byWhere` | optional predicate |
-
-**Returns**
-
-`Task<Response>`
-
-###### ReadSingleById(id) {#csharp-enrichedcrudrepository-readsinglebyid-id}
-
-Reads one row by id, then enriches it.
-
-**Definition**
-
-```csharp
-public Task<T?> ReadSingleById(Value id)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | value of the single id column |
-
-**Returns**
-
-`Task<T?>`
-
-###### ReadSingleById(ids) {#csharp-enrichedcrudrepository-readsinglebyid-ids}
-
-Reads one row by composite id, then enriches it.
-
-**Definition**
-
-```csharp
-public Task<T?> ReadSingleById(Row ids)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `ids` | id column names and values |
-
-**Returns**
-
-`Task<T?>`
-
 ##### IRepositoryTree {#csharp-irepositorytree}
 
 ```csharp
@@ -11880,91 +12276,6 @@ pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>,
 
 `&mut Self`
 
-##### EnrichedCRUDRepository {#rust-enrichedcrudrepository}
-
-```rust
-pub struct EnrichedCRUDRepository
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(inner)](#rust-enrichedcrudrepository-new-inner) | Wraps an inner [CRUDRepository](#crud-repository). Uses the default strategy. |
-| [with_strategy(inner, strategy)](#rust-enrichedcrudrepository-with_strategy-inner-strategy) | Wraps an inner repository with a [ReadonlyEnrichmentStrategy](#rust-readonlyenrichmentstrategy). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [add_enriched(into, from, via, by, select, many, nest)](#rust-enrichedcrudrepository-add_enriched-into-from-via-by-select-many-nest) | Forwards to the inner [EnrichedReadonlyRepository](#rust-enrichedreadonlyrepository). A CRUD `via` is kept so `many` children can be written. |
-| [read_single_by_id(id)](#rust-enrichedcrudrepository-read_single_by_id-id) | Reads one row by id, then enriches it. |
-
-###### new(inner) {#rust-enrichedcrudrepository-new-inner}
-
-Wraps an inner [CRUDRepository](#crud-repository). Uses the default strategy.
-
-**Definition**
-
-```rust
-pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [CRUDRepository](#crud-repository) |
-
-**Returns**
-
-[EnrichedCRUDRepository](#rust-deepcrudrepository)
-
-###### with_strategy(inner, strategy) {#rust-enrichedcrudrepository-with_strategy-inner-strategy}
-
-Wraps an inner repository with a [ReadonlyEnrichmentStrategy](#rust-readonlyenrichmentstrategy).
-
-**Definition**
-
-```rust
-pub fn with_strategy(inner: Arc<dyn CRUDRepository>, strategy: Arc<dyn ReadonlyEnrichmentStrategy>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [CRUDRepository](#crud-repository) |
-| `strategy` | [ReadonlyEnrichmentStrategy](#rust-readonlyenrichmentstrategy) |
-
-**Returns**
-
-[EnrichedCRUDRepository](#rust-deepcrudrepository)
-
-###### add_enriched(into, from, via, by, select, many, nest) {#rust-enrichedcrudrepository-add_enriched-into-from-via-by-select-many-nest}
-
-Forwards to the inner [EnrichedReadonlyRepository](#rust-enrichedreadonlyrepository). A CRUD `via` is kept so `many` children can be written.
-
-###### read_single_by_id(id) {#rust-enrichedcrudrepository-read_single_by_id-id}
-
-Reads one row by id, then enriches it.
-
-**Definition**
-
-```rust
-async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | `Value` for the single id column, or a `Row` keyed by each id column |
-
-**Returns**
-
-`Result<Option<Row>>`
-
 ##### RepositoryTree {#rust-repositorytree}
 
 ```rust
@@ -12168,19 +12479,11 @@ assert!(repo
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
 
 ```typescript
-it("fills lookup select and leaves missing default", async () => {
-  const repo = new EnrichedReadonlyRepository(
-    new ListReadonlyRepository([parent(1, 10), parent(2, 99)]),
-  );
-  repo.addEnriched(
-    "type_name",
-    "type_id",
-    new ListReadonlyRepository([
-      Object.assign(new TypeRow(), { id: 10, name: "person" }),
-    ]),
-    "id",
-    "name",
-  );
+describe("EnrichedReadonlyRepository", () => {
+  it("reads one row through a where clause", async () => {
+    const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository([parent(1, 0)]));
+    const byClause = await collectAsync(repo.read(new WhereClause(new Operator.Equals("id", 1))));
+    const byWhere = await collectAsync(repo.read(new Where("id = 1")));
 ```
 
 #### Fill user type on a user view
@@ -12334,7 +12637,7 @@ users_view.remove("UserTypeId");
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L114-L160)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L116-L162)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
@@ -12502,7 +12805,7 @@ var lin = Assert.Single(items, item => item.Login == "lin");
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L463-L564)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L465-L567)
 
 ```rust
 let built = datasource();
@@ -12726,7 +13029,7 @@ expect(items).toHaveLength(3);
 
 ## Bulk repository
 
-[EnrichedCRUDRepository](#deepcrudrepository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+[CRUDRepository](#crud-repository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
 
 ### Classes
 
@@ -12735,7 +13038,7 @@ expect(items).toHaveLength(3);
 ##### BulkCRUDRepository {#typescript-bulkcrudrepository}
 
 ```typescript
-class BulkCRUDRepository<T extends object> extends EnrichedCRUDRepository<T>
+class BulkCRUDRepository<T extends object> extends CRUDRepository<T>
 ```
 
 **Constructor**
@@ -12835,7 +13138,7 @@ deleteBulk(items: T[], byWhere?: IWhere): Promise<Response>
 ##### BulkCRUDRepository {#csharp-bulkcrudrepository}
 
 ```csharp
-public class BulkCRUDRepository<T> : EnrichedCRUDRepository<T>
+public class BulkCRUDRepository<T> : CRUDRepository<T>
 ```
 
 **Constructor**
@@ -13013,7 +13316,7 @@ pub struct BulkCRUDRepository
 
 | Name | Description |
 | --- | --- |
-| [add_enriched(into, from, via, by, select, many, nest)](#rust-bulkcrudrepository-add_enriched-into-from-via-by-select-many-nest) | Forwards to the inner [EnrichedCRUDRepository](#rust-deepcrudrepository). A CRUD `via` is kept so `many` children can be written. |
+| [add_enriched(into, from, via, by, select, many, nest)](#rust-bulkcrudrepository-add_enriched-into-from-via-by-select-many-nest) | Forwards to the inner [CRUDRepository](#crud-repository). A CRUD `via` is kept so `many` children can be written. |
 | [create_bulk(items)](#rust-bulkcrudrepository-create_bulk-items) | Creates each item, including nested `many` children. |
 | [update_bulk(items, by_where)](#rust-bulkcrudrepository-update_bulk-items-by_where) | Updates each item, then replace-syncs nested `many` lists. |
 | [delete_bulk(items, by_where)](#rust-bulkcrudrepository-delete_bulk-items-by_where) | Deletes nested `many` rows for each item, then the parents. |
@@ -13040,7 +13343,7 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 ###### add_enriched(into, from, via, by, select, many, nest) {#rust-bulkcrudrepository-add_enriched-into-from-via-by-select-many-nest}
 
-Forwards to the inner [EnrichedCRUDRepository](#rust-deepcrudrepository). A CRUD `via` is kept so `many` children can be written.
+Forwards to the inner [CRUDRepository](#crud-repository). A CRUD `via` is kept so `many` children can be written.
 
 ###### create_bulk(items) {#rust-bulkcrudrepository-create_bulk-items}
 
@@ -13108,7 +13411,7 @@ pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn Where>) -> 
 
 C# exposes list overloads (`Create(IReadOnlyList<T>)`) and `Bulk*` aliases. TypeScript and Rust use `createBulk` / `create_bulk` only.
 
-Each item still runs the same deep persist as [EnrichedCRUDRepository](#deepcrudrepository).
+Each item still runs the same deep persist as [CRUDRepository](#crud-repository).
 
 ### Examples
 

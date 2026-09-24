@@ -23,6 +23,7 @@ use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statements::Text;
 use crate::stubs::StubRepository;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::value::Value;
@@ -48,7 +49,7 @@ pub struct CRUDRepository {
     id: Vec<String>,
     ids: HashSet<String>,
     delegate: Option<Arc<dyn ICRUDRepository>>,
-    tree: RepositoryTree,
+    pub tree: RepositoryTree,
     strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
 }
 
@@ -351,11 +352,10 @@ impl CRUDRepository {
             _ => unreachable!(),
         };
         let statement = self.sql().statements.update(&fields, predicate);
-        let mut parameters = fields;
-        parameters.extend(predicate.parameters());
+        let (text, parameters) = distinct(&statement.get_text(), &fields, &predicate.parameters());
         self.sql()
             .command()
-            .execute_statement(&statement, Some(&parameters))
+            .execute(&text, Some(&parameters))
             .await
     }
 
@@ -369,7 +369,7 @@ impl CRUDRepository {
         };
         let statement = self.sql().statements.delete(predicate);
         let parameters = predicate.parameters();
-        let parameters = if parameters.is_empty() {
+        let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
             self.params(&record, true)?
         } else {
             parameters
@@ -645,6 +645,47 @@ fn parse_value(text: &str) -> Value {
             .map(Value::Int)
             .unwrap_or_else(|_| Value::Text(text.into())),
     }
+}
+
+fn distinct(text: &str, fields: &[Parameter], where_params: &[Parameter]) -> (String, Vec<Parameter>) {
+    let (head, mut tail) = match text.rfind(" WHERE ") {
+        Some(split) => (&text[..split], text[split..].to_string()),
+        None => (text, String::new()),
+    };
+    let mut bound = fields.to_vec();
+    for parameter in where_params {
+        let differs = fields.iter().any(|field| {
+            field.name == parameter.name && field.value != parameter.value
+        });
+        if differs {
+            let alias = format!("{}__where", parameter.name);
+            tail = alias_token(&tail, &parameter.name, &alias);
+            bound.push(Parameter::new(alias, parameter.value.clone()));
+        } else {
+            bound.push(parameter.clone());
+        }
+    }
+    (format!("{head}{tail}"), bound)
+}
+
+fn alias_token(text: &str, name: &str, alias: &str) -> String {
+    let token = format!("${name}");
+    let next = format!("${alias}");
+    let mut result = String::new();
+    let mut index = 0;
+    while let Some(at) = text[index..].find(&token) {
+        let at = index + at;
+        let end = at + token.len();
+        let boundary = match text[end..].chars().next() {
+            None => true,
+            Some(ch) => !ch.is_ascii_alphanumeric() && ch != '_',
+        };
+        result.push_str(&text[index..at]);
+        result.push_str(if boundary { &next } else { &token });
+        index = end;
+    }
+    result.push_str(&text[index..]);
+    result
 }
 
 fn and_all(parts: Vec<Expression>) -> Expression {
