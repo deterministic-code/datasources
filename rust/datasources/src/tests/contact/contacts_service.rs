@@ -1,5 +1,6 @@
 use crate::enriched_crud_repository::EnrichedCRUDRepository;
 use crate::i_repository::IRepository;
+use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::RepositoryTreeNode;
@@ -118,5 +119,9 @@ impl ICRUDRepository for ContactsService {
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
         self.inner.delete(item, by_where).await
+    }
+
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
+        self.inner.read_single_by_id(id).await
     }
 }

@@ -1,5 +1,6 @@
 use super::not_implemented::fail;
 use crate::i_repository::IRepository;
+use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
@@ -60,6 +61,10 @@ impl ICRUDRepository for StubRepository {
     }
 
     async fn delete(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+        Err(fail(&self.provider))
+    }
+
+    async fn read_single_by_id(&self, _id: &dyn IdKey) -> Result<Option<Row>> {
         Err(fail(&self.provider))
     }
 }

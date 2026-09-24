@@ -137,6 +137,26 @@ public class RepositoryTests
     }
 
     [Fact]
+    public async Task ReadSingleByIdUsesIdColumns()
+    {
+        var (repo, command) = Create();
+        command.Reader = new MockReader<Row>([]);
+        Assert.Null(await repo.ReadSingleById(9));
+        Assert.Equal("SELECT id, name FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
+        Assert.Equal(new Value.Int(9), command.ExecuteReaderCalls[0].Parameters![0].Value);
+
+        var (composite, generated) = Create<Composite>(id: ["org_id", "user_id"]);
+        generated.Reader = new MockReader<Row>([]);
+        Assert.Null(await composite.ReadSingleById(new Row { ["org_id"] = 1, ["user_id"] = 2 }));
+        Assert.Contains("org_id = $org_id AND user_id = $user_id", generated.ExecuteReaderCalls[0].Text);
+        var scalar = await Assert.ThrowsAsync<DatasourceException>(() => composite.ReadSingleById(1));
+        Assert.Equal("Composite id requires a row keyed by each Id column", scalar.Message);
+        var missing = await Assert.ThrowsAsync<DatasourceException>(() =>
+            composite.ReadSingleById(new Row { ["org_id"] = 1 }));
+        Assert.Contains("Missing Id value", missing.Message);
+    }
+
+    [Fact]
     public async Task MissingIdAndBadRowAndCtor()
     {
         var (repo, command) = Create();

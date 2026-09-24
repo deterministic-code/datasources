@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T>
+public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T>, ITrackedApply where T : new()
 {
     public async IAsyncEnumerable<T> Read(
         IReadonlyRepository<T> inner,
@@ -19,9 +19,7 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
             yield return item;
     }
 
-    public Task Enrich(IRepositoryTree tree, IList<T> items) => Enrich(tree, items, null);
-
-    internal Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources) =>
+    public Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null) =>
         ((RepositoryTreeNode)tree.Parent).EnrichFrom(items.Cast<object>().ToList(), sources);
 
     public Task Apply<TRelated>(

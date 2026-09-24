@@ -4,7 +4,7 @@ public sealed class FlatToNestedReadonlyEnrichmentStrategy<T>(
     IReadonlyRepository<Row> source,
     IFlatToNestedMapper mapper,
     IMapper<Dictionary<string, MappedValue>, T> hydrate,
-    IStatement? command = null) : IReadonlyEnrichmentStrategy<T>
+    IStatement? command = null) : IReadonlyEnrichmentStrategy<T>, ITrackedApply where T : new()
 {
     public async IAsyncEnumerable<T> Read(
         IReadonlyRepository<T> inner,
@@ -20,7 +20,8 @@ public sealed class FlatToNestedReadonlyEnrichmentStrategy<T>(
             yield return item;
     }
 
-    public Task Enrich(IRepositoryTree tree, IList<T> items) => Task.CompletedTask;
+    public Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null) =>
+        Task.CompletedTask;
 
     public Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,

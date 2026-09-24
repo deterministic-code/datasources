@@ -1,3 +1,5 @@
+import type { Scalar } from "../builders/Scalar.ts";
+import type { Cells } from "../converters/Cell.ts";
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
@@ -80,4 +82,6 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     }
     return this.deleteResponse;
   }
+
+  readSingleById = (_id: Scalar | Cells): Promise<T | undefined> => this.readSingle();
 }

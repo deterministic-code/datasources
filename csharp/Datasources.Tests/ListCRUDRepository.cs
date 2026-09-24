@@ -19,7 +19,7 @@ internal sealed class ListCRUDRepository<T> : ReadonlyRepository<T>, ICRUDReposi
                 yield return item;
     }
 
-    protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
+    protected override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
         WithoutSource(Read(query));
 
     public Task<Response> Create(T item)
@@ -44,6 +44,17 @@ internal sealed class ListCRUDRepository<T> : ReadonlyRepository<T>, ICRUDReposi
         var key = IdKey(Id(item));
         Items.RemoveAll(row => IdKey(Id(row)) == key);
         return Task.FromResult(new Response(Value.Null.Instance, 1));
+    }
+
+    public Task<T?> ReadSingleById(Value id) => Task.FromResult(Find(item => Same(Id(item), id)));
+
+    public Task<T?> ReadSingleById(Row ids) =>
+        Task.FromResult(Find(item => ids.All(pair => Same(Get(item, pair.Key), pair.Value))));
+
+    T? Find(Func<T, bool> match)
+    {
+        var index = Items.FindIndex(item => match(item));
+        return index < 0 ? default : Items[index];
     }
 
     static bool Matches(T item, IStatement? query) =>

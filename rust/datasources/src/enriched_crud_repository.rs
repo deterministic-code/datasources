@@ -5,6 +5,7 @@ use crate::enriched_readonly_repository::EnrichedReadonlyRepository;
 use crate::enrichment::Enrichment;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
+use crate::id_key::IdKey;
 use crate::nest::Nest;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -354,6 +355,16 @@ impl ICRUDRepository for EnrichedCRUDRepository {
         )
         .await?;
         Ok(response)
+    }
+
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
+        match self.inner.read_single_by_id(id).await? {
+            Some(mut row) => {
+                self.enrich(std::slice::from_mut(&mut row)).await?;
+                Ok(Some(row))
+            }
+            None => Ok(None),
+        }
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {

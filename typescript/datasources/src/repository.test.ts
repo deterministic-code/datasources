@@ -169,6 +169,29 @@ describe("CRUDRepository", () => {
     );
   });
 
+  it("reads a single row by id columns", async () => {
+    const { repo, command } = create();
+    command.reader = new MockReader([]);
+    expect(await repo.readSingleById(9)).toBeUndefined();
+    expect(command.executeReaderCalls[0]?.text).toBe(
+      "SELECT id, name FROM users WHERE id = $id",
+    );
+    expect(command.executeReaderCalls[0]?.parameters).toEqual([{ name: "id", value: 9 }]);
+
+    const composite = create({ ids: ["org_id", "user_id"], type: asType(Composite) });
+    composite.command.reader = new MockReader([]);
+    expect(await composite.repo.readSingleById({ org_id: 1, user_id: 2 })).toBeUndefined();
+    expect(composite.command.executeReaderCalls[0]?.text).toContain(
+      "org_id = $org_id AND user_id = $user_id",
+    );
+    await expect(composite.repo.readSingleById(1)).rejects.toThrow(
+      "Composite id requires a row keyed by each Id column",
+    );
+    await expect(composite.repo.readSingleById({ org_id: 1 })).rejects.toThrow(
+      "Missing Id value",
+    );
+  });
+
   it("throws on missing id, bad rows, and empty update", async () => {
     const connection = new MockConnection();
     const command = new MockCommand(connection);

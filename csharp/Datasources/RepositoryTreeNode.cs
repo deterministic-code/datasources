@@ -78,7 +78,7 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
     }
 
     internal static object? SourceKey(object parent, string name, Row? source) =>
-        source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
+        source is not null && source.TryGetValue(name, out var cell) && cell is not global::Datasources.Value.Null
             ? cell.ToObject()
             : parent.GetType().GetProperty(name)?.GetValue(parent);
 

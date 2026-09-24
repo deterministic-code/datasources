@@ -6,6 +6,7 @@ import { ReadonlyRepository, untyped, withoutSource } from "../ReadonlyRepositor
 import type { Sourced } from "../IReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
+import type { Cells } from "../converters/Cell.ts";
 import type { Scalar } from "../builders/Scalar.ts";
 
 type Props = Record<string, Scalar | object>;
@@ -92,4 +93,11 @@ export class ListCRUDRepository<T extends object>
     if (index >= 0) this.items.splice(index, 1);
     return { result: null, rowsAffected: 1 };
   };
+
+  readSingleById = async (id: Scalar | Cells): Promise<T | undefined> =>
+    this.items.find((item) =>
+      id !== null && typeof id === "object"
+        ? Object.entries(id).every(([name, value]) => String(props(item)[name]) === String(value))
+        : String(idOf(item)) === String(id),
+    );
 }
