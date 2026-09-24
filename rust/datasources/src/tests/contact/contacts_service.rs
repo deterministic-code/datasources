@@ -109,7 +109,7 @@ impl IReadonlyRepository for ContactsService {
 
 #[async_trait]
 impl ICRUDRepository for ContactsService {
-    async fn create(&self, item: &mut Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Row> {
         self.inner.create(item).await
     }
 

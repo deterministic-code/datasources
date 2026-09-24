@@ -14,5 +14,13 @@ public interface IRepositoryTreeNode
         string by,
         string? select = null,
         bool many = false);
+    IRepositoryTreeNode IncludeLinked<TRelated, TLink>(
+        IReadonlyRepository<TRelated> via,
+        string into,
+        string from,
+        string by,
+        ICRUDRepository<TLink> link,
+        string parent,
+        string related);
     Task EnrichFrom(IReadOnlyList<object> parents);
 }

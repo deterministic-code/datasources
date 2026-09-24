@@ -30,7 +30,7 @@ export class StubRepository<T = unknown> extends ReadonlyRepository<T> implement
     yield* withoutSource(this.read(query));
   }
 
-  create = async (_item: T): Promise<Response> => notImplemented(this.provider);
+  create = async (_item: T): Promise<T> => notImplemented(this.provider);
 
   update = async (_item: T, _byWhere?: IWhere): Promise<Response> =>
     notImplemented(this.provider);

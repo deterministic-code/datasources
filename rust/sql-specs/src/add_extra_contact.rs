@@ -24,7 +24,7 @@ pub async fn add_extra_contact(
     );
     let version = Value::Binary(vec![]);
     let uuid = Value::Uuid(Uuid::new_v4());
-    let response = service
+    let created = service
         .create(&mut record(&[
             ("uuid", uuid.clone()),
             ("created", stamp.clone()),
@@ -59,7 +59,7 @@ pub async fn add_extra_contact(
             ),
         ]))
         .await?;
-    let Value::Int(id) = response.result else {
+    let Value::Int(id) = created.get("id").cloned().unwrap_or(Value::Null) else {
         return Err(DatasourceError::message("expected insert id"));
     };
     service

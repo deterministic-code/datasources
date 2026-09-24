@@ -45,9 +45,13 @@ impl BulkCRUDRepository {
         let mut result = Value::Null;
         let mut rows_affected = 0;
         for item in items {
-            let response = self.inner.create(item).await?;
-            result = response.result;
-            rows_affected += response.rows_affected;
+            let created = self.inner.create(item).await?;
+            result = created
+                .get("id")
+                .or_else(|| created.get("Id"))
+                .cloned()
+                .unwrap_or(Value::Null);
+            rows_affected += 1;
         }
         Ok(Response::new(result, rows_affected))
     }
@@ -118,7 +122,7 @@ impl ICRUDRepository for BulkCRUDRepository {
         self.inner.id_names()
     }
 
-    async fn create(&self, item: &mut Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Row> {
         self.inner.create(item).await
     }
 

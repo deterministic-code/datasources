@@ -1,4 +1,5 @@
 mod array_reader;
+mod association;
 pub mod builders;
 mod built_repository;
 mod bulk_crud_repository;
@@ -66,6 +67,7 @@ mod value;
 mod where_trait;
 
 pub use array_reader::ArrayReader;
+pub use association::Association;
 pub use builders::{Column, Join, JoinKind};
 pub use built_repository::BuiltRepository;
 pub use bulk_crud_repository::BulkCRUDRepository;

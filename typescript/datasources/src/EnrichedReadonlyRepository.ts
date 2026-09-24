@@ -1,4 +1,5 @@
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IEnriched } from "./IEnriched.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "./statements/IQuery.ts";
@@ -44,6 +45,19 @@ export class EnrichedReadonlyRepository<T extends object>
   ): this {
     const child = this.tree.parent.include(via, into, from, by, select, many);
     nest?.(child);
+    return this;
+  }
+
+  addLinked<TRelated extends object, TLink extends object>(
+    into: keyof T & string,
+    from: keyof T & string,
+    via: IReadonlyRepository<TRelated>,
+    by: keyof TRelated & string,
+    link: ICRUDRepository<TLink>,
+    parent: keyof TLink & string,
+    related: keyof TLink & string,
+  ): this {
+    this.tree.parent.includeLinked(via, into, from, by, link, parent, related);
     return this;
   }
 

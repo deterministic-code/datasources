@@ -215,12 +215,10 @@ describe("CRUDRepository", () => {
   it("rejects unknown persist mode", async () => {
     const repo = new CRUDRepository(new ListCRUDRepository<Parent>());
     repo.addEnriched("children", "id", new ListCRUDRepository<Child>(), "parent_id", undefined, true);
-    const persistNode = Reflect.get(repo, "persistNode") as (
-      child: object,
-      parents: object[],
-      mode: string,
-    ) => Promise<void>;
-    await expect(persistNode.call(repo, repo.tree.parent.items[0], [{}], "nope")).rejects.toThrow(
+    const write = Reflect.get(repo, "write") as {
+      persist(tree: typeof repo.tree, items: Parent[], mode: string): Promise<void>;
+    };
+    await expect(write.persist(repo.tree, [assign(Parent, {})], "nope")).rejects.toThrow(
       /Unknown persist mode/,
     );
   });
@@ -232,14 +230,14 @@ describe("CRUDRepository", () => {
     repo.addEnriched("children", "id", children, "parent_id", undefined, true);
     parents.create = async (item) => {
       parents.items.push(item);
-      return { result: true, rowsAffected: 1 };
+      return { ...item, id: true as Parent["id"] };
     };
     const flagged = assign(Parent, { children: [] });
     await repo.create(flagged);
     expect(flagged.id).toBe(true);
     parents.create = async (item) => {
       parents.items.push(item);
-      return { result: 4n, rowsAffected: 1 };
+      return { ...item, id: 4n as Parent["id"] };
     };
     const numbered = assign(Parent, { children: [] });
     await repo.create(numbered);

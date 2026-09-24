@@ -1,3 +1,5 @@
+use crate::association::Association;
+
 #[derive(Clone)]
 pub struct Enrichment {
     pub into: String,
@@ -5,6 +7,7 @@ pub struct Enrichment {
     pub by: String,
     pub select: Option<String>,
     pub many: bool,
+    pub association: Option<Association>,
 }
 
 impl Enrichment {
@@ -21,6 +24,14 @@ impl Enrichment {
             by: by.into(),
             select,
             many,
+            association: None,
         }
+    }
+
+    pub fn linked(mut self, association: Association) -> Self {
+        self.many = true;
+        self.select = None;
+        self.association = Some(association);
+        self
     }
 }

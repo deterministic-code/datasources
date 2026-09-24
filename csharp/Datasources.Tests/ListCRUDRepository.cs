@@ -23,12 +23,12 @@ internal sealed class ListCRUDRepository<T> : ReadonlyRepository<T>, ICRUDReposi
     protected override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
         WithoutSource(Read(query));
 
-    public Task<Response> Create(T item)
+    public Task<T> Create(T item)
     {
         if (Id(item) is not { } id || !HasId(id))
             SetId(item!, nextId++);
         Items.Add(item);
-        return Task.FromResult(new Response(Value.From(Id(item)), 1));
+        return Task.FromResult(item);
     }
 
     public Task<Response> Update(T item, IWhere? byWhere = null)
@@ -42,8 +42,10 @@ internal sealed class ListCRUDRepository<T> : ReadonlyRepository<T>, ICRUDReposi
 
     public Task<Response> Delete(T item, IWhere? byWhere = null)
     {
-        var key = IdKey(Id(item));
-        Items.RemoveAll(row => IdKey(Id(row)) == key);
+        if (byWhere is not null)
+            Items.RemoveAll(row => byWhere.Parameters.All(parameter => Same(Get(row, parameter.Name), parameter.Value)));
+        else
+            Items.RemoveAll(row => IdKey(Id(row)) == IdKey(Id(item)));
         return Task.FromResult(new Response(Value.Null.Instance, 1));
     }
 

@@ -42,6 +42,7 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
     public IReadOnlyList<IRepositoryTreeNode> Items => items;
     public Enrichment? Enrichment { get; }
     internal IChildPersist? Persist { get; private set; }
+    internal IChildPersist? Link { get; private set; }
 
     public IRepositoryTreeNode Include<TRelated>(
         IReadonlyRepository<TRelated> via,
@@ -61,6 +62,31 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
             binder)
         {
             Persist = via is ICRUDRepository<TRelated> crud ? new ChildPersist<TRelated>(crud) : null
+        };
+        items.Add(child);
+        return child;
+    }
+
+    public IRepositoryTreeNode IncludeLinked<TRelated, TLink>(
+        IReadonlyRepository<TRelated> via,
+        string into,
+        string from,
+        string by,
+        ICRUDRepository<TLink> link,
+        string parent,
+        string related)
+    {
+        var enrichment = new Enrichment(into, from, by, null, true, new Association(parent, related));
+        var writer = new ChildPersist<TLink>(link);
+        var child = new RepositoryTreeNode(
+            via,
+            into,
+            this,
+            (parents, sources) => ApplyLinked(via, writer, enrichment, parents, sources),
+            enrichment,
+            binder)
+        {
+            Link = writer
         };
         items.Add(child);
         return child;
@@ -111,11 +137,39 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         obj.GetType().GetProperty(name)
         ?? throw new DatasourceException($"Unknown property \"{name}\"");
 
+    static async Task ApplyLinked<TRelated>(
+        IReadonlyRepository<TRelated> via,
+        IChildPersist link,
+        Enrichment enrichment,
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources)
+    {
+        var association = enrichment.Association ?? throw new DatasourceException("Missing association");
+        for (var i = 0; i < parents.Count; i++)
+        {
+            var key = SourceKey(parents[i], enrichment.From, At(sources, i));
+            if (key is null) continue;
+            var related = new List<TRelated>();
+            await foreach (var row in link.Read(new WhereClause(new Operator.Equals(association.Parent, global::Datasources.Value.From(key)))))
+            {
+                if (Get(row, association.Related) is not { } id) continue;
+                var entity = await via.ReadSingle(new WhereClause(new Operator.Equals(enrichment.By, global::Datasources.Value.From(id))));
+                if (entity is not null)
+                    related.Add(entity);
+            }
+            Set(parents[i], enrichment.Into, related);
+        }
+    }
+
+    static Row? At(IReadOnlyList<Row?>? sources, int index) =>
+        sources is not null && index < sources.Count ? sources[index] : null;
+
     internal interface IChildPersist
     {
         IReadOnlyList<string> Ids { get; }
-        Task<Response> Create(object item);
-        void AssignIdentity(object item, Response response);
+        object New();
+        Task<object> Create(object item);
+        void AssignIdentity(object item, object created);
         Task<Response> Update(object item, IWhere? byWhere = null);
         Task<Response> Delete(object item, IWhere? byWhere = null);
         IAsyncEnumerable<object> Read(IStatement? query = null);
@@ -131,23 +185,25 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
             this.inner = inner;
             Ids = inner.Ids;
         }
-        public Task<Response> Create(object item) => inner.Create((T)item);
-        public void AssignIdentity(object item, Response response)
+        public object New() => Activator.CreateInstance(typeof(T))!;
+        public async Task<object> Create(object item) => (await inner.Create((T)item))!;
+        public void AssignIdentity(object item, object created)
         {
-            if (response.Result is Value.Null || Ids.Count != 1) return;
+            if (Ids.Count != 1 || ReferenceEquals(item, created)) return;
             var name = Ids[0];
+            var value = created is IDictionary source
+                ? source.Contains(name) ? source[name] : null
+                : created.GetType().GetProperty(name)?.GetValue(created);
+            if (value is null) return;
             if (item is IDictionary dict)
             {
-                dict[name] = item is Row ? response.Result : response.Result.ToObject();
+                dict[name] = value;
                 return;
             }
             var prop = item.GetType().GetProperty(name);
             if (prop is not { CanWrite: true }) return;
             var target = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-            var value = response.Result.ToObject();
-            prop.SetValue(item, value is null || target.IsInstanceOfType(value)
-                ? value
-                : Convert.ChangeType(value, target));
+            prop.SetValue(item, target.IsInstanceOfType(value) ? value : Convert.ChangeType(value, target));
         }
         public Task<Response> Update(object item, IWhere? byWhere = null) =>
             inner.Update((T)item, byWhere);
