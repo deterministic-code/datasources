@@ -440,6 +440,60 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ```
 ```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L32-L56
 ```
+
+```output [After: by id]
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
+```
+
+```output:typescript [After: by id]
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+```output:rust [After: by id]
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+```output [After: disabled]
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: false
+  }
+]
+```
+
+```output:typescript [After: disabled]
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: 0
+  }
+]
+```
+
+```output:rust [After: disabled]
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: 0
+  }
+]
+```
 :::
 
 ### Read a user by guid, username, and created
@@ -450,6 +504,99 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#L88-L152
 ```
 ```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L58-L97
+```
+
+```output [After: by id]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: true,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+```output:typescript [After: by id]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+```output:rust [After: by id]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+```output [After: by login]
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: true,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+```output:typescript [After: by login]
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+```output:rust [After: by login]
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+```output [After: later]
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: true,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
+```
+
+```output:typescript [After: later]
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
+```
+
+```output:rust [After: later]
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
 ```
 :::
 
@@ -462,6 +609,12 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ```
 ```typescript typescript/datasources/src/repository.test.ts#L102-L109
 ```
+
+```output [After: rows]
+[
+  { id: 1, name: 'a' }
+]
+```
 :::
 
 ### Read and read single
@@ -469,8 +622,18 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ::: example
 ```csharp csharp/Datasources.Tests/RepositoryTests.cs#L61-L71
 ```
-```rust rust/datasources/src/tests/mod.rs#L892-L898
+```rust rust/datasources/src/tests/mod.rs#L1465-L1471
 ```
 ```typescript typescript/datasources/src/repository.test.ts#L63-L73
+```
+
+```output [After: read]
+[
+  { id: 1, name: 'a' }
+]
+```
+
+```output [After: read single]
+{ id: 1, name: 'a' }
 ```
 :::

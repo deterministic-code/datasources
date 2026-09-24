@@ -9332,6 +9332,28 @@ await foreach (var row in repo.Read(new WhereClause("username", eq, "grace").And
     disabled.Add(row);
 ```
 
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
+```
+
+**After: disabled**
+
+```
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: false
+  }
+]
+```
+
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L47-L86)
 
 ```rust
@@ -9369,6 +9391,28 @@ let disabled = repo
     .unwrap();
 ```
 
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+**After: disabled**
+
+```
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: 0
+  }
+]
+```
+
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L32-L56)
 
 ```typescript
@@ -9390,6 +9434,28 @@ const byId = await repo.readSingle(new WhereClause("id", eq, 1));
 const disabled: User[] = [];
 for await (const row of repo.read(new WhereClause("username", eq, "grace").and("is_enabled", eq, 0)))
   disabled.push(row);
+```
+
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+**After: disabled**
+
+```
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: 0
+  }
+]
 ```
 
 #### Read a user by guid, username, and created
@@ -9430,6 +9496,43 @@ await foreach (var row in repo.Read(new WhereClause("Login", eq, "ada").And("Act
 var later = new List<UserAccount>();
 await foreach (var row in repo.Read(new WhereClause("Active", eq, true).And("Opened", gt, opened)))
     later.Add(row);
+```
+
+**After: by id**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: true,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+**After: by login**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: true,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+**After: later**
+
+```
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: true,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L88-L152)
@@ -9488,6 +9591,43 @@ let later = repo
     .unwrap();
 ```
 
+**After: by id**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+**After: by login**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+**After: later**
+
+```
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
+```
+
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L58-L97)
 
 ```typescript
@@ -9523,6 +9663,43 @@ for await (const row of repo.read(new WhereClause("Active", eq, true).and("Opene
   later.push(row);
 ```
 
+**After: by id**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+**After: by login**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+**After: later**
+
+```
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
+```
+
 #### Call a stored procedure
 
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L99-L108)
@@ -9534,11 +9711,27 @@ await foreach (var row in repo.Read(call))
     rows.Add(row);
 ```
 
+**After: rows**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1428-L1444)
 
 ```rust
 let call = ExecuteStoredProcedureStatement::new("get_user", &[Parameter::new("id", 9_i64)]);
 let rows = repo.read(Some(&call)).await.unwrap();
+```
+
+**After: rows**
+
+```
+[
+  { id: 1, name: 'a' }
+]
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L102-L109)
@@ -9549,6 +9742,14 @@ const rows: Cells[] = [];
 for await (const row of repo.read(call)) rows.push(row);
 ```
 
+**After: rows**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
 #### Read and read single
 
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L61-L71)
@@ -9557,14 +9758,38 @@ for await (const row of repo.read(call)) rows.push(row);
 ["id"] = 1, ["name"] = "a" 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L892-L898)
+**After: read**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+**After: read single**
+
+```
+{ id: 1, name: 'a' }
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1465-L1471)
 
 ```rust
-        Operator::equals("age", 18_i64)
-    ))
-    .get_text(),
-    "(NOT (id = $id)) AND age = $age"
-);
+let rows = repo.read(None).await.unwrap();
+```
+
+**After: read**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+**After: read single**
+
+```
+{ id: 1, name: 'a' }
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
@@ -9577,6 +9802,20 @@ command.reader = new MockReader([
 ]);
 const rows: Cells[] = [];
 for await (const row of repo.read()) rows.push(row);
+```
+
+**After: read**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+**After: read single**
+
+```
+{ id: 1, name: 'a' }
 ```
 
 ## CRUD repository
@@ -11664,6 +11903,233 @@ it("fills lookup select and leaves missing default", async () => {
   );
 ```
 
+#### Fill user type on a user view
+
+The user row keeps `UserTypeId` so the lookup can run. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](#change-casing-mapper) maps that Pascal name, plus `Id` and `Name`, to `user_type`, `id`, and `name`. `UserView` drops `UserTypeId` and keeps `UserType`.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L146-L210)
+
+```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, $"""
+    CREATE TABLE user_type (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+    );
+    INSERT INTO user_type (id, name) VALUES
+        (1, 'admin'),
+        (2, 'user'),
+        (3, 'service');
+    CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL,
+        user_type_id INTEGER NOT NULL
+    );
+    INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+        ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+        ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+        ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+    """);
+var users = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+{
+    Entity = "user",
+    ReadColumns = ["Key", "Login", "Active", "Opened", "UserTypeId"],
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+        ["UserTypeId"] = "user_type_id",
+    }),
+});
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var types = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
+{
+    Entity = "UserType",
+    EntityMapper = casing,
+    ColumnMappings = casing,
+});
+var enriched = new EnrichedReadonlyRepository<UserAccount>(users);
+enriched.AddEnriched("UserType", "UserTypeId", types, "Id", "Name");
+var account = await enriched.ReadSingle(new WhereClause("Key", eq, Ada));
+var usersView = new UserView
+{
+    Key = account!.Key,
+    Login = account.Login,
+    Active = account.Active,
+    Opened = account.Opened,
+    UserType = account.UserType,
+};
+```
+
+**User view**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: true,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L198-L281)
+
+```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    &format!(
+        "
+    CREATE TABLE user_type (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+    );
+    INSERT INTO user_type (id, name) VALUES
+        (1, 'admin'),
+        (2, 'user'),
+        (3, 'service');
+    CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL,
+        user_type_id INTEGER NOT NULL
+    );
+    INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+        ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+        ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+        ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+    "
+    ),
+)
+.await;
+let mut users_options = create_repository_options::<UserAccount>();
+users_options.entity = "user".into();
+users_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+    ("UserTypeId".to_string(), "user_type_id".to_string()),
+]));
+let mut type_options = create_repository_options::<UserType>();
+type_options.entity = "UserType".into();
+type_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+type_options.column_mappings =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+let users = ds.create_readonly_repository::<UserAccount>(
+    Some(connection.clone()),
+    Some(users_options.read),
+);
+let types =
+    ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
+let mut enriched = EnrichedReadonlyRepository::new(users);
+enriched.add_enriched(
+    "UserType",
+    "UserTypeId",
+    types,
+    "Id",
+    Some("Name".into()),
+    false,
+    (),
+);
+let account = enriched
+    .read_single(Some(&WhereClause::binary(
+        "Key",
+        eq,
+        Uuid::parse_str(ADA).unwrap(),
+    )))
+    .await
+    .unwrap()
+    .unwrap();
+let mut users_view = account.clone();
+users_view.remove("UserTypeId");
+```
+
+**User view**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L123-L179)
+
+```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, `
+  CREATE TABLE user_type (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+  );
+  INSERT INTO user_type (id, name) VALUES
+    (1, 'admin'),
+    (2, 'user'),
+    (3, 'service');
+  CREATE TABLE user (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL,
+    created TEXT NOT NULL,
+    user_type_id INTEGER NOT NULL
+  );
+  INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+    ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+    ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+    ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+`);
+const users = ds.createReadonlyRepository(UserAccount, connection, {
+  entity: "user",
+  readColumns: ["Key", "Login", "Active", "Opened", "UserTypeId"],
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserTypeId", "user_type_id"],
+  ]),
+});
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const types = ds.createReadonlyRepository(UserType, connection, {
+  entity: "UserType",
+  entityMapper: casing,
+  columnMappings: casing,
+});
+const enriched = new EnrichedReadonlyRepository(users);
+enriched.addEnriched("UserType", "UserTypeId", types, "Id", "Name");
+const account = await enriched.readSingle(new WhereClause("Key", eq, ada));
+const usersView = new UserView();
+usersView.Key = account?.Key ?? "";
+usersView.Login = account?.Login ?? "";
+usersView.Active = account?.Active ?? 0;
+usersView.Opened = account?.Opened ?? "";
+usersView.UserType = account?.UserType ?? "";
+```
+
+**User view**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
 ## Bulk repository
 
 [EnrichedCRUDRepository](#deepcrudrepository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
@@ -12284,6 +12750,7 @@ Repository read is convert, then map. [ReadonlyRepositoryOptions.RowsMapper](#ro
 - [IdentityMapper](#identity-mapper)
 - [DictionaryMapper](#dictionary-mapper)
 - [PluralizerMapper](#pluralizer-mapper)
+- [ChangeCasingMapper](#change-casing-mapper)
 - [TransformMapper](#transform-mapper)
 - [FlatToNestedMapper](#flat-to-nested-mapper)
 - [ReadonlyRepositoryOptions](#readonlyrepositoryoptions)
@@ -12999,6 +13466,286 @@ let mapper = PluralizerMapper::new();
 describe("PluralizerMapper", () => {
   it("pluralizes and lowercases the table name", () => {
     const mapper = new PluralizerMapper();
+```
+
+## ChangeCasingMapper
+
+Mapper that rewrites a name from one casing to another through `ChangeCasingConverter`. `Map` writes the stored casing. `ReverseMap` restores the application casing.
+
+### Classes
+
+##### TypeScript
+
+##### ChangeCasingMapper {#typescript-changecasingmapper}
+
+```typescript
+class ChangeCasingMapper implements IMapper<string, string>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ChangeCasingMapper(from, to)](#typescript-changecasingmapper-changecasingmapper-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `snakeCase` becomes `user_type`. |
+| [reverseMap(value)](#typescript-changecasingmapper-reversemap-value) | Rewrites `value` into the application casing. `user_type` with `pascalCase` becomes `UserType`. |
+
+###### ChangeCasingMapper(from, to) {#typescript-changecasingmapper-changecasingmapper-from-to}
+
+Maps names from `from` to `to`. Reverse maps back to `from`.
+
+**Definition**
+
+```typescript
+constructor(from: Casing, to: Casing)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | application casing, such as `pascalCase` |
+| `to` | stored casing, such as `snakeCase` |
+
+**Returns**
+
+[ChangeCasingMapper](#typescript-changecasingmapper)
+
+###### map(value) {#typescript-changecasingmapper-map-value}
+
+Rewrites `value` into the stored casing. `UserType` with `snakeCase` becomes `user_type`.
+
+**Definition**
+
+```typescript
+map(value: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | application name |
+
+**Returns**
+
+`string`
+
+###### reverseMap(value) {#typescript-changecasingmapper-reversemap-value}
+
+Rewrites `value` into the application casing. `user_type` with `pascalCase` becomes `UserType`.
+
+**Definition**
+
+```typescript
+reverseMap(value: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`string`
+
+##### C#
+
+##### ChangeCasingMapper {#csharp-changecasingmapper}
+
+```csharp
+public sealed class ChangeCasingMapper : IMapper<string, string>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ChangeCasingMapper(from, to)](#csharp-changecasingmapper-changecasingmapper-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`. |
+| [ReverseMap(value)](#csharp-changecasingmapper-reversemap-value) | Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`. |
+
+###### ChangeCasingMapper(from, to) {#csharp-changecasingmapper-changecasingmapper-from-to}
+
+Maps names from `from` to `to`. Reverse maps back to `from`.
+
+**Definition**
+
+```csharp
+public ChangeCasingMapper(Casing from, Casing to)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | application casing, such as `Pascal` |
+| `to` | stored casing, such as `Snake` |
+
+**Returns**
+
+[ChangeCasingMapper](#csharp-changecasingmapper)
+
+###### Map(value) {#csharp-changecasingmapper-map-value}
+
+Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`.
+
+**Definition**
+
+```csharp
+string Map(string value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | application name |
+
+**Returns**
+
+`string`
+
+###### ReverseMap(value) {#csharp-changecasingmapper-reversemap-value}
+
+Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`.
+
+**Definition**
+
+```csharp
+string ReverseMap(string value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`string`
+
+##### Rust
+
+##### ChangeCasingMapper {#rust-changecasingmapper}
+
+```rust
+pub struct ChangeCasingMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(from, to)](#rust-changecasingmapper-new-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`. |
+| [reverse_map(value)](#rust-changecasingmapper-reverse_map-value) | Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`. |
+
+###### new(from, to) {#rust-changecasingmapper-new-from-to}
+
+Maps names from `from` to `to`. Reverse maps back to `from`.
+
+**Definition**
+
+```rust
+pub fn new(from: Casing, to: Casing) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | application casing, such as `Pascal` |
+| `to` | stored casing, such as `Snake` |
+
+**Returns**
+
+[ChangeCasingMapper](#rust-changecasingmapper)
+
+###### map(value) {#rust-changecasingmapper-map-value}
+
+Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`.
+
+**Definition**
+
+```rust
+fn map(&self, value: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | application name |
+
+**Returns**
+
+`String`
+
+###### reverse_map(value) {#rust-changecasingmapper-reverse_map-value}
+
+Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`String`
+
+### Remarks
+
+Use this as [EntityMapper](#entitymapper) and [ColumnMappings](#columnmappings) when application names are Pascal and stored names are snake case. `UserType` becomes `user_type`, and `Id` becomes `id`.
+
+### Examples
+
+#### Map Pascal to snake case
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ChangeCasingMapperTests.cs#L7-L15)
+
+```csharp
+var mapper = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L34-L42)
+
+```rust
+let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#L4-L11)
+
+```typescript
+describe("ChangeCasingMapper", () => {
+  it("maps pascal to snake and back", () => {
+    const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");
 ```
 
 ## TransformMapper

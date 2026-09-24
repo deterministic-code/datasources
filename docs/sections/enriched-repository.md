@@ -1030,3 +1030,46 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 ```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51
 ```
 :::
+
+### Fill user type on a user view
+
+The user row keeps `UserTypeId` so the lookup can run. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](./change-casing-mapper.md) maps that Pascal name, plus `Id` and `Name`, to `user_type`, `id`, and `name`. `UserView` drops `UserTypeId` and keeps `UserType`.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L146-L210
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L198-L281
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L123-L179
+```
+
+```output [User view]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: true,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+```output:typescript [User view]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+```output:rust [User view]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+:::
