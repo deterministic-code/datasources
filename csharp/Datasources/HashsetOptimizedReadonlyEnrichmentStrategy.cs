@@ -8,28 +8,44 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         IStatement? query)
     {
         var items = new List<T>();
-        await foreach (var item in inner.Read(query))
+        var sources = new List<Row?>();
+        await foreach (var (item, source) in ReadonlyRepository<T>.Tracked(inner, query))
+        {
             items.Add(item);
-        await Enrich(tree, items);
+            sources.Add(source);
+        }
+        await Enrich(tree, items, sources);
         foreach (var item in items)
             yield return item;
     }
 
-    public Task Enrich(IRepositoryTree tree, IList<T> items) =>
-        tree.Parent.EnrichFrom(items.Cast<object>().ToList());
+    public Task Enrich(IRepositoryTree tree, IList<T> items) => Enrich(tree, items, null);
+
+    internal Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources) =>
+        ((RepositoryTreeNode)tree.Parent).EnrichFrom(items.Cast<object>().ToList(), sources);
 
     public Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
         IReadOnlyList<object> parents) =>
-        enrichment.Many ? ApplyMany(via, enrichment, parents) : ApplyLookup(via, enrichment, parents);
+        ((ITrackedApply)this).ApplyTracked(via, enrichment, parents, null);
+
+    Task ITrackedApply.ApplyTracked<TRelated>(
+        IReadonlyRepository<TRelated> via,
+        Enrichment enrichment,
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources) =>
+        enrichment.Many
+            ? ApplyMany(via, enrichment, parents, sources)
+            : ApplyLookup(via, enrichment, parents, sources);
 
     static async Task ApplyLookup<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents)
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources)
     {
-        var keys = Keys(parents, enrichment.From);
+        var keys = Keys(parents, sources, enrichment.From);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, TRelated>();
         await foreach (var item in via.Read(new WhereClause(new Operator.In(enrichment.By, keys.Values.ToList()))))
@@ -38,7 +54,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
             if (by is not null)
                 index[RepositoryTreeNode.KeyOf(by)] = item;
         }
-        foreach (var parent in parents)
+        for (var i = 0; i < parents.Count; i++)
         {
             var key = RepositoryTreeNode.Get(parent, enrichment.From);
             if (key is null || !index.TryGetValue(RepositoryTreeNode.KeyOf(key), out var related))
@@ -53,9 +69,10 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
     static async Task ApplyMany<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents)
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources)
     {
-        var keys = Keys(parents, enrichment.From);
+        var keys = Keys(parents, sources, enrichment.From);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, List<TRelated>>();
         await foreach (var item in via.Read(new WhereClause(new Operator.In(enrichment.By, keys.Values.ToList()))))
@@ -67,9 +84,10 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
                 index[cacheKey] = list = [];
             list.Add(item);
         }
-        foreach (var parent in parents)
+        for (var i = 0; i < parents.Count; i++)
         {
-            var key = RepositoryTreeNode.Get(parent, enrichment.From);
+            var parent = parents[i];
+            var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
             if (key is null) continue;
             RepositoryTreeNode.Set(
                 parent,
@@ -78,15 +96,21 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         }
     }
 
-    static Dictionary<string, Value> Keys(IReadOnlyList<object> parents, string from)
+    static Dictionary<string, Value> Keys(
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources,
+        string from)
     {
         var keys = new Dictionary<string, Value>();
-        foreach (var parent in parents)
+        for (var i = 0; i < parents.Count; i++)
         {
-            var key = RepositoryTreeNode.Get(parent, from);
+            var key = RepositoryTreeNode.SourceKey(parents[i], from, At(sources, i));
             if (key is not null)
                 keys.TryAdd(RepositoryTreeNode.KeyOf(key), Value.From(key));
         }
         return keys;
     }
+
+    static Row? At(IReadOnlyList<Row?>? sources, int index) =>
+        sources is not null && index < sources.Count ? sources[index] : null;
 }

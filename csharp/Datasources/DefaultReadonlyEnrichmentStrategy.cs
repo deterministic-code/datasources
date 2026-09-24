@@ -8,31 +8,48 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
         IStatement? query)
     {
         var items = new List<T>();
-        await foreach (var item in inner.Read(query))
+        var sources = new List<Row?>();
+        await foreach (var (item, source) in ReadonlyRepository<T>.Tracked(inner, query))
+        {
             items.Add(item);
-        await Enrich(tree, items);
+            sources.Add(source);
+        }
+        await Enrich(tree, items, sources);
         foreach (var item in items)
             yield return item;
     }
 
-    public Task Enrich(IRepositoryTree tree, IList<T> items) =>
-        tree.Parent.EnrichFrom(items.Cast<object>().ToList());
+    public Task Enrich(IRepositoryTree tree, IList<T> items) => Enrich(tree, items, null);
+
+    internal Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources) =>
+        ((RepositoryTreeNode)tree.Parent).EnrichFrom(items.Cast<object>().ToList(), sources);
 
     public Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
         IReadOnlyList<object> parents) =>
-        enrichment.Many ? ApplyMany(via, enrichment, parents) : ApplyLookup(via, enrichment, parents);
+        ((ITrackedApply)this).ApplyTracked(via, enrichment, parents, null);
+
+    Task ITrackedApply.ApplyTracked<TRelated>(
+        IReadonlyRepository<TRelated> via,
+        Enrichment enrichment,
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources) =>
+        enrichment.Many
+            ? ApplyMany(via, enrichment, parents, sources)
+            : ApplyLookup(via, enrichment, parents, sources);
 
     static async Task ApplyLookup<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents)
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources)
     {
         var cache = new Dictionary<string, TRelated?>();
-        foreach (var parent in parents)
+        for (var i = 0; i < parents.Count; i++)
         {
-            var key = RepositoryTreeNode.Get(parent, enrichment.From);
+            var parent = parents[i];
+            var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
             if (key is null) continue;
             var cacheKey = RepositoryTreeNode.KeyOf(key);
             if (!cache.TryGetValue(cacheKey, out var related))
@@ -51,11 +68,13 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
     static async Task ApplyMany<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents)
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources)
     {
-        foreach (var parent in parents)
+        for (var i = 0; i < parents.Count; i++)
         {
-            var key = RepositoryTreeNode.Get(parent, enrichment.From);
+            var parent = parents[i];
+            var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
             await foreach (var item in via.Read(new WhereClause(new Operator.Equals(enrichment.By, Value.From(key)))))
@@ -63,4 +82,7 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
             RepositoryTreeNode.Set(parent, enrichment.Into, related);
         }
     }
+
+    static Row? At(IReadOnlyList<Row?>? sources, int index) =>
+        sources is not null && index < sources.Count ? sources[index] : null;
 }

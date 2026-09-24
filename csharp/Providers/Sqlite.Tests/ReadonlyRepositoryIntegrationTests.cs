@@ -118,23 +118,13 @@ public class UserViewEnrichmentTests
     static readonly Guid Grace = Guid.Parse("22222222-2222-2222-2222-222222222222");
     static readonly Guid Lin = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
-    sealed class UserAccount
-    {
-        public Guid Key { get; set; }
-        public string Login { get; set; } = "";
-        public bool Active { get; set; }
-        public DateTime Opened { get; set; }
-        public int UserTypeId { get; set; }
-        public string UserType { get; set; } = "";
-    }
-
     sealed class UserType
     {
         public int Id { get; set; }
         public string Name { get; set; } = "";
     }
 
-    sealed class UserView
+    sealed class UsersView
     {
         public Guid Key { get; set; }
         public string Login { get; set; } = "";
@@ -144,7 +134,7 @@ public class UserViewEnrichmentTests
     }
 
     [Fact]
-    public async Task FillsUserTypeOnUserView()
+    public async Task FillsUserTypeOnUsersView()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
         var connection = await Open(ds, $"""
@@ -168,45 +158,33 @@ public class UserViewEnrichmentTests
                 ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
                 ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
             """);
-        var users = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+        var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+        var usersRepo = ds.CreateReadonlyEnrichedRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
-            Entity = "user",
-            ReadColumns = ["Key", "Login", "Active", "Opened", "UserTypeId"],
+            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
             ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Key"] = "id",
                 ["Login"] = "username",
                 ["Active"] = "is_enabled",
                 ["Opened"] = "created",
-                ["UserTypeId"] = "user_type_id",
+                ["UserType"] = "user_type_id",
             }),
         });
-        var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-        var types = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
+        var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
         {
-            Entity = "UserType",
             EntityMapper = casing,
             ColumnMappings = casing,
         });
-        var enriched = new EnrichedReadonlyRepository<UserAccount>(users);
-        enriched.AddEnriched("UserType", "UserTypeId", types, "Id", "Name");
-        var account = await enriched.ReadSingle(new WhereClause("Key", eq, Ada));
-        var usersView = new UserView
-        {
-            Key = account!.Key,
-            Login = account.Login,
-            Active = account.Active,
-            Opened = account.Opened,
-            UserType = account.UserType,
-        };
+        usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name");
+        var usersView = await usersRepo.ReadSingle(new WhereClause("Key", eq, Ada));
 
-        Assert.Equal(1, account.UserTypeId);
-        Assert.Equal("admin", usersView.UserType);
+        Assert.Equal("admin", usersView!.UserType);
         Assert.Equal("ada", usersView.Login);
         Assert.Equal(Ada, usersView.Key);
         Assert.True(usersView.Active);
         Assert.Equal(2020, usersView.Opened.Year);
-        Assert.Null(typeof(UserView).GetProperty("UserTypeId"));
+        Assert.Null(typeof(UsersView).GetProperty("UserTypeId"));
     }
 
     static async Task<IConnection> Open(IDatasource ds, string sql)

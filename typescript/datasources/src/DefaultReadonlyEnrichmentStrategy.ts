@@ -6,7 +6,9 @@ import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IWhere } from "./statements/IWhere.ts";
-import { keyOf, props, scalar } from "./RepositoryTreeNode.ts";
+import type { Row } from "./Row.ts";
+import { readTracked } from "./ReadonlyRepository.ts";
+import { RepositoryTreeNode, keyOf, props, scalar, sourceKey } from "./RepositoryTreeNode.ts";
 
 export class DefaultReadonlyEnrichmentStrategy<T extends object>
   implements IReadonlyEnrichmentStrategy<T>
@@ -17,33 +19,43 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<T> {
     const items: T[] = [];
-    for await (const item of inner.read(query)) items.push(item);
-    await this.enrich(tree, items);
+    const sources: (Row | undefined)[] = [];
+    for await (const sourced of readTracked(inner, query)) {
+      items.push(sourced.item);
+      sources.push(sourced.source);
+    }
+    await this.enrich(tree, items, sources);
     for (const item of items) yield item;
   }
 
-  enrich = async (tree: IRepositoryTree, items: T[]): Promise<void> => {
-    await tree.parent.enrichFrom(items);
+  enrich = async (
+    tree: IRepositoryTree,
+    items: T[],
+    sources?: (Row | undefined)[],
+  ): Promise<void> => {
+    await (tree.parent as RepositoryTreeNode).enrichFrom(items, sources);
   };
 
   apply = async <TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
     parents: object[],
+    sources?: (Row | undefined)[],
   ): Promise<void> =>
     enrichment.many
-      ? applyMany(via, enrichment, parents)
-      : applyLookup(via, enrichment, parents);
+      ? applyMany(via, enrichment, parents, sources)
+      : applyLookup(via, enrichment, parents, sources);
 }
 
 const applyLookup = async <TRelated extends object>(
   via: IReadonlyRepository<TRelated>,
   enrichment: Enrichment,
   parents: object[],
+  sources?: (Row | undefined)[],
 ): Promise<void> => {
   const cache = new Map<string, TRelated | undefined>();
-  for (const parent of parents) {
-    const key = props(parent)[enrichment.from];
+  for (const [index, parent] of parents.entries()) {
+    const key = sourceKey(parent, enrichment.from, sources, index);
     if (key === undefined || key === null) continue;
     const cacheKey = keyOf(key);
     if (!cache.has(cacheKey))
@@ -64,9 +76,10 @@ const applyMany = async <TRelated extends object>(
   via: IReadonlyRepository<TRelated>,
   enrichment: Enrichment,
   parents: object[],
+  sources?: (Row | undefined)[],
 ): Promise<void> => {
-  for (const parent of parents) {
-    const key = props(parent)[enrichment.from];
+  for (const [index, parent] of parents.entries()) {
+    const key = sourceKey(parent, enrichment.from, sources, index);
     if (key === undefined || key === null) continue;
     const related: TRelated[] = [];
     for await (const item of via.read(

@@ -13,5 +13,5 @@ export type ReadonlyRepositoryOptions<T = Cells> = {
   rowConverter?: TypeConverter<T, Cells>;
   type?: Constructable<T>;
   rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>;
-  readColumns?: string[];
+  readProperties?: string[];
 };

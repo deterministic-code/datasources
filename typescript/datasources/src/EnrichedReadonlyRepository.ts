@@ -10,6 +10,8 @@ import type { IWhere } from "./statements/IWhere.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
+import type { Row } from "./Row.ts";
+import { readTracked, tracked, type Sourced } from "./ReadonlyRepository.ts";
 
 export class EnrichedReadonlyRepository<T extends object>
   extends ReadonlyRepository<T>
@@ -49,6 +51,20 @@ export class EnrichedReadonlyRepository<T extends object>
   };
 
   async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
-    yield* this.strategy.read(this.inner, this.tree, query);
+    for await (const sourced of this[tracked](query)) yield sourced.item;
+  }
+
+  async *[tracked](
+    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+  ): AsyncIterable<Sourced<T>> {
+    const items: T[] = [];
+    const sources: (Row | undefined)[] = [];
+    for await (const sourced of readTracked(this.inner, query)) {
+      items.push(sourced.item);
+      sources.push(sourced.source);
+    }
+    await this.strategy.enrich(this.tree, items, sources);
+    for (let index = 0; index < items.length; index++)
+      yield { item: items[index]!, source: sources[index] };
   }
 }

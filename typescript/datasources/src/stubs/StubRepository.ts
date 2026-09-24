@@ -3,7 +3,8 @@ import type { IConnection } from "../IConnection.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
-import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
+import { ReadonlyRepository, untyped, withoutSource } from "../ReadonlyRepository.ts";
+import type { Sourced } from "../IReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import { notImplemented } from "./notImplemented.ts";
@@ -19,6 +20,12 @@ export class StubRepository<T = unknown> extends ReadonlyRepository<T> implement
 
   async *read(_query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     notImplemented(this.provider);
+  }
+
+  async *readWithSource(
+    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+  ): AsyncIterable<Sourced<T>> {
+    yield* withoutSource(this.read(query));
   }
 
   create = async (_item: T): Promise<Response> => notImplemented(this.provider);

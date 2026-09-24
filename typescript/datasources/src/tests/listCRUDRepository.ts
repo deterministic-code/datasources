@@ -2,7 +2,8 @@ import type { Constructable } from "../converters/Constructable.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
-import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
+import { ReadonlyRepository, untyped, withoutSource } from "../ReadonlyRepository.ts";
+import type { Sourced } from "../IReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
@@ -64,6 +65,12 @@ export class ListCRUDRepository<T extends object>
 
   async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     for (const item of this.items) if (matches(item, query)) yield item;
+  }
+
+  async *readWithSource(
+    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+  ): AsyncIterable<Sourced<T>> {
+    yield* withoutSource(this.read(query));
   }
 
   create = async (item: T): Promise<Response> => {

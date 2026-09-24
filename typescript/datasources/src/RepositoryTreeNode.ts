@@ -5,19 +5,20 @@ import type { IReadonlyEnrichmentBinder } from "./IReadonlyEnrichmentBinder.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import type { Scalar } from "./builders/Scalar.ts";
+import type { Row } from "./Row.ts";
 
 type Props = Record<string, Scalar | object>;
 
 export class RepositoryTreeNode implements IRepositoryTreeNode {
   readonly items: RepositoryTreeNode[] = [];
-  private readonly apply: (parents: object[]) => Promise<void>;
+  private readonly apply: (parents: object[], sources?: (Row | undefined)[]) => Promise<void>;
   private readonly binder: IReadonlyEnrichmentBinder;
 
   constructor(
     readonly value: object,
     readonly propertyName: string,
     readonly parent?: IRepositoryTreeNode,
-    apply: (parents: object[]) => Promise<void> = async () => {},
+    apply: (parents: object[], sources?: (Row | undefined)[]) => Promise<void> = async () => {},
     readonly enrichment?: Enrichment,
     binder?: IReadonlyEnrichmentBinder,
   ) {
@@ -38,7 +39,8 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
       via,
       into,
       this,
-      (parents) => this.binder.apply(via, enrichment, parents),
+      (parents, sources) =>
+        (this.binder as TrackedBinder).apply(via, enrichment, parents, sources),
       enrichment,
       this.binder,
     );
@@ -46,12 +48,33 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
     return child;
   }
 
-  enrichFrom = async (parents: object[]): Promise<void> => {
-    await this.apply(parents);
+  enrichFrom = async (parents: object[], sources?: (Row | undefined)[]): Promise<void> => {
+    await this.apply(parents, sources);
     const next = related(parents, this.propertyName);
-    for (const child of this.items) await child.enrichFrom(next);
+    const nested = this.propertyName ? undefined : sources;
+    for (const child of this.items) await child.enrichFrom(next, nested);
   };
 }
+
+type TrackedBinder = IReadonlyEnrichmentBinder & {
+  apply<TRelated extends object>(
+    via: IReadonlyRepository<TRelated>,
+    enrichment: Enrichment,
+    parents: object[],
+    sources?: (Row | undefined)[],
+  ): Promise<void>;
+};
+
+export const sourceKey = (
+  parent: object,
+  name: string,
+  sources: (Row | undefined)[] | undefined,
+  index: number,
+): Scalar | object | undefined => {
+  const cell = sources?.[index]?.[name];
+  if (cell !== undefined && cell !== null) return cell;
+  return props(parent)[name];
+};
 
 export const props = (item: object): Props => item as Props;
 

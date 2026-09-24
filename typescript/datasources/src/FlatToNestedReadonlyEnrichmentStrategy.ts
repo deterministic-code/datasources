@@ -8,6 +8,7 @@ import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import type { IFlatToNestedMapper } from "./mappers/IFlatToNestedMapper.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
+import type { Row } from "./Row.ts";
 
 export class FlatToNestedReadonlyEnrichmentStrategy<T extends object>
   implements IReadonlyEnrichmentStrategy<T>
@@ -30,11 +31,16 @@ export class FlatToNestedReadonlyEnrichmentStrategy<T extends object>
       yield item;
   }
 
-  enrich = async (_tree: IRepositoryTree, _items: T[]): Promise<void> => {};
+  enrich = async (
+    _tree: IRepositoryTree,
+    _items: T[],
+    _sources?: (Row | undefined)[],
+  ): Promise<void> => {};
 
   apply = async <TRelated extends object>(
     _via: IReadonlyRepository<TRelated>,
     _enrichment: Enrichment,
     _parents: object[],
+    _sources?: (Row | undefined)[],
   ): Promise<void> => {};
 }

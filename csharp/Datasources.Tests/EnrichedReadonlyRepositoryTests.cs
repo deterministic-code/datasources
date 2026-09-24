@@ -175,6 +175,39 @@ public class EnrichedReadonlyRepositoryTests
         Assert.Equal(["person", "org"], items.Select(item => item.type_name));
     }
 
+    [Fact]
+    public async Task LookupKeyComesFromRenamedRow()
+    {
+        var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 1, name = "admin" });
+        var repo = new EnrichedReadonlyRepository<View>(new SourcedView());
+        repo.AddEnriched("UserType", "UserType", types, "id", "name");
+        var item = await repo.ReadSingle();
+        Assert.Equal("admin", item!.UserType);
+    }
+
+    sealed class View
+    {
+        public string UserType { get; set; } = "";
+    }
+
+    sealed class SourcedView : ReadonlyRepository<View>
+    {
+        protected internal override async IAsyncEnumerable<(View Item, Row? Source)> ReadTracked(IStatement? query = null)
+        {
+            await Task.Yield();
+            yield return (new View(), new Row { ["UserType"] = Value.From(1) });
+        }
+
+        public override IAsyncEnumerable<View> Read(IStatement? query = null) =>
+            Items(ReadTracked(query));
+
+        static async IAsyncEnumerable<View> Items(IAsyncEnumerable<(View Item, Row? Source)> pairs)
+        {
+            await foreach (var (item, _) in pairs)
+                yield return item;
+        }
+    }
+
     sealed class CountingReadonlyRepository<T>(IReadonlyRepository<T> inner) : ReadonlyRepository<T> where T : new()
     {
         public int Reads { get; private set; }
@@ -186,6 +219,9 @@ public class EnrichedReadonlyRepositoryTests
             await foreach (var item in inner.Read(query))
                 yield return item;
         }
+
+        protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
+            WithoutSource(Read(query));
 
         public override async Task<T?> ReadSingle(IStatement? query = null)
         {

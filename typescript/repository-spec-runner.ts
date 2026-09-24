@@ -254,7 +254,7 @@ export const runRepositorySpec = async (
     entity: spec.type.table,
     rowConverter: mapping,
     ...crudFieldsOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
-    readColumns: Object.keys(spec.type.fields),
+    readProperties: Object.keys(spec.type.fields),
   });
   const logs: string[] = [];
   attach(repo, logs);

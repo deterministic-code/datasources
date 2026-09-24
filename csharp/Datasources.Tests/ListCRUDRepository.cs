@@ -19,6 +19,9 @@ internal sealed class ListCRUDRepository<T> : ReadonlyRepository<T>, ICRUDReposi
                 yield return item;
     }
 
+    protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
+        WithoutSource(Read(query));
+
     public Task<Response> Create(T item)
     {
         if (Id(item) is not { } id || !HasId(id))

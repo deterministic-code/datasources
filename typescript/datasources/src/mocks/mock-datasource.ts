@@ -7,6 +7,7 @@ import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { MockCommand } from "./mock-command.ts";
 import { MockConnection } from "./mock-connection.ts";
 import { MockRepository } from "./mock-repository.ts";
+import { EnrichedReadonlyRepository } from "../EnrichedReadonlyRepository.ts";
 
 export class MockDatasource implements IDatasource {
   createConnectionCalls = 0;
@@ -41,5 +42,12 @@ export class MockDatasource implements IDatasource {
     connection?: IConnection,
   ): IReadonlyRepository<T> {
     return this.createRepository(type, connection);
+  }
+
+  createReadonlyEnrichedRepository<T extends object>(
+    type: Constructable<T>,
+    connection?: IConnection,
+  ): EnrichedReadonlyRepository<T> {
+    return new EnrichedReadonlyRepository(this.createReadonlyRepository(type, connection));
   }
 }

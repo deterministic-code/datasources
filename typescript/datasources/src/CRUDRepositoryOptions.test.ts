@@ -12,7 +12,7 @@ import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 
 describe("CRUDRepositoryOptions", () => {
   it("defaults are identity", () => {
-    const built = parts(new MockConnection(), { ids: ["id"], entity: "users", readColumns: ["id"] });
+    const built = parts(new MockConnection(), { ids: ["id"], entity: "users", readProperties: ["id"] });
     expect(built.statements.query().getText()).toBe("SELECT id FROM users");
     expect(built.rowsMapper.map("x")).toBe("x");
     expect(built.rowsMapper.reverseMap("x")).toBe("x");

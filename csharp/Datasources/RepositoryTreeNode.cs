@@ -6,7 +6,7 @@ namespace Datasources;
 public sealed class RepositoryTreeNode : IRepositoryTreeNode
 {
     readonly List<RepositoryTreeNode> items = [];
-    readonly Func<IReadOnlyList<object>, Task> apply;
+    readonly Func<IReadOnlyList<object>, IReadOnlyList<Row?>?, Task> apply;
     readonly IReadonlyEnrichmentBinder binder;
 
     public RepositoryTreeNode(
@@ -15,14 +15,25 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         IRepositoryTreeNode? parent = null,
         Func<IReadOnlyList<object>, Task>? apply = null,
         Enrichment? enrichment = null,
-        IReadonlyEnrichmentBinder? binder = null)
+        IReadonlyEnrichmentBinder? binder = null) :
+        this(value, propertyName, parent, (parents, _) => (apply ?? (_ => Task.CompletedTask))(parents), enrichment, binder)
+    {
+    }
+
+    internal RepositoryTreeNode(
+        object value,
+        string propertyName,
+        IRepositoryTreeNode? parent,
+        Func<IReadOnlyList<object>, IReadOnlyList<Row?>?, Task> apply,
+        Enrichment? enrichment,
+        IReadonlyEnrichmentBinder? binder)
     {
         Value = value;
         PropertyName = propertyName;
         Parent = parent;
         Enrichment = enrichment;
         this.binder = binder ?? new DefaultReadonlyEnrichmentStrategy<object>();
-        this.apply = apply ?? (_ => Task.CompletedTask);
+        this.apply = apply;
     }
 
     public object Value { get; }
@@ -45,7 +56,7 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
             via,
             into,
             this,
-            parents => binder.Apply(via, enrichment, parents),
+            (parents, sources) => ((ITrackedApply)binder).ApplyTracked(via, enrichment, parents, sources),
             enrichment,
             binder)
         {
@@ -55,13 +66,21 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         return child;
     }
 
-    public async Task EnrichFrom(IReadOnlyList<object> parents)
+    public Task EnrichFrom(IReadOnlyList<object> parents) => EnrichFrom(parents, null);
+
+    internal async Task EnrichFrom(IReadOnlyList<object> parents, IReadOnlyList<Row?>? sources)
     {
-        await apply(parents);
+        await apply(parents, sources);
         var next = Related(parents, PropertyName);
+        var nested = PropertyName.Length == 0 ? sources : null;
         foreach (var child in items)
-            await child.EnrichFrom(next);
+            await child.EnrichFrom(next, nested);
     }
+
+    internal static object? SourceKey(object parent, string name, Row? source) =>
+        source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
+            ? cell.ToObject()
+            : parent.GetType().GetProperty(name)?.GetValue(parent);
 
     internal static string KeyOf(object? key) => key?.ToString() ?? "";
 

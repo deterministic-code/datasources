@@ -33,7 +33,9 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
             var prop = typeof(T).GetProperty(key);
             if (prop is null || !prop.CanWrite || prop.GetIndexParameters().Length > 0
                 || !IsColumn(prop.PropertyType)) continue;
-            prop.SetValue(target, Assign(Converted(key, value, reverse: false), prop.PropertyType));
+            var cell = Converted(key, value, reverse: false);
+            if (prop.PropertyType == typeof(string) && cell.ToObject() is not string) continue;
+            prop.SetValue(target, Assign(cell, prop.PropertyType));
         }
         return target;
     }
