@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Datasources.Sqlite;
 
@@ -10,7 +11,11 @@ internal static class SqliteSessions
     {
         if (Create is null)
         {
-            try { Assembly.Load("Datasources.Sqlite.Microsoft"); }
+            try
+            {
+                var assembly = Assembly.Load("Datasources.Sqlite.Microsoft");
+                RuntimeHelpers.RunModuleConstructor(assembly.ManifestModule.ModuleHandle);
+            }
             catch (Exception ex) when (ex is FileNotFoundException or FileLoadException) { }
         }
         return Create?.Invoke() ?? throw new DatasourceException("SQLite driver is required");

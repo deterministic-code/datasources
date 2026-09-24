@@ -1082,14 +1082,14 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 
 ### Fill user type on a user view
 
-The user row keeps `UserTypeId` so the lookup can run. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](./change-casing-mapper.md) maps that Pascal name, plus `Id` and `Name`, to `user_type`, `id`, and `name`. `UserView` drops `UserTypeId` and keeps `UserType`.
+`UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](./change-casing-mapper.md) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L146-L210
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L136-L188
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#L198-L281
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L123-L179
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L114-L160
 ```
 
 ```output [User view]

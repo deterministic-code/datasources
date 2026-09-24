@@ -280,3 +280,286 @@ mod user_view {
         assert!(users_view.get("UserTypeId").is_none());
     }
 }
+
+mod users_view_roles {
+    use super::{datasource, open, ADA, GRACE, LIN};
+    use datasources::{
+        create_repository_options, encode_rows, eq, Casing, ChangeCasingMapper, ConvertSchema,
+        Datasource, DictionaryMapper, EnrichedReadonlyRepository, FlatToNestedMapper,
+        FlatToNestedReadonlyEnrichmentStrategy, HashsetOptimizedReadonlyEnrichmentStrategy, Join,
+        MappedValue, Query, QueryStatement, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
+        Value, WhereClause,
+    };
+    use std::sync::Arc;
+
+    struct UserType;
+
+    impl ConvertSchema for UserType {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![("Id", "INTEGER"), ("Name", "TEXT")]
+        }
+    }
+
+    struct UserRole;
+
+    impl ConvertSchema for UserRole {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![("UserId", "TEXT"), ("Name", "TEXT")]
+        }
+    }
+
+    struct UsersView;
+
+    impl ConvertSchema for UsersView {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![
+                ("Key", "TEXT"),
+                ("Login", "TEXT"),
+                ("Active", "INTEGER"),
+                ("Opened", "TEXT"),
+                ("UserType", "TEXT"),
+            ]
+        }
+    }
+
+    struct JoinRow;
+
+    impl ConvertSchema for JoinRow {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            Vec::new()
+        }
+    }
+
+    fn seed() -> String {
+        format!(
+            "
+            CREATE TABLE user_type (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+            INSERT INTO user_type (id, name) VALUES
+                (1, 'admin'),
+                (2, 'user'),
+                (3, 'service');
+            CREATE TABLE user (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL,
+                is_enabled INTEGER NOT NULL,
+                created TEXT NOT NULL,
+                user_type_id INTEGER NOT NULL
+            );
+            INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+                ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+                ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+                ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+            CREATE TABLE roles (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+            INSERT INTO roles (id, name) VALUES
+                (1, 'admin'),
+                (2, 'editor'),
+                (3, 'viewer');
+            CREATE TABLE user_roles (
+                user_id TEXT NOT NULL,
+                role_id INTEGER NOT NULL
+            );
+            INSERT INTO user_roles (user_id, role_id) VALUES
+                ('{ADA}', 1),
+                ('{ADA}', 2),
+                ('{GRACE}', 3);
+            "
+        )
+    }
+
+    fn roles_sql(sql: String) -> String {
+        let select = "SELECT user_roles.user_id AS user_id, roles.name AS name FROM user_roles INNER JOIN roles ON roles.id = user_roles.role_id";
+        match sql.split_once(" WHERE ") {
+            Some((_, rest)) => format!("{select} WHERE {rest}"),
+            None => select.to_string(),
+        }
+    }
+
+    fn role_names(value: &Value) -> Vec<String> {
+        value
+            .wire_text()
+            .split('|')
+            .filter(|part| !part.is_empty())
+            .filter_map(|part| {
+                part.split(',')
+                    .find_map(|field| field.strip_prefix("Name="))
+                    .map(str::to_string)
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn fills_roles_with_a_hashset() {
+        let built = datasource();
+        let ds: &dyn Datasource = &*built;
+        let connection = open(ds, &seed()).await;
+        let mut users_options = create_repository_options::<UsersView>();
+        users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+            "UsersView".to_string(),
+            "user".to_string(),
+        )]));
+        users_options.column_mappings = Box::new(DictionaryMapper::new([
+            ("Key".to_string(), "id".to_string()),
+            ("Login".to_string(), "username".to_string()),
+            ("Active".to_string(), "is_enabled".to_string()),
+            ("Opened".to_string(), "created".to_string()),
+            ("UserType".to_string(), "user_type_id".to_string()),
+        ]));
+        let mut type_options = create_repository_options::<UserType>();
+        type_options.entity_mapper =
+            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        type_options.column_mappings =
+            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        let mut role_options = create_repository_options::<UserRole>();
+        role_options.entity = "user_roles".into();
+        role_options.column_mappings = Box::new(DictionaryMapper::new([
+            ("UserId".to_string(), "user_id".to_string()),
+            ("Name".to_string(), "name".to_string()),
+        ]));
+        role_options.query = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
+        let users = ds.create_readonly_repository::<UsersView>(
+            Some(connection.clone()),
+            Some(users_options.read),
+        );
+        let types =
+            ds.create_readonly_repository::<UserType>(Some(connection.clone()), Some(type_options.read));
+        let roles =
+            ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
+        let mut users_repo = EnrichedReadonlyRepository::with_strategy(
+            users,
+            Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy),
+        );
+        users_repo.add_enriched(
+            "UserType",
+            "UserType",
+            types,
+            "Id",
+            Some("Name".into()),
+            false,
+            (),
+        );
+        users_repo.add_enriched("Roles", "Key", roles, "UserId", None, true, ());
+        let users_view = users_repo
+            .read_single(Some(&WhereClause::binary("Key", eq, ADA)))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(users_view.get("UserType"), Some(&Value::from("admin")));
+        let mut names = role_names(users_view.get("Roles").unwrap());
+        names.sort();
+        assert_eq!(names, ["admin", "editor"]);
+        assert!(users_view
+            .get("Roles")
+            .unwrap()
+            .wire_text()
+            .contains(&format!("UserId={ADA}")));
+    }
+
+    #[tokio::test]
+    async fn fills_roles_from_a_join() {
+        let built = datasource();
+        let ds: &dyn Datasource = &*built;
+        let connection = open(ds, &seed()).await;
+        let source = ds.create_readonly_repository::<JoinRow>(Some(connection.clone()), None);
+        let command: Arc<dyn Query> = Arc::new(QueryStatement::new(
+            "user",
+            &[
+                "user.id AS Key",
+                "user.username AS Login",
+                "user.is_enabled AS Active",
+                "user.created AS Opened",
+                "user_type.name AS UserType",
+                "user.id AS UserId",
+                "user_roles.role_id AS RoleId",
+                "roles.name AS RoleName",
+            ],
+            None,
+            &[
+                Join::left("user_type", "user_type.id", "user.user_type_id"),
+                Join::left("user_roles", "user_roles.user_id", "user.id"),
+                Join::left("roles", "roles.id", "user_roles.role_id"),
+            ],
+        ));
+        let users_repo = EnrichedReadonlyRepository::with_strategy(
+            ds.create_readonly_repository::<UsersView>(Some(connection.clone()), None),
+            Arc::new(FlatToNestedReadonlyEnrichmentStrategy::new(
+                source,
+                FlatToNestedMapper::new(TypeMap::new(
+                    "Key",
+                    vec![
+                        ("Key".into(), TypeMapField::column("Key")),
+                        ("Login".into(), TypeMapField::column("Login")),
+                        ("Active".into(), TypeMapField::column("Active")),
+                        ("Opened".into(), TypeMapField::column("Opened")),
+                        ("UserType".into(), TypeMapField::column("UserType")),
+                        (
+                            "Roles".into(),
+                            TypeMapField::Group(TypeMapGroup::new(
+                                "RoleId",
+                                vec![
+                                    ("RoleId".into(), TypeMapField::column("RoleId")),
+                                    ("UserId".into(), TypeMapField::column("UserId")),
+                                    ("Name".into(), TypeMapField::column("RoleName")),
+                                ],
+                            )),
+                        ),
+                    ],
+                )),
+                |row| {
+                    let mut view = datasources::Row::new();
+                    for key in ["Key", "Login", "Active", "Opened", "UserType"] {
+                        if let Some(MappedValue::Cell(value)) = row.get(key) {
+                            view.insert(key.into(), value.clone());
+                        }
+                    }
+                    let roles = match row.get("Roles") {
+                        Some(MappedValue::Many(items)) => items
+                            .iter()
+                            .map(|item| {
+                                let mut role = datasources::Row::new();
+                                for key in ["UserId", "Name"] {
+                                    if let Some(MappedValue::Cell(value)) = item.get(key) {
+                                        role.insert(key.into(), value.clone());
+                                    }
+                                }
+                                role
+                            })
+                            .collect(),
+                        _ => Vec::new(),
+                    };
+                    view.insert("Roles".into(), encode_rows(&roles));
+                    view
+                },
+                Some(command),
+            )),
+        );
+        let items = users_repo.read(None).await.unwrap();
+        let view = |login: &str| {
+            items
+                .iter()
+                .find(|item| item.get("Login") == Some(&Value::from(login)))
+                .unwrap()
+                .clone()
+        };
+        let ada = view("ada");
+        let grace = view("grace");
+        let lin = view("lin");
+        assert_eq!(items.len(), 3);
+        assert_eq!(ada.get("UserType"), Some(&Value::from("admin")));
+        let mut names = role_names(ada.get("Roles").unwrap());
+        names.sort();
+        assert_eq!(names, ["admin", "editor"]);
+        assert!(ada
+            .get("Roles")
+            .unwrap()
+            .wire_text()
+            .contains(&format!("UserId={ADA}")));
+        assert_eq!(role_names(grace.get("Roles").unwrap()), ["viewer"]);
+        assert_eq!(lin.get("Roles"), Some(&Value::from("")));
+    }
+}
