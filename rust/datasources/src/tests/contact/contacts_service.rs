@@ -1,10 +1,10 @@
 use crate::enriched_crud_repository::EnrichedCRUDRepository;
 use crate::i_repository::IRepository;
+use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
-use crate::read_input::ReadInput;
 use crate::row::Row;
 use crate::where_trait::Where;
 use async_trait::async_trait;
@@ -63,16 +63,24 @@ impl ContactsService {
                     );
                 },
             )
-            .add_enriched("phones", "id", phones, "contact_id", None, true, |node: &mut RepositoryTreeNode| {
-                node.include(
-                    phone_types,
-                    "phone_type_name",
-                    "phone_type_id",
-                    "id",
-                    Some("name".into()),
-                    false,
-                );
-            });
+            .add_enriched(
+                "phones",
+                "id",
+                phones,
+                "contact_id",
+                None,
+                true,
+                |node: &mut RepositoryTreeNode| {
+                    node.include(
+                        phone_types,
+                        "phone_type_name",
+                        "phone_type_id",
+                        "id",
+                        Some("name".into()),
+                        false,
+                    );
+                },
+            );
         Self { inner }
     }
 }

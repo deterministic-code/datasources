@@ -1,11 +1,9 @@
-use super::command::SqliteCommand;
-use super::connection::SqliteConnection;
 use chrono::{TimeZone, Utc};
 use datasources::{
-    create_repository_options, eq, gt, Command, Connection, ConvertSchema, DictionaryMapper,
-    IReadonlyRepository, PluralizerMapper, ReadonlyRepository, RowTypeConverter, Value,
-    WhereClause,
+    create_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
+    DictionaryMapper, PluralizerMapper, Value, WhereClause,
 };
+use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -38,9 +36,20 @@ impl ConvertSchema for UserAccount {
     }
 }
 
+fn datasource() -> Arc<BuiltDatasource> {
+    Arc::new(BuiltDatasource::new(
+        "sqlite",
+        Arc::new(crate::SqliteDriver),
+        Some(HashMap::from([("filename".into(), ":memory:".into())])),
+    ))
+}
+
 #[tokio::test]
 async fn reads_users_by_id_and_by_username_and_enabled() {
+    let built = datasource();
+    let ds: &dyn Datasource = &*built;
     let connection = open(
+        ds,
         "
         CREATE TABLE users (
             id INTEGER PRIMARY KEY,
@@ -55,15 +64,18 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     .await;
     let mut options = create_repository_options::<User>();
     options.entity_mapper = Box::new(PluralizerMapper::new());
-    options.row_converter = Some(RowTypeConverter::of::<User>());
-    let repo = ReadonlyRepository::new(connection, options.read).unwrap();
+    let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
     let by_id = repo
         .read_single(Some(&WhereClause::binary("id", eq, 1_i64)))
         .await
         .unwrap()
         .unwrap();
     let disabled = repo
-        .read(Some(&WhereClause::binary("username", eq, "grace").and("is_enabled", eq, 0_i64)))
+        .read(Some(&WhereClause::binary("username", eq, "grace").and(
+            "is_enabled",
+            eq,
+            0_i64,
+        )))
         .await
         .unwrap();
     assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
@@ -75,8 +87,12 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
 
 #[tokio::test]
 async fn reads_user_by_guid_username_and_created() {
-    let connection = open(&format!(
-        "
+    let built = datasource();
+    let ds: &dyn Datasource = &*built;
+    let connection = open(
+        ds,
+        &format!(
+            "
         CREATE TABLE user (
             id TEXT PRIMARY KEY,
             username TEXT NOT NULL,
@@ -88,19 +104,18 @@ async fn reads_user_by_guid_username_and_created() {
             ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
             ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z');
         "
-    ))
+        ),
+    )
     .await;
     let mut options = create_repository_options::<UserAccount>();
     options.entity = "user".into();
-    options.row_converter = Some(RowTypeConverter::of::<UserAccount>());
     options.column_mappings = Box::new(DictionaryMapper::new([
         ("Key".to_string(), "id".to_string()),
         ("Login".to_string(), "username".to_string()),
         ("Active".to_string(), "is_enabled".to_string()),
         ("Opened".to_string(), "created".to_string()),
     ]));
-    options.row_type_converters = crate::converters::row_type_converters();
-    let repo = ReadonlyRepository::new(connection, options.read).unwrap();
+    let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
         .read_single(Some(&WhereClause::binary(
@@ -112,11 +127,15 @@ async fn reads_user_by_guid_username_and_created() {
         .unwrap()
         .unwrap();
     let by_login = repo
-        .read(Some(&WhereClause::binary("Login", eq, "ada").and("Active", eq, true)))
+        .read(Some(
+            &WhereClause::binary("Login", eq, "ada").and("Active", eq, true),
+        ))
         .await
         .unwrap();
     let later = repo
-        .read(Some(&WhereClause::binary("Active", eq, true).and("Opened", gt, opened)))
+        .read(Some(
+            &WhereClause::binary("Active", eq, true).and("Opened", gt, opened),
+        ))
         .await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
@@ -132,10 +151,10 @@ async fn reads_user_by_guid_username_and_created() {
     assert_eq!(later[0].get("Login"), Some(&Value::from("grace")));
 }
 
-async fn open(sql: &str) -> Arc<SqliteConnection> {
-    let connection = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+async fn open(ds: &dyn Datasource, sql: &str) -> Arc<dyn Connection> {
+    let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
-    let command = SqliteCommand::new(connection.clone());
+    let command = ds.create_command(Some(connection.clone()));
     for statement in sql
         .split(';')
         .map(str::trim)

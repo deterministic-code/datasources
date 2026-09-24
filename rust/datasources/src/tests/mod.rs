@@ -475,7 +475,7 @@ async fn stubs_throw() {
         .await
         .is_err());
     let ds: &dyn Datasource = &*ds;
-    let repo = ds.create_repository::<Cells>(None);
+    let repo = ds.create_repository::<Cells>(None, None);
     let mut empty = Row::new();
     assert!(repo.read_single(None).await.is_err());
     assert!(repo.read(None).await.is_err());
@@ -487,7 +487,7 @@ async fn stubs_throw() {
     assert!(repo.create(&mut empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
-    let readonly = ds.create_readonly_repository::<Cells>(None);
+    let readonly = ds.create_readonly_repository::<Cells>(None, None);
     assert!(readonly.read_single(None).await.is_err());
     assert!(readonly.read(None).await.is_err());
     assert!(readonly
@@ -615,8 +615,8 @@ async fn published_mocks() {
     let command = ds.create_command(None);
     command.execute("", None).await.unwrap();
     command.execute_reader("", None).await.unwrap();
-    ds.create_repository::<Cells>(None);
-    ds.create_readonly_repository::<Cells>(None);
+    ds.create_repository::<Cells>(None, None);
+    ds.create_readonly_repository::<Cells>(None, None);
 
     let q = MockQuery::new("q");
     let w = MockWhere::new("w");
@@ -2012,7 +2012,15 @@ async fn hashset_uses_one_read_per_edge() {
         false,
         (),
     )
-    .add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
+    .add_enriched(
+        "children",
+        "id",
+        children.clone(),
+        "parent_id",
+        None,
+        true,
+        (),
+    );
     repo.read(None).await.unwrap();
     assert_eq!(*types.reads.lock().unwrap(), 1);
     assert_eq!(*types.read_singles.lock().unwrap(), 0);
@@ -2153,7 +2161,15 @@ async fn deep_create_writes_children_stamps_fk_and_skips_select() {
         false,
         (),
     )
-    .add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
+    .add_enriched(
+        "children",
+        "id",
+        children.clone(),
+        "parent_id",
+        None,
+        true,
+        (),
+    );
     repo.create(&mut record(&[
         ("type_id", Value::Int(10)),
         (
@@ -2181,7 +2197,15 @@ async fn deep_create_applies_generated_parent_id_before_child_fks() {
     )])]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
     let mut repo = EnrichedCRUDRepository::new(parents);
-    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
+    repo.add_enriched(
+        "children",
+        "id",
+        children.clone(),
+        "parent_id",
+        None,
+        true,
+        (),
+    );
     repo.create(&mut record(&[(
         "children",
         encode_rows(&[record(&[("label", Value::from("n"))])]),
@@ -2210,7 +2234,15 @@ async fn deep_update_replace_syncs_children() {
         ]),
     ]));
     let mut repo = EnrichedCRUDRepository::new(parents);
-    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
+    repo.add_enriched(
+        "children",
+        "id",
+        children.clone(),
+        "parent_id",
+        None,
+        true,
+        (),
+    );
     repo.update(
         &record(&[
             ("id", Value::Int(1)),
@@ -2393,7 +2425,15 @@ async fn bulk_create_writes_parents_and_children() {
     let parents = Arc::new(list_repository::ListRepository::new(vec![]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
     let mut repo = BulkCRUDRepository::new(parents.clone());
-    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
+    repo.add_enriched(
+        "children",
+        "id",
+        children.clone(),
+        "parent_id",
+        None,
+        true,
+        (),
+    );
     let response = repo
         .create_bulk(&mut [
             record(&[(
@@ -2438,7 +2478,15 @@ async fn bulk_update_replace_syncs_each_parent() {
         ]),
     ]));
     let mut repo = BulkCRUDRepository::new(parents);
-    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
+    repo.add_enriched(
+        "children",
+        "id",
+        children.clone(),
+        "parent_id",
+        None,
+        true,
+        (),
+    );
     repo.update_bulk(
         &[
             record(&[
@@ -2505,7 +2553,15 @@ async fn bulk_delete_cascades_each_parent() {
         ]),
     ]));
     let mut repo = BulkCRUDRepository::new(parents.clone());
-    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
+    repo.add_enriched(
+        "children",
+        "id",
+        children.clone(),
+        "parent_id",
+        None,
+        true,
+        (),
+    );
     repo.delete_bulk(
         &[
             record(&[("id", Value::Int(1))]),

@@ -434,11 +434,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Read users by id and by username
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L56
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L58
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L40-L72
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L47-L86
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L30-L54
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L32-L56
 ```
 :::
 
@@ -447,9 +447,9 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L59-L102
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L77-L129
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L88-L152
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L57-L97
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L58-L97
 ```
 :::
 

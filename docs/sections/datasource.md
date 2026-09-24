@@ -80,29 +80,31 @@ createCommand(connection?: IConnection): ICommand
 
 **Returns** [ICommand](./command.md)
 
-##### createRepository(type, connection?)
+##### createRepository(type, connection?, options?)
 
-Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class.
+Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class. The driver's row type converters replace `rowTypeConverters`.
 
 ```typescript
-createRepository<T>(type: Constructable<T>, connection?: IConnection): ICRUDRepository<T>
+createRepository<T>(type: Constructable<T>, connection?: IConnection, options?: CRUDRepositoryOptions<T>): ICRUDRepository<T>
 ```
 
 - `type` — class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `options` — optional [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
-##### createReadonlyRepository(type, connection?)
+##### createReadonlyRepository(type, connection?, options?)
 
-Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`.
+Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The driver's row type converters replace `rowTypeConverters`.
 
 ```typescript
-createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection): IReadonlyRepository<T>
+createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, options?: ReadonlyRepositoryOptions<T>): IReadonlyRepository<T>
 ```
 
 - `type` — class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
@@ -201,27 +203,29 @@ ICommand CreateCommand(IConnection? connection = null)
 
 **Returns** [ICommand](./command.md)
 
-##### CreateRepository(connection)
+##### CreateRepository(connection, options)
 
-Creates a CRUD repository bound to an optional open connection.
+Creates a CRUD repository bound to an optional open connection. The driver's row type converters replace `RowTypeConverters`.
 
 ```csharp
-ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null)
+ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null, CRUDRepositoryOptions<T>? options = null)
 ```
 
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `options` — optional [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
-##### CreateReadonlyRepository(connection)
+##### CreateReadonlyRepository(connection, options)
 
-Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method.
+Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method. The driver's row type converters replace `RowTypeConverters`.
 
 ```csharp
-IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null)
+IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null, ReadonlyRepositoryOptions<T>? options = null)
 ```
 
 - `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
@@ -320,27 +324,29 @@ fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Com
 
 **Returns** `Arc<dyn `[Command](./command.md)`>`
 
-##### create_repository(connection)
+##### create_repository(connection, options)
 
-Creates a CRUD repository for `T`, bound to an optional open connection.
+Creates a CRUD repository for `T`, bound to an optional open connection. The driver's row type converters replace `row_type_converters`.
 
 ```rust
-fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ICRUDRepository>
+fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<CRUDRepositoryOptions>) -> Arc<dyn ICRUDRepository>
 ```
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one
+- `options` — optional [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults
 
 **Returns** `Arc<dyn `[CRUDRepository](./crud-repository.md)`>`
 
-##### create_readonly_repository(connection)
+##### create_readonly_repository(connection, options)
 
-Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`.
+Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`. The driver's row type converters replace `row_type_converters`.
 
 ```rust
-fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn IReadonlyRepository>
+fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryOptions>) -> Arc<dyn IReadonlyRepository>
 ```
 
 - `connection` — optional open [Connection](./connection.md); omitted constructs one
+- `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults
 
 **Returns** `Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>`
 

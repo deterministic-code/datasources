@@ -142,8 +142,8 @@ mod tests {
         let bound = ds.create_command(Some(ds.create_connection().await.unwrap()));
         assert!(bound.execute("insert", None).await.is_err());
         assert!(bound.execute_reader("", None).await.is_err());
-        ds.create_repository::<Cells>(None);
-        ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()));
+        ds.create_repository::<Cells>(None, None);
+        ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()), None);
 
         let missing = MemoryFileStore::new();
         assert!(!missing.exists("x"));
