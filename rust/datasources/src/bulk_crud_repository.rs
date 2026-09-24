@@ -10,19 +10,19 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use crate::where_trait::Where;
-use crate::EnrichedCRUDRepository;
+use crate::CRUDRepository;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct BulkCRUDRepository {
-    inner: EnrichedCRUDRepository,
+    inner: CRUDRepository,
 }
 
 impl BulkCRUDRepository {
     pub fn new(inner: Arc<dyn ICRUDRepository>) -> Self {
         Self {
-            inner: EnrichedCRUDRepository::new(inner),
+            inner: CRUDRepository::from_repository(inner),
         }
     }
 
@@ -114,6 +114,10 @@ impl IReadonlyRepository for BulkCRUDRepository {
 
 #[async_trait]
 impl ICRUDRepository for BulkCRUDRepository {
+    fn id_names(&self) -> Vec<String> {
+        self.inner.id_names()
+    }
+
     async fn create(&self, item: &mut Row) -> Result<Response> {
         self.inner.create(item).await
     }

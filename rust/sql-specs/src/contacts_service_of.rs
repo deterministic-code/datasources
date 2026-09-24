@@ -1,7 +1,7 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
     as_readonly, CRUDRepository, CRUDRepositoryOptions, CommandMiddleware, Connection,
-    EnrichedCRUDRepository, ICRUDRepository, RepositoryTreeNode, TypeConverter, Value,
+    ICRUDRepository, RepositoryTreeNode, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -46,7 +46,7 @@ pub fn contacts_service_of(
     connection: Arc<dyn Connection>,
     middleware: Option<Arc<dyn CommandMiddleware>>,
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
-) -> EnrichedCRUDRepository {
+) -> CRUDRepository {
     let base = [
         "id",
         "uuid",
@@ -108,7 +108,7 @@ pub fn contacts_service_of(
         middleware.clone(),
         field,
     ));
-    let mut inner = EnrichedCRUDRepository::new(repo(
+    let mut inner = CRUDRepository::from_repository(repo(
         connection.clone(),
         "contacts_base",
         &base,

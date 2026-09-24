@@ -3,6 +3,7 @@ namespace Datasources.Tests;
 internal sealed class ListCRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 {
     public List<T> Items { get; } = [];
+    public IReadOnlyList<string> Ids { get; } = CreateRepositoryOptions.FromType<T>().Ids;
     int nextId = 1;
 
     public ListCRUDRepository(params T[] items)

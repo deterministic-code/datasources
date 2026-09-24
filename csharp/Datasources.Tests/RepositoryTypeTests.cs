@@ -16,10 +16,10 @@ public class RepositoryTypeTests
     }
 
     [Fact]
-    public void EnrichedCRUDRepositoryReportsSameTypeAsInner()
+    public void CRUDRepositoryReportsSameTypeAsInner()
     {
         var inner = new ListCRUDRepository<Item>();
-        var repo = new EnrichedCRUDRepository<Item>(inner);
+        var repo = new CRUDRepository<Item>(inner);
         Assert.Equal(typeof(Item), inner.Type);
         Assert.Equal(typeof(Item), repo.Type);
     }

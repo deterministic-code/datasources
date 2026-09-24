@@ -12390,6 +12390,340 @@ const usersView = await usersRepo.readSingle(new WhereClause("Key", eq, ada));
 }
 ```
 
+#### Fill roles from one join
+
+`FlatToNestedReadonlyEnrichmentStrategy` reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](#flat-to-nested-mapper) groups each user's `Roles`.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L280-L356)
+
+```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, Seed());
+var source = ds.CreateReadonlyRepository<Row>(connection, new ReadonlyRepositoryOptions<Row>
+{
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+        ["UserType"] = "user_type.name",
+        ["UserId"] = "user_id",
+        ["RoleId"] = "role_id",
+        ["Name"] = "roles.name",
+    }),
+});
+var usersRepo = new EnrichedReadonlyRepository<UsersView>(
+    ds.CreateReadonlyRepository<UsersView>(connection),
+    new FlatToNestedReadonlyEnrichmentStrategy<UsersView>(
+        source,
+        new FlatToNestedMapper(new TypeMap
+        {
+            Key = "Key",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["Key"] = "Key",
+                ["Login"] = "Login",
+                ["Active"] = "Active",
+                ["Opened"] = "Opened",
+                ["UserType"] = "UserType",
+                ["Roles"] = new TypeMapGroup
+                {
+                    Key = "RoleId",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["RoleId"] = "RoleId",
+                        ["UserId"] = "UserId",
+                        ["Name"] = "Name",
+                    }
+                }
+            }
+        }),
+        new MappedValueMapper<UsersView>(),
+        new QueryStatement(
+            "user",
+            [
+                "user.id",
+                "user.username",
+                "user.is_enabled",
+                "user.created",
+                "user_type.name",
+                "user_roles.user_id",
+                "user_roles.role_id",
+                "roles.name",
+            ],
+            joins:
+            [
+                new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
+                new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
+                new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
+            ])));
+var items = new List<UsersView>();
+await foreach (var item in usersRepo.Read())
+    items.Add(item);
+var ada = Assert.Single(items, item => item.Login == "ada");
+var grace = Assert.Single(items, item => item.Login == "grace");
+var lin = Assert.Single(items, item => item.Login == "lin");
+```
+
+**Users with roles**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: true,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: [
+      { UserId: '11111111-1111-1111-1111-111111111111', Name: 'admin' },
+      { UserId: '11111111-1111-1111-1111-111111111111', Name: 'editor' }
+    ]
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: true,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: [
+      { UserId: '22222222-2222-2222-2222-222222222222', Name: 'viewer' }
+    ]
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: false,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: []
+  }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L463-L564)
+
+```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(ds, &seed()).await;
+let source = ds.create_readonly_repository::<JoinRow>(Some(connection.clone()), None);
+let command: Arc<dyn Query> = Arc::new(QueryStatement::new(
+    "user",
+    &[
+        "user.id AS Key",
+        "user.username AS Login",
+        "user.is_enabled AS Active",
+        "user.created AS Opened",
+        "user_type.name AS UserType",
+        "user.id AS UserId",
+        "user_roles.role_id AS RoleId",
+        "roles.name AS RoleName",
+    ],
+    None,
+    &[
+        Join::left("user_type", "user_type.id", "user.user_type_id"),
+        Join::left("user_roles", "user_roles.user_id", "user.id"),
+        Join::left("roles", "roles.id", "user_roles.role_id"),
+    ],
+));
+let users_repo = EnrichedReadonlyRepository::with_strategy(
+    ds.create_readonly_repository::<UsersView>(Some(connection.clone()), None),
+    Arc::new(FlatToNestedReadonlyEnrichmentStrategy::new(
+        source,
+        FlatToNestedMapper::new(TypeMap::new(
+            "Key",
+            vec![
+                ("Key".into(), TypeMapField::column("Key")),
+                ("Login".into(), TypeMapField::column("Login")),
+                ("Active".into(), TypeMapField::column("Active")),
+                ("Opened".into(), TypeMapField::column("Opened")),
+                ("UserType".into(), TypeMapField::column("UserType")),
+                (
+                    "Roles".into(),
+                    TypeMapField::Group(TypeMapGroup::new(
+                        "RoleId",
+                        vec![
+                            ("RoleId".into(), TypeMapField::column("RoleId")),
+                            ("UserId".into(), TypeMapField::column("UserId")),
+                            ("Name".into(), TypeMapField::column("RoleName")),
+                        ],
+                    )),
+                ),
+            ],
+        )),
+        |row| {
+            let mut view = datasources::Row::new();
+            for key in ["Key", "Login", "Active", "Opened", "UserType"] {
+                if let Some(MappedValue::Cell(value)) = row.get(key) {
+                    view.insert(key.into(), value.clone());
+                }
+            }
+            let roles = match row.get("Roles") {
+                Some(MappedValue::Many(items)) => items
+                    .iter()
+                    .map(|item| {
+                        let mut role = datasources::Row::new();
+                        for key in ["UserId", "Name"] {
+                            if let Some(MappedValue::Cell(value)) = item.get(key) {
+                                role.insert(key.into(), value.clone());
+                            }
+                        }
+                        role
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            };
+            view.insert("Roles".into(), encode_rows(&roles));
+            view
+        },
+        Some(command),
+    )),
+);
+let items = users_repo.read(None).await.unwrap();
+let view = |login: &str| {
+    items
+        .iter()
+        .find(|item| item.get("Login") == Some(&Value::from(login)))
+        .unwrap()
+        .clone()
+};
+let ada = view("ada");
+let grace = view("grace");
+let lin = view("lin");
+```
+
+**Users with roles**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: 'Name=admin,UserId=11111111-1111-1111-1111-111111111111|Name=editor,UserId=11111111-1111-1111-1111-111111111111'
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: 'Name=viewer,UserId=22222222-2222-2222-2222-222222222222'
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: 0,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: ''
+  }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L133-L197)
+
+```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, seed());
+const source = ds.createReadonlyRepository(JoinRow, connection);
+const usersRepo = new EnrichedReadonlyRepository(
+  ds.createReadonlyRepository(UsersView, connection),
+  new FlatToNestedReadonlyEnrichmentStrategy(
+    source,
+    new FlatToNestedMapper<UsersView>({
+      key: "Key",
+      fields: {
+        Key: "Key",
+        Login: "Login",
+        Active: "Active",
+        Opened: "Opened",
+        UserType: "UserType",
+        Roles: {
+          key: "RoleId",
+          fields: { RoleId: "RoleId", UserId: "UserId", Name: "RoleName" },
+        },
+      },
+    }),
+    new TransformMapper(
+      (row) =>
+        Object.assign(new UsersView(), row, {
+          Roles: row.Roles.map((role) => Object.assign(new UserRole(), role)),
+        }),
+      () => {
+        throw new Error("UsersView hydrate does not reverse");
+      },
+    ),
+    new QueryStatement(
+      "user",
+      [
+        "user.id AS Key",
+        "user.username AS Login",
+        "user.is_enabled AS Active",
+        "user.created AS Opened",
+        "user_type.name AS UserType",
+        "user.id AS UserId",
+        "user_roles.role_id AS RoleId",
+        "roles.name AS RoleName",
+      ],
+      undefined,
+      [
+        Join.left("user_type", "user_type.id", "user.user_type_id"),
+        Join.left("user_roles", "user_roles.user_id", "user.id"),
+        Join.left("roles", "roles.id", "user_roles.role_id"),
+      ],
+    ),
+  ),
+);
+const items: UsersView[] = [];
+for await (const item of usersRepo.read()) items.push(item);
+const found = (login: string) => items.find((item) => item.Login === login);
+const adaView = found("ada");
+const graceView = found("grace");
+const linView = found("lin");
+expect(items).toHaveLength(3);
+```
+
+**Users with roles**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: [
+      { RoleId: 1, UserId: '11111111-1111-1111-1111-111111111111', Name: 'admin' },
+      { RoleId: 2, UserId: '11111111-1111-1111-1111-111111111111', Name: 'editor' }
+    ]
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: [
+      { RoleId: 3, UserId: '22222222-2222-2222-2222-222222222222', Name: 'viewer' }
+    ]
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: 0,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: []
+  }
+]
+```
+
 ## Bulk repository
 
 [EnrichedCRUDRepository](#deepcrudrepository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.

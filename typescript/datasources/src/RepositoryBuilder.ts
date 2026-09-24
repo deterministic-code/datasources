@@ -15,12 +15,10 @@ import type { Scalar } from "./builders/Scalar.ts";
 export type { BuiltRepository } from "./BuiltRepository.ts";
 export type { RepositoryStatements } from "./RepositoryStatements.ts";
 
-const defaultCreate = <T>(): IMapper<Scalar, T> =>
+export const identityCreate = <T>(ids: readonly string[]): IMapper<Scalar, T> =>
   new TransformMapper(
-    (value) => {
-      if (value == null) return {} as T;
-      return { id: value } as T;
-    },
+    (value) =>
+      value == null || ids.length !== 1 ? ({} as T) : ({ [ids[0]!]: value } as T),
     () => null,
   );
 
@@ -48,6 +46,9 @@ export const parts = <T>(
     .map((name) => columnMappings.map(name))
     .sort((left, right) => left.localeCompare(right));
   const crud = isCrud(options) ? options : undefined;
+  const ids = crud
+    ? (crud.ids ?? (options.type ? defaultId(fieldNamesOf(options.type)) : ["id"]))
+    : [];
   return {
     connection,
     rowConverter,
@@ -55,11 +56,9 @@ export const parts = <T>(
     columnMappings,
     statements: statementsOf(entity, columns, options.query, crud?.insert, crud?.update, crud?.delete),
     readColumns: columns,
-    ids: crud
-      ? (crud.ids ?? (options.type ? defaultId(fieldNamesOf(options.type)) : ["id"]))
-      : [],
+    ids,
     type: options.type ?? (Object as never as Constructable<T>),
-    create: crud ? (crud.create ?? defaultCreate<T>()) : undefined,
+    create: crud ? (crud.create ?? identityCreate<T>(ids)) : undefined,
   };
 };
 

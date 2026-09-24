@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { EnrichedCRUDRepository } from "./EnrichedCRUDRepository.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
@@ -18,7 +17,7 @@ describe("repository type", () => {
 
   it("wrappers expose inner type", () => {
     const inner = new ListCRUDRepository<Item>([], Item);
-    const repo = new EnrichedCRUDRepository(inner);
+    const repo = new CRUDRepository(inner);
     expect(inner.type).toBe(Item);
     expect(repo.type).toBe(Item);
   });

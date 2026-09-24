@@ -11,6 +11,7 @@ import type { IWhere } from "../statements/IWhere.ts";
 import { notImplemented } from "./notImplemented.ts";
 
 export class StubRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
+  readonly ids: readonly string[] = [];
   constructor(
     readonly provider: string,
     _connection: IConnection,
