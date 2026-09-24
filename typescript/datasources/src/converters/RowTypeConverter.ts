@@ -16,7 +16,14 @@ export class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells> {
   }
 
   convert = (row: Cells, type?: Constructable<T>): T => {
-    const dest = Object.assign(type ? new type() : {}, row) as T;
+    const blank = type ? new type() : {};
+    const cells = Object.fromEntries(
+      Object.entries(row).filter(([key, value]) => {
+        const current = (blank as Cells)[key];
+        return !(typeof current === "string" && typeof value !== "string" && value !== null);
+      }),
+    );
+    const dest = Object.assign(blank, cells) as T;
     for (const [key, value] of Object.entries(row)) {
       const converter = this.fields[key];
       if (converter) (dest as Cells)[key] = converter.convert(value);

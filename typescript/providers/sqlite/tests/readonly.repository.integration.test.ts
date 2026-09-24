@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ChangeCasingMapper, Datasource,
-  DictionaryMapper, EnrichedReadonlyRepository,
+  DictionaryMapper,
   PluralizerMapper,
   WhereClause,
   eq,
@@ -98,21 +98,12 @@ describe("readonly repository", () => {
 });
 
 describe("user view", () => {
-  class UserAccount {
-    Key = "";
-    Login = "";
-    Active = 0;
-    Opened = "";
-    UserTypeId = 0;
-    UserType = "";
-  }
-
   class UserType {
     Id = 0;
     Name = "";
   }
 
-  class UserView {
+  class UsersView {
     Key = "";
     Login = "";
     Active = 0;
@@ -143,39 +134,29 @@ describe("user view", () => {
         ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
         ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
     `);
-    const users = ds.createReadonlyRepository(UserAccount, connection, {
-      entity: "user",
-      readColumns: ["Key", "Login", "Active", "Opened", "UserTypeId"],
+    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+    const usersRepo = ds.createReadonlyEnrichedRepository(UsersView, connection, {
+      entityMapper: new DictionaryMapper([["UsersView", "user"]]),
       columnMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
         ["Active", "is_enabled"],
         ["Opened", "created"],
-        ["UserTypeId", "user_type_id"],
+        ["UserType", "user_type_id"],
       ]),
     });
-    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-    const types = ds.createReadonlyRepository(UserType, connection, {
-      entity: "UserType",
+    const typesRepo = ds.createReadonlyRepository(UserType, connection, {
       entityMapper: casing,
       columnMappings: casing,
     });
-    const enriched = new EnrichedReadonlyRepository(users);
-    enriched.addEnriched("UserType", "UserTypeId", types, "Id", "Name");
-    const account = await enriched.readSingle(new WhereClause("Key", eq, ada));
-    const usersView = new UserView();
-    usersView.Key = account?.Key ?? "";
-    usersView.Login = account?.Login ?? "";
-    usersView.Active = account?.Active ?? 0;
-    usersView.Opened = account?.Opened ?? "";
-    usersView.UserType = account?.UserType ?? "";
-    expect(account?.UserTypeId).toBe(1);
-    expect(usersView.UserType).toBe("admin");
-    expect(usersView.Login).toBe("ada");
-    expect(usersView.Key).toBe(ada);
-    expect(usersView.Active).toBe(1);
-    expect(usersView.Opened).toBe("2020-01-01T00:00:00.000Z");
-    expect("UserTypeId" in usersView).toBe(false);
+    usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name");
+    const usersView = await usersRepo.readSingle(new WhereClause("Key", eq, ada));
+    expect(usersView?.UserType).toBe("admin");
+    expect(usersView?.Login).toBe("ada");
+    expect(usersView?.Key).toBe(ada);
+    expect(usersView?.Active).toBe(1);
+    expect(usersView?.Opened).toBe("2020-01-01T00:00:00.000Z");
+    expect(usersView === undefined || !("UserTypeId" in usersView)).toBe(true);
   });
 });
 

@@ -3,7 +3,8 @@ import type { IConnection } from "../IConnection.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
-import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
+import { ReadonlyRepository, untyped, withoutSource } from "../ReadonlyRepository.ts";
+import type { Sourced } from "../IReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 
@@ -46,6 +47,12 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     for (const item of this.items) {
       yield item;
     }
+  }
+
+  async *readWithSource(
+    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+  ): AsyncIterable<Sourced<T>> {
+    yield* withoutSource(this.read(query));
   }
 
   async create(item: T): Promise<Response> {

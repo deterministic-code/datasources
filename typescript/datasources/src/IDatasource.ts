@@ -5,6 +5,7 @@ import type { IConnection } from "./IConnection.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
+import type { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
 
 export interface IDatasource {
   readonly provider: string;
@@ -20,4 +21,9 @@ export interface IDatasource {
     connection?: IConnection,
     options?: ReadonlyRepositoryOptions<T>,
   ): IReadonlyRepository<T>;
+  createReadonlyEnrichedRepository<T extends object>(
+    type: Constructable<T>,
+    connection?: IConnection,
+    options?: ReadonlyRepositoryOptions<T>,
+  ): EnrichedReadonlyRepository<T>;
 }

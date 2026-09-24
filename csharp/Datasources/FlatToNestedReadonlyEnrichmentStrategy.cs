@@ -27,4 +27,11 @@ public sealed class FlatToNestedReadonlyEnrichmentStrategy<T>(
         Enrichment enrichment,
         IReadOnlyList<object> parents) =>
         Task.CompletedTask;
+
+    Task ITrackedApply.ApplyTracked<TRelated>(
+        IReadonlyRepository<TRelated> via,
+        Enrichment enrichment,
+        IReadOnlyList<object> parents,
+        IReadOnlyList<Row?>? sources) =>
+        Task.CompletedTask;
 }

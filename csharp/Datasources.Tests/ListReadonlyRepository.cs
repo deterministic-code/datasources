@@ -15,6 +15,9 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T> where T 
                 yield return item;
     }
 
+    protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
+        WithoutSource(Read(query));
+
     static bool Matches(T item, IStatement? query) =>
         query is IQuery { Where: { } where } && where.GetText() == "1 = 0"
             ? false

@@ -44,9 +44,21 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
 
     public virtual IAsyncEnumerable<T> Read(IWhere where) => Read(Compiled(Stored(where)));
 
+    protected internal virtual IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
+        ReadTracked(Compiled(Stored(where)));
+
     public virtual Task<T?> ReadSingle(IWhere where) => ReadSingle(Compiled(Stored(where)));
 
-    public virtual async IAsyncEnumerable<T> Read(IStatement? query = null)
+    public virtual IAsyncEnumerable<T> Read(IStatement? query = null) =>
+        Items(ReadTracked(query));
+
+    internal static IAsyncEnumerable<(T Item, Row? Source)> Tracked(IReadonlyRepository<T> repo, IStatement? query = null) =>
+        repo is ReadonlyRepository<T> stored ? stored.ReadTracked(query) : WithoutSource(repo.Read(query));
+
+    internal static IAsyncEnumerable<(T Item, Row? Source)> Tracked(IReadonlyRepository<T> repo, IWhere where) =>
+        repo is ReadonlyRepository<T> stored ? stored.ReadTracked(where) : WithoutSource(repo.Read(where));
+
+    protected internal virtual async IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null)
     {
         var statement = query switch
         {
@@ -62,8 +74,22 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
         };
         var reader = await Command().ExecuteReader(statement, parameters);
         while (await reader.Next())
-            yield return Mapper!.Map(RowConverter.Convert(Renamed(reader.Current
-                ?? throw new DatasourceException("Reader current must be a row"))));
+        {
+            var renamed = Renamed(reader.Current ?? throw new DatasourceException("Reader current must be a row"));
+            yield return (Mapper!.Map(RowConverter.Convert(renamed)), renamed);
+        }
+    }
+
+    static async IAsyncEnumerable<T> Items(IAsyncEnumerable<(T Item, Row? Source)> pairs)
+    {
+        await foreach (var (item, _) in pairs)
+            yield return item;
+    }
+
+    protected static async IAsyncEnumerable<(T Item, Row? Source)> WithoutSource(IAsyncEnumerable<T> items)
+    {
+        await foreach (var item in items)
+            yield return (item, null);
     }
 
     public virtual async Task<T?> ReadSingle(IStatement? query = null) =>

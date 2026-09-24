@@ -189,7 +189,7 @@ public static class RepositorySpec
             Entity = type.Table,
             RowConverter = mapping,
             Ids = type.Ids,
-            ReadColumns = [.. type.Fields.Keys],
+            ReadProperties = [.. type.Fields.Keys],
             EntityMapper = new TransformMapper<string, string>(
                 name => quote(type.CRUDMapper?.Entity ?? name),
                 name => name),

@@ -9,5 +9,5 @@ public class ReadonlyRepositoryOptions<T> where T : new()
     public IMapper<T, T> RowsMapper { get; init; } = new IdentityMapper<T>();
     public TypeConverter<T, Row>? RowConverter { get; init; }
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>>? RowTypeConverters { get; init; }
-    public IReadOnlyList<string>? ReadColumns { get; init; }
+    public IReadOnlyList<string>? ReadProperties { get; init; }
 }

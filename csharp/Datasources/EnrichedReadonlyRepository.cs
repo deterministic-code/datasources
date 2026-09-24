@@ -34,15 +34,34 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
     public Task Enrich(IList<T> items) => strategy.Enrich(Tree, items);
 
     public override IAsyncEnumerable<T> Read(IStatement? query = null) =>
-        strategy.Read(inner, Tree, query);
+        Items(ReadTracked(query));
 
-    public override async IAsyncEnumerable<T> Read(IWhere where)
+    public override IAsyncEnumerable<T> Read(IWhere where) =>
+        Items(ReadTracked(where));
+
+    protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
+        Sourced(Tracked(inner, query));
+
+    protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
+        Sourced(Tracked(inner, where));
+
+    async IAsyncEnumerable<(T Item, Row? Source)> Sourced(IAsyncEnumerable<(T Item, Row? Source)> pairs)
     {
         var items = new List<T>();
-        await foreach (var item in inner.Read(where))
+        var sources = new List<Row?>();
+        await foreach (var (item, source) in pairs)
+        {
             items.Add(item);
-        await Enrich(items);
-        foreach (var item in items)
+            sources.Add(source);
+        }
+        await strategy.Enrich(Tree, items, sources);
+        for (var i = 0; i < items.Count; i++)
+            yield return (items[i], sources[i]);
+    }
+
+    static async IAsyncEnumerable<T> Items(IAsyncEnumerable<(T Item, Row? Source)> pairs)
+    {
+        await foreach (var (item, _) in pairs)
             yield return item;
     }
 

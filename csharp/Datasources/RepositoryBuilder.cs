@@ -13,7 +13,7 @@ public static class RepositoryBuilder<T> where T : new()
             foreach (var (key, converter) in types)
                 row.Types[key] = converter;
         var entity = options.EntityMapper.Map(options.Entity ?? typeof(T).Name);
-        var columns = (options.ReadColumns is { Count: > 0 } listed ? listed : Columns())
+        var columns = (options.ReadProperties is { Count: > 0 } listed ? listed : Columns())
             .Select(options.ColumnMappings.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
