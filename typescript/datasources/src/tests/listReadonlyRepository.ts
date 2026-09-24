@@ -3,8 +3,7 @@ import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteSto
 import type { IQuery } from "../statements/IQuery.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
-import { ReadonlyRepository, untyped, withoutSource } from "../ReadonlyRepository.ts";
-import type { Sourced } from "../IReadonlyRepository.ts";
+import { ReadonlyRepository, tracked, untyped, withoutSource, type Sourced } from "../ReadonlyRepository.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -20,7 +19,7 @@ export class ListReadonlyRepository<T extends object> extends ReadonlyRepository
     for (const item of this.items) if (matches(item, query)) yield item;
   }
 
-  async *readWithSource(
+  async *[tracked](
     query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
     yield* withoutSource(this.read(query));

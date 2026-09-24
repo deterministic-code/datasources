@@ -200,8 +200,6 @@ public class UserViewEnrichmentTests
 
 public class UsersViewRoleTests
 {
-    static UsersViewRoleTests() => _ = typeof(SqliteConnectionDriver);
-
     static readonly Guid Ada = Guid.Parse("11111111-1111-1111-1111-111111111111");
     static readonly Guid Grace = Guid.Parse("22222222-2222-2222-2222-222222222222");
     static readonly Guid Lin = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -265,7 +263,7 @@ public class UsersViewRoleTests
             Query = new TransformMapper<IQuery, IQuery>(
                 query => new QueryStatement(
                     "user_roles",
-                    ["user_roles.user_id AS user_id", "roles.name AS name"],
+                    ["user_roles.user_id", "roles.name"],
                     query.Where,
                     [new Join(JoinKind.Inner, "roles", "roles.id", "user_roles.role_id")]),
                 query => query),
@@ -276,7 +274,7 @@ public class UsersViewRoleTests
 
         Assert.Equal("admin", usersView!.UserType);
         Assert.Equal(["admin", "editor"], usersView.Roles.Select(role => role.Name).OrderBy(name => name));
-        Assert.All(usersView.Roles, role => Assert.Equal(Ada, role.UserId));
+        Assert.Equal(usersView.Roles.Count, usersView.Roles.Count(role => role.UserId == Ada));
     }
 
     [Fact]
@@ -284,7 +282,20 @@ public class UsersViewRoleTests
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
         var connection = await Open(ds, Seed());
-        var source = ds.CreateReadonlyRepository<Row>(connection);
+        var source = ds.CreateReadonlyRepository<Row>(connection, new ReadonlyRepositoryOptions<Row>
+        {
+            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["Key"] = "id",
+                ["Login"] = "username",
+                ["Active"] = "is_enabled",
+                ["Opened"] = "created",
+                ["UserType"] = "user_type.name",
+                ["UserId"] = "user_id",
+                ["RoleId"] = "role_id",
+                ["Name"] = "roles.name",
+            }),
+        });
         var usersRepo = new EnrichedReadonlyRepository<UsersView>(
             ds.CreateReadonlyRepository<UsersView>(connection),
             new FlatToNestedReadonlyEnrichmentStrategy<UsersView>(
@@ -306,23 +317,23 @@ public class UsersViewRoleTests
                             {
                                 ["RoleId"] = "RoleId",
                                 ["UserId"] = "UserId",
-                                ["Name"] = "RoleName",
+                                ["Name"] = "Name",
                             }
                         }
                     }
                 }),
-                new TransformMapper<Dictionary<string, MappedValue>, UsersView>(Hydrate, _ => throw new InvalidOperationException()),
+                new MappedValueMapper<UsersView>(),
                 new QueryStatement(
                     "user",
                     [
-                        "user.id AS Key",
-                        "user.username AS Login",
-                        "user.is_enabled AS Active",
-                        "user.created AS Opened",
-                        "user_type.name AS UserType",
-                        "user.id AS UserId",
-                        "user_roles.role_id AS RoleId",
-                        "roles.name AS RoleName",
+                        "user.id",
+                        "user.username",
+                        "user.is_enabled",
+                        "user.created",
+                        "user_type.name",
+                        "user_roles.user_id",
+                        "user_roles.role_id",
+                        "roles.name",
                     ],
                     joins:
                     [
@@ -339,50 +350,10 @@ public class UsersViewRoleTests
 
         Assert.Equal("admin", ada.UserType);
         Assert.Equal(["admin", "editor"], ada.Roles.Select(role => role.Name).OrderBy(name => name));
-        Assert.All(ada.Roles, role => Assert.Equal(Ada, role.UserId));
+        Assert.Equal(ada.Roles.Count, ada.Roles.Count(role => role.UserId == Ada));
         Assert.Equal(["viewer"], grace.Roles.Select(role => role.Name));
         Assert.Empty(lin.Roles);
     }
-
-    static UsersView Hydrate(Dictionary<string, MappedValue> row) => new()
-    {
-        Key = Id(row, "Key"),
-        Login = Text(row, "Login"),
-        Active = Flag(row, "Active"),
-        Opened = When(row, "Opened"),
-        UserType = Text(row, "UserType"),
-        Roles = row.GetValueOrDefault("Roles") is MappedValue.Many(var items)
-            ? items.Select(item => new UserRole { UserId = Id(item, "UserId"), Name = Text(item, "Name") }).ToList()
-            : [],
-    };
-
-    static Value Cell(Dictionary<string, MappedValue> row, string name) =>
-        row[name] is MappedValue.Cell(var value) ? value : throw new InvalidOperationException(name);
-
-    static string Text(Dictionary<string, MappedValue> row, string name) =>
-        Cell(row, name) is Value.Text(var text) ? text : throw new InvalidOperationException(name);
-
-    static Guid Id(Dictionary<string, MappedValue> row, string name) => Cell(row, name) switch
-    {
-        Value.Guid(var id) => id,
-        Value.Text(var text) => Guid.Parse(text),
-        _ => throw new InvalidOperationException(name)
-    };
-
-    static bool Flag(Dictionary<string, MappedValue> row, string name) => Cell(row, name) switch
-    {
-        Value.Bool(var flag) => flag,
-        Value.Int(var number) => number != 0,
-        Value.Text(var text) => text is "1" or "true",
-        _ => throw new InvalidOperationException(name)
-    };
-
-    static DateTime When(Dictionary<string, MappedValue> row, string name) => Cell(row, name) switch
-    {
-        Value.DateTime(var time) => time,
-        Value.Text(var text) => DateTime.Parse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
-        _ => throw new InvalidOperationException(name)
-    };
 
     static string Seed() => $"""
         CREATE TABLE user_type (

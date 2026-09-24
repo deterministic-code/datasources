@@ -7482,13 +7482,13 @@ username = $username AND is_enabled = $is_enabled
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2490-L2496)
 
 ```rust
-repo.update_bulk(
-    &[
-        record(&[
-            ("id", Value::Int(1)),
-            (
-                "children",
-                encode_rows(&[record(&[
+    "children",
+    encode_rows(&[record(&[("label", Value::from("a"))])]),
+)]),
+record(&[(
+    "children",
+    encode_rows(&[
+        record(&[("label", Value::from("b"))]),
 ```
 
 **After: equals**
@@ -8097,13 +8097,13 @@ username = $username AND is_enabled = $is_enabled
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2490-L2496)
 
 ```rust
-repo.update_bulk(
-    &[
-        record(&[
-            ("id", Value::Int(1)),
-            (
-                "children",
-                encode_rows(&[record(&[
+    "children",
+    encode_rows(&[record(&[("label", Value::from("a"))])]),
+)]),
+record(&[(
+    "children",
+    encode_rows(&[
+        record(&[("label", Value::from("b"))]),
 ```
 
 **After: equals**
@@ -9841,6 +9841,7 @@ interface ICRUDRepository<T = unknown> extends IReadonlyRepository<T>
 | [create(item)](#typescript-icrudrepository-create-item) | Inserts one item. |
 | [update(item, byWhere?)](#typescript-icrudrepository-update-item-bywhere) | Updates one item. Omitted `byWhere` uses id columns. |
 | [delete(item, byWhere?)](#typescript-icrudrepository-delete-item-bywhere) | Deletes one item. Omitted `byWhere` uses id columns. |
+| [readSingleById(id)](#typescript-icrudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `undefined`. |
 
 ###### create(item) {#typescript-icrudrepository-create-item}
 
@@ -9904,6 +9905,26 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 `Promise<Response>`
 
+###### readSingleById(id) {#typescript-icrudrepository-readsinglebyid-id}
+
+Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `undefined`.
+
+**Definition**
+
+```typescript
+readSingleById(id: Scalar | Cells): Promise<T | undefined>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column, or a row keyed by each id column |
+
+**Returns**
+
+`Promise<T | undefined>`
+
 ##### CRUDRepository {#typescript-crudrepository}
 
 ```typescript
@@ -9935,6 +9956,7 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | [create(item)](#typescript-crudrepository-create-item) | Inserts one item. |
 | [update(item, byWhere?)](#typescript-crudrepository-update-item-bywhere) | Updates one item. |
 | [delete(item, byWhere?)](#typescript-crudrepository-delete-item-bywhere) | Deletes one item. |
+| [readSingleById(id)](#typescript-crudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. |
 
 ###### CRUDRepository(type, connection) {#typescript-crudrepository-crudrepository-type-connection}
 
@@ -10088,6 +10110,26 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 
 `Promise<Response>`
 
+###### readSingleById(id) {#typescript-crudrepository-readsinglebyid-id}
+
+Returns the row for one id column, or for a composite key.
+
+**Definition**
+
+```typescript
+readSingleById(id: Scalar | Cells): Promise<T | undefined>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column, or a row keyed by each id column |
+
+**Returns**
+
+`Promise<T | undefined>`
+
 ##### CRUDRepositoryOptions {#typescript-crudrepositoryoptions}
 
 ```typescript
@@ -10137,6 +10179,8 @@ public interface ICRUDRepository<T> : IReadonlyRepository<T>
 | [Create(item)](#csharp-icrudrepository-create-item) | Inserts one item. |
 | [Update(item, byWhere)](#csharp-icrudrepository-update-item-bywhere) | Updates one item. Omitted `byWhere` uses id columns. |
 | [Delete(item, byWhere)](#csharp-icrudrepository-delete-item-bywhere) | Deletes one item. Omitted `byWhere` uses id columns. |
+| [ReadSingleById(id)](#csharp-icrudrepository-readsinglebyid-id) | Returns the row for the single configured id column. Zero id columns, or more than one, throw. |
+| [ReadSingleById(ids)](#csharp-icrudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. A missing id column throws. No match returns `null`. |
 
 ###### Create(item) {#csharp-icrudrepository-create-item}
 
@@ -10200,6 +10244,46 @@ Task<Response> Delete(T item, IWhere? byWhere = null)
 
 `Task<Response>`
 
+###### ReadSingleById(id) {#csharp-icrudrepository-readsinglebyid-id}
+
+Returns the row for the single configured id column. Zero id columns, or more than one, throw.
+
+**Definition**
+
+```csharp
+Task<T?> ReadSingleById(Value id)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column |
+
+**Returns**
+
+`Task<T?>`
+
+###### ReadSingleById(ids) {#csharp-icrudrepository-readsinglebyid-ids}
+
+Returns the row whose configured id columns match `ids`. A missing id column throws. No match returns `null`.
+
+**Definition**
+
+```csharp
+Task<T?> ReadSingleById(Row ids)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `ids` | id column names and values |
+
+**Returns**
+
+`Task<T?>`
+
 ##### CRUDRepository {#csharp-crudrepository}
 
 ```csharp
@@ -10229,6 +10313,8 @@ public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 | [Create(item)](#csharp-crudrepository-create-item) | Inserts one item. |
 | [Update(item, byWhere)](#csharp-crudrepository-update-item-bywhere) | Updates one item. |
 | [Delete(item, byWhere)](#csharp-crudrepository-delete-item-bywhere) | Deletes one item. |
+| [ReadSingleById(id)](#csharp-crudrepository-readsinglebyid-id) | Returns the row for the single configured id column. |
+| [ReadSingleById(ids)](#csharp-crudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. |
 
 ###### CRUDRepository(connection) {#csharp-crudrepository-crudrepository-connection}
 
@@ -10381,6 +10467,46 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 
 `Task<Response>`
 
+###### ReadSingleById(id) {#csharp-crudrepository-readsinglebyid-id}
+
+Returns the row for the single configured id column.
+
+**Definition**
+
+```csharp
+public Task<T?> ReadSingleById(Value id)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column |
+
+**Returns**
+
+`Task<T?>`
+
+###### ReadSingleById(ids) {#csharp-crudrepository-readsinglebyid-ids}
+
+Returns the row whose configured id columns match `ids`.
+
+**Definition**
+
+```csharp
+public Task<T?> ReadSingleById(Row ids)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `ids` | id column names and values |
+
+**Returns**
+
+`Task<T?>`
+
 ##### CRUDRepositoryOptions {#csharp-crudrepositoryoptions}
 
 ```csharp
@@ -10429,6 +10555,7 @@ pub trait ICRUDRepository: IReadonlyRepository
 | [create(item)](#rust-icrudrepository-create-item) | Inserts one row. |
 | [update(item, by_where)](#rust-icrudrepository-update-item-by_where) | Updates one row. `None` `by_where` uses id columns. |
 | [delete(item, by_where)](#rust-icrudrepository-delete-item-by_where) | Deletes one row. `None` `by_where` uses id columns. |
+| [read_single_by_id(id)](#rust-icrudrepository-read_single_by_id-id) | Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `None`. |
 
 ###### create(item) {#rust-icrudrepository-create-item}
 
@@ -10492,6 +10619,26 @@ async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Respo
 
 `Result<Response>`
 
+###### read_single_by_id(id) {#rust-icrudrepository-read_single_by_id-id}
+
+Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `None`.
+
+**Definition**
+
+```rust
+async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | `Value` for the single id column, or a `Row` keyed by each id column |
+
+**Returns**
+
+`Result<Option<Row>>`
+
 ##### CRUDRepository {#rust-crudrepository}
 
 ```rust
@@ -10511,6 +10658,7 @@ pub struct CRUDRepository
 | Name | Description |
 | --- | --- |
 | [add_middleware(middleware)](#rust-crudrepository-add_middleware-middleware) | Adds command middleware. |
+| [read_single_by_id(id)](#rust-crudrepository-read_single_by_id-id) | Returns the row for one id column, or for a composite key. |
 
 ###### from_type(connection) {#rust-crudrepository-from_type-connection}
 
@@ -10589,6 +10737,26 @@ pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>)
 | --- | --- |
 | `middleware` | command middleware |
 
+###### read_single_by_id(id) {#rust-crudrepository-read_single_by_id-id}
+
+Returns the row for one id column, or for a composite key.
+
+**Definition**
+
+```rust
+pub async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | `Value` for the single id column, or a `Row` keyed by each id column |
+
+**Returns**
+
+`Result<Option<Row>>`
+
 ##### CRUDRepositoryOptions {#rust-crudrepositoryoptions}
 
 ```rust
@@ -10627,6 +10795,8 @@ pub struct BuiltRepository
 
 Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
 
+`ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
+
 `Mapper` / `mapper` is [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper).
 
 ### Examples
@@ -10659,6 +10829,31 @@ assert!(repo.read_single(Some(&query)).await.unwrap().is_none());
 
 ```typescript
 id: 1, name: "a" 
+```
+
+#### Read one row by id
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L144-L150)
+
+```csharp
+
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1835-L1855)
+
+```rust
+assert!(repo
+    .read_single_by_id(&Value::Int(9))
+    .await
+    .unwrap()
+    .is_none());
+let log = command.reader_logs.lock().unwrap()[0].clone();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L175-L183)
+
+```typescript
+
 ```
 
 ## Enriched repository
@@ -10866,6 +11061,7 @@ class EnrichedCRUDRepository<T extends object> extends EnrichedReadonlyRepositor
 | [create(item)](#typescript-enrichedcrudrepository-create-item) | Writes the parent, then nested `many` children. |
 | [update(item, byWhere?)](#typescript-enrichedcrudrepository-update-item-bywhere) | Writes the parent, then replace-syncs nested `many` lists. |
 | [delete(item, byWhere?)](#typescript-enrichedcrudrepository-delete-item-bywhere) | Deletes nested `many` rows, then the parent. |
+| [readSingleById(id)](#typescript-enrichedcrudrepository-readsinglebyid-id) | Reads one row by id, then enriches it. |
 
 ###### EnrichedCRUDRepository(inner, strategy?) {#typescript-enrichedcrudrepository-enrichedcrudrepository-inner-strategy}
 
@@ -10945,6 +11141,26 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 **Returns**
 
 `Promise<Response>`
+
+###### readSingleById(id) {#typescript-enrichedcrudrepository-readsinglebyid-id}
+
+Reads one row by id, then enriches it.
+
+**Definition**
+
+```typescript
+readSingleById(id: Scalar | Cells): Promise<T | undefined>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column, or a row keyed by each id column |
+
+**Returns**
+
+`Promise<T | undefined>`
 
 ##### IRepositoryTree {#typescript-irepositorytree}
 
@@ -11271,6 +11487,8 @@ public class EnrichedCRUDRepository<T> : EnrichedReadonlyRepository<T>, ICRUDRep
 | [Create(item)](#csharp-enrichedcrudrepository-create-item) | Writes the parent, then nested `many` children. |
 | [Update(item, byWhere)](#csharp-enrichedcrudrepository-update-item-bywhere) | Writes the parent, then replace-syncs nested `many` lists. |
 | [Delete(item, byWhere)](#csharp-enrichedcrudrepository-delete-item-bywhere) | Deletes nested `many` rows, then the parent. |
+| [ReadSingleById(id)](#csharp-enrichedcrudrepository-readsinglebyid-id) | Reads one row by id, then enriches it. |
+| [ReadSingleById(ids)](#csharp-enrichedcrudrepository-readsinglebyid-ids) | Reads one row by composite id, then enriches it. |
 
 ###### EnrichedCRUDRepository(inner, strategy) {#csharp-enrichedcrudrepository-enrichedcrudrepository-inner-strategy}
 
@@ -11350,6 +11568,46 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 **Returns**
 
 `Task<Response>`
+
+###### ReadSingleById(id) {#csharp-enrichedcrudrepository-readsinglebyid-id}
+
+Reads one row by id, then enriches it.
+
+**Definition**
+
+```csharp
+public Task<T?> ReadSingleById(Value id)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column |
+
+**Returns**
+
+`Task<T?>`
+
+###### ReadSingleById(ids) {#csharp-enrichedcrudrepository-readsinglebyid-ids}
+
+Reads one row by composite id, then enriches it.
+
+**Definition**
+
+```csharp
+public Task<T?> ReadSingleById(Row ids)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `ids` | id column names and values |
+
+**Returns**
+
+`Task<T?>`
 
 ##### IRepositoryTree {#csharp-irepositorytree}
 
@@ -11454,7 +11712,7 @@ public interface IReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentBinder
 | Name | Description |
 | --- | --- |
 | [Read(inner, tree, query)](#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
-| [Enrich(tree, items)](#csharp-ireadonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
+| [Enrich(tree, items, sources)](#csharp-ireadonlyenrichmentstrategy-enrich-tree-items-sources) | Fills `items` from the tree. `sources` supplies the unread columns for each parent. |
 
 ###### Read(inner, tree, query) {#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query}
 
@@ -11478,14 +11736,14 @@ IAsyncEnumerable<T> Read(IReadonlyRepository<T> inner, IRepositoryTree tree, ISt
 
 `IAsyncEnumerable<T>`
 
-###### Enrich(tree, items) {#csharp-ireadonlyenrichmentstrategy-enrich-tree-items}
+###### Enrich(tree, items, sources) {#csharp-ireadonlyenrichmentstrategy-enrich-tree-items-sources}
 
-Fills `items` from the tree.
+Fills `items` from the tree. `sources` supplies the unread columns for each parent.
 
 **Definition**
 
 ```csharp
-Task Enrich(IRepositoryTree tree, IList<T> items)
+Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null)
 ```
 
 **Parameters**
@@ -11494,6 +11752,7 @@ Task Enrich(IRepositoryTree tree, IList<T> items)
 | --- | --- |
 | `tree` | [IRepositoryTree](#csharp-irepositorytree) |
 | `items` | parents to fill |
+| `sources` | optional source rows aligned with `items` |
 
 ##### Rust
 
@@ -11639,6 +11898,7 @@ pub struct EnrichedCRUDRepository
 | Name | Description |
 | --- | --- |
 | [add_enriched(into, from, via, by, select, many, nest)](#rust-enrichedcrudrepository-add_enriched-into-from-via-by-select-many-nest) | Forwards to the inner [EnrichedReadonlyRepository](#rust-enrichedreadonlyrepository). A CRUD `via` is kept so `many` children can be written. |
+| [read_single_by_id(id)](#rust-enrichedcrudrepository-read_single_by_id-id) | Reads one row by id, then enriches it. |
 
 ###### new(inner) {#rust-enrichedcrudrepository-new-inner}
 
@@ -11684,6 +11944,26 @@ pub fn with_strategy(inner: Arc<dyn CRUDRepository>, strategy: Arc<dyn ReadonlyE
 ###### add_enriched(into, from, via, by, select, many, nest) {#rust-enrichedcrudrepository-add_enriched-into-from-via-by-select-many-nest}
 
 Forwards to the inner [EnrichedReadonlyRepository](#rust-enrichedreadonlyrepository). A CRUD `via` is kept so `many` children can be written.
+
+###### read_single_by_id(id) {#rust-enrichedcrudrepository-read_single_by_id-id}
+
+Reads one row by id, then enriches it.
+
+**Definition**
+
+```rust
+async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | `Value` for the single id column, or a `Row` keyed by each id column |
+
+**Returns**
+
+`Result<Option<Row>>`
 
 ##### RepositoryTree {#rust-repositorytree}
 
@@ -11873,16 +12153,16 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1845-L1854)
 
 ```rust
-let mut repo = EnrichedReadonlyRepository::new(parents);
-repo.add_enriched(
-    "type_name",
-    "type_id",
-    types,
-    "id",
-    Some("name".into()),
-    false,
-    (),
-);
+let generated = Arc::new(MockCommand::new());
+let connection = MockConnection::with_command_provider(generated.clone(), "memory");
+let mut options = CRUDRepositoryOptions::default();
+options.ids = vec!["org_id".into(), "user_id".into()];
+options.entity = "users".into();
+options.row_converter = Some(RowTypeConverter::of::<Composite>());
+let repo = CRUDRepository::new(connection, options).unwrap();
+assert!(repo
+    .read_single_by_id(&record(&[
+        ("org_id", Value::Int(1)),
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -11905,9 +12185,9 @@ it("fills lookup select and leaves missing default", async () => {
 
 #### Fill user type on a user view
 
-The user row keeps `UserTypeId` so the lookup can run. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](#change-casing-mapper) maps that Pascal name, plus `Id` and `Name`, to `user_type`, `id`, and `name`. `UserView` drops `UserTypeId` and keeps `UserType`.
+`UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](#change-casing-mapper) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L146-L210)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L136-L188)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
@@ -11932,37 +12212,26 @@ var connection = await Open(ds, $"""
         ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
         ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
     """);
-var users = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var usersRepo = ds.CreateReadonlyEnrichedRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
 {
-    Entity = "user",
-    ReadColumns = ["Key", "Login", "Active", "Opened", "UserTypeId"],
+    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
     ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
         ["Active"] = "is_enabled",
         ["Opened"] = "created",
-        ["UserTypeId"] = "user_type_id",
+        ["UserType"] = "user_type_id",
     }),
 });
-var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var types = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
+var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
 {
-    Entity = "UserType",
     EntityMapper = casing,
     ColumnMappings = casing,
 });
-var enriched = new EnrichedReadonlyRepository<UserAccount>(users);
-enriched.AddEnriched("UserType", "UserTypeId", types, "Id", "Name");
-var account = await enriched.ReadSingle(new WhereClause("Key", eq, Ada));
-var usersView = new UserView
-{
-    Key = account!.Key,
-    Login = account.Login,
-    Active = account.Active,
-    Opened = account.Opened,
-    UserType = account.UserType,
-};
+usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name");
+var usersView = await usersRepo.ReadSingle(new WhereClause("Key", eq, Ada));
 ```
 
 **User view**
@@ -12065,7 +12334,7 @@ users_view.remove("UserTypeId");
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L123-L179)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L114-L160)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
@@ -12090,32 +12359,23 @@ const connection = await open(ds, `
     ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
     ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
 `);
-const users = ds.createReadonlyRepository(UserAccount, connection, {
-  entity: "user",
-  readColumns: ["Key", "Login", "Active", "Opened", "UserTypeId"],
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const usersRepo = ds.createReadonlyEnrichedRepository(UsersView, connection, {
+  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
   columnMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
     ["Opened", "created"],
-    ["UserTypeId", "user_type_id"],
+    ["UserType", "user_type_id"],
   ]),
 });
-const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-const types = ds.createReadonlyRepository(UserType, connection, {
-  entity: "UserType",
+const typesRepo = ds.createReadonlyRepository(UserType, connection, {
   entityMapper: casing,
   columnMappings: casing,
 });
-const enriched = new EnrichedReadonlyRepository(users);
-enriched.addEnriched("UserType", "UserTypeId", types, "Id", "Name");
-const account = await enriched.readSingle(new WhereClause("Key", eq, ada));
-const usersView = new UserView();
-usersView.Key = account?.Key ?? "";
-usersView.Login = account?.Login ?? "";
-usersView.Active = account?.Active ?? 0;
-usersView.Opened = account?.Opened ?? "";
-usersView.UserType = account?.UserType ?? "";
+usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name");
+const usersView = await usersRepo.readSingle(new WhereClause("Key", eq, ada));
 ```
 
 **User view**
@@ -12536,24 +12796,24 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1862-L1879)
 
 ```rust
-let parents = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-    ("id", Value::Int(1)),
-    ("type_id", Value::Int(10)),
-])]));
-let types = Arc::new(items_repository::ItemsRepository::new(vec![record(&[
-    ("id", Value::Int(10)),
-    ("name", Value::from("org")),
-])]));
-let children = Arc::new(items_repository::ItemsRepository::new(vec![
-    record(&[("parent_id", Value::Int(1)), ("label", Value::from("a"))]),
-    record(&[("parent_id", Value::Int(1)), ("label", Value::from("b"))]),
-    record(&[("parent_id", Value::Int(2)), ("label", Value::from("x"))]),
-]));
-let mut repo = EnrichedReadonlyRepository::new(parents);
-repo.add_enriched(
-    "type_name",
-    "type_id",
-    types,
+        .contains("org_id = $org_id AND user_id = $user_id"));
+    assert!(repo
+        .read_single_by_id(&Value::Int(1))
+        .await
+        .unwrap_err()
+        .to_string()
+        .contains("Composite id requires a row keyed by each Id column"));
+    assert!(repo
+        .read_single_by_id(&record(&[("org_id", Value::Int(1))]))
+        .await
+        .unwrap_err()
+        .to_string()
+        .contains("Missing Id value"));
+}
+
+struct Label;
+
+impl ConvertSchema for Label {
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)

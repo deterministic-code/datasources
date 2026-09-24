@@ -2,8 +2,7 @@ import type { Constructable } from "../converters/Constructable.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "../statements/IQuery.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
-import { ReadonlyRepository, untyped, withoutSource } from "../ReadonlyRepository.ts";
-import type { Sourced } from "../IReadonlyRepository.ts";
+import { ReadonlyRepository, tracked, untyped, withoutSource, type Sourced } from "../ReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import type { Cells } from "../converters/Cell.ts";
@@ -68,7 +67,7 @@ export class ListCRUDRepository<T extends object>
     for (const item of this.items) if (matches(item, query)) yield item;
   }
 
-  async *readWithSource(
+  async *[tracked](
     query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
     yield* withoutSource(this.read(query));

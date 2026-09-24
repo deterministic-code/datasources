@@ -43,15 +43,35 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
     {
         using var command = Bind(sql, parameters);
         using var reader = await command.ExecuteReaderAsync();
+        var names = ColumnNames(reader);
         var rows = new List<Row>();
         while (await reader.ReadAsync())
         {
             var row = new Row();
             for (var i = 0; i < reader.FieldCount; i++)
-                row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                row[names[i]] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
             rows.Add(row);
         }
         return rows;
+    }
+
+    static string[] ColumnNames(Microsoft.Data.Sqlite.SqliteDataReader reader)
+    {
+        var names = new string[reader.FieldCount];
+        for (var i = 0; i < names.Length; i++)
+            names[i] = reader.GetName(i);
+        var schema = reader.GetSchemaTable();
+        var duplicated = names.GroupBy(name => name).Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet();
+        if (schema is null || duplicated.Count == 0) return names;
+        for (var i = 0; i < names.Length; i++)
+        {
+            if (!duplicated.Contains(names[i])) continue;
+            var table = schema.Rows[i]["BaseTableName"]?.ToString();
+            var column = schema.Rows[i]["BaseColumnName"]?.ToString();
+            if (!string.IsNullOrEmpty(table) && !string.IsNullOrEmpty(column))
+                names[i] = $"{table}.{column}";
+        }
+        return names;
     }
 
     SqliteCmd Bind(string sql, Row parameters)

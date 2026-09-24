@@ -7,6 +7,8 @@ import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import type { IWhere } from "./statements/IWhere.ts";
+import { Where } from "./statements/Where.ts";
+import { WhereClause } from "./statements/WhereClause.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
@@ -51,7 +53,11 @@ export class EnrichedReadonlyRepository<T extends object>
   };
 
   async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
-    for await (const sourced of this[tracked](query)) yield sourced.item;
+    if (query instanceof WhereClause || query instanceof Where) {
+      for await (const sourced of this[tracked](query)) yield sourced.item;
+      return;
+    }
+    yield* this.strategy.read(this.inner, this.tree, query);
   }
 
   async *[tracked](
