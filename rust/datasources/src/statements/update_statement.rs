@@ -53,6 +53,12 @@ impl Text for UpdateStatement {
     }
 }
 
+impl crate::ReadInput for UpdateStatement {
+    fn as_statement(&self) -> Option<&dyn crate::Statement> {
+        Some(self)
+    }
+}
+
 impl Statement for UpdateStatement {
     fn kind(&self) -> super::statement::StatementKind {
         super::statement::StatementKind::Update

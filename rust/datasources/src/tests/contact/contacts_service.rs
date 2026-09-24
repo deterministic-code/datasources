@@ -1,10 +1,11 @@
 use crate::enriched_crud_repository::EnrichedCRUDRepository;
 use crate::i_repository::IRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
+use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
+use crate::read_input::ReadInput;
 use crate::row::Row;
-use crate::statement::Statement;
 use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -33,6 +34,7 @@ impl ContactsService {
                 "id",
                 Some("name".into()),
                 false,
+                (),
             )
             .add_enriched(
                 "contact_source_name",
@@ -41,15 +43,16 @@ impl ContactsService {
                 "id",
                 Some("name".into()),
                 false,
+                (),
             )
-            .add_enriched_repo_with(
+            .add_enriched(
                 "addresses",
                 "id",
                 addresses,
                 "contact_id",
                 None,
                 true,
-                |node| {
+                |node: &mut RepositoryTreeNode| {
                     node.include(
                         address_types,
                         "address_type_name",
@@ -60,7 +63,7 @@ impl ContactsService {
                     );
                 },
             )
-            .add_enriched_repo_with("phones", "id", phones, "contact_id", None, true, |node| {
+            .add_enriched("phones", "id", phones, "contact_id", None, true, |node: &mut RepositoryTreeNode| {
                 node.include(
                     phone_types,
                     "phone_type_name",
@@ -82,20 +85,16 @@ impl IRepository for ContactsService {
 
 #[async_trait]
 impl IReadonlyRepository for ContactsService {
-    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
+        Some(self)
+    }
+
+    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
         self.inner.read(query).await
-    }
-
-    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.inner.read_single_where(where_clause).await
-    }
-
-    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.inner.read_where(where_clause).await
     }
 }
 

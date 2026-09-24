@@ -39,6 +39,12 @@ impl Text for MockQuery {
     }
 }
 
+impl crate::ReadInput for MockQuery {
+    fn as_statement(&self) -> Option<&dyn crate::Statement> {
+        Some(self)
+    }
+}
+
 impl Statement for MockQuery {
     fn kind(&self) -> crate::statements::StatementKind {
         crate::statements::StatementKind::Query

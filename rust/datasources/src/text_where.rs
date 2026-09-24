@@ -17,6 +17,12 @@ impl Text for TextWhere {
     }
 }
 
+impl crate::ReadInput for TextWhere {
+    fn as_where(&self) -> Option<&dyn Where> {
+        Some(self)
+    }
+}
+
 impl Where for TextWhere {
     fn as_any(&self) -> &dyn std::any::Any {
         self

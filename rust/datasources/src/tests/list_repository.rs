@@ -2,13 +2,13 @@ use crate::i_repository::IRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
+use crate::read_input::{where_of, ReadInput};
 use crate::row::Row;
-use crate::statement::Statement;
 use crate::statements::{StatementEvaluator, WhereClause};
 use crate::value::Value;
 use crate::where_trait::Where;
 use async_trait::async_trait;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 pub struct ListRepository {
     pub items: Mutex<Vec<Row>>,
@@ -64,23 +64,16 @@ impl IRepository for ListRepository {}
 
 #[async_trait]
 impl IReadonlyRepository for ListRepository {
-    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
-        Ok(self
-            .filter(query.and_then(Statement::predicate))
-            .into_iter()
-            .next())
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
+        Some(self)
     }
 
-    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
-        Ok(self.filter(query.and_then(Statement::predicate)))
+    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
+        Ok(self.filter(where_of(query)).into_iter().next())
     }
 
-    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        Ok(self.filter(Some(where_clause)).into_iter().next())
-    }
-
-    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        Ok(self.filter(Some(where_clause)))
+    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+        Ok(self.filter(where_of(query)))
     }
 }
 

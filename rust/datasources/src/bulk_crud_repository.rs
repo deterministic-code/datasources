@@ -1,11 +1,12 @@
 use crate::enriched::Enriched;
+use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
+use crate::nest::Nest;
+use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statement::Statement;
 use crate::value::Value;
 use crate::where_trait::Where;
 use crate::EnrichedCRUDRepository;
@@ -28,56 +29,14 @@ impl BulkCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn IReadonlyRepository>,
+        via: impl EnrichmentVia,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
-    ) -> &mut Self {
-        self.inner.add_enriched(into, from, via, by, select, many);
-        self
-    }
-
-    pub fn add_enriched_with(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn IReadonlyRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-        nest: impl FnOnce(&mut RepositoryTreeNode),
+        nest: impl Nest,
     ) -> &mut Self {
         self.inner
-            .add_enriched_with(into, from, via, by, select, many, nest);
-        self
-    }
-
-    pub fn add_enriched_repo(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn ICRUDRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-    ) -> &mut Self {
-        self.inner
-            .add_enriched_repo(into, from, via, by, select, many);
-        self
-    }
-
-    pub fn add_enriched_repo_with(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn ICRUDRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-        nest: impl FnOnce(&mut RepositoryTreeNode),
-    ) -> &mut Self {
-        self.inner
-            .add_enriched_repo_with(into, from, via, by, select, many, nest);
+            .add_enriched(into, from, via, by, select, many, nest);
         self
     }
 
@@ -139,20 +98,16 @@ impl IRepository for BulkCRUDRepository {
 
 #[async_trait]
 impl IReadonlyRepository for BulkCRUDRepository {
-    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
+        Some(self)
+    }
+
+    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
         self.inner.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
         self.inner.read(query).await
-    }
-
-    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.inner.read_single_where(where_clause).await
-    }
-
-    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.inner.read_where(where_clause).await
     }
 }
 

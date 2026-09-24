@@ -8,6 +8,7 @@ use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
+use crate::read_input::ReadInput;
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
@@ -224,39 +225,39 @@ impl IRepository for ReadonlyRepository {
 
 #[async_trait]
 impl IReadonlyRepository for ReadonlyRepository {
-    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
-        self.ensure_readable(query)?;
-        match query {
+    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
+        if let Some(where_clause) = query.and_then(ReadInput::as_where) {
+            let (statement, params) = self.stored_query(where_clause)?;
+            return self.fetch_one(&statement, params).await;
+        }
+        let statement = query.and_then(ReadInput::as_statement);
+        self.ensure_readable(statement)?;
+        match statement {
             Some(statement) if statement.kind() == StatementKind::Procedure => {
                 self.fetch_one(statement, statement.parameters()).await
             }
-            query => {
-                let (statement, params) = self.query_of(query);
+            statement => {
+                let (statement, params) = self.query_of(statement);
                 self.fetch_one(&statement, params).await
             }
         }
     }
 
-    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
-        self.ensure_readable(query)?;
-        match query {
+    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+        if let Some(where_clause) = query.and_then(ReadInput::as_where) {
+            let (statement, params) = self.stored_query(where_clause)?;
+            return self.fetch_all(&statement, params).await;
+        }
+        let statement = query.and_then(ReadInput::as_statement);
+        self.ensure_readable(statement)?;
+        match statement {
             Some(statement) if statement.kind() == StatementKind::Procedure => {
                 self.fetch_all(statement, statement.parameters()).await
             }
-            query => {
-                let (statement, params) = self.query_of(query);
+            statement => {
+                let (statement, params) = self.query_of(statement);
                 self.fetch_all(&statement, params).await
             }
         }
-    }
-
-    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        let (statement, params) = self.stored_query(where_clause)?;
-        self.fetch_one(&statement, params).await
-    }
-
-    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        let (statement, params) = self.stored_query(where_clause)?;
-        self.fetch_all(&statement, params).await
     }
 }

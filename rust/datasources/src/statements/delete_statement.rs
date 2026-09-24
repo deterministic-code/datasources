@@ -43,6 +43,12 @@ impl Text for DeleteStatement {
     }
 }
 
+impl crate::ReadInput for DeleteStatement {
+    fn as_statement(&self) -> Option<&dyn crate::Statement> {
+        Some(self)
+    }
+}
+
 impl Statement for DeleteStatement {
     fn kind(&self) -> super::statement::StatementKind {
         super::statement::StatementKind::Delete

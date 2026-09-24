@@ -1,7 +1,8 @@
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment::Enrichment;
+use crate::enrichment_via::EnrichmentVia;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
+use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -44,7 +45,7 @@ impl RepositoryTreeNode {
 
     pub fn include(
         &mut self,
-        via: Arc<dyn IReadonlyRepository>,
+        via: impl EnrichmentVia,
         into: impl Into<String>,
         from: impl Into<String>,
         by: impl Into<String>,
@@ -52,30 +53,17 @@ impl RepositoryTreeNode {
         many: bool,
     ) -> &mut Self {
         let into = into.into();
+        let (value, write) = via.into_repos();
         let enrichment = Enrichment::new(into.clone(), from, by, select, many);
         self.items.push(Self {
-            value: via,
-            write: None,
+            value,
+            write,
             property_name: into,
             items: Vec::new(),
             enrichment: Some(enrichment),
             strategy: self.strategy.clone(),
         });
         self.items.last_mut().expect("include")
-    }
-
-    pub fn include_repo(
-        &mut self,
-        via: Arc<dyn ICRUDRepository>,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-    ) -> &mut Self {
-        let child = self.include(as_readonly(via.clone()), into, from, by, select, many);
-        child.write = Some(via);
-        child
     }
 
     pub fn enrich_from<'a>(

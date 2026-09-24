@@ -27,6 +27,12 @@ impl Text for MockWhere {
     }
 }
 
+impl crate::ReadInput for MockWhere {
+    fn as_where(&self) -> Option<&dyn crate::where_trait::Where> {
+        Some(self)
+    }
+}
+
 impl Where for MockWhere {
     fn as_any(&self) -> &dyn std::any::Any {
         self

@@ -184,9 +184,9 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 **Methods**
 
-##### add_enriched / add_enriched_repo
+##### add_enriched(into, from, via, by, select, many, nest)
 
-Forwards to the inner [EnrichedCRUDRepository](./enriched-repository.md#deepcrudrepository). Use `add_enriched_repo` for `many` children that must persist.
+Forwards to the inner [EnrichedCRUDRepository](./enriched-repository.md#deepcrudrepository). A CRUD `via` is kept so `many` children can be written.
 
 ##### create_bulk(items)
 

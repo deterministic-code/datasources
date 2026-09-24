@@ -58,12 +58,12 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     options.row_converter = Some(RowTypeConverter::of::<User>());
     let repo = ReadonlyRepository::new(connection, options.read).unwrap();
     let by_id = repo
-        .read_single_where(&WhereClause::binary("id", eq, 1_i64))
+        .read_single(Some(&WhereClause::binary("id", eq, 1_i64)))
         .await
         .unwrap()
         .unwrap();
     let disabled = repo
-        .read_where(&WhereClause::binary("username", eq, "grace").and("is_enabled", eq, 0_i64))
+        .read(Some(&WhereClause::binary("username", eq, "grace").and("is_enabled", eq, 0_i64)))
         .await
         .unwrap();
     assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
@@ -103,20 +103,20 @@ async fn reads_user_by_guid_username_and_created() {
     let repo = ReadonlyRepository::new(connection, options.read).unwrap();
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
-        .read_single_where(&WhereClause::binary(
+        .read_single(Some(&WhereClause::binary(
             "Key",
             eq,
             Uuid::parse_str(ADA).unwrap(),
-        ))
+        )))
         .await
         .unwrap()
         .unwrap();
     let by_login = repo
-        .read_where(&WhereClause::binary("Login", eq, "ada").and("Active", eq, true))
+        .read(Some(&WhereClause::binary("Login", eq, "ada").and("Active", eq, true)))
         .await
         .unwrap();
     let later = repo
-        .read_where(&WhereClause::binary("Active", eq, true).and("Opened", gt, opened))
+        .read(Some(&WhereClause::binary("Active", eq, true).and("Opened", gt, opened)))
         .await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));

@@ -1,7 +1,7 @@
 use datasources::converters::RowTypeConverter;
 use datasources::{
     as_readonly, CRUDRepository, CRUDRepositoryOptions, CommandMiddleware, Connection,
-    EnrichedCRUDRepository, ICRUDRepository, TypeConverter, Value,
+    EnrichedCRUDRepository, ICRUDRepository, RepositoryTreeNode, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -129,6 +129,7 @@ pub fn contacts_service_of(
             "id",
             Some("name".into()),
             false,
+            (),
         )
         .add_enriched(
             "contact_source_name",
@@ -143,8 +144,9 @@ pub fn contacts_service_of(
             "id",
             Some("name".into()),
             false,
+            (),
         )
-        .add_enriched_repo_with(
+        .add_enriched(
             "addresses",
             "id",
             repo(
@@ -157,7 +159,7 @@ pub fn contacts_service_of(
             "contact_id",
             None,
             true,
-            |node| {
+            |node: &mut RepositoryTreeNode| {
                 node.include(
                     address_types,
                     "address_type_name",
@@ -168,14 +170,14 @@ pub fn contacts_service_of(
                 );
             },
         )
-        .add_enriched_repo_with(
+        .add_enriched(
             "phones",
             "id",
             repo(connection, "phone", &phone, middleware, field),
             "contact_id",
             None,
             true,
-            |node| {
+            |node: &mut RepositoryTreeNode| {
                 node.include(
                     phone_types,
                     "phone_type_name",

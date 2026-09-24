@@ -38,6 +38,12 @@ impl Text for CreateTableStatement {
 
 impl Statement for CreateTableStatement {}
 
+impl crate::ReadInput for CreateTableStatement {
+    fn as_statement(&self) -> Option<&dyn crate::Statement> {
+        Some(self)
+    }
+}
+
 fn parts(columns: &[Column], constraints: &[TableConstraint]) -> Vec<String> {
     let mut parts = columns.iter().map(column_sql).collect::<Vec<_>>();
     parts.extend(constraints.iter().map(constraint_sql));

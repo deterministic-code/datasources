@@ -480,10 +480,10 @@ async fn stubs_throw() {
     assert!(repo.read_single(None).await.is_err());
     assert!(repo.read(None).await.is_err());
     assert!(repo
-        .read_single_where(&TextWhere::new("1=1"))
+        .read_single(Some(&TextWhere::new("1=1")))
         .await
         .is_err());
-    assert!(repo.read_where(&TextWhere::new("1=1")).await.is_err());
+    assert!(repo.read(Some(&TextWhere::new("1=1"))).await.is_err());
     assert!(repo.create(&mut empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
@@ -491,10 +491,10 @@ async fn stubs_throw() {
     assert!(readonly.read_single(None).await.is_err());
     assert!(readonly.read(None).await.is_err());
     assert!(readonly
-        .read_single_where(&TextWhere::new("1=1"))
+        .read_single(Some(&TextWhere::new("1=1")))
         .await
         .is_err());
-    assert!(readonly.read_where(&TextWhere::new("1=1")).await.is_err());
+    assert!(readonly.read(Some(&TextWhere::new("1=1"))).await.is_err());
     let txn = StubTransaction::new("text");
     assert!(txn.commit().await.is_err());
     assert!(txn.abort().await.is_err());
@@ -577,12 +577,12 @@ async fn published_mocks() {
         1
     );
     assert!(repo
-        .read_single_where(&MockWhere::new("id=1"))
+        .read_single(Some(&MockWhere::new("id=1")))
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read_where(&MockWhere::new("all")).await.unwrap().len(),
+        repo.read(Some(&MockWhere::new("all"))).await.unwrap().len(),
         1
     );
     repo.create(&mut record(&[("id", Value::Int(2))]))
@@ -1481,7 +1481,7 @@ async fn table_repository() {
 
     command.reader_rows.lock().unwrap().clear();
     assert!(repo
-        .read_single_where(&WhereClause::new(Operator::equals("id", 9_i64)))
+        .read_single(Some(&WhereClause::new(Operator::equals("id", 9_i64))))
         .await
         .unwrap()
         .is_none());
@@ -1490,7 +1490,7 @@ async fn table_repository() {
     assert_eq!(last.1[0].name, "id");
     assert_eq!(last.1[0].value, Value::Int(9));
     assert!(repo
-        .read_where(&WhereClause::new(Operator::equals("id", 9_i64)))
+        .read(Some(&WhereClause::new(Operator::equals("id", 9_i64))))
         .await
         .unwrap()
         .is_empty());
@@ -1850,6 +1850,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
         "id",
         Some("name".into()),
         false,
+        (),
     );
     let items = repo.read(None).await.unwrap();
     assert_eq!(items[0]["type_name"], Value::from("person"));
@@ -1879,8 +1880,9 @@ async fn enriched_fills_lists_and_read_single_is_enriched() {
         "id",
         Some("name".into()),
         false,
+        (),
     )
-    .add_enriched("children", "id", children, "parent_id", None, true);
+    .add_enriched("children", "id", children, "parent_id", None, true, ());
     let item = repo.read_single(None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     assert!(item["children"].wire_text().contains("label=a"));
@@ -1922,15 +1924,16 @@ async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
         "id",
         Some("name".into()),
         false,
+        (),
     )
-    .add_enriched_with(
+    .add_enriched(
         "children",
         "id",
         children,
         "parent_id",
         None,
         true,
-        |node| {
+        |node: &mut RepositoryTreeNode| {
             node.include(
                 child_types,
                 "type_name",
@@ -1963,24 +1966,14 @@ impl IRepository for CountingRepository {
 
 #[async_trait]
 impl IReadonlyRepository for CountingRepository {
-    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
         *self.read_singles.lock().unwrap() += 1;
         self.inner.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
         *self.reads.lock().unwrap() += 1;
         self.inner.read(query).await
-    }
-
-    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        *self.read_singles.lock().unwrap() += 1;
-        self.inner.read_single_where(where_clause).await
-    }
-
-    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        *self.reads.lock().unwrap() += 1;
-        self.inner.read_where(where_clause).await
     }
 }
 
@@ -2017,8 +2010,9 @@ async fn hashset_uses_one_read_per_edge() {
         "id",
         Some("name".into()),
         false,
+        (),
     )
-    .add_enriched("children", "id", children.clone(), "parent_id", None, true);
+    .add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
     repo.read(None).await.unwrap();
     assert_eq!(*types.reads.lock().unwrap(), 1);
     assert_eq!(*types.read_singles.lock().unwrap(), 0);
@@ -2157,8 +2151,9 @@ async fn deep_create_writes_children_stamps_fk_and_skips_select() {
         "id",
         Some("name".into()),
         false,
+        (),
     )
-    .add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    .add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
     repo.create(&mut record(&[
         ("type_id", Value::Int(10)),
         (
@@ -2186,7 +2181,7 @@ async fn deep_create_applies_generated_parent_id_before_child_fks() {
     )])]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
     let mut repo = EnrichedCRUDRepository::new(parents);
-    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
     repo.create(&mut record(&[(
         "children",
         encode_rows(&[record(&[("label", Value::from("n"))])]),
@@ -2215,7 +2210,7 @@ async fn deep_update_replace_syncs_children() {
         ]),
     ]));
     let mut repo = EnrichedCRUDRepository::new(parents);
-    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
     repo.update(
         &record(&[
             ("id", Value::Int(1)),
@@ -2273,15 +2268,15 @@ async fn deep_delete_cascades_children_then_parent() {
         ]),
     ]));
     let mut repo = EnrichedCRUDRepository::new(parents.clone());
-    repo.add_enriched_repo_with(
+    repo.add_enriched(
         "children",
         "id",
         children.clone(),
         "parent_id",
         None,
         true,
-        |node| {
-            node.include_repo(notes.clone(), "notes", "id", "child_id", None, true);
+        |node: &mut RepositoryTreeNode| {
+            node.include(notes.clone(), "notes", "id", "child_id", None, true);
         },
     );
     repo.delete(&record(&[("id", Value::Int(1))]), None)
@@ -2302,14 +2297,14 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
         ("name", Value::from("home")),
     ])]));
     let mut repo = EnrichedCRUDRepository::new(parents);
-    repo.add_enriched_repo_with(
+    repo.add_enriched(
         "children",
         "id",
         children.clone(),
         "parent_id",
         None,
         true,
-        |node| {
+        |node: &mut RepositoryTreeNode| {
             node.include(
                 child_types.clone(),
                 "type_name",
@@ -2318,7 +2313,7 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
                 Some("name".into()),
                 false,
             );
-            node.include_repo(notes.clone(), "notes", "id", "child_id", None, true);
+            node.include(notes.clone(), "notes", "id", "child_id", None, true);
         },
     );
     repo.create(&mut record(&[(
@@ -2351,6 +2346,7 @@ async fn deep_many_readonly_via_throws() {
         "parent_id",
         None,
         true,
+        (),
     );
     let error = repo
         .create(&mut record(&[(
@@ -2384,8 +2380,9 @@ async fn deep_get_still_enriches() {
         "id",
         Some("name".into()),
         false,
+        (),
     )
-    .add_enriched_repo("children", "id", children, "parent_id", None, true);
+    .add_enriched("children", "id", children, "parent_id", None, true, ());
     let item = repo.read_single(None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     assert!(item["children"].wire_text().contains("label=a"));
@@ -2396,7 +2393,7 @@ async fn bulk_create_writes_parents_and_children() {
     let parents = Arc::new(list_repository::ListRepository::new(vec![]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
     let mut repo = BulkCRUDRepository::new(parents.clone());
-    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
     let response = repo
         .create_bulk(&mut [
             record(&[(
@@ -2441,7 +2438,7 @@ async fn bulk_update_replace_syncs_each_parent() {
         ]),
     ]));
     let mut repo = BulkCRUDRepository::new(parents);
-    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
     repo.update_bulk(
         &[
             record(&[
@@ -2508,7 +2505,7 @@ async fn bulk_delete_cascades_each_parent() {
         ]),
     ]));
     let mut repo = BulkCRUDRepository::new(parents.clone());
-    repo.add_enriched_repo("children", "id", children.clone(), "parent_id", None, true);
+    repo.add_enriched("children", "id", children.clone(), "parent_id", None, true, ());
     repo.delete_bulk(
         &[
             record(&[("id", Value::Int(1))]),

@@ -337,10 +337,10 @@ pub trait IReadonlyRepository: IRepository
 Returns the first row, or `None` when the result is empty.
 
 ```rust
-async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>>
+async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>>
 ```
 
-- `query` — optional query or stored procedure; omitted uses the default select
+- `query` — optional query, where, or stored procedure; omitted uses the default select
 
 **Returns** `Result<Option<Row>>`
 
@@ -349,34 +349,10 @@ async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>
 Returns every row.
 
 ```rust
-async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>>
+async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
 ```
 
-- `query` — optional query or stored procedure; omitted uses the default select
-
-**Returns** `Result<Vec<Row>>`
-
-##### read_single_where(where_clause)
-
-Returns the first row matching a where.
-
-```rust
-async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>>
-```
-
-- `where_clause` — predicate
-
-**Returns** `Result<Option<Row>>`
-
-##### read_where(where_clause)
-
-Returns every row matching a where.
-
-```rust
-async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>>
-```
-
-- `where_clause` — predicate
+- `query` — optional query, where, or stored procedure; omitted uses the default select
 
 **Returns** `Result<Vec<Row>>`
 
@@ -451,7 +427,7 @@ pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + S
 
 Repository read is convert, then map. See [TypeConverter](./type-converters.md) and [Mapper](./mappers.md).
 
-C# and TypeScript accept a query, a where, or an [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md) (C#: `IStatement`, plus an `IWhere` overload). Rust `read` accepts a query or procedure [Statement](./statements.md). Where stays on `read_where` / `read_single_where`. Result rows still convert, then map. Procedure argument names are not rewritten as columns.
+`read` and `read_single` accept a query, a where, or an [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md). Result rows still convert, then map. Procedure argument names are not rewritten as columns.
 
 ## Examples
 
