@@ -1,7 +1,7 @@
 use crate::built_repository::BuiltRepository;
 use crate::connection::Connection;
 use crate::converters::{Cells, RowTypeConverter};
-use crate::crud_repository_options::CRUDRepositoryOptions;
+use crate::crud_repository_options::{identity_mapper, CRUDRepositoryOptions};
 use crate::mappers::{Mapper, TransformMapper};
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::result::Result;
@@ -33,6 +33,7 @@ impl RepositoryBuilder {
             create,
             read,
         } = options;
+        let create = create.unwrap_or_else(|| identity_mapper(&ids));
         assemble(connection, read, ids, insert, update, delete, Some(create))
     }
 }

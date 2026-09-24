@@ -1614,7 +1614,7 @@ fn repository_entity_type() {
         StubRepository::new("memory").entity_type(),
         TypeId::of::<Row>()
     );
-    let deep = EnrichedCRUDRepository::new(Arc::new(typed));
+    let deep = CRUDRepository::from_repository(Arc::new(typed));
     assert_eq!(deep.entity_type(), TypeId::of::<Item>());
     assert_eq!(
         (&deep as &dyn IRepository).entity_type(),
@@ -2201,7 +2201,7 @@ async fn deep_create_writes_children_stamps_fk_and_skips_select() {
         ("name", Value::from("person")),
     ])]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
-    let mut repo = EnrichedCRUDRepository::new(parents.clone());
+    let mut repo = CRUDRepository::from_repository(parents.clone());
     repo.add_enriched(
         "type_name",
         "type_id",
@@ -2246,7 +2246,7 @@ async fn deep_create_applies_generated_parent_id_before_child_fks() {
         Value::Int(4),
     )])]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
-    let mut repo = EnrichedCRUDRepository::new(parents);
+    let mut repo = CRUDRepository::from_repository(parents);
     repo.add_enriched(
         "children",
         "id",
@@ -2283,7 +2283,7 @@ async fn deep_update_replace_syncs_children() {
             ("label", Value::from("b")),
         ]),
     ]));
-    let mut repo = EnrichedCRUDRepository::new(parents);
+    let mut repo = CRUDRepository::from_repository(parents);
     repo.add_enriched(
         "children",
         "id",
@@ -2349,7 +2349,7 @@ async fn deep_delete_cascades_children_then_parent() {
             ("text", Value::from("other")),
         ]),
     ]));
-    let mut repo = EnrichedCRUDRepository::new(parents.clone());
+    let mut repo = CRUDRepository::from_repository(parents.clone());
     repo.add_enriched(
         "children",
         "id",
@@ -2378,7 +2378,7 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
         ("id", Value::Int(3)),
         ("name", Value::from("home")),
     ])]));
-    let mut repo = EnrichedCRUDRepository::new(parents);
+    let mut repo = CRUDRepository::from_repository(parents);
     repo.add_enriched(
         "children",
         "id",
@@ -2420,7 +2420,7 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
 #[tokio::test]
 async fn deep_many_readonly_via_throws() {
     let mut repo =
-        EnrichedCRUDRepository::new(Arc::new(list_repository::ListRepository::new(vec![])));
+        CRUDRepository::from_repository(Arc::new(list_repository::ListRepository::new(vec![])));
     repo.add_enriched(
         "children",
         "id",
@@ -2454,7 +2454,7 @@ async fn deep_get_still_enriches() {
         ("parent_id", Value::Int(1)),
         ("label", Value::from("a")),
     ])]));
-    let mut repo = EnrichedCRUDRepository::new(parents);
+    let mut repo = CRUDRepository::from_repository(parents);
     repo.add_enriched(
         "type_name",
         "type_id",

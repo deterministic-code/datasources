@@ -1,4 +1,4 @@
-use crate::enriched_crud_repository::EnrichedCRUDRepository;
+use crate::CRUDRepository;
 use crate::i_repository::IRepository;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
@@ -13,7 +13,7 @@ use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct ContactsService {
-    inner: EnrichedCRUDRepository,
+    inner: CRUDRepository,
 }
 
 impl ContactsService {
@@ -26,7 +26,7 @@ impl ContactsService {
         addresses: Arc<dyn ICRUDRepository>,
         phones: Arc<dyn ICRUDRepository>,
     ) -> Self {
-        let mut inner = EnrichedCRUDRepository::new(contacts);
+        let mut inner = CRUDRepository::from_repository(contacts);
         inner
             .add_enriched(
                 "contact_type_name",

@@ -81,6 +81,10 @@ impl IReadonlyRepository for ListRepository {
 
 #[async_trait]
 impl ICRUDRepository for ListRepository {
+    fn id_names(&self) -> Vec<String> {
+        vec!["id".into()]
+    }
+
     async fn create(&self, item: &mut Row) -> Result<Response> {
         let mut row = item.clone();
         let id = match row.get("id") {

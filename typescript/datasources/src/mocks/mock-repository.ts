@@ -10,6 +10,7 @@ import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 
 export class MockRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
+  readonly ids: readonly string[] = [];
   items: T[] = [];
   readSingleCalls: Array<IQuery | IWhere | IExecuteStoredProcedureStatement | undefined> = [];
   readCalls: Array<IQuery | IWhere | IExecuteStoredProcedureStatement | undefined> = [];

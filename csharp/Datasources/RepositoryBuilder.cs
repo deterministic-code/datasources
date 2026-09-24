@@ -19,7 +19,12 @@ public static class RepositoryBuilder<T> where T : new()
             .ToArray();
         var (ids, insert, update, delete, create) = options switch
         {
-            CRUDRepositoryOptions<T> crud => (crud.Ids, crud.Insert, crud.Update, crud.Delete, crud.Create),
+            CRUDRepositoryOptions<T> crud => (
+                crud.Ids,
+                crud.Insert,
+                crud.Update,
+                crud.Delete,
+                crud.Create ?? CRUDRepositoryOptions<T>.Identity(crud.Ids)),
             _ => (Array.Empty<string>(), null, null, null, null)
         };
         return new(

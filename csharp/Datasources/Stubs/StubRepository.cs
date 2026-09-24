@@ -6,6 +6,8 @@ public sealed class StubRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 
     public StubRepository(string provider, IConnection _) => this.provider = provider;
 
+    public IReadOnlyList<string> Ids { get; } = [];
+
     public override IAsyncEnumerable<T> Read(IStatement? query = null) =>
         throw new ProviderNotImplementedException(provider);
     protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>

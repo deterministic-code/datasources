@@ -148,6 +148,7 @@ describe("CRUDRepository", () => {
     const { repo, command } = create({ ids: [] });
     await repo.update({ id: 1, name: "a" });
     expect(command.executeCalls[0]?.text).toContain("1 = 1");
+    await expect(repo.readSingleById(1)).rejects.toThrow("ReadSingleById requires an Id column");
     await repo.delete({ id: 1, name: "a" });
     expect(command.executeCalls[1]?.parameters).toEqual([
       { name: "id", value: 1 },

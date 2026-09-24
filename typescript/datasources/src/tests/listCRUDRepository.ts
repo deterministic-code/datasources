@@ -7,6 +7,7 @@ import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import type { Cells } from "../converters/Cell.ts";
 import type { Scalar } from "../builders/Scalar.ts";
+import { defaultId, fieldNamesOf } from "../createRepositoryOptions.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -48,6 +49,7 @@ export class ListCRUDRepository<T extends object>
   implements ICRUDRepository<T>
 {
   readonly items: T[];
+  readonly ids: readonly string[];
   private nextId: number;
 
   constructor(
@@ -55,6 +57,7 @@ export class ListCRUDRepository<T extends object>
     type: Constructable<T> = untyped<T>(),
   ) {
     super(type);
+    this.ids = type === Object ? [] : defaultId(fieldNamesOf(type));
     this.items = [...items];
     this.nextId =
       items.reduce((max, item) => {

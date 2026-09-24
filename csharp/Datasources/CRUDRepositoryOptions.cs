@@ -7,18 +7,15 @@ public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> wher
     public IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
     public IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
     public IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }
-    public IMapper<Value, T> Create { get; init; } = DefaultCreate();
+    public IMapper<Value, T>? Create { get; init; }
 
-    static IMapper<Value, T> DefaultCreate() =>
+    internal static IMapper<Value, T> Identity(IReadOnlyList<string> ids) =>
         new TransformMapper<Value, T>(
-            static value =>
+            value =>
             {
                 var item = new T();
-                if (value is Value.Null) return item;
-                var name = typeof(T).GetProperty("id") is not null ? "id"
-                    : typeof(T).GetProperty("Id") is not null ? "Id"
-                    : item is System.Collections.IDictionary ? "id" : null;
-                if (name is null) return item;
+                if (value is Value.Null || ids.Count != 1) return item;
+                var name = ids[0];
                 if (item is System.Collections.IDictionary dict)
                     dict[name] = item is Row ? value : value.ToObject();
                 else if (typeof(T).GetProperty(name) is { } prop)

@@ -1,4 +1,4 @@
-import { EnrichedCRUDRepository } from "../../EnrichedCRUDRepository.ts";
+import { CRUDRepository } from "../../CRUDRepository.ts";
 import type { IReadonlyRepository } from "../../IReadonlyRepository.ts";
 import type { ICRUDRepository } from "../../ICRUDRepository.ts";
 import type { Address } from "./Address.ts";
@@ -9,7 +9,7 @@ import type { ContactType } from "./ContactType.ts";
 import type { Phone } from "./Phone.ts";
 import type { PhoneType } from "./PhoneType.ts";
 
-export class ContactsService extends EnrichedCRUDRepository<Contact> {
+export class ContactsService extends CRUDRepository<Contact> {
   constructor(
     contacts: ICRUDRepository<Contact>,
     types: IReadonlyRepository<ContactType>,

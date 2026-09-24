@@ -25,6 +25,7 @@ public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
         WithoutSource(Read(query));
 
+    public IReadOnlyList<string> Ids { get; } = [];
     public Task<Response> Create(T item)
     {
         if (CreateError is not null) throw CreateError;

@@ -126,6 +126,17 @@ public class RepositoryTests
     }
 
     [Fact]
+    public async Task CreateMapperWritesConfiguredId()
+    {
+        var (repo, command) = Create<Item>(id: ["Id"]);
+        command.Response = new Response(new Value.Int(4), 1);
+        var row = new Item { Name = "a" };
+        await repo.Create(row);
+        Assert.Equal(4, row.Id);
+        Assert.Contains("INSERT INTO users (Name)", command.ExecuteCalls[0].Text);
+    }
+
+    [Fact]
     public async Task CompositeIdOmitsIdsOnCreate()
     {
         var (repo, command) = Create<Composite>(id: ["org_id", "user_id"]);

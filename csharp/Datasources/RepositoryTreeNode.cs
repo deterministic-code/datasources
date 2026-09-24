@@ -113,7 +113,9 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
 
     internal interface IChildPersist
     {
+        IReadOnlyList<string> Ids { get; }
         Task<Response> Create(object item);
+        void AssignIdentity(object item, Response response);
         Task<Response> Update(object item, IWhere? byWhere = null);
         Task<Response> Delete(object item, IWhere? byWhere = null);
         IAsyncEnumerable<object> Read(IStatement? query = null);
@@ -123,8 +125,30 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
     sealed class ChildPersist<T> : IChildPersist
     {
         readonly ICRUDRepository<T> inner;
-        public ChildPersist(ICRUDRepository<T> inner) => this.inner = inner;
+        public IReadOnlyList<string> Ids { get; }
+        public ChildPersist(ICRUDRepository<T> inner)
+        {
+            this.inner = inner;
+            Ids = inner.Ids;
+        }
         public Task<Response> Create(object item) => inner.Create((T)item);
+        public void AssignIdentity(object item, Response response)
+        {
+            if (response.Result is Value.Null || Ids.Count != 1) return;
+            var name = Ids[0];
+            if (item is IDictionary dict)
+            {
+                dict[name] = item is Row ? response.Result : response.Result.ToObject();
+                return;
+            }
+            var prop = item.GetType().GetProperty(name);
+            if (prop is not { CanWrite: true }) return;
+            var target = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+            var value = response.Result.ToObject();
+            prop.SetValue(item, value is null || target.IsInstanceOfType(value)
+                ? value
+                : Convert.ChangeType(value, target));
+        }
         public Task<Response> Update(object item, IWhere? byWhere = null) =>
             inner.Update((T)item, byWhere);
         public Task<Response> Delete(object item, IWhere? byWhere = null) =>

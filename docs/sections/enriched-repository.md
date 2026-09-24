@@ -1122,3 +1122,113 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 }
 ```
 :::
+
+### Fill roles from one join
+
+`FlatToNestedReadonlyEnrichmentStrategy` reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](./flat-to-nested-mapper.md) groups each user's `Roles`.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L280-L356
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L463-L564
+```
+```typescript typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L133-L197
+```
+
+```output [Users with roles]
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: true,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: [
+      { UserId: '11111111-1111-1111-1111-111111111111', Name: 'admin' },
+      { UserId: '11111111-1111-1111-1111-111111111111', Name: 'editor' }
+    ]
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: true,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: [
+      { UserId: '22222222-2222-2222-2222-222222222222', Name: 'viewer' }
+    ]
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: false,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: []
+  }
+]
+```
+
+```output:typescript [Users with roles]
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: [
+      { RoleId: 1, UserId: '11111111-1111-1111-1111-111111111111', Name: 'admin' },
+      { RoleId: 2, UserId: '11111111-1111-1111-1111-111111111111', Name: 'editor' }
+    ]
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: [
+      { RoleId: 3, UserId: '22222222-2222-2222-2222-222222222222', Name: 'viewer' }
+    ]
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: 0,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: []
+  }
+]
+```
+
+```output:rust [Users with roles]
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: 'Name=admin,UserId=11111111-1111-1111-1111-111111111111|Name=editor,UserId=11111111-1111-1111-1111-111111111111'
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: 'Name=viewer,UserId=22222222-2222-2222-2222-222222222222'
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: 0,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: ''
+  }
+]
+```
+:::

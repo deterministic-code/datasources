@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests.Contact;
 
-internal sealed class ContactsService : EnrichedCRUDRepository<Contact>
+internal sealed class ContactsService : CRUDRepository<Contact>
 {
     public ContactsService(
         ICRUDRepository<Contact> contacts,

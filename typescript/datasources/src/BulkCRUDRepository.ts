@@ -1,4 +1,4 @@
-import { EnrichedCRUDRepository } from "./EnrichedCRUDRepository.ts";
+import { CRUDRepository } from "./CRUDRepository.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./statements/IWhere.ts";
@@ -17,7 +17,7 @@ const fold = async <T>(
   return { result, rowsAffected };
 };
 
-export class BulkCRUDRepository<T extends object> extends EnrichedCRUDRepository<T> {
+export class BulkCRUDRepository<T extends object> extends CRUDRepository<T> {
   constructor(crud: ICRUDRepository<T>) {
     super(crud);
   }

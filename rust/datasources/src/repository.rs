@@ -28,6 +28,10 @@ pub trait ICRUDRepository: IReadonlyRepository {
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>;
+
+    fn id_names(&self) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 struct AsReadonly(Arc<dyn ICRUDRepository>);
