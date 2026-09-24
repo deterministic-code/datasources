@@ -200,6 +200,8 @@ public class UserViewEnrichmentTests
 
 public class UsersViewRoleTests
 {
+    static UsersViewRoleTests() => _ = typeof(SqliteConnectionDriver);
+
     static readonly Guid Ada = Guid.Parse("11111111-1111-1111-1111-111111111111");
     static readonly Guid Grace = Guid.Parse("22222222-2222-2222-2222-222222222222");
     static readonly Guid Lin = Guid.Parse("33333333-3333-3333-3333-333333333333");
