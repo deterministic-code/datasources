@@ -125,23 +125,23 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
     }
     if (step.READ)
       return withStatementSql(
-        new QueryStatement(table, columns, idWhere(type, step.READ.id)).getText(),
+        new QueryStatement({ table, fields: columns, where: idWhere(type, step.READ.id) }).getText(),
         false,
         type,
       );
     if (step.QUERY)
       return withStatementSql(
-        new QueryStatement(
+        new QueryStatement({
           table,
-          columns,
-          step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
-        ).getText(),
+          fields: columns,
+          where: step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
+        }).getText(),
         false,
         type,
       );
     if (step.READBY)
       return withStatementSql(
-        new QueryStatement(table, columns, whereOf(step.READBY.where)).getText(),
+        new QueryStatement({ table, fields: columns, where: whereOf(step.READBY.where) }).getText(),
         false,
         type,
       );

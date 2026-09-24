@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  Aggregate,
   ArrayExpression,
   CheckConstraint,
   ColumnDefault,
@@ -13,6 +14,7 @@ import {
   Literal,
   NotNull,
   Operator,
+  OrderBy,
   PrimaryKey,
   QueryStatement,
   ReferentialAction,
@@ -188,41 +190,73 @@ describe("statements", () => {
 
   it("creates write and ddl statements", () => {
     const where = new WhereClause(new Operator.Equals("id", 1));
-    const query = new QueryStatement("users", ["id", "name"], where);
+    const query = new QueryStatement({ table: "users", fields: ["id", "name"], where });
     expect(query.getText()).toBe(
       "SELECT id, name FROM users WHERE id = $id",
     );
     expect(query.where).toBe(where);
-    expect(new QueryStatement("users", []).getText()).toBe(
+    expect(new QueryStatement({ table: "users", fields: [] }).getText()).toBe(
       "SELECT * FROM users",
     );
-    expect(new QueryStatement("users", []).where).toBeUndefined();
-    expect(new QueryStatement("users", ["id", "name"]).getText()).toBe(
+    expect(new QueryStatement({ table: "users", fields: [] }).where).toBeUndefined();
+    expect(new QueryStatement({ table: "users", fields: ["id", "name"] }).getText()).toBe(
       "SELECT id, name FROM users",
     );
     expect(
-      new QueryStatement("users", ["users.id", "orders.total"], undefined, [
-        Join.inner("orders", "users.id", "orders.user_id"),
-      ]).getText(),
+      new QueryStatement({
+        table: "users",
+        fields: ["users.id", "orders.total"],
+        joins: [Join.inner("orders", "users.id", "orders.user_id")],
+      }).getText(),
     ).toBe(
       "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id",
     );
     expect(
-      new QueryStatement(
-        "users",
-        ["users.id"],
-        new WhereClause(new Operator.Equals("users.id", 1)),
-        [
+      new QueryStatement({
+        table: "users",
+        fields: ["users.id"],
+        where: new WhereClause(new Operator.Equals("users.id", 1)),
+        joins: [
           Join.inner("orders", "users.id", "orders.user_id"),
           Join.left("payments", "orders.id", "payments.order_id"),
           Join.right("profiles", "users.id", "profiles.user_id"),
         ],
-      ).getText(),
+      }).getText(),
     ).toBe(
       "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
     );
-    expect(new QueryStatement("users", ["id"], undefined, []).getText()).toBe(
+    expect(new QueryStatement({ table: "users", fields: ["id"], joins: [] }).getText()).toBe(
       "SELECT id FROM users",
+    );
+    const grouped = new QueryStatement({
+      table: "orders",
+      fields: ["status", Aggregate.count("*", "n"), Aggregate.sum("amount", "total")],
+      where: new WhereClause(new Operator.Equals("status", "open")),
+      joins: [Join.inner("customers", "orders.customer_id", "customers.id")],
+      groupBy: ["status"],
+      orderBy: [OrderBy.desc("total"), OrderBy.asc("status")],
+      limit: 10,
+    });
+    expect(grouped.getText()).toBe(
+      "SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10",
+    );
+    const byStatus = new QueryStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
+    expect(byStatus.getText()).toBe("SELECT id FROM users GROUP BY id");
+    const bounds = new QueryStatement({ table: "users", fields: [Aggregate.min("n"), Aggregate.max("n")] });
+    expect(bounds.getText()).toBe("SELECT MIN(n), MAX(n) FROM users");
+    const ordered = new QueryStatement({
+      table: "users",
+      fields: ["id"],
+      orderBy: [OrderBy.asc("id"), OrderBy.desc("name")],
+    });
+    expect(ordered.getText()).toBe("SELECT id FROM users ORDER BY id ASC, name DESC");
+    const limited = new QueryStatement({ table: "users", fields: ["id"], limit: 10 });
+    expect(limited.getText()).toBe("SELECT id FROM users LIMIT 10");
+    expect(new QueryStatement({ table: "users", fields: ["id"], limit: 0 }).getText()).toBe(
+      "SELECT id FROM users LIMIT 0",
+    );
+    expect(() => new QueryStatement({ table: "users", fields: ["id"], limit: -1 })).toThrow(
+      "negative limit",
     );
     const insert = new InsertStatement("users", [...fields]);
     expect(insert.getText()).toBe(

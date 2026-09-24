@@ -113,12 +113,12 @@ describe("users view roles", () => {
       ]),
       query: new TransformMapper(
         (query) =>
-          new QueryStatement(
-            "user_roles",
-            ["user_roles.user_id AS user_id", "roles.name AS name"],
-            query.where,
-            [Join.inner("roles", "roles.id", "user_roles.role_id")],
-          ),
+          new QueryStatement({
+            table: "user_roles",
+            fields: ["user_roles.user_id AS user_id", "roles.name AS name"],
+            where: query.where,
+            joins: [Join.inner("roles", "roles.id", "user_roles.role_id")],
+          }),
         (query) => query,
       ),
     });
@@ -161,9 +161,9 @@ describe("users view roles", () => {
             throw new Error("UsersView hydrate does not reverse");
           },
         ),
-        new QueryStatement(
-          "user",
-          [
+        new QueryStatement({
+          table: "user",
+          fields: [
             "user.id AS Key",
             "user.username AS Login",
             "user.is_enabled AS Active",
@@ -173,13 +173,12 @@ describe("users view roles", () => {
             "user_roles.role_id AS RoleId",
             "roles.name AS RoleName",
           ],
-          undefined,
-          [
+          joins: [
             Join.left("user_type", "user_type.id", "user.user_type_id"),
             Join.left("user_roles", "user_roles.user_id", "user.id"),
             Join.left("roles", "roles.id", "user_roles.role_id"),
           ],
-        ),
+        }),
       ),
     );
     const items: UsersView[] = [];

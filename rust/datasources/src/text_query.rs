@@ -2,6 +2,7 @@ use crate::builders::{Join, JoinKind};
 use crate::query::Query;
 use crate::statements::statement::Statement;
 use crate::statements::text::Text;
+use crate::statements::{OrderBy, QueryStatementOptions};
 use crate::where_trait::Where;
 
 pub struct QueryStatement {
@@ -24,26 +25,27 @@ impl QueryStatement {
         }
     }
 
-    pub fn new(
-        table: impl AsRef<str>,
-        fields: &[&str],
-        where_clause: Option<&dyn Where>,
-        joins: &[Join],
-    ) -> Self {
-        let sql = with_where(
-            format!(
-                "SELECT {} FROM {}{}",
-                if fields.is_empty() {
-                    "*".to_string()
-                } else {
-                    fields.join(", ")
-                },
-                table.as_ref(),
-                join_sql(joins)
+    pub fn new(options: QueryStatementOptions<'_>) -> Self {
+        let fields = if options.fields.is_empty() {
+            "*".to_string()
+        } else {
+            options.fields.join(", ")
+        };
+        let sql = format!(
+            "{}{}{}{}",
+            with_where(
+                format!(
+                    "SELECT {fields} FROM {}{}",
+                    options.table,
+                    join_sql(options.joins)
+                ),
+                options.where_clause,
             ),
-            where_clause,
+            group_by(options.group_by),
+            order_by(options.order_by),
+            limit_sql(options.limit),
         );
-        match where_clause {
+        match options.where_clause {
             Some(predicate) => {
                 Self::with_where(sql, crate::text_where::TextWhere::new(predicate.get_text()))
             }
@@ -89,6 +91,35 @@ fn with_where(sql: String, where_clause: Option<&dyn Where>) -> String {
     match where_clause {
         Some(predicate) => format!("{sql} WHERE {}", predicate.get_text()),
         None => sql,
+    }
+}
+
+fn group_by(columns: &[&str]) -> String {
+    match columns {
+        [] => String::new(),
+        names => format!(" GROUP BY {}", names.join(", ")),
+    }
+}
+
+fn order_by(order: &[OrderBy]) -> String {
+    match order {
+        [] => String::new(),
+        items => format!(
+            " ORDER BY {}",
+            items
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    }
+}
+
+fn limit_sql(limit: Option<i64>) -> String {
+    match limit {
+        None => String::new(),
+        Some(n) if n < 0 => panic!("negative limit"),
+        Some(n) => format!(" LIMIT {n}"),
     }
 }
 

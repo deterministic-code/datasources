@@ -28,7 +28,7 @@ export const statementsOf = (
   update?: IMapper<IUpdateStatement, IUpdateStatement>,
   deleteMapper?: IMapper<IDeleteStatement, IDeleteStatement>,
 ): RepositoryStatements => ({
-  query: (where) => mapped(new QueryStatement(table, columns, where), query),
+  query: (where) => mapped(new QueryStatement({ table, fields: columns, where }), query),
   insert: (fields) => mapped(new InsertStatement(table, fields), insert),
   update: (fields, where) => mapped(new UpdateStatement(table, fields, where), update),
   delete: (where) => mapped(new DeleteStatement(table, where), deleteMapper),

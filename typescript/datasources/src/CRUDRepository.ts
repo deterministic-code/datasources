@@ -34,43 +34,6 @@ import type { Row } from "./Row.ts";
 type Props = Record<string, Scalar | object>;
 type ReadQuery = IQuery | IWhere | IExecuteStoredProcedureStatement;
 
-const alias = (text: string, name: string, next: string): string => {
-  const token = `$${name}`;
-  let index = 0;
-  let result = "";
-  while (text.indexOf(token, index) >= 0) {
-    const at = text.indexOf(token, index);
-    const end = at + token.length;
-    const nextChar = text.charAt(end);
-    const boundary = nextChar === "" || !/[A-Za-z0-9_]/.test(nextChar);
-    result += text.slice(index, at) + (boundary ? `$${next}` : token);
-    index = end;
-  }
-  return result + text.slice(index);
-};
-
-const distinct = (
-  text: string,
-  fields: Field[],
-  where: { name: string; value?: Scalar }[],
-): { text: string; parameters: Field[] } => {
-  const split = text.lastIndexOf(" WHERE ");
-  /* v8 ignore next 2 -- table updates always include WHERE */
-  const head = split < 0 ? text : text.slice(0, split);
-  let tail = split < 0 ? "" : text.slice(split);
-  const parameters = [...fields];
-  for (const parameter of where) {
-    if (parameter.value === undefined) continue;
-    const field = fields.find((item) => item.name === parameter.name);
-    if (field && field.value !== parameter.value) {
-      const renamed = `${parameter.name}__where`;
-      tail = alias(tail, parameter.name, renamed);
-      parameters.push({ name: renamed, value: parameter.value });
-    } else parameters.push({ name: parameter.name, value: parameter.value });
-  }
-  return { text: head + tail, parameters };
-};
-
 const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
@@ -142,8 +105,6 @@ export class CRUDRepository<T = Cells>
   private readonly delegate?: ICRUDRepository<T>;
   private readonly strategy: IReadonlyEnrichmentStrategy<T>;
   private readonly createMapper?: IMapper<Scalar, T>;
-  private readonly idSet: Set<string>;
-
   private readonly write: IWriteEnrichmentStrategy<T>;
 
   constructor(
@@ -170,7 +131,6 @@ export class CRUDRepository<T = Cells>
         new RepositoryTreeNode(typeOrConnectionOrBuilt, "", undefined, undefined, undefined, this.strategy),
       );
       this.ids = typeOrConnectionOrBuilt.ids;
-      this.idSet = new Set(this.ids);
       this.createMapper =
         typeOrConnectionOrBuilt instanceof CRUDRepository && typeOrConnectionOrBuilt.createMapper
           ? typeOrConnectionOrBuilt.createMapper
@@ -181,7 +141,6 @@ export class CRUDRepository<T = Cells>
     super(built);
     this.createMapper = built.create;
     this.ids = built.ids;
-    this.idSet = new Set(this.ids);
     this.strategy = new DefaultReadonlyEnrichmentStrategy<T>();
     this.write = new DefaultWriteEnrichmentStrategy<T>();
     this.tree = new RepositoryTree(
@@ -281,7 +240,7 @@ export class CRUDRepository<T = Cells>
   };
 
   private insert = async (item: T): Promise<Response> => {
-    const fields = fieldsOf(this.reverseConvert(item), (col) => !this.idSet.has(col), this.column, this.cell);
+    const fields = fieldsOf(this.reverseConvert(item), (col) => !this.ids.includes(col), this.column, this.cell);
     const response = await execute(this.command(), this.statements!.insert(fields), fields);
     const scalar = asScalar(response.result as string | number | boolean | bigint | null | undefined);
     if (scalar !== undefined && this.createMapper) apply(item, this.createMapper.map(scalar));
@@ -291,11 +250,10 @@ export class CRUDRepository<T = Cells>
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ? this.stored(byWhere) : this.stored(this.idWhere(record), true);
-    const fields = fieldsOf(record, (col) => !this.idSet.has(col), this.column, this.cell);
+    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.statements!.update(fields, where);
-    const bound = distinct(statement.getText(), fields, where.parameters ?? []);
-    return this.command().execute(bound.text, bound.parameters);
+    return this.command().execute(statement.getText(), statement.parameters);
   };
 
   private remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
@@ -313,18 +271,18 @@ export class CRUDRepository<T = Cells>
   };
 
   private byId = (id: Scalar | Cells): IWhere => {
-    if (this.idSet.size === 0) throw new DatasourceError("ReadSingleById requires an Id column");
+    if (this.ids.length === 0) throw new DatasourceError("ReadSingleById requires an Id column");
     if (isCells(id)) return this.idWhere(id);
-    if (this.idSet.size !== 1)
+    if (this.ids.length !== 1)
       throw new DatasourceError("Composite id requires a row keyed by each Id column");
-    return this.idWhere({ [[...this.idSet][0]!]: id });
+    return this.idWhere({ [this.ids[0]!]: id });
   };
 
   private reverseConvert = (item: T): Cells =>
     this.rowConverter!.reverseConvert(this.mapper!.reverseMap(item));
 
   private idWhere = (record: Cells): IWhere => {
-    const parts: IExpression[] = [...this.idSet].map((col) => {
+    const parts: IExpression[] = this.ids.map((col) => {
       if (!Object.prototype.hasOwnProperty.call(record, col))
         throw new DatasourceError(`Missing Id value "${col}"`);
       return new Operator.Equals(col, record[col] as Scalar);

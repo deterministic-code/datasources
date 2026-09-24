@@ -4,8 +4,8 @@ use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
-    InsertStatement, Literal, Operator, Parameter, QueryStatement, Result, Row, Text,
-    TransformMapper, TypeConverter, UpdateStatement, Value, WhereClause,
+    InsertStatement, Literal, Operator, Parameter, QueryStatement, QueryStatementOptions, Result,
+    Row, Text, TransformMapper, TypeConverter, UpdateStatement, Value, WhereClause,
 };
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -529,19 +529,21 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(read) = &step.read {
                 let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&read.id)));
                 with_statement_sql(
-                    QueryStatement::new(&table, &refs, Some(&where_clause), &[]).get_text(),
+                    QueryStatement::new(QueryStatementOptions {
+                        where_clause: Some(&where_clause),
+                        ..QueryStatementOptions::new(&table, &refs)
+                    })
+                    .get_text(),
                     false,
                     &spec.type_spec,
                 )
             } else if let Some(query) = &step.query {
                 let where_clause = query.where_clause.as_ref().map(where_sql);
                 with_statement_sql(
-                    QueryStatement::new(
-                        &table,
-                        &refs,
-                        where_clause.as_ref().map(|w| w as &dyn datasources::Where),
-                        &[],
-                    )
+                    QueryStatement::new(QueryStatementOptions {
+                        where_clause: where_clause.as_ref().map(|w| w as &dyn datasources::Where),
+                        ..QueryStatementOptions::new(&table, &refs)
+                    })
                     .get_text(),
                     false,
                     &spec.type_spec,
@@ -549,7 +551,11 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(read_by) = &step.read_by {
                 let where_clause = where_sql(&read_by.where_clause);
                 with_statement_sql(
-                    QueryStatement::new(&table, &refs, Some(&where_clause), &[]).get_text(),
+                    QueryStatement::new(QueryStatementOptions {
+                        where_clause: Some(&where_clause),
+                        ..QueryStatementOptions::new(&table, &refs)
+                    })
+                    .get_text(),
                     false,
                     &spec.type_spec,
                 )

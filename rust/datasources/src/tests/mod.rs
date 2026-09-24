@@ -923,50 +923,106 @@ fn statements_and_builders() {
     }
 
     let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
-    let query = QueryStatement::new("users", &["id", "name"], Some(&where_clause), &[]);
+    let query = QueryStatement::new(QueryStatementOptions {
+        where_clause: Some(&where_clause),
+        ..QueryStatementOptions::new("users", &["id", "name"])
+    });
     assert_eq!(
         query.get_text(),
         "SELECT id, name FROM users WHERE id = $id AND age > $age"
     );
     assert!(query.where_clause().is_some());
     assert_eq!(
-        QueryStatement::new("users", &[], None, &[]).get_text(),
+        QueryStatement::new(QueryStatementOptions::new("users", &[])).get_text(),
         "SELECT * FROM users"
     );
-    assert!(QueryStatement::new("users", &[], None, &[])
-        .where_clause()
-        .is_none());
+    assert!(
+        QueryStatement::new(QueryStatementOptions::new("users", &[]))
+            .where_clause()
+            .is_none()
+    );
     assert_eq!(
-        QueryStatement::new("users", &["id", "name"], None, &[]).get_text(),
+        QueryStatement::new(QueryStatementOptions::new("users", &["id", "name"])).get_text(),
         "SELECT id, name FROM users"
     );
     assert_eq!(
-        QueryStatement::new(
-            "users",
-            &["users.id", "orders.total"],
-            None,
-            &[Join::inner("orders", "users.id", "orders.user_id")],
-        )
+        QueryStatement::new(QueryStatementOptions {
+            joins: &[Join::inner("orders", "users.id", "orders.user_id")],
+            ..QueryStatementOptions::new("users", &["users.id", "orders.total"])
+        })
         .get_text(),
         "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id"
     );
     assert_eq!(
-        QueryStatement::new(
-            "users",
-            &["users.id"],
-            Some(&WhereClause::new(Operator::equals("users.id", 1_i64))),
-            &[
+        QueryStatement::new(QueryStatementOptions {
+            where_clause: Some(&WhereClause::new(Operator::equals("users.id", 1_i64))),
+            joins: &[
                 Join::inner("orders", "users.id", "orders.user_id"),
                 Join::left("payments", "orders.id", "payments.order_id"),
                 Join::right("profiles", "users.id", "profiles.user_id"),
             ],
-        )
+            ..QueryStatementOptions::new("users", &["users.id"])
+        })
         .get_text(),
         "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
     );
     assert_eq!(
-        QueryStatement::new("users", &["id"], None, &[]).get_text(),
+        QueryStatement::new(QueryStatementOptions {
+            joins: &[],
+            ..QueryStatementOptions::new("users", &["id"])
+        })
+        .get_text(),
         "SELECT id FROM users"
+    );
+    let count = Aggregate::count("*", Some("n"));
+    let total = Aggregate::sum("amount", Some("total"));
+    let grouped_fields = ["status", count.as_str(), total.as_str()];
+    let grouped = QueryStatement::new(QueryStatementOptions {
+        where_clause: Some(&WhereClause::new(Operator::equals("status", "open"))),
+        joins: &[Join::inner(
+            "customers",
+            "orders.customer_id",
+            "customers.id"
+        )],
+        group_by: &["status"],
+        order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],
+        limit: Some(10),
+        ..QueryStatementOptions::new("orders", &grouped_fields)
+    });
+    assert_eq!(
+        grouped.get_text(),
+        "SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10"
+    );
+    let by_status = QueryStatement::new(QueryStatementOptions {
+        group_by: &["id"],
+        ..QueryStatementOptions::new("users", &["id"])
+    });
+    assert_eq!(by_status.get_text(), "SELECT id FROM users GROUP BY id");
+    let min_n = Aggregate::min("n", None);
+    let max_n = Aggregate::max("n", None);
+    let bound_fields = [min_n.as_str(), max_n.as_str()];
+    let bounds = QueryStatement::new(QueryStatementOptions::new("users", &bound_fields));
+    assert_eq!(bounds.get_text(), "SELECT MIN(n), MAX(n) FROM users");
+    let ordered = QueryStatement::new(QueryStatementOptions {
+        order_by: &[OrderBy::asc("id"), OrderBy::desc("name")],
+        ..QueryStatementOptions::new("users", &["id"])
+    });
+    assert_eq!(
+        ordered.get_text(),
+        "SELECT id FROM users ORDER BY id ASC, name DESC"
+    );
+    let limited = QueryStatement::new(QueryStatementOptions {
+        limit: Some(10),
+        ..QueryStatementOptions::new("users", &["id"])
+    });
+    assert_eq!(limited.get_text(), "SELECT id FROM users LIMIT 10");
+    assert_eq!(
+        QueryStatement::new(QueryStatementOptions {
+            limit: Some(0),
+            ..QueryStatementOptions::new("users", &["id"])
+        })
+        .get_text(),
+        "SELECT id FROM users LIMIT 0"
     );
     let insert = InsertStatement::new("users", &fields);
     assert_eq!(
@@ -1136,6 +1192,15 @@ fn statements_and_builders() {
         .parameters()
         .is_empty());
     assert_eq!(ReturnStatement::text("x").get_text(), "x");
+}
+
+#[test]
+#[should_panic(expected = "negative limit")]
+fn rejects_a_negative_limit() {
+    QueryStatement::new(QueryStatementOptions {
+        limit: Some(-1),
+        ..QueryStatementOptions::new("users", &["id"])
+    });
 }
 
 #[test]
@@ -1471,7 +1536,10 @@ async fn table_repository() {
     assert!(repo.read_single(None).await.unwrap().is_some());
 
     let where_clause = WhereClause::new(Operator::equals("id", 9_i64));
-    let query = QueryStatement::new("users", &["id"], Some(&where_clause), &[]);
+    let query = QueryStatement::new(QueryStatementOptions {
+        where_clause: Some(&where_clause),
+        ..QueryStatementOptions::new("users", &["id"])
+    });
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.read_single(Some(&query)).await.unwrap().is_none());
     assert_eq!(

@@ -1,5 +1,5 @@
 use crate::schema;
-use datasources::{Join, QueryStatement, Text};
+use datasources::{Join, QueryStatement, QueryStatementOptions, Text};
 
 pub fn create(provider: &str) -> QueryStatement {
     let users = schema::ident(provider, "users");
@@ -28,17 +28,15 @@ pub fn create(provider: &str) -> QueryStatement {
     let right_ug = format!("{user_groups}.user_id");
     let left_group = format!("{user_groups}.group_id");
     let right_group = format!("{groups}.id");
-    QueryStatement::new(
-        &users,
-        &field_refs,
-        None,
-        &[
+    QueryStatement::new(QueryStatementOptions {
+        joins: &[
             Join::left(&user_roles, &left_ur, &right_ur),
             Join::left(&roles, &left_role, &right_role),
             Join::left(&user_groups, &left_ug, &right_ug),
             Join::left(&groups, &left_group, &right_group),
         ],
-    )
+        ..QueryStatementOptions::new(&users, &field_refs)
+    })
 }
 
 pub fn text(provider: &str) -> String {

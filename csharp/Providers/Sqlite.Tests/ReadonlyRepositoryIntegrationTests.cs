@@ -261,11 +261,13 @@ public class UsersViewRoleTests
                 ["Name"] = "name",
             }),
             Query = new TransformMapper<IQuery, IQuery>(
-                query => new QueryStatement(
-                    "user_roles",
-                    ["user_roles.user_id", "roles.name"],
-                    query.Where,
-                    [new Join(JoinKind.Inner, "roles", "roles.id", "user_roles.role_id")]),
+                query => new QueryStatement(new()
+                {
+                    Table = "user_roles",
+                    Fields = ["user_roles.user_id", "roles.name"],
+                    Where = query.Where,
+                    Joins = [new Join(JoinKind.Inner, "roles", "roles.id", "user_roles.role_id")],
+                }),
                 query => query),
         });
         usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name");
@@ -323,8 +325,10 @@ public class UsersViewRoleTests
                     }
                 }),
                 new MappedValueMapper<UsersView>(),
-                new QueryStatement(
-                    "user",
+                new QueryStatement(new()
+                {
+                    Table = "user",
+                    Fields =
                     [
                         "user.id",
                         "user.username",
@@ -335,12 +339,13 @@ public class UsersViewRoleTests
                         "user_roles.role_id",
                         "roles.name",
                     ],
-                    joins:
+                    Joins =
                     [
                         new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
                         new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
                         new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
-                    ])));
+                    ],
+                })));
         var items = new List<UsersView>();
         await foreach (var item in usersRepo.Read())
             items.Add(item);

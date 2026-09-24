@@ -8,8 +8,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     readonly ICRUDRepository<T>? inner;
     readonly IReadonlyEnrichmentStrategy<T> strategy;
     readonly IWriteEnrichmentStrategy<T> write;
-    readonly IReadOnlyList<string> idNames;
-    readonly HashSet<string> ids;
+    readonly IReadOnlyList<string> ids;
     readonly IMapper<Value, T>? create;
 
     public IRepositoryTree Tree { get; }
@@ -31,23 +30,21 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         Tree = new RepositoryTree(new RepositoryTreeNode(inner, "", binder: this.strategy));
         if (inner is CRUDRepository<T> crud)
         {
-            idNames = crud.idNames;
+            ids = crud.ids;
             create = crud.create;
         }
         else
         {
-            idNames = CreateRepositoryOptions.FromType<T>().Ids;
-            create = CRUDRepositoryOptions<T>.Identity(idNames);
+            ids = CreateRepositoryOptions.FromType<T>().Ids;
+            create = CRUDRepositoryOptions<T>.Identity(ids);
         }
-        ids = [.. idNames];
     }
 
     public CRUDRepository(BuiltRepository<T> built) : base(
         built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
     {
         create = built.Create;
-        idNames = built.Ids;
-        ids = [.. built.Ids];
+        ids = built.Ids;
         strategy = new DefaultReadonlyEnrichmentStrategy<T>();
         write = new DefaultWriteEnrichmentStrategy<T>();
         Tree = new RepositoryTree(new RepositoryTreeNode(this, "", binder: strategy));
@@ -55,7 +52,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
 
     bool Enriched => Tree.Parent.Items.Count > 0;
 
-    public IReadOnlyList<string> Ids => idNames;
+    public IReadOnlyList<string> Ids => ids;
 
     public new CRUDRepository<T> AddMiddleware(ICommandMiddleware middleware)
     {
@@ -127,7 +124,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         if (!Enriched) return created;
         CopyIds(item, created);
         await write.Persist(Tree, [item!], WriteMode.Create);
-        if (idNames.Count != 1) return item;
+        if (ids.Count != 1) return item;
         var id = IdValue(item);
         return id is Value.Null ? item : await ReadSingleById(id) ?? item;
     }
@@ -194,8 +191,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = Statements.Update(fields, where);
-        var (text, parameters) = Distinct(statement.GetText(), fields, where.Parameters);
-        return await Command().Execute(text, parameters);
+        return await Command().Execute(statement, statement.Parameters);
     }
 
     async Task<Response> Remove(T item, IWhere? byWhere)
@@ -262,13 +258,13 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         if (ReferenceEquals(item, created)) return;
         if (item is IDictionary dest && created is IDictionary src)
         {
-            foreach (var name in idNames)
+            foreach (var name in ids)
                 if (src.Contains(name))
                     dest[name] = src[name];
             return;
         }
         var unset = new T();
-        foreach (var name in idNames)
+        foreach (var name in ids)
         {
             var prop = typeof(T).GetProperty(name);
             if (prop is not { CanRead: true, CanWrite: true }) continue;
@@ -280,7 +276,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
 
     Value IdValue(T item)
     {
-        var name = idNames[0];
+        var name = ids[0];
         if (item is IDictionary dict)
             return dict.Contains(name) ? Value.From(dict[name]) : Value.Null.Instance;
         return typeof(T).GetProperty(name)?.GetValue(item) is { } value
@@ -334,41 +330,5 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
             prop.SetValue(dest, prop.GetValue(item));
         }
         return dest;
-    }
-
-    static (string Text, List<Parameter> Parameters) Distinct(
-        string text, IReadOnlyList<Parameter> fields, IReadOnlyList<Parameter> where)
-    {
-        var split = text.LastIndexOf(" WHERE ", StringComparison.Ordinal);
-        var head = split < 0 ? text : text[..split];
-        var tail = split < 0 ? "" : text[split..];
-        var bound = fields.ToList();
-        var values = fields.GroupBy(field => field.Name).ToDictionary(group => group.Key, group => group.Last().Value);
-        foreach (var parameter in where)
-            if (values.TryGetValue(parameter.Name, out var current) && !Equals(current, parameter.Value))
-            {
-                var alias = $"{parameter.Name}__where";
-                tail = Alias(tail, parameter.Name, alias);
-                bound.Add(new Parameter(alias, parameter.Value));
-            }
-            else
-                bound.Add(parameter);
-        return (head + tail, bound);
-    }
-
-    static string Alias(string text, string name, string alias)
-    {
-        var token = "$" + name;
-        var next = "$" + alias;
-        var index = 0;
-        var result = new System.Text.StringBuilder();
-        while (text.IndexOf(token, index, StringComparison.Ordinal) is var at && at >= 0)
-        {
-            var end = at + token.Length;
-            var boundary = end >= text.Length || !char.IsAsciiLetterOrDigit(text[end]) && text[end] != '_';
-            result.Append(text[index..at]).Append(boundary ? next : token);
-            index = end;
-        }
-        return result.Append(text[index..]).ToString();
     }
 }

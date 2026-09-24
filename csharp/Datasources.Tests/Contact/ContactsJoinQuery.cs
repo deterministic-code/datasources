@@ -5,8 +5,10 @@ namespace Datasources.Tests.Contact;
 internal static class ContactsJoinQuery
 {
     public static IQuery Create() =>
-        new QueryStatement(
-            "contacts_base",
+        new QueryStatement(new()
+        {
+            Table = "contacts_base",
+            Fields =
             [
                 "contacts_base.id AS id",
                 "contacts_base.first_name AS first_name",
@@ -22,7 +24,7 @@ internal static class ContactsJoinQuery
                 "phone.number AS phone_number",
                 "phone_type.name AS phone_type_name",
             ],
-            null,
+            Joins =
             [
                 Join.Inner("contact_source", "contacts_base.contact_source_id", "contact_source.id"),
                 Join.Inner("contact_type", "contacts_base.contact_type_id", "contact_type.id"),
@@ -30,5 +32,6 @@ internal static class ContactsJoinQuery
                 Join.Left("address_type", "address.address_type_id", "address_type.id"),
                 Join.Left("phone", "contacts_base.id", "phone.contact_id"),
                 Join.Left("phone_type", "phone.phone_type_id", "phone_type.id"),
-            ]);
+            ],
+        });
 }

@@ -1,10 +1,10 @@
 use crate::mappers::Mapper;
 use crate::mappers::TransformMapper;
 use crate::parameter::Parameter;
-use crate::statements::{DeleteStatement, InsertStatement, Text, UpdateStatement};
+use crate::statements::{DeleteStatement, InsertStatement, Statement, Text, UpdateStatement};
 use crate::text_where::TextWhere;
 use crate::where_trait::Where;
-use crate::QueryStatement;
+use crate::{QueryStatement, QueryStatementOptions};
 use std::sync::Arc;
 
 pub struct RepositoryStatements {
@@ -41,7 +41,10 @@ impl RepositoryStatements {
 
     pub fn query(&self, where_clause: Option<&dyn Where>) -> QueryStatement {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
-        let built = QueryStatement::new(&self.table, &refs, where_clause, &[]);
+        let built = QueryStatement::new(QueryStatementOptions {
+            where_clause,
+            ..QueryStatementOptions::new(&self.table, &refs)
+        });
         let text = map_sql(&self.query, built.get_text());
         match where_clause {
             Some(predicate) => {
@@ -59,12 +62,11 @@ impl RepositoryStatements {
     }
 
     pub fn update(&self, fields: &[Parameter], where_clause: &dyn Where) -> UpdateStatement {
-        UpdateStatement::text(
-            map_sql(
-                &self.update,
-                UpdateStatement::new(&self.table, fields, Some(where_clause)).get_text(),
-            ),
+        let built = UpdateStatement::new(&self.table, fields, Some(where_clause));
+        UpdateStatement::bound(
+            map_sql(&self.update, built.get_text()),
             Some(Box::new(TextWhere::new(where_clause.get_text()))),
+            built.parameters(),
         )
     }
 

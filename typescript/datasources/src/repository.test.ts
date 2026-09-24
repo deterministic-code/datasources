@@ -78,7 +78,7 @@ describe("CRUDRepository", () => {
     command.reader = new MockReader([]);
     const where = new WhereClause(new Operator.Equals("id", 9));
     expect(
-      await repo.readSingle(new QueryStatement("users", ["id"], where)),
+      await repo.readSingle(new QueryStatement({ table: "users", fields: ["id"], where })),
     ).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id FROM users WHERE id = $id",

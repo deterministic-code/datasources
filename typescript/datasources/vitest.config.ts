@@ -27,6 +27,7 @@ export default defineConfig({
         "src/statements/IExpression.ts",
         "src/statements/IText.ts",
         "src/statements/IWhere.ts",
+        "src/statements/QueryStatementOptions.ts",
         "src/statements/Column.ts",
         "src/IReader.ts",
         "src/IRepository.ts",

@@ -2,7 +2,7 @@ import { Operator, QueryStatement, WhereClause, executeReader, type ICommand } f
 
 export const lookupId = async (command: ICommand, table: string, column: string, value: string): Promise<number> => {
   const where = new WhereClause(new Operator.Equals(column, value));
-  const reader = await executeReader(command, new QueryStatement(table, ["id"], where), where.parameters);
+  const reader = await executeReader(command, new QueryStatement({ table, fields: ["id"], where }), where.parameters);
   if (!(await reader.next()) || reader.current == null)
     throw new Error(`${table} '${value}' not found`);
   const id = reader.current.id;

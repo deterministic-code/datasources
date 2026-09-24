@@ -223,9 +223,9 @@ public static class RepositorySpec
             yield return step switch
             {
                 { Create: { } create } => WithStatementSql(new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col))).GetText(), true, spec.Type),
-                { Read: { } read } => WithStatementSql(new QueryStatement(table, columns, new WhereClause(new Operator.Equals("id", Value.From(read.Id)))).GetText(), false, spec.Type),
-                { Query: { } query } => WithStatementSql(new QueryStatement(table, columns, query.Where is { } where ? SqlWhere(where) : null).GetText(), false, spec.Type),
-                { ReadBy: { } readBy } => WithStatementSql(new QueryStatement(table, columns, SqlWhere(readBy.Where)).GetText(), false, spec.Type),
+                { Read: { } read } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = new WhereClause(new Operator.Equals("id", Value.From(read.Id))) }).GetText(), false, spec.Type),
+                { Query: { } query } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null }).GetText(), false, spec.Type),
+                { ReadBy: { } readBy } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) }).GetText(), false, spec.Type),
                 { Update: { } update } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), new WhereClause(new Operator.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"])))).GetText(), true, spec.Type),
                 { UpdateBy: { } updateBy } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(), true, spec.Type),
                 { Delete: { } delete } => WithStatementSql(new DeleteStatement(table, new WhereClause(new Operator.Equals("id", Value.From(delete.Id)))).GetText(), true, spec.Type),

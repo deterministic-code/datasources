@@ -80,6 +80,8 @@ export {
   ge,
   le,
   PrimaryKey,
+  Aggregate,
+  OrderBy,
   QueryStatement,
   ReferentialAction,
   StatementEvaluator,
@@ -137,7 +139,7 @@ export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";
 export { ProviderNotImplementedError } from "./ProviderNotImplementedError.ts";
 export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
-export type { Column, JoinKind, ReferentialAction as ReferentialActionName } from "./statements/index.ts";
+export type { Column, JoinKind, QueryStatementOptions, ReferentialAction as ReferentialActionName, SortDirection } from "./statements/index.ts";
 export type { Field, Scalar } from "./builders/index.ts";
 export { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 export {

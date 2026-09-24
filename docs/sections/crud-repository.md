@@ -1046,11 +1046,11 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 The table, columns, and id come from `User`. Create omits `id`. SQLite writes `last_insert_rowid` back onto `user.id`.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L427-L438
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L421-L452
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L637-L666
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L623-L676
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L184-L195
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L175-L201
 ```
 
 ```output [Created]
@@ -1099,11 +1099,11 @@ no row
 `UsersView` maps onto `user`. `UserTypeId` is written to `user_type_id`. `UserType` is the enriched name from `user_type` and is not a column. `Roles` is a `many` list from `user_role`. Create writes the generated id back onto `Key`. `Update` passes a where on `Key` and `Version`, so a stale version changes no row. Delete removes the user and its roles.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L509-L561
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L491-L578
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L703-L804
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L678-L818
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L247-L295
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L226-L306
 ```
 
 ```output [Created]
