@@ -69,7 +69,7 @@ readSingleById(id: Scalar | Cells): Promise<T | undefined>
 #### CRUDRepository
 
 ```typescript
-class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>
+class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>, IEnriched<T>
 ```
 
 **Constructor**
@@ -106,7 +106,34 @@ constructor(built: BuiltRepository<T>)
 
 - `built` — [BuiltRepository](#builtrepository)
 
+##### CRUDRepository(inner, strategy?)
+
+Wraps an inner [ICRUDRepository](#icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
+
+```typescript
+constructor(inner: ICRUDRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
+```
+
+- `inner` — [ICRUDRepository](#icrudrepository)
+- `strategy` — optional read enrichment strategy
+
 **Properties**
+
+##### ids
+
+Configured id property names.
+
+```typescript
+readonly ids: readonly string[]
+```
+
+##### tree
+
+Enrichment tree. Empty until `addEnriched`.
+
+```typescript
+readonly tree: IRepositoryTree
+```
 
 ##### rowConverter
 
@@ -207,6 +234,36 @@ readSingleById(id: Scalar | Cells): Promise<T | undefined>
 - `id` — value of the single id column, or a row keyed by each id column
 
 **Returns** `Promise<T | undefined>`
+
+##### addEnriched(into, from, via, by, select?, many?, nest?)
+
+Registers a lookup or a `many` list. Returns this repository.
+
+```typescript
+addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean, nest?: (node: IRepositoryTreeNode) => void): this
+```
+
+- `into` — destination field
+- `from` — key on the parent
+- `via` — related repository. A CRUD repository is kept so `many` children can be written
+- `by` — key on the related row
+- `select` — optional related field to copy
+- `many` — collect a list
+- `nest` — child-node callback
+
+**Returns** `this`
+
+##### enrich(items)
+
+Fills `items` from the registered tree.
+
+```typescript
+enrich(items: T[]): Promise<T[]>
+```
+
+- `items` — parents to fill
+
+**Returns** `Promise<T[]>`
 
 #### CRUDRepositoryOptions
 
@@ -398,7 +455,7 @@ Task<T?> ReadSingleById(Row ids)
 #### CRUDRepository
 
 ```csharp
-public sealed class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
+public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnriched<T> where T : new()
 ```
 
 **Constructor**
@@ -434,7 +491,34 @@ public Repository(BuiltRepository<T> built)
 
 - `built` — [BuiltRepository](#builtrepository)
 
+##### CRUDRepository(inner, strategy)
+
+Wraps an inner [ICRUDRepository](#icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
+
+```csharp
+public CRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+- `inner` — [ICRUDRepository](#icrudrepository)
+- `strategy` — optional read enrichment strategy
+
 **Properties**
+
+##### Ids
+
+Configured id property names.
+
+```csharp
+IReadOnlyList<string> Ids { get; }
+```
+
+##### Tree
+
+Enrichment tree. Empty until `AddEnriched`.
+
+```csharp
+IRepositoryTree Tree { get; }
+```
 
 ##### Mapper
 
@@ -531,6 +615,36 @@ public Task<T?> ReadSingleById(Row ids)
 - `ids` — id column names and values
 
 **Returns** `Task<T?>`
+
+##### AddEnriched(into, from, via, by, select, many, nest)
+
+Registers a lookup or a `many` list. Returns this repository.
+
+```csharp
+public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, Action<IRepositoryTreeNode>? nest = null)
+```
+
+- `into` — destination field
+- `from` — key on the parent
+- `via` — related repository. A CRUD repository is kept so `many` children can be written
+- `by` — key on the related row
+- `select` — optional related field to copy
+- `many` — collect a list
+- `nest` — child-node callback
+
+**Returns** [IEnriched](./enriched-repository.md#ienriched)`<T>`
+
+##### Enrich(items)
+
+Fills `items` from the registered tree.
+
+```csharp
+public Task Enrich(IList<T> items)
+```
+
+- `items` — parents to fill
+
+**Returns** `Task`
 
 #### CRUDRepositoryOptions
 
@@ -744,7 +858,37 @@ pub fn from_built(built: BuiltRepository) -> Self
 
 **Returns** [CRUDRepository](#crudrepository)
 
+##### from_repository(inner)
+
+Wraps an inner [ICRUDRepository](#icrudrepository). Parent writes delegate to `inner`.
+
+```rust
+pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
+```
+
+- `inner` — [ICRUDRepository](#icrudrepository)
+
+**Returns** [CRUDRepository](#crudrepository)
+
 **Methods**
+
+##### add_enriched(into, from, via, by, select, many, nest)
+
+Registers a lookup or a `many` list.
+
+```rust
+pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool, nest: impl Nest) -> &mut Self
+```
+
+- `into` — destination field
+- `from` — key on the parent
+- `via` — related repository. A CRUD repository is kept so `many` children can be written
+- `by` — key on the related row
+- `select` — optional related field to copy
+- `many` — collect a list
+- `nest` — child-node callback, or `()`
+
+**Returns** `&mut Self`
 
 ##### add_middleware(middleware)
 
@@ -887,32 +1031,110 @@ pub ids: Vec<String>
 
 ## Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the created item.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the configured id through the create mapper.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
 `Mapper` / `mapper` is [ReadonlyRepositoryOptions.RowsMapper](./readonly-repository.md#rowsmapper).
 
+`AddEnriched` registers a lookup or a `many` list on this repository. Lookups are filled on read and are not written. `many` children are created, replace-synced, and deleted with the parent. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+
 ## Examples
 
-### Create, update, and delete
+### User from the type
+
+The table, columns, and id come from `User`. Create omits `id`. SQLite writes `last_insert_rowid` back onto `user.id`.
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L100-L108
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L427-L438
 ```
-```rust rust/datasources/src/tests/mod.rs#L1468-L1482
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L637-L666
 ```
-```typescript typescript/datasources/src/repository.test.ts#L103-L113
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L184-L195
+```
+
+```output [Created]
+id: 1
+```
+
+```output [Read by id]
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
+```
+
+```output:typescript [Read by id]
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+```output:rust [Read by id]
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+```output [Read by username and enabled]
+ada
+```
+
+```output [After update]
+ada-v2
+```
+
+```output [After delete]
+no row
 ```
 :::
 
-### Read one row by id
+### Users view with enrichment and a version
+
+`UsersView` maps onto `user`. `UserTypeId` is written to `user_type_id`. `UserType` is the enriched name from `user_type` and is not a column. `Roles` is a `many` list from `user_role`. Create writes the generated id back onto `Key`. `Update` passes a where on `Key` and `Version`, so a stale version changes no row. Delete removes the user and its roles.
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L144-L150
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L509-L561
 ```
-```rust rust/datasources/src/tests/mod.rs#L1835-L1855
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L703-L804
 ```
-```typescript typescript/datasources/src/repository.test.ts#L175-L183
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L247-L295
+```
+
+```output [Created]
+{
+  id: 1,
+  Key: 1
+}
+```
+
+```output [Enriched Ada]
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor']
+}
+```
+
+```output [Versioned update]
+{
+  rowsAffected: 1,
+  version: 2,
+  Login: 'ada-v2'
+}
+```
+
+```output [Stale update]
+{
+  rowsAffected: 0
+}
+```
+
+```output [After delete]
+no row
 ```
 :::

@@ -438,7 +438,7 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#L47-L86
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L32-L56
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L34-L58
 ```
 
 ```output [After: by id]
@@ -503,7 +503,7 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#L88-L152
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L58-L97
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L60-L99
 ```
 
 ```output [After: by id]

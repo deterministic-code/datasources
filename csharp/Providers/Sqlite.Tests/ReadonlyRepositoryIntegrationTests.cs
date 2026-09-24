@@ -403,3 +403,182 @@ public class UsersViewRoleTests
         return connection;
     }
 }
+
+public class UserCrudTests
+{
+    sealed class User
+    {
+        public int id { get; set; }
+        public string username { get; set; } = "";
+        public bool is_enabled { get; set; }
+    }
+
+    [Fact]
+    public async Task WritesUserFromTheType()
+    {
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var connection = await Open(ds, """
+            CREATE TABLE User (
+                id INTEGER PRIMARY KEY,
+                is_enabled INTEGER NOT NULL,
+                username TEXT NOT NULL
+            );
+            """);
+        var usersRepo = new CRUDRepository<User>(connection);
+        var created = new User { username = "ada", is_enabled = true };
+        await usersRepo.Create(created);
+        var byId = await usersRepo.ReadSingleById(created.id);
+        var matches = new List<User>();
+        await foreach (var row in usersRepo.Read(new WhereClause("username", eq, "ada").And("is_enabled", eq, true)))
+            matches.Add(row);
+        created.username = "ada-v2";
+        await usersRepo.Update(created);
+        var renamed = await usersRepo.ReadSingleById(created.id);
+        await usersRepo.Delete(created);
+        var gone = await usersRepo.ReadSingleById(created.id);
+
+        Assert.Equal(1, created.id);
+        Assert.Equal(1, byId!.id);
+        Assert.Equal("ada", byId.username);
+        Assert.True(byId.is_enabled);
+        Assert.Equal("ada", Assert.Single(matches).username);
+        Assert.Equal("ada-v2", renamed!.username);
+        Assert.Null(gone);
+    }
+
+    static async Task<IConnection> Open(IDatasource ds, string sql)
+    {
+        var connection = await ds.CreateConnection();
+        await connection.Open();
+        var command = connection.CreateCommand();
+        foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            await command.Execute(statement);
+        return connection;
+    }
+}
+
+public class UsersViewCrudTests
+{
+    sealed class UserType
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    sealed class UserRole
+    {
+        public int UserId { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    sealed class UsersView
+    {
+        public int Key { get; set; }
+        public string Login { get; set; } = "";
+        public bool Active { get; set; }
+        public DateTime Opened { get; set; }
+        public int UserTypeId { get; set; }
+        public string UserType { get; set; } = "";
+        public int Version { get; set; }
+        public List<UserRole> Roles { get; set; } = [];
+    }
+
+    [Fact]
+    public async Task UpdatesUsersViewWhenTheVersionMatches()
+    {
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var connection = await Open(ds, """
+            CREATE TABLE user_type (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+            CREATE TABLE user (
+                id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL,
+                is_enabled INTEGER NOT NULL,
+                created TEXT NOT NULL,
+                user_type_id INTEGER NOT NULL,
+                version INTEGER NOT NULL
+            );
+            CREATE TABLE user_role (
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL
+            );
+            """);
+        var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+        var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
+        {
+            Ids = ["Key"],
+            ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
+            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
+            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["Key"] = "id",
+                ["Login"] = "username",
+                ["Active"] = "is_enabled",
+                ["Opened"] = "created",
+                ["UserTypeId"] = "user_type_id",
+                ["Version"] = "version",
+            }),
+        });
+        var userTypesRepo = new CRUDRepository<UserType>(connection, new CRUDRepositoryOptions<UserType>
+        {
+            Ids = ["Id"],
+            EntityMapper = casing,
+            ColumnMappings = casing,
+        });
+        var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
+        {
+            Ids = [],
+            EntityMapper = casing,
+            ColumnMappings = casing,
+        });
+        usersRepo.AddEnriched("UserType", "UserTypeId", userTypesRepo, "Id", "Name");
+        usersRepo.AddEnriched("Roles", "Key", userRolesRepo, "UserId", many: true);
+        var admin = new UserType { Name = "admin" };
+        await userTypesRepo.Create(admin);
+        var user = new UsersView
+        {
+            Login = "ada",
+            Active = true,
+            Opened = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            UserTypeId = admin.Id,
+            Version = 1,
+            Roles = [new UserRole { Name = "admin" }, new UserRole { Name = "editor" }],
+        };
+        await usersRepo.Create(user);
+        var loaded = await usersRepo.ReadSingle(new WhereClause("Key", eq, user.Key));
+        var version = loaded!.Version;
+        loaded.Login = "ada-v2";
+        loaded.Version = version + 1;
+        var updated = await usersRepo.Update(loaded, new WhereClause("Key", eq, loaded.Key).And("Version", eq, version));
+        var current = await usersRepo.ReadSingle(new WhereClause("Key", eq, loaded.Key));
+        var stale = await usersRepo.Update(loaded, new WhereClause("Key", eq, loaded.Key).And("Version", eq, version));
+        await usersRepo.Delete(loaded);
+        var gone = await usersRepo.ReadSingleById(loaded.Key);
+        var roles = new List<UserRole>();
+        await foreach (var role in userRolesRepo.Read(new WhereClause("UserId", eq, loaded.Key)))
+            roles.Add(role);
+
+        Assert.Equal(1, admin.Id);
+        Assert.Equal(1, user.Key);
+        Assert.Equal("admin", loaded.UserType);
+        Assert.Equal(["admin", "editor"], loaded.Roles.Select(role => role.Name).OrderBy(name => name));
+        Assert.Equal(1, updated.RowsAffected);
+        Assert.Equal(2, current!.Version);
+        Assert.Equal("ada-v2", current.Login);
+        Assert.Equal(0, stale.RowsAffected);
+        Assert.Null(gone);
+        Assert.Empty(roles);
+    }
+
+    static async Task<IConnection> Open(IDatasource ds, string sql)
+    {
+        var connection = await ds.CreateConnection();
+        await connection.Open();
+        var command = connection.CreateCommand();
+        foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            await command.Execute(statement);
+        return connection;
+    }
+}

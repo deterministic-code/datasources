@@ -150,10 +150,27 @@ describe("CRUDRepository", () => {
     expect(command.executeCalls[0]?.text).toContain("1 = 1");
     await expect(repo.readSingleById(1)).rejects.toThrow("ReadSingleById requires an Id column");
     await repo.delete({ id: 1, name: "a" });
-    expect(command.executeCalls[1]?.parameters).toEqual([
+    expect(command.executeCalls[1]?.parameters).toEqual([]);
+    await repo.delete({ id: 1, name: "a" }, new Where("id = $id"));
+    expect(command.executeCalls[2]?.parameters).toEqual([
       { name: "id", value: 1 },
       { name: "name", value: "a" },
     ]);
+    const versioned = create();
+    await versioned.repo.update(
+      { id: 1, name: "b", name_extra: "x" },
+      new WhereClause(new Operator.And(
+        new Operator.Equals("name_extra", "x"),
+        new Operator.Equals("name", "a"),
+      )),
+    );
+    expect(versioned.command.executeCalls[0]?.text).toContain("name = $name__where");
+    expect(versioned.command.executeCalls[0]?.text).toContain("name_extra = $name_extra");
+    await versioned.repo.update({ id: 1, name: "b" }, {
+      getText: () => "name = $name",
+      parameters: [{ name: "skipped" }, { name: "name", value: "a" }],
+    });
+    expect(versioned.command.executeCalls[1]?.text).toContain("name = $name__where");
   });
 
   it("supports composite id and omits ids on create", async () => {
