@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  Datasource,
-  DictionaryMapper,
+  ChangeCasingMapper, Datasource,
+  DictionaryMapper, EnrichedReadonlyRepository,
   PluralizerMapper,
   WhereClause,
   eq,
@@ -94,6 +94,88 @@ describe("readonly repository", () => {
     expect(byLogin[0]?.Login).toBe("ada");
     expect(later.length).toBe(1);
     expect(later[0]?.Login).toBe("grace");
+  });
+});
+
+describe("user view", () => {
+  class UserAccount {
+    Key = "";
+    Login = "";
+    Active = 0;
+    Opened = "";
+    UserTypeId = 0;
+    UserType = "";
+  }
+
+  class UserType {
+    Id = 0;
+    Name = "";
+  }
+
+  class UserView {
+    Key = "";
+    Login = "";
+    Active = 0;
+    Opened = "";
+    UserType = "";
+  }
+
+  it("fills user type on a user view", async () => {
+    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const connection = await open(ds, `
+      CREATE TABLE user_type (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+      );
+      INSERT INTO user_type (id, name) VALUES
+        (1, 'admin'),
+        (2, 'user'),
+        (3, 'service');
+      CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL,
+        user_type_id INTEGER NOT NULL
+      );
+      INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+        ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+        ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+        ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+    `);
+    const users = ds.createReadonlyRepository(UserAccount, connection, {
+      entity: "user",
+      readColumns: ["Key", "Login", "Active", "Opened", "UserTypeId"],
+      columnMappings: new DictionaryMapper([
+        ["Key", "id"],
+        ["Login", "username"],
+        ["Active", "is_enabled"],
+        ["Opened", "created"],
+        ["UserTypeId", "user_type_id"],
+      ]),
+    });
+    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+    const types = ds.createReadonlyRepository(UserType, connection, {
+      entity: "UserType",
+      entityMapper: casing,
+      columnMappings: casing,
+    });
+    const enriched = new EnrichedReadonlyRepository(users);
+    enriched.addEnriched("UserType", "UserTypeId", types, "Id", "Name");
+    const account = await enriched.readSingle(new WhereClause("Key", eq, ada));
+    const usersView = new UserView();
+    usersView.Key = account?.Key ?? "";
+    usersView.Login = account?.Login ?? "";
+    usersView.Active = account?.Active ?? 0;
+    usersView.Opened = account?.Opened ?? "";
+    usersView.UserType = account?.UserType ?? "";
+    expect(account?.UserTypeId).toBe(1);
+    expect(usersView.UserType).toBe("admin");
+    expect(usersView.Login).toBe("ada");
+    expect(usersView.Key).toBe(ada);
+    expect(usersView.Active).toBe(1);
+    expect(usersView.Opened).toBe("2020-01-01T00:00:00.000Z");
+    expect("UserTypeId" in usersView).toBe(false);
   });
 });
 

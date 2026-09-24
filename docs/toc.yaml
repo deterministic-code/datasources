@@ -108,6 +108,10 @@ pages:
     title: Pluralizer Mapper
     group: Code Reference
     parent: Mapper
+  - path: sections/change-casing-mapper.md
+    title: Change Casing Mapper
+    group: Code Reference
+    parent: Mapper
   - path: sections/transform-mapper.md
     title: Transform Mapper
     group: Code Reference

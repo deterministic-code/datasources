@@ -164,3 +164,119 @@ async fn open(ds: &dyn Datasource, sql: &str) -> Arc<dyn Connection> {
     }
     connection
 }
+
+mod user_view {
+    use super::{datasource, open, ADA, GRACE, LIN};
+    use datasources::{
+        create_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        DictionaryMapper, EnrichedReadonlyRepository, IReadonlyRepository, Value, WhereClause,
+    };
+    use uuid::Uuid;
+
+    struct UserAccount;
+
+    impl ConvertSchema for UserAccount {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![
+                ("Key", "TEXT"),
+                ("Login", "TEXT"),
+                ("Active", "INTEGER"),
+                ("Opened", "TEXT"),
+                ("UserTypeId", "INTEGER"),
+            ]
+        }
+    }
+
+    struct UserType;
+
+    impl ConvertSchema for UserType {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![("Id", "INTEGER"), ("Name", "TEXT")]
+        }
+    }
+
+    #[tokio::test]
+    async fn fills_user_type_on_user_view() {
+        let built = datasource();
+        let ds: &dyn Datasource = &*built;
+        let connection = open(
+            ds,
+            &format!(
+                "
+            CREATE TABLE user_type (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+            INSERT INTO user_type (id, name) VALUES
+                (1, 'admin'),
+                (2, 'user'),
+                (3, 'service');
+            CREATE TABLE user (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL,
+                is_enabled INTEGER NOT NULL,
+                created TEXT NOT NULL,
+                user_type_id INTEGER NOT NULL
+            );
+            INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+                ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+                ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+                ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+            "
+            ),
+        )
+        .await;
+        let mut users_options = create_repository_options::<UserAccount>();
+        users_options.entity = "user".into();
+        users_options.column_mappings = Box::new(DictionaryMapper::new([
+            ("Key".to_string(), "id".to_string()),
+            ("Login".to_string(), "username".to_string()),
+            ("Active".to_string(), "is_enabled".to_string()),
+            ("Opened".to_string(), "created".to_string()),
+            ("UserTypeId".to_string(), "user_type_id".to_string()),
+        ]));
+        let mut type_options = create_repository_options::<UserType>();
+        type_options.entity = "UserType".into();
+        type_options.entity_mapper =
+            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        type_options.column_mappings =
+            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        let users = ds.create_readonly_repository::<UserAccount>(
+            Some(connection.clone()),
+            Some(users_options.read),
+        );
+        let types =
+            ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
+        let mut enriched = EnrichedReadonlyRepository::new(users);
+        enriched.add_enriched(
+            "UserType",
+            "UserTypeId",
+            types,
+            "Id",
+            Some("Name".into()),
+            false,
+            (),
+        );
+        let account = enriched
+            .read_single(Some(&WhereClause::binary(
+                "Key",
+                eq,
+                Uuid::parse_str(ADA).unwrap(),
+            )))
+            .await
+            .unwrap()
+            .unwrap();
+        let mut users_view = account.clone();
+        users_view.remove("UserTypeId");
+        assert_eq!(account.get("UserTypeId"), Some(&Value::Int(1)));
+        assert_eq!(users_view.get("UserType"), Some(&Value::from("admin")));
+        assert_eq!(users_view.get("Login"), Some(&Value::from("ada")));
+        assert_eq!(users_view.get("Key"), Some(&Value::from(ADA)));
+        assert_eq!(users_view.get("Active"), Some(&Value::Int(1)));
+        assert_eq!(
+            users_view.get("Opened"),
+            Some(&Value::from("2020-01-01T00:00:00.000Z"))
+        );
+        assert!(users_view.get("UserTypeId").is_none());
+    }
+}
