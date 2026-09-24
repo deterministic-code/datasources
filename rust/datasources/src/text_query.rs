@@ -73,6 +73,12 @@ impl Statement for QueryStatement {
     }
 }
 
+impl crate::ReadInput for QueryStatement {
+    fn as_statement(&self) -> Option<&dyn crate::Statement> {
+        Some(self)
+    }
+}
+
 impl Query for QueryStatement {
     fn where_clause(&self) -> Option<&dyn Where> {
         self.where_clause.as_deref()

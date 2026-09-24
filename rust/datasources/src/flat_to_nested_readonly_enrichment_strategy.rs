@@ -1,13 +1,12 @@
 use crate::mappers::{FlatToNestedMapper, MappedRow, Mapper};
 use crate::query::Query;
+use crate::read_input::{ReadInput, StatementRead};
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statement::Statement;
-use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -40,29 +39,14 @@ impl ReadonlyEnrichmentStrategy for FlatToNestedReadonlyEnrichmentStrategy {
         &self,
         _inner: &dyn IReadonlyRepository,
         _tree: &RepositoryTree,
-        query: Option<&dyn Statement>,
+        query: Option<&dyn ReadInput>,
     ) -> Result<Vec<Row>> {
         let rows = match &self.command {
-            Some(command) => self.source.read(Some(command.as_ref())).await?,
+            Some(command) => {
+                let input = StatementRead(command.as_ref());
+                self.source.read(Some(&input)).await?
+            }
             None => self.source.read(query).await?,
-        };
-        Ok(self
-            .mapper
-            .map(rows)
-            .into_iter()
-            .map(|row| (self.hydrate)(row))
-            .collect())
-    }
-
-    async fn read_where(
-        &self,
-        _inner: &dyn IReadonlyRepository,
-        _tree: &RepositoryTree,
-        where_clause: &dyn Where,
-    ) -> Result<Vec<Row>> {
-        let rows = match &self.command {
-            Some(command) => self.source.read(Some(command.as_ref())).await?,
-            None => self.source.read_where(where_clause).await?,
         };
         Ok(self
             .mapper

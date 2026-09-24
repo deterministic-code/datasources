@@ -116,12 +116,12 @@ await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address
 ```rust
 let mut contacts = EnrichedCRUDRepository::new(contact_repo);
 contacts
-    .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false)
-    .add_enriched_repo_with("addresses", "id", addresses, "contact_id", None, true, |node| {
+    .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false, ())
+    .add_enriched("addresses", "id", addresses, "contact_id", None, true, |node| {
         node.include(address_types, "address_type_name", "address_type_id", "id", Some("name".into()), false);
     });
 
-let loaded = contacts.read_single_where(&WhereClause::new(Operator::equals("id", 10))).await?;
+let loaded = contacts.read_single(Some(&WhereClause::new(Operator::equals("id", 10)))).await?;
 contacts.create(contact).await?;
 ```
 ```typescript

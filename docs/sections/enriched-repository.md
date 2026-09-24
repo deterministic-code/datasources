@@ -2,9 +2,9 @@
 
 A read-only wrapper fills properties already on `T` from related repositories. This is a post-Read step (after convert-then-map). It does not join or collapse rows.
 
-Lookups use `ReadSingle` / `read_single_where` (cached per distinct key). Lists use `Read` / `read_where`. Missing lookups leave the destination default.
+Lookups use `ReadSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read`. Missing lookups leave the destination default.
 
-`EnrichedCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository (Rust: `add_enriched_repo`).
+`EnrichedCRUDRepository` is the write side of the same tree. `Read` still enriches. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository.
 
 - **Create** — write the parent, apply generated identity to `id`, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by `id`, create the rest).
@@ -771,73 +771,21 @@ pub tree: RepositoryTree
 
 **Methods**
 
-##### add_enriched(into, from, via, by, select, many)
+##### add_enriched(into, from, via, by, select, many, nest)
 
-Adds a related fill.
+Adds a related fill. Pass `()` for `nest` when the child has no further fill.
 
 ```rust
-pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: Arc<dyn ReadonlyRepository>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
+pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool, nest: impl Nest) -> &mut Self
 ```
 
 - `into` — destination field
 - `from` — key on the parent
-- `via` — related [ReadonlyRepository](./readonly-repository.md)
+- `via` — related readonly or [CRUDRepository](./crud-repository.md). A CRUD repository is kept for deep writes
 - `by` — key on the related row
 - `select` — optional related field to copy
 - `many` — collect a list
-
-**Returns** `&mut Self`
-
-##### add_enriched_with(into, from, via, by, select, many, nest)
-
-Adds a related fill and nests on the child node.
-
-```rust
-pub fn add_enriched_with(&mut self, into: impl Into<String>, from: impl Into<String>, via: Arc<dyn ReadonlyRepository>, by: impl Into<String>, select: Option<String>, many: bool, nest: impl FnOnce(&mut RepositoryTreeNode)) -> &mut Self
-```
-
-- `into` — destination field
-- `from` — key on the parent
-- `via` — related [ReadonlyRepository](./readonly-repository.md)
-- `by` — key on the related row
-- `select` — optional related field to copy
-- `many` — collect a list
-- `nest` — child-node callback
-
-**Returns** `&mut Self`
-
-##### add_enriched_repo(into, from, via, by, select, many)
-
-Adds a related fill whose `via` is a [CRUDRepository](./crud-repository.md) (required for deep writes).
-
-```rust
-pub fn add_enriched_repo(&mut self, into: impl Into<String>, from: impl Into<String>, via: Arc<dyn CRUDRepository>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
-```
-
-- `into` — destination field
-- `from` — key on the parent
-- `via` — related [CRUDRepository](./crud-repository.md)
-- `by` — key on the related row
-- `select` — optional related field to copy
-- `many` — collect a list
-
-**Returns** `&mut Self`
-
-##### add_enriched_repo_with(into, from, via, by, select, many, nest)
-
-Adds a CRUD-backed fill and nests on the child node.
-
-```rust
-pub fn add_enriched_repo_with(&mut self, into: impl Into<String>, from: impl Into<String>, via: Arc<dyn CRUDRepository>, by: impl Into<String>, select: Option<String>, many: bool, nest: impl FnOnce(&mut RepositoryTreeNode)) -> &mut Self
-```
-
-- `into` — destination field
-- `from` — key on the parent
-- `via` — related [CRUDRepository](./crud-repository.md)
-- `by` — key on the related row
-- `select` — optional related field to copy
-- `many` — collect a list
-- `nest` — child-node callback
+- `nest` — child-node callback, or `()`
 
 **Returns** `&mut Self`
 
@@ -876,9 +824,9 @@ pub fn with_strategy(inner: Arc<dyn CRUDRepository>, strategy: Arc<dyn ReadonlyE
 
 **Methods**
 
-##### add_enriched / add_enriched_repo
+##### add_enriched(into, from, via, by, select, many, nest)
 
-Forwards to the inner [EnrichedReadonlyRepository](#enrichedreadonlyrepository). Use `add_enriched_repo` for `many` children that must persist.
+Forwards to the inner [EnrichedReadonlyRepository](#enrichedreadonlyrepository). A CRUD `via` is kept so `many` children can be written.
 
 #### RepositoryTree
 
@@ -943,27 +891,10 @@ pub enrichment: Option<Enrichment>
 Adds a child node.
 
 ```rust
-pub fn include(&mut self, via: Arc<dyn ReadonlyRepository>, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
+pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
 ```
 
-- `via` — related [ReadonlyRepository](./readonly-repository.md)
-- `into` — destination field
-- `from` — parent key
-- `by` — related key
-- `select` — optional related field to copy
-- `many` — collect a list
-
-**Returns** `&mut Self`
-
-##### include_repo(via, into, from, by, select, many)
-
-Adds a child whose `via` is a [CRUDRepository](./crud-repository.md).
-
-```rust
-pub fn include_repo(&mut self, via: Arc<dyn CRUDRepository>, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
-```
-
-- `via` — related [CRUDRepository](./crud-repository.md)
+- `via` — related readonly or [CRUDRepository](./crud-repository.md). A CRUD repository is kept for deep writes
 - `into` — destination field
 - `from` — parent key
 - `by` — related key
@@ -1053,12 +984,12 @@ pub trait ReadonlyEnrichmentStrategy
 Reads through `inner`, then enriches.
 
 ```rust
-async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn Statement>) -> Result<Vec<Row>>
+async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
 ```
 
 - `inner` — [ReadonlyRepository](./readonly-repository.md)
 - `tree` — [RepositoryTree](#repositorytree)
-- `query` — optional query or stored procedure
+- `query` — optional query, where, or stored procedure
 
 **Returns** `Result<Vec<Row>>`
 
@@ -1094,7 +1025,7 @@ AddEnriched("children", "id", children, "parent_id", many: true,
 ::: example
 ```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L43-L47
 ```
-```rust rust/datasources/src/tests/mod.rs#L1333-L1342
+```rust rust/datasources/src/tests/mod.rs#L1845-L1854
 ```
 ```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51
 ```

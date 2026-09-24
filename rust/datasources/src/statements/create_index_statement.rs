@@ -35,3 +35,9 @@ impl Text for CreateIndexStatement {
 }
 
 impl Statement for CreateIndexStatement {}
+
+impl crate::ReadInput for CreateIndexStatement {
+    fn as_statement(&self) -> Option<&dyn crate::Statement> {
+        Some(self)
+    }
+}

@@ -1,13 +1,12 @@
 use crate::enrichment::Enrichment;
+use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::{encode_row, encode_rows, RepositoryTreeNode};
 use crate::result::Result;
 use crate::row::Row;
-use crate::statement::Statement;
 use crate::value::Value;
-use crate::where_trait::Where;
 use crate::{Operator, WhereClause};
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -20,20 +19,9 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
         &self,
         inner: &dyn IReadonlyRepository,
         tree: &RepositoryTree,
-        query: Option<&dyn Statement>,
+        query: Option<&dyn ReadInput>,
     ) -> Result<Vec<Row>> {
         let mut items = inner.read(query).await?;
-        self.enrich(tree, &mut items).await?;
-        Ok(items)
-    }
-
-    async fn read_where(
-        &self,
-        inner: &dyn IReadonlyRepository,
-        tree: &RepositoryTree,
-        where_clause: &dyn Where,
-    ) -> Result<Vec<Row>> {
-        let mut items = inner.read_where(where_clause).await?;
         self.enrich(tree, &mut items).await?;
         Ok(items)
     }
@@ -89,10 +77,10 @@ async fn apply_lookup(
         return Ok(());
     }
     let loaded = via
-        .read_where(&WhereClause::new(Operator::in_list(
+        .read(Some(&WhereClause::new(Operator::in_list(
             enrichment.by.clone(),
             values,
-        )))
+        ))))
         .await?;
     let mut index = HashMap::new();
     for mut related in loaded {
@@ -133,10 +121,10 @@ async fn apply_many(
         return Ok(());
     }
     let loaded = via
-        .read_where(&WhereClause::new(Operator::in_list(
+        .read(Some(&WhereClause::new(Operator::in_list(
             enrichment.by.clone(),
             values,
-        )))
+        ))))
         .await?;
     let mut index: HashMap<String, Vec<Row>> = HashMap::new();
     for row in loaded {

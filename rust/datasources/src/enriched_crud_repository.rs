@@ -3,14 +3,16 @@ use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrate
 use crate::enriched::Enriched;
 use crate::enriched_readonly_repository::EnrichedReadonlyRepository;
 use crate::enrichment::Enrichment;
+use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
+use crate::nest::Nest;
+use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statement::Statement;
 use crate::value::Value;
 use crate::where_trait::Where;
 use crate::{Operator, WhereClause};
@@ -55,57 +57,14 @@ impl EnrichedCRUDRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn IReadonlyRepository>,
+        via: impl EnrichmentVia,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
+        nest: impl Nest,
     ) -> &mut Self {
         self.enriched
-            .add_enriched(into, from, via, by, select, many);
-        self
-    }
-
-    pub fn add_enriched_with(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn IReadonlyRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-        nest: impl FnOnce(&mut RepositoryTreeNode),
-    ) -> &mut Self {
-        self.enriched
-            .add_enriched_with(into, from, via, by, select, many, nest);
-        self
-    }
-
-    pub fn add_enriched_repo(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn ICRUDRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-    ) -> &mut Self {
-        self.enriched
-            .add_enriched_repo(into, from, via, by, select, many);
-        self
-    }
-
-    pub fn add_enriched_repo_with(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn ICRUDRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-        nest: impl FnOnce(&mut RepositoryTreeNode),
-    ) -> &mut Self {
-        self.enriched
-            .add_enriched_repo_with(into, from, via, by, select, many, nest);
+            .add_enriched(into, from, via, by, select, many, nest);
         self
     }
 
@@ -302,10 +261,10 @@ async fn load(
         return Ok(Vec::new());
     };
     writer
-        .read_where(&WhereClause::new(Operator::equals(
+        .read(Some(&WhereClause::new(Operator::equals(
             enrichment.by.clone(),
             key,
-        )))
+        ))))
         .await
 }
 
@@ -351,20 +310,16 @@ impl IRepository for EnrichedCRUDRepository {
 
 #[async_trait]
 impl IReadonlyRepository for EnrichedCRUDRepository {
-    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
+        Some(self)
+    }
+
+    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
         self.enriched.read_single(query).await
     }
 
-    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
         self.enriched.read(query).await
-    }
-
-    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.enriched.read_single_where(where_clause).await
-    }
-
-    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.enriched.read_where(where_clause).await
     }
 }
 

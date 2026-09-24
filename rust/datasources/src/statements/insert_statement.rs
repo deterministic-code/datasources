@@ -37,6 +37,12 @@ impl Text for InsertStatement {
     }
 }
 
+impl crate::ReadInput for InsertStatement {
+    fn as_statement(&self) -> Option<&dyn crate::Statement> {
+        Some(self)
+    }
+}
+
 impl Statement for InsertStatement {
     fn kind(&self) -> super::statement::StatementKind {
         super::statement::StatementKind::Insert

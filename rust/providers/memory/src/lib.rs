@@ -115,12 +115,12 @@ mod tests {
             .unwrap()
             .is_empty());
         assert!(repo
-            .read_single_where(&TextWhere::new("{\"id\":1}"))
+            .read_single(Some(&TextWhere::new("{\"id\":1}")))
             .await
             .unwrap()
             .is_some());
         assert!(!repo
-            .read_where(&TextWhere::new("{\"id\":1}"))
+            .read(Some(&TextWhere::new("{\"id\":1}")))
             .await
             .unwrap()
             .is_empty());

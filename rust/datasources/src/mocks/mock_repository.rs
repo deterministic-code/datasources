@@ -3,12 +3,12 @@ use crate::i_repository::IRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
+use crate::read_input::ReadInput;
 use crate::row::Row;
-use crate::statement::Statement;
 use crate::value::Value;
 use crate::where_trait::Where;
 use async_trait::async_trait;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 pub struct MockRepository {
     pub items: Mutex<Vec<Row>>,
@@ -56,26 +56,22 @@ impl IRepository for MockRepository {}
 
 #[async_trait]
 impl IReadonlyRepository for MockRepository {
-    async fn read_single(&self, _query: Option<&dyn Statement>) -> Result<Option<Row>> {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
+        Some(self)
+    }
+
+    async fn read_single(&self, _query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
         if let Some(error) = &*self.read_single_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(self.items.lock().expect("mock").first().cloned())
     }
 
-    async fn read(&self, _query: Option<&dyn Statement>) -> Result<Vec<Row>> {
+    async fn read(&self, _query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
         if let Some(error) = &*self.get_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(self.items.lock().expect("mock").clone())
-    }
-
-    async fn read_single_where(&self, _where_clause: &dyn Where) -> Result<Option<Row>> {
-        self.read_single(None).await
-    }
-
-    async fn read_where(&self, _where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.read(None).await
     }
 }
 

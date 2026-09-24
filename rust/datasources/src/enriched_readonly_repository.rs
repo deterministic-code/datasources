@@ -1,14 +1,15 @@
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enriched::Enriched;
+use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
+use crate::nest::Nest;
+use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statement::Statement;
-use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;
@@ -43,59 +44,13 @@ impl EnrichedReadonlyRepository {
         &mut self,
         into: impl Into<String>,
         from: impl Into<String>,
-        via: Arc<dyn IReadonlyRepository>,
+        via: impl EnrichmentVia,
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
+        nest: impl Nest,
     ) -> &mut Self {
-        self.tree.parent.include(via, into, from, by, select, many);
-        self
-    }
-
-    pub fn add_enriched_with(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn IReadonlyRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-        nest: impl FnOnce(&mut RepositoryTreeNode),
-    ) -> &mut Self {
-        nest(self.tree.parent.include(via, into, from, by, select, many));
-        self
-    }
-
-    pub fn add_enriched_repo(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn crate::repository::ICRUDRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-    ) -> &mut Self {
-        self.tree
-            .parent
-            .include_repo(via, into, from, by, select, many);
-        self
-    }
-
-    pub fn add_enriched_repo_with(
-        &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
-        via: Arc<dyn crate::repository::ICRUDRepository>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
-        nest: impl FnOnce(&mut RepositoryTreeNode),
-    ) -> &mut Self {
-        nest(
-            self.tree
-                .parent
-                .include_repo(via, into, from, by, select, many),
-        );
+        nest.apply(self.tree.parent.include(via, into, from, by, select, many));
         self
     }
 }
@@ -115,23 +70,13 @@ impl IRepository for EnrichedReadonlyRepository {
 
 #[async_trait]
 impl IReadonlyRepository for EnrichedReadonlyRepository {
-    async fn read_single(&self, query: Option<&dyn Statement>) -> Result<Option<Row>> {
+    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
         Ok(self.read(query).await?.into_iter().next())
     }
 
-    async fn read(&self, query: Option<&dyn Statement>) -> Result<Vec<Row>> {
+    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
         self.strategy
             .read(self.inner.as_ref(), &self.tree, query)
-            .await
-    }
-
-    async fn read_single_where(&self, where_clause: &dyn Where) -> Result<Option<Row>> {
-        Ok(self.read_where(where_clause).await?.into_iter().next())
-    }
-
-    async fn read_where(&self, where_clause: &dyn Where) -> Result<Vec<Row>> {
-        self.strategy
-            .read_where(self.inner.as_ref(), &self.tree, where_clause)
             .await
     }
 }

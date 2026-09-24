@@ -58,6 +58,12 @@ impl Text for WhereClause {
     }
 }
 
+impl crate::ReadInput for WhereClause {
+    fn as_where(&self) -> Option<&dyn Where> {
+        Some(self)
+    }
+}
+
 impl Where for WhereClause {
     fn parameters(&self) -> Vec<Parameter> {
         collect(&self.condition)
