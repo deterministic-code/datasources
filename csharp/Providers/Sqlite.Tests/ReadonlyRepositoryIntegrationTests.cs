@@ -28,7 +28,8 @@ public class ReadonlyRepositoryIntegrationTests
     [Fact]
     public async Task ReadsUsersByIdAndByUsernameAndEnabled()
     {
-        var connection = await Open("""
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var connection = await Open(ds, """
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
                 username TEXT NOT NULL,
@@ -38,7 +39,7 @@ public class ReadonlyRepositoryIntegrationTests
                 (1, 'ada', 1),
                 (2, 'grace', 0);
             """);
-        var repo = new ReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+        var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
         {
             EntityMapper = new PluralizerMapper(),
         });
@@ -58,7 +59,8 @@ public class ReadonlyRepositoryIntegrationTests
     [Fact]
     public async Task ReadsUserByGuidUsernameAndCreated()
     {
-        var connection = await Open($"""
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var connection = await Open(ds, $"""
             CREATE TABLE user (
                 id TEXT PRIMARY KEY,
                 username TEXT NOT NULL,
@@ -66,12 +68,11 @@ public class ReadonlyRepositoryIntegrationTests
                 created TEXT NOT NULL
             );
             INSERT INTO user (id, username, is_enabled, created) VALUES
-
                 ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
                 ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
                 ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
             """);
-        var repo = new ReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+        var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
         {
             Entity = "user",
             ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -81,7 +82,6 @@ public class ReadonlyRepositoryIntegrationTests
                 ["Active"] = "is_enabled",
                 ["Opened"] = "created",
             }),
-            RowTypeConverters = new SqliteDriver().RowTypeConverters,
         });
 
         var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -101,9 +101,9 @@ public class ReadonlyRepositoryIntegrationTests
         Assert.Equal("grace", Assert.Single(later).Login);
     }
 
-    static async Task<SqliteConnection> Open(string sql)
+    static async Task<IConnection> Open(IDatasource ds, string sql)
     {
-        var connection = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
+        var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))

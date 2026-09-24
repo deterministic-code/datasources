@@ -134,7 +134,7 @@ mod tests {
             .execute("DELETE FROM items", None)
             .await
             .is_err());
-        ds.create_repository::<Cells>(None);
+        ds.create_repository::<Cells>(None, None);
         let closed = Arc::new(PostgresConnection::new(None, None));
         assert!(PostgresCommand::new(closed)
             .execute("x", None)

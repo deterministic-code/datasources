@@ -128,14 +128,14 @@ mod tests {
         let command = ds.create_command(None);
         assert!(command.execute("DELETE FROM items", None).await.is_err());
         assert!(command.execute_reader("SELECT 1", None).await.is_err());
-        ds.create_repository::<Cells>(None);
+        ds.create_repository::<Cells>(None, None);
         let factory = BuiltDatasource::new("sqlite", Arc::new(With(None)), None);
         factory.create_connection().await.unwrap();
         let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
         assert!(bound.execute("DELETE FROM items", None).await.is_err());
         assert!(bound.execute_reader("SELECT 1", None).await.is_err());
         (&factory as &dyn Datasource)
-            .create_repository::<Cells>(Some(factory.create_connection().await.unwrap()));
+            .create_repository::<Cells>(Some(factory.create_connection().await.unwrap()), None);
 
         let closed = Arc::new(SqliteConnection::new(None));
         assert!(SqliteCommand::new(closed).execute("x", None).await.is_err());

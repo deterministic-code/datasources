@@ -9,6 +9,8 @@ public sealed class StubDatasource : IDatasource
     public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public ICommand CreateCommand(IConnection? connection = null) =>
         new StubCommand(Provider, connection ?? DefaultConnection());
-    public ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null) where T : new() =>
+    public ICRUDRepository<T> CreateRepository<T>(
+        IConnection? connection = null,
+        CRUDRepositoryOptions<T>? options = null) where T : new() =>
         new StubRepository<T>(Provider, connection ?? DefaultConnection());
 }

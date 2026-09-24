@@ -916,8 +916,8 @@ interface IDatasource
 | --- | --- |
 | [createConnection()](#typescript-idatasource-createconnection) | Creates a closed connection. The caller opens it. |
 | [createCommand(connection?)](#typescript-idatasource-createcommand-connection) | Creates a command bound to an optional open connection. |
-| [createRepository(type, connection?)](#typescript-idatasource-createrepository-type-connection) | Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class. |
-| [createReadonlyRepository(type, connection?)](#typescript-idatasource-createreadonlyrepository-type-connection) | Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. |
+| [createRepository(type, connection?, options?)](#typescript-idatasource-createrepository-type-connection-options) | Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class. The driver's row type converters replace `rowTypeConverters`. |
+| [createReadonlyRepository(type, connection?, options?)](#typescript-idatasource-createreadonlyrepository-type-connection-options) | Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The driver's row type converters replace `rowTypeConverters`. |
 
 ###### createConnection() {#typescript-idatasource-createconnection}
 
@@ -953,14 +953,14 @@ createCommand(connection?: IConnection): ICommand
 
 [ICommand](#command)
 
-###### createRepository(type, connection?) {#typescript-idatasource-createrepository-type-connection}
+###### createRepository(type, connection?, options?) {#typescript-idatasource-createrepository-type-connection-options}
 
-Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class.
+Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class. The driver's row type converters replace `rowTypeConverters`.
 
 **Definition**
 
 ```typescript
-createRepository<T>(type: Constructable<T>, connection?: IConnection): ICRUDRepository<T>
+createRepository<T>(type: Constructable<T>, connection?: IConnection, options?: CRUDRepositoryOptions<T>): ICRUDRepository<T>
 ```
 
 **Parameters**
@@ -969,19 +969,20 @@ createRepository<T>(type: Constructable<T>, connection?: IConnection): ICRUDRepo
 | --- | --- |
 | `type` | class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity |
 | `connection` | optional open [IConnection](#connection); omitted constructs one |
+| `options` | optional [CRUDRepositoryOptions](#typescript-crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults |
 
 **Returns**
 
 [ICRUDRepository](#crud-repository)`<T>`
 
-###### createReadonlyRepository(type, connection?) {#typescript-idatasource-createreadonlyrepository-type-connection}
+###### createReadonlyRepository(type, connection?, options?) {#typescript-idatasource-createreadonlyrepository-type-connection-options}
 
-Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`.
+Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The driver's row type converters replace `rowTypeConverters`.
 
 **Definition**
 
 ```typescript
-createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection): IReadonlyRepository<T>
+createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, options?: ReadonlyRepositoryOptions<T>): IReadonlyRepository<T>
 ```
 
 **Parameters**
@@ -990,6 +991,7 @@ createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection): I
 | --- | --- |
 | `type` | class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity |
 | `connection` | optional open [IConnection](#connection); omitted constructs one |
+| `options` | optional [ReadonlyRepositoryOptions](#typescript-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults |
 
 **Returns**
 
@@ -1059,8 +1061,8 @@ public interface IDatasource
 | --- | --- |
 | [CreateConnection()](#csharp-idatasource-createconnection) | Creates a closed connection. The caller opens it. |
 | [CreateCommand(connection)](#csharp-idatasource-createcommand-connection) | Creates a command bound to an optional open connection. |
-| [CreateRepository(connection)](#csharp-idatasource-createrepository-connection) | Creates a CRUD repository bound to an optional open connection. |
-| [CreateReadonlyRepository(connection)](#csharp-idatasource-createreadonlyrepository-connection) | Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method. |
+| [CreateRepository(connection, options)](#csharp-idatasource-createrepository-connection-options) | Creates a CRUD repository bound to an optional open connection. The driver's row type converters replace `RowTypeConverters`. |
+| [CreateReadonlyRepository(connection, options)](#csharp-idatasource-createreadonlyrepository-connection-options) | Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method. The driver's row type converters replace `RowTypeConverters`. |
 
 ###### CreateConnection() {#csharp-idatasource-createconnection}
 
@@ -1096,14 +1098,14 @@ ICommand CreateCommand(IConnection? connection = null)
 
 [ICommand](#command)
 
-###### CreateRepository(connection) {#csharp-idatasource-createrepository-connection}
+###### CreateRepository(connection, options) {#csharp-idatasource-createrepository-connection-options}
 
-Creates a CRUD repository bound to an optional open connection.
+Creates a CRUD repository bound to an optional open connection. The driver's row type converters replace `RowTypeConverters`.
 
 **Definition**
 
 ```csharp
-ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null)
+ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null, CRUDRepositoryOptions<T>? options = null)
 ```
 
 **Parameters**
@@ -1111,19 +1113,20 @@ ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null)
 | Name | Description |
 | --- | --- |
 | `connection` | optional open [IConnection](#connection); omitted constructs one |
+| `options` | optional [CRUDRepositoryOptions](#csharp-crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults |
 
 **Returns**
 
 [ICRUDRepository](#crud-repository)`<T>`
 
-###### CreateReadonlyRepository(connection) {#csharp-idatasource-createreadonlyrepository-connection}
+###### CreateReadonlyRepository(connection, options) {#csharp-idatasource-createreadonlyrepository-connection-options}
 
-Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method.
+Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method. The driver's row type converters replace `RowTypeConverters`.
 
 **Definition**
 
 ```csharp
-IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null)
+IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null, ReadonlyRepositoryOptions<T>? options = null)
 ```
 
 **Parameters**
@@ -1131,6 +1134,7 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 | Name | Description |
 | --- | --- |
 | `connection` | optional open [IConnection](#connection); omitted constructs one |
+| `options` | optional [ReadonlyRepositoryOptions](#csharp-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults |
 
 **Returns**
 
@@ -1195,8 +1199,8 @@ pub trait Datasource
 | [provider()](#rust-datasource-provider) | Registered provider name. |
 | [create_connection()](#rust-datasource-create_connection) | Creates a closed connection. The caller opens it. |
 | [create_command(connection)](#rust-datasource-create_command-connection) | Creates a command bound to an optional open connection. |
-| [create_repository(connection)](#rust-datasource-create_repository-connection) | Creates a CRUD repository for `T`, bound to an optional open connection. |
-| [create_readonly_repository(connection)](#rust-datasource-create_readonly_repository-connection) | Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`. |
+| [create_repository(connection, options)](#rust-datasource-create_repository-connection-options) | Creates a CRUD repository for `T`, bound to an optional open connection. The driver's row type converters replace `row_type_converters`. |
+| [create_readonly_repository(connection, options)](#rust-datasource-create_readonly_repository-connection-options) | Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`. The driver's row type converters replace `row_type_converters`. |
 
 ###### provider() {#rust-datasource-provider}
 
@@ -1246,14 +1250,14 @@ fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Com
 
 `Arc<dyn `[Command](#command)`>`
 
-###### create_repository(connection) {#rust-datasource-create_repository-connection}
+###### create_repository(connection, options) {#rust-datasource-create_repository-connection-options}
 
-Creates a CRUD repository for `T`, bound to an optional open connection.
+Creates a CRUD repository for `T`, bound to an optional open connection. The driver's row type converters replace `row_type_converters`.
 
 **Definition**
 
 ```rust
-fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn ICRUDRepository>
+fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<CRUDRepositoryOptions>) -> Arc<dyn ICRUDRepository>
 ```
 
 **Parameters**
@@ -1261,19 +1265,20 @@ fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<d
 | Name | Description |
 | --- | --- |
 | `connection` | optional open [Connection](#connection); omitted constructs one |
+| `options` | optional [CRUDRepositoryOptions](#rust-crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults |
 
 **Returns**
 
 `Arc<dyn `[CRUDRepository](#crud-repository)`>`
 
-###### create_readonly_repository(connection) {#rust-datasource-create_readonly_repository-connection}
+###### create_readonly_repository(connection, options) {#rust-datasource-create_readonly_repository-connection-options}
 
-Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`.
+Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`. The driver's row type converters replace `row_type_converters`.
 
 **Definition**
 
 ```rust
-fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn IReadonlyRepository>
+fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryOptions>) -> Arc<dyn IReadonlyRepository>
 ```
 
 **Parameters**
@@ -1281,6 +1286,7 @@ fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Opt
 | Name | Description |
 | --- | --- |
 | `connection` | optional open [Connection](#connection); omitted constructs one |
+| `options` | optional [ReadonlyRepositoryOptions](#rust-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults |
 
 **Returns**
 
@@ -7476,13 +7482,13 @@ username = $username AND is_enabled = $is_enabled
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2490-L2496)
 
 ```rust
-let children = Arc::new(list_repository::ListRepository::new(vec![
-    record(&[
-        ("id", Value::Int(1)),
-        ("parent_id", Value::Int(1)),
-        ("label", Value::from("a")),
-    ]),
-    record(&[
+repo.update_bulk(
+    &[
+        record(&[
+            ("id", Value::Int(1)),
+            (
+                "children",
+                encode_rows(&[record(&[
 ```
 
 **After: equals**
@@ -8091,13 +8097,13 @@ username = $username AND is_enabled = $is_enabled
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2490-L2496)
 
 ```rust
-let children = Arc::new(list_repository::ListRepository::new(vec![
-    record(&[
-        ("id", Value::Int(1)),
-        ("parent_id", Value::Int(1)),
-        ("label", Value::from("a")),
-    ]),
-    record(&[
+repo.update_bulk(
+    &[
+        record(&[
+            ("id", Value::Int(1)),
+            (
+                "children",
+                encode_rows(&[record(&[
 ```
 
 **After: equals**
@@ -9301,10 +9307,11 @@ Repository read is convert, then map. See [TypeConverter](#type-converter) and [
 
 #### Read users by id and by username
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L56)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L58)
 
 ```csharp
-var connection = await Open("""
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, """
     CREATE TABLE users (
         id INTEGER PRIMARY KEY,
         username TEXT NOT NULL,
@@ -9314,7 +9321,7 @@ var connection = await Open("""
         (1, 'ada', 1),
         (2, 'grace', 0);
     """);
-var repo = new ReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = new PluralizerMapper(),
 });
@@ -9325,62 +9332,64 @@ await foreach (var row in repo.Read(new WhereClause("username", eq, "grace").And
     disabled.Add(row);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L40-L72)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L47-L86)
 
 ```rust
-#[tokio::test]
-async fn reads_users_by_id_and_by_username_and_enabled() {
-    let connection = open(
-        "
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY,
-            username TEXT NOT NULL,
-            is_enabled INTEGER NOT NULL
-        );
-        INSERT INTO users (id, username, is_enabled) VALUES
-            (1, 'ada', 1),
-            (2, 'grace', 0);
-        ",
-    )
-    .await;
-    let mut options = create_repository_options::<User>();
-    options.entity_mapper = Box::new(PluralizerMapper::new());
-    options.row_converter = Some(RowTypeConverter::of::<User>());
-    let repo = ReadonlyRepository::new(connection, options.read).unwrap();
-    let by_id = repo
-        .read_single(Some(&WhereClause::binary("id", eq, 1_i64)))
-        .await
-        .unwrap()
-        .unwrap();
-    let disabled = repo
-        .read(Some(&WhereClause::binary("username", eq, "grace").and("is_enabled", eq, 0_i64)))
-        .await
-        .unwrap();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L30-L54)
-
-```typescript
-describe("readonly repository", () => {
-  it("reads users by id and by username and enabled", async () => {
-    const connection = await open(`
-      CREATE TABLE users (
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    "
+    CREATE TABLE users (
         id INTEGER PRIMARY KEY,
         username TEXT NOT NULL,
         is_enabled INTEGER NOT NULL
-      );
-      INSERT INTO users (id, username, is_enabled) VALUES
+    );
+    INSERT INTO users (id, username, is_enabled) VALUES
         (1, 'ada', 1),
         (2, 'grace', 0);
-    `);
-    const repo = new ReadonlyRepository(connection, {
-      type: User,
-      entityMapper: new PluralizerMapper(),
-    });
-    const byId = await repo.readSingle(new WhereClause("id", eq, 1));
-    const disabled: User[] = [];
-    for await (const row of repo.read(new WhereClause("username", eq, "grace").and("is_enabled", eq, 0)))
-      disabled.push(row);
+    ",
+)
+.await;
+let mut options = create_repository_options::<User>();
+options.entity_mapper = Box::new(PluralizerMapper::new());
+let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+let by_id = repo
+    .read_single(Some(&WhereClause::binary("id", eq, 1_i64)))
+    .await
+    .unwrap()
+    .unwrap();
+let disabled = repo
+    .read(Some(&WhereClause::binary("username", eq, "grace").and(
+        "is_enabled",
+        eq,
+        0_i64,
+    )))
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L32-L56)
+
+```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, `
+  CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL
+  );
+  INSERT INTO users (id, username, is_enabled) VALUES
+    (1, 'ada', 1),
+    (2, 'grace', 0);
+`);
+const repo = ds.createReadonlyRepository(User, connection, {
+  entityMapper: new PluralizerMapper(),
+});
+const byId = await repo.readSingle(new WhereClause("id", eq, 1));
+const disabled: User[] = [];
+for await (const row of repo.read(new WhereClause("username", eq, "grace").and("is_enabled", eq, 0)))
+  disabled.push(row);
 ```
 
 #### Read a user by guid, username, and created
@@ -9388,98 +9397,102 @@ describe("readonly repository", () => {
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L59-L102)
 
 ```csharp
-public async Task ReadsUserByGuidUsernameAndCreated()
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, $"""
+    CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL
+    );
+    INSERT INTO user (id, username, is_enabled, created) VALUES
+        ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+        ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+        ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+    """);
+var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
 {
-    var connection = await Open($"""
-        CREATE TABLE user (
-            id TEXT PRIMARY KEY,
-            username TEXT NOT NULL,
-            is_enabled INTEGER NOT NULL,
-            created TEXT NOT NULL
-        );
-        INSERT INTO user (id, username, is_enabled, created) VALUES
-
-            ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
-            ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
-            ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
-        """);
-    var repo = new ReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+    Entity = "user",
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
-        Entity = "user",
-        ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-        {
-            ["Key"] = "id",
-            ["Login"] = "username",
-            ["Active"] = "is_enabled",
-            ["Opened"] = "created",
-        }),
-        RowTypeConverters = new SqliteDriver().RowTypeConverters,
-    });
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+    }),
+});
 
-    var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    var byId = await repo.ReadSingle(new WhereClause("Key", eq, Ada));
-    var byLogin = new List<UserAccount>();
-    await foreach (var row in repo.Read(new WhereClause("Login", eq, "ada").And("Active", eq, true)))
-        byLogin.Add(row);
-    var later = new List<UserAccount>();
-    await foreach (var row in repo.Read(new WhereClause("Active", eq, true).And("Opened", gt, opened)))
-        later.Add(row);
+var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+var byId = await repo.ReadSingle(new WhereClause("Key", eq, Ada));
+var byLogin = new List<UserAccount>();
+await foreach (var row in repo.Read(new WhereClause("Login", eq, "ada").And("Active", eq, true)))
+    byLogin.Add(row);
+var later = new List<UserAccount>();
+await foreach (var row in repo.Read(new WhereClause("Active", eq, true).And("Opened", gt, opened)))
+    later.Add(row);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L77-L129)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L88-L152)
 
 ```rust
-async fn reads_user_by_guid_username_and_created() {
-    let connection = open(&format!(
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    &format!(
         "
-        CREATE TABLE user (
-            id TEXT PRIMARY KEY,
-            username TEXT NOT NULL,
-            is_enabled INTEGER NOT NULL,
-            created TEXT NOT NULL
-        );
-        INSERT INTO user (id, username, is_enabled, created) VALUES
-            ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
-            ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
-            ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z');
-        "
+    CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL
+    );
+    INSERT INTO user (id, username, is_enabled, created) VALUES
+        ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+        ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+        ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+    "
+    ),
+)
+.await;
+let mut options = create_repository_options::<UserAccount>();
+options.entity = "user".into();
+options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+]));
+let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
+let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+let by_id = repo
+    .read_single(Some(&WhereClause::binary(
+        "Key",
+        eq,
+        Uuid::parse_str(ADA).unwrap(),
+    )))
+    .await
+    .unwrap()
+    .unwrap();
+let by_login = repo
+    .read(Some(
+        &WhereClause::binary("Login", eq, "ada").and("Active", eq, true),
     ))
-    .await;
-    let mut options = create_repository_options::<UserAccount>();
-    options.entity = "user".into();
-    options.row_converter = Some(RowTypeConverter::of::<UserAccount>());
-    options.column_mappings = Box::new(DictionaryMapper::new([
-        ("Key".to_string(), "id".to_string()),
-        ("Login".to_string(), "username".to_string()),
-        ("Active".to_string(), "is_enabled".to_string()),
-        ("Opened".to_string(), "created".to_string()),
-    ]));
-    options.row_type_converters = crate::converters::row_type_converters();
-    let repo = ReadonlyRepository::new(connection, options.read).unwrap();
-    let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-    let by_id = repo
-        .read_single(Some(&WhereClause::binary(
-            "Key",
-            eq,
-            Uuid::parse_str(ADA).unwrap(),
-        )))
-        .await
-        .unwrap()
-        .unwrap();
-    let by_login = repo
-        .read(Some(&WhereClause::binary("Login", eq, "ada").and("Active", eq, true)))
-        .await
-        .unwrap();
-    let later = repo
-        .read(Some(&WhereClause::binary("Active", eq, true).and("Opened", gt, opened)))
-        .await
-        .unwrap();
+    .await
+    .unwrap();
+let later = repo
+    .read(Some(
+        &WhereClause::binary("Active", eq, true).and("Opened", gt, opened),
+    ))
+    .await
+    .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L57-L97)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L58-L97)
 
 ```typescript
-const connection = await open(`
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, `
   CREATE TABLE user (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL,
@@ -9491,8 +9504,7 @@ const connection = await open(`
     ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
     ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
 `);
-const repo = new ReadonlyRepository(connection, {
-  type: UserAccount,
+const repo = ds.createReadonlyRepository(UserAccount, connection, {
   entity: "user",
   columnMappings: new DictionaryMapper([
     ["Key", "id"],
@@ -9500,7 +9512,6 @@ const repo = new ReadonlyRepository(connection, {
     ["Active", "is_enabled"],
     ["Opened", "created"],
   ]),
-  rowTypeConverters: new SqliteDriver().rowTypeConverters,
 });
 const opened = new Date("2024-01-01T00:00:00.000Z");
 const byId = await repo.readSingle(new WhereClause("Key", eq, ada));

@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  Datasource,
   DictionaryMapper,
   PluralizerMapper,
-  ReadonlyRepository,
   WhereClause,
   eq,
   gt,
+  type IConnection,
+  type IDatasource,
 } from "@datasources/core";
-import { SqliteConnection } from "../src/connection.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 const ada = "11111111-1111-1111-1111-111111111111";
@@ -29,7 +30,8 @@ class UserAccount {
 
 describe("readonly repository", () => {
   it("reads users by id and by username and enabled", async () => {
-    const connection = await open(`
+    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const connection = await open(ds, `
       CREATE TABLE users (
         id INTEGER PRIMARY KEY,
         username TEXT NOT NULL,
@@ -39,8 +41,7 @@ describe("readonly repository", () => {
         (1, 'ada', 1),
         (2, 'grace', 0);
     `);
-    const repo = new ReadonlyRepository(connection, {
-      type: User,
+    const repo = ds.createReadonlyRepository(User, connection, {
       entityMapper: new PluralizerMapper(),
     });
     const byId = await repo.readSingle(new WhereClause("id", eq, 1));
@@ -55,7 +56,8 @@ describe("readonly repository", () => {
   });
 
   it("reads user by guid username and created", async () => {
-    const connection = await open(`
+    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const connection = await open(ds, `
       CREATE TABLE user (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -67,8 +69,7 @@ describe("readonly repository", () => {
         ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
         ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
     `);
-    const repo = new ReadonlyRepository(connection, {
-      type: UserAccount,
+    const repo = ds.createReadonlyRepository(UserAccount, connection, {
       entity: "user",
       columnMappings: new DictionaryMapper([
         ["Key", "id"],
@@ -76,7 +77,6 @@ describe("readonly repository", () => {
         ["Active", "is_enabled"],
         ["Opened", "created"],
       ]),
-      rowTypeConverters: new SqliteDriver().rowTypeConverters,
     });
     const opened = new Date("2024-01-01T00:00:00.000Z");
     const byId = await repo.readSingle(new WhereClause("Key", eq, ada));
@@ -97,8 +97,8 @@ describe("readonly repository", () => {
   });
 });
 
-const open = async (sql: string): Promise<SqliteConnection> => {
-  const connection = SqliteConnection.from({ filename: ":memory:" });
+const open = async (ds: IDatasource, sql: string): Promise<IConnection> => {
+  const connection = await ds.createConnection();
   await connection.open();
   const command = connection.createCommand();
   for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))

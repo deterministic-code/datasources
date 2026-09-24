@@ -39,25 +39,34 @@ impl dyn Datasource {
     pub fn create_repository<T: ConvertSchema + 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
+        options: Option<CRUDRepositoryOptions>,
     ) -> Arc<dyn ICRUDRepository> {
         let bound = self.bind_connection(connection);
-        self.repository_from(bound, repository_options::<T>(self))
+        self.repository_from(bound, repository_options::<T>(self, options))
     }
 
     pub fn create_readonly_repository<T: ConvertSchema + 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
+        options: Option<ReadonlyRepositoryOptions>,
     ) -> Arc<dyn IReadonlyRepository> {
+        let custom = options.map(|read| CRUDRepositoryOptions {
+            read,
+            ..create_repository_options::<T>()
+        });
         let bound = self.bind_connection(connection);
-        self.readonly_repository_from(bound, repository_options::<T>(self).read)
+        self.readonly_repository_from(bound, repository_options::<T>(self, custom).read)
     }
 }
 
 fn repository_options<T: ConvertSchema + 'static>(
     datasource: &dyn Datasource,
+    custom: Option<CRUDRepositoryOptions>,
 ) -> CRUDRepositoryOptions {
-    let mut options = create_repository_options::<T>();
-    options.row_converter = Some(RowTypeConverter::of::<T>());
+    let mut options = custom.unwrap_or_else(create_repository_options::<T>);
+    if options.row_converter.is_none() {
+        options.row_converter = Some(RowTypeConverter::of::<T>());
+    }
     options.row_type_converters = datasource.row_type_converters();
     options
 }
