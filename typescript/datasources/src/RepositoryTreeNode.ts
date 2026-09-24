@@ -1,11 +1,13 @@
 import { DatasourceError } from "./DatasourceError.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyEnrichmentBinder } from "./IReadonlyEnrichmentBinder.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Row } from "./Row.ts";
+import { Operator, WhereClause } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -21,6 +23,7 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
     apply: (parents: object[], sources?: (Row | undefined)[]) => Promise<void> = async () => {},
     readonly enrichment?: Enrichment,
     binder?: IReadonlyEnrichmentBinder,
+    readonly link?: ICRUDRepository<object>,
   ) {
     this.binder = binder ?? new DefaultReadonlyEnrichmentStrategy<object>();
     this.apply = apply;
@@ -48,6 +51,36 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
     return child;
   }
 
+  includeLinked<TRelated extends object, TLink extends object>(
+    via: IReadonlyRepository<TRelated>,
+    into: string,
+    from: string,
+    by: string,
+    link: ICRUDRepository<TLink>,
+    parent: string,
+    related: string,
+  ): IRepositoryTreeNode {
+    const writer = link as ICRUDRepository<object>;
+    const enrichment: Enrichment = {
+      into,
+      from,
+      by,
+      many: true,
+      association: { parent, related },
+    };
+    const child = new RepositoryTreeNode(
+      via,
+      into,
+      this,
+      (parents, sources) => applyLinked(via, writer, enrichment, parents, sources),
+      enrichment,
+      this.binder,
+      writer,
+    );
+    this.items.push(child);
+    return child;
+  }
+
   enrichFrom = async (parents: object[], sources?: (Row | undefined)[]): Promise<void> => {
     await this.apply(parents, sources);
     const next = related(parents, this.propertyName);
@@ -55,6 +88,31 @@ export class RepositoryTreeNode implements IRepositoryTreeNode {
     for (const child of this.items) await child.enrichFrom(next, nested);
   };
 }
+
+const applyLinked = async <TRelated extends object>(
+  via: IReadonlyRepository<TRelated>,
+  link: ICRUDRepository<object>,
+  enrichment: Enrichment,
+  parents: object[],
+  sources?: (Row | undefined)[],
+): Promise<void> => {
+  const association = enrichment.association;
+  if (!association) return;
+  for (const [index, parent] of parents.entries()) {
+    const key = sourceKey(parent, enrichment.from, sources, index);
+    if (key === undefined || key === null) continue;
+    const related: TRelated[] = [];
+    for await (const row of link.read(
+      new WhereClause(new Operator.Equals(association.parent, scalar(key))),
+    )) {
+      const id = props(row)[association.related];
+      if (id === undefined || id === null || typeof id === "object") continue;
+      const entity = await via.readSingle(new WhereClause(new Operator.Equals(enrichment.by, id)));
+      if (entity) related.push(entity);
+    }
+    Object.assign(parent, { [enrichment.into]: related });
+  }
+};
 
 type TrackedBinder = IReadonlyEnrichmentBinder & {
   apply<TRelated extends object>(

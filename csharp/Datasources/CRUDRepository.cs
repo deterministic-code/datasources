@@ -7,6 +7,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
 {
     readonly ICRUDRepository<T>? inner;
     readonly IReadonlyEnrichmentStrategy<T> strategy;
+    readonly IWriteEnrichmentStrategy<T> write;
     readonly IReadOnlyList<string> idNames;
     readonly HashSet<string> ids;
     readonly IMapper<Value, T>? create;
@@ -19,10 +20,14 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
-    public CRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
+    public CRUDRepository(
+        ICRUDRepository<T> inner,
+        IReadonlyEnrichmentStrategy<T>? strategy = null,
+        IWriteEnrichmentStrategy<T>? write = null)
     {
         this.inner = inner;
         this.strategy = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
+        this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
         Tree = new RepositoryTree(new RepositoryTreeNode(inner, "", binder: this.strategy));
         if (inner is CRUDRepository<T> crud)
         {
@@ -44,6 +49,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         idNames = built.Ids;
         ids = [.. built.Ids];
         strategy = new DefaultReadonlyEnrichmentStrategy<T>();
+        write = new DefaultWriteEnrichmentStrategy<T>();
         Tree = new RepositoryTree(new RepositoryTreeNode(this, "", binder: strategy));
     }
 
@@ -68,6 +74,19 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     {
         var child = Tree.Parent.Include(via, into, from, by, select, many);
         nest?.Invoke(child);
+        return this;
+    }
+
+    public IEnriched<T> AddLinked<TRelated, TLink>(
+        string into,
+        string from,
+        IReadonlyRepository<TRelated> via,
+        string by,
+        ICRUDRepository<TLink> link,
+        string parent,
+        string related)
+    {
+        Tree.Parent.IncludeLinked(via, into, from, by, link, parent, related);
         return this;
     }
 
@@ -101,14 +120,16 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
         Enriched ? Sourced(Source(where)) : Source(where);
 
-    public async Task<Response> Create(T item)
+    public async Task<T> Create(T item)
     {
         var stored = Enriched ? StripEnriched(item) : item;
-        var response = inner is null ? await Insert(stored) : await inner.Create(stored);
-        if (!Enriched) return response;
-        ApplyGenerated(item, response.Result);
-        await Persist(Tree.Parent, [item!], Mode.Create);
-        return response;
+        var created = inner is null ? await Inserted(stored) : await inner.Create(stored);
+        if (!Enriched) return created;
+        CopyIds(item, created);
+        await write.Persist(Tree, [item!], WriteMode.Create);
+        if (idNames.Count != 1) return item;
+        var id = IdValue(item);
+        return id is Value.Null ? item : await ReadSingleById(id) ?? item;
     }
 
     public async Task<Response> Update(T item, IWhere? byWhere = null)
@@ -116,14 +137,14 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         var stored = Enriched ? StripEnriched(item) : item;
         var response = inner is null ? await Save(stored, byWhere) : await inner.Update(stored, byWhere);
         if (Enriched)
-            await Persist(Tree.Parent, [item!], Mode.Update);
+            await write.Persist(Tree, [item!], WriteMode.Update);
         return response;
     }
 
     public async Task<Response> Delete(T item, IWhere? byWhere = null)
     {
         if (Enriched)
-            await Persist(Tree.Parent, [item!], Mode.Delete);
+            await write.Persist(Tree, [item!], WriteMode.Delete);
         return inner is null ? await Remove(item, byWhere) : await inner.Delete(item, byWhere);
     }
 
@@ -148,6 +169,12 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         if (ids.Count == 0)
             throw new DatasourceException("ReadSingleById requires an Id column");
         return await ReadSingle(IdWhere(key));
+    }
+
+    async Task<T> Inserted(T item)
+    {
+        await Insert(item);
+        return item;
     }
 
     async Task<Response> Insert(T item)
@@ -230,11 +257,10 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
 
     Row ReverseConvert(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));
 
-    void ApplyGenerated(T item, Value result)
+    void CopyIds(T item, T created)
     {
-        if (result is Value.Null || create is not { } map) return;
-        var identity = map.Map(result);
-        if (item is IDictionary dest && identity is IDictionary src)
+        if (ReferenceEquals(item, created)) return;
+        if (item is IDictionary dest && created is IDictionary src)
         {
             foreach (var name in idNames)
                 if (src.Contains(name))
@@ -246,10 +272,20 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         {
             var prop = typeof(T).GetProperty(name);
             if (prop is not { CanRead: true, CanWrite: true }) continue;
-            var value = prop.GetValue(identity);
+            var value = prop.GetValue(created);
             if (!Equals(value, prop.GetValue(unset)))
                 prop.SetValue(item, value);
         }
+    }
+
+    Value IdValue(T item)
+    {
+        var name = idNames[0];
+        if (item is IDictionary dict)
+            return dict.Contains(name) ? Value.From(dict[name]) : Value.Null.Instance;
+        return typeof(T).GetProperty(name)?.GetValue(item) is { } value
+            ? Value.From(value)
+            : Value.Null.Instance;
     }
 
     static void Apply(T item, T identity)
@@ -268,95 +304,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
             if (!Equals(value, prop.GetValue(unset)))
                 prop.SetValue(item, value);
         }
-    }
-
-    async Task Persist(IRepositoryTreeNode node, IReadOnlyList<object> parents, Mode mode)
-    {
-        foreach (var child in node.Items)
-            await PersistNode(child, parents, mode);
-    }
-
-    async Task PersistNode(IRepositoryTreeNode child, IReadOnlyList<object> parents, Mode mode)
-    {
-        if (child.Enrichment is not { Many: true, Select: null } enrichment)
-            return;
-        var writer = (child as RepositoryTreeNode)?.Persist
-            ?? throw new DatasourceException(
-                $"Deep write requires a CRUD repository for \"{enrichment.Into}\"");
-        foreach (var parent in parents)
-            await (mode switch
-            {
-                Mode.Create => CreateChildren(child, writer, enrichment, parent),
-                Mode.Update => SyncChildren(child, writer, enrichment, parent),
-                Mode.Delete => DeleteChildren(child, writer, enrichment, parent),
-                _ => throw new DatasourceException("Unknown persist mode")
-            });
-    }
-
-    async Task CreateChildren(
-        IRepositoryTreeNode node,
-        RepositoryTreeNode.IChildPersist writer,
-        Enrichment enrichment,
-        object parent)
-    {
-        foreach (var related in Payload(parent, enrichment.Into))
-        {
-            Stamp(related, enrichment.By, Get(parent, enrichment.From));
-            writer.AssignIdentity(related, await writer.Create(Strip(node, related)));
-            await Persist(node, [related], Mode.Create);
-        }
-    }
-
-    async Task SyncChildren(
-        IRepositoryTreeNode node,
-        RepositoryTreeNode.IChildPersist writer,
-        Enrichment enrichment,
-        object parent)
-    {
-        var existing = await Load(writer, enrichment, parent);
-        var payload = Payload(parent, enrichment.Into);
-        foreach (var related in payload)
-            Stamp(related, enrichment.By, Get(parent, enrichment.From));
-        var keys = writer.Ids;
-        var keep = payload.Where(row => HasKey(row, keys)).Select(row => KeyOf(row, keys)).ToHashSet();
-        foreach (var row in existing.Where(row => !keep.Contains(KeyOf(row, keys))))
-        {
-            await Persist(node, [row], Mode.Delete);
-            await writer.Delete(row);
-        }
-        foreach (var related in payload)
-        {
-            if (HasKey(related, keys) && existing.Any(row => KeyOf(row, keys) == KeyOf(related, keys)))
-                await writer.Update(Strip(node, related));
-            else
-                writer.AssignIdentity(related, await writer.Create(Strip(node, related)));
-            await Persist(node, [related], Mode.Update);
-        }
-    }
-
-    async Task DeleteChildren(
-        IRepositoryTreeNode node,
-        RepositoryTreeNode.IChildPersist writer,
-        Enrichment enrichment,
-        object parent)
-    {
-        var existing = await Load(writer, enrichment, parent);
-        await Persist(node, existing, Mode.Delete);
-        foreach (var row in existing)
-            await writer.Delete(row);
-    }
-
-    static async Task<List<object>> Load(
-        RepositoryTreeNode.IChildPersist writer,
-        Enrichment enrichment,
-        object parent)
-    {
-        var key = Get(parent, enrichment.From);
-        if (key is null) return [];
-        var items = new List<object>();
-        await foreach (var item in writer.Read(new WhereClause(new Operator.Equals(enrichment.By, Value.From(key)))))
-            items.Add(item);
-        return items;
     }
 
     T StripEnriched(T item) => (T)Strip(Tree.Parent, item!);
@@ -388,41 +335,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         }
         return dest;
     }
-
-    static IReadOnlyList<object> Payload(object parent, string into) =>
-        Get(parent, into) switch
-        {
-            null or string => [],
-            IEnumerable rows => [.. rows.Cast<object>().Where(item => item is not null and not string)],
-            _ => []
-        };
-
-    static void Stamp(object related, string by, object? key)
-    {
-        if (key is not null)
-            Set(related, by, key);
-    }
-
-    static bool HasKey(object item, IReadOnlyList<string> keys) =>
-        keys.Count > 0 && keys.All(name => Get(item, name) is not null and not 0 and not 0L and not 0u and not "");
-
-    static string KeyOf(object item, IReadOnlyList<string> keys) =>
-        string.Join("\u001f", keys.Select(name => Get(item, name)?.ToString() ?? ""));
-
-    static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
-
-    static void Set(object obj, string name, object? value)
-    {
-        var prop = Prop(obj, name);
-        var target = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-        prop.SetValue(obj, value is null || target.IsInstanceOfType(value)
-            ? value
-            : Convert.ChangeType(value, target));
-    }
-
-    static PropertyInfo Prop(object obj, string name) =>
-        obj.GetType().GetProperty(name)
-        ?? throw new DatasourceException($"Unknown property \"{name}\"");
 
     static (string Text, List<Parameter> Parameters) Distinct(
         string text, IReadOnlyList<Parameter> fields, IReadOnlyList<Parameter> where)
@@ -459,6 +371,4 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         }
         return result.Append(text[index..]).ToString();
     }
-
-    enum Mode { Create, Update, Delete }
 }

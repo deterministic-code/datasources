@@ -57,14 +57,14 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     yield* withoutSource(this.read(query));
   }
 
-  async create(item: T): Promise<Response> {
+  async create(item: T): Promise<T> {
     this.addCalls.push(item);
     if (this.addError) {
       throw this.addError;
     }
     this.items.push(item);
     this.addResponse = { result: item, rowsAffected: 1 };
-    return this.addResponse;
+    return item;
   }
 
   async update(item: T, byWhere?: IWhere): Promise<Response> {

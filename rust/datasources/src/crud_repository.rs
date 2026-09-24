@@ -238,24 +238,32 @@ impl IReadonlyRepository for CRUDRepository {
 
 #[async_trait]
 impl ICRUDRepository for CRUDRepository {
-    async fn create(&self, item: &mut Row) -> Result<Response> {
+    async fn create(&self, item: &mut Row) -> Result<Row> {
         if !self.enriched() {
             return match &self.delegate {
                 Some(repo) => repo.create(item).await,
-                None => self.insert(item).await,
+                None => self.inserted(item).await,
             };
         }
         let mut stripped = strip_enriched(item, &self.tree.parent);
-        let response = match &self.delegate {
+        let created = match &self.delegate {
             Some(repo) => repo.create(&mut stripped).await?,
-            None => self.insert(&mut stripped).await?,
+            None => self.inserted(&mut stripped).await?,
         };
-        if response.result != Value::Null {
-            apply(item, Mapper::map(&self.create, response.result.clone()));
-        }
+        let ids = self.id_names();
+        copy_ids(item, &created, &ids);
         self.persist(&self.tree.parent, std::slice::from_mut(item), Mode::Create)
             .await?;
-        Ok(response)
+        if ids.len() != 1 {
+            return Ok(item.clone());
+        }
+        let Some(id) = item.get(&ids[0]).cloned() else {
+            return Ok(item.clone());
+        };
+        if matches!(id, Value::Null) {
+            return Ok(item.clone());
+        }
+        Ok(self.read_single_by_id(&id).await?.unwrap_or_else(|| item.clone()))
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
@@ -322,6 +330,11 @@ impl ICRUDRepository for CRUDRepository {
 }
 
 impl CRUDRepository {
+    async fn inserted(&self, item: &mut Row) -> Result<Row> {
+        self.insert(item).await?;
+        Ok(item.clone())
+    }
+
     async fn insert(&self, item: &mut Row) -> Result<Response> {
         let record = self.sql().reverse_convert(item)?;
         let fields = self.params(&record, false)?;
@@ -486,8 +499,9 @@ impl CRUDRepository {
                 row.insert(enrichment.by.clone(), key.clone());
             }
             let mut stripped = strip_enriched(row, node);
-            let response = writer.create(&mut stripped).await?;
-            place_identity(row, &writer.id_names(), response.result);
+            let created = writer.create(&mut stripped).await?;
+            let ids = writer.id_names();
+            copy_ids(row, &created, &ids);
             self.persist(node, std::slice::from_mut(row), Mode::Create)
                 .await?;
         }
@@ -527,8 +541,8 @@ impl CRUDRepository {
                 }
                 _ => {
                     let mut stripped = strip_enriched(row, node);
-                    let response = writer.create(&mut stripped).await?;
-                    place_identity(row, &ids, response.result);
+                    let created = writer.create(&mut stripped).await?;
+                    copy_ids(row, &created, &ids);
                 }
             }
             self.persist(node, std::slice::from_mut(row), Mode::Update)
@@ -572,11 +586,14 @@ fn strip_enriched(item: &Row, node: &RepositoryTreeNode) -> Row {
     row
 }
 
-fn place_identity(item: &mut Row, ids: &[String], result: Value) {
-    if result == Value::Null {
-        return;
+fn copy_ids(item: &mut Row, created: &Row, ids: &[String]) {
+    for name in ids {
+        if let Some(value) = created.get(name) {
+            if *value != Value::Null && *value != Value::Int(0) {
+                item.insert(name.clone(), value.clone());
+            }
+        }
     }
-    apply(item, Mapper::map(&identity_mapper(ids), result));
 }
 
 fn assigned(value: &Value) -> bool {

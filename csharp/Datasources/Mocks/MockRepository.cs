@@ -26,11 +26,11 @@ public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
         WithoutSource(Read(query));
 
     public IReadOnlyList<string> Ids { get; } = [];
-    public Task<Response> Create(T item)
+    public Task<T> Create(T item)
     {
         if (CreateError is not null) throw CreateError;
         Items.Add(item);
-        return Task.FromResult(new Response(Value.Null.Instance, 1));
+        return Task.FromResult(item);
     }
 
     public Task<Response> Update(T item, IWhere? byWhere = null) =>

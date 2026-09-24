@@ -13,6 +13,7 @@ use std::sync::Arc;
 pub struct RepositoryTreeNode {
     pub value: Arc<dyn IReadonlyRepository>,
     pub write: Option<Arc<dyn ICRUDRepository>>,
+    pub link: Option<Arc<dyn ICRUDRepository>>,
     pub property_name: String,
     pub items: Vec<RepositoryTreeNode>,
     pub enrichment: Option<Enrichment>,
@@ -36,6 +37,7 @@ impl RepositoryTreeNode {
         Self {
             value,
             write: None,
+            link: None,
             property_name: property_name.into(),
             items: Vec::new(),
             enrichment: None,
@@ -58,6 +60,7 @@ impl RepositoryTreeNode {
         self.items.push(Self {
             value,
             write,
+            link: None,
             property_name: into,
             items: Vec::new(),
             enrichment: Some(enrichment),

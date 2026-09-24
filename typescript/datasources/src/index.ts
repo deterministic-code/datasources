@@ -34,10 +34,14 @@ export { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts"
 export type { IEnriched } from "./IEnriched.ts";
 export type { IRepositoryTree } from "./IRepositoryTree.ts";
 export type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
-export type { Enrichment } from "./Enrichment.ts";
+export type { Association, Enrichment } from "./Enrichment.ts";
 export type { IReadonlyEnrichmentBinder } from "./IReadonlyEnrichmentBinder.ts";
 export type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
+export type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
+export type { WriteMode } from "./WriteMode.ts";
 export { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+export { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
+export { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 export { FlatToNestedReadonlyEnrichmentStrategy } from "./FlatToNestedReadonlyEnrichmentStrategy.ts";
 export { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";

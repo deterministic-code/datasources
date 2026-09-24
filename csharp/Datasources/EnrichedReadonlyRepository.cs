@@ -31,6 +31,19 @@ public class EnrichedReadonlyRepository<T> : ReadonlyRepository<T>, IEnriched<T>
         return this;
     }
 
+    public IEnriched<T> AddLinked<TRelated, TLink>(
+        string into,
+        string from,
+        IReadonlyRepository<TRelated> via,
+        string by,
+        ICRUDRepository<TLink> link,
+        string parent,
+        string related)
+    {
+        Tree.Parent.IncludeLinked(via, into, from, by, link, parent, related);
+        return this;
+    }
+
     public Task Enrich(IList<T> items) => strategy.Enrich(Tree, items);
 
     public override IAsyncEnumerable<T> Read(IStatement? query = null) =>

@@ -76,10 +76,10 @@ export class ListCRUDRepository<T extends object>
     yield* withoutSource(this.read(query));
   }
 
-  create = async (item: T): Promise<Response> => {
+  create = async (item: T): Promise<T> => {
     if (!hasId(idOf(item))) setId(item, this.nextId++);
     this.items.push(item);
-    return { result: idOf(item), rowsAffected: 1 };
+    return item;
   };
 
   update = async (item: T, _byWhere?: IWhere): Promise<Response> => {
@@ -89,7 +89,12 @@ export class ListCRUDRepository<T extends object>
     return { result: null, rowsAffected: 1 };
   };
 
-  delete = async (item: T, _byWhere?: IWhere): Promise<Response> => {
+  delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
+    if (byWhere) {
+      for (let index = this.items.length - 1; index >= 0; index--)
+        if (matches(this.items[index]!, byWhere)) this.items.splice(index, 1);
+      return { result: null, rowsAffected: 1 };
+    }
     const key = idKey(idOf(item));
     const index = this.items.findIndex((row) => idKey(idOf(row)) === key);
     if (index >= 0) this.items.splice(index, 1);

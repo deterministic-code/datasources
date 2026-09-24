@@ -5,4 +5,5 @@ public sealed record Enrichment(
     string From,
     string By,
     string? Select = null,
-    bool Many = false);
+    bool Many = false,
+    Association? Association = null);

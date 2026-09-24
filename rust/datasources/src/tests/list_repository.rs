@@ -85,20 +85,15 @@ impl ICRUDRepository for ListRepository {
         vec!["id".into()]
     }
 
-    async fn create(&self, item: &mut Row) -> Result<Response> {
-        let mut row = item.clone();
-        let id = match row.get("id") {
-            Some(Value::Int(id)) if *id != 0 => *id,
-            _ => {
-                let mut next = self.next_id.lock().expect("list");
-                let id = *next;
-                *next += 1;
-                row.insert("id".into(), Value::Int(id));
-                id
-            }
-        };
-        self.items.lock().expect("list").push(row);
-        Ok(Response::new(Value::Int(id), 1))
+    async fn create(&self, item: &mut Row) -> Result<Row> {
+        if !matches!(item.get("id"), Some(Value::Int(id)) if *id != 0) {
+            let mut next = self.next_id.lock().expect("list");
+            let id = *next;
+            *next += 1;
+            item.insert("id".into(), Value::Int(id));
+        }
+        self.items.lock().expect("list").push(item.clone());
+        Ok(item.clone())
     }
 
     async fn update(&self, item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {

@@ -24,7 +24,7 @@ pub trait IReadonlyRepository: IRepository {
 
 #[async_trait]
 pub trait ICRUDRepository: IReadonlyRepository {
-    async fn create(&self, item: &mut Row) -> Result<Response>;
+    async fn create(&self, item: &mut Row) -> Result<Row>;
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
     async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>;
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>;
