@@ -13,7 +13,7 @@ import {
 } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
 import type { MysqlConnection } from "./connection.ts";
-import type { MysqlExecuteResult, MysqlQueryHeader } from "./i-mysql-engine.ts";
+import type { MysqlExecuteResult } from "./i-mysql-engine.ts";
 import type { Scalar } from "./scalar.ts";
 
 const isSelect = (sql: string) =>
@@ -29,6 +29,11 @@ const outputs = (parameters?: Parameter[]) =>
 const scalarOf = (row: Cells | undefined): Scalar | undefined => {
   const value = row ? Object.values(row)[0] : undefined;
   return value;
+};
+
+const firstRow = async (rows: AsyncIterable<Cells>): Promise<Cells | undefined> => {
+  for await (const row of rows) return row;
+  return undefined;
 };
 
 export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
@@ -71,8 +76,8 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     parameters?: Parameter[],
   ): Promise<MysqlExecuteResult> {
     if (isSelect(sql)) {
-      const rows = await this.query(sql, params);
-      return { rowsAffected: rows[0] ? 1 : 0, result: scalarOf(rows[0]), parameters };
+      const row = await firstRow(this.query(sql, params));
+      return { rowsAffected: row ? 1 : 0, result: scalarOf(row), parameters };
     }
     const outs = outputs(parameters);
     if (isCall(sql) && outs.length && parameters) {
@@ -113,8 +118,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
         };
   }
 
-  private async query(sql: string, params?: Record<string, Scalar>): Promise<Cells[]> {
-    const [rows] = await this.connection.require().query(toMysql(sql), params);
-    return Array.isArray(rows) ? rows : [];
+  private query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {
+    return this.connection.require().queryRows(toMysql(sql), params);
   }
 }

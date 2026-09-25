@@ -14,8 +14,9 @@ pub(crate) fn map_err(error: tokio_postgres::Error) -> DatasourceError {
 pub struct PostgresConnection {
     pub url: String,
     pub schema: Option<String>,
-    opened: Arc<Mutex<bool>>,
+    pub(crate) opened: Arc<Mutex<bool>>,
     pub(crate) client: Arc<tokio::sync::Mutex<Option<tokio_postgres::Client>>>,
+    pub(crate) ready: Arc<tokio::sync::Notify>,
 }
 
 impl PostgresConnection {
@@ -25,6 +26,7 @@ impl PostgresConnection {
             schema,
             opened: Arc::new(Mutex::new(false)),
             client: Arc::new(tokio::sync::Mutex::new(None)),
+            ready: Arc::new(tokio::sync::Notify::new()),
         }
     }
 
@@ -44,6 +46,26 @@ impl PostgresConnection {
             schema: self.schema.clone(),
             opened: self.opened.clone(),
             client: self.client.clone(),
+            ready: self.ready.clone(),
+        }
+    }
+
+    pub(crate) async fn lock_client(
+        &self,
+    ) -> Result<tokio::sync::MutexGuard<'_, Option<tokio_postgres::Client>>> {
+        loop {
+            let notified = self.ready.notified();
+            tokio::pin!(notified);
+            let slot = self.client.lock().await;
+            if slot.is_some() {
+                return Ok(slot);
+            }
+            let open = *self.opened.lock().unwrap();
+            drop(slot);
+            if !open {
+                return Err(DatasourceError::message("Connection is not open"));
+            }
+            notified.await;
         }
     }
 
@@ -55,7 +77,7 @@ impl PostgresConnection {
     }
 
     pub(crate) async fn exec(&self, sql: &str) -> Result<()> {
-        let slot = self.client.lock().await;
+        let slot = self.lock_client().await?;
         let client = slot
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
@@ -109,8 +131,9 @@ impl Connection for PostgresConnection {
     }
 
     async fn close(&self) -> Result<()> {
-        *self.client.lock().await = None;
         *self.opened.lock().unwrap() = false;
+        *self.client.lock().await = None;
+        self.ready.notify_waiters();
         Ok(())
     }
 

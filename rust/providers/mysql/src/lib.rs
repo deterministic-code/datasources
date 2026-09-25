@@ -3,6 +3,7 @@ mod connection;
 mod converters;
 mod driver;
 mod engine;
+mod reader;
 mod transaction;
 
 pub use driver::MysqlDriver;

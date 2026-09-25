@@ -36,6 +36,11 @@ class FakeClient implements IMysqlClient {
       MysqlQueryHeader | Cells[],
     ];
   }
+  async *queryRows(sql: string, params?: Record<string, Scalar>): AsyncGenerator<Cells> {
+    this.queries.push({ sql, params });
+    if (!this.arrayResult) return;
+    for (const row of this.rows) yield row;
+  }
   async beginTransaction(): Promise<void> {
     this.begins += 1;
   }

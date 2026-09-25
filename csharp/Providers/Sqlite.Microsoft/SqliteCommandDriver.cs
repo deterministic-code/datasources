@@ -13,10 +13,8 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
             ? Task.FromResult(new SqliteExecuteResult(0, Value.Null.Instance, parameters))
             : Run(sql, parameters);
 
-    public Task<IReadOnlyList<Row>> Query(string sql, Row parameters) =>
-        string.IsNullOrWhiteSpace(sql)
-            ? Task.FromResult<IReadOnlyList<Row>>([])
-            : Read(sql, parameters);
+    public IAsyncEnumerable<Row> Query(string sql, Row parameters) =>
+        string.IsNullOrWhiteSpace(sql) ? EmptyRows() : Read(sql, parameters);
 
     public async Task<IReader<Row>> Open(string sql, Row parameters)
     {
@@ -74,20 +72,23 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
         return new SqliteExecuteResult(rows, Value.From(await id.ExecuteScalarAsync()), parameters);
     }
 
-    async Task<IReadOnlyList<Row>> Read(string sql, Row parameters)
+    static async IAsyncEnumerable<Row> EmptyRows()
+    {
+        yield break;
+    }
+
+    async IAsyncEnumerable<Row> Read(string sql, Row parameters)
     {
         using var command = Bind(sql, parameters);
         using var reader = await command.ExecuteReaderAsync();
         var names = ColumnNames(reader);
-        var rows = new List<Row>();
         while (await reader.ReadAsync())
         {
             var row = new Row();
             for (var i = 0; i < reader.FieldCount; i++)
                 row[names[i]] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
-            rows.Add(row);
+            yield return row;
         }
-        return rows;
     }
 
     static string[] ColumnNames(Microsoft.Data.Sqlite.SqliteDataReader reader)
