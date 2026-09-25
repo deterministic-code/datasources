@@ -84,7 +84,7 @@ public class BulkCRUDRepositoryTests
         ListCRUDRepository<Parent> parents,
         ListCRUDRepository<Child> children)
     {
-        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
         return parents;
     }
 }

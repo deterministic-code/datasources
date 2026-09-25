@@ -127,9 +127,9 @@ public class UserViewCRUDRepositoryTests
 
     static CRUDRepository<UserView> Enrich(CRUDRepository<UserView> users, Graph graph)
     {
-        users.AddEnriched("UserType", "UserTypeId", graph.UserTypesRepo, "Id");
-        users.AddLinked("Roles", "Id", graph.RolesRepo, "Id", graph.UserRolesRepo, "UserId", "RoleId");
-        users.AddLinked("Groups", "Id", graph.GroupsRepo, "Id", graph.UserGroupsRepo, "UserId", "GroupId");
+        users.AddEnriched(new("UserType", "UserTypeId", "Id"), graph.UserTypesRepo);
+        users.AddLinked(new("Roles", "Id", "Id", Association: new("UserId", "RoleId")), graph.RolesRepo, graph.UserRolesRepo);
+        users.AddLinked(new("Groups", "Id", "Id", Association: new("UserId", "GroupId")), graph.GroupsRepo, graph.UserGroupsRepo);
         return users;
     }
 
@@ -178,9 +178,9 @@ public class UserViewCRUDRepositoryTests
         var editorRole = await rolesRepo.Create(new Role { Name = "editor" });
         var engineering = await groupsRepo.Create(new Group { Name = "engineering" });
         var ops = await groupsRepo.Create(new Group { Name = "ops" });
-        usersRepo.AddEnriched("UserType", "UserTypeId", userTypesRepo, "Id");
-        usersRepo.AddLinked("Roles", "Id", rolesRepo, "Id", userRolesRepo, "UserId", "RoleId");
-        usersRepo.AddLinked("Groups", "Id", groupsRepo, "Id", userGroupsRepo, "UserId", "GroupId");
+        usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id"), userTypesRepo);
+        usersRepo.AddLinked(new("Roles", "Id", "Id", Association: new("UserId", "RoleId")), rolesRepo, userRolesRepo);
+        usersRepo.AddLinked(new("Groups", "Id", "Id", Association: new("UserId", "GroupId")), groupsRepo, userGroupsRepo);
 
         var created = await usersRepo.Create(new UserView
         {

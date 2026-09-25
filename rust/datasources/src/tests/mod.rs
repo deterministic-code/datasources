@@ -2068,15 +2068,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
         ("id", Value::Int(10)),
         ("name", Value::from("person")),
     ])]));
-    parents.add_enriched(
-        "type_name",
-        "type_id",
-        types,
-        "id",
-        Some("name".into()),
-        false,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("type_name", "type_id", "id", Some("name".into()), false), types, None);
     let items = parents.read(None, None).await.unwrap();
     assert_eq!(items[0]["type_name"], Value::from("person"));
     assert!(!items[1].contains_key("type_name"));
@@ -2098,16 +2090,8 @@ async fn enriched_fills_lists_and_read_single_is_enriched() {
         record(&[("parent_id", Value::Int(2)), ("label", Value::from("x"))]),
     ]));
     parents
-        .add_enriched(
-            "type_name",
-            "type_id",
-            types,
-            "id",
-            Some("name".into()),
-            false,
-            None,
-        )
-        .add_enriched("children", "id", children, "parent_id", None, true, None);
+        .add_enriched(crate::enrichment::Enrichment::new("type_name", "type_id", "id", Some("name".into()), false), types, None)
+        .add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children, None);
     let item = parents.read_single(None, None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     assert!(item["children"].wire_text().contains("label=a"));
@@ -2141,34 +2125,10 @@ async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
             ("label", Value::from("b")),
         ]),
     ]);
-    children.add_enriched(
-        "type_name",
-        "type_id",
-        child_types,
-        "id",
-        Some("name".into()),
-        false,
-        None,
-    );
+    children.add_enriched(crate::enrichment::Enrichment::new("type_name", "type_id", "id", Some("name".into()), false), child_types, None);
     parents
-        .add_enriched(
-            "type_name",
-            "type_id",
-            types,
-            "id",
-            Some("name".into()),
-            false,
-            None,
-        )
-        .add_enriched(
-            "children",
-            "id",
-            Arc::new(children),
-            "parent_id",
-            None,
-            true,
-            None,
-        );
+        .add_enriched(crate::enrichment::Enrichment::new("type_name", "type_id", "id", Some("name".into()), false), types, None)
+        .add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), Arc::new(children), None);
     let item = parents.read_single(None, None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     let children_text = item["children"].wire_text();
@@ -2235,24 +2195,8 @@ async fn hashset_uses_one_read_per_edge() {
     let strategy: Arc<dyn ReadonlyEnrichmentStrategy> =
         Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
     parents
-        .add_enriched(
-            "type_name",
-            "type_id",
-            types.clone(),
-            "id",
-            Some("name".into()),
-            false,
-            Some(strategy.clone()),
-        )
-        .add_enriched(
-            "children",
-            "id",
-            children.clone(),
-            "parent_id",
-            None,
-            true,
-            Some(strategy),
-        );
+        .add_enriched(crate::enrichment::Enrichment::new("type_name", "type_id", "id", Some("name".into()), false), types.clone(), Some(strategy.clone()))
+        .add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), Some(strategy));
     parents.read(None, None).await.unwrap();
     assert_eq!(*types.reads.lock().unwrap(), 1);
     assert_eq!(*types.read_singles.lock().unwrap(), 0);
@@ -2287,12 +2231,14 @@ async fn flat_to_nested_collapses_join_rows() {
         },
         |_| Vec::new(),
     );
-    let parents = items_repository::ItemsRepository::with_result(
-        vec![
-            record(&[("id", Value::Int(1)), ("type_name", Value::from("person"))]),
-            record(&[("id", Value::Int(2)), ("type_name", Value::from("org"))]),
-        ],
-        Box::new(result),
+    let mut parents = items_repository::ItemsRepository::new(vec![
+        record(&[("id", Value::Int(1)), ("type_name", Value::from("person"))]),
+        record(&[("id", Value::Int(2)), ("type_name", Value::from("org"))]),
+    ]);
+    parents.add_enriched(
+        crate::enrichment::Enrichment::new("type_name", "id", "id", None, false),
+        Arc::new(items_repository::ItemsRepository::new(vec![])),
+        Some(Arc::new(crate::nested_to_object_enrichment_strategy::NestedToObjectEnrichmentStrategy::new(Box::new(result)))),
     );
     let items = parents.read(None, None).await.unwrap();
     assert_eq!(items[0]["id"], Value::Int(1));
@@ -2387,24 +2333,8 @@ async fn deep_create_writes_children_stamps_fk_and_skips_select() {
     ])]));
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
     parents
-        .add_enriched(
-            "type_name",
-            "type_id",
-            types.clone(),
-            "id",
-            Some("name".into()),
-            false,
-            None,
-        )
-        .add_enriched(
-            "children",
-            "id",
-            children.clone(),
-            "parent_id",
-            None,
-            true,
-            None,
-        );
+        .add_enriched(crate::enrichment::Enrichment::new("type_name", "type_id", "id", Some("name".into()), false), types.clone(), None)
+        .add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     parents
         .create(&mut record(&[
             ("type_id", Value::Int(10)),
@@ -2432,15 +2362,7 @@ async fn deep_create_applies_generated_parent_id_before_child_fks() {
         Value::Int(4),
     )])]);
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
-    parents.add_enriched(
-        "children",
-        "id",
-        children.clone(),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     parents
         .create(&mut record(&[(
             "children",
@@ -2469,15 +2391,7 @@ async fn deep_update_replace_syncs_children() {
             ("label", Value::from("b")),
         ]),
     ]));
-    parents.add_enriched(
-        "children",
-        "id",
-        children.clone(),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     parents
         .update(
             &record(&[
@@ -2535,17 +2449,9 @@ async fn deep_delete_cascades_children_then_parent() {
         ("parent_id", Value::Int(1)),
         ("label", Value::from("a")),
     ])]);
-    children_repo.add_enriched("notes", "id", notes.clone(), "child_id", None, true, None);
+    children_repo.add_enriched(crate::enrichment::Enrichment::new("notes", "id", "child_id", None, true), notes.clone(), None);
     let children = Arc::new(children_repo);
-    parents.add_enriched(
-        "children",
-        "id",
-        children.clone(),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     parents
         .delete(&record(&[("id", Value::Int(1))]), None)
         .await
@@ -2561,7 +2467,7 @@ struct SkipDelete;
 impl DeleteEnrichmentStrategy for SkipDelete {
     async fn delete_owned(
         &self,
-        _node: &RepositoryTreeNode,
+        _entry: &StoredEnrichment,
         _enrichment: &Enrichment,
         _parent: &Row,
         _delete_nested: &dyn DeleteNested,
@@ -2571,7 +2477,7 @@ impl DeleteEnrichmentStrategy for SkipDelete {
 
     async fn delete_linked(
         &self,
-        _node: &RepositoryTreeNode,
+        _entry: &StoredEnrichment,
         _enrichment: &Enrichment,
         _parent: &Row,
     ) -> Result<()> {
@@ -2590,15 +2496,7 @@ async fn delete_strategy_can_skip_children() {
         vec![record(&[("id", Value::Int(1))])],
         Arc::new(DefaultWriteEnrichmentStrategy::new(Some(Arc::new(SkipDelete)))),
     );
-    parents.add_enriched(
-        "children",
-        "id",
-        children.clone(),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     parents
         .delete(&record(&[("id", Value::Int(1))]), None)
         .await
@@ -2616,26 +2514,10 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
         ("name", Value::from("home")),
     ])]));
     let mut children_repo = list_repository::ListRepository::new(vec![]);
-    children_repo.add_enriched(
-        "type_name",
-        "type_id",
-        child_types.clone(),
-        "id",
-        Some("name".into()),
-        false,
-        None,
-    );
-    children_repo.add_enriched("notes", "id", notes.clone(), "child_id", None, true, None);
+    children_repo.add_enriched(crate::enrichment::Enrichment::new("type_name", "type_id", "id", Some("name".into()), false), child_types.clone(), None);
+    children_repo.add_enriched(crate::enrichment::Enrichment::new("notes", "id", "child_id", None, true), notes.clone(), None);
     let children = Arc::new(children_repo);
-    parents.add_enriched(
-        "children",
-        "id",
-        children.clone(),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     parents
         .create(&mut record(&[(
             "children",
@@ -2659,15 +2541,7 @@ async fn deep_nested_many_writes_and_nested_select_is_skipped() {
 #[tokio::test]
 async fn deep_many_readonly_via_throws() {
     let mut parents = list_repository::ListRepository::new(vec![]);
-    parents.add_enriched(
-        "children",
-        "id",
-        Arc::new(items_repository::ItemsRepository::new(vec![])),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), Arc::new(items_repository::ItemsRepository::new(vec![])), None);
     let error = parents
         .create(&mut record(&[(
             "children",
@@ -2693,16 +2567,8 @@ async fn deep_get_still_enriches() {
         ("label", Value::from("a")),
     ])]));
     parents
-        .add_enriched(
-            "type_name",
-            "type_id",
-            types,
-            "id",
-            Some("name".into()),
-            false,
-            None,
-        )
-        .add_enriched("children", "id", children, "parent_id", None, true, None);
+        .add_enriched(crate::enrichment::Enrichment::new("type_name", "type_id", "id", Some("name".into()), false), types, None)
+        .add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children, None);
     let item = parents.read_single(None, None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     assert!(item["children"].wire_text().contains("label=a"));
@@ -2712,15 +2578,7 @@ async fn deep_get_still_enriches() {
 async fn bulk_create_writes_parents_and_children() {
     let mut parents = list_repository::ListRepository::new(vec![]);
     let children = Arc::new(list_repository::ListRepository::new(vec![]));
-    parents.add_enriched(
-        "children",
-        "id",
-        children.clone(),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     let response = parents
         .create_bulk(&mut [
             record(&[(
@@ -2764,15 +2622,7 @@ async fn bulk_update_replace_syncs_each_parent() {
             ("label", Value::from("b")),
         ]),
     ]));
-    parents.add_enriched(
-        "children",
-        "id",
-        children.clone(),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     parents
         .update_bulk(
             &[
@@ -2839,15 +2689,7 @@ async fn bulk_delete_cascades_each_parent() {
             ("label", Value::from("keep")),
         ]),
     ]));
-    parents.add_enriched(
-        "children",
-        "id",
-        children.clone(),
-        "parent_id",
-        None,
-        true,
-        None,
-    );
+    parents.add_enriched(crate::enrichment::Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
     parents
         .delete_bulk(
             &[

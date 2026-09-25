@@ -2,8 +2,7 @@ import { DatasourceError } from "./DatasourceError.ts";
 import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
-import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
-import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
+import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { Operator, Where } from "./statements/index.ts";
 
@@ -16,15 +15,13 @@ const get = (item: object, name: string): Scalar | object | undefined => props(i
 const present = (value: Scalar | object | undefined): value is Scalar =>
   value !== undefined && value !== null && typeof value !== "object" && value !== 0 && value !== 0n && value !== "";
 
-const writerOf = (child: IRepositoryTreeNode, into: string): ICRUDRepository<object> => {
-  const persist = (child as RepositoryTreeNode).persist;
-  if (persist) return persist;
+const writerOf = (entry: StoredEnrichment, into: string): ICRUDRepository<object> => {
+  if (entry.persist) return entry.persist;
   throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
 };
 
-const linkWriter = (child: IRepositoryTreeNode, into: string): ICRUDRepository<object> => {
-  const link = (child as RepositoryTreeNode).link;
-  if (link) return link;
+const linkWriter = (entry: StoredEnrichment, into: string): ICRUDRepository<object> => {
+  if (entry.link) return entry.link;
   throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
 };
 
@@ -42,21 +39,21 @@ const linkWhere = (
 
 export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy<T> {
   async deleteOwned(
-    node: IRepositoryTreeNode,
+    entry: StoredEnrichment,
     enrichment: Enrichment,
     parent: object,
     deleteNested: (rows: object[]) => Promise<void>,
   ): Promise<void> {
-    const writer = writerOf(node, enrichment.into);
+    const writer = writerOf(entry, enrichment.into);
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     await deleteNested(existing);
     for (const row of existing) await writer.delete(row);
   }
 
-  async deleteLinked(node: IRepositoryTreeNode, enrichment: Enrichment, parent: object): Promise<void> {
+  async deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
-    const writer = linkWriter(node, enrichment.into);
+    const writer = linkWriter(entry, enrichment.into);
     const key = get(parent, enrichment.from);
     if (!present(key)) return;
     for (const row of await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, key)) {

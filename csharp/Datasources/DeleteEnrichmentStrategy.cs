@@ -5,13 +5,13 @@ namespace Datasources;
 public abstract class DeleteEnrichmentStrategy<T>
 {
     public abstract Task DeleteOwned(
-        IRepositoryTreeNode node,
+        StoredEnrichment entry,
         Enrichment enrichment,
         object parent,
         Func<IReadOnlyList<object>, Task> deleteNested);
 
     public abstract Task DeleteLinked(
-        IRepositoryTreeNode node,
+        StoredEnrichment entry,
         Enrichment enrichment,
         object parent);
 

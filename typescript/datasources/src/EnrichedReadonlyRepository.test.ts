@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { collectAsync } from "./collectAsync.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStrategy.ts";
 import { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";
 import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
@@ -54,11 +55,16 @@ class JoinRows extends ReadonlyRepository<Parent> {
     private readonly rows: Cells[],
     result: IMapper<Iterable<Cells>, Parent[]>,
   ) {
-    super(result);
+    super();
+    this.addEnriched(
+      { into: "type_name", from: "id", by: "id" },
+      new ListReadonlyRepository<Parent>(),
+      new NestedToObjectEnrichmentStrategy(result),
+    );
   }
 
-  protected async *readSources() {
-    for (const row of this.rows) yield row;
+  protected async *readItems() {
+    for (const row of this.rows) yield { item: new Parent(), source: row };
   }
 }
 
@@ -70,7 +76,7 @@ const fillLookup = async (strategy: IReadonlyEnrichmentStrategy<Parent>) => {
   const types = new ListReadonlyRepository([
     Object.assign(new TypeRow(), { id: 10, name: "person" }),
   ]);
-  parents.addEnriched("type_name", "type_id", types, "id", "name", undefined, strategy);
+  parents.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, types, strategy);
   const items = await collectAsync(parents.read());
   expect(items[0]?.type_name).toBe("person");
   expect(items[1]?.type_name).toBe("");
@@ -86,8 +92,8 @@ const fillLists = async (strategy: IReadonlyEnrichmentStrategy<Parent>) => {
     Object.assign(new Child(), { parent_id: 1, label: "b" }),
     Object.assign(new Child(), { parent_id: 2, label: "x" }),
   ]);
-  parents.addEnriched("type_name", "type_id", types, "id", "name", undefined, strategy);
-  parents.addEnriched("children", "id", children, "parent_id", undefined, true, strategy);
+  parents.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, types, strategy);
+  parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children, strategy);
   const item = await parents.readSingle();
   expect(item?.type_name).toBe("org");
   expect(item?.children.map((child) => child.label)).toEqual(["a", "b"]);
@@ -105,9 +111,9 @@ const nestListLookup = async (strategy: IReadonlyEnrichmentStrategy<Parent>) => 
     Object.assign(new Child(), { parent_id: 1, type_id: 3, label: "a" }),
     Object.assign(new Child(), { parent_id: 1, type_id: 9, label: "b" }),
   ]);
-  children.addEnriched("type_name", "type_id", childTypes, "id", "name");
-  parents.addEnriched("type_name", "type_id", types, "id", "name", undefined, strategy);
-  parents.addEnriched("children", "id", children, "parent_id", undefined, true, strategy);
+  children.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, childTypes);
+  parents.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, types, strategy);
+  parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children, strategy);
   const item = await parents.readSingle();
   expect(item?.type_name).toBe("org");
   expect(item?.children[0]?.type_name).toBe("home");
@@ -146,21 +152,8 @@ describe("ReadonlyRepository", () => {
       { type_id: null, type_name: "", children: [] },
       { type_name: "" },
     ]);
-    repo.addEnriched(
-      "type_name",
-      "type_id",
-      new ListReadonlyRepository([Object.assign(new TypeRow(), { id: 10, name: "person" })]),
-      "id",
-      "name",
-    );
-    repo.addEnriched(
-      "children",
-      "id",
-      new ListReadonlyRepository([Object.assign(new Child(), { parent_id: 1, label: "a" })]),
-      "parent_id",
-      undefined,
-      true,
-    );
+    repo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, new ListReadonlyRepository([Object.assign(new TypeRow(), { id: 10, name: "person" })]));
+    repo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, new ListReadonlyRepository([Object.assign(new Child(), { parent_id: 1, label: "a" })]));
     const items = await collectAsync(repo.read());
     expect(items[0]?.type_name).toBe("");
     expect(items[1]?.children).toBeUndefined();
@@ -184,16 +177,10 @@ describe("ReadonlyRepository", () => {
     const children = new ListReadonlyRepository([
       Object.assign(new Child(), { parent_id: 2, type_id: 3, label: "only" }),
     ]);
-    children.addEnriched(
-      "type_name",
-      "type_id",
-      new ListReadonlyRepository([
+    children.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, new ListReadonlyRepository([
         Object.assign(new TypeRow(), { id: 3, name: "home" }),
-      ]),
-      "id",
-      "name",
-    );
-    repo.addEnriched("child", "id", children, "parent_id");
+      ]));
+    repo.addEnriched({ into: "child", from: "id", by: "parent_id" }, children);
     const items = await collectAsync(repo.read());
     expect(items[0]?.child).toBe("skip");
     expect(
@@ -207,13 +194,7 @@ describe("ReadonlyRepository", () => {
     const repo = new ListReadonlyRepository([
       Object.assign(parent(1, 10), { type_id: { x: 1 } }),
     ]);
-    repo.addEnriched(
-      "type_name",
-      "type_id",
-      new ListReadonlyRepository<TypeRow>([]),
-      "id",
-      "name",
-    );
+    repo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, new ListReadonlyRepository<TypeRow>([]));
     await expect(collectAsync(repo.read())).rejects.toThrow(/scalar/);
   });
 
@@ -232,8 +213,8 @@ describe("ReadonlyRepository", () => {
     );
     const parents = new ListReadonlyRepository([parent(1, 10), parent(2, 11)]);
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-    parents.addEnriched("type_name", "type_id", types, "id", "name", undefined, strategy);
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true, strategy);
+    parents.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, types, strategy);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children, strategy);
     await collectAsync(parents.read());
     expect(types.reads).toBe(1);
     expect(types.readSingles).toBe(0);
@@ -249,7 +230,7 @@ describe("ReadonlyRepository", () => {
       ]),
     );
     const parents = new ListReadonlyRepository([parent(1, 10), parent(2, 11)]);
-    parents.addEnriched("type_name", "type_id", types, "id", "name");
+    parents.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, types);
     await collectAsync(parents.read());
     expect(types.readSingles).toBe(2);
     expect(types.reads).toBe(0);
@@ -258,17 +239,9 @@ describe("ReadonlyRepository", () => {
   it("hashset assigns the related row when select is omitted", async () => {
     const parents = new ListReadonlyRepository([parent(1, 10)]);
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-    parents.addEnriched(
-      "type",
-      "type_id",
-      new ListReadonlyRepository([
+    parents.addEnriched({ into: "type", from: "type_id", by: "id" }, new ListReadonlyRepository([
         Object.assign(new TypeRow(), { id: 10, name: "person" }),
-      ]),
-      "id",
-      undefined,
-      undefined,
-      strategy,
-    );
+      ]), strategy);
     const items = await collectAsync(parents.read());
     expect(items[0]).toMatchObject({
       type: { id: 10, name: "person" },
@@ -279,30 +252,14 @@ describe("ReadonlyRepository", () => {
     const blank = Object.assign(parent(2, 0), { type_id: undefined });
     const parents = new ListReadonlyRepository([parent(1, 10), parent(3, 99), blank]);
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-    parents.addEnriched(
-      "type_name",
-      "type_id",
-      new ListReadonlyRepository([
+    parents.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, new ListReadonlyRepository([
         Object.assign(new TypeRow(), { id: 10, name: "person" }),
-      ]),
-      "id",
-      "name",
-      undefined,
-      strategy,
-    );
-    parents.addEnriched(
-      "children",
-      "id",
-      new ListReadonlyRepository([
+      ]), strategy);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, new ListReadonlyRepository([
         Object.assign(new Child(), { label: "orphan" }),
         Object.assign(new Child(), { parent_id: 1, label: "a" }),
         Object.assign(new Child(), { parent_id: 1, label: "b" }),
-      ]),
-      "parent_id",
-      undefined,
-      true,
-      strategy,
-    );
+      ]), strategy);
     const items = await collectAsync(parents.read());
     expect(items[0]?.type_name).toBe("person");
     expect(items[0]?.children.map((child) => child.label)).toEqual(["a", "b"]);
@@ -375,7 +332,7 @@ describe("ReadonlyRepository", () => {
       Object.assign(new TypeRow(), { id: 1, name: "admin" }),
     ]);
     const repo = new SourcedView();
-    repo.addEnriched("UserType", "UserType", types, "id", "name");
+    repo.addEnriched({ into: "UserType", from: "UserType", by: "id", select: "name" }, types);
     const item = await repo.readSingle();
     expect(item?.UserType).toBe("admin");
   });
@@ -385,7 +342,7 @@ describe("ReadonlyRepository", () => {
     const types = new ListReadonlyRepository([
       Object.assign(new TypeRow(), { id: 10, name: "person" }),
     ]);
-    parents.tree.parent.include(types, "type_name", "type_id", "id", "name");
+    parents.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, types);
     const items = await collectAsync(parents.read());
     expect(items[0]?.type_name).toBe("person");
     await new DefaultReadonlyEnrichmentStrategy<Parent>().apply(

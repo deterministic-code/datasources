@@ -3,12 +3,12 @@ namespace Datasources;
 public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrategy<T>
 {
     public override async Task DeleteOwned(
-        IRepositoryTreeNode node,
+        StoredEnrichment entry,
         Enrichment enrichment,
         object parent,
         Func<IReadOnlyList<object>, Task> deleteNested)
     {
-        var writer = (node as RepositoryTreeNode)?.Persist
+        var writer = entry.Persist
             ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.Into}\"");
         var existing = await Load(writer, enrichment, parent);
         await deleteNested(existing);
@@ -17,12 +17,12 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
     }
 
     public override async Task DeleteLinked(
-        IRepositoryTreeNode node,
+        StoredEnrichment entry,
         Enrichment enrichment,
         object parent)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
-        var writer = (node as RepositoryTreeNode)?.Link
+        var writer = entry.Link
             ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.Into}\"");
         var parentKey = Get(parent, enrichment.From);
         if (parentKey is null) return;

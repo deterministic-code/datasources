@@ -60,7 +60,7 @@ public class CRUDRepositoryTests
     {
         var parents = new ListCRUDRepository<Parent>(new Parent { id = 4 });
         var children = new ListCRUDRepository<Child>();
-        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
         await parents.Create(new Parent { children = [new Child { label = "n" }] });
         Assert.Equal(5, Assert.Single(children.Items).parent_id);
     }
@@ -72,7 +72,7 @@ public class CRUDRepositoryTests
         var children = new ListCRUDRepository<Child>(
             new Child { id = 1, parent_id = 1, label = "a" },
             new Child { id = 2, parent_id = 1, label = "b" });
-        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
         await parents.Update(new Parent
         {
             id = 1,
@@ -97,8 +97,8 @@ public class CRUDRepositoryTests
         var notes = new ListCRUDRepository<Note>(
             new Note { id = 8, child_id = 3, text = "n" },
             new Note { id = 9, child_id = 9, text = "other" });
-        children.AddEnriched("notes", "id", notes, "child_id", many: true);
-        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        children.AddEnriched(new("notes", "id", "child_id", Many: true), notes);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
         await parents.Delete(new Parent { id = 1 });
         Assert.Empty(parents.Items);
         Assert.Empty(children.Items);
@@ -113,7 +113,7 @@ public class CRUDRepositoryTests
         var parents = new ListCRUDRepository<Parent>(
             new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()),
             new Parent { id = 1 });
-        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
         await parents.Delete(new Parent { id = 1 });
         Assert.Empty(parents.Items);
         Assert.Equal("a", Assert.Single(children.Items).label);
@@ -126,9 +126,9 @@ public class CRUDRepositoryTests
         var children = new ListCRUDRepository<Child>();
         var notes = new ListCRUDRepository<Note>();
         var childTypes = new ListCRUDRepository<TypeRow>(new TypeRow { id = 3, name = "home" });
-        children.AddEnriched("type_name", "type_id", childTypes, "id", "name");
-        children.AddEnriched("notes", "id", notes, "child_id", many: true);
-        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        children.AddEnriched(new("type_name", "type_id", "id", "name"), childTypes);
+        children.AddEnriched(new("notes", "id", "child_id", Many: true), notes);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
         await parents.Create(new Parent
         {
             children =
@@ -150,7 +150,7 @@ public class CRUDRepositoryTests
     public async Task ManyReadonlyViaThrows()
     {
         var parents = new ListCRUDRepository<Parent>();
-        parents.AddEnriched("children", "id", new ListReadonlyRepository<Child>(), "parent_id", many: true);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), new ListReadonlyRepository<Child>());
         var error = await Assert.ThrowsAsync<DatasourceException>(() =>
             parents.Create(new Parent { children = [new Child { label = "a" }] }));
         Assert.Contains("children", error.Message);
@@ -171,13 +171,13 @@ public class CRUDRepositoryTests
     sealed class SkipDelete<T> : DeleteEnrichmentStrategy<T>
     {
         public override Task DeleteOwned(
-            IRepositoryTreeNode _node,
+            StoredEnrichment _entry,
             Enrichment _enrichment,
             object _parent,
             Func<IReadOnlyList<object>, Task> _deleteNested) =>
             Task.CompletedTask;
 
-        public override Task DeleteLinked(IRepositoryTreeNode _node, Enrichment _enrichment, object _parent) =>
+        public override Task DeleteLinked(StoredEnrichment _entry, Enrichment _enrichment, object _parent) =>
             Task.CompletedTask;
     }
 
@@ -186,8 +186,8 @@ public class CRUDRepositoryTests
         ListCRUDRepository<TypeRow> types,
         ListCRUDRepository<Child> children)
     {
-        parents.AddEnriched("type_name", "type_id", types, "id", "name");
-        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        parents.AddEnriched(new("type_name", "type_id", "id", "name"), types);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
         return parents;
     }
 }

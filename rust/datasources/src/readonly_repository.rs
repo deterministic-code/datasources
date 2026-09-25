@@ -19,6 +19,7 @@ use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
+use crate::stored_enrichment::StoredEnrichment;
 use crate::select_statement::SelectStatement;
 use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
@@ -30,18 +31,18 @@ use crate::table_repository_statements::RepositoryStatements;
 use crate::value::Value;
 use async_trait::async_trait;
 use std::any::TypeId;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct ReadonlyRepository {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: RowTypeConverter,
     pub(crate) rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
-    pub(crate) result: Option<Box<dyn Mapper<Vec<Row>, Vec<Row>> + Send + Sync>>,
     pub(crate) column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
     pub(crate) statements: RepositoryStatements,
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
+    pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
     pub tree: RepositoryTree,
 }
 
@@ -64,87 +65,77 @@ impl ReadonlyRepository {
     }
 
     pub fn from_built(built: BuiltRepository) -> Self {
+        let enrichments = Arc::new(Mutex::new(Vec::new()));
         Self {
             connection: built.connection,
             middlewares: Vec::new(),
             row_converter: built.row_converter,
             rows_mapper: built.rows_mapper,
-            result: built.result,
             column_mappings: built.column_mappings,
             statements: built.statements,
             entity_type: TypeId::of::<Row>(),
             memory: None,
-            tree: RepositoryTree::new(RepositoryTreeNode::with_binder(
+            tree: RepositoryTree::new(RepositoryTreeNode::new(
                 Arc::new(StubRepository::new("readonly")),
                 "",
-                Arc::new(DefaultReadonlyEnrichmentStrategy),
+                enrichments.clone(),
             )),
+            enrichments,
         }
     }
 
     pub fn memory(items: Vec<Row>) -> Self {
-        Self::memory_with(items, None)
-    }
-
-    pub fn memory_with(
-        items: Vec<Row>,
-        result: Option<Box<dyn Mapper<Vec<Row>, Vec<Row>> + Send + Sync>>,
-    ) -> Self {
+        let enrichments = Arc::new(Mutex::new(Vec::new()));
         Self {
             connection: Arc::new(StubConnection::new("memory")),
             middlewares: Vec::new(),
             row_converter: RowTypeConverter::new(Vec::new()),
             rows_mapper: Box::new(IdentityMapper::<Row>::new()),
-            result,
             column_mappings: Box::new(IdentityMapper::<String>::new()),
             statements: RepositoryStatements::new("", Vec::new()),
             entity_type: TypeId::of::<Row>(),
             memory: Some(SharedItems::new(items)),
-            tree: RepositoryTree::new(RepositoryTreeNode::with_binder(
+            tree: RepositoryTree::new(RepositoryTreeNode::new(
                 Arc::new(StubRepository::new("memory")),
                 "",
-                Arc::new(DefaultReadonlyEnrichmentStrategy),
+                enrichments.clone(),
             )),
+            enrichments,
         }
     }
 
     pub fn add_enriched(
         &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
+        enrichment: crate::enrichment::Enrichment,
         via: impl EnrichmentVia,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
-        self.tree
-            .parent
-            .include_with(via, into, from, by, select, many, strategy);
+        let (via, persist) = via.into_repos();
+        self.enrichments.lock().expect("enrichments").push(
+            StoredEnrichment::direct(enrichment, via, persist, strategy),
+        );
         self
     }
 
     pub fn add_linked(
         &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
+        enrichment: crate::enrichment::Enrichment,
         via: impl EnrichmentVia,
-        by: impl Into<String>,
         link: Arc<dyn crate::repository::ICRUDRepository>,
-        parent: impl Into<String>,
-        related: impl Into<String>,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
-        self.tree.parent.include_linked_with(
-            via, into, from, by, link, parent, related, strategy,
-        );
+        let (via, _) = via.into_repos();
+        self.enrichments
+            .lock()
+            .expect("enrichments")
+            .push(StoredEnrichment::linked(enrichment, via, link, strategy));
         self
     }
 
     pub(crate) fn enriched(&self) -> bool {
-        !self.tree.parent.items.is_empty()
+        !self.enrichments.lock().expect("enrichments").is_empty()
     }
 
     pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
@@ -236,15 +227,15 @@ impl ReadonlyRepository {
         query: Option<&dyn ReadInput>,
         parameters: Option<&[Parameter]>,
     ) -> Result<Vec<(Row, Option<Row>)>> {
-        if self.result.is_some() {
-            return self.collapse(query, parameters).await;
-        }
         if self.memory.is_some() {
             return Ok(self
                 .read_sources(query, parameters)
                 .await?
                 .into_iter()
-                .map(|row| (row, None))
+                .map(|row| {
+                    let source = row.clone();
+                    (row, Some(source))
+                })
                 .collect());
         }
         let mut pairs = Vec::new();
@@ -258,35 +249,22 @@ impl ReadonlyRepository {
         Ok(pairs)
     }
 
-    async fn collapse(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Vec<(Row, Option<Row>)>> {
-        let rows = self.read_sources(query, parameters).await?;
-        let mapped = self.result.as_ref().expect("result").map(rows);
-        Ok(mapped.into_iter().map(|item| (item, None)).collect())
-    }
-
     async fn apply(
         &self,
-        mut pairs: Vec<(Row, Option<Row>)>,
+        pairs: Vec<(Row, Option<Row>)>,
     ) -> Result<Vec<(Row, Option<Row>)>> {
         if !self.enriched() {
             return Ok(pairs);
         }
         let mut items: Vec<Row> = pairs.iter().map(|(item, _)| item.clone()).collect();
         let sources: Vec<Option<Row>> = pairs.iter().map(|(_, source)| source.clone()).collect();
-        self.tree
-            .parent
-            .enrich_from_sourced(&mut items, Some(&sources))
-            .await?;
-        for (index, item) in items.into_iter().enumerate() {
-            if let Some(pair) = pairs.get_mut(index) {
-                pair.0 = item;
-            }
-        }
-        Ok(pairs)
+        self.fill(&mut items, Some(&sources)).await?;
+        let paired = items.len() == sources.len();
+        Ok(items
+            .into_iter()
+            .enumerate()
+            .map(|(index, item)| (item, if paired { sources[index].clone() } else { None }))
+            .collect())
     }
 
     pub(crate) async fn read_tracked(
@@ -340,6 +318,18 @@ impl ReadonlyRepository {
         Mapper::map(&self.column_mappings, property.to_string())
     }
 
+    pub(crate) async fn fill(
+        &self,
+        parents: &mut Vec<Row>,
+        sources: Option<&[Option<Row>]>,
+    ) -> Result<()> {
+        let entries = self.enrichments.lock().expect("enrichments").clone();
+        for entry in entries {
+            entry.apply(parents, sources).await?;
+        }
+        Ok(())
+    }
+
     pub(crate) fn cell(
         &self,
         property: &str,
@@ -362,8 +352,8 @@ impl IRepository for ReadonlyRepository {
 
 #[async_trait]
 impl Enriched for ReadonlyRepository {
-    async fn enrich(&self, items: &mut [Row]) -> Result<()> {
-        self.tree.parent.enrich_from(items).await
+    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
+        self.fill(items, None).await
     }
 }
 

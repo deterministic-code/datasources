@@ -11,21 +11,22 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         this.delete = delete ?? new CascadeDeleteEnrichmentStrategy<T>();
 
     public Task Persist(IRepositoryTree tree, IList<T> items, WriteMode mode) =>
-        Walk(tree.Parent, [.. items.Cast<object>()], mode);
+        Walk(tree.Parent.Value, [.. items.Cast<object>()], mode);
 
     protected virtual bool SkipUnloaded => false;
 
-    async Task Walk(IRepositoryTreeNode node, IReadOnlyList<object> parents, WriteMode mode)
+    async Task Walk(object host, IReadOnlyList<object> parents, WriteMode mode)
     {
-        foreach (var child in node.Items)
-            await PersistNode(child, parents, mode);
+        if (host is not IEnrichmentHost enriched) return;
+        foreach (var entry in enriched.Enrichments)
+            await PersistEntry(entry, parents, mode);
     }
 
-    async Task PersistNode(IRepositoryTreeNode child, IReadOnlyList<object> parents, WriteMode mode)
+    async Task PersistEntry(StoredEnrichment entry, IReadOnlyList<object> parents, WriteMode mode)
     {
-        if (child.Enrichment is { Association: { } association } enrichment)
+        if (entry.Enrichment is { Association: { } association } enrichment)
         {
-            var writer = (child as RepositoryTreeNode)?.Link
+            var writer = entry.Link
                 ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.Into}\"");
             foreach (var parent in parents)
             {
@@ -34,24 +35,24 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
                 {
                     WriteMode.Create => CreateLinks(writer, enrichment, association, parent),
                     WriteMode.Update => SyncLinks(writer, enrichment, association, parent),
-                    WriteMode.Delete => delete.DeleteLinked(child, enrichment, parent),
+                    WriteMode.Delete => delete.DeleteLinked(entry, enrichment, parent),
                     _ => throw new DatasourceException("Unknown persist mode")
                 });
             }
             return;
         }
-        if (child.Enrichment is not { Many: true, Select: null } owned)
+        if (entry.Enrichment is not { Many: true, Select: null } owned)
             return;
-        var childWriter = (child as RepositoryTreeNode)?.Persist
+        var childWriter = entry.Persist
             ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{owned.Into}\"");
         foreach (var parent in parents)
         {
             if (Skip(parent, owned.Into, mode)) continue;
             await (mode switch
             {
-                WriteMode.Create => CreateChildren(child, childWriter, owned, parent),
-                WriteMode.Update => SyncChildren(child, childWriter, owned, parent),
-                WriteMode.Delete => delete.DeleteOwned(child, owned, parent, rows => Walk(child, rows, WriteMode.Delete)),
+                WriteMode.Create => CreateChildren(childWriter, owned, parent),
+                WriteMode.Update => SyncChildren(childWriter, owned, parent),
+                WriteMode.Delete => delete.DeleteOwned(entry, owned, parent, _ => Task.CompletedTask),
                 _ => throw new DatasourceException("Unknown persist mode")
             });
         }
@@ -60,8 +61,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     bool Skip(object parent, string into, WriteMode mode) =>
         SkipUnloaded && mode is not WriteMode.Delete && Get(parent, into) is null;
 
-    async Task CreateChildren(
-        IRepositoryTreeNode node,
+    static async Task CreateChildren(
         RepositoryTreeNode.IChildPersist writer,
         Enrichment enrichment,
         object parent)
@@ -69,13 +69,11 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         foreach (var related in Payload(parent, enrichment.Into))
         {
             Stamp(related, enrichment.By, Get(parent, enrichment.From));
-            writer.AssignIdentity(related, await writer.Create(Strip(node, related)));
-            await Walk(node, [related], WriteMode.Create);
+            writer.AssignIdentity(related, await writer.Create(related));
         }
     }
 
-    async Task SyncChildren(
-        IRepositoryTreeNode node,
+    static async Task SyncChildren(
         RepositoryTreeNode.IChildPersist writer,
         Enrichment enrichment,
         object parent)
@@ -87,17 +85,13 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         var keys = writer.Ids;
         var keep = payload.Where(row => HasKey(row, keys)).Select(row => KeyOf(row, keys)).ToHashSet();
         foreach (var row in existing.Where(row => !keep.Contains(KeyOf(row, keys))))
-        {
-            await Walk(node, [row], WriteMode.Delete);
             await writer.Delete(row);
-        }
         foreach (var related in payload)
         {
             if (HasKey(related, keys) && existing.Any(row => KeyOf(row, keys) == KeyOf(related, keys)))
-                await writer.Update(Strip(node, related));
+                await writer.Update(related);
             else
-                writer.AssignIdentity(related, await writer.Create(Strip(node, related)));
-            await Walk(node, [related], WriteMode.Update);
+                writer.AssignIdentity(related, await writer.Create(related));
         }
     }
 
@@ -165,12 +159,9 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 
     static bool Missing(object? value) => value is null or 0 or 0L or 0u or "";
 
-    static object Strip(IRepositoryTreeNode node, object item)
+    internal static object Strip(IEnrichmentHost host, object item)
     {
-        var skip = node.Items
-            .Select(child => child.Enrichment?.Into)
-            .OfType<string>()
-            .ToHashSet();
+        var skip = host.Enrichments.Select(entry => entry.Enrichment.Into).ToHashSet();
         if (item is IDictionary<string, Value> row)
         {
             var copy = new Row(row);

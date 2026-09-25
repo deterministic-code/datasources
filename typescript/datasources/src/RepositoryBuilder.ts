@@ -54,7 +54,6 @@ export const parts = <T>(
     connection,
     rowConverter,
     rowsMapper,
-    result: options.result,
     columnMappings,
     statements: statementsOf(entity, columns, options.query, crud?.insert, crud?.update, crud?.delete),
     readColumns: columns,

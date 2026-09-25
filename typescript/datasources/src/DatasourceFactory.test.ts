@@ -109,14 +109,7 @@ describe("Datasource registry", () => {
     );
     const enriched = ds.createReadonlyRepository(Item) as ReadonlyRepository<Item>;
     expect(enriched).toBeInstanceOf(ReadonlyRepository);
-    enriched.addLinked("name", "id", typedRead, "id", typed, "id", "name");
-    const withResult = ds.createReadonlyRepository(Item, connection, {
-      result: {
-        map: () => [],
-        reverseMap: () => [],
-      },
-    });
-    expect(withResult).toBeInstanceOf(ReadonlyRepository);
+    enriched.addLinked({ into: "name", from: "id", by: "id", association: { parent: "id", related: "name" } }, typedRead, typed);
     const withWrite = ds.createRepository(Item, connection, {
       write: { persist: async () => {} },
       ids: ["id"],
@@ -129,10 +122,6 @@ describe("Datasource registry", () => {
     expect(withCrudIds).toBeInstanceOf(CRUDRepository);
     const withReadOpts = ds.createRepository(Item, connection, {
       entity: "items",
-      result: {
-        map: () => [],
-        reverseMap: () => [],
-      },
     });
     expect(withReadOpts).toBeInstanceOf(CRUDRepository);
     expect(new DatasourceFactory().create({

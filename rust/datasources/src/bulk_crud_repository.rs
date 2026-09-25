@@ -49,16 +49,11 @@ impl BulkCRUDRepository {
 
     pub fn add_enriched(
         &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
+        enrichment: crate::enrichment::Enrichment,
         via: impl EnrichmentVia,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
-        self.crud
-            .add_enriched(into, from, via, by, select, many, strategy);
+        self.crud.add_enriched(enrichment, via, strategy);
         self
     }
 
@@ -125,7 +120,7 @@ impl DerefMut for BulkCRUDRepository {
 
 #[async_trait]
 impl Enriched for BulkCRUDRepository {
-    async fn enrich(&self, items: &mut [Row]) -> Result<()> {
+    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
         self.crud.enrich(items).await
     }
 }

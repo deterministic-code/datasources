@@ -4,7 +4,8 @@ use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::repository_tree::RepositoryTree;
-use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
+use crate::repository_tree_node::encode_rows;
+use crate::stored_enrichment::StoredEnrichment;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -52,37 +53,36 @@ impl WriteEnrichmentStrategy for DefaultWriteEnrichmentStrategy {
         items: &mut [Row],
         mode: WriteMode,
     ) -> Result<()> {
-        self.walk(&tree.parent, items, mode).await
+        let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
+        self.walk(&entries, items, mode).await
     }
 }
 
 impl DefaultWriteEnrichmentStrategy {
     fn walk<'a>(
         &'a self,
-        node: &'a RepositoryTreeNode,
+        entries: &'a [StoredEnrichment],
         parents: &'a mut [Row],
         mode: WriteMode,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
-            for child in &node.items {
-                self.persist_node(child, parents, mode).await?;
+            for entry in entries {
+                self.persist_entry(entry, parents, mode).await?;
             }
             Ok(())
         })
     }
 
-    fn persist_node<'a>(
+    fn persist_entry<'a>(
         &'a self,
-        child: &'a RepositoryTreeNode,
+        entry: &'a StoredEnrichment,
         parents: &'a mut [Row],
         mode: WriteMode,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
-            let Some(enrichment) = child.enrichment.as_ref() else {
-                return Ok(());
-            };
+            let enrichment = &entry.enrichment;
             if enrichment.association.is_some() {
-                let writer = child.link.as_ref().ok_or_else(|| {
+                let writer = entry.link.as_ref().ok_or_else(|| {
                     DatasourceError::message(format!(
                         "Deep write requires a CRUD repository for \"{}\"",
                         enrichment.into
@@ -101,7 +101,7 @@ impl DefaultWriteEnrichmentStrategy {
                         }
                         WriteMode::Delete => {
                             self.delete
-                                .delete_linked(child, enrichment, parent)
+                                .delete_linked(entry, enrichment, parent)
                                 .await?
                         }
                     }
@@ -111,7 +111,7 @@ impl DefaultWriteEnrichmentStrategy {
             if !enrichment.many || enrichment.select.is_some() {
                 return Ok(());
             }
-            let writer = child.write.as_ref().ok_or_else(|| {
+            let writer = entry.persist.as_ref().ok_or_else(|| {
                 DatasourceError::message(format!(
                     "Deep write requires a CRUD repository for \"{}\"",
                     enrichment.into
@@ -123,16 +123,16 @@ impl DefaultWriteEnrichmentStrategy {
                 }
                 match mode {
                     WriteMode::Create => {
-                        self.create_children(child, writer.as_ref(), enrichment, parent)
+                        self.create_children(writer.as_ref(), enrichment, parent)
                             .await?
                     }
                     WriteMode::Update => {
-                        self.sync_children(child, writer.as_ref(), enrichment, parent)
+                        self.sync_children(writer.as_ref(), enrichment, parent)
                             .await?
                     }
                     WriteMode::Delete => {
                         self.delete
-                            .delete_owned(child, enrichment, parent, self)
+                            .delete_owned(entry, enrichment, parent, self)
                             .await?
                     }
                 }
@@ -147,7 +147,6 @@ impl DefaultWriteEnrichmentStrategy {
 
     async fn create_children(
         &self,
-        node: &RepositoryTreeNode,
         writer: &dyn ICRUDRepository,
         enrichment: &Enrichment,
         parent: &mut Row,
@@ -158,11 +157,8 @@ impl DefaultWriteEnrichmentStrategy {
             if let Some(key) = &key {
                 row.insert(enrichment.by.clone(), key.clone());
             }
-            let mut stripped = strip_enriched(row, node);
-            let created = writer.create(&mut stripped).await?;
+            let created = writer.create(row).await?;
             copy_ids(row, &created, &writer.id_names());
-            self.walk(node, std::slice::from_mut(row), WriteMode::Create)
-                .await?;
         }
         parent.insert(enrichment.into.clone(), encode_rows(&related));
         Ok(())
@@ -170,7 +166,6 @@ impl DefaultWriteEnrichmentStrategy {
 
     async fn sync_children(
         &self,
-        node: &RepositoryTreeNode,
         writer: &dyn ICRUDRepository,
         enrichment: &Enrichment,
         parent: &mut Row,
@@ -192,9 +187,6 @@ impl DefaultWriteEnrichmentStrategy {
                 .map(|key| !keep.contains(&key))
                 .unwrap_or(true)
         }) {
-            let mut doomed = row.clone();
-            self.walk(node, std::slice::from_mut(&mut doomed), WriteMode::Delete)
-                .await?;
             writer.delete(row, None).await?;
         }
         for row in &mut related {
@@ -204,16 +196,13 @@ impl DefaultWriteEnrichmentStrategy {
                         .iter()
                         .any(|ex| row_key(ex, &ids) == Some(key.clone())) =>
                 {
-                    writer.update(&strip_enriched(row, node), None).await?;
+                    writer.update(row, None).await?;
                 }
                 _ => {
-                    let mut stripped = strip_enriched(row, node);
-                    let created = writer.create(&mut stripped).await?;
+                    let created = writer.create(row).await?;
                     copy_ids(row, &created, &ids);
                 }
             }
-            self.walk(node, std::slice::from_mut(row), WriteMode::Update)
-                .await?;
         }
         parent.insert(enrichment.into.clone(), encode_rows(&related));
         Ok(())
@@ -222,8 +211,8 @@ impl DefaultWriteEnrichmentStrategy {
 
 #[async_trait]
 impl crate::delete_nested::DeleteNested for DefaultWriteEnrichmentStrategy {
-    async fn delete_nested(&self, node: &RepositoryTreeNode, rows: &mut [Row]) -> Result<()> {
-        self.walk(node, rows, WriteMode::Delete).await
+    async fn delete_nested(&self, _rows: &mut [Row]) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -332,12 +321,10 @@ fn missing(value: &Value) -> bool {
         || matches!(value, Value::Text(text) if text.is_empty())
 }
 
-pub(crate) fn strip_enriched(item: &Row, node: &RepositoryTreeNode) -> Row {
+pub(crate) fn strip_enriched(item: &Row, entries: &[StoredEnrichment]) -> Row {
     let mut row = item.clone();
-    for child in &node.items {
-        if let Some(enrichment) = &child.enrichment {
-            row.remove(&enrichment.into);
-        }
+    for entry in entries {
+        row.remove(&entry.enrichment.into);
     }
     row
 }

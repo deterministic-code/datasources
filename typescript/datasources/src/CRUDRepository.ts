@@ -17,9 +17,8 @@ import { identityCreate, parts } from "./RepositoryBuilder.ts";
 import { isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
+import { DefaultWriteEnrichmentStrategy, strip } from "./DefaultWriteEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
-import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -211,14 +210,7 @@ export class CRUDRepository<T = Cells>
     );
   };
 
-  private stripEnriched = (item: T): T => this.stripNode(this.tree.parent, item) as T;
-
-  private stripNode = (node: IRepositoryTreeNode, item: object): object => {
-    const copy = { ...item } as Props;
-    for (const child of node.items)
-      if (child.enrichment) delete copy[child.enrichment.into];
-    return copy;
-  };
+  private stripEnriched = (item: T): T => strip(this, item) as T;
 }
 
 const isWrite = <T>(
