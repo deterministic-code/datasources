@@ -44,6 +44,11 @@ describe("Query and Where", () => {
     expect(select.where).toBeUndefined();
     expect(withWhere.where).toBe(where);
   });
+
+  it("returns constructor text", () => {
+    expect(new QueryStatement("SELECT 1").getText()).toBe("SELECT 1");
+    expect(new Where("id = 1").getText()).toBe("id = 1");
+  });
 });
 
 describe("WhereClause", () => {

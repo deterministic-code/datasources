@@ -1,9 +1,16 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  bindInstall,
+  CRUDRepository,
+  Datasource,
+  DatasourceError,
   DatasourceFactory,
+  EnrichedReadonlyRepository,
   MockCommand,
   MockDriver,
   ProviderNotInstalledError,
+  ReadonlyRepository,
+  untyped,
 } from "./index.ts";
 
 const envKeys = [
@@ -20,7 +27,10 @@ beforeEach(() => {
   for (const key of envKeys) delete process.env[key];
 });
 
-afterEach(() => DatasourceFactory.reset());
+afterEach(() => {
+  DatasourceFactory.reset();
+  bindInstall();
+});
 
 afterAll(() => {
   for (const key of envKeys) {
@@ -53,5 +63,84 @@ describe("DatasourceFactory", () => {
     expect(driver.transaction(connection, "readCommitted").isolation).toBe(
       "readCommitted",
     );
+  });
+});
+
+describe("Datasource registry", () => {
+  it("registers, lists, creates, and resets", () => {
+    expect(DatasourceFactory.registered()).toEqual([]);
+    DatasourceFactory.register("json", new MockDriver());
+    DatasourceFactory.register("memory", new MockDriver());
+    expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
+    const created = Datasource.create({ provider: "json", path: "x" });
+    expect(created.provider).toBe("json");
+    DatasourceFactory.reset();
+    expect(DatasourceFactory.registered()).toEqual([]);
+    expect(() => Datasource.create({ provider: "json" })).toThrow(ProviderNotInstalledError);
+  });
+
+  it("requires consumer defaults when provider is omitted", async () => {
+    expect(() => Datasource.create()).toThrow(DatasourceError);
+    DatasourceFactory.register("sqlite", new MockDriver());
+    const ds = Datasource.create({
+      provider: "sqlite",
+      database_url: "sqlite:///:memory:",
+    });
+    expect(ds.provider).toBe("sqlite");
+    const connection = await ds.createConnection();
+    expect(connection.isOpen).toBe(false);
+    expect(ds.createCommand().connection).toBe(connection);
+    expect(ds.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
+    expect(ds.createReadonlyRepository(untyped()).constructor).toBe(ReadonlyRepository);
+    class Item {
+      id = 0;
+      name = "";
+    }
+    const typed = ds.createRepository(Item, connection);
+    const typedRead = ds.createReadonlyRepository(Item);
+    expect(typed).toBeInstanceOf(CRUDRepository);
+    expect(typed.type).toBe(Item);
+    expect(typed instanceof CRUDRepository && typed.statements?.query().getText()).toBe(
+      "SELECT id, name FROM Item",
+    );
+    expect(typedRead.constructor).toBe(ReadonlyRepository);
+    expect(typedRead.type).toBe(Item);
+    expect(typedRead instanceof ReadonlyRepository && typedRead.statements?.query().getText()).toBe(
+      "SELECT id, name FROM Item",
+    );
+    const enriched = ds.createReadonlyEnrichedRepository(Item);
+    expect(enriched).toBeInstanceOf(EnrichedReadonlyRepository);
+    enriched.addLinked("name", "id", typedRead, "id", typed, "id", "name");
+    expect(new DatasourceFactory().create({
+      provider: "sqlite",
+      database_schema: "main",
+    }).provider).toBe("sqlite");
+    process.env.DATASOURCE_URL = "  ";
+    process.env.DATABASE_SCHEMA = "  ";
+    expect(() => Datasource.create()).toThrow(DatasourceError);
+    process.env.DATASOURCE_URL = "sqlite:///:memory:";
+    process.env.DATABASE_SCHEMA = "main";
+    expect(Datasource.create().provider).toBe("sqlite");
+    bindInstall((options) => {
+      if (options.INSTALLED_PROVIDERS?.includes("json"))
+        DatasourceFactory.register("json", new MockDriver());
+    });
+    DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "json" });
+    expect(DatasourceFactory.registered()).toEqual(["json", "sqlite"]);
+    DatasourceFactory.reset();
+    for (const key of envKeys) delete process.env[key];
+    expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
+    expect(() => DatasourceFactory.default).toThrow("Datasource defaults are not specified");
+    DatasourceFactory.register("sqlite", new MockDriver());
+    DatasourceFactory.register("memory", new MockDriver());
+    process.env.DATASOURCE_URL = "sqlite:///:memory:";
+    expect(DatasourceFactory.default.provider).toBe("sqlite");
+    expect(Datasource.default.provider).toBe("sqlite");
+    delete process.env.DATASOURCE_URL;
+    process.env.PROVIDER = "sqlite";
+    expect(DatasourceFactory.default.provider).toBe("sqlite");
+    process.env.DEFAULT_PROVIDER = "memory";
+    process.env.DEFAULT_DATASOURCE_URL = "memory://";
+    expect(DatasourceFactory.default.provider).toBe("memory");
   });
 });
