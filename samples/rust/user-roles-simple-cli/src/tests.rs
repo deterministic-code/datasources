@@ -209,7 +209,7 @@ fn builds_schema() {
         .contains("INSERT INTO `groups` (ugly_name"));
     assert_eq!(
         users_roles_groups_query::text("sqlite"),
-        "SELECT \"users\".id AS id, \"users\".username AS username, \"users\".is_enabled AS is_enabled, \"users\".created AS created, \"roles\".id AS role_id, \"roles\".name AS role_name, \"roles\".is_enabled AS role_is_enabled, \"groups\".id AS group_id, \"groups\".ugly_name AS group_name, \"groups\".is_enabled AS group_is_enabled FROM \"users\" LEFT JOIN \"user_roles\" ON \"users\".id = \"user_roles\".user_id LEFT JOIN \"roles\" ON \"user_roles\".bad_role_id = \"roles\".id LEFT JOIN \"user_groups\" ON \"users\".id = \"user_groups\".user_id LEFT JOIN \"groups\" ON \"user_groups\".group_id = \"groups\".id"
+        "SELECT \"users\".id AS id, \"users\".username AS username, \"users\".is_enabled AS is_enabled, \"users\".created AS created, \"roles\".id AS role_id, \"roles\".name AS role_name, \"roles\".is_enabled AS role_is_enabled, \"groups\".id AS group_id, \"groups\".ugly_name AS group_name, \"groups\".is_enabled AS group_is_enabled FROM \"users\" LEFT JOIN \"user_roles\" ON \"users\".id = \"user_roles\".user_id LEFT JOIN \"roles\" ON \"user_roles\".bad_role_id = \"roles\".id LEFT JOIN \"user_groups\" ON \"users\".id = \"user_groups\".user_id LEFT JOIN \"groups\" ON \"user_groups\".group_id = \"groups\".id ORDER BY \"users\".id ASC, \"roles\".id ASC, \"groups\".id ASC"
     );
 }
 
@@ -498,6 +498,29 @@ fn normalizes_dialect_noise_and_matches_sql_text() {
     assert_eq!(crate::console_log::normalize_console_line("count: 1234"), "count: 1234");
     assert_eq!(crate::console_log::normalize_console_line("plain"), "plain");
     assert_eq!(crate::console_log::normalize_console_line("[x] kept"), "[x] kept");
+    assert_eq!(
+        crate::console_log::dialect_transcript(&[
+            "[2026-09-22T00:00:00.000Z]-[datasource][Request]-[{is_enabled: True}]".into()
+        ]),
+        vec!["[<date>]-[datasource][Request]-[{is_enabled: 1}]".to_string()]
+    );
+    assert_eq!(
+        crate::console_log::dialect_transcript(&[
+            "[2026-09-22T00:00:00.000Z]-[datasource][Start]-[UPDATE users SET is_enabled = $is_enabled]".into(),
+            "[2026-09-22T00:00:00.000Z]-[datasource][AfterCommand]-[{result: 5, rowsAffected: 1}]".into(),
+        ]),
+        vec![
+            "[<date>]-[datasource][Start]-[UPDATE users SET is_enabled = $is_enabled]".to_string(),
+            "[<date>]-[datasource][AfterCommand]-[{result: <id>, rowsAffected: 1}]".to_string(),
+        ]
+    );
+    assert_eq!(
+        crate::console_log::dialect_transcript(&[
+            "[2026-09-22T00:00:00.000Z]-[datasource][Start]-[INSERT INTO users (name) VALUES ($name)]".into(),
+            "[2026-09-22T00:00:00.000Z]-[datasource][AfterCommand]-[{result: 1, rowsAffected: 1}]".into(),
+        ])[1],
+        "[<date>]-[datasource][AfterCommand]-[{result: 1, rowsAffected: 1}]"
+    );
     let shared = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../user-roles-simple-cli-shared");
     let lines = |name: &str| {
         std::fs::read_to_string(shared.join(name))
@@ -510,6 +533,9 @@ fn normalizes_dialect_noise_and_matches_sql_text() {
     let sqlite = crate::console_log::sql_text(&lines("sqlite.log"));
     assert_eq!(crate::console_log::sql_text(&lines("mysql.log")), sqlite);
     assert_eq!(crate::console_log::sql_text(&lines("postgres.log")), sqlite);
+    let transcript = crate::console_log::dialect_transcript(&lines("sqlite.log"));
+    assert_eq!(crate::console_log::dialect_transcript(&lines("mysql.log")), transcript);
+    assert_eq!(crate::console_log::dialect_transcript(&lines("postgres.log")), transcript);
 }
 
 #[tokio::test]

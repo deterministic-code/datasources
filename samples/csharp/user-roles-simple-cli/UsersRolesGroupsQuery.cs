@@ -34,6 +34,7 @@ public static class UsersRolesGroupsQuery
                 Join.Left(userGroups, $"{users}.id", $"{userGroups}.user_id"),
                 Join.Left(groups, $"{userGroups}.group_id", $"{groups}.id")
             ],
+            OrderBy = [OrderBy.Asc($"{users}.id"), OrderBy.Asc($"{roles}.id"), OrderBy.Asc($"{groups}.id")],
         });
     }
 }

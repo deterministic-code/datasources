@@ -1,5 +1,5 @@
 use crate::schema;
-use datasources::{Join, QueryStatement, QueryStatementOptions, Text};
+use datasources::{Join, OrderBy, QueryStatement, QueryStatementOptions, Text};
 
 pub fn create(provider: &str) -> QueryStatement {
     let users = schema::ident(provider, "users");
@@ -28,6 +28,11 @@ pub fn create(provider: &str) -> QueryStatement {
     let right_ug = format!("{user_groups}.user_id");
     let left_group = format!("{user_groups}.group_id");
     let right_group = format!("{groups}.id");
+    let order = [
+        OrderBy::asc(format!("{users}.id")),
+        OrderBy::asc(format!("{roles}.id")),
+        OrderBy::asc(format!("{groups}.id")),
+    ];
     QueryStatement::new(QueryStatementOptions {
         joins: &[
             Join::left(&user_roles, &left_ur, &right_ur),
@@ -35,6 +40,7 @@ pub fn create(provider: &str) -> QueryStatement {
             Join::left(&user_groups, &left_ug, &right_ug),
             Join::left(&groups, &left_group, &right_group),
         ],
+        order_by: &order,
         ..QueryStatementOptions::new(&users, &field_refs)
     })
 }

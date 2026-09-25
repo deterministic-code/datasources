@@ -17,3 +17,14 @@ export const normalizeConsoleLine = (line: string): string =>
 
 export const sqlText = (lines: readonly string[]): string[] =>
   lines.filter((line) => line.includes("][Start]-") || line.includes("][Finish]-")).map(normalizeConsoleLine);
+
+const maskUpdateResult = (line: string): string => line.replace(/result: [^,}]+/, "result: <id>");
+
+export const dialectTranscript = (lines: readonly string[]): string[] => {
+  let update = false;
+  return lines.filter((line) => line.length > 0).map((line) => {
+    const text = normalizeConsoleLine(line).replaceAll(": True", ": 1").replaceAll(": False", ": 0");
+    if (text.includes("][Start]-")) update = text.includes("][Start]-[UPDATE ");
+    return update && text.includes("][AfterCommand]-") ? maskUpdateResult(text) : text;
+  });
+};

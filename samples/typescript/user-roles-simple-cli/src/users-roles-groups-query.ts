@@ -1,4 +1,4 @@
-import { Join, QueryStatement, type IQuery } from "@datasources/core";
+import { Join, OrderBy, QueryStatement, type IQuery } from "@datasources/core";
 import { ident } from "./schema.ts";
 
 export const usersRolesGroupsQuery = (provider = "sqlite"): IQuery => {
@@ -27,5 +27,6 @@ export const usersRolesGroupsQuery = (provider = "sqlite"): IQuery => {
       Join.left(userGroups, `${users}.id`, `${userGroups}.user_id`),
       Join.left(groups, `${userGroups}.group_id`, `${groups}.id`),
     ],
+    orderBy: [OrderBy.asc(`${users}.id`), OrderBy.asc(`${roles}.id`), OrderBy.asc(`${groups}.id`)],
   });
 };

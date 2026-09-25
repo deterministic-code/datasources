@@ -23,6 +23,9 @@ public sealed class ConsoleTranscriptTests
         var sql = new[] { "sqlite", "mysql", "postgres" }.Select(SqlText).ToArray();
         Assert.Equal(sql[0], sql[1]);
         Assert.Equal(sql[0], sql[2]);
+        var full = new[] { "sqlite", "mysql", "postgres" }.Select(DialectFile).ToArray();
+        Assert.Equal(full[0], full[1]);
+        Assert.Equal(full[0], full[2]);
     }
 
     [Fact]
@@ -37,6 +40,24 @@ public sealed class ConsoleTranscriptTests
         Assert.Equal("count: 1234", Normalize("count: 1234"));
         Assert.Equal("plain", Normalize("plain"));
         Assert.Equal("[x] kept", Normalize("[x] kept"));
+        Assert.Equal(
+            ["[<date>]-[datasource][Request]-[{is_enabled: 1}]"],
+            Dialect(["[2026-09-22T00:00:00.000Z]-[datasource][Request]-[{is_enabled: True}]"]));
+        Assert.Equal(
+            [
+                "[<date>]-[datasource][Start]-[UPDATE users SET is_enabled = $is_enabled]",
+                "[<date>]-[datasource][AfterCommand]-[{result: <id>, rowsAffected: 1}]"
+            ],
+            Dialect([
+                "[2026-09-22T00:00:00.000Z]-[datasource][Start]-[UPDATE users SET is_enabled = $is_enabled]",
+                "[2026-09-22T00:00:00.000Z]-[datasource][AfterCommand]-[{result: 5, rowsAffected: 1}]"
+            ]));
+        Assert.Equal(
+            "[<date>]-[datasource][AfterCommand]-[{result: 1, rowsAffected: 1}]",
+            Dialect([
+                "[2026-09-22T00:00:00.000Z]-[datasource][Start]-[INSERT INTO users (name) VALUES ($name)]",
+                "[2026-09-22T00:00:00.000Z]-[datasource][AfterCommand]-[{result: 1, rowsAffected: 1}]"
+            ])[1]);
     }
 
     [Fact]
@@ -160,6 +181,23 @@ public sealed class ConsoleTranscriptTests
             .Select(Normalize)
             .ToArray();
 
+    static string[] DialectFile(string provider) =>
+        Dialect(File.ReadAllLines(Path.Combine(Shared(), $"{provider}.log")));
+
+    static string[] Dialect(IEnumerable<string> lines)
+    {
+        var update = false;
+        return lines.Where(line => line.Length > 0).Select(line =>
+        {
+            var text = Normalize(line).Replace(": True", ": 1", StringComparison.Ordinal).Replace(": False", ": 0", StringComparison.Ordinal);
+            if (text.Contains("][Start]-", StringComparison.Ordinal))
+                update = text.Contains("][Start]-[UPDATE ", StringComparison.Ordinal);
+            return update && text.Contains("][AfterCommand]-", StringComparison.Ordinal)
+                ? UpdateResult.Replace(text, "result: <id>")
+                : text;
+        }).ToArray();
+    }
+
     static string Normalize(string line)
     {
         var text = ExpectConsoleMiddleware.Signature(line);
@@ -177,6 +215,7 @@ public sealed class ConsoleTranscriptTests
     static readonly Regex Password = new(@"password: [^,}\]]+", RegexOptions.Compiled);
     static readonly Regex Updated = new(@"updated: [^,}\]]+", RegexOptions.Compiled);
     static readonly Regex Token = new(@"[A-Za-z0-9+/]{4,}={0,2}", RegexOptions.Compiled);
+    static readonly Regex UpdateResult = new(@"result: [^,}]+", RegexOptions.Compiled);
 
     static CliSpec Spec() =>
         new DeserializerBuilder()

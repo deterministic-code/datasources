@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 import { App } from "./app.ts";
-import { normalizeConsoleLine, sqlText } from "./console-log.ts";
+import { dialectTranscript, normalizeConsoleLine, sqlText } from "./console-log.ts";
 import { migrate } from "./migrate.ts";
 import { parse } from "./parse.ts";
 
@@ -23,11 +23,27 @@ describe("console transcript", () => {
     expect(normalizeConsoleLine("count: 1234")).toBe("count: 1234");
     expect(normalizeConsoleLine("plain")).toBe("plain");
     expect(normalizeConsoleLine("[x] kept")).toBe("[x] kept");
-    const logs = ["sqlite", "mysql", "postgres"].map((provider) =>
-      sqlText(readFileSync(join(shared, `${provider}.log`), "utf8").split("\n").filter((line) => line.length > 0)),
-    );
+    expect(dialectTranscript(["[2026-09-22T00:00:00.000Z]-[datasource][Request]-[{is_enabled: True}]"])).toEqual([
+      "[<date>]-[datasource][Request]-[{is_enabled: 1}]",
+    ]);
+    expect(dialectTranscript([
+      "[2026-09-22T00:00:00.000Z]-[datasource][Start]-[UPDATE users SET is_enabled = $is_enabled]",
+      "[2026-09-22T00:00:00.000Z]-[datasource][AfterCommand]-[{result: 5, rowsAffected: 1}]",
+    ])).toEqual([
+      "[<date>]-[datasource][Start]-[UPDATE users SET is_enabled = $is_enabled]",
+      "[<date>]-[datasource][AfterCommand]-[{result: <id>, rowsAffected: 1}]",
+    ]);
+    expect(dialectTranscript([
+      "[2026-09-22T00:00:00.000Z]-[datasource][Start]-[INSERT INTO users (name) VALUES ($name)]",
+      "[2026-09-22T00:00:00.000Z]-[datasource][AfterCommand]-[{result: 1, rowsAffected: 1}]",
+    ])[1]).toBe("[<date>]-[datasource][AfterCommand]-[{result: 1, rowsAffected: 1}]");
+    const read = (provider: string) => readFileSync(join(shared, `${provider}.log`), "utf8").split("\n").filter((line) => line.length > 0);
+    const logs = ["sqlite", "mysql", "postgres"].map((provider) => sqlText(read(provider)));
     expect(logs[1]).toEqual(logs[0]);
     expect(logs[2]).toEqual(logs[0]);
+    const full = ["sqlite", "mysql", "postgres"].map((provider) => dialectTranscript(read(provider)));
+    expect(full[1]).toEqual(full[0]);
+    expect(full[2]).toEqual(full[0]);
   });
 
   it("matches the sqlite console transcript", async () => {
