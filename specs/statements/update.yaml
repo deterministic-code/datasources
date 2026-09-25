@@ -1,0 +1,49 @@
+# Shared UPDATE grammar. C#, Rust, and TypeScript must all pass this file.
+# expr, ident, param, and select (subqueries) are the SELECT grammar.
+name: update
+grammar: |
+  update      = "UPDATE" ident "SET" assignment ("," assignment)* where?
+  assignment  = ident "=" expr
+  where       = "WHERE" expr
+  expr        = or_expr
+  or_expr     = and_expr ("OR" and_expr)*
+  and_expr    = not_expr ("AND" not_expr)*
+  not_expr    = "NOT" "(" expr ")" | predicate
+  predicate   = "EXISTS" subquery
+              | primary null_test
+              | primary "NOT" "IN" "(" in_list ")"
+              | primary "IN" "(" in_list ")"
+              | primary "NOT" "BETWEEN" param "AND" param
+              | primary "BETWEEN" param "AND" param
+              | primary "NOT" "LIKE" param
+              | primary "LIKE" param
+              | primary (cmp_op primary)?
+  in_list     = param ("," param)* | select
+  null_test   = "IS" "NULL" | "IS" "NOT" "NULL"
+  cmp_op      = "=" | "<>" | ">" | "<" | ">=" | "<="
+  primary     = ident | param | integer | string | "true" | "false" | "null" | subquery | "(" expr ")"
+  param       = "$" ident
+  subquery    = "(" select ")"
+  string      = "'" (any except "'" | "''")* "'"
+  ident       = part ("." part)*
+  part        = name | quoted
+  name        = letter (letter | digit | "_")*
+  quoted      = '"' (any except '"' | '""')* '"'
+examples:
+  - name: set where
+    sql: UPDATE users SET name = $name WHERE id = $id
+    table: users
+    columns: [name]
+    where: { op: eq, value: id }
+  - name: set only
+    sql: UPDATE users SET name = $name, age = $age
+    table: users
+    columns: [name, age]
+  - name: not like
+    sql: UPDATE users SET name = $name WHERE name NOT LIKE $name
+    table: users
+    where: { op: notLike, value: name, pattern: name }
+  - name: column value
+    sql: UPDATE users SET name = name WHERE id = $id
+    table: users
+    columns: [name]

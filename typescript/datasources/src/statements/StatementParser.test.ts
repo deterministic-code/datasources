@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ArrayExpression,
+  DeleteStatement,
   Identifier,
+  InsertStatement,
   Join,
   Literal,
   Operator,
@@ -9,6 +11,7 @@ import {
   StatementEvaluator,
   StatementParser,
   Subquery,
+  UpdateStatement,
   WhereClause,
 } from "../index.ts";
 import type { IExpression } from "./IExpression.ts";
@@ -39,6 +42,38 @@ describe("StatementParser", () => {
       "SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10",
     ])
       roundTrip(sql);
+  });
+
+  it("round-trips the write grammar", () => {
+    for (const sql of [
+      "INSERT INTO users (id, name) VALUES ($id, $name)",
+      'INSERT INTO "user" (id) VALUES ($id)',
+      "INSERT INTO users (name) VALUES ('ada')",
+      "UPDATE users SET name = $name WHERE id = $id",
+      "UPDATE users SET name = $name, age = $age",
+      "UPDATE users SET name = $name WHERE name NOT LIKE $name",
+      "UPDATE users SET name = name WHERE id = $id",
+      "DELETE FROM users WHERE id = $id",
+      "DELETE FROM users",
+      'DELETE FROM "user" WHERE id = $id',
+      "DELETE FROM users WHERE name NOT LIKE $name",
+    ])
+      roundTrip(sql);
+  });
+
+  it("builds the write trees", () => {
+    expect(StatementParser.parse("INSERT INTO users (id, name) VALUES ($id, $name)")).toBeInstanceOf(
+      InsertStatement,
+    );
+    const update = StatementParser.parse("UPDATE users SET name = $name WHERE id = $id") as UpdateStatement;
+    expect((update.where as WhereClause).condition).toBeInstanceOf(Operator.Equals);
+    const notLike = StatementParser.parse(
+      "UPDATE users SET name = $name WHERE name NOT LIKE $name",
+    ) as UpdateStatement;
+    expect((notLike.where as WhereClause).condition).toBeInstanceOf(Operator.NotLike);
+    const deleted = StatementParser.parse("DELETE FROM users WHERE id = $id") as DeleteStatement;
+    expect((deleted.where as WhereClause).condition).toBeInstanceOf(Operator.Equals);
+    expect((StatementParser.parse("DELETE FROM users") as DeleteStatement).where).toBeUndefined();
   });
 
   it("builds the where tree", () => {

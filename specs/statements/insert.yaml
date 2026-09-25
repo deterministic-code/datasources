@@ -1,0 +1,42 @@
+# Shared INSERT grammar. C#, Rust, and TypeScript must all pass this file.
+# expr, ident, param, and select (subqueries) are the SELECT grammar.
+name: insert
+grammar: |
+  insert      = "INSERT" "INTO" ident "(" ident ("," ident)* ")" "VALUES" "(" expr ("," expr)* ")"
+  expr        = or_expr
+  or_expr     = and_expr ("OR" and_expr)*
+  and_expr    = not_expr ("AND" not_expr)*
+  not_expr    = "NOT" "(" expr ")" | predicate
+  predicate   = "EXISTS" subquery
+              | primary null_test
+              | primary "NOT" "IN" "(" in_list ")"
+              | primary "IN" "(" in_list ")"
+              | primary "NOT" "BETWEEN" param "AND" param
+              | primary "BETWEEN" param "AND" param
+              | primary "NOT" "LIKE" param
+              | primary "LIKE" param
+              | primary (cmp_op primary)?
+  in_list     = param ("," param)* | select
+  null_test   = "IS" "NULL" | "IS" "NOT" "NULL"
+  cmp_op      = "=" | "<>" | ">" | "<" | ">=" | "<="
+  primary     = ident | param | integer | string | "true" | "false" | "null" | subquery | "(" expr ")"
+  param       = "$" ident
+  subquery    = "(" select ")"
+  string      = "'" (any except "'" | "''")* "'"
+  ident       = part ("." part)*
+  part        = name | quoted
+  name        = letter (letter | digit | "_")*
+  quoted      = '"' (any except '"' | '""')* '"'
+examples:
+  - name: columns
+    sql: INSERT INTO users (id, name) VALUES ($id, $name)
+    table: users
+    columns: [id, name]
+  - name: quoted table
+    sql: INSERT INTO "user" (id) VALUES ($id)
+    table: '"user"'
+    columns: [id]
+  - name: literal value
+    sql: INSERT INTO users (name) VALUES ('ada')
+    table: users
+    columns: [name]

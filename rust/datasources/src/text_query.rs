@@ -121,6 +121,9 @@ impl Text for QueryStatement {
 }
 
 impl Statement for QueryStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn parameters(&self) -> Vec<crate::parameter::Parameter> {
         self.where_clause
             .as_ref()

@@ -23,6 +23,39 @@ public sealed class StatementParserTests
     public void RoundTrips(string sql) =>
         Assert.Equal(sql, StatementParser.Parse(sql).GetText());
 
+    [Theory]
+    [InlineData("INSERT INTO users (id, name) VALUES ($id, $name)")]
+    [InlineData("INSERT INTO \"user\" (id) VALUES ($id)")]
+    [InlineData("INSERT INTO users (name) VALUES ('ada')")]
+    [InlineData("UPDATE users SET name = $name WHERE id = $id")]
+    [InlineData("UPDATE users SET name = $name, age = $age")]
+    [InlineData("UPDATE users SET name = $name WHERE name NOT LIKE $name")]
+    [InlineData("UPDATE users SET name = name WHERE id = $id")]
+    [InlineData("DELETE FROM users WHERE id = $id")]
+    [InlineData("DELETE FROM users")]
+    [InlineData("DELETE FROM \"user\" WHERE id = $id")]
+    [InlineData("DELETE FROM users WHERE name NOT LIKE $name")]
+    public void RoundTripsWrites(string sql) =>
+        Assert.Equal(sql, StatementParser.Parse(sql).GetText());
+
+    [Fact]
+    public void BuildsTheWriteTrees()
+    {
+        Assert.IsType<InsertStatement>(StatementParser.Parse("INSERT INTO users (id, name) VALUES ($id, $name)"));
+
+        var update = Assert.IsType<UpdateStatement>(StatementParser.Parse("UPDATE users SET name = $name WHERE id = $id"));
+        Assert.IsType<Operator.Equals>(Assert.IsType<WhereClause>(update.Where).Condition);
+
+        var notLike = Assert.IsType<UpdateStatement>(StatementParser.Parse("UPDATE users SET name = $name WHERE name NOT LIKE $name"));
+        Assert.IsType<Operator.NotLike>(Assert.IsType<WhereClause>(notLike.Where).Condition);
+
+        var delete = Assert.IsType<DeleteStatement>(StatementParser.Parse("DELETE FROM users WHERE id = $id"));
+        Assert.IsType<Operator.Equals>(Assert.IsType<WhereClause>(delete.Where).Condition);
+
+        var all = Assert.IsType<DeleteStatement>(StatementParser.Parse("DELETE FROM users"));
+        Assert.Null(all.Where);
+    }
+
     [Fact]
     public void BuildsTheWhereTree()
     {

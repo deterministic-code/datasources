@@ -34,7 +34,11 @@ impl Text for CreateIndexStatement {
     }
 }
 
-impl Statement for CreateIndexStatement {}
+impl Statement for CreateIndexStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
 
 impl crate::ReadInput for CreateIndexStatement {
     fn as_statement(&self) -> Option<&dyn crate::Statement> {

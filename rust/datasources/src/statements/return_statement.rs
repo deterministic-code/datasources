@@ -25,7 +25,11 @@ impl Text for ReturnStatement {
     }
 }
 
-impl Statement for ReturnStatement {}
+impl Statement for ReturnStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
 
 impl crate::ReadInput for ReturnStatement {
     fn as_statement(&self) -> Option<&dyn crate::Statement> {

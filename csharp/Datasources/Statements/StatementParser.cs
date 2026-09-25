@@ -14,10 +14,80 @@ public static class StatementParser
     {
         int i;
 
-        public IStatement Statement() =>
-            PeekWord("SELECT")
-                ? SelectStatement()
-                : throw new InvalidOperationException("empty statement");
+        public IStatement Statement() => Word() switch
+        {
+            "SELECT" => SelectStatement(),
+            "INSERT" => ParseInsert(),
+            "UPDATE" => ParseUpdate(),
+            "DELETE" => ParseDelete(),
+            _ => throw new InvalidOperationException("empty statement")
+        };
+
+        string? Word() =>
+            PeekWord("SELECT") ? "SELECT"
+            : PeekWord("INSERT") ? "INSERT"
+            : PeekWord("UPDATE") ? "UPDATE"
+            : PeekWord("DELETE") ? "DELETE"
+            : null;
+
+        InsertStatement ParseInsert()
+        {
+            var start = i;
+            ExpectWord("INSERT");
+            ExpectWord("INTO");
+            var table = Ident();
+            Expect('(');
+            var columns = List(Ident);
+            Expect(')');
+            ExpectWord("VALUES");
+            Expect('(');
+            var values = new List<string> { RawExpr() };
+            while (Try(',')) values.Add(RawExpr());
+            Expect(')');
+            return values.Count == columns.Count && values.Zip(columns).All(pair => pair.First == "$" + pair.Second)
+                ? new InsertStatement(table, columns.Select(name => new Parameter(name, Value.Null.Instance)).ToList())
+                : new InsertStatement(text[start..i]);
+        }
+
+        UpdateStatement ParseUpdate()
+        {
+            var start = i;
+            ExpectWord("UPDATE");
+            var table = Ident();
+            ExpectWord("SET");
+            var columns = new List<string>();
+            var canonical = Assignment(columns);
+            while (Try(',')) canonical = Assignment(columns) && canonical;
+            IWhere? where = TryWord("WHERE") ? new WhereClause(Expr()) : null;
+            return canonical
+                ? new UpdateStatement(table, columns.Select(name => new Parameter(name, Value.Null.Instance)).ToList(), where)
+                : new UpdateStatement(text[start..i], where);
+        }
+
+        bool Assignment(List<string> columns)
+        {
+            var column = Ident();
+            Expect('=');
+            var raw = RawExpr();
+            columns.Add(column);
+            return raw == "$" + column;
+        }
+
+        DeleteStatement ParseDelete()
+        {
+            ExpectWord("DELETE");
+            ExpectWord("FROM");
+            var table = Ident();
+            return new DeleteStatement(table, TryWord("WHERE") ? new WhereClause(Expr()) : null);
+        }
+
+        string RawExpr()
+        {
+            Skip();
+            var start = i;
+            Expr();
+            return text[start..i];
+        }
 
         public void End()
         {

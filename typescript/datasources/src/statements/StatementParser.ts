@@ -1,13 +1,17 @@
+import type { Field } from "../builders/Field.ts";
 import { ArrayExpression } from "./ArrayExpression.ts";
+import { DeleteStatement } from "./DeleteStatement.ts";
 import { Identifier } from "./Identifier.ts";
 import type { IExpression } from "./IExpression.ts";
 import type { IStatement } from "./IStatement.ts";
+import { InsertStatement } from "./InsertStatement.ts";
 import { Join, type JoinKind } from "./Join.ts";
 import { Literal } from "./Literal.ts";
 import { Operator } from "./Operator.ts";
 import { OrderBy } from "./OrderBy.ts";
 import { QueryStatement } from "./QueryStatement.ts";
 import { Subquery } from "./Subquery.ts";
+import { UpdateStatement } from "./UpdateStatement.ts";
 import { WhereClause } from "./WhereClause.ts";
 
 const empty = (): never => {
@@ -20,7 +24,70 @@ class Cursor {
   constructor(private readonly text: string) {}
 
   statement(): IStatement {
-    return this.peekWord("SELECT") ? this.selectStatement() : empty();
+    const word = (["SELECT", "INSERT", "UPDATE", "DELETE"] as const).find((name) => this.peekWord(name)) ?? empty();
+    return {
+      SELECT: () => this.selectStatement(),
+      INSERT: () => this.parseInsert(),
+      UPDATE: () => this.parseUpdate(),
+      DELETE: () => this.parseDelete(),
+    }[word]();
+  }
+
+  private parseInsert(): InsertStatement {
+    const start = this.i;
+    this.expectWord("INSERT");
+    this.expectWord("INTO");
+    const table = this.ident();
+    this.expectChar("(");
+    const columns = [this.ident()];
+    while (this.tryChar(",")) columns.push(this.ident());
+    this.expectChar(")");
+    this.expectWord("VALUES");
+    this.expectChar("(");
+    const values = [this.rawExpr()];
+    while (this.tryChar(",")) values.push(this.rawExpr());
+    this.expectChar(")");
+    const fields: Field[] = columns.map((name) => ({ name, value: null }));
+    return values.length === columns.length && values.every((value, index) => value === `$${columns[index]}`)
+      ? new InsertStatement(table, fields)
+      : new InsertStatement(this.text.slice(start, this.i));
+  }
+
+  private parseUpdate(): UpdateStatement {
+    const start = this.i;
+    this.expectWord("UPDATE");
+    const table = this.ident();
+    this.expectWord("SET");
+    const columns: string[] = [];
+    let canonical = this.assignment(columns);
+    while (this.tryChar(",")) canonical = this.assignment(columns) && canonical;
+    const where = this.tryWord("WHERE") ? new WhereClause(this.expr()) : undefined;
+    const fields: Field[] = columns.map((name) => ({ name, value: null }));
+    return canonical
+      ? new UpdateStatement(table, fields, where)
+      : new UpdateStatement(this.text.slice(start, this.i), where);
+  }
+
+  private assignment(columns: string[]): boolean {
+    const column = this.ident();
+    this.expectChar("=");
+    const raw = this.rawExpr();
+    columns.push(column);
+    return raw === `$${column}`;
+  }
+
+  private parseDelete(): DeleteStatement {
+    this.expectWord("DELETE");
+    this.expectWord("FROM");
+    const table = this.ident();
+    return new DeleteStatement(table, this.tryWord("WHERE") ? new WhereClause(this.expr()) : undefined);
+  }
+
+  private rawExpr(): string {
+    this.skip();
+    const start = this.i;
+    this.expr();
+    return this.text.slice(start, this.i);
   }
 
   end(): void {
