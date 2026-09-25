@@ -232,7 +232,7 @@ public class UsersViewRoleTests
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
         var connection = await Open(ds, Seed());
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-        var users = ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
             ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -244,9 +244,7 @@ public class UsersViewRoleTests
                 ["UserType"] = "user_type_id",
             }),
         });
-        var usersRepo = new ReadonlyRepository<UsersView>(
-            users,
-            new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>());
+        var strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>();
         var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
         {
             EntityMapper = casing,
@@ -270,8 +268,8 @@ public class UsersViewRoleTests
                 }),
                 query => query),
         });
-        usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name");
-        usersRepo.AddEnriched("Roles", "Key", rolesRepo, "UserId", many: true);
+        usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name", strategy: strategy);
+        usersRepo.AddEnriched("Roles", "Key", rolesRepo, "UserId", many: true, strategy: strategy);
         var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 
         Assert.Equal("admin", usersView!.UserType);
@@ -284,38 +282,23 @@ public class UsersViewRoleTests
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
         var connection = await Open(ds, Seed());
-        var source = ds.CreateReadonlyRepository<Row>(connection, new ReadonlyRepositoryOptions<Row>
+        var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
         {
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-            {
-                ["Key"] = "id",
-                ["Login"] = "username",
-                ["Active"] = "is_enabled",
-                ["Opened"] = "created",
-                ["UserType"] = "user_type.name",
-                ["UserId"] = "user_id",
-                ["RoleId"] = "role_id",
-                ["Name"] = "roles.name",
-            }),
+            ["Key"] = "id",
+            ["Login"] = "username",
+            ["Active"] = "is_enabled",
+            ["Opened"] = "created",
+            ["UserType"] = "user_type.name",
+            ["UserId"] = "user_id",
+            ["RoleId"] = "role_id",
+            ["Name"] = "roles.name",
         });
-        var usersRepo = new ReadonlyRepository<UsersView>(
-            ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
-            {
-                ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-                {
-                    ["Key"] = "id",
-                    ["Login"] = "username",
-                    ["Active"] = "is_enabled",
-                    ["Opened"] = "created",
-                    ["UserType"] = "user_type.name",
-                    ["UserId"] = "user_id",
-                    ["RoleId"] = "role_id",
-                    ["Name"] = "roles.name",
-                }),
-            }),
-            new FlatToNestedReadonlyEnrichmentStrategy<UsersView>(
-                source,
-                new FlatToNestedMapper(new TypeMap
+        var hydrate = new MappedValueMapper<UsersView>();
+        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+        {
+            ColumnMappings = mappings,
+            Result = new TransformMapper<IEnumerable<Row>, IReadOnlyList<UsersView>>(
+                rows => new FlatToNestedMapper(new TypeMap
                 {
                     Key = "Key",
                     Fields = new Dictionary<string, TypeMapField>
@@ -336,29 +319,9 @@ public class UsersViewRoleTests
                             }
                         }
                     }
-                }),
-                new MappedValueMapper<UsersView>(),
-                new SelectStatement(new()
-                {
-                    Table = "user",
-                    Fields =
-                    [
-                        "user.id",
-                        "user.username",
-                        "user.is_enabled",
-                        "user.created",
-                        "user_type.name",
-                        "user_roles.user_id",
-                        "user_roles.role_id",
-                        "roles.name",
-                    ],
-                    Joins =
-                    [
-                        new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
-                        new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
-                        new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
-                    ],
-                })));
+                }).Map(rows).Select(hydrate.Map).ToList(),
+                _ => throw new InvalidOperationException()),
+        });
         var items = new List<UsersView>();
         await foreach (var item in usersRepo.Read(new SelectStatement(new()
         {

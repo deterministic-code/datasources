@@ -1,28 +1,49 @@
+use crate::built_repository::BuiltRepository;
+use crate::connection::Connection;
+use crate::crud_repository::CRUDRepository;
+use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::enriched::Enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
-use crate::nest::Nest;
 use crate::read_input::ReadInput;
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
-use crate::CRUDRepository;
+use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use async_trait::async_trait;
 use std::any::TypeId;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 pub struct BulkCRUDRepository {
-    inner: CRUDRepository,
+    crud: CRUDRepository,
 }
 
 impl BulkCRUDRepository {
-    pub fn new(inner: Arc<dyn ICRUDRepository>) -> Self {
+    pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
+        Ok(Self {
+            crud: CRUDRepository::new(connection, options)?,
+        })
+    }
+
+    pub fn from_built(built: BuiltRepository) -> Self {
         Self {
-            inner: CRUDRepository::from_repository(inner),
+            crud: CRUDRepository::from_built(built),
+        }
+    }
+
+    pub fn memory(items: Vec<Row>) -> Self {
+        Self::memory_with(items, None)
+    }
+
+    pub fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
+        Self {
+            crud: CRUDRepository::memory_with(items, write),
         }
     }
 
@@ -34,10 +55,10 @@ impl BulkCRUDRepository {
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
-        nest: impl Nest,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
-        self.inner
-            .add_enriched(into, from, via, by, select, many, nest);
+        self.crud
+            .add_enriched(into, from, via, by, select, many, strategy);
         self
     }
 
@@ -45,7 +66,7 @@ impl BulkCRUDRepository {
         let mut result = Value::Null;
         let mut rows_affected = 0;
         for item in items {
-            let created = self.inner.create(item).await?;
+            let created = self.crud.create(item).await?;
             result = created
                 .get("id")
                 .or_else(|| created.get("Id"))
@@ -61,7 +82,7 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        fold(items, |item| self.inner.update(item, by_where)).await
+        fold(items, |item| self.crud.update(item, by_where)).await
     }
 
     pub async fn delete_bulk(
@@ -69,7 +90,7 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        fold(items, |item| self.inner.delete(item, by_where)).await
+        fold(items, |item| self.crud.delete(item, by_where)).await
     }
 }
 
@@ -88,16 +109,30 @@ where
     Ok(Response::new(result, rows_affected))
 }
 
+impl Deref for BulkCRUDRepository {
+    type Target = CRUDRepository;
+
+    fn deref(&self) -> &Self::Target {
+        &self.crud
+    }
+}
+
+impl DerefMut for BulkCRUDRepository {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.crud
+    }
+}
+
 #[async_trait]
 impl Enriched for BulkCRUDRepository {
     async fn enrich(&self, items: &mut [Row]) -> Result<()> {
-        self.inner.enrich(items).await
+        self.crud.enrich(items).await
     }
 }
 
 impl IRepository for BulkCRUDRepository {
     fn entity_type(&self) -> TypeId {
-        self.inner.entity_type()
+        self.crud.entity_type()
     }
 }
 
@@ -108,33 +143,33 @@ impl IReadonlyRepository for BulkCRUDRepository {
     }
 
     async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        self.inner.read_single(query).await
+        self.crud.read_single(query).await
     }
 
     async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        self.inner.read(query).await
+        self.crud.read(query).await
     }
 }
 
 #[async_trait]
 impl ICRUDRepository for BulkCRUDRepository {
     fn id_names(&self) -> Vec<String> {
-        self.inner.id_names()
+        self.crud.id_names()
     }
 
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        self.inner.create(item).await
+        self.crud.create(item).await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.inner.update(item, by_where).await
+        self.crud.update(item, by_where).await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.inner.delete(item, by_where).await
+        self.crud.delete(item, by_where).await
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
-        self.inner.read_single_by_id(id).await
+        self.crud.read_single_by_id(id).await
     }
 }

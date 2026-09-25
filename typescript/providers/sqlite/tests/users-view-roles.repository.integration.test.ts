@@ -3,15 +3,15 @@ import {
   ChangeCasingMapper,
   Datasource,
   DictionaryMapper,
-  ReadonlyRepository,
   FlatToNestedMapper,
-  FlatToNestedReadonlyEnrichmentStrategy,
   HashsetOptimizedReadonlyEnrichmentStrategy,
   Join,
+  ReadonlyRepository,
   SelectStatement,
   TransformMapper,
   Where,
   eq,
+  type Cells,
   type IConnection,
   type IDatasource,
 } from "@datasources/core";
@@ -39,8 +39,6 @@ class UsersView {
   UserType = "";
   Roles: UserRole[] = [];
 }
-
-class JoinRow {}
 
 const seed = () => `
   CREATE TABLE user_type (
@@ -87,7 +85,9 @@ describe("users view roles", () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
     const connection = await open(ds, seed());
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-    const users = ds.createReadonlyRepository(UsersView, connection, {
+    const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>();
+    const usersRepo = new ReadonlyRepository(connection, {
+      type: UsersView,
       entityMapper: new DictionaryMapper([["UsersView", "user"]]),
       columnMappings: new DictionaryMapper([
         ["Key", "id"],
@@ -97,10 +97,6 @@ describe("users view roles", () => {
         ["UserType", "user_type_id"],
       ]),
     });
-    const usersRepo = new ReadonlyRepository(
-      users,
-      new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>(),
-    );
     const typesRepo = ds.createReadonlyRepository(UserType, connection, {
       entityMapper: casing,
       columnMappings: casing,
@@ -122,8 +118,8 @@ describe("users view roles", () => {
         (query) => query,
       ),
     });
-    usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name");
-    usersRepo.addEnriched("Roles", "Key", rolesRepo, "UserId", undefined, true);
+    usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name", undefined, strategy);
+    usersRepo.addEnriched("Roles", "Key", rolesRepo, "UserId", undefined, true, strategy);
     const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
     expect(usersView?.UserType).toBe("admin");
     expect(names(usersView?.Roles ?? [])).toEqual(["admin", "editor"]);
@@ -133,73 +129,70 @@ describe("users view roles", () => {
   it("fills roles from a join", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
     const connection = await open(ds, seed());
-    const source = ds.createReadonlyRepository(JoinRow, connection);
-    const usersRepo = new ReadonlyRepository(
-      ds.createReadonlyRepository(UsersView, connection),
-      new FlatToNestedReadonlyEnrichmentStrategy(
-        source,
-        new FlatToNestedMapper<UsersView>({
-          key: "Key",
-          fields: {
-            Key: "Key",
-            Login: "Login",
-            Active: "Active",
-            Opened: "Opened",
-            UserType: "UserType",
-            Roles: {
-              key: "RoleId",
-              fields: { RoleId: "RoleId", UserId: "UserId", Name: "RoleName" },
-            },
-          },
+    const hydrate = new TransformMapper(
+      (row: UsersView) =>
+        Object.assign(new UsersView(), row, {
+          Roles: (row.Roles ?? []).map((role) => Object.assign(new UserRole(), role)),
         }),
-        new TransformMapper(
-          (row) =>
-            Object.assign(new UsersView(), row, {
-              Roles: row.Roles.map((role) => Object.assign(new UserRole(), role)),
-            }),
-          () => {
-            throw new Error("UsersView hydrate does not reverse");
-          },
-        ),
-        new SelectStatement({
-          table: "user",
-          fields: [
-            "user.id AS Key",
-            "user.username AS Login",
-            "user.is_enabled AS Active",
-            "user.created AS Opened",
-            "user_type.name AS UserType",
-            "user.id AS UserId",
-            "user_roles.role_id AS RoleId",
-            "roles.name AS RoleName",
-          ],
-          joins: [
-            Join.left("user_type", "user_type.id", "user.user_type_id"),
-            Join.left("user_roles", "user_roles.user_id", "user.id"),
-            Join.left("roles", "roles.id", "user_roles.role_id"),
-          ],
-        }),
-      ),
+      () => {
+        throw new Error("UsersView hydrate does not reverse");
+      },
     );
+    const flat = new FlatToNestedMapper<UsersView>({
+      key: "Key",
+      fields: {
+        Key: "Key",
+        Login: "Login",
+        Active: "Active",
+        Opened: "Opened",
+        UserType: "UserType",
+        Roles: {
+          key: "RoleId",
+          fields: { RoleId: "RoleId", UserId: "UserId", Name: "Name" },
+        },
+      },
+    });
+    const usersRepo = new ReadonlyRepository(connection, {
+      type: UsersView,
+      columnMappings: new DictionaryMapper([
+        ["Key", "id"],
+        ["Login", "username"],
+        ["Active", "is_enabled"],
+        ["Opened", "created"],
+        ["UserType", "user_type.name"],
+        ["UserId", "user_id"],
+        ["RoleId", "role_id"],
+        ["Name", "roles.name"],
+      ]),
+      result: new TransformMapper(
+        (rows: Iterable<Cells>) => flat.map(rows).map((row) => hydrate.map(row)),
+        () => {
+          throw new Error("result does not reverse");
+        },
+      ),
+    });
     const items: UsersView[] = [];
-    for await (const item of usersRepo.read(new SelectStatement({
-      table: "user",
-      fields: [
-        "user.id AS Key",
-        "user.username AS Login",
-        "user.is_enabled AS Active",
-        "user.created AS Opened",
-        "user_type.name AS UserType",
-        "user.id AS UserId",
-        "user_roles.role_id AS RoleId",
-        "roles.name AS RoleName",
-      ],
-      joins: [
-        Join.left("user_type", "user_type.id", "user.user_type_id"),
-        Join.left("user_roles", "user_roles.user_id", "user.id"),
-        Join.left("roles", "roles.id", "user_roles.role_id"),
-      ],
-    }))) items.push(item);
+    for await (const item of usersRepo.read(
+      new SelectStatement({
+        table: "user",
+        fields: [
+          "user.id",
+          "user.username",
+          "user.is_enabled",
+          "user.created",
+          "user_type.name",
+          "user_roles.user_id",
+          "user_roles.role_id",
+          "roles.name",
+        ],
+        joins: [
+          Join.left("user_type", "user_type.id", "user.user_type_id"),
+          Join.left("user_roles", "user_roles.user_id", "user.id"),
+          Join.left("roles", "roles.id", "user_roles.role_id"),
+        ],
+      }),
+    ))
+      items.push(item);
     const found = (login: string) => items.find((item) => item.Login === login);
     const adaView = found("ada");
     const graceView = found("grace");

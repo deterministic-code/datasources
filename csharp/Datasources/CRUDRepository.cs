@@ -9,40 +9,25 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     readonly IReadOnlyList<string> ids;
     readonly IMapper<Value, T>? create;
 
-    ICRUDRepository<T>? Delegate => InnerRepo as ICRUDRepository<T>;
-
     public CRUDRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
 
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
-        this(RepositoryBuilder<T>.Parts(connection, options)) { }
+        this(RepositoryBuilder<T>.Parts(connection, options), options.Write) { }
 
-    public CRUDRepository(
-        ICRUDRepository<T> inner,
-        IReadonlyEnrichmentStrategy<T>? strategy = null,
-        IWriteEnrichmentStrategy<T>? write = null) : base(
-            inner,
-            strategy ?? new DefaultReadonlyEnrichmentStrategy<T>())
-    {
-        this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
-        if (inner is CRUDRepository<T> crud)
-        {
-            ids = crud.ids;
-            create = crud.create;
-        }
-        else
-        {
-            ids = CreateRepositoryOptions.FromType<T>().Ids;
-            create = CRUDRepositoryOptions<T>.Identity(ids);
-        }
-    }
-
-    public CRUDRepository(BuiltRepository<T> built) : base(
-        built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
+    public CRUDRepository(BuiltRepository<T> built, IWriteEnrichmentStrategy<T>? write = null) : base(
+        built.Connection, built.RowConverter, built.RowsMapper, built.Result, built.ColumnMappings, built.Statements)
     {
         create = built.Create;
         ids = built.Ids;
-        write = new DefaultWriteEnrichmentStrategy<T>();
+        this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
+    }
+
+    protected CRUDRepository(IWriteEnrichmentStrategy<T>? write = null)
+    {
+        ids = CreateRepositoryOptions.FromType<T>().Ids;
+        create = CRUDRepositoryOptions<T>.Identity(ids);
+        this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
     }
 
     public IReadOnlyList<string> Ids => ids;
@@ -56,7 +41,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public async Task<T> Create(T item)
     {
         var stored = Enriched ? StripEnriched(item) : item;
-        var created = Delegate is null ? await Inserted(stored) : await Delegate.Create(stored);
+        var created = await Inserted(stored);
         if (!Enriched) return created;
         CopyIds(item, created);
         await write.Persist(Tree, [item!], WriteMode.Create);
@@ -68,7 +53,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public async Task<Response> Update(T item, IWhere? byWhere = null)
     {
         var stored = Enriched ? StripEnriched(item) : item;
-        var response = Delegate is null ? await Save(stored, byWhere) : await Delegate.Update(stored, byWhere);
+        var response = await Save(stored, byWhere);
         if (Enriched)
             await write.Persist(Tree, [item!], WriteMode.Update);
         return response;
@@ -78,33 +63,20 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         if (Enriched)
             await write.Persist(Tree, [item!], WriteMode.Delete);
-        return Delegate is null ? await Remove(item, byWhere) : await Delegate.Delete(item, byWhere);
+        return await Remove(item, byWhere);
     }
 
-    public async Task<T?> ReadSingleById(Value id)
-    {
-        if (Delegate is null) return await ReadSingle(IdWhere(Single(id)));
-        var item = await Delegate.ReadSingleById(id);
-        if (item is null || !Enriched) return item;
-        await Enrich([item]);
-        return item;
-    }
+    public Task<T?> ReadSingleById(Value id) =>
+        ReadSingle(IdWhere(Single(id)));
 
     public async Task<T?> ReadSingleById(Row key)
     {
-        if (Delegate is not null)
-        {
-            var item = await Delegate.ReadSingleById(key);
-            if (item is null || !Enriched) return item;
-            await Enrich([item]);
-            return item;
-        }
         if (ids.Count == 0)
             throw new DatasourceException("ReadSingleById requires an Id column");
         return await ReadSingle(IdWhere(key));
     }
 
-    async Task<T> Inserted(T item)
+    protected virtual async Task<T> Inserted(T item)
     {
         await Insert(item);
         return item;
@@ -119,7 +91,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return response;
     }
 
-    async Task<Response> Save(T item, IWhere? byWhere)
+    protected virtual async Task<Response> Save(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
         var where = byWhere is null ? Stored(IdWhere(record), fieldsApplied: true) : Stored(byWhere);
@@ -130,7 +102,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return await Command().Execute(statement, statement.Parameters);
     }
 
-    async Task<Response> Remove(T item, IWhere? byWhere)
+    protected virtual async Task<Response> Remove(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
         var where = byWhere is null ? Stored(IdWhere(record), fieldsApplied: true) : Stored(byWhere);

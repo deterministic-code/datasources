@@ -63,12 +63,26 @@ fn repository_options<T: ConvertSchema + 'static>(
     datasource: &dyn Datasource,
     custom: Option<CRUDRepositoryOptions>,
 ) -> CRUDRepositoryOptions {
-    let mut options = custom.unwrap_or_else(create_repository_options::<T>);
-    if options.row_converter.is_none() {
-        options.row_converter = Some(RowTypeConverter::of::<T>());
+    let built = create_repository_options::<T>();
+    let types = datasource.row_type_converters();
+    match custom {
+        None => {
+            let mut options = built;
+            options.row_converter = Some(RowTypeConverter::of::<T>());
+            options.row_type_converters = types;
+            options
+        }
+        Some(mut crud) => {
+            if crud.entity.is_empty() {
+                crud.entity = built.entity.clone();
+            }
+            if crud.row_converter.is_none() {
+                crud.row_converter = Some(RowTypeConverter::of::<T>());
+            }
+            crud.row_type_converters = types;
+            crud
+        }
     }
-    options.row_type_converters = datasource.row_type_converters();
-    options
 }
 
 pub struct BuiltDatasource {

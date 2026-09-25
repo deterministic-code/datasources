@@ -1,68 +1,87 @@
-use crate::datasource_error::DatasourceError;
+use crate::bulk_crud_repository::BulkCRUDRepository;
+use crate::enriched::Enriched;
+use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
-use crate::read_input::{where_of, ReadInput};
+use crate::read_input::ReadInput;
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statements::{Operator, StatementEvaluator, Where};
-use crate::value::Value;
+use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use async_trait::async_trait;
-use std::sync::{Arc, Mutex};
+use std::any::TypeId;
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 
 pub struct ListRepository {
-    pub items: Mutex<Vec<Row>>,
-    next_id: Mutex<i64>,
+    inner: BulkCRUDRepository,
 }
 
 impl ListRepository {
     pub fn new(items: Vec<Row>) -> Self {
-        let next_id = items
-            .iter()
-            .filter_map(|row| match row.get("id") {
-                Some(Value::Int(id)) => Some(*id),
-                _ => None,
-            })
-            .max()
-            .unwrap_or(0)
-            + 1;
         Self {
-            items: Mutex::new(items),
-            next_id: Mutex::new(next_id),
+            inner: BulkCRUDRepository::memory(items),
+        }
+    }
+
+    pub fn with_write(items: Vec<Row>, write: Arc<dyn WriteEnrichmentStrategy>) -> Self {
+        Self {
+            inner: BulkCRUDRepository::memory_with(items, Some(write)),
         }
     }
 
     pub fn snapshot(&self) -> Vec<Row> {
-        self.items.lock().expect("list").clone()
+        self.inner
+            .items()
+            .expect("memory store")
+            .snapshot()
     }
 
-    fn filter(&self, where_clause: Option<&dyn IWhere>) -> Vec<Row> {
-        let items = self.items.lock().expect("list");
-        match where_clause {
-            None => items.clone(),
-            Some(predicate) => {
-                let evaluator = StatementEvaluator;
-                items
-                    .iter()
-                    .filter(|row| {
-                        predicate
-                            .as_any()
-                            .downcast_ref::<Where>()
-                            .map(|statement| {
-                                evaluator.evaluate(&statement.condition, row) == Value::Bool(true)
-                            })
-                            .unwrap_or(true)
-                    })
-                    .cloned()
-                    .collect()
-            }
-        }
+    pub fn add_enriched(
+        &mut self,
+        into: impl Into<String>,
+        from: impl Into<String>,
+        via: impl EnrichmentVia,
+        by: impl Into<String>,
+        select: Option<String>,
+        many: bool,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
+    ) -> &mut Self {
+        self.inner
+            .add_enriched(into, from, via, by, select, many, strategy);
+        self
     }
 }
 
-impl IRepository for ListRepository {}
+impl Deref for ListRepository {
+    type Target = BulkCRUDRepository;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for ListRepository {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl IRepository for ListRepository {
+    fn entity_type(&self) -> TypeId {
+        self.inner.entity_type()
+    }
+}
+
+#[async_trait]
+impl Enriched for ListRepository {
+    async fn enrich(&self, items: &mut [Row]) -> Result<()> {
+        self.inner.enrich(items).await
+    }
+}
 
 #[async_trait]
 impl IReadonlyRepository for ListRepository {
@@ -71,66 +90,33 @@ impl IReadonlyRepository for ListRepository {
     }
 
     async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        Ok(self.filter(where_of(query)).into_iter().next())
+        self.inner.read_single(query).await
     }
 
     async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        Ok(self.filter(where_of(query)))
+        self.inner.read(query).await
     }
 }
 
 #[async_trait]
 impl ICRUDRepository for ListRepository {
     fn id_names(&self) -> Vec<String> {
-        vec!["id".into()]
+        self.inner.id_names()
     }
 
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        if !matches!(item.get("id"), Some(Value::Int(id)) if *id != 0) {
-            let mut next = self.next_id.lock().expect("list");
-            let id = *next;
-            *next += 1;
-            item.insert("id".into(), Value::Int(id));
-        }
-        self.items.lock().expect("list").push(item.clone());
-        Ok(item.clone())
+        self.inner.create(item).await
     }
 
-    async fn update(&self, item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let id = item.get("id").cloned();
-        let mut items = self.items.lock().expect("list");
-        if let Some(index) = items.iter().position(|row| row.get("id") == id.as_ref()) {
-            items[index] = item.clone();
-        }
-        Ok(Response::new(Value::Null, 1))
+    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        self.inner.update(item, by_where).await
     }
 
-    async fn delete(&self, item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let id = item.get("id").cloned();
-        self.items
-            .lock()
-            .expect("list")
-            .retain(|row| row.get("id") != id.as_ref());
-        Ok(Response::new(Value::Null, 1))
+    async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        self.inner.delete(item, by_where).await
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
-        let clause = id_clause(id)?;
-        Ok(self.filter(Some(&clause)).into_iter().next())
-    }
-}
-
-fn id_clause(id: &dyn IdKey) -> Result<Where> {
-    match (id.as_value(), id.as_row()) {
-        (Some(value), _) => Ok(Where::new(Operator::equals("id", value.clone()))),
-        (_, Some(row)) => row
-            .iter()
-            .map(|(key, value)| Operator::equals(key.clone(), value.clone()))
-            .reduce(|left, right| Operator::and(left, right))
-            .map(Where::new)
-            .ok_or_else(|| DatasourceError::message("ReadSingleById requires an Id column")),
-        _ => Err(DatasourceError::message(
-            "ReadSingleById requires an Id column",
-        )),
+        self.inner.read_single_by_id(id).await
     }
 }

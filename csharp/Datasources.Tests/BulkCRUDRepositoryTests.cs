@@ -39,8 +39,7 @@ public class BulkCRUDRepositoryTests
     public async Task BulkCreateMatchesListCreate()
     {
         var parents = new ListCRUDRepository<Parent>();
-        var repo = new BulkCRUDRepository<Parent>(parents);
-        await repo.BulkCreate([new Parent(), new Parent()]);
+        await parents.BulkCreate([new Parent(), new Parent()]);
         Assert.Equal(2, parents.Items.Count);
     }
 
@@ -81,12 +80,11 @@ public class BulkCRUDRepositoryTests
         Assert.Equal("keep", Assert.Single(children.Items).label);
     }
 
-    static BulkCRUDRepository<Parent> Repo(
+    static ListCRUDRepository<Parent> Repo(
         ListCRUDRepository<Parent> parents,
         ListCRUDRepository<Child> children)
     {
-        var repo = new BulkCRUDRepository<Parent>(parents);
-        repo.AddEnriched("children", "id", children, "parent_id", many: true);
-        return repo;
+        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        return parents;
     }
 }

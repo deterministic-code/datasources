@@ -21,7 +21,7 @@ describe("ContactsService", () => {
         city: "x",
       }),
     ]);
-    const service = new ContactsService(
+    const service = ContactsService.open(
       new ListCRUDRepository<Contact>(),
       new ListReadonlyRepository([
         Object.assign(new ContactType(), { id: 2, name: "person" }),

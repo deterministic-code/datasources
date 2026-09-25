@@ -16,20 +16,16 @@ const get = (item: object, name: string): Scalar | object | undefined => props(i
 const present = (value: Scalar | object | undefined): value is Scalar =>
   value !== undefined && value !== null && typeof value !== "object" && value !== 0 && value !== 0n && value !== "";
 
-const isWriter = (via: object): via is ICRUDRepository<object> =>
-  "create" in via && typeof via.create === "function";
-
-const writerOf = (via: object, into: string): ICRUDRepository<object> =>
-  isWriter(via)
-    ? via
-    : (() => {
-        throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
-      })();
+const writerOf = (child: IRepositoryTreeNode, into: string): ICRUDRepository<object> => {
+  const persist = (child as RepositoryTreeNode).persist;
+  if (persist) return persist;
+  throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
+};
 
 const linkWriter = (child: IRepositoryTreeNode, into: string): ICRUDRepository<object> => {
   const link = (child as RepositoryTreeNode).link;
-  if (!link) throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
-  return link;
+  if (link) return link;
+  throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
 };
 
 const linkWhere = (
@@ -51,7 +47,7 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
     parent: object,
     deleteNested: (rows: object[]) => Promise<void>,
   ): Promise<void> {
-    const writer = writerOf(node.value, enrichment.into);
+    const writer = writerOf(node, enrichment.into);
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     await deleteNested(existing);
     for (const row of existing) await writer.delete(row);

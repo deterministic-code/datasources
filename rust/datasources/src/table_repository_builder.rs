@@ -31,10 +31,13 @@ impl RepositoryBuilder {
             delete,
             return_: _,
             create,
+            write,
             read,
         } = options;
         let create = create.unwrap_or_else(|| identity_mapper(&ids));
-        assemble(connection, read, ids, insert, update, delete, Some(create))
+        let mut built = assemble(connection, read, ids, insert, update, delete, Some(create))?;
+        built.write = write;
+        Ok(built)
     }
 }
 
@@ -53,6 +56,7 @@ fn assemble(
         column_mappings,
         query,
         rows_mapper,
+        result,
         row_converter,
         row_type_converters,
     } = options;
@@ -71,6 +75,7 @@ fn assemble(
         connection,
         row_converter,
         rows_mapper,
+        result,
         column_mappings,
         statements: RepositoryStatements::with_mappers(
             Mapper::map(&entity_mapper, entity),
@@ -82,5 +87,6 @@ fn assemble(
         ),
         ids,
         create,
+        write: None,
     })
 }

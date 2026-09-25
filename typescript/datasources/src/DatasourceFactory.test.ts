@@ -110,6 +110,31 @@ describe("Datasource registry", () => {
     const enriched = ds.createReadonlyRepository(Item) as ReadonlyRepository<Item>;
     expect(enriched).toBeInstanceOf(ReadonlyRepository);
     enriched.addLinked("name", "id", typedRead, "id", typed, "id", "name");
+    const withResult = ds.createReadonlyRepository(Item, connection, {
+      result: {
+        map: () => [],
+        reverseMap: () => [],
+      },
+    });
+    expect(withResult).toBeInstanceOf(ReadonlyRepository);
+    const withWrite = ds.createRepository(Item, connection, {
+      write: { persist: async () => {} },
+      ids: ["id"],
+    });
+    expect(withWrite).toBeInstanceOf(CRUDRepository);
+    const withCrudIds = ds.createRepository(Item, connection, {
+      ids: undefined as never,
+      entity: "Item",
+    });
+    expect(withCrudIds).toBeInstanceOf(CRUDRepository);
+    const withReadOpts = ds.createRepository(Item, connection, {
+      entity: "items",
+      result: {
+        map: () => [],
+        reverseMap: () => [],
+      },
+    });
+    expect(withReadOpts).toBeInstanceOf(CRUDRepository);
     expect(new DatasourceFactory().create({
       provider: "sqlite",
       database_schema: "main",

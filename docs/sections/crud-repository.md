@@ -235,12 +235,12 @@ readSingleById(id: Scalar | Cells): Promise<T | undefined>
 
 **Returns** `Promise<T | undefined>`
 
-##### addEnriched(into, from, via, by, select?, many?, nest?)
+##### addEnriched(into, from, via, by, select?, many?)
 
 Registers a lookup or a `many` list. Returns this repository.
 
 ```typescript
-addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean, nest?: (node: IRepositoryTreeNode) => void): this
+addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean): this
 ```
 
 - `into` — destination field
@@ -249,7 +249,6 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 - `by` — key on the related row
 - `select` — optional related field to copy
 - `many` — collect a list
-- `nest` — child-node callback
 
 **Returns** `this`
 
@@ -616,12 +615,12 @@ public Task<T?> ReadSingleById(Row ids)
 
 **Returns** `Task<T?>`
 
-##### AddEnriched(into, from, via, by, select, many, nest)
+##### AddEnriched(into, from, via, by, select, many, strategy)
 
 Registers a lookup or a `many` list. Returns this repository.
 
 ```csharp
-public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, Action<IRepositoryTreeNode>? nest = null)
+public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
 - `into` — destination field
@@ -630,7 +629,7 @@ public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRep
 - `by` — key on the related row
 - `select` — optional related field to copy
 - `many` — collect a list
-- `nest` — child-node callback
+- `strategy` — optional read strategy for this edge
 
 **Returns** [IEnriched](./readonly-repository.md#ienriched)`<T>`
 
@@ -872,12 +871,12 @@ pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
 
 **Methods**
 
-##### add_enriched(into, from, via, by, select, many, nest)
+##### add_enriched(into, from, via, by, select, many)
 
 Registers a lookup or a `many` list.
 
 ```rust
-pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool, nest: impl Nest) -> &mut Self
+pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
 ```
 
 - `into` — destination field
@@ -886,7 +885,6 @@ pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>,
 - `by` — key on the related row
 - `select` — optional related field to copy
 - `many` — collect a list
-- `nest` — child-node callback, or `()`
 
 **Returns** `&mut Self`
 

@@ -107,8 +107,7 @@ A `CRUDRepository` fills related fields after `read` once enrichments are regist
 ```csharp
 var contacts = new CRUDRepository<Contact>(contactRepo);
 contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
-contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
-    nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
+contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true);
 
 var loaded = await contacts.ReadSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
@@ -116,10 +115,8 @@ await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address
 ```rust
 let mut contacts = CRUDRepository::from_repository(contact_repo);
 contacts
-    .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false, ())
-    .add_enriched("addresses", "id", addresses, "contact_id", None, true, |node| {
-        node.include(address_types, "address_type_name", "address_type_id", "id", Some("name".into()), false);
-    });
+    .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false)
+    .add_enriched("addresses", "id", addresses, "contact_id", None, true);
 
 let loaded = contacts.read_single(Some(&Where::new(Operator::equals("id", 10)))).await?;
 contacts.create(contact).await?;
@@ -127,9 +124,7 @@ contacts.create(contact).await?;
 ```typescript
 const contacts = new CRUDRepository(contactRepo);
 contacts.addEnriched("contact_type_name", "contact_type_id", types, "id", "name");
-contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true, (node) =>
-  node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
-);
+contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true);
 
 const loaded = await contacts.readSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });

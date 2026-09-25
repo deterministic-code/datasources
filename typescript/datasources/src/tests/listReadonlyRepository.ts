@@ -3,26 +3,23 @@ import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteSto
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
-import { ReadonlyRepository, tracked, untyped, withoutSource, type Sourced } from "../ReadonlyRepository.ts";
+import { ReadonlyRepository, untyped, type Sourced } from "../ReadonlyRepository.ts";
 
 type Props = Record<string, Scalar | object>;
 
 export class ListReadonlyRepository<T extends object> extends ReadonlyRepository<T> {
   constructor(
-    private readonly items: T[],
+    private readonly items: T[] = [],
     type: Constructable<T> = untyped<T>(),
   ) {
     super(type);
   }
 
-  async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
-    for (const item of this.items) if (matches(item, query)) yield item;
-  }
-
-  async *[tracked](
+  protected async *readItems(
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
-    yield* withoutSource(this.read(query));
+    for (const item of this.items)
+      if (matches(item, query)) yield { item };
   }
 }
 
@@ -33,7 +30,10 @@ const fieldOf = (name: string): string => {
     : name;
 };
 
-const matches = <T extends object>(item: T, query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): boolean => {
+const matches = <T extends object>(
+  item: T,
+  query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
+): boolean => {
   if (query && "getText" in query && query.getText() === "1 = 0") return false;
   const groups = new Map<string, { name: string; value: Scalar }[]>();
   for (const parameter of parametersOf(query)) {

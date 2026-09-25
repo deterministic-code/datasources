@@ -41,8 +41,8 @@ public class CRUDRepositoryTests
         var parents = new ListCRUDRepository<Parent>();
         var types = new ListCRUDRepository<TypeRow>(new TypeRow { id = 10, name = "person" });
         var children = new ListCRUDRepository<Child>();
-        var repo = Repo(parents, types, children);
-        await repo.Create(new Parent
+        Repo(parents, types, children);
+        await parents.Create(new Parent
         {
             type_id = 10,
             children = [new Child { label = "a" }, new Child { label = "b" }]
@@ -60,9 +60,8 @@ public class CRUDRepositoryTests
     {
         var parents = new ListCRUDRepository<Parent>(new Parent { id = 4 });
         var children = new ListCRUDRepository<Child>();
-        var repo = new CRUDRepository<Parent>(parents);
-        repo.AddEnriched("children", "id", children, "parent_id", many: true);
-        await repo.Create(new Parent { children = [new Child { label = "n" }] });
+        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        await parents.Create(new Parent { children = [new Child { label = "n" }] });
         Assert.Equal(5, Assert.Single(children.Items).parent_id);
     }
 
@@ -73,9 +72,8 @@ public class CRUDRepositoryTests
         var children = new ListCRUDRepository<Child>(
             new Child { id = 1, parent_id = 1, label = "a" },
             new Child { id = 2, parent_id = 1, label = "b" });
-        var repo = new CRUDRepository<Parent>(parents);
-        repo.AddEnriched("children", "id", children, "parent_id", many: true);
-        await repo.Update(new Parent
+        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        await parents.Update(new Parent
         {
             id = 1,
             children =
@@ -99,10 +97,9 @@ public class CRUDRepositoryTests
         var notes = new ListCRUDRepository<Note>(
             new Note { id = 8, child_id = 3, text = "n" },
             new Note { id = 9, child_id = 9, text = "other" });
-        var repo = new CRUDRepository<Parent>(parents);
-        repo.AddEnriched("children", "id", children, "parent_id", many: true,
-            nest: node => node.Include(notes, "notes", "id", "child_id", many: true));
-        await repo.Delete(new Parent { id = 1 });
+        children.AddEnriched("notes", "id", notes, "child_id", many: true);
+        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        await parents.Delete(new Parent { id = 1 });
         Assert.Empty(parents.Items);
         Assert.Empty(children.Items);
         Assert.Equal("other", Assert.Single(notes.Items).text);
@@ -111,14 +108,13 @@ public class CRUDRepositoryTests
     [Fact]
     public async Task DeleteStrategyCanSkipChildren()
     {
-        var parents = new ListCRUDRepository<Parent>(new Parent { id = 1 });
         var children = new ListCRUDRepository<Child>(
             new Child { id = 3, parent_id = 1, label = "a" });
-        var repo = new CRUDRepository<Parent>(
-            parents,
-            write: new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()));
-        repo.AddEnriched("children", "id", children, "parent_id", many: true);
-        await repo.Delete(new Parent { id = 1 });
+        var parents = new ListCRUDRepository<Parent>(
+            new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()),
+            new Parent { id = 1 });
+        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        await parents.Delete(new Parent { id = 1 });
         Assert.Empty(parents.Items);
         Assert.Equal("a", Assert.Single(children.Items).label);
     }
@@ -130,14 +126,10 @@ public class CRUDRepositoryTests
         var children = new ListCRUDRepository<Child>();
         var notes = new ListCRUDRepository<Note>();
         var childTypes = new ListCRUDRepository<TypeRow>(new TypeRow { id = 3, name = "home" });
-        var repo = new CRUDRepository<Parent>(parents);
-        repo.AddEnriched("children", "id", children, "parent_id", many: true,
-            nest: node =>
-            {
-                node.Include(childTypes, "type_name", "type_id", "id", "name");
-                node.Include(notes, "notes", "id", "child_id", many: true);
-            });
-        await repo.Create(new Parent
+        children.AddEnriched("type_name", "type_id", childTypes, "id", "name");
+        children.AddEnriched("notes", "id", notes, "child_id", many: true);
+        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        await parents.Create(new Parent
         {
             children =
             [
@@ -157,10 +149,10 @@ public class CRUDRepositoryTests
     [Fact]
     public async Task ManyReadonlyViaThrows()
     {
-        var repo = new CRUDRepository<Parent>(new ListCRUDRepository<Parent>());
-        repo.AddEnriched("children", "id", new ListReadonlyRepository<Child>(), "parent_id", many: true);
+        var parents = new ListCRUDRepository<Parent>();
+        parents.AddEnriched("children", "id", new ListReadonlyRepository<Child>(), "parent_id", many: true);
         var error = await Assert.ThrowsAsync<DatasourceException>(() =>
-            repo.Create(new Parent { children = [new Child { label = "a" }] }));
+            parents.Create(new Parent { children = [new Child { label = "a" }] }));
         Assert.Contains("children", error.Message);
     }
 
@@ -170,8 +162,8 @@ public class CRUDRepositoryTests
         var parents = new ListCRUDRepository<Parent>(new Parent { id = 1, type_id = 10 });
         var types = new ListCRUDRepository<TypeRow>(new TypeRow { id = 10, name = "org" });
         var children = new ListCRUDRepository<Child>(new Child { parent_id = 1, label = "a" });
-        var repo = Repo(parents, types, children);
-        var item = await repo.ReadSingle();
+        Repo(parents, types, children);
+        var item = await parents.ReadSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal("a", Assert.Single(item.children).label);
     }
@@ -189,14 +181,13 @@ public class CRUDRepositoryTests
             Task.CompletedTask;
     }
 
-    static CRUDRepository<Parent> Repo(
+    static ListCRUDRepository<Parent> Repo(
         ListCRUDRepository<Parent> parents,
         ListCRUDRepository<TypeRow> types,
         ListCRUDRepository<Child> children)
     {
-        var repo = new CRUDRepository<Parent>(parents);
-        repo.AddEnriched("type_name", "type_id", types, "id", "name");
-        repo.AddEnriched("children", "id", children, "parent_id", many: true);
-        return repo;
+        parents.AddEnriched("type_name", "type_id", types, "id", "name");
+        parents.AddEnriched("children", "id", children, "parent_id", many: true);
+        return parents;
     }
 }

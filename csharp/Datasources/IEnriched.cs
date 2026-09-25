@@ -9,7 +9,7 @@ public interface IEnriched<T>
         string by,
         string? select = null,
         bool many = false,
-        Action<IRepositoryTreeNode>? nest = null);
+        IReadonlyEnrichmentStrategy<T>? strategy = null);
     IEnriched<T> AddLinked<TRelated, TLink>(
         string into,
         string from,
@@ -17,6 +17,7 @@ public interface IEnriched<T>
         string by,
         ICRUDRepository<TLink> link,
         string parent,
-        string related);
+        string related,
+        IReadonlyEnrichmentStrategy<T>? strategy = null);
     Task Enrich(IList<T> items);
 }

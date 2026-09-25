@@ -1,19 +1,22 @@
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
-import type { ICRUDRepository } from "../ICRUDRepository.ts";
-import { ReadonlyRepository, tracked, untyped, withoutSource, type Sourced } from "../ReadonlyRepository.ts";
+import { BulkCRUDRepository } from "../BulkCRUDRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
-import type { Cells } from "../converters/Cell.ts";
 import type { Scalar } from "../builders/Scalar.ts";
 import { defaultId, fieldNamesOf } from "../createRepositoryOptions.ts";
+import type { IWriteEnrichmentStrategy } from "../IWriteEnrichmentStrategy.ts";
+import { untyped, type Sourced } from "../ReadonlyRepository.ts";
 
 type Props = Record<string, Scalar | object>;
 
 const props = (item: object): Props => item as Props;
 
-const matches = <T extends object>(item: T, query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): boolean =>
+const matches = <T extends object>(
+  item: T,
+  query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
+): boolean =>
   parametersOf(query).every(
     ({ name, value }) => String(props(item)[name]) === String(value),
   );
@@ -29,35 +32,50 @@ const parametersOf = (
   }));
 };
 
-const idOf = (item: object): Scalar | undefined => {
+const idOf = (item: object): Scalar | object | undefined => {
   const value = props(item).id ?? props(item).Id;
-  return value === undefined || typeof value === "object" ? undefined : value;
+  return value === undefined ? undefined : value;
 };
 
-const hasId = (id: Scalar | undefined): boolean =>
+const hasId = (id: Scalar | object | undefined): boolean =>
   id !== undefined && id !== null && id !== 0 && id !== 0n && id !== "";
 
-const idKey = (id: Scalar | undefined): string => String(id ?? "");
+const idKey = (id: Scalar | object | undefined): string => String(id ?? "");
 
 const setId = (item: object, id: number): void => {
   const name = "id" in item ? "id" : "Id" in item ? "Id" : "id";
   Object.assign(item, { [name]: id });
 };
 
-export class ListCRUDRepository<T extends object>
-  extends ReadonlyRepository<T>
-  implements ICRUDRepository<T>
-{
+export class ListCRUDRepository<T extends object> extends BulkCRUDRepository<T> {
   readonly items: T[];
-  readonly ids: readonly string[];
   private nextId: number;
 
+  constructor(items?: T[], type?: Constructable<T>);
+  constructor(write: IWriteEnrichmentStrategy<T> | undefined, items?: T[], type?: Constructable<T>);
   constructor(
-    items: T[] = [],
-    type: Constructable<T> = untyped<T>(),
+    itemsOrWrite: T[] | IWriteEnrichmentStrategy<T> | undefined = [],
+    typeOrItems: Constructable<T> | T[] = untyped<T>(),
+    typeArg: Constructable<T> = untyped<T>(),
   ) {
-    super(type);
-    this.ids = type === Object ? [] : defaultId(fieldNamesOf(type));
+    const write =
+      itemsOrWrite !== undefined &&
+      !Array.isArray(itemsOrWrite) &&
+      typeof itemsOrWrite === "object" &&
+      "persist" in itemsOrWrite
+        ? itemsOrWrite
+        : undefined;
+    const items = Array.isArray(itemsOrWrite)
+      ? itemsOrWrite
+      : Array.isArray(typeOrItems)
+        ? typeOrItems
+        : [];
+    const constructable =
+      typeof typeOrItems === "function" ? typeOrItems : typeArg;
+    super(write);
+    (this as { type: Constructable<T> }).type = constructable;
+    (this as { ids: readonly string[] }).ids =
+      constructable === Object ? ["id"] : defaultId(fieldNamesOf(constructable));
     this.items = [...items];
     this.nextId =
       items.reduce((max, item) => {
@@ -66,30 +84,27 @@ export class ListCRUDRepository<T extends object>
       }, 0) + 1;
   }
 
-  async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
-    for (const item of this.items) if (matches(item, query)) yield item;
-  }
-
-  async *[tracked](
+  protected async *readItems(
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
-    yield* withoutSource(this.read(query));
+    for (const item of this.items)
+      if (matches(item, query)) yield { item };
   }
 
-  create = async (item: T): Promise<T> => {
+  protected inserted = async (item: T): Promise<T> => {
     if (!hasId(idOf(item))) setId(item, this.nextId++);
     this.items.push(item);
     return item;
   };
 
-  update = async (item: T, _byWhere?: IWhere): Promise<Response> => {
+  protected save = async (item: T, _byWhere?: IWhere): Promise<Response> => {
     const key = idKey(idOf(item));
     const index = this.items.findIndex((row) => idKey(idOf(row)) === key);
     if (index >= 0) this.items[index] = item;
     return { result: null, rowsAffected: 1 };
   };
 
-  delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  protected remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     if (byWhere) {
       for (let index = this.items.length - 1; index >= 0; index--)
         if (matches(this.items[index]!, byWhere)) this.items.splice(index, 1);
@@ -100,11 +115,4 @@ export class ListCRUDRepository<T extends object>
     if (index >= 0) this.items.splice(index, 1);
     return { result: null, rowsAffected: 1 };
   };
-
-  readSingleById = async (id: Scalar | Cells): Promise<T | undefined> =>
-    this.items.find((item) =>
-      id !== null && typeof id === "object"
-        ? Object.entries(id).every(([name, value]) => String(props(item)[name]) === String(value))
-        : String(idOf(item)) === String(id),
-    );
 }

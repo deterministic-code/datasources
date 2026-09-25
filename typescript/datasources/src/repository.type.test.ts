@@ -15,10 +15,8 @@ describe("repository type", () => {
     expect(new ReadonlyRepository(Item, new MockConnection()).type).toBe(Item);
   });
 
-  it("wrappers expose inner type", () => {
-    const inner = new ListCRUDRepository<Item>([], Item);
-    const repo = new CRUDRepository(inner);
-    expect(inner.type).toBe(Item);
+  it("list repository reports item type", () => {
+    const repo = new ListCRUDRepository<Item>([], Item);
     expect(repo.type).toBe(Item);
   });
 
