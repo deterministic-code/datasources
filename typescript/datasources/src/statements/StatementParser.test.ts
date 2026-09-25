@@ -12,7 +12,7 @@ import {
   StatementParser,
   Subquery,
   UpdateStatement,
-  WhereClause,
+  Where,
 } from "../index.ts";
 import type { IExpression } from "./IExpression.ts";
 
@@ -66,24 +66,24 @@ describe("StatementParser", () => {
       InsertStatement,
     );
     const update = StatementParser.parse("UPDATE users SET name = $name WHERE id = $id") as UpdateStatement;
-    expect((update.where as WhereClause).condition).toBeInstanceOf(Operator.Equals);
+    expect((update.where as Where).condition).toBeInstanceOf(Operator.Equals);
     const notLike = StatementParser.parse(
       "UPDATE users SET name = $name WHERE name NOT LIKE $name",
     ) as UpdateStatement;
-    expect((notLike.where as WhereClause).condition).toBeInstanceOf(Operator.NotLike);
+    expect((notLike.where as Where).condition).toBeInstanceOf(Operator.NotLike);
     const deleted = StatementParser.parse("DELETE FROM users WHERE id = $id") as DeleteStatement;
-    expect((deleted.where as WhereClause).condition).toBeInstanceOf(Operator.Equals);
+    expect((deleted.where as Where).condition).toBeInstanceOf(Operator.Equals);
     expect((StatementParser.parse("DELETE FROM users") as DeleteStatement).where).toBeUndefined();
   });
 
   it("builds the where tree", () => {
     const notLike = StatementParser.parse("SELECT id FROM users WHERE name NOT LIKE $name") as QueryStatement;
-    expect((notLike.where as WhereClause).condition).toBeInstanceOf(Operator.NotLike);
+    expect((notLike.where as Where).condition).toBeInstanceOf(Operator.NotLike);
 
     const exists = StatementParser.parse(
       "SELECT id FROM users WHERE EXISTS (SELECT id FROM posts WHERE posts.user_id = users.id)",
     ) as QueryStatement;
-    expect((exists.where as WhereClause).condition).toBeInstanceOf(Operator.Exists);
+    expect((exists.where as Where).condition).toBeInstanceOf(Operator.Exists);
 
     const full = StatementParser.parse(
       "SELECT id FROM users FULL JOIN profiles ON users.id = profiles.user_id",
@@ -100,7 +100,7 @@ describe("StatementParser", () => {
     expect(shaped.distinct).toBe(true);
     expect(shaped.limit).toBe(10);
     expect(shaped.offset).toBe(5);
-    expect((shaped.having as WhereClause).condition).toBeInstanceOf(Operator.Equals);
+    expect((shaped.having as Where).condition).toBeInstanceOf(Operator.Equals);
   });
 
   it("keeps a string beside a column as its parameter", () => {
@@ -118,12 +118,12 @@ describe("StatementParser", () => {
     expect(evaluator.evaluate(new Operator.Between("age", 18, 40), row)).toBe(true);
     expect(evaluator.evaluate(new Operator.NotBetween("age", 18, 40), row)).toBe(false);
     expect(evaluator.evaluate(new Operator.NotIn("age", [1, 2]), row)).toBe(true);
-    expect(new WhereClause(new Operator.NotLike("name", "%a")).getText()).toBe("name NOT LIKE $name");
-    expect(new WhereClause(new Operator.NotBetween("age", 1, 2)).getText()).toBe(
+    expect(new Where(new Operator.NotLike("name", "%a")).getText()).toBe("name NOT LIKE $name");
+    expect(new Where(new Operator.NotBetween("age", 1, 2)).getText()).toBe(
       "age NOT BETWEEN $age_0 AND $age_1",
     );
-    expect(new WhereClause(new Operator.NotIn("id", [])).getText()).toBe("1 = 1");
-    expect(new WhereClause(new Operator.Not(new Operator.Like("name", "%a"))).getText()).toBe(
+    expect(new Where(new Operator.NotIn("id", [])).getText()).toBe("1 = 1");
+    expect(new Where(new Operator.Not(new Operator.Like("name", "%a"))).getText()).toBe(
       "NOT (name LIKE $name)",
     );
   });
@@ -175,12 +175,12 @@ describe("StatementParser", () => {
     const nested = new QueryStatement({
       table: "posts",
       fields: ["id"],
-      where: new WhereClause(new Operator.Equals("id", 1)),
-      having: new WhereClause(new Operator.Equals("n", 2)),
+      where: new Where(new Operator.Equals("id", 1)),
+      having: new Where(new Operator.Equals("n", 2)),
       joins: [Join.inner("tags", "posts.id", "tags.post_id")],
     });
     const plain = new QueryStatement("SELECT 1");
-    const mapped = new WhereClause(
+    const mapped = new Where(
       new Operator.And(
         new Operator.Or(new Operator.IsNull(new Identifier("id")), new Operator.IsNotNull(new Identifier("id"))),
         new Operator.Not(new Operator.Like(new Literal("a"), new Identifier("name"))),
@@ -202,67 +202,67 @@ describe("StatementParser", () => {
       new Operator.Exists(new Subquery(nested)),
       new Operator.Exists(new Subquery(plain)),
     ])
-      expect(new WhereClause(op).map(same, keep).getText().length).toBeGreaterThan(0);
-    expect(new WhereClause(new Operator.Equals('"user"', 1)).getText()).toBe('"user" = $user');
-    expect(new WhereClause(new Operator.Equals('"a.b"', 1)).parameters).toEqual([
+      expect(new Where(op).map(same, keep).getText().length).toBeGreaterThan(0);
+    expect(new Where(new Operator.Equals('"user"', 1)).getText()).toBe('"user" = $user');
+    expect(new Where(new Operator.Equals('"a.b"', 1)).parameters).toEqual([
       { name: "a.b", value: 1 },
     ]);
-    expect(new WhereClause(new Operator.In(new Identifier("id"), new Subquery(nested))).getText()).toBe(
+    expect(new Where(new Operator.In(new Identifier("id"), new Subquery(nested))).getText()).toBe(
       "id IN (SELECT id FROM posts INNER JOIN tags ON posts.id = tags.post_id WHERE id = $id HAVING n = $n)",
     );
     expect(
-      new WhereClause(new Operator.NotIn(new Identifier("id"), new Subquery(nested))).parameters,
+      new Where(new Operator.NotIn(new Identifier("id"), new Subquery(nested))).parameters,
     ).toEqual([
       { name: "id", value: 1 },
       { name: "n", value: 2 },
     ]);
     expect(
-      new WhereClause(new Operator.Between(new Literal(1), new Literal(0), new Literal(2))).getText(),
+      new Where(new Operator.Between(new Literal(1), new Literal(0), new Literal(2))).getText(),
     ).toBe("1 BETWEEN 0 AND 2");
-    expect(new WhereClause(new Operator.NotBetween(new Literal(1), new Literal(0), new Literal(2))).getText()).toBe(
+    expect(new Where(new Operator.NotBetween(new Literal(1), new Literal(0), new Literal(2))).getText()).toBe(
       "1 NOT BETWEEN 0 AND 2",
     );
-    expect(new WhereClause(new Operator.NotBetween(new Literal(1), new Literal(0), new Literal(2))).parameters).toEqual(
+    expect(new Where(new Operator.NotBetween(new Literal(1), new Literal(0), new Literal(2))).parameters).toEqual(
       [],
     );
     expect(
-      new WhereClause(
+      new Where(
         new Operator.Between(new Identifier("age"), new Identifier("low"), new Identifier("high")),
       ).map(same, keep).getText(),
     ).toBe("age BETWEEN low AND high");
     expect(
-      new WhereClause(new Operator.In(new Identifier("id"), new Subquery(plain))).map(same, keep).getText(),
+      new Where(new Operator.In(new Identifier("id"), new Subquery(plain))).map(same, keep).getText(),
     ).toBe("id IN (SELECT 1)");
     const bare = new QueryStatement({ table: "posts", fields: ["id"], joins: [Join.cross("tags")] });
-    expect(new WhereClause(new Operator.Exists(new Subquery(bare))).map(same, keep).getText()).toBe(
+    expect(new Where(new Operator.Exists(new Subquery(bare))).map(same, keep).getText()).toBe(
       "EXISTS (SELECT id FROM posts CROSS JOIN tags)",
     );
-    expect(new WhereClause(new Operator.Exists(new Subquery(bare))).parameters).toEqual([]);
-    expect(new WhereClause(new Operator.Exists(new Subquery(nested))).parameters).toEqual([
+    expect(new Where(new Operator.Exists(new Subquery(bare))).parameters).toEqual([]);
+    expect(new Where(new Operator.Exists(new Subquery(nested))).parameters).toEqual([
       { name: "id", value: 1 },
       { name: "n", value: 2 },
     ]);
-    expect(new WhereClause(new Operator.NotIn("id", [1, 2])).parameters).toEqual([
+    expect(new Where(new Operator.NotIn("id", [1, 2])).parameters).toEqual([
       { name: "id_0", value: 1 },
       { name: "id_1", value: 2 },
     ]);
-    expect(new WhereClause(new Operator.Between("age", 1, 2)).parameters).toEqual([
+    expect(new Where(new Operator.Between("age", 1, 2)).parameters).toEqual([
       { name: "age_0", value: 1 },
       { name: "age_1", value: 2 },
     ]);
-    expect(new WhereClause(new Operator.NotBetween("age", 1, 2)).parameters).toEqual([
+    expect(new Where(new Operator.NotBetween("age", 1, 2)).parameters).toEqual([
       { name: "age_0", value: 1 },
       { name: "age_1", value: 2 },
     ]);
     expect(
-      new WhereClause(
+      new Where(
         new Operator.In(new Identifier("id"), new ArrayExpression([new Identifier("x")])),
       ).map(same, keep).getText(),
     ).toBe("id IN ($id_0)");
-    expect(new WhereClause(new WhereClause(new Operator.Equals("id", 1))).map(same, keep).getText()).toBe(
+    expect(new Where(new Where(new Operator.Equals("id", 1))).map(same, keep).getText()).toBe(
       "id = $id",
     );
-    expect(new WhereClause(new ArrayExpression([new Literal(1)])).map(same, keep).getText()).toBe("1");
+    expect(new Where(new ArrayExpression([new Literal(1)])).map(same, keep).getText()).toBe("1");
     expect(Join.full("profiles", "users.id", "profiles.user_id").kind).toBe("full");
     expect(() =>
       new QueryStatement({ table: "users", fields: ["id"], joins: [{ kind: "inner", table: "t" }] }).getText(),
@@ -270,7 +270,7 @@ describe("StatementParser", () => {
     expect(() => new QueryStatement({ table: "users", fields: ["id"], offset: -1 })).toThrow(
       "negative offset",
     );
-    expect(() => new WhereClause(new Ghost() as IExpression).map(same, keep)).toThrow("empty expression");
+    expect(() => new Where(new Ghost() as IExpression).map(same, keep)).toThrow("empty expression");
   });
 
   it("evaluates null patterns and rejects a subquery", () => {

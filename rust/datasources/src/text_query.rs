@@ -1,19 +1,19 @@
 use crate::builders::{Join, JoinKind};
+use crate::i_where::IWhere;
 use crate::query::Query;
 use crate::statements::statement::Statement;
 use crate::statements::text::Text;
 use crate::statements::{OrderBy, QueryStatementOptions};
-use crate::where_trait::Where;
 
 pub struct QueryStatement {
     text: String,
-    where_clause: Option<Box<dyn Where>>,
+    where_clause: Option<Box<dyn IWhere>>,
     pub distinct: bool,
     pub table: String,
     pub fields: Vec<String>,
     pub joins: Vec<Join>,
     pub group_by: Vec<String>,
-    pub having: Option<Box<dyn Where>>,
+    pub having: Option<Box<dyn IWhere>>,
     pub order_by: Vec<OrderBy>,
     pub limit: Option<i64>,
     pub offset: Option<i64>,
@@ -36,7 +36,7 @@ impl QueryStatement {
         }
     }
 
-    pub fn with_where(text: impl Into<String>, where_clause: impl Where + 'static) -> Self {
+    pub fn with_where(text: impl Into<String>, where_clause: impl IWhere + 'static) -> Self {
         Self {
             text: text.into(),
             where_clause: Some(Box::new(where_clause)),
@@ -77,7 +77,7 @@ impl QueryStatement {
         );
         let mut statement = match options.where_clause {
             Some(predicate) => {
-                Self::with_where(sql, crate::text_where::TextWhere::new(predicate.get_text()))
+                Self::with_where(sql, crate::where_text::WhereText::new(predicate.get_text()))
             }
             None => Self::text(sql),
         };
@@ -95,7 +95,7 @@ impl QueryStatement {
             .map(|column| (*column).to_string())
             .collect();
         statement.having = options.having.map(|predicate| {
-            Box::new(crate::text_where::TextWhere::new(predicate.get_text())) as Box<dyn Where>
+            Box::new(crate::where_text::WhereText::new(predicate.get_text())) as Box<dyn IWhere>
         });
         statement.order_by = options.order_by.to_vec();
         statement.limit = options.limit;
@@ -103,12 +103,12 @@ impl QueryStatement {
         statement
     }
 
-    pub fn replace_where(mut self, where_clause: impl Where + 'static) -> Self {
+    pub fn replace_where(mut self, where_clause: impl IWhere + 'static) -> Self {
         self.where_clause = Some(Box::new(where_clause));
         self
     }
 
-    pub fn replace_having(mut self, having: impl Where + 'static) -> Self {
+    pub fn replace_having(mut self, having: impl IWhere + 'static) -> Self {
         self.having = Some(Box::new(having));
         self
     }
@@ -133,7 +133,7 @@ impl Statement for QueryStatement {
     fn kind(&self) -> crate::statements::StatementKind {
         crate::statements::StatementKind::Query
     }
-    fn predicate(&self) -> Option<&dyn Where> {
+    fn predicate(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }
@@ -145,12 +145,12 @@ impl crate::ReadInput for QueryStatement {
 }
 
 impl Query for QueryStatement {
-    fn where_clause(&self) -> Option<&dyn Where> {
+    fn where_clause(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }
 
-fn with_where(sql: String, where_clause: Option<&dyn Where>) -> String {
+fn with_where(sql: String, where_clause: Option<&dyn IWhere>) -> String {
     match where_clause {
         Some(predicate) => format!("{sql} WHERE {}", predicate.get_text()),
         None => sql,
@@ -178,7 +178,7 @@ fn order_by(order: &[OrderBy]) -> String {
     }
 }
 
-fn having_sql(having: Option<&dyn Where>) -> String {
+fn having_sql(having: Option<&dyn IWhere>) -> String {
     match having {
         Some(predicate) => format!(" HAVING {}", predicate.get_text()),
         None => String::new(),

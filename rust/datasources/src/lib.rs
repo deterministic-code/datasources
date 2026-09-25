@@ -10,7 +10,6 @@ mod command_middleware;
 mod command_middleware_host;
 mod connection;
 mod console_command_middleware;
-mod expect_console_middleware;
 pub mod converters;
 mod create;
 mod create_repository_options;
@@ -29,9 +28,11 @@ mod enriched;
 mod enriched_readonly_repository;
 mod enrichment;
 mod enrichment_via;
+mod expect_console_middleware;
 mod flat_to_nested_readonly_enrichment_strategy;
 mod hashset_optimized_readonly_enrichment_strategy;
 mod i_repository;
+mod i_where;
 mod id_key;
 mod identity_filter;
 mod identity_where_text;
@@ -66,10 +67,9 @@ pub mod stubs;
 mod table_repository_builder;
 mod table_repository_statements;
 mod text_query;
-mod text_where;
 mod transaction;
 mod value;
-mod where_trait;
+mod where_text;
 
 pub use array_reader::ArrayReader;
 pub use association::Association;
@@ -83,7 +83,6 @@ pub use command_middleware::CommandMiddleware;
 pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
 pub use console_command_middleware::{format_elapsed, utc_iso_millis, ConsoleCommandMiddleware};
-pub use expect_console_middleware::ExpectConsoleMiddleware;
 pub use converters::{
     Casing, ChangeCasingConverter, ConvertSchema, PluralizerConverter, RegexConverter,
     ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter,
@@ -104,9 +103,11 @@ pub use enriched::Enriched;
 pub use enriched_readonly_repository::EnrichedReadonlyRepository;
 pub use enrichment::Enrichment;
 pub use enrichment_via::EnrichmentVia;
+pub use expect_console_middleware::ExpectConsoleMiddleware;
 pub use flat_to_nested_readonly_enrichment_strategy::FlatToNestedReadonlyEnrichmentStrategy;
 pub use hashset_optimized_readonly_enrichment_strategy::HashsetOptimizedReadonlyEnrichmentStrategy;
 pub use i_repository::IRepository;
+pub use i_where::IWhere;
 pub use id_key::IdKey;
 pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
@@ -149,7 +150,7 @@ pub use statements::{
     Expression, ForeignKey, Identifier, InsertStatement, Literal, NotNull, Operator, OrderBy,
     PrimaryKey, QueryStatementOptions, ReferentialAction, ReturnStatement, SortDirection,
     Statement, StatementEvaluator, StatementKind, TableConstraint, Text, UniqueConstraint,
-    UpdateStatement, WhereClause,
+    UpdateStatement, Where,
 };
 pub use stubs::{
     create_stub_datasource, StubCommand, StubConnection, StubDatasource, StubReader,
@@ -158,10 +159,9 @@ pub use stubs::{
 pub use table_repository_builder::RepositoryBuilder;
 pub use table_repository_statements::RepositoryStatements;
 pub use text_query::QueryStatement;
-pub use text_where::TextWhere;
 pub use transaction::Transaction;
 pub use value::Value;
-pub use where_trait::Where;
+pub use where_text::WhereText;
 
 #[cfg(test)]
 mod tests;

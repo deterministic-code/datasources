@@ -2,7 +2,7 @@ import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import type { Scalar } from "./builders/Scalar.ts";
-import { Operator, WhereClause } from "./statements/index.ts";
+import { Operator, Where } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -30,7 +30,7 @@ export abstract class DeleteEnrichmentStrategy<T> {
     const key = get(parent, enrichment.from);
     if (key === undefined || key === null || typeof key === "object") return [];
     const items: object[] = [];
-    for await (const item of writer.read(new WhereClause(new Operator.Equals(enrichment.by, key))))
+    for await (const item of writer.read(new Where(new Operator.Equals(enrichment.by, key))))
       items.push(item);
     return items;
   };
@@ -41,7 +41,7 @@ export abstract class DeleteEnrichmentStrategy<T> {
     key: Scalar,
   ): Promise<object[]> => {
     const items: object[] = [];
-    for await (const item of writer.read(new WhereClause(new Operator.Equals(column, key))))
+    for await (const item of writer.read(new Where(new Operator.Equals(column, key))))
       items.push(item);
     return items;
   };

@@ -1,12 +1,12 @@
+use crate::i_where::IWhere;
 use crate::query::Query;
 use crate::statement::Statement;
 use crate::statements::text::Text;
-use crate::where_trait::Where;
 use std::sync::Mutex;
 
 pub struct MockQuery {
     text: String,
-    where_clause: Option<Box<dyn Where>>,
+    where_clause: Option<Box<dyn IWhere>>,
     calls: Mutex<usize>,
 }
 
@@ -19,7 +19,7 @@ impl MockQuery {
         }
     }
 
-    pub fn with_where(text: impl Into<String>, where_clause: impl Where + 'static) -> Self {
+    pub fn with_where(text: impl Into<String>, where_clause: impl IWhere + 'static) -> Self {
         Self {
             text: text.into(),
             where_clause: Some(Box::new(where_clause)),
@@ -52,13 +52,13 @@ impl Statement for MockQuery {
     fn kind(&self) -> crate::statements::StatementKind {
         crate::statements::StatementKind::Query
     }
-    fn predicate(&self) -> Option<&dyn Where> {
+    fn predicate(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }
 
 impl Query for MockQuery {
-    fn where_clause(&self) -> Option<&dyn Where> {
+    fn where_clause(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }

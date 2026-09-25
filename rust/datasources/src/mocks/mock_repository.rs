@@ -1,5 +1,6 @@
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
+use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
@@ -7,7 +8,6 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
-use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 
@@ -86,14 +86,14 @@ impl ICRUDRepository for MockRepository {
         Ok(item.clone())
     }
 
-    async fn update(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(error) = &*self.update_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn delete(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(error) = &*self.delete_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }

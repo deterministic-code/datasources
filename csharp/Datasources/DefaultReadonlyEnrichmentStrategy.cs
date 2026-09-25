@@ -52,7 +52,7 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
             var cacheKey = RepositoryTreeNode.KeyOf(key);
             if (!cache.TryGetValue(cacheKey, out var related))
             {
-                related = await via.ReadSingle(new WhereClause(new Operator.Equals(enrichment.By, Value.From(key))));
+                related = await via.ReadSingle(new Where(new Operator.Equals(enrichment.By, Value.From(key))));
                 cache[cacheKey] = related;
             }
             if (related is null) continue;
@@ -75,7 +75,7 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
             var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
-            await foreach (var item in via.Read(new WhereClause(new Operator.Equals(enrichment.By, Value.From(key)))))
+            await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.By, Value.From(key)))))
                 related.Add(item);
             RepositoryTreeNode.Set(parent, enrichment.Into, related);
         }

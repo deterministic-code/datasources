@@ -6,8 +6,8 @@ import {
   QueryStatement,
   RowTypeConverter,
   TransformMapper,
+  WhereText,
   Where,
-  WhereClause,
   Operator,
   RepositoryBuilder,
   createRepositoryOptions,
@@ -80,7 +80,7 @@ describe("CRUDRepository", () => {
   it("uses caller query and returns empty", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([]);
-    const where = new WhereClause(new Operator.Equals("id", 9));
+    const where = new Where(new Operator.Equals("id", 9));
     expect(
       await repo.readSingle(new QueryStatement({ table: "users", fields: ["id"], where })),
     ).toBeUndefined();
@@ -93,7 +93,7 @@ describe("CRUDRepository", () => {
   it("attaches where to the default select", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([]);
-    expect(await repo.readSingle(new WhereClause(new Operator.Equals("id", 9)))).toBeUndefined();
+    expect(await repo.readSingle(new Where(new Operator.Equals("id", 9)))).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id, name FROM users WHERE id = $id",
     );
@@ -155,7 +155,7 @@ describe("CRUDRepository", () => {
     await expect(repo.readSingleById(1)).rejects.toThrow("ReadSingleById requires an Id column");
     await repo.delete({ id: 1, name: "a" });
     expect(command.executeCalls[1]?.parameters).toEqual([]);
-    await repo.delete({ id: 1, name: "a" }, new Where("id = $id"));
+    await repo.delete({ id: 1, name: "a" }, new WhereText("id = $id"));
     expect(command.executeCalls[2]?.parameters).toEqual([
       { name: "id", value: 1 },
       { name: "name", value: "a" },
@@ -163,7 +163,7 @@ describe("CRUDRepository", () => {
     const versioned = create();
     await versioned.repo.update(
       { id: 1, name: "b", name_extra: "x" },
-      new WhereClause(new Operator.And(
+      new Where(new Operator.And(
         new Operator.Equals("name_extra", "x"),
         new Operator.Equals("name", "a"),
       )),
@@ -234,7 +234,7 @@ describe("CRUDRepository", () => {
         /* consume */
       }
     }).rejects.toThrow("Reader current must be a row");
-    await repo.update({ id: 1, name: "a" }, new Where("id = 1"));
+    await repo.update({ id: 1, name: "a" }, new WhereText("id = 1"));
     const typed = new CRUDRepository(connection, {
       type: asType(Item),
       entity: "users",
@@ -242,7 +242,7 @@ describe("CRUDRepository", () => {
     });
     await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
-    await typed.delete(Object.assign(new Item(), { name: "z" }), new WhereClause(new Operator.Equals("name", "z")));
+    await typed.delete(Object.assign(new Item(), { name: "z" }), new Where(new Operator.Equals("name", "z")));
     expect(command.executeCalls[1]?.text).toBe("DELETE FROM users WHERE name = $name");
   });
 
@@ -453,7 +453,7 @@ describe("CRUDRepository", () => {
     await repo.create(Object.assign(new Row(), { id: 1, on: true }));
     await repo.update(
       Object.assign(new Row(), { id: 1, on: true }),
-      new WhereClause(new Operator.Equals("on", true)),
+      new Where(new Operator.Equals("on", true)),
     );
     expect(command.executeCalls[1]?.parameters).toContainEqual({ name: "on", value: 1 });
   });
@@ -473,7 +473,7 @@ describe("CRUDRepository", () => {
     });
     await repo.update(
       Object.assign(new Item(), { id: 1, name: "a" }),
-      new WhereClause(new Operator.Equals("name", "a")),
+      new Where(new Operator.Equals("name", "a")),
     );
     expect(command.executeCalls[0]?.parameters).toContainEqual({ name: "name", value: "a" });
   });

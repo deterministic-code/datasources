@@ -15,15 +15,15 @@ Call-site shape must match (names follow each language’s convention only: `Rea
 
 ```csharp
 var ds = DatasourceFactory.Default;
-await repo.Read(new WhereClause(new Operator.Equals("id", 9)));
+await repo.Read(new Where(new Operator.Equals("id", 9)));
 ```
 
 ```rust
 let ds = default()?;
-repo.read_single_where(&WhereClause::new(Operator::equals("id", 9))).await?;
+repo.read_single_where(&Where::new(Operator::equals("id", 9))).await?;
 ```
 
 ```typescript
 const ds = DatasourceFactory.default;
-for await (const row of repo.read(new WhereClause(new Operator.Equals("id", 9)))) { }
+for await (const row of repo.read(new Where(new Operator.Equals("id", 9)))) { }
 ```

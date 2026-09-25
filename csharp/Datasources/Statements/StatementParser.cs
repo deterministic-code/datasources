@@ -58,7 +58,7 @@ public static class StatementParser
             var columns = new List<string>();
             var canonical = Assignment(columns);
             while (Try(',')) canonical = Assignment(columns) && canonical;
-            IWhere? where = TryWord("WHERE") ? new WhereClause(Expr()) : null;
+            IWhere? where = TryWord("WHERE") ? new Where(Expr()) : null;
             return canonical
                 ? new UpdateStatement(table, columns.Select(name => new Parameter(name, Value.Null.Instance)).ToList(), where)
                 : new UpdateStatement(text[start..i], where);
@@ -78,7 +78,7 @@ public static class StatementParser
             ExpectWord("DELETE");
             ExpectWord("FROM");
             var table = Ident();
-            return new DeleteStatement(table, TryWord("WHERE") ? new WhereClause(Expr()) : null);
+            return new DeleteStatement(table, TryWord("WHERE") ? new Where(Expr()) : null);
         }
 
         string RawExpr()
@@ -103,9 +103,9 @@ public static class StatementParser
             ExpectWord("FROM");
             var table = FromItem();
             var joins = Joins();
-            IWhere? where = TryWord("WHERE") ? new WhereClause(Expr()) : null;
+            IWhere? where = TryWord("WHERE") ? new Where(Expr()) : null;
             IReadOnlyList<string>? group = TryWord("GROUP") ? Group() : null;
-            IWhere? having = TryWord("HAVING") ? new WhereClause(Expr()) : null;
+            IWhere? having = TryWord("HAVING") ? new Where(Expr()) : null;
             IReadOnlyList<OrderBy>? order = TryWord("ORDER") ? Order() : null;
             int? limit = TryWord("LIMIT") ? Integer() : null;
             int? offset = TryWord("OFFSET") ? Integer() : null;

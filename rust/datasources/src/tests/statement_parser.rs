@@ -79,7 +79,7 @@ fn builds_the_where_tree() {
         .where_clause()
         .unwrap()
         .as_any()
-        .downcast_ref::<WhereClause>()
+        .downcast_ref::<Where>()
         .unwrap();
     assert!(matches!(
         clause.condition,
@@ -95,7 +95,7 @@ fn builds_the_where_tree() {
         .where_clause()
         .unwrap()
         .as_any()
-        .downcast_ref::<WhereClause>()
+        .downcast_ref::<Where>()
         .unwrap();
     assert!(matches!(
         clause.condition,
@@ -129,7 +129,7 @@ fn builds_the_where_tree() {
         .as_ref()
         .unwrap()
         .as_any()
-        .downcast_ref::<WhereClause>()
+        .downcast_ref::<Where>()
         .unwrap();
     assert!(matches!(
         having.condition,
@@ -185,19 +185,19 @@ fn evaluates_the_new_predicates() {
         Value::Bool(true)
     );
     assert_eq!(
-        WhereClause::new(Operator::not_like("name", "%a")).get_text(),
+        Where::new(Operator::not_like("name", "%a")).get_text(),
         "name NOT LIKE $name"
     );
     assert_eq!(
-        WhereClause::new(Operator::not_between("age", 1_i64, 2_i64)).get_text(),
+        Where::new(Operator::not_between("age", 1_i64, 2_i64)).get_text(),
         "age NOT BETWEEN $age_0 AND $age_1"
     );
     assert_eq!(
-        WhereClause::new(Operator::not_in("id", vec![])).get_text(),
+        Where::new(Operator::not_in("id", vec![])).get_text(),
         "1 = 1"
     );
     assert_eq!(
-        WhereClause::new(Operator::not(Operator::like("name", "%a"))).get_text(),
+        Where::new(Operator::not(Operator::like("name", "%a"))).get_text(),
         "NOT (name LIKE $name)"
     );
 }

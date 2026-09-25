@@ -4,7 +4,7 @@ use crate::repository::ICRUDRepository;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
-use crate::{Operator, WhereClause};
+use crate::{Operator, Where};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -34,7 +34,7 @@ pub(crate) async fn load(
         return Ok(Vec::new());
     };
     writer
-        .read(Some(&WhereClause::new(Operator::equals(
+        .read(Some(&Where::new(Operator::equals(
             enrichment.by.clone(),
             key,
         ))))

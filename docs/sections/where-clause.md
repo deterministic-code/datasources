@@ -1,4 +1,4 @@
-# Where Clause
+# Where
 
 [IWhere](#iwhere) over an [IExpression](./expressions.md#iexpression) tree. A clause is an expression, not a statement. Placeholders are `$field` and `$field_0` for `In`.
 
@@ -6,15 +6,15 @@
 
 ::: reference
 ### typescript
-#### WhereClause
+#### Where
 
 ```typescript
-class WhereClause implements IWhere
+class Where implements IWhere
 ```
 
 **Constructor**
 
-##### WhereClause(condition)
+##### Where(condition)
 
 Builds a where clause from an [IExpression](./expressions.md#iexpression).
 
@@ -24,7 +24,7 @@ constructor(condition: IExpression)
 
 - `condition` — [IExpression](./expressions.md#iexpression)
 
-##### WhereClause(column, op, value)
+##### Where(column, op, value)
 
 Builds a comparison from a column, a [Cmp](./expressions.md#cmp) alias, and a literal.
 
@@ -72,28 +72,28 @@ getText(): string
 Nests this clause with another comparison under [Operator.And](./expressions.md#operator) or `Operator.Or`.
 
 ```typescript
-and(column: string, op: Comparison, value: Cell): WhereClause
-or(column: string, op: Comparison, value: Cell): WhereClause
+and(column: string, op: Comparison, value: Cell): Where
+or(column: string, op: Comparison, value: Cell): Where
 ```
 
 - `column` — column name
 - `op` — [Cmp](./expressions.md#cmp) alias
 - `value` — [Cell](./flat-to-nested-mapper.md#cell)
 
-**Returns** [WhereClause](#whereclause)
+**Returns** [Where](#where)
 
 ##### map(column, value)
 
 Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
 
 ```typescript
-map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): WhereClause
+map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): Where
 ```
 
 - `column` — property name to stored column
 - `value` — property name and domain cell to stored cell
 
-**Returns** [WhereClause](#whereclause)
+**Returns** [Where](#where)
 
 #### IWhere
 
@@ -101,15 +101,15 @@ map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell)
 interface IWhere extends IExpression, IText {}
 ```
 
-#### Where
+#### WhereText
 
 ```typescript
-class Where implements IWhere
+class WhereText implements IWhere
 ```
 
 **Constructor**
 
-##### Where(text)
+##### WhereText(text)
 
 Wraps predicate text.
 
@@ -137,33 +137,33 @@ getText(): string
 type Scalar = string | number | boolean | bigint | null
 ```
 
-Cell value used by [WhereClause](#whereclause) and [Identifier](./expressions.md#identifier).
+Cell value used by [Where](#where) and [Identifier](./expressions.md#identifier).
 
 ### csharp
-#### WhereClause
+#### Where
 
 ```csharp
-public sealed record WhereClause(IExpression Condition) : IWhere
+public sealed record Where(IExpression Condition) : IWhere
 ```
 
 **Constructor**
 
-##### WhereClause(condition)
+##### Where(condition)
 
 Builds a where clause from an [IExpression](./expressions.md#iexpression).
 
 ```csharp
-public WhereClause(IExpression Condition)
+public Where(IExpression Condition)
 ```
 
 - `condition` — [IExpression](./expressions.md#iexpression)
 
-##### WhereClause(column, op, value)
+##### Where(column, op, value)
 
 Builds a comparison from a column, a [Cmp](./expressions.md#cmp) alias, and a literal.
 
 ```csharp
-public WhereClause(string column, Comparison op, Value? value)
+public Where(string column, Comparison op, Value? value)
 ```
 
 - `column` — column name
@@ -206,28 +206,28 @@ public string GetText()
 Nests this clause with another comparison under `Operator.And` or `Operator.Or`.
 
 ```csharp
-public WhereClause And(string column, Comparison op, Value? value)
-public WhereClause Or(string column, Comparison op, Value? value)
+public Where And(string column, Comparison op, Value? value)
+public Where Or(string column, Comparison op, Value? value)
 ```
 
 - `column` — column name
 - `op` — [Cmp](./expressions.md#cmp) alias
 - `value` — cell value
 
-**Returns** [WhereClause](#whereclause)
+**Returns** [Where](#where)
 
 ##### Map(column, value)
 
 Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
 
 ```csharp
-public WhereClause Map(Func<string, string> column, Func<string, Value, Value> value)
+public Where Map(Func<string, string> column, Func<string, Value, Value> value)
 ```
 
 - `column` — property name to stored column
 - `value` — property name and domain cell to stored cell
 
-**Returns** [WhereClause](#whereclause)
+**Returns** [Where](#where)
 
 #### IWhere
 
@@ -235,20 +235,20 @@ public WhereClause Map(Func<string, string> column, Func<string, Value, Value> v
 public interface IWhere : IExpression, IText
 ```
 
-#### Where
+#### WhereText
 
 ```csharp
-public sealed class Where : IWhere
+public sealed record WhereText : IWhere
 ```
 
 **Constructor**
 
-##### Where(text)
+##### WhereText(text)
 
 Wraps predicate text.
 
 ```csharp
-public Where(string text)
+public WhereText(string text)
 ```
 
 - `text` — predicate text
@@ -266,10 +266,10 @@ string GetText()
 **Returns** `string`
 
 ### rust
-#### WhereClause
+#### Where
 
 ```rust
-pub struct WhereClause
+pub struct Where
 ```
 
 **Constructor**
@@ -284,7 +284,7 @@ pub fn new(condition: impl Into<Expression>) -> Self
 
 - `condition` — [Expression](./expressions.md#expression) or [Operator](./expressions.md#operator)
 
-**Returns** [WhereClause](#whereclause)
+**Returns** [Where](#where)
 
 ##### binary(column, op, value)
 
@@ -298,7 +298,7 @@ pub fn binary(column: &str, op: fn(&str, Value) -> Operator, value: impl Into<Va
 - `op` — [Cmp](./expressions.md#cmp) alias such as `eq` or `gt`
 - `value` — [Value](#value)
 
-**Returns** [WhereClause](#whereclause)
+**Returns** [Where](#where)
 
 ##### and(column, op, value) / or(column, op, value)
 
@@ -313,7 +313,7 @@ pub fn or(self, column: &str, op: fn(&str, Value) -> Operator, value: impl Into<
 - `op` — [Cmp](./expressions.md#cmp) alias
 - `value` — [Value](#value)
 
-**Returns** [WhereClause](#whereclause)
+**Returns** [Where](#where)
 
 ##### map(column, value)
 
@@ -329,7 +329,7 @@ where
 - `column` — property name to stored column
 - `value` — property name and domain cell to stored cell
 
-**Returns** `Result<`[WhereClause](#whereclause)`>`
+**Returns** `Result<`[Where](#where)`>`
 
 ##### get_text()
 
@@ -351,16 +351,16 @@ fn parameters(&self) -> Vec<Parameter>
 
 **Returns** `Vec<`[Parameter](./command.md#parameter)`>`
 
-#### Where
+#### IWhere
 
 ```rust
-pub trait Where: Text {}
+pub trait IWhere: Text {}
 ```
 
-#### TextWhere
+#### WhereText
 
 ```rust
-pub struct TextWhere
+pub struct WhereText
 ```
 
 **Constructor**
@@ -375,7 +375,7 @@ pub fn new(text: impl Into<String>) -> Self
 
 - `text` — predicate text
 
-**Returns** [TextWhere](#textwhere)
+**Returns** [WhereText](#wheretext)
 
 **Methods**
 
@@ -392,7 +392,7 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-Construct the predicate with [Operator](./expressions.md#operator) records, then wrap it: `new WhereClause(new Operator.Equals("id", 9))`. A column, [Cmp](./expressions.md#cmp) alias, and literal is the same tree: `new WhereClause("id", eq, 9)`. [QueryStatement](./query-statement.md) / [UpdateStatement](./update-statement.md) / [DeleteStatement](./delete-statement.md) embed `WhereClause.GetText()` in the command SQL. Keep the [WhereClause](#whereclause) when the caller needs bound parameters. [StatementEvaluator](./statement-evaluator.md) interprets the same tree against a parameter map. Raw text [Where](#where) is not evaluable.
+Construct the predicate with [Operator](./expressions.md#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](./expressions.md#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [QueryStatement](./query-statement.md) / [UpdateStatement](./update-statement.md) / [DeleteStatement](./delete-statement.md) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [StatementEvaluator](./statement-evaluator.md) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
 
 ## Examples
 

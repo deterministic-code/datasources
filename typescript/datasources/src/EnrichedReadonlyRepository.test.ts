@@ -10,8 +10,8 @@ import { TransformMapper } from "./mappers/TransformMapper.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "./statements/IQuery.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
-import { Operator, WhereClause } from "./statements/index.ts";
-import { Where } from "./statements/Where.ts";
+import { Operator, Where } from "./statements/index.ts";
+import { WhereText } from "./statements/WhereText.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 
 class Parent {
@@ -40,8 +40,8 @@ const parent = (id: number, type_id: number): Parent =>
 describe("EnrichedReadonlyRepository", () => {
   it("reads one row through a where clause", async () => {
     const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository([parent(1, 0)]));
-    const byClause = await collectAsync(repo.read(new WhereClause(new Operator.Equals("id", 1))));
-    const byWhere = await collectAsync(repo.read(new Where("id = 1")));
+    const byClause = await collectAsync(repo.read(new Where(new Operator.Equals("id", 1))));
+    const byWhere = await collectAsync(repo.read(new WhereText("id = 1")));
     expect(byClause.map((item) => item.id)).toEqual([1]);
     expect(byWhere.map((item) => item.id)).toEqual([1]);
   });

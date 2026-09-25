@@ -12,7 +12,7 @@ internal static class ContactLookupIds
             {
                 Entity = entity,
                 ReadProperties = ["id", "name"]
-            }).ReadSingle(new WhereClause(new Operator.Equals("name", name)));
+            }).ReadSingle(new Where(new Operator.Equals("name", name)));
             return row?.id ?? throw new InvalidOperationException($"{entity} '{name}' missing");
         }
         return new ContactLookups(

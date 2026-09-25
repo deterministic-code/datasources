@@ -7,7 +7,7 @@ use crate::repository_tree_node::{encode_row, encode_rows, RepositoryTreeNode};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
-use crate::{Operator, WhereClause};
+use crate::{Operator, Where};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
@@ -77,7 +77,7 @@ async fn apply_lookup(
         return Ok(());
     }
     let loaded = via
-        .read(Some(&WhereClause::new(Operator::in_list(
+        .read(Some(&Where::new(Operator::in_list(
             enrichment.by.clone(),
             values,
         ))))
@@ -121,7 +121,7 @@ async fn apply_many(
         return Ok(());
     }
     let loaded = via
-        .read(Some(&WhereClause::new(Operator::in_list(
+        .read(Some(&Where::new(Operator::in_list(
             enrichment.by.clone(),
             values,
         ))))

@@ -1,7 +1,7 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
     create_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
-    DictionaryMapper, PluralizerMapper, Value, WhereClause,
+    DictionaryMapper, PluralizerMapper, Value, Where,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -66,12 +66,12 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     options.entity_mapper = Box::new(PluralizerMapper::new());
     let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
     let by_id = repo
-        .read_single(Some(&WhereClause::binary("id", eq, 1_i64)))
+        .read_single(Some(&Where::binary("id", eq, 1_i64)))
         .await
         .unwrap()
         .unwrap();
     let disabled = repo
-        .read(Some(&WhereClause::binary("username", eq, "grace").and(
+        .read(Some(&Where::binary("username", eq, "grace").and(
             "is_enabled",
             eq,
             0_i64,
@@ -118,7 +118,7 @@ async fn reads_user_by_guid_username_and_created() {
     let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
-        .read_single(Some(&WhereClause::binary(
+        .read_single(Some(&Where::binary(
             "Key",
             eq,
             Uuid::parse_str(ADA).unwrap(),
@@ -128,13 +128,13 @@ async fn reads_user_by_guid_username_and_created() {
         .unwrap();
     let by_login = repo
         .read(Some(
-            &WhereClause::binary("Login", eq, "ada").and("Active", eq, true),
+            &Where::binary("Login", eq, "ada").and("Active", eq, true),
         ))
         .await
         .unwrap();
     let later = repo
         .read(Some(
-            &WhereClause::binary("Active", eq, true).and("Opened", gt, opened),
+            &Where::binary("Active", eq, true).and("Opened", gt, opened),
         ))
         .await
         .unwrap();
@@ -169,7 +169,7 @@ mod user_view {
     use super::{datasource, open, ADA, GRACE, LIN};
     use datasources::{
         create_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
-        DictionaryMapper, EnrichedReadonlyRepository, IReadonlyRepository, Value, WhereClause,
+        DictionaryMapper, EnrichedReadonlyRepository, IReadonlyRepository, Value, Where,
     };
     use uuid::Uuid;
 
@@ -258,7 +258,7 @@ mod user_view {
             (),
         );
         let account = enriched
-            .read_single(Some(&WhereClause::binary(
+            .read_single(Some(&Where::binary(
                 "Key",
                 eq,
                 Uuid::parse_str(ADA).unwrap(),
@@ -288,7 +288,7 @@ mod users_view_roles {
         Datasource, DictionaryMapper, EnrichedReadonlyRepository, FlatToNestedMapper,
         FlatToNestedReadonlyEnrichmentStrategy, HashsetOptimizedReadonlyEnrichmentStrategy,
         IReadonlyRepository, Join, MappedValue, Query, QueryStatement, QueryStatementOptions,
-        TransformMapper, TypeMap, TypeMapField, TypeMapGroup, Value, WhereClause,
+        TransformMapper, TypeMap, TypeMapField, TypeMapGroup, Value, Where,
     };
     use std::sync::Arc;
 
@@ -447,7 +447,7 @@ mod users_view_roles {
         );
         users_repo.add_enriched("Roles", "Key", roles, "UserId", None, true, ());
         let users_view = users_repo
-            .read_single(Some(&WhereClause::binary("Key", eq, ADA)))
+            .read_single(Some(&Where::binary("Key", eq, ADA)))
             .await
             .unwrap()
             .unwrap();
@@ -572,7 +572,7 @@ mod user_crud {
     use datasources::{
         create_repository_options, encode_rows, eq, CRUDRepository, Casing, ChangeCasingMapper,
         ConvertSchema, Datasource, DictionaryMapper, ICRUDRepository, IReadonlyRepository,
-        RowTypeConverter, Value, WhereClause,
+        RowTypeConverter, Value, Where,
     };
     use std::sync::Arc;
 
@@ -646,7 +646,7 @@ mod user_crud {
             .unwrap()
             .unwrap();
         let matches = users_repo
-            .read(Some(&WhereClause::binary("username", eq, "ada").and(
+            .read(Some(&Where::binary("username", eq, "ada").and(
                 "is_enabled",
                 eq,
                 Value::Bool(true),
@@ -767,7 +767,7 @@ mod user_crud {
         users_repo.create(&mut user).await.unwrap();
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
-            .read_single(Some(&WhereClause::binary("Key", eq, key.clone())))
+            .read_single(Some(&Where::binary("Key", eq, key.clone())))
             .await
             .unwrap()
             .unwrap();
@@ -777,30 +777,26 @@ mod user_crud {
         let updated = users_repo
             .update(
                 &loaded,
-                Some(&WhereClause::binary("Key", eq, key.clone()).and(
-                    "Version",
-                    eq,
-                    version.clone(),
-                )),
+                Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
             )
             .await
             .unwrap();
         let current = users_repo
-            .read_single(Some(&WhereClause::binary("Key", eq, key.clone())))
+            .read_single(Some(&Where::binary("Key", eq, key.clone())))
             .await
             .unwrap()
             .unwrap();
         let stale = users_repo
             .update(
                 &loaded,
-                Some(&WhereClause::binary("Key", eq, key.clone()).and("Version", eq, version)),
+                Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
             )
             .await
             .unwrap();
         users_repo.delete(&loaded, None).await.unwrap();
         let gone = users_repo.read_single_by_id(&key).await.unwrap();
         let roles = user_roles_repo
-            .read(Some(&WhereClause::binary("UserId", eq, key.clone())))
+            .read(Some(&Where::binary("UserId", eq, key.clone())))
             .await
             .unwrap();
         assert_eq!(admin.get("Id"), Some(&Value::Int(1)));

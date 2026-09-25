@@ -54,7 +54,7 @@ public static class RepositorySpec
             await (step switch
             {
                 { Create: { } create } => repo.Create(ToEntity(create.Row, spec.Type, mapping)),
-                { Read: { } read } => AssertRead(spec.Name, read, repo.ReadSingle(new WhereClause(new Operator.Equals("id", IdValue(read.Id, spec.Type))))),
+                { Read: { } read } => AssertRead(spec.Name, read, repo.ReadSingle(new Where(new Operator.Equals("id", IdValue(read.Id, spec.Type))))),
                 { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Read(Where(mapping, where, spec.Type)) : repo.Read()),
                 { ReadBy: { } readBy } => AssertRead(spec.Name, readBy, repo.ReadSingle(Where(mapping, readBy.Where, spec.Type))),
                 { Update: { } update } => AssertAffected($"{spec.Name} UPDATE", update.HasExpect, update.Expect,
@@ -223,12 +223,12 @@ public static class RepositorySpec
             yield return step switch
             {
                 { Create: { } create } => WithStatementSql(new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col))).GetText(), true, spec.Type),
-                { Read: { } read } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = new WhereClause(new Operator.Equals("id", Value.From(read.Id))) }).GetText(), false, spec.Type),
+                { Read: { } read } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) }).GetText(), false, spec.Type),
                 { Query: { } query } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null }).GetText(), false, spec.Type),
                 { ReadBy: { } readBy } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) }).GetText(), false, spec.Type),
-                { Update: { } update } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), new WhereClause(new Operator.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"])))).GetText(), true, spec.Type),
+                { Update: { } update } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), new Where(new Operator.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"])))).GetText(), true, spec.Type),
                 { UpdateBy: { } updateBy } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(), true, spec.Type),
-                { Delete: { } delete } => WithStatementSql(new DeleteStatement(table, new WhereClause(new Operator.Equals("id", Value.From(delete.Id)))).GetText(), true, spec.Type),
+                { Delete: { } delete } => WithStatementSql(new DeleteStatement(table, new Where(new Operator.Equals("id", Value.From(delete.Id)))).GetText(), true, spec.Type),
                 { DeleteBy: { } deleteBy } => WithStatementSql(new DeleteStatement(table, SqlWhere(deleteBy.Where)).GetText(), true, spec.Type),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
@@ -255,7 +255,7 @@ public static class RepositorySpec
 
     static IWhere Where<T>(RowTypeConverter<T> mapping, Dictionary<string, object?> row, TypeSpec type)
         where T : new() =>
-        new WhereClause(row.Select(pair =>
+        new Where(row.Select(pair =>
         {
             var value = Value.From(Coerce(pair.Value, Canonical(type, pair.Key)));
             var cell = mapping.Fields.TryGetValue(pair.Key, out var field)
@@ -266,7 +266,7 @@ public static class RepositorySpec
           .Aggregate((left, right) => new Operator.And(left, right)));
 
     static IWhere SqlWhere(Dictionary<string, object?> row) =>
-        new WhereClause(row.Select(pair =>
+        new Where(row.Select(pair =>
             (IExpression)new Operator.Equals(pair.Key, Value.From(Coerce(pair.Value)))
         ).DefaultIfEmpty(new Operator.Equals(new Literal(1), new Literal(1)))
          .Aggregate((left, right) => new Operator.And(left, right)));

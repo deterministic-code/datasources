@@ -7,7 +7,7 @@ import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Row } from "./Row.ts";
-import { Operator, WhereClause } from "./statements/index.ts";
+import { Operator, Where } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -102,11 +102,11 @@ const applyLinked = async <TRelated extends object>(
     if (key === undefined || key === null) continue;
     const related: TRelated[] = [];
     for await (const row of link.read(
-      new WhereClause(new Operator.Equals(association.parent, scalar(key))),
+      new Where(new Operator.Equals(association.parent, scalar(key))),
     )) {
       const id = props(row)[association.related];
       if (id === undefined || id === null || typeof id === "object") continue;
-      const entity = await via.readSingle(new WhereClause(new Operator.Equals(enrichment.by, id)));
+      const entity = await via.readSingle(new Where(new Operator.Equals(enrichment.by, id)));
       if (entity) related.push(entity);
     }
     Object.assign(parent, { [enrichment.into]: related });

@@ -1,12 +1,12 @@
+use crate::i_where::IWhere;
 use crate::statement::Statement;
-use crate::where_trait::Where;
 
 pub trait ReadInput: Send + Sync {
     fn as_statement(&self) -> Option<&dyn Statement> {
         None
     }
 
-    fn as_where(&self) -> Option<&dyn Where> {
+    fn as_where(&self) -> Option<&dyn IWhere> {
         None
     }
 }
@@ -20,7 +20,7 @@ impl ReadInput for StatementRead<'_> {
 }
 
 #[cfg(test)]
-pub fn where_of<'a>(query: Option<&'a dyn ReadInput>) -> Option<&'a dyn Where> {
+pub fn where_of<'a>(query: Option<&'a dyn ReadInput>) -> Option<&'a dyn IWhere> {
     let input = query?;
     input
         .as_where()

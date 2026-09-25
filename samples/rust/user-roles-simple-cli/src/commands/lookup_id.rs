@@ -1,7 +1,7 @@
-use datasources::{Command, DatasourceError, Operator, QueryStatement, QueryStatementOptions, Result, Value, Where, WhereClause};
+use datasources::{Command, DatasourceError, Operator, QueryStatement, QueryStatementOptions, Result, Value, IWhere, Where};
 
 pub async fn of(command: &dyn Command, table: &str, column: &str, value: &str) -> Result<i64> {
-    let where_clause = WhereClause::new(Operator::equals(column, value));
+    let where_clause = Where::new(Operator::equals(column, value));
     let query = QueryStatement::new(QueryStatementOptions {
         where_clause: Some(&where_clause),
         ..QueryStatementOptions::new(table, &["id"])

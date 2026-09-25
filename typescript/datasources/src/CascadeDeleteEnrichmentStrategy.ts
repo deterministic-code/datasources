@@ -5,7 +5,7 @@ import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import type { Scalar } from "./builders/Scalar.ts";
-import { Operator, WhereClause } from "./statements/index.ts";
+import { Operator, Where } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -36,8 +36,8 @@ const linkWhere = (
   association: NonNullable<Enrichment["association"]>,
   parentKey: Scalar,
   relatedKey: Scalar,
-): WhereClause =>
-  new WhereClause(
+): Where =>
+  new Where(
     new Operator.And(
       new Operator.Equals(association.parent, parentKey),
       new Operator.Equals(association.related, relatedKey),

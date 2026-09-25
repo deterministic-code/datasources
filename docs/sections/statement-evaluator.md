@@ -1,6 +1,6 @@
 # StatementEvaluator
 
-Interprets an [IExpression](./expressions.md) against a name→value map. [WhereClause.GetText](./where-clause.md) materializes SQL; this type evaluates.
+Interprets an [IExpression](./expressions.md) against a name→value map. [Where.GetText](./where-clause.md) materializes SQL; this type evaluates.
 
 ## Classes
 
@@ -74,7 +74,7 @@ pub fn evaluate(&self, expression: &Expression, parameters: &Row) -> Value
 
 ## Remarks
 
-Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A raw text [Where](./where-clause.md#where) is not evaluable.
+Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A raw text [WhereText](./where-clause.md#wheretext) is not evaluable.
 
 ## Examples
 

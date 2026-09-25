@@ -222,7 +222,7 @@ public class UserViewCRUDRepositoryTests
             Roles = [editorRole],
             Groups = [engineering, ops]
         });
-        var updated = await userViewRepo.ReadSingle(new WhereClause("Username", eq, "ada"));
+        var updated = await userViewRepo.ReadSingle(new Where("Username", eq, "ada"));
         Assert.Equal(["editor"], updated!.Roles!.Select(role => role.Name));
         Assert.Equal([editorRole.Id], updated.Roles!.Select(role => role.Id));
         Assert.True(updated.Roles![0].Id > 0);

@@ -12,7 +12,7 @@ import { DatasourceError } from "./DatasourceError.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { WhereClause } from "./statements/WhereClause.ts";
+import { Where } from "./statements/Where.ts";
 import { createRepositoryOptions } from "./createRepositoryOptions.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
@@ -154,7 +154,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
         : this.statements!.query(this.stored(query));
 
   protected stored = (where: IWhere, fieldsApplied = false): IWhere =>
-    where instanceof WhereClause
+    where instanceof Where
       ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied))
       : where;
 

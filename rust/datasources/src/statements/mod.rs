@@ -24,7 +24,8 @@ mod table_constraint;
 pub mod text;
 mod unique_constraint;
 mod update_statement;
-mod where_clause;
+#[path = "where.rs"]
+mod r#where;
 
 pub use aggregate::Aggregate;
 pub use array_expression::ArrayExpression;
@@ -45,6 +46,7 @@ pub use operator::Operator;
 pub use order_by::{OrderBy, SortDirection};
 pub use primary_key::PrimaryKey;
 pub use query_statement_options::QueryStatementOptions;
+pub use r#where::Where;
 pub use return_statement::ReturnStatement;
 pub use statement::{Statement, StatementKind};
 pub use statement_evaluator::StatementEvaluator;
@@ -52,4 +54,3 @@ pub use table_constraint::TableConstraint;
 pub use text::Text;
 pub use unique_constraint::UniqueConstraint;
 pub use update_statement::UpdateStatement;
-pub use where_clause::WhereClause;

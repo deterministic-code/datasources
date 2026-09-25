@@ -58,19 +58,19 @@ public sealed class Api(ContactsRepository contacts, LegacyContactRepository leg
     async Task<HttpResult> PutContact(Dictionary<string, string> query, string? body)
     {
         var id = RequiredInt(query, "id");
-        if (await contacts.ReadSingle(new WhereClause(new Datasources.Operator.Equals("id", id))) is null)
+        if (await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("id", id))) is null)
             return new HttpResult(404, "");
         var contact = Read<ContactsView>(body);
         contact.id = id;
         await Bind(contact);
         await contacts.Update(contact);
-        return new HttpResult(200, JsonSerializer.Serialize(await contacts.ReadSingle(new WhereClause(new Datasources.Operator.Equals("id", id))), Json));
+        return new HttpResult(200, JsonSerializer.Serialize(await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("id", id))), Json));
     }
 
     async Task<HttpResult> DeleteContact(Dictionary<string, string> query)
     {
         var id = RequiredInt(query, "id");
-        var contact = await contacts.ReadSingle(new WhereClause(new Datasources.Operator.Equals("id", id)));
+        var contact = await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("id", id)));
         if (contact is null)
             return new HttpResult(404, "");
         await contacts.Delete(contact);
@@ -91,21 +91,21 @@ public sealed class Api(ContactsRepository contacts, LegacyContactRepository leg
     async Task<HttpResult> PutLegacy(Dictionary<string, string> query, string? body)
     {
         var key = Required(query, "key");
-        if (await legacy.ReadSingle(new WhereClause(new Datasources.Operator.Equals("key", key))) is null)
+        if (await legacy.ReadSingle(new Where(new Datasources.Operator.Equals("key", key))) is null)
             return new HttpResult(404, "");
         var row = Text(Read<LegacyContact>(body));
         row.key = key;
-        await legacy.Update(row, new WhereClause(new Datasources.Operator.Equals("key", key)));
-        return new HttpResult(200, JsonSerializer.Serialize(await legacy.ReadSingle(new WhereClause(new Datasources.Operator.Equals("key", key))), Json));
+        await legacy.Update(row, new Where(new Datasources.Operator.Equals("key", key)));
+        return new HttpResult(200, JsonSerializer.Serialize(await legacy.ReadSingle(new Where(new Datasources.Operator.Equals("key", key))), Json));
     }
 
     async Task<HttpResult> DeleteLegacy(Dictionary<string, string> query)
     {
         var key = Required(query, "key");
-        var row = await legacy.ReadSingle(new WhereClause(new Datasources.Operator.Equals("key", key)));
+        var row = await legacy.ReadSingle(new Where(new Datasources.Operator.Equals("key", key)));
         if (row is null)
             return new HttpResult(404, "");
-        await legacy.Delete(row, new WhereClause(new Datasources.Operator.Equals("key", key)));
+        await legacy.Delete(row, new Where(new Datasources.Operator.Equals("key", key)));
         return new HttpResult(204, "");
     }
 
@@ -139,7 +139,7 @@ public sealed class Api(ContactsRepository contacts, LegacyContactRepository leg
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new RequestException($"{field} is required");
-        var found = await repo.ReadSingle(new WhereClause(new Datasources.Operator.Equals("name", name)));
+        var found = await repo.ReadSingle(new Where(new Datasources.Operator.Equals("name", name)));
         return found?.id ?? throw new RequestException($"Unknown {field} \"{name}\"");
     }
 
@@ -193,7 +193,7 @@ public sealed class Api(ContactsRepository contacts, LegacyContactRepository leg
                 : new Datasources.Operator.Equals(key, value);
             expr = expr is null ? eq : new Datasources.Operator.And(expr, eq);
         }
-        return expr is null ? null : new WhereClause(expr);
+        return expr is null ? null : new Where(expr);
     }
 
     static T Read<T>(string? body) where T : new() =>

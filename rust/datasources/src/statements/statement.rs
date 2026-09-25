@@ -1,6 +1,6 @@
 use super::text::Text;
+use crate::i_where::IWhere;
 use crate::parameter::Parameter;
-use crate::where_trait::Where;
 use std::any::Any;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -21,7 +21,7 @@ pub trait Statement: Text {
     fn kind(&self) -> StatementKind {
         StatementKind::Other
     }
-    fn predicate(&self) -> Option<&dyn Where> {
+    fn predicate(&self) -> Option<&dyn IWhere> {
         None
     }
 }

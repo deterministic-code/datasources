@@ -7,7 +7,7 @@ use crate::repository_tree_node::{encode_row, encode_rows, RepositoryTreeNode};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
-use crate::{Operator, WhereClause};
+use crate::{Operator, Where};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
@@ -70,7 +70,7 @@ async fn apply_lookup(
         let cache_key = key.wire_text();
         if !cache.contains_key(&cache_key) {
             let related = via
-                .read_single(Some(&WhereClause::new(Operator::equals(
+                .read_single(Some(&Where::new(Operator::equals(
                     enrichment.by.clone(),
                     key.clone(),
                 ))))
@@ -103,7 +103,7 @@ async fn apply_many(
             continue;
         };
         let mut related = via
-            .read(Some(&WhereClause::new(Operator::equals(
+            .read(Some(&Where::new(Operator::equals(
                 enrichment.by.clone(),
                 key,
             ))))

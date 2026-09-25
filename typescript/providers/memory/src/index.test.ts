@@ -10,7 +10,7 @@ import {
   InsertStatement,
   QueryStatement,
   UpdateStatement,
-  Where,
+  WhereText,
 } from "@datasources/core";
 import { MemoryCommand } from "./command.ts";
 import { MemoryConnection } from "./connection.ts";
@@ -245,18 +245,18 @@ describe("MemoryCommand and CRUDRepository", () => {
     expect(await collectAsync(repo.read(new QueryStatement('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
-    expect(await repo.readSingle(new Where('{"id":1}'))).toEqual({ id: 1, name: "a" });
-    expect(await collectAsync(repo.read(new Where('{"id":1}')))).toEqual([
+    expect(await repo.readSingle(new WhereText('{"id":1}'))).toEqual({ id: 1, name: "a" });
+    expect(await collectAsync(repo.read(new WhereText('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
     expect((await repo.create({ id: 2, name: "b" })).rowsAffected).toBe(1);
     expect((await repo.update({ id: 2, name: "B" })).rowsAffected).toBe(1);
     expect(
-      (await repo.update({ name: "C" }, new Where('{"id":2}'))).rowsAffected,
+      (await repo.update({ name: "C" }, new WhereText('{"id":2}'))).rowsAffected,
     ).toBe(1);
     expect((await repo.delete({ id: 1 })).rowsAffected).toBe(1);
     expect(
-      (await repo.delete({ id: 2 }, new Where('{"id":2}'))).rowsAffected,
+      (await repo.delete({ id: 2 }, new WhereText('{"id":2}'))).rowsAffected,
     ).toBe(1);
     expect(await collectAsync(repo.read())).toEqual([]);
   });
@@ -311,7 +311,7 @@ describe("Memory datasource", () => {
     );
     await command.executeReaderStatement(new InsertStatement("t", []));
     await command.executeStatement(
-      new UpdateStatement("t", [{ name: "name", value: "Z" }], new Where('{"id":99}')),
+      new UpdateStatement("t", [{ name: "name", value: "Z" }], new WhereText('{"id":99}')),
     );
   });
 });

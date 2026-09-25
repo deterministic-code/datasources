@@ -240,7 +240,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         };
 
     IWhere IdWhere(Row record) =>
-        new WhereClause(ids.Select(col =>
+        new Where(ids.Select(col =>
             record.TryGetValue(col, out var value)
                 ? (IExpression)new Operator.Equals(col, value)
                 : throw new DatasourceException($"Missing Id value \"{col}\"")

@@ -93,8 +93,8 @@ export {
   ReturnStatement,
   UniqueConstraint,
   UpdateStatement,
+  WhereText,
   Where,
-  WhereClause,
   Join,
 } from "./statements/index.ts";
 export type { IDatasourceFactory } from "./IDatasourceFactory.ts";

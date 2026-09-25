@@ -1,5 +1,5 @@
+use crate::i_where::IWhere;
 use crate::statements::text::Text;
-use crate::where_trait::Where;
 use std::sync::Mutex;
 
 pub struct MockWhere {
@@ -28,12 +28,12 @@ impl Text for MockWhere {
 }
 
 impl crate::ReadInput for MockWhere {
-    fn as_where(&self) -> Option<&dyn crate::where_trait::Where> {
+    fn as_where(&self) -> Option<&dyn crate::i_where::IWhere> {
         Some(self)
     }
 }
 
-impl Where for MockWhere {
+impl IWhere for MockWhere {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

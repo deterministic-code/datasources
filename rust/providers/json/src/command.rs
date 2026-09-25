@@ -3,8 +3,8 @@ use crate::filter::{matches, parse_filter, record_from_json, value_to_json};
 use async_trait::async_trait;
 use datasources::{
     identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, Statement,
-    StatementKind, Value, Where,
+    CommandMiddlewareHost, DatasourceError, IWhere, Parameter, Reader, Response, Result, Statement,
+    StatementKind, Value,
 };
 use serde_json::{Map, Value as JsonValue};
 use std::sync::Arc;
@@ -181,7 +181,7 @@ fn filter_text(statement: &dyn Statement) -> String {
 
 fn with_where(
     parameters: Option<&[Parameter]>,
-    where_clause: Option<&dyn Where>,
+    where_clause: Option<&dyn IWhere>,
 ) -> Vec<Parameter> {
     let mut params = parameters.unwrap_or(&[]).to_vec();
     if let Some(text) = where_clause.map(|predicate| predicate.get_text()) {

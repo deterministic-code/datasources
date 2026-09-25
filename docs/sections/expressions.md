@@ -1,6 +1,6 @@
 # Expressions
 
-AST nodes for [WhereClause](./where-clause.md). `Operator` records hold operands; `GetText()` maps them to SQL.
+AST nodes for [Where](./where-clause.md). `Operator` records hold operands; `GetText()` maps them to SQL.
 
 ## Classes
 
@@ -48,7 +48,7 @@ new Operator.Not(argument: IExpression)
 
 #### Cmp
 
-Aliases for the comparison constructors. Pass one as the middle argument of [WhereClause](./where-clause.md#whereclause).
+Aliases for the comparison constructors. Pass one as the middle argument of [Where](./where-clause.md#where).
 
 ```typescript
 function eq(column: string, value: Cell): IExpression
@@ -177,7 +177,7 @@ Same shape for `NotEquals`, `GreaterThan`, `LessThan`, `GreaterThanOrEqual`, and
 
 #### Cmp
 
-Aliases for the comparison constructors. `using static Datasources.Cmp` brings `eq` into scope. Pass one as the middle argument of [WhereClause](./where-clause.md#whereclause).
+Aliases for the comparison constructors. `using static Datasources.Cmp` brings `eq` into scope. Pass one as the middle argument of [Where](./where-clause.md#where).
 
 ```csharp
 public static class Cmp
@@ -310,7 +310,7 @@ Same field constructors for `not_equals`, `greater_than`, `less_than`, `greater_
 
 #### Cmp
 
-Aliases for the comparison constructors. Pass one as the middle argument of [WhereClause::binary](./where-clause.md#whereclause).
+Aliases for the comparison constructors. Pass one as the middle argument of [Where::binary](./where-clause.md#where).
 
 ```rust
 pub fn eq(column: &str, value: Value) -> Operator

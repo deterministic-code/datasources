@@ -98,11 +98,11 @@ public class MemoryTests
         Assert.NotNull(await repo.ReadSingle());
         Assert.Null(await repo.ReadSingle(new QueryStatement("{\"id\":9}")));
         Assert.NotEmpty(await repo.Read(new QueryStatement("{\"id\":1}")).ToListAsync());
-        Assert.NotNull(await repo.ReadSingle(new Where("{\"id\":1}")));
-        Assert.NotEmpty(await repo.Read(new Where("{\"id\":1}")).ToListAsync());
+        Assert.NotNull(await repo.ReadSingle(new WhereText("{\"id\":1}")));
+        Assert.NotEmpty(await repo.Read(new WhereText("{\"id\":1}")).ToListAsync());
         await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });
         await repo.Update(new Row { ["id"] = 4, ["name"] = "D" });
-        await repo.Update(new Row { ["name"] = "Z" }, new Where("{\"id\":4}"));
+        await repo.Update(new Row { ["name"] = "Z" }, new WhereText("{\"id\":4}"));
         await repo.Delete(new Row { ["id"] = 4 });
         await command.Execute("insert", [new Parameter("id", 5)]);
         await command.Execute("update", [new Parameter("id", 5), new Parameter("$where", "{\"id\":5}")]);

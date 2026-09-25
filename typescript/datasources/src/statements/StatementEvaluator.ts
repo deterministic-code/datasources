@@ -5,8 +5,8 @@ import type { IExpression } from "./IExpression.ts";
 import { Literal } from "./Literal.ts";
 import { Operator } from "./Operator.ts";
 import { Subquery } from "./Subquery.ts";
+import { WhereText } from "./WhereText.ts";
 import { Where } from "./Where.ts";
-import { WhereClause } from "./WhereClause.ts";
 
 const isTrue = (value: Scalar): boolean => value === true;
 
@@ -62,9 +62,9 @@ const compare = (left: Scalar, right: Scalar): number =>
 
 export class StatementEvaluator {
   evaluate = (expression: IExpression, parameters?: Record<string, Scalar>): Scalar =>
-    expression instanceof WhereClause
+    expression instanceof Where
       ? this.evaluate(expression.condition, parameters)
-      : expression instanceof Where
+      : expression instanceof WhereText
         ? (() => {
             throw new Error("text where is not evaluable");
           })()

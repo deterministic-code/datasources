@@ -12,7 +12,7 @@ import { OrderBy } from "./OrderBy.ts";
 import { QueryStatement } from "./QueryStatement.ts";
 import { Subquery } from "./Subquery.ts";
 import { UpdateStatement } from "./UpdateStatement.ts";
-import { WhereClause } from "./WhereClause.ts";
+import { Where } from "./Where.ts";
 
 const empty = (): never => {
   throw new Error("empty statement");
@@ -61,7 +61,7 @@ class Cursor {
     const columns: string[] = [];
     let canonical = this.assignment(columns);
     while (this.tryChar(",")) canonical = this.assignment(columns) && canonical;
-    const where = this.tryWord("WHERE") ? new WhereClause(this.expr()) : undefined;
+    const where = this.tryWord("WHERE") ? new Where(this.expr()) : undefined;
     const fields: Field[] = columns.map((name) => ({ name, value: null }));
     return canonical
       ? new UpdateStatement(table, fields, where)
@@ -80,7 +80,7 @@ class Cursor {
     this.expectWord("DELETE");
     this.expectWord("FROM");
     const table = this.ident();
-    return new DeleteStatement(table, this.tryWord("WHERE") ? new WhereClause(this.expr()) : undefined);
+    return new DeleteStatement(table, this.tryWord("WHERE") ? new Where(this.expr()) : undefined);
   }
 
   private rawExpr(): string {
@@ -102,9 +102,9 @@ class Cursor {
     this.expectWord("FROM");
     const table = this.fromItem();
     const joins = this.joins();
-    const where = this.tryWord("WHERE") ? new WhereClause(this.expr()) : undefined;
+    const where = this.tryWord("WHERE") ? new Where(this.expr()) : undefined;
     const groupBy = this.tryWord("GROUP") ? this.group() : undefined;
-    const having = this.tryWord("HAVING") ? new WhereClause(this.expr()) : undefined;
+    const having = this.tryWord("HAVING") ? new Where(this.expr()) : undefined;
     const orderBy = this.tryWord("ORDER") ? this.order() : undefined;
     const limit = this.tryWord("LIMIT") ? this.integer() : undefined;
     const offset = this.tryWord("OFFSET") ? this.integer() : undefined;

@@ -107,7 +107,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
         rowConverter ?? throw new DatasourceException("Row converter required");
 
     protected IWhere Stored(IWhere where, bool fieldsApplied = false) =>
-        where is WhereClause clause
+        where is Where clause
             ? clause.Map(Column, (name, cell) => Cell(name, cell, fieldsApplied))
             : where;
 

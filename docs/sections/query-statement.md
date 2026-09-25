@@ -601,13 +601,13 @@ pub trait Query: Statement
 
 ##### where_clause()
 
-Optional [Where](./where-clause.md#where) used to build this query.
+Optional [IWhere](./where-clause.md#iwhere) used to build this query.
 
 ```rust
-fn where_clause(&self) -> Option<&dyn Where>
+fn where_clause(&self) -> Option<&dyn IWhere>
 ```
 
-**Returns** `Option<&dyn `[Where](./where-clause.md#where)`>`
+**Returns** `Option<&dyn `[IWhere](./where-clause.md#iwhere)`>`
 
 #### QueryStatement
 
@@ -631,14 +631,14 @@ pub fn text(text: impl Into<String>) -> Self
 
 ##### with_where(text, where_clause)
 
-Wraps query text and a [Where](./where-clause.md#where).
+Wraps query text and an [IWhere](./where-clause.md#iwhere).
 
 ```rust
-pub fn with_where(text: impl Into<String>, where_clause: impl Where + 'static) -> Self
+pub fn with_where(text: impl Into<String>, where_clause: impl IWhere + 'static) -> Self
 ```
 
 - `text` — command text
-- `where_clause` — [Where](./where-clause.md#where)
+- `where_clause` — [IWhere](./where-clause.md#iwhere)
 
 **Returns** [QueryStatement](#querystatement)
 
@@ -668,13 +668,13 @@ fn get_text(&self) -> String
 
 ##### where_clause()
 
-Optional [Where](./where-clause.md#where) used to build this query.
+Optional [IWhere](./where-clause.md#iwhere) used to build this query.
 
 ```rust
-fn where_clause(&self) -> Option<&dyn Where>
+fn where_clause(&self) -> Option<&dyn IWhere>
 ```
 
-**Returns** `Option<&dyn `[Where](./where-clause.md#where)`>`
+**Returns** `Option<&dyn `[IWhere](./where-clause.md#iwhere)`>`
 
 #### QueryStatementOptions
 
@@ -717,10 +717,10 @@ pub fields: &'a [&'a str]
 
 ##### where_clause
 
-Optional [Where](./where-clause.md#where).
+Optional [IWhere](./where-clause.md#iwhere).
 
 ```rust
-pub where_clause: Option<&'a dyn Where>
+pub where_clause: Option<&'a dyn IWhere>
 ```
 
 ##### joins
@@ -912,7 +912,7 @@ pub enum JoinKind
 
 ## Remarks
 
-[Command](./command.md) uses `GetText()` / `getText()` / `get_text()` only. Keep the [WhereClause](./where-clause.md) when the caller needs bound parameters. Empty `fields` compiles `SELECT *`. Clauses append as `GROUP BY`, `ORDER BY`, then `LIMIT`. An empty group or order list is omitted. `Aggregate` returns a select-list fragment such as `COUNT(*) AS n`.
+[Command](./command.md) uses `GetText()` / `getText()` / `get_text()` only. Keep the [Where](./where-clause.md) when the caller needs bound parameters. Empty `fields` compiles `SELECT *`. Clauses append as `GROUP BY`, `ORDER BY`, then `LIMIT`. An empty group or order list is omitted. `Aggregate` returns a select-list fragment such as `COUNT(*) AS n`.
 
 ## Examples
 

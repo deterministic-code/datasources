@@ -1,23 +1,23 @@
 use super::statement::Statement;
 use super::text::Text;
+use crate::i_where::IWhere;
 use crate::parameter::Parameter;
-use crate::where_trait::Where;
 use std::collections::HashMap;
 
 pub struct UpdateStatement {
     text: String,
-    where_clause: Option<Box<dyn Where>>,
+    where_clause: Option<Box<dyn IWhere>>,
     parameters: Vec<Parameter>,
 }
 
 impl UpdateStatement {
-    pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self {
+    pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn IWhere>>) -> Self {
         Self::bound(text, where_clause, Vec::new())
     }
 
     pub fn bound(
         text: impl Into<String>,
-        where_clause: Option<Box<dyn Where>>,
+        where_clause: Option<Box<dyn IWhere>>,
         parameters: Vec<Parameter>,
     ) -> Self {
         Self {
@@ -30,7 +30,7 @@ impl UpdateStatement {
     pub fn new(
         table: impl AsRef<str>,
         fields: &[Parameter],
-        where_clause: Option<&dyn Where>,
+        where_clause: Option<&dyn IWhere>,
     ) -> Self {
         let sql = format!(
             "UPDATE {} SET {}",
@@ -46,19 +46,19 @@ impl UpdateStatement {
             text,
             parameters,
             where_clause: where_clause.map(|predicate| {
-                Box::new(crate::text_where::TextWhere::new(predicate.get_text())) as Box<dyn Where>
+                Box::new(crate::where_text::WhereText::new(predicate.get_text())) as Box<dyn IWhere>
             }),
         }
     }
 
-    pub fn where_clause(&self) -> Option<&dyn Where> {
+    pub fn where_clause(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }
 
 fn bind(
     sql: &str,
-    where_clause: Option<&dyn Where>,
+    where_clause: Option<&dyn IWhere>,
     fields: &[Parameter],
 ) -> (String, Vec<Parameter>) {
     let Some(predicate) = where_clause else {
@@ -129,7 +129,7 @@ impl Statement for UpdateStatement {
     fn kind(&self) -> super::statement::StatementKind {
         super::statement::StatementKind::Update
     }
-    fn predicate(&self) -> Option<&dyn Where> {
+    fn predicate(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }

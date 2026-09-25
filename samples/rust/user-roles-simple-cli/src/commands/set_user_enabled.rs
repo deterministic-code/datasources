@@ -2,7 +2,7 @@ use crate::app::App;
 use crate::commands::lookup_id;
 use crate::schema;
 use datasources::{
-    ExecuteStoredProcedureStatement, Operator, Parameter, Result, UpdateStatement, Where, WhereClause,
+    ExecuteStoredProcedureStatement, Operator, Parameter, Result, UpdateStatement, IWhere, Where,
 };
 
 pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<String> {
@@ -27,7 +27,7 @@ pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<Str
         Parameter::new("is_enabled", schema::flag(app.provider(), enabled)),
         Parameter::new("updated", updated),
     ];
-    let where_clause = WhereClause::new(Operator::equals("id", id));
+    let where_clause = Where::new(Operator::equals("id", id));
     let mut parameters = fields.to_vec();
     parameters.extend(where_clause.parameters());
     app.command()

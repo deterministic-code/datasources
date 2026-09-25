@@ -44,9 +44,9 @@ public class ReadonlyRepositoryIntegrationTests
             EntityMapper = new PluralizerMapper(),
         });
 
-        var byId = await repo.ReadSingle(new WhereClause("id", eq, 1));
+        var byId = await repo.ReadSingle(new Where("id", eq, 1));
         var disabled = new List<User>();
-        await foreach (var row in repo.Read(new WhereClause("username", eq, "grace").And("is_enabled", eq, 0)))
+        await foreach (var row in repo.Read(new Where("username", eq, "grace").And("is_enabled", eq, 0)))
             disabled.Add(row);
 
         Assert.Equal("ada", byId!.username);
@@ -85,12 +85,12 @@ public class ReadonlyRepositoryIntegrationTests
         });
 
         var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var byId = await repo.ReadSingle(new WhereClause("Key", eq, Ada));
+        var byId = await repo.ReadSingle(new Where("Key", eq, Ada));
         var byLogin = new List<UserAccount>();
-        await foreach (var row in repo.Read(new WhereClause("Login", eq, "ada").And("Active", eq, true)))
+        await foreach (var row in repo.Read(new Where("Login", eq, "ada").And("Active", eq, true)))
             byLogin.Add(row);
         var later = new List<UserAccount>();
-        await foreach (var row in repo.Read(new WhereClause("Active", eq, true).And("Opened", gt, opened)))
+        await foreach (var row in repo.Read(new Where("Active", eq, true).And("Opened", gt, opened)))
             later.Add(row);
 
         Assert.Equal("ada", byId!.Login);
@@ -177,7 +177,7 @@ public class UserViewEnrichmentTests
             ColumnMappings = casing,
         });
         usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name");
-        var usersView = await usersRepo.ReadSingle(new WhereClause("Key", eq, Ada));
+        var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 
         Assert.Equal("admin", usersView!.UserType);
         Assert.Equal("ada", usersView.Login);
@@ -272,7 +272,7 @@ public class UsersViewRoleTests
         });
         usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name");
         usersRepo.AddEnriched("Roles", "Key", rolesRepo, "UserId", many: true);
-        var usersView = await usersRepo.ReadSingle(new WhereClause("Key", eq, Ada));
+        var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 
         Assert.Equal("admin", usersView!.UserType);
         Assert.Equal(["admin", "editor"], usersView.Roles.Select(role => role.Name).OrderBy(name => name));
@@ -434,7 +434,7 @@ public class UserCrudTests
         await usersRepo.Create(created);
         var byId = await usersRepo.ReadSingleById(created.id);
         var matches = new List<User>();
-        await foreach (var row in usersRepo.Read(new WhereClause("username", eq, "ada").And("is_enabled", eq, true)))
+        await foreach (var row in usersRepo.Read(new Where("username", eq, "ada").And("is_enabled", eq, true)))
             matches.Add(row);
         created.username = "ada-v2";
         await usersRepo.Update(created);
@@ -552,17 +552,17 @@ public class UsersViewCrudTests
             Roles = [new UserRole { Name = "admin" }, new UserRole { Name = "editor" }],
         };
         await usersRepo.Create(user);
-        var loaded = await usersRepo.ReadSingle(new WhereClause("Key", eq, user.Key));
+        var loaded = await usersRepo.ReadSingle(new Where("Key", eq, user.Key));
         var version = loaded!.Version;
         loaded.Login = "ada-v2";
         loaded.Version = version + 1;
-        var updated = await usersRepo.Update(loaded, new WhereClause("Key", eq, loaded.Key).And("Version", eq, version));
-        var current = await usersRepo.ReadSingle(new WhereClause("Key", eq, loaded.Key));
-        var stale = await usersRepo.Update(loaded, new WhereClause("Key", eq, loaded.Key).And("Version", eq, version));
+        var updated = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
+        var current = await usersRepo.ReadSingle(new Where("Key", eq, loaded.Key));
+        var stale = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
         await usersRepo.Delete(loaded);
         var gone = await usersRepo.ReadSingleById(loaded.Key);
         var roles = new List<UserRole>();
-        await foreach (var role in userRolesRepo.Read(new WhereClause("UserId", eq, loaded.Key)))
+        await foreach (var role in userRolesRepo.Read(new Where("UserId", eq, loaded.Key)))
             roles.Add(role);
 
         Assert.Equal(1, admin.Id);

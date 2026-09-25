@@ -1,21 +1,21 @@
 use super::statement::Statement;
 use super::text::Text;
-use crate::where_trait::Where;
+use crate::i_where::IWhere;
 
 pub struct DeleteStatement {
     text: String,
-    where_clause: Option<Box<dyn Where>>,
+    where_clause: Option<Box<dyn IWhere>>,
 }
 
 impl DeleteStatement {
-    pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self {
+    pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn IWhere>>) -> Self {
         Self {
             text: text.into(),
             where_clause,
         }
     }
 
-    pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> Self {
+    pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn IWhere>) -> Self {
         let sql = match where_clause {
             Some(predicate) => format!(
                 "DELETE FROM {} WHERE {}",
@@ -27,12 +27,12 @@ impl DeleteStatement {
         Self {
             text: sql,
             where_clause: where_clause.map(|predicate| {
-                Box::new(crate::text_where::TextWhere::new(predicate.get_text())) as Box<dyn Where>
+                Box::new(crate::where_text::WhereText::new(predicate.get_text())) as Box<dyn IWhere>
             }),
         }
     }
 
-    pub fn where_clause(&self) -> Option<&dyn Where> {
+    pub fn where_clause(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }
@@ -56,7 +56,7 @@ impl Statement for DeleteStatement {
     fn kind(&self) -> super::statement::StatementKind {
         super::statement::StatementKind::Delete
     }
-    fn predicate(&self) -> Option<&dyn Where> {
+    fn predicate(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }

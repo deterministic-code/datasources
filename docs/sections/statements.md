@@ -119,7 +119,7 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-Bound values live on [WhereClause](./where-clause.md). [IStatement](#istatement) is not an [IExpression](./expressions.md#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](./where-clause.md#iwhere) is a clause ([IExpression](./expressions.md#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
+Bound values live on [Where](./where-clause.md). [IStatement](#istatement) is not an [IExpression](./expressions.md#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](./where-clause.md#iwhere) is a clause ([IExpression](./expressions.md#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
 
 ## See also
 
@@ -131,6 +131,6 @@ Bound values live on [WhereClause](./where-clause.md). [IStatement](#istatement)
 - [CreateIndexStatement](./create-index-statement.md)
 - [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md)
 - [ReturnStatement](./return-statement.md)
-- [WhereClause](./where-clause.md)
+- [Where](./where-clause.md)
 - [Expressions](./expressions.md)
 - [StatementEvaluator](./statement-evaluator.md)

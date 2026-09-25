@@ -12,7 +12,7 @@ import {
   UpdateStatement,
   Literal,
   Operator,
-  WhereClause,
+  Where,
   type Cell,
   type Cells,
   type Constructable,
@@ -86,7 +86,7 @@ const whereOf = (mapping: RowTypeConverter<SpecRow>, row: RepositoryRow) => {
   const parts = Object.entries(mapping.reverseConvert(row)).map(
     ([name, value]) => new Operator.Equals(name, value as Scalar),
   );
-  return new WhereClause(
+  return new Where(
     parts.length === 0
       ? new Operator.Equals(new Literal(1), new Literal(1))
       : parts.reduce((left, right) => new Operator.And(left, right)),
@@ -268,7 +268,7 @@ export const runRepositorySpec = async (
       },
       READ: async () => {
         if (!step.READ) return;
-        const row = await repo.readSingle(new WhereClause(new Operator.Equals("id", step.READ.id)));
+        const row = await repo.readSingle(new Where(new Operator.Equals("id", step.READ.id)));
         if ("expect" in step.READ) assertRow(`${spec.name} READ`, row, step.READ.expect ?? null);
       },
       QUERY: async () => {

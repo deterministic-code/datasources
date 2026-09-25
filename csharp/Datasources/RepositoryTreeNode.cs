@@ -150,10 +150,10 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
             var key = SourceKey(parents[i], enrichment.From, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
-            await foreach (var row in link.Read(new WhereClause(new Operator.Equals(association.Parent, global::Datasources.Value.From(key)))))
+            await foreach (var row in link.Read(new Where(new Operator.Equals(association.Parent, global::Datasources.Value.From(key)))))
             {
                 if (Get(row, association.Related) is not { } id) continue;
-                var entity = await via.ReadSingle(new WhereClause(new Operator.Equals(enrichment.By, global::Datasources.Value.From(id))));
+                var entity = await via.ReadSingle(new Where(new Operator.Equals(enrichment.By, global::Datasources.Value.From(id))));
                 if (entity is not null)
                     related.Add(entity);
             }

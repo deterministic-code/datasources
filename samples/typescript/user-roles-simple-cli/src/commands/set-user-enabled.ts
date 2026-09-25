@@ -1,4 +1,4 @@
-import { ExecuteStoredProcedureStatement, Operator, UpdateStatement, WhereClause, execute, type Parameter } from "@datasources/core";
+import { ExecuteStoredProcedureStatement, Operator, UpdateStatement, Where, execute, type Parameter } from "@datasources/core";
 import type { App } from "../app.ts";
 import { flag, ident } from "../schema.ts";
 import { lookupId } from "./lookup-id.ts";
@@ -20,7 +20,7 @@ export const setUserEnabled = async (app: App, username: string, enabled: boolea
     { name: "is_enabled", value: flag(provider, enabled) },
     { name: "updated", value: app.bytes(updated) },
   ];
-  const where = new WhereClause(new Operator.Equals("id", id));
+  const where = new Where(new Operator.Equals("id", id));
   await execute(app.command, new UpdateStatement(ident(provider, "users"), fields, where), [...fields, ...where.parameters]);
   return "";
 };

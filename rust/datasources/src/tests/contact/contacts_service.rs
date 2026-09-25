@@ -1,4 +1,5 @@
 use crate::i_repository::IRepository;
+use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
@@ -6,7 +7,6 @@ use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::where_trait::Where;
 use crate::CRUDRepository;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -113,11 +113,11 @@ impl ICRUDRepository for ContactsService {
         self.inner.create(item).await
     }
 
-    async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.inner.update(item, by_where).await
     }
 
-    async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.inner.delete(item, by_where).await
     }
 

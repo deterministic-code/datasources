@@ -4,17 +4,17 @@ use super::identifier::Identifier;
 use super::literal::Literal;
 use super::operator::Operator;
 use super::text::Text;
+use crate::i_where::IWhere;
 use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::value::Value;
-use crate::where_trait::Where;
 
 #[derive(Clone)]
-pub struct WhereClause {
+pub struct Where {
     pub condition: Expression,
 }
 
-impl WhereClause {
+impl Where {
     pub fn new(condition: impl Into<Expression>) -> Self {
         Self {
             condition: condition.into(),
@@ -52,19 +52,19 @@ impl WhereClause {
     }
 }
 
-impl Text for WhereClause {
+impl Text for Where {
     fn get_text(&self) -> String {
         render(&self.condition)
     }
 }
 
-impl crate::ReadInput for WhereClause {
-    fn as_where(&self) -> Option<&dyn Where> {
+impl crate::ReadInput for Where {
+    fn as_where(&self) -> Option<&dyn IWhere> {
         Some(self)
     }
 }
 
-impl Where for WhereClause {
+impl IWhere for Where {
     fn parameters(&self) -> Vec<Parameter> {
         collect(&self.condition)
     }
@@ -74,8 +74,8 @@ impl Where for WhereClause {
     }
 }
 
-impl From<WhereClause> for Expression {
-    fn from(where_clause: WhereClause) -> Self {
+impl From<Where> for Expression {
+    fn from(where_clause: Where) -> Self {
         where_clause.condition
     }
 }

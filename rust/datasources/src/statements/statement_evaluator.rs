@@ -1,9 +1,9 @@
 use super::expression::Expression;
 use super::operator::Operator;
-use super::where_clause::WhereClause;
+use super::r#where::Where;
+use crate::i_where::IWhere;
 use crate::row::Row;
 use crate::value::Value;
-use crate::where_trait::Where;
 
 pub struct StatementEvaluator;
 
@@ -94,10 +94,10 @@ impl StatementEvaluator {
         }
     }
 
-    pub fn evaluate_where(&self, statement: &dyn Where, parameters: &Row) -> Value {
+    pub fn evaluate_where(&self, statement: &dyn IWhere, parameters: &Row) -> Value {
         statement
             .as_any()
-            .downcast_ref::<WhereClause>()
+            .downcast_ref::<Where>()
             .map(|where_clause| self.evaluate(&where_clause.condition, parameters))
             .unwrap_or_else(|| panic!("text where is not evaluable"))
     }

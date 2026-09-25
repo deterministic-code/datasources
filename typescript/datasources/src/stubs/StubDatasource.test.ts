@@ -11,7 +11,7 @@ import {
   StubRepository,
   StubTransaction,
   untyped,
-  Where,
+  WhereText,
 } from "../index.ts";
 import { tracked } from "../ReadonlyRepository.ts";
 
@@ -43,18 +43,18 @@ describe("StubDatasource", () => {
     const repo = ds.createRepository(untyped(), provided);
     expect(repo).toBeInstanceOf(StubRepository);
     await expect(repo.readSingle()).rejects.toThrow(ProviderNotImplementedError);
-    await expect(repo.readSingle(new Where("1=1"))).rejects.toThrow(
+    await expect(repo.readSingle(new WhereText("1=1"))).rejects.toThrow(
       ProviderNotImplementedError,
     );
     await expect(collectAsync(repo.read())).rejects.toThrow(
       ProviderNotImplementedError,
     );
-    await expect(collectAsync(repo.read(new Where("1=1")))).rejects.toThrow(
+    await expect(collectAsync(repo.read(new WhereText("1=1")))).rejects.toThrow(
       ProviderNotImplementedError,
     );
     await expect(repo.create({})).rejects.toThrow(ProviderNotImplementedError);
     await expect(repo.update({})).rejects.toThrow(ProviderNotImplementedError);
-    await expect(repo.delete({}, new Where("1=1"))).rejects.toThrow(
+    await expect(repo.delete({}, new WhereText("1=1"))).rejects.toThrow(
       ProviderNotImplementedError,
     );
 
@@ -63,7 +63,7 @@ describe("StubDatasource", () => {
     expect(ds.createReadonlyEnrichedRepository(untyped())).toBeInstanceOf(EnrichedReadonlyRepository);
     expect(() => repo.readSingleById(1)).toThrow(ProviderNotImplementedError);
     await expect(collectAsync(repo[tracked]())).rejects.toThrow(ProviderNotImplementedError);
-    await expect(collectAsync(repo[tracked](new Where("1=1")))).rejects.toThrow(
+    await expect(collectAsync(repo[tracked](new WhereText("1=1")))).rejects.toThrow(
       ProviderNotImplementedError,
     );
     class YieldingStub extends StubRepository<{ id: number }> {

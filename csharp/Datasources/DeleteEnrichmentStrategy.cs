@@ -23,7 +23,7 @@ public abstract class DeleteEnrichmentStrategy<T>
         var key = Get(parent, enrichment.From);
         if (key is null) return [];
         var items = new List<object>();
-        await foreach (var item in writer.Read(new WhereClause(new Operator.Equals(enrichment.By, Value.From(key)))))
+        await foreach (var item in writer.Read(new Where(new Operator.Equals(enrichment.By, Value.From(key)))))
             items.Add(item);
         return items;
     }
@@ -34,13 +34,13 @@ public abstract class DeleteEnrichmentStrategy<T>
         object key)
     {
         var items = new List<object>();
-        await foreach (var item in writer.Read(new WhereClause(new Operator.Equals(column, Value.From(key)))))
+        await foreach (var item in writer.Read(new Where(new Operator.Equals(column, Value.From(key)))))
             items.Add(item);
         return items;
     }
 
     internal static IWhere LinkWhere(Association association, object parentKey, object? relatedKey) =>
-        new WhereClause(new Operator.And(
+        new Where(new Operator.And(
             new Operator.Equals(association.Parent, Value.From(parentKey)),
             new Operator.Equals(association.Related, Value.From(relatedKey))));
 

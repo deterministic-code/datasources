@@ -5,7 +5,7 @@ import {
   InsertStatement,
   UpdateStatement,
   DeleteStatement,
-  WhereClause,
+  Where,
   type Field,
   type IExpression,
   type Scalar,
@@ -88,7 +88,7 @@ const fieldsOf = (row: RepositoryRow, include: (col: string) => boolean): Field[
     .map(([name, value]) => ({ name, value: value as Scalar }));
 
 const andAll = (parts: IExpression[]) =>
-  new WhereClause(
+  new Where(
     parts.length === 0
       ? new Operator.Equals(new Literal(1), new Literal(1))
       : parts.reduce((left, right) => new Operator.And(left, right)),
