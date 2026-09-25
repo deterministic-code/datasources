@@ -8,7 +8,7 @@ Writes use [CRUDRepository](./crud-repository.md). Register the same tree with `
 
 - **Create** — write the parent, apply the generated identity through the create mapper, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
-- **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+- **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
 [EnrichedReadonlyRepository](#enrichedreadonlyrepository) is the read-only wrapper.
 

@@ -5,6 +5,11 @@ namespace Datasources;
 
 public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 {
+    readonly DeleteEnrichmentStrategy<T> delete;
+
+    public DefaultWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null) =>
+        this.delete = delete ?? new CascadeDeleteEnrichmentStrategy<T>();
+
     public Task Persist(IRepositoryTree tree, IList<T> items, WriteMode mode) =>
         Walk(tree.Parent, [.. items.Cast<object>()], mode);
 
@@ -29,7 +34,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
                 {
                     WriteMode.Create => CreateLinks(writer, enrichment, association, parent),
                     WriteMode.Update => SyncLinks(writer, enrichment, association, parent),
-                    WriteMode.Delete => DeleteLinks(writer, enrichment, association, parent),
+                    WriteMode.Delete => delete.DeleteLinked(child, enrichment, parent),
                     _ => throw new DatasourceException("Unknown persist mode")
                 });
             }
@@ -46,7 +51,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             {
                 WriteMode.Create => CreateChildren(child, childWriter, owned, parent),
                 WriteMode.Update => SyncChildren(child, childWriter, owned, parent),
-                WriteMode.Delete => DeleteChildren(child, childWriter, owned, parent),
+                WriteMode.Delete => delete.DeleteOwned(child, owned, parent, rows => Walk(child, rows, WriteMode.Delete)),
                 _ => throw new DatasourceException("Unknown persist mode")
             });
         }
@@ -75,7 +80,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         Enrichment enrichment,
         object parent)
     {
-        var existing = await Load(writer, enrichment, parent);
+        var existing = await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent);
         var payload = Payload(parent, enrichment.Into);
         foreach (var related in payload)
             Stamp(related, enrichment.By, Get(parent, enrichment.From));
@@ -94,18 +99,6 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
                 writer.AssignIdentity(related, await writer.Create(Strip(node, related)));
             await Walk(node, [related], WriteMode.Update);
         }
-    }
-
-    async Task DeleteChildren(
-        IRepositoryTreeNode node,
-        RepositoryTreeNode.IChildPersist writer,
-        Enrichment enrichment,
-        object parent)
-    {
-        var existing = await Load(writer, enrichment, parent);
-        await Walk(node, existing, WriteMode.Delete);
-        foreach (var row in existing)
-            await writer.Delete(row);
     }
 
     static async Task CreateLinks(
@@ -131,14 +124,14 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         object parent)
     {
         var parentKey = Required(parent, enrichment.From, enrichment.Into);
-        var existing = await LoadLinks(writer, association.Parent, parentKey);
+        var existing = await DeleteEnrichmentStrategy<T>.LoadLinks(writer, association.Parent, parentKey);
         var wanted = RelatedIds(parent, enrichment);
         var keep = wanted.Select(id => id.ToString()).ToHashSet();
         foreach (var row in existing)
         {
             var id = Get(row, association.Related);
             if (id?.ToString() is { } key && keep.Contains(key)) continue;
-            await writer.Delete(row, LinkWhere(association, parentKey, id));
+            await writer.Delete(row, DeleteEnrichmentStrategy<T>.LinkWhere(association, parentKey, id));
         }
         foreach (var id in wanted)
         {
@@ -149,29 +142,6 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             Set(row, association.Related, id);
             await writer.Create(row);
         }
-    }
-
-    static async Task DeleteLinks(
-        RepositoryTreeNode.IChildPersist writer,
-        Enrichment enrichment,
-        Association association,
-        object parent)
-    {
-        var parentKey = Get(parent, enrichment.From);
-        if (parentKey is null) return;
-        foreach (var row in await LoadLinks(writer, association.Parent, parentKey))
-            await writer.Delete(row, LinkWhere(association, parentKey, Get(row, association.Related)));
-    }
-
-    static async Task<List<object>> LoadLinks(
-        RepositoryTreeNode.IChildPersist writer,
-        string column,
-        object key)
-    {
-        var items = new List<object>();
-        await foreach (var item in writer.Read(new WhereClause(new Operator.Equals(column, Value.From(key)))))
-            items.Add(item);
-        return items;
     }
 
     static List<object> RelatedIds(object parent, Enrichment enrichment)
@@ -194,24 +164,6 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             : throw new DatasourceException($"{into} requires \"{name}\"");
 
     static bool Missing(object? value) => value is null or 0 or 0L or 0u or "";
-
-    static IWhere LinkWhere(Association association, object parentKey, object? relatedKey) =>
-        new WhereClause(new Operator.And(
-            new Operator.Equals(association.Parent, Value.From(parentKey)),
-            new Operator.Equals(association.Related, Value.From(relatedKey))));
-
-    static async Task<List<object>> Load(
-        RepositoryTreeNode.IChildPersist writer,
-        Enrichment enrichment,
-        object parent)
-    {
-        var key = Get(parent, enrichment.From);
-        if (key is null) return [];
-        var items = new List<object>();
-        await foreach (var item in writer.Read(new WhereClause(new Operator.Equals(enrichment.By, Value.From(key)))))
-            items.Add(item);
-        return items;
-    }
 
     static object Strip(IRepositoryTreeNode node, object item)
     {

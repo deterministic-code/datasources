@@ -1,4 +1,5 @@
 use crate::built_repository::BuiltRepository;
+use crate::cascade_delete_enrichment_strategy::CascadeDeleteEnrichmentStrategy;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
@@ -6,6 +7,8 @@ use crate::create_repository_options::create_repository_options;
 use crate::crud_repository_options::{identity_mapper, CRUDRepositoryOptions};
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
+use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
+use crate::delete_nested::DeleteNested;
 use crate::enriched::Enriched;
 use crate::enrichment::Enrichment;
 use crate::enrichment_via::EnrichmentVia;
@@ -51,6 +54,7 @@ pub struct CRUDRepository {
     delegate: Option<Arc<dyn ICRUDRepository>>,
     pub tree: RepositoryTree,
     strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    delete_strategy: Arc<dyn DeleteEnrichmentStrategy>,
 }
 
 impl RepositoryBuilder {
@@ -92,6 +96,7 @@ impl CRUDRepository {
             )),
             strategy,
             delegate: Some(inner),
+            delete_strategy: default_delete(),
         }
     }
 
@@ -111,7 +116,16 @@ impl CRUDRepository {
                 strategy.clone(),
             )),
             strategy,
+            delete_strategy: default_delete(),
         }
+    }
+
+    pub fn with_delete_strategy(
+        &mut self,
+        strategy: Arc<dyn DeleteEnrichmentStrategy>,
+    ) -> &mut Self {
+        self.delete_strategy = strategy;
+        self
     }
 
     pub fn add_enriched(
@@ -467,7 +481,9 @@ impl CRUDRepository {
                             .await?
                     }
                     Mode::Delete => {
-                        self.delete_children(child, writer.as_ref(), enrichment, parent)
+                        let strategy = Arc::clone(&self.delete_strategy);
+                        strategy
+                            .delete_owned(child, enrichment, parent, self)
                             .await?
                     }
                 }
@@ -550,21 +566,17 @@ impl CRUDRepository {
         parent.insert(enrichment.into.clone(), encode_rows(&related));
         Ok(())
     }
+}
 
-    async fn delete_children(
-        &self,
-        node: &RepositoryTreeNode,
-        writer: &dyn ICRUDRepository,
-        enrichment: &Enrichment,
-        parent: &Row,
-    ) -> Result<()> {
-        let mut existing = load(writer, enrichment, parent).await?;
-        self.persist(node, &mut existing, Mode::Delete).await?;
-        for row in existing {
-            writer.delete(&row, None).await?;
-        }
-        Ok(())
+#[async_trait]
+impl DeleteNested for CRUDRepository {
+    async fn delete_nested(&self, node: &RepositoryTreeNode, rows: &mut [Row]) -> Result<()> {
+        self.persist(node, rows, Mode::Delete).await
     }
+}
+
+fn default_delete() -> Arc<dyn DeleteEnrichmentStrategy> {
+    Arc::new(CascadeDeleteEnrichmentStrategy)
 }
 
 fn apply(item: &mut Row, identity: Row) {
@@ -618,22 +630,6 @@ fn row_key(row: &Row, ids: &[String]) -> Option<String> {
             .collect::<Vec<_>>()
             .join("\u{1f}"),
     )
-}
-
-async fn load(
-    writer: &dyn ICRUDRepository,
-    enrichment: &Enrichment,
-    parent: &Row,
-) -> Result<Vec<Row>> {
-    let Some(key) = parent.get(&enrichment.from).cloned() else {
-        return Ok(Vec::new());
-    };
-    writer
-        .read(Some(&WhereClause::new(Operator::equals(
-            enrichment.by.clone(),
-            key,
-        ))))
-        .await
 }
 
 fn decode_rows(value: Option<&Value>) -> Vec<Row> {
