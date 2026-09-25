@@ -3,6 +3,7 @@ use crate::converters::{
     BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
 };
 use crate::engine::to_mysql;
+use crate::reader::MysqlReader;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
@@ -12,7 +13,7 @@ use datasources::{
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Row, Value as MysqlValue};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 struct MysqlExecuteResult {
     rows_affected: i64,
@@ -38,18 +39,26 @@ impl MysqlCommand {
         params: &HashMap<String, Value>,
     ) -> Result<MysqlExecuteResult> {
         if sql.trim_start().len() >= 6 && sql.trim_start()[..6].eq_ignore_ascii_case("SELECT") {
-            let rows = Self::query_sql(connection, sql, params).await?;
-            let result = rows
-                .first()
-                .and_then(|row| row.values().next().cloned())
+            let mut slot = connection.lock_conn().await?;
+            let conn = slot
+                .as_mut()
+                .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+            let row: Option<Row> = conn
+                .exec_first(to_mysql(sql), named_params(params))
+                .await
+                .map_err(map_err)?;
+            let found = row.is_some();
+            let result = row
+                .and_then(|row| row.as_ref(0).cloned())
+                .map(from_mysql_value)
                 .unwrap_or(Value::Null);
             return Ok(MysqlExecuteResult {
-                rows_affected: if rows.is_empty() { 0 } else { 1 },
+                rows_affected: if found { 1 } else { 0 },
                 result,
             });
         }
         let sql = to_mysql(sql);
-        let mut slot = connection.conn.lock().await;
+        let mut slot = connection.lock_conn().await?;
         let conn = slot
             .as_mut()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
@@ -64,21 +73,6 @@ impl MysqlCommand {
             rows_affected: conn.affected_rows() as i64,
             result: Value::Int(conn.last_insert_id().unwrap_or(0) as i64),
         })
-    }
-
-    async fn query_sql(
-        connection: &MysqlConnection,
-        sql: &str,
-        params: &HashMap<String, Value>,
-    ) -> Result<Vec<datasources::Row>> {
-        let sql = to_mysql(sql);
-        let params = named_params(params);
-        let mut slot = connection.conn.lock().await;
-        let conn = slot
-            .as_mut()
-            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        let rows: Vec<Row> = conn.exec(sql, params).await.map_err(map_err)?;
-        Ok(rows.into_iter().map(row_record).collect())
     }
 }
 
@@ -113,11 +107,14 @@ impl Command for MysqlCommand {
                         ));
                     }
                     Ok((
-                        Box::new(MysqlReader::new(
-                            connection,
-                            statements,
-                            parameters_to_map(params.as_deref()),
-                        )) as Box<dyn Reader>,
+                        Box::new(
+                            MysqlReader::open(
+                                &connection,
+                                statements,
+                                parameters_to_map(params.as_deref()),
+                            )
+                            .await?,
+                        ) as Box<dyn Reader>,
                         vec![],
                     ))
                 }
@@ -189,7 +186,7 @@ fn from_mysql_value(value: MysqlValue) -> Value {
     }
 }
 
-fn named_params(params: &HashMap<String, Value>) -> Params {
+pub(crate) fn named_params(params: &HashMap<String, Value>) -> Params {
     if params.is_empty() {
         return Params::Empty;
     }
@@ -201,7 +198,7 @@ fn named_params(params: &HashMap<String, Value>) -> Params {
     )
 }
 
-fn row_record(row: Row) -> datasources::Row {
+pub(crate) fn row_record(row: Row) -> datasources::Row {
     let columns = row.columns_ref().to_vec();
     let mut record = datasources::Row::new();
     for (index, column) in columns.iter().enumerate() {
@@ -209,85 +206,4 @@ fn row_record(row: Row) -> datasources::Row {
         record.insert(column.name_str().into_owned(), from_mysql_value(value));
     }
     record
-}
-
-struct BatchState {
-    index: usize,
-    rows: Vec<datasources::Row>,
-    at: usize,
-    loaded: bool,
-    current: Option<datasources::Row>,
-}
-
-struct MysqlReader {
-    connection: Arc<MysqlConnection>,
-    statements: Vec<String>,
-    params: HashMap<String, Value>,
-    state: Mutex<BatchState>,
-}
-
-impl MysqlReader {
-    fn new(
-        connection: Arc<MysqlConnection>,
-        statements: Vec<String>,
-        params: HashMap<String, Value>,
-    ) -> Self {
-        Self {
-            connection,
-            statements,
-            params,
-            state: Mutex::new(BatchState {
-                index: 0,
-                rows: Vec::new(),
-                at: 0,
-                loaded: false,
-                current: None,
-            }),
-        }
-    }
-}
-
-#[async_trait]
-impl Reader for MysqlReader {
-    fn current(&self) -> Option<datasources::Row> {
-        self.state.lock().expect("reader").current.clone()
-    }
-
-    async fn next(&self) -> Result<bool> {
-        let index = {
-            let state = self.state.lock().expect("reader");
-            if state.loaded {
-                None
-            } else if state.index >= self.statements.len() {
-                return Ok(false);
-            } else {
-                Some(state.index)
-            }
-        };
-        if let Some(index) = index {
-            let rows =
-                MysqlCommand::query_sql(&self.connection, &self.statements[index], &self.params)
-                    .await?;
-            let mut state = self.state.lock().expect("reader");
-            state.rows = rows;
-            state.at = 0;
-            state.loaded = true;
-        }
-        let mut state = self.state.lock().expect("reader");
-        if state.at >= state.rows.len() {
-            state.current = None;
-            return Ok(false);
-        }
-        state.current = Some(state.rows[state.at].clone());
-        state.at += 1;
-        Ok(true)
-    }
-
-    async fn next_result(&self) -> Result<bool> {
-        let mut state = self.state.lock().expect("reader");
-        state.index += 1;
-        state.loaded = false;
-        state.current = None;
-        Ok(state.index < self.statements.len())
-    }
 }

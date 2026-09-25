@@ -67,13 +67,19 @@ describe("StreamingReader", () => {
     await reader.dispose();
     await reader.dispose();
     expect(closed).toBe(true);
+    const plain = new StreamingReader(
+      async () => undefined,
+      async () => false,
+    );
+    await plain.dispose();
+    await plain.dispose();
   });
 
   it("loads one statement at a time", async () => {
     const loaded: string[] = [];
-    const reader = statementReader(["SELECT 1 AS id", "SELECT 2 AS id"], async (sql) => {
+    const reader = statementReader(["SELECT 1 AS id", "SELECT 2 AS id"], async function* (sql) {
       loaded.push(sql);
-      return sql.endsWith("1 AS id") ? [{ id: 1 }] : [{ id: 2 }];
+      yield sql.endsWith("1 AS id") ? { id: 1 } : { id: 2 };
     });
     expect(loaded).toEqual([]);
     expect(await reader.next()).toBe(true);
@@ -90,10 +96,12 @@ describe("StreamingReader", () => {
   });
 
   it("returns false when a statement reader has no statements", async () => {
-    const reader = statementReader([], async () => []);
+    const reader = statementReader([], async function* () {});
     expect(await reader.next()).toBe(false);
     expect(await reader.nextResult()).toBe(false);
-    const blank = statementReader([""], async () => [{ id: 1 }]);
+    const blank = statementReader([""], async function* () {
+      yield { id: 1 };
+    });
     expect(await blank.next()).toBe(false);
   });
 });

@@ -30,26 +30,28 @@ export class StreamingReader implements IReader<Cells> {
 
 export const statementReader = (
   statements: readonly string[],
-  load: (sql: string) => Promise<Cells[]>,
+  load: (sql: string) => AsyncIterable<Cells>,
 ): StreamingReader => {
   let index = 0;
-  let rows: Cells[] | undefined;
-  let at = 0;
-  return new StreamingReader(async () => {
-    if (index >= statements.length) return undefined;
-    const sql = statements[index];
-    if (!sql) return undefined;
-    if (!rows) {
-      rows = await load(sql);
-      at = 0;
-    }
-    if (at >= rows.length) return undefined;
-    const row = rows[at];
-    at += 1;
-    return row;
-  }, async () => {
-    index += 1;
+  let rows: AsyncIterator<Cells> | undefined;
+  const closeRows = async () => {
+    await rows?.return?.();
     rows = undefined;
-    return index < statements.length;
-  });
+  };
+  return new StreamingReader(
+    async () => {
+      if (index >= statements.length) return undefined;
+      const sql = statements[index];
+      if (!sql) return undefined;
+      rows ??= load(sql)[Symbol.asyncIterator]();
+      const step = await rows.next();
+      return step.done ? undefined : step.value;
+    },
+    async () => {
+      await closeRows();
+      index += 1;
+      return index < statements.length;
+    },
+    closeRows,
+  );
 };

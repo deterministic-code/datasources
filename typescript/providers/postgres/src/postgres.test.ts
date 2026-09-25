@@ -16,7 +16,7 @@ import { bindParameters, toPostgres, withReturning } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
 import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
-import { pgClient, type IPgClient, type PgQueryResult } from "./i-postgres-driver.ts";
+import { pgClient, type IPgClient, type PgModule, type PgQueryResult } from "./i-postgres-driver.ts";
 import { PostgresDriver } from "./PostgresDriver.ts";
 import { PostgresTransaction } from "./transaction.ts";
 import type { Scalar } from "./scalar.ts";
@@ -38,6 +38,10 @@ class FakeClient implements IPgClient {
   async query(text: string, values?: Scalar[]): Promise<PgQueryResult> {
     this.queries.push({ text, values });
     return this.result;
+  }
+  async *rows(text: string, values?: Scalar[]): AsyncGenerator<PgQueryResult["rows"][number]> {
+    this.queries.push({ text, values });
+    for (const row of this.result.rows) yield row;
   }
   async end(): Promise<void> {
     this.ended = true;
@@ -131,17 +135,18 @@ describe("PostgresConnection", () => {
       async query() {
         return { rowCount: 0, rows: [] };
       }
+      async *rows() {}
       async end(): Promise<void> {}
     };
     const named = new PostgresConnection({
       url: "postgres://db/app",
-      Client: pgClient({ Client }),
+      Client: pgClient({ Client } as PgModule),
     });
     await named.open();
     await named.close();
     const viaDefault = new PostgresConnection({
       url: "postgres://db/app",
-      Client: pgClient({ Client, default: { Client } }),
+      Client: pgClient({ Client, default: { Client } } as PgModule),
     });
     await viaDefault.open();
     await viaDefault.close();

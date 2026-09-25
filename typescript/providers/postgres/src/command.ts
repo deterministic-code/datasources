@@ -26,6 +26,11 @@ const hasOutput = (parameters?: Parameter[]) =>
       parameter.direction && parameter.direction !== ParameterDirection.Input,
   ) ?? false;
 
+const firstRow = async (rows: AsyncIterable<Cells>): Promise<Cells | undefined> => {
+  for await (const row of rows) return row;
+  return undefined;
+};
+
 export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: PostgresConnection) {
     super();
@@ -71,8 +76,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   ): Promise<PostgresExecuteResult> {
     const rewritten = withReturning(sql);
     if (isSelect(rewritten) || (isCall(rewritten) && hasOutput(parameters))) {
-      const rows = await this.query(rewritten, params);
-      const row = rows[0];
+      const row = await firstRow(this.query(rewritten, params));
       return {
         rowsAffected: row ? 1 : 0,
         result: row ? Object.values(row)[0] ?? null : null,
@@ -96,8 +100,8 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     };
   }
 
-  private async query(sql: string, params?: Record<string, Scalar>): Promise<Cells[]> {
+  private query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {
     const { text, values } = toPostgres(sql, params);
-    return (await this.connection.require().query(text, values)).rows;
+    return this.connection.require().rows(text, values);
   }
 }

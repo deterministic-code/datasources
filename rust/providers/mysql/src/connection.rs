@@ -14,8 +14,9 @@ pub(crate) fn map_err(error: mysql_async::Error) -> DatasourceError {
 
 pub struct MysqlConnection {
     pub url: String,
-    opened: Arc<Mutex<bool>>,
+    pub(crate) opened: Arc<Mutex<bool>>,
     pub(crate) conn: Arc<tokio::sync::Mutex<Option<Conn>>>,
+    pub(crate) ready: Arc<tokio::sync::Notify>,
 }
 
 impl MysqlConnection {
@@ -24,6 +25,7 @@ impl MysqlConnection {
             url: url.unwrap_or_default(),
             opened: Arc::new(Mutex::new(false)),
             conn: Arc::new(tokio::sync::Mutex::new(None)),
+            ready: Arc::new(tokio::sync::Notify::new()),
         }
     }
 
@@ -37,6 +39,24 @@ impl MysqlConnection {
             url: self.url.clone(),
             opened: self.opened.clone(),
             conn: self.conn.clone(),
+            ready: self.ready.clone(),
+        }
+    }
+
+    pub(crate) async fn lock_conn(&self) -> Result<tokio::sync::MutexGuard<'_, Option<Conn>>> {
+        loop {
+            let notified = self.ready.notified();
+            tokio::pin!(notified);
+            let slot = self.conn.lock().await;
+            if slot.is_some() {
+                return Ok(slot);
+            }
+            let open = *self.opened.lock().unwrap();
+            drop(slot);
+            if !open {
+                return Err(DatasourceError::message("Connection is not open"));
+            }
+            notified.await;
         }
     }
 
@@ -48,7 +68,7 @@ impl MysqlConnection {
     }
 
     pub(crate) async fn exec(&self, sql: &str) -> Result<()> {
-        let mut slot = self.conn.lock().await;
+        let mut slot = self.lock_conn().await?;
         let conn = slot
             .as_mut()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
@@ -94,8 +114,9 @@ impl Connection for MysqlConnection {
     }
 
     async fn close(&self) -> Result<()> {
-        *self.conn.lock().await = None;
         *self.opened.lock().unwrap() = false;
+        *self.conn.lock().await = None;
+        self.ready.notify_waiters();
         Ok(())
     }
 

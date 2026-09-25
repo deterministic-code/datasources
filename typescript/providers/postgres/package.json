@@ -16,7 +16,8 @@
   "dependencies": {
     "@datasources/core": "*",
     "@types/pg": "^8.15.5",
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "pg-query-stream": "^4.17.0"
   },
   "devDependencies": {
     "yaml": "^2.8.0"

@@ -71,19 +71,17 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         }
     }
 
-    async Task<IReadOnlyList<Row>> Read(string sql, Row parameters)
+    async IAsyncEnumerable<Row> Read(string sql, Row parameters)
     {
         using var command = Bind(sql, parameters);
         using var reader = await command.ExecuteReaderAsync();
-        var rows = new List<Row>();
         while (await reader.ReadAsync())
         {
             var row = new Row();
             for (var i = 0; i < reader.FieldCount; i++)
                 row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
-            rows.Add(row);
+            yield return row;
         }
-        return rows;
     }
 
     MySqlCommand Bind(string sql, IReadOnlyList<Parameter>? parameters)

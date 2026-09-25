@@ -88,22 +88,20 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         }
     }
 
-    async Task<IReadOnlyList<Row>> Read(string sql, Row parameters)
+    async IAsyncEnumerable<Row> Read(string sql, Row parameters)
     {
         var (text, values) = PostgresBind.ToPostgres(sql, parameters);
         using var command = Typed.Require().CreateCommand();
         command.CommandText = text;
         Bind(command, values);
         using var reader = await command.ExecuteReaderAsync();
-        var rows = new List<Row>();
         while (await reader.ReadAsync())
         {
             var row = new Row();
             for (var i = 0; i < reader.FieldCount; i++)
                 row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
-            rows.Add(row);
+            yield return row;
         }
-        return rows;
     }
 
     static void Bind(NpgsqlCommand command, object?[] values)

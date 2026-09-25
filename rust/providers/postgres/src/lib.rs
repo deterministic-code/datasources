@@ -4,6 +4,7 @@ mod connection;
 mod converters;
 mod driver;
 mod pg_value;
+mod reader;
 mod transaction;
 
 pub use driver::PostgresDriver;
