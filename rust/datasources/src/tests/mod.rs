@@ -595,24 +595,24 @@ async fn stubs_throw() {
     let ds: &dyn Datasource = &*ds;
     let repo = ds.create_repository::<Cells>(None, None);
     let mut empty = Row::new();
-    assert!(repo.read_single(None).await.is_err());
-    assert!(repo.read(None).await.is_err());
+    assert!(repo.read_single(None, None).await.is_err());
+    assert!(repo.read(None, None).await.is_err());
     assert!(repo
-        .read_single(Some(&WhereText::new("1=1")))
+        .read_single(Some(&WhereText::new("1=1")), None)
         .await
         .is_err());
-    assert!(repo.read(Some(&WhereText::new("1=1"))).await.is_err());
+    assert!(repo.read(Some(&WhereText::new("1=1")), None).await.is_err());
     assert!(repo.create(&mut empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
     let readonly = ds.create_readonly_repository::<Cells>(None, None);
-    assert!(readonly.read_single(None).await.is_err());
-    assert!(readonly.read(None).await.is_err());
+    assert!(readonly.read_single(None, None).await.is_err());
+    assert!(readonly.read(None, None).await.is_err());
     assert!(readonly
-        .read_single(Some(&WhereText::new("1=1")))
+        .read_single(Some(&WhereText::new("1=1")), None)
         .await
         .is_err());
-    assert!(readonly.read(Some(&WhereText::new("1=1"))).await.is_err());
+    assert!(readonly.read(Some(&WhereText::new("1=1")), None).await.is_err());
     let txn = StubTransaction::new("text");
     assert!(txn.commit().await.is_err());
     assert!(txn.abort().await.is_err());
@@ -680,30 +680,30 @@ async fn published_mocks() {
     assert!(reader.next().await.is_err());
 
     let repo = MockRepository::new();
-    assert!(repo.read_single(None).await.unwrap().is_none());
+    assert!(repo.read_single(None, None).await.unwrap().is_none());
     repo.items
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(1))]));
     assert!(repo
-        .read_single(Some(&SelectStatement::text("id=1")))
+        .read_single(Some(&SelectStatement::text("id=1")), None)
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read(Some(&MockSelectStatement::new("all")))
+        repo.read(Some(&MockSelectStatement::new("all")), None)
             .await
             .unwrap()
             .len(),
         1
     );
     assert!(repo
-        .read_single(Some(&MockWhere::new("id=1")))
+        .read_single(Some(&MockWhere::new("id=1")), None)
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read(Some(&MockWhere::new("all"))).await.unwrap().len(),
+        repo.read(Some(&MockWhere::new("all")), None).await.unwrap().len(),
         1
     );
     repo.create(&mut record(&[("id", Value::Int(2))]))
@@ -719,9 +719,9 @@ async fn published_mocks() {
         .await
         .unwrap();
     repo.set_read_single_error("gs");
-    assert!(repo.read_single(None).await.is_err());
+    assert!(repo.read_single(None, None).await.is_err());
     repo.set_read_error("g");
-    assert!(repo.read(None).await.is_err());
+    assert!(repo.read(None, None).await.is_err());
     repo.set_add_error("ad");
     assert!(repo.create(&mut Row::new()).await.is_err());
     repo.set_update_error("up");
@@ -1255,7 +1255,6 @@ fn statements_and_builders() {
     );
     let call = ExecuteStoredProcedureStatement::new("save", &fields);
     assert_eq!(call.get_text(), "CALL save($id, $name)");
-    assert_eq!(call.parameters(), fields.to_vec());
     assert_eq!(
         ExecuteStoredProcedureStatement::new("save", &[]).get_text(),
         "CALL save()"
@@ -1303,9 +1302,6 @@ fn statements_and_builders() {
     assert_eq!(CreateTableStatement::text("x").get_text(), "x");
     assert_eq!(CreateIndexStatement::text("x").get_text(), "x");
     assert_eq!(ExecuteStoredProcedureStatement::text("x").get_text(), "x");
-    assert!(ExecuteStoredProcedureStatement::text("x")
-        .parameters()
-        .is_empty());
     assert_eq!(ReturnStatement::text("x").get_text(), "x");
 }
 
@@ -1602,8 +1598,9 @@ async fn read_calls_stored_procedure() {
     options.entity = "users".into();
     options.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, options).unwrap();
-    let call = ExecuteStoredProcedureStatement::new("get_user", &[Parameter::new("id", 9_i64)]);
-    let rows = repo.read(Some(&call)).await.unwrap();
+    let parameters = [Parameter::new("id", 9_i64)];
+    let call = ExecuteStoredProcedureStatement::new("get_user", &parameters);
+    let rows = repo.read(Some(&call), Some(&parameters)).await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["id"], Value::Int(1));
     assert_eq!(rows[0]["name"], Value::from("a"));
@@ -1617,7 +1614,10 @@ async fn read_calls_stored_procedure() {
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     assert_eq!(
-        repo.read_single(Some(&call)).await.unwrap().unwrap()["id"],
+        repo.read_single(Some(&call), Some(&parameters))
+            .await
+            .unwrap()
+            .unwrap()["id"],
         Value::Int(1)
     );
 }
@@ -1639,13 +1639,13 @@ async fn table_repository() {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
     }));
-    let rows = repo.read(None).await.unwrap();
+    let rows = repo.read(None, None).await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT id, name FROM users"
     );
-    assert!(repo.read_single(None).await.unwrap().is_some());
+    assert!(repo.read_single(None, None).await.unwrap().is_some());
 
     let where_clause = Where::new(Operator::equals("id", 9_i64));
     let query = SelectStatement::new(SelectStatementOptions {
@@ -1653,7 +1653,7 @@ async fn table_repository() {
         ..SelectStatementOptions::new("users", &["id"])
     });
     command.reader_rows.lock().unwrap().clear();
-    assert!(repo.read_single(Some(&query)).await.unwrap().is_none());
+    assert!(repo.read_single(Some(&query), None).await.unwrap().is_none());
     assert_eq!(
         command.reader_logs.lock().unwrap().last().unwrap().0,
         "SELECT id FROM users WHERE id = $id"
@@ -1661,7 +1661,7 @@ async fn table_repository() {
 
     command.reader_rows.lock().unwrap().clear();
     assert!(repo
-        .read_single(Some(&Where::new(Operator::equals("id", 9_i64))))
+        .read_single(Some(&Where::new(Operator::equals("id", 9_i64))), None)
         .await
         .unwrap()
         .is_none());
@@ -1670,7 +1670,7 @@ async fn table_repository() {
     assert_eq!(last.1[0].name, "id");
     assert_eq!(last.1[0].value, Value::Int(9));
     assert!(repo
-        .read(Some(&Where::new(Operator::equals("id", 9_i64))))
+        .read(Some(&Where::new(Operator::equals("id", 9_i64))), None)
         .await
         .unwrap()
         .is_empty());
@@ -1861,7 +1861,7 @@ async fn table_repository_maps_after_row_converter() {
         },
     ));
     let repo = CRUDRepository::new(connection, options).unwrap();
-    let rows = repo.read(None).await.unwrap();
+    let rows = repo.read(None, None).await.unwrap();
     assert_eq!(rows[0]["name"], Value::from("A"));
 }
 
@@ -1881,7 +1881,7 @@ async fn table_repository_maps_flat_row_into_contacts() {
     options.row_converter = Some(RowTypeConverter::of::<UserRow>());
     options.rows_mapper = Box::new(user_contacts_mapper());
     let repo = CRUDRepository::new(connection, options).unwrap();
-    let mut user = repo.read_single(None).await.unwrap().unwrap();
+    let mut user = repo.read_single(None, None).await.unwrap().unwrap();
     assert_eq!(user["username"], Value::from("bobby"));
     assert_eq!(user["email"], Value::from("bob@asdf.com"));
     assert_eq!(user["contacts"], Value::from("bob,roberta"));
@@ -1943,7 +1943,7 @@ async fn table_repository_crud_mapper() {
     )));
     let repo = CRUDRepository::new(connection, options).unwrap();
     command.reader_rows.lock().unwrap().clear();
-    assert!(repo.read_single(None).await.unwrap().is_none());
+    assert!(repo.read_single(None, None).await.unwrap().is_none());
     assert_eq!(
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT full_name, user_id FROM people LIMIT 1"
@@ -2077,7 +2077,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
         false,
         None,
     );
-    let items = parents.read(None).await.unwrap();
+    let items = parents.read(None, None).await.unwrap();
     assert_eq!(items[0]["type_name"], Value::from("person"));
     assert!(!items[1].contains_key("type_name"));
 }
@@ -2108,7 +2108,7 @@ async fn enriched_fills_lists_and_read_single_is_enriched() {
             None,
         )
         .add_enriched("children", "id", children, "parent_id", None, true, None);
-    let item = parents.read_single(None).await.unwrap().unwrap();
+    let item = parents.read_single(None, None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     assert!(item["children"].wire_text().contains("label=a"));
     assert!(item["children"].wire_text().contains("label=b"));
@@ -2169,7 +2169,7 @@ async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
             true,
             None,
         );
-    let item = parents.read_single(None).await.unwrap().unwrap();
+    let item = parents.read_single(None, None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     let children_text = item["children"].wire_text();
     let parts: Vec<_> = children_text.split('|').collect();
@@ -2191,14 +2191,22 @@ impl IRepository for CountingRepository {
 
 #[async_trait]
 impl IReadonlyRepository for CountingRepository {
-    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Option<Row>> {
         *self.read_singles.lock().unwrap() += 1;
-        self.inner.read_single(query).await
+        self.inner.read_single(query, parameters).await
     }
 
-    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+    async fn read(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Vec<Row>> {
         *self.reads.lock().unwrap() += 1;
-        self.inner.read(query).await
+        self.inner.read(query, parameters).await
     }
 }
 
@@ -2245,7 +2253,7 @@ async fn hashset_uses_one_read_per_edge() {
             true,
             Some(strategy),
         );
-    parents.read(None).await.unwrap();
+    parents.read(None, None).await.unwrap();
     assert_eq!(*types.reads.lock().unwrap(), 1);
     assert_eq!(*types.read_singles.lock().unwrap(), 0);
     assert_eq!(*children.reads.lock().unwrap(), 1);
@@ -2286,7 +2294,7 @@ async fn flat_to_nested_collapses_join_rows() {
         ],
         Box::new(result),
     );
-    let items = parents.read(None).await.unwrap();
+    let items = parents.read(None, None).await.unwrap();
     assert_eq!(items[0]["id"], Value::Int(1));
     assert_eq!(items[0]["type_name"], Value::from("person"));
     assert_eq!(items[1]["id"], Value::Int(2));
@@ -2351,7 +2359,7 @@ async fn contacts_service_fills_names_and_child_lists() {
         .await
         .unwrap();
     let contact = service
-        .read(None)
+        .read(None, None)
         .await
         .unwrap()
         .into_iter()
@@ -2695,7 +2703,7 @@ async fn deep_get_still_enriches() {
             None,
         )
         .add_enriched("children", "id", children, "parent_id", None, true, None);
-    let item = parents.read_single(None).await.unwrap().unwrap();
+    let item = parents.read_single(None, None).await.unwrap().unwrap();
     assert_eq!(item["type_name"], Value::from("org"));
     assert!(item["children"].wire_text().contains("label=a"));
 }

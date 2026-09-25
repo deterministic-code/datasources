@@ -4,7 +4,6 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
-use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enriched::Enriched;
 use crate::enrichment_via::EnrichmentVia;
@@ -172,7 +171,7 @@ impl ReadonlyRepository {
             let params = query
                 .predicate()
                 .map(|predicate| predicate.parameters())
-                .unwrap_or_else(|| query.parameters());
+                .unwrap_or_default();
             let statement = match query.predicate() {
                 Some(predicate) => SelectStatement::with_where(
                     query.get_text(),
@@ -182,29 +181,34 @@ impl ReadonlyRepository {
             };
             (statement, params)
         } else {
-            let statement = self.statements.query(None);
-            let params = statement.parameters();
-            (statement, params)
+            (self.statements.query(None), Vec::new())
         }
     }
 
-    async fn read_sources(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+    async fn read_sources(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Vec<Row>> {
         if let Some(memory) = &self.memory {
             return Ok(memory.filter_input(query));
         }
         if let Some(where_clause) = query.and_then(ReadInput::as_where) {
             let (statement, params) = self.stored_query(where_clause)?;
-            return self.fetch_sources(&statement, params).await;
+            return self
+                .fetch_sources(&statement, parameters.unwrap_or(&params).to_vec())
+                .await;
         }
         let statement = query.and_then(ReadInput::as_statement);
-        self.ensure_readable(statement)?;
         match statement {
             Some(statement) if statement.kind() == StatementKind::Procedure => {
-                self.fetch_sources(statement, statement.parameters()).await
+                self.fetch_sources(statement, parameters.unwrap_or(&[]).to_vec())
+                    .await
             }
             statement => {
                 let (statement, params) = self.query_of(statement);
-                self.fetch_sources(&statement, params).await
+                self.fetch_sources(&statement, parameters.unwrap_or(&params).to_vec())
+                    .await
             }
         }
     }
@@ -227,20 +231,24 @@ impl ReadonlyRepository {
         Ok(rows)
     }
 
-    async fn read_items(&self, query: Option<&dyn ReadInput>) -> Result<Vec<(Row, Option<Row>)>> {
+    async fn read_items(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Vec<(Row, Option<Row>)>> {
         if self.result.is_some() {
-            return self.collapse(query).await;
+            return self.collapse(query, parameters).await;
         }
         if self.memory.is_some() {
             return Ok(self
-                .read_sources(query)
+                .read_sources(query, parameters)
                 .await?
                 .into_iter()
                 .map(|row| (row, None))
                 .collect());
         }
         let mut pairs = Vec::new();
-        for renamed in self.read_sources(query).await? {
+        for renamed in self.read_sources(query, parameters).await? {
             let item = Mapper::map(
                 &self.rows_mapper,
                 self.row_converter.convert(&renamed)?,
@@ -250,8 +258,12 @@ impl ReadonlyRepository {
         Ok(pairs)
     }
 
-    async fn collapse(&self, query: Option<&dyn ReadInput>) -> Result<Vec<(Row, Option<Row>)>> {
-        let rows = self.read_sources(query).await?;
+    async fn collapse(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Vec<(Row, Option<Row>)>> {
+        let rows = self.read_sources(query, parameters).await?;
         let mapped = self.result.as_ref().expect("result").map(rows);
         Ok(mapped.into_iter().map(|item| (item, None)).collect())
     }
@@ -280,8 +292,9 @@ impl ReadonlyRepository {
     pub(crate) async fn read_tracked(
         &self,
         query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
     ) -> Result<Vec<(Row, Option<Row>)>> {
-        self.apply(self.read_items(query).await?).await
+        self.apply(self.read_items(query, parameters).await?).await
     }
 
     fn renamed(&self, row: Row) -> Row {
@@ -339,19 +352,6 @@ impl ReadonlyRepository {
         }
     }
 
-    fn ensure_readable(&self, query: Option<&dyn Statement>) -> Result<()> {
-        match query.map(|statement| statement.kind()) {
-            Some(
-                StatementKind::Insert
-                | StatementKind::Update
-                | StatementKind::Delete
-                | StatementKind::Other,
-            ) => Err(DatasourceError::message(
-                "Read requires a query or stored procedure",
-            )),
-            _ => Ok(()),
-        }
-    }
 }
 
 impl IRepository for ReadonlyRepository {
@@ -369,13 +369,21 @@ impl Enriched for ReadonlyRepository {
 
 #[async_trait]
 impl IReadonlyRepository for ReadonlyRepository {
-    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        Ok(self.read(query).await?.into_iter().next())
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Option<Row>> {
+        Ok(self.read(query, parameters).await?.into_iter().next())
     }
 
-    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+    async fn read(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Vec<Row>> {
         Ok(self
-            .read_tracked(query)
+            .read_tracked(query, parameters)
             .await?
             .into_iter()
             .map(|(item, _)| item)

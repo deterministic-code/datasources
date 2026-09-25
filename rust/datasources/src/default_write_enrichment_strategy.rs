@@ -257,10 +257,13 @@ async fn sync_links(
         .ok_or_else(|| DatasourceError::message("Missing association"))?;
     let parent_key = required(parent, &enrichment.from, &enrichment.into)?;
     let existing = writer
-        .read(Some(&Where::new(Operator::equals(
-            association.parent.clone(),
-            parent_key.clone(),
-        ))))
+        .read(
+            Some(&Where::new(Operator::equals(
+                association.parent.clone(),
+                parent_key.clone(),
+            ))),
+            None,
+        )
         .await?;
     let wanted = related_ids(parent, enrichment)?;
     let keep: HashSet<String> = wanted.iter().map(Value::wire_text).collect();

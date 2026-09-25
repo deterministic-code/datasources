@@ -2,7 +2,7 @@ use crate::i_where::IWhere;
 use crate::mappers::Mapper;
 use crate::mappers::TransformMapper;
 use crate::parameter::Parameter;
-use crate::statements::{DeleteStatement, InsertStatement, Statement, Text, UpdateStatement};
+use crate::statements::{DeleteStatement, InsertStatement, Text, UpdateStatement};
 use crate::where_text::WhereText;
 use crate::{SelectStatement, SelectStatementOptions};
 use std::sync::Arc;
@@ -63,10 +63,9 @@ impl RepositoryStatements {
 
     pub fn update(&self, fields: &[Parameter], where_clause: &dyn IWhere) -> UpdateStatement {
         let built = UpdateStatement::new(&self.table, fields, Some(where_clause));
-        UpdateStatement::bound(
+        UpdateStatement::text(
             map_sql(&self.update, built.get_text()),
             Some(Box::new(WhereText::new(where_clause.get_text()))),
-            built.parameters(),
         )
     }
 

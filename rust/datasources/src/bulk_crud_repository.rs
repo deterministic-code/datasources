@@ -142,12 +142,20 @@ impl IReadonlyRepository for BulkCRUDRepository {
         Some(self)
     }
 
-    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        self.crud.read_single(query).await
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Option<Row>> {
+        self.crud.read_single(query, parameters).await
     }
 
-    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        self.crud.read(query).await
+    async fn read(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Vec<Row>> {
+        self.crud.read(query, parameters).await
     }
 }
 

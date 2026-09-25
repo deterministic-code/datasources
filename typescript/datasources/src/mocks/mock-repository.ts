@@ -2,6 +2,7 @@ import type { Scalar } from "../builders/Scalar.ts";
 import type { Cells } from "../converters/Cell.ts";
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
+import type { Parameter } from "../Parameter.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
@@ -33,7 +34,10 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     super(type);
   }
 
-  async readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined> {
+  async readSingle(
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
+    _parameters?: Parameter[],
+  ): Promise<T | undefined> {
     this.readSingleCalls.push(query);
     if (this.readSingleError) {
       throw this.readSingleError;
@@ -41,7 +45,10 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     return this.items[0];
   }
 
-  async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
+  async *read(
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
+    _parameters?: Parameter[],
+  ): AsyncIterable<T> {
     this.readCalls.push(query);
     if (this.readError) {
       throw this.readError;
@@ -53,8 +60,9 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
 
   async *[tracked](
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
+    parameters?: Parameter[],
   ): AsyncIterable<Sourced<T>> {
-    yield* withoutSource(this.read(query));
+    yield* withoutSource(this.read(query, parameters));
   }
 
   async create(item: T): Promise<T> {

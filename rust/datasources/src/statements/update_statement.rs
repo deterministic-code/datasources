@@ -7,24 +7,18 @@ use std::collections::HashMap;
 pub struct UpdateStatement {
     text: String,
     where_clause: Option<Box<dyn IWhere>>,
-    parameters: Vec<Parameter>,
 }
 
 impl UpdateStatement {
     pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn IWhere>>) -> Self {
-        Self::bound(text, where_clause, Vec::new())
-    }
-
-    pub fn bound(
-        text: impl Into<String>,
-        where_clause: Option<Box<dyn IWhere>>,
-        parameters: Vec<Parameter>,
-    ) -> Self {
         Self {
             text: text.into(),
             where_clause,
-            parameters,
         }
+    }
+
+    pub fn parameter_list(fields: &[Parameter], where_clause: Option<&dyn IWhere>) -> Vec<Parameter> {
+        compose("", where_clause, fields).1
     }
 
     pub fn new(
@@ -41,10 +35,9 @@ impl UpdateStatement {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        let (text, parameters) = bind(&sql, where_clause, fields);
+        let (text, _) = compose(&sql, where_clause, fields);
         Self {
             text,
-            parameters,
             where_clause: where_clause.map(|predicate| {
                 Box::new(crate::where_text::WhereText::new(predicate.get_text())) as Box<dyn IWhere>
             }),
@@ -56,7 +49,7 @@ impl UpdateStatement {
     }
 }
 
-fn bind(
+fn compose(
     sql: &str,
     where_clause: Option<&dyn IWhere>,
     fields: &[Parameter],
@@ -122,9 +115,6 @@ impl crate::ReadInput for UpdateStatement {
 impl Statement for UpdateStatement {
     fn as_any(&self) -> &dyn std::any::Any {
         self
-    }
-    fn parameters(&self) -> Vec<Parameter> {
-        self.parameters.clone()
     }
     fn kind(&self) -> super::statement::StatementKind {
         super::statement::StatementKind::Update

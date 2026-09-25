@@ -27,7 +27,7 @@ use crate::table_repository_builder::RepositoryBuilder;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
-use crate::{Expression, Literal, Operator, Statement, Text, Where};
+use crate::{Expression, Literal, Operator, Text, Where};
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
@@ -205,10 +205,10 @@ impl CRUDRepository {
             _ => unreachable!(),
         };
         let statement = self.readonly.statements.update(&fields, predicate);
-        let parameters = statement.parameters();
+        let parameters = crate::UpdateStatement::parameter_list(&fields, Some(predicate));
         self.readonly
             .command()
-            .execute(&statement.get_text(), Some(&parameters))
+            .execute_statement(&statement, Some(&parameters))
             .await
     }
 
@@ -313,12 +313,20 @@ impl IReadonlyRepository for CRUDRepository {
         Some(self)
     }
 
-    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        self.readonly.read_single(query).await
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Option<Row>> {
+        self.readonly.read_single(query, parameters).await
     }
 
-    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        self.readonly.read(query).await
+    async fn read(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Vec<Row>> {
+        self.readonly.read(query, parameters).await
     }
 }
 
@@ -403,7 +411,7 @@ impl ICRUDRepository for CRUDRepository {
         }
         let record = self.id_record(id)?;
         let clause = self.id_where(&record)?;
-        self.read_single(Some(&clause)).await
+        self.read_single(Some(&clause), None).await
     }
 }
 

@@ -64,7 +64,7 @@ public class CRUDRepositoryOptionsTests
                 insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
                 insert => insert),
             new TransformMapper<IUpdateStatement, IUpdateStatement>(
-                update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where, update.Parameters),
+                update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
                 update => update),
             new TransformMapper<IDeleteStatement, IDeleteStatement>(
                 delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),
@@ -75,7 +75,7 @@ public class CRUDRepositoryOptionsTests
             statements.Insert([new Parameter("id", 1)]).GetText());
         var updated = statements.Update([new Parameter("name", "a")]);
         Assert.Equal("UPDATE users SET name = $name RETURNING id", updated.GetText());
-        Assert.Equal("name", Assert.Single(updated.Parameters).Name);
+        Assert.Equal("name", Assert.Single(UpdateStatement.ParameterList([new Parameter("name", "a")])).Name);
         Assert.Equal("DELETE FROM users RETURNING id", statements.Delete().GetText());
     }
 
@@ -108,7 +108,7 @@ public class CRUDRepositoryOptionsTests
                 insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
                 insert => insert),
             Update = new TransformMapper<IUpdateStatement, IUpdateStatement>(
-                update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where, update.Parameters),
+                update => new UpdateStatement($"{update.GetText()} RETURNING id", update.Where),
                 update => update),
             Delete = new TransformMapper<IDeleteStatement, IDeleteStatement>(
                 delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),

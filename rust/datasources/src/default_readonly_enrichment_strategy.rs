@@ -43,10 +43,13 @@ async fn apply_lookup(
         let cache_key = RepositoryTreeNode::key_of(&key);
         if !cache.contains_key(&cache_key) {
             let related = via
-                .read_single(Some(&Where::new(Operator::equals(
-                    enrichment.by.clone(),
-                    key.clone(),
-                ))))
+                .read_single(
+                    Some(&Where::new(Operator::equals(
+                        enrichment.by.clone(),
+                        key.clone(),
+                    ))),
+                    None,
+                )
                 .await?;
             cache.insert(cache_key.clone(), related);
         }
@@ -69,10 +72,13 @@ async fn apply_many(
             continue;
         };
         let related = via
-            .read(Some(&Where::new(Operator::equals(
-                enrichment.by.clone(),
-                key,
-            ))))
+            .read(
+                Some(&Where::new(Operator::equals(
+                    enrichment.by.clone(),
+                    key,
+                ))),
+                None,
+            )
             .await?;
         parent.insert(enrichment.into.clone(), encode_rows(&related));
     }

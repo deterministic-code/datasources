@@ -103,14 +103,15 @@ describe("CRUDRepository", () => {
   it("calls a stored procedure and maps rows", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([{ id: 1, name: "a" }]);
-    const call = new ExecuteStoredProcedureStatement("get_user", [{ name: "id", value: 9 }]);
+    const parameters = [{ name: "id", value: 9 }];
+    const call = new ExecuteStoredProcedureStatement("get_user", parameters);
     const rows: Cells[] = [];
-    for await (const row of repo.read(call)) rows.push(row);
+    for await (const row of repo.read(call, parameters)) rows.push(row);
     expect(rows).toEqual([{ id: 1, name: "a" }]);
     expect(command.executeReaderCalls[0]?.text).toBe("CALL get_user($id)");
     expect(command.executeReaderCalls[0]?.parameters).toEqual([{ name: "id", value: 9 }]);
     command.reader = new MockReader([{ id: 1, name: "a" }]);
-    expect(await repo.readSingle(call)).toEqual({ id: 1, name: "a" });
+    expect(await repo.readSingle(call, parameters)).toEqual({ id: 1, name: "a" });
   });
 
   it("adds updates and deletes through builders", async () => {
@@ -400,7 +401,7 @@ describe("CRUDRepository", () => {
       ),
       update: new TransformMapper(
         (update) =>
-          new UpdateStatement(`${update.getText()} RETURNING id`, update.where, update.parameters),
+          new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
         (update) => update,
       ),
       delete: new TransformMapper(

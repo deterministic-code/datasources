@@ -1,7 +1,7 @@
 import type { Constructable } from "../converters/Constructable.ts";
-import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
+import type { Parameter } from "../Parameter.ts";
+import type { IStatement } from "../statements/IStatement.ts";
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
-import type { IWhere } from "../statements/IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
 import { ReadonlyRepository, untyped, type Sourced } from "../ReadonlyRepository.ts";
 
@@ -15,11 +15,9 @@ export class ListReadonlyRepository<T extends object> extends ReadonlyRepository
     super(type);
   }
 
-  protected async *readItems(
-    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-  ): AsyncIterable<Sourced<T>> {
+  protected async *readItems(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
     for (const item of this.items)
-      if (matches(item, query)) yield { item };
+      if (matches(item, query, parameters)) yield { item };
   }
 }
 
@@ -30,13 +28,10 @@ const fieldOf = (name: string): string => {
     : name;
 };
 
-const matches = <T extends object>(
-  item: T,
-  query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-): boolean => {
+const matches = <T extends object>(item: T, query?: IStatement, parameters?: Parameter[]): boolean => {
   if (query && "getText" in query && query.getText() === "1 = 0") return false;
   const groups = new Map<string, { name: string; value: Scalar }[]>();
-  for (const parameter of parametersOf(query)) {
+  for (const parameter of parameters ?? []) {
     const field = fieldOf(parameter.name);
     const list = groups.get(field) ?? [];
     list.push(parameter);
@@ -45,17 +40,6 @@ const matches = <T extends object>(
   return [...groups.entries()].every(([field, values]) =>
     values.some(({ value }) => String(props(item)[field]) === String(value)),
   );
-};
-
-const parametersOf = (
-  query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-): { name: string; value: Scalar }[] => {
-  if (!query) return [];
-  const where = "where" in query ? query.where : query;
-  return (where?.parameters ?? query.parameters ?? []).map((parameter) => ({
-    name: parameter.name,
-    value: parameter.value as Scalar,
-  }));
 };
 
 const props = (item: object): Props => item as Props;

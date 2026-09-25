@@ -203,10 +203,13 @@ async fn apply_linked(
             continue;
         };
         let links = link
-            .read(Some(&Where::new(Operator::equals(
-                association.parent.clone(),
-                key,
-            ))))
+            .read(
+                Some(&Where::new(Operator::equals(
+                    association.parent.clone(),
+                    key,
+                ))),
+                None,
+            )
             .await?;
         let mut related_rows = Vec::new();
         for row in links {
@@ -214,10 +217,13 @@ async fn apply_linked(
                 continue;
             };
             if let Some(entity) = via
-                .read_single(Some(&Where::new(Operator::equals(
-                    enrichment.by.clone(),
-                    id,
-                ))))
+                .read_single(
+                    Some(&Where::new(Operator::equals(
+                        enrichment.by.clone(),
+                        id,
+                    ))),
+                    None,
+                )
                 .await?
             {
                 related_rows.push(entity);

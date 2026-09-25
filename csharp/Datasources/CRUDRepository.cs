@@ -99,7 +99,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = Statements.Update(fields, where);
-        return await Command().Execute(statement, statement.Parameters);
+        return await Command().Execute(statement, UpdateStatement.ParameterList(fields, where));
     }
 
     protected virtual async Task<Response> Remove(T item, IWhere? byWhere)

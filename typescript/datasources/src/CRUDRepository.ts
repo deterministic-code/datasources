@@ -6,7 +6,7 @@ import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
 import { Literal } from "./statements/Literal.ts";
-import { Operator, Where } from "./statements/index.ts";
+import { Operator, UpdateStatement, Where } from "./statements/index.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -170,7 +170,7 @@ export class CRUDRepository<T = Cells>
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.statements!.update(fields, where);
-    return this.command().execute(statement.getText(), statement.parameters);
+    return execute(this.command(), statement, UpdateStatement.parameterList(fields, where));
   };
 
   protected remove = async (item: T, byWhere?: IWhere): Promise<Response> => {

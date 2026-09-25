@@ -41,11 +41,19 @@ impl IReadonlyRepository for StubRepository {
         Some(self)
     }
 
-    async fn read_single(&self, _query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
+    async fn read_single(
+        &self,
+        _query: Option<&dyn ReadInput>,
+        _parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Option<Row>> {
         Err(fail(&self.provider))
     }
 
-    async fn read(&self, _query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+    async fn read(
+        &self,
+        _query: Option<&dyn ReadInput>,
+        _parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Vec<Row>> {
         Err(fail(&self.provider))
     }
 }

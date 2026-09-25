@@ -5,21 +5,16 @@ use crate::parameter_direction::ParameterDirection;
 
 pub struct ExecuteStoredProcedureStatement {
     text: String,
-    parameters: Vec<Parameter>,
 }
 
 impl ExecuteStoredProcedureStatement {
     pub fn text(text: impl Into<String>) -> Self {
-        Self {
-            text: text.into(),
-            parameters: Vec::new(),
-        }
+        Self { text: text.into() }
     }
 
     pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self {
         Self {
             text: format!("CALL {}({})", name.as_ref(), args(parameters)),
-            parameters: parameters.to_vec(),
         }
     }
 }
@@ -40,10 +35,6 @@ impl Statement for ExecuteStoredProcedureStatement {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
-    fn parameters(&self) -> Vec<Parameter> {
-        self.parameters.clone()
-    }
-
     fn kind(&self) -> StatementKind {
         StatementKind::Procedure
     }

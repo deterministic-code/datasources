@@ -18,8 +18,16 @@ pub trait IReadonlyRepository: IRepository {
         None
     }
 
-    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>>;
-    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>;
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Option<Row>>;
+    async fn read(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Vec<Row>>;
 }
 
 #[async_trait]
@@ -44,12 +52,20 @@ impl IRepository for AsReadonly {
 
 #[async_trait]
 impl IReadonlyRepository for AsReadonly {
-    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        self.0.read_single(query).await
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Option<Row>> {
+        self.0.read_single(query, parameters).await
     }
 
-    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        self.0.read(query).await
+    async fn read(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Vec<Row>> {
+        self.0.read(query, parameters).await
     }
 }
 
