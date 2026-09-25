@@ -3,7 +3,7 @@ import {
   CRUDRepository,
   collectAsync,
   ExecuteStoredProcedureStatement,
-  QueryStatement,
+  SelectStatement,
   RowTypeConverter,
   TransformMapper,
   WhereText,
@@ -82,7 +82,7 @@ describe("CRUDRepository", () => {
     command.reader = new MockReader([]);
     const where = new Where(new Operator.Equals("id", 9));
     expect(
-      await repo.readSingle(new QueryStatement({ table: "users", fields: ["id"], where })),
+      await repo.readSingle(new SelectStatement({ table: "users", fields: ["id"], where })),
     ).toBeUndefined();
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT id FROM users WHERE id = $id",
@@ -219,7 +219,12 @@ describe("CRUDRepository", () => {
     const command = new MockCommand(connection);
     connection.command = command;
     const { repo, command: query } = create();
-    query.reader = { current: undefined, next: async () => true };
+    query.reader = {
+      current: undefined,
+      next: async () => true,
+      nextResult: async () => false,
+      dispose: async () => {},
+    };
     await expect(async () => {
       for await (const _ of repo.read()) {
         /* consume */
@@ -228,7 +233,12 @@ describe("CRUDRepository", () => {
     await expect(repo.update({ name: "a" })).rejects.toThrow("Missing Id value");
     await expect(repo.delete({ name: "a" })).rejects.toThrow("Missing Id value");
     await expect(repo.update({ id: 1 })).rejects.toThrow("non-Id field");
-    query.reader = { current: undefined, next: async () => true };
+    query.reader = {
+      current: undefined,
+      next: async () => true,
+      nextResult: async () => false,
+      dispose: async () => {},
+    };
     await expect(async () => {
       for await (const _ of repo.read()) {
         /* consume */
@@ -381,7 +391,7 @@ describe("CRUDRepository", () => {
       entityMapper: entity,
       columnMappings,
       query: new TransformMapper(
-        (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
+        (query) => new SelectStatement(`${query.getText()} LIMIT 1`, query.where),
         (query) => query,
       ),
       insert: new TransformMapper(

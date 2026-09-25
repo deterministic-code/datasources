@@ -20,6 +20,12 @@ public class ArrayReader<T> : IReader<T>
         Current = default;
         return Task.FromResult(false);
     }
+
+    public Task<bool> NextResult()
+    {
+        Current = default;
+        return Task.FromResult(false);
+    }
 }
 
 public sealed class ArrayReader : ArrayReader<object>, IReader

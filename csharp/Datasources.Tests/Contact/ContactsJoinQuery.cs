@@ -4,8 +4,8 @@ namespace Datasources.Tests.Contact;
 
 internal static class ContactsJoinQuery
 {
-    public static IQuery Create() =>
-        new QueryStatement(new()
+    public static ISelectStatement Create() =>
+        new SelectStatement(new()
         {
             Table = "contacts_base",
             Fields =

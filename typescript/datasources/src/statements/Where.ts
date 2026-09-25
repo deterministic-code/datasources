@@ -8,7 +8,7 @@ import { Literal } from "./Literal.ts";
 import { Operator } from "./Operator.ts";
 import type { Comparison } from "./Cmp.ts";
 import { eq } from "./Cmp.ts";
-import { QueryStatement } from "./QueryStatement.ts";
+import { SelectStatement } from "./SelectStatement.ts";
 import { Subquery } from "./Subquery.ts";
 
 const symbol = (op: Operator): string =>
@@ -184,13 +184,13 @@ const rewriteWhere = (
   where instanceof Where ? new Where(rewrite(where.condition, column, value)) : where;
 
 const rewriteQuery = (
-  query: QueryStatement,
+  query: SelectStatement,
   column: (name: string) => string,
   value: (name: string, cell: Cell) => Cell,
-): QueryStatement =>
+): SelectStatement =>
   query.table === undefined
     ? query
-    : new QueryStatement({
+    : new SelectStatement({
         distinct: query.distinct,
         table: query.table,
         fields: query.fields,

@@ -1,7 +1,7 @@
 import { Operator, Where } from "./statements/index.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
-import type { IQuery } from "./statements/IQuery.ts";
+import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
@@ -16,7 +16,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   async *read(
     inner: IReadonlyRepository<T>,
     tree: IRepositoryTree,
-    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<T> {
     const items: T[] = [];
     const sources: (Row | undefined)[] = [];

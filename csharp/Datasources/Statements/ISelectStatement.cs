@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public interface IQuery : IStatement
+public interface ISelectStatement : IStatement
 {
     IWhere? Where { get; }
 }

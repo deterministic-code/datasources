@@ -1,7 +1,7 @@
 import {
   Literal,
   Operator,
-  QueryStatement,
+  SelectStatement,
   InsertStatement,
   UpdateStatement,
   DeleteStatement,
@@ -125,13 +125,13 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
     }
     if (step.READ)
       return withStatementSql(
-        new QueryStatement({ table, fields: columns, where: idWhere(type, step.READ.id) }).getText(),
+        new SelectStatement({ table, fields: columns, where: idWhere(type, step.READ.id) }).getText(),
         false,
         type,
       );
     if (step.QUERY)
       return withStatementSql(
-        new QueryStatement({
+        new SelectStatement({
           table,
           fields: columns,
           where: step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
@@ -141,7 +141,7 @@ export const repositoryQueries = (spec: RepositorySpec): string[] => {
       );
     if (step.READBY)
       return withStatementSql(
-        new QueryStatement({ table, fields: columns, where: whereOf(step.READBY.where) }).getText(),
+        new SelectStatement({ table, fields: columns, where: whereOf(step.READBY.where) }).getText(),
         false,
         type,
       );

@@ -392,7 +392,7 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-Construct the predicate with [Operator](./expressions.md#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](./expressions.md#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [QueryStatement](./query-statement.md) / [UpdateStatement](./update-statement.md) / [DeleteStatement](./delete-statement.md) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [StatementEvaluator](./statement-evaluator.md) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
+Construct the predicate with [Operator](./expressions.md#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](./expressions.md#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [SelectStatement](./select-statement.md) / [UpdateStatement](./update-statement.md) / [DeleteStatement](./delete-statement.md) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [StatementEvaluator](./statement-evaluator.md) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
 
 ## Examples
 

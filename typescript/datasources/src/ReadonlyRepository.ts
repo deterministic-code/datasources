@@ -4,7 +4,7 @@ import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
 import { ExecuteStoredProcedureStatement } from "./statements/ExecuteStoredProcedureStatement.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
-import type { IQuery } from "./statements/IQuery.ts";
+import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Row } from "./Row.ts";
 import type { IWhere } from "./statements/IWhere.ts";
@@ -30,13 +30,13 @@ export const tracked = Symbol("tracked");
 
 type Tracked<T> = {
   [tracked](
-    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>>;
 };
 
 export async function* readTracked<T>(
   repo: IReadonlyRepository<T>,
-  query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+  query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
 ): AsyncIterable<Sourced<T>> {
   const read = (repo as Partial<Tracked<T>>)[tracked];
   if (read) {
@@ -102,13 +102,19 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
     return this;
   };
 
-  async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
+  async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     for await (const sourced of this[tracked](query)) yield sourced.item;
   }
 
   async *[tracked](
-    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
+    for (const row of await this.rows(query)) yield row;
+  }
+
+  private rows = async (
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
+  ): Promise<Sourced<T>[]> => {
     const statement =
       query instanceof ExecuteStoredProcedureStatement ? query : this.readQuery(query);
     const parameters =
@@ -116,21 +122,27 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
         ? statement.parameters
         : (statement.where?.parameters ?? statement.parameters);
     const reader = await executeReader(this.command(), statement, parameters);
-    while (await reader.next()) {
-      const renamed = this.renamed(
-        reader.current ??
-          (() => {
-            throw new DatasourceError("Reader current must be a row");
-          })(),
-      );
-      yield {
-        item: this.mapper!.map(this.rowConverter!.convert(renamed)),
-        source: renamed,
-      };
+    try {
+      const rows: Sourced<T>[] = [];
+      while (await reader.next()) {
+        const renamed = this.renamed(
+          reader.current ??
+            (() => {
+              throw new DatasourceError("Reader current must be a row");
+            })(),
+        );
+        rows.push({
+          item: this.mapper!.map(this.rowConverter!.convert(renamed)),
+          source: renamed,
+        });
+      }
+      return rows;
+    } finally {
+      await reader.dispose();
     }
-  }
+  };
 
-  async readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined> {
+  async readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined> {
     for await (const item of this.read(query)) return item;
     return undefined;
   }
@@ -146,7 +158,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
       Object.entries(row).map(([key, value]) => [this.columnMappings.reverseMap(key), value]),
     );
 
-  protected readQuery = (query?: IQuery | IWhere): IQuery =>
+  protected readQuery = (query?: ISelectStatement | IWhere): ISelectStatement =>
     !query
       ? this.statements!.query()
       : "where" in query

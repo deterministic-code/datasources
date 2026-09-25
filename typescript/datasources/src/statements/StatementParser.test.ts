@@ -7,7 +7,7 @@ import {
   Join,
   Literal,
   Operator,
-  QueryStatement,
+  SelectStatement,
   StatementEvaluator,
   StatementParser,
   Subquery,
@@ -77,26 +77,26 @@ describe("StatementParser", () => {
   });
 
   it("builds the where tree", () => {
-    const notLike = StatementParser.parse("SELECT id FROM users WHERE name NOT LIKE $name") as QueryStatement;
+    const notLike = StatementParser.parse("SELECT id FROM users WHERE name NOT LIKE $name") as SelectStatement;
     expect((notLike.where as Where).condition).toBeInstanceOf(Operator.NotLike);
 
     const exists = StatementParser.parse(
       "SELECT id FROM users WHERE EXISTS (SELECT id FROM posts WHERE posts.user_id = users.id)",
-    ) as QueryStatement;
+    ) as SelectStatement;
     expect((exists.where as Where).condition).toBeInstanceOf(Operator.Exists);
 
     const full = StatementParser.parse(
       "SELECT id FROM users FULL JOIN profiles ON users.id = profiles.user_id",
-    ) as QueryStatement;
+    ) as SelectStatement;
     expect(full.joins[0]?.kind).toBe("full");
 
-    const cross = StatementParser.parse("SELECT id FROM users CROSS JOIN tags") as QueryStatement;
+    const cross = StatementParser.parse("SELECT id FROM users CROSS JOIN tags") as SelectStatement;
     expect(cross.joins[0]?.kind).toBe("cross");
     expect(cross.joins[0]?.on).toBeUndefined();
 
     const shaped = StatementParser.parse(
       "SELECT DISTINCT status FROM orders GROUP BY status HAVING status = $status ORDER BY status ASC LIMIT 10 OFFSET 5",
-    ) as QueryStatement;
+    ) as SelectStatement;
     expect(shaped.distinct).toBe(true);
     expect(shaped.limit).toBe(10);
     expect(shaped.offset).toBe(5);
@@ -104,7 +104,7 @@ describe("StatementParser", () => {
   });
 
   it("keeps a string beside a column as its parameter", () => {
-    const query = StatementParser.parse("SELECT id FROM users WHERE name = 'ada'") as QueryStatement;
+    const query = StatementParser.parse("SELECT id FROM users WHERE name = 'ada'") as SelectStatement;
     expect(query.getText()).toBe("SELECT id FROM users WHERE name = $name");
     expect(query.where?.parameters).toEqual([{ name: "name", value: "ada" }]);
   });
@@ -172,14 +172,14 @@ describe("StatementParser", () => {
   it("rewrites and collects the new operators", () => {
     const same = (name: string): string => name;
     const keep = <T>(_name: string, cell: T): T => cell;
-    const nested = new QueryStatement({
+    const nested = new SelectStatement({
       table: "posts",
       fields: ["id"],
       where: new Where(new Operator.Equals("id", 1)),
       having: new Where(new Operator.Equals("n", 2)),
       joins: [Join.inner("tags", "posts.id", "tags.post_id")],
     });
-    const plain = new QueryStatement("SELECT 1");
+    const plain = new SelectStatement("SELECT 1");
     const mapped = new Where(
       new Operator.And(
         new Operator.Or(new Operator.IsNull(new Identifier("id")), new Operator.IsNotNull(new Identifier("id"))),
@@ -233,7 +233,7 @@ describe("StatementParser", () => {
     expect(
       new Where(new Operator.In(new Identifier("id"), new Subquery(plain))).map(same, keep).getText(),
     ).toBe("id IN (SELECT 1)");
-    const bare = new QueryStatement({ table: "posts", fields: ["id"], joins: [Join.cross("tags")] });
+    const bare = new SelectStatement({ table: "posts", fields: ["id"], joins: [Join.cross("tags")] });
     expect(new Where(new Operator.Exists(new Subquery(bare))).map(same, keep).getText()).toBe(
       "EXISTS (SELECT id FROM posts CROSS JOIN tags)",
     );
@@ -265,9 +265,9 @@ describe("StatementParser", () => {
     expect(new Where(new ArrayExpression([new Literal(1)])).map(same, keep).getText()).toBe("1");
     expect(Join.full("profiles", "users.id", "profiles.user_id").kind).toBe("full");
     expect(() =>
-      new QueryStatement({ table: "users", fields: ["id"], joins: [{ kind: "inner", table: "t" }] }).getText(),
+      new SelectStatement({ table: "users", fields: ["id"], joins: [{ kind: "inner", table: "t" }] }).getText(),
     ).toThrow("empty join");
-    expect(() => new QueryStatement({ table: "users", fields: ["id"], offset: -1 })).toThrow(
+    expect(() => new SelectStatement({ table: "users", fields: ["id"], offset: -1 })).toThrow(
       "negative offset",
     );
     expect(() => new Where(new Ghost() as IExpression).map(same, keep)).toThrow("empty expression");
@@ -289,7 +289,7 @@ describe("StatementParser", () => {
     expect(() => evaluator.evaluate(new Operator.NotIn(new Identifier("id"), new Literal(1)), row)).toThrow(
       "empty in",
     );
-    const query = new Subquery(new QueryStatement("SELECT 1"));
+    const query = new Subquery(new SelectStatement("SELECT 1"));
     expect(() => evaluator.evaluate(new Operator.Exists(query), row)).toThrow("subquery is not evaluable");
     expect(() => evaluator.evaluate(query, row)).toThrow("subquery is not evaluable");
   });

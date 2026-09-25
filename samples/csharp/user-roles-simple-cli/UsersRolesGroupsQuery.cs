@@ -4,14 +4,14 @@ namespace UserRolesSimpleCli;
 
 public static class UsersRolesGroupsQuery
 {
-    public static IQuery Create(string provider = "sqlite")
+    public static ISelectStatement Create(string provider = "sqlite")
     {
         var users = Schema.Ident(provider, "users");
         var roles = Schema.Ident(provider, "roles");
         var groups = Schema.Ident(provider, "groups");
         var userRoles = Schema.Ident(provider, "user_roles");
         var userGroups = Schema.Ident(provider, "user_groups");
-        return new QueryStatement(new()
+        return new SelectStatement(new()
         {
             Table = users,
             Fields =

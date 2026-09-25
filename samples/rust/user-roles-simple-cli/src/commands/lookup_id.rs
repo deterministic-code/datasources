@@ -1,10 +1,10 @@
-use datasources::{Command, DatasourceError, Operator, QueryStatement, QueryStatementOptions, Result, Value, IWhere, Where};
+use datasources::{Command, DatasourceError, Operator, SelectStatement, SelectStatementOptions, Result, Value, IWhere, Where};
 
 pub async fn of(command: &dyn Command, table: &str, column: &str, value: &str) -> Result<i64> {
     let where_clause = Where::new(Operator::equals(column, value));
-    let query = QueryStatement::new(QueryStatementOptions {
+    let query = SelectStatement::new(SelectStatementOptions {
         where_clause: Some(&where_clause),
-        ..QueryStatementOptions::new(table, &["id"])
+        ..SelectStatementOptions::new(table, &["id"])
     });
     let parameters = where_clause.parameters();
     let reader = command

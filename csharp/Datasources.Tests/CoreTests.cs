@@ -30,9 +30,9 @@ public class CoreTests
     {
         Assert.Empty(Helpers.ParametersToRecord(null));
         Assert.Equal(new Value.Int(1), Helpers.ParametersToRecord(new[] { new Parameter("id", 1) })["id"]);
-        var select = new QueryStatement("SELECT 1");
+        var select = new SelectStatement("SELECT 1");
         var byId = new WhereText("id = 1");
-        var withWhere = new QueryStatement("SELECT 1", byId);
+        var withWhere = new SelectStatement("SELECT 1", byId);
         Assert.Equal("SELECT 1", select.GetText());
         Assert.Null(select.Where);
         Assert.Same(byId, withWhere.Where);
@@ -125,15 +125,15 @@ public class CoreTests
         Assert.Equal(new Value.Int(1), Assert.IsType<Literal>(idEquals.Right).Value);
 
         var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
-        var query = new QueryStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
+        var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
         Assert.Equal("SELECT id, name FROM users WHERE id = $id AND age > $age", query.GetText());
         Assert.Same(where, query.Where);
-        Assert.Equal("SELECT * FROM users", new QueryStatement(new() { Table = "users", Fields = [] }).GetText());
-        Assert.Null(new QueryStatement(new() { Table = "users", Fields = [] }).Where);
-        Assert.Equal("SELECT id, name FROM users", new QueryStatement(new() { Table = "users", Fields = ["id", "name"] }).GetText());
+        Assert.Equal("SELECT * FROM users", new SelectStatement(new() { Table = "users", Fields = [] }).GetText());
+        Assert.Null(new SelectStatement(new() { Table = "users", Fields = [] }).Where);
+        Assert.Equal("SELECT id, name FROM users", new SelectStatement(new() { Table = "users", Fields = ["id", "name"] }).GetText());
         Assert.Equal(
             "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id",
-            new QueryStatement(new()
+            new SelectStatement(new()
             {
                 Table = "users",
                 Fields = ["users.id", "orders.total"],
@@ -141,7 +141,7 @@ public class CoreTests
             }).GetText());
         Assert.Equal(
             "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
-            new QueryStatement(new()
+            new SelectStatement(new()
             {
                 Table = "users",
                 Fields = ["users.id"],
@@ -153,8 +153,8 @@ public class CoreTests
                     Join.Right("profiles", "users.id", "profiles.user_id"),
                 ],
             }).GetText());
-        Assert.Equal("SELECT id FROM users", new QueryStatement(new() { Table = "users", Fields = ["id"], Joins = [] }).GetText());
-        var grouped = new QueryStatement(new()
+        Assert.Equal("SELECT id FROM users", new SelectStatement(new() { Table = "users", Fields = ["id"], Joins = [] }).GetText());
+        var grouped = new SelectStatement(new()
         {
             Table = "orders",
             Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
@@ -165,16 +165,16 @@ public class CoreTests
             Limit = 10,
         });
         Assert.Equal("SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10", grouped.GetText());
-        var byStatus = new QueryStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
+        var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
         Assert.Equal("SELECT id FROM users GROUP BY id", byStatus.GetText());
-        var bounds = new QueryStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
+        var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
         Assert.Equal("SELECT MIN(n), MAX(n) FROM users", bounds.GetText());
-        var ordered = new QueryStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
+        var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
         Assert.Equal("SELECT id FROM users ORDER BY id ASC, name DESC", ordered.GetText());
-        var limited = new QueryStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
+        var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
         Assert.Equal("SELECT id FROM users LIMIT 10", limited.GetText());
-        Assert.Equal("SELECT id FROM users LIMIT 0", new QueryStatement(new() { Table = "users", Fields = ["id"], Limit = 0 }).GetText());
-        Assert.Throws<InvalidOperationException>(() => new QueryStatement(new() { Table = "users", Fields = ["id"], Limit = -1 }));
+        Assert.Equal("SELECT id FROM users LIMIT 0", new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 0 }).GetText());
+        Assert.Throws<InvalidOperationException>(() => new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = -1 }));
         var insert = new InsertStatement("users", fields);
         Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", insert.GetText());
         var update = new UpdateStatement("users", fields, where);
@@ -362,6 +362,36 @@ public class CoreTests
         Assert.Equal("x", typed.Current);
         Assert.True(await typed.Next());
         Assert.False(await typed.Next());
+        Assert.False(await ((IReader<string>)typed).NextResult());
+
+        var reads = 0;
+        var sets = new[] { new[] { new Row { ["id"] = 1 } }, new[] { new Row { ["id"] = 2 } } };
+        var set = 0;
+        var row = 0;
+        var streamed = new StreamingReader(
+            () =>
+            {
+                reads++;
+                if (row >= sets[set].Length) return Task.FromResult<Row?>(null);
+                return Task.FromResult<Row?>(sets[set][row++]);
+            },
+            () =>
+            {
+                set++;
+                row = 0;
+                return Task.FromResult(set < sets.Length);
+            },
+            () => Task.CompletedTask);
+        Assert.Equal(0, reads);
+        Assert.True(await streamed.Next());
+        Assert.Equal(new Value.Int(1), streamed.Current!["id"]);
+        Assert.False(await streamed.Next());
+        Assert.True(await streamed.NextResult());
+        Assert.Null(streamed.Current);
+        Assert.True(await streamed.Next());
+        Assert.Equal(new Value.Int(2), streamed.Current!["id"]);
+        Assert.False(await streamed.NextResult());
+        await streamed.DisposeAsync();
     }
 
     [Fact]
@@ -629,10 +659,10 @@ public class CoreTests
         var repo = new MockRepository<Dictionary<string, Value>>(connection);
         Assert.Null(await repo.ReadSingle());
         repo.Items.Add(new Row { ["id"] = 1 });
-        Assert.NotNull(await repo.ReadSingle(new MockQuery("id=1")));
+        Assert.NotNull(await repo.ReadSingle(new MockSelectStatement("id=1")));
         Assert.NotNull(await repo.ReadSingle(new MockWhere("id=1")));
         Assert.Single(await repo.Read().ToListAsync());
-        Assert.Single(await repo.Read(new MockQuery("all")).ToListAsync());
+        Assert.Single(await repo.Read(new MockSelectStatement("all")).ToListAsync());
         Assert.Single(await repo.Read(new MockWhere("all")).ToListAsync());
         await repo.Create(new Row { ["id"] = 3 });
         await repo.Update(new Row { ["id"] = 3 }, new MockWhere("id=3"));
@@ -665,7 +695,7 @@ public class CoreTests
         Assert.Same(ds.Repository, ((IDatasource)ds).CreateReadonlyRepository<object>());
         Assert.Equal("custom", new MockDatasource("custom").Provider);
 
-        var q = new MockQuery("q");
+        var q = new MockSelectStatement("q");
         var w = new MockWhere("w");
         Assert.Equal("q", q.GetText());
         Assert.Equal("w", w.GetText());

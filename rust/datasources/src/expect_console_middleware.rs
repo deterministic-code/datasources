@@ -16,10 +16,7 @@ pub struct ExpectConsoleMiddleware {
 }
 
 impl ExpectConsoleMiddleware {
-    pub fn new(
-        expected: Vec<String>,
-        now: impl Fn() -> String + Send + Sync + 'static,
-    ) -> Self {
+    pub fn new(expected: Vec<String>, now: impl Fn() -> String + Send + Sync + 'static) -> Self {
         Self::with_normalize(expected, now, signature)
     }
 
@@ -41,7 +38,10 @@ impl ExpectConsoleMiddleware {
                 }
                 let actual = normalize(line);
                 let i = *index_write.lock().unwrap();
-                let want = expected_write.get(i).map(String::as_str).unwrap_or("<missing>");
+                let want = expected_write
+                    .get(i)
+                    .map(String::as_str)
+                    .unwrap_or("<missing>");
                 if expected_write.get(i).map(String::as_str) != Some(actual.as_str()) {
                     *error_write.lock().unwrap() = Some(format!(
                         "console mismatch at {i}\nexpected: {want}\nactual:   {actual}"
@@ -83,7 +83,9 @@ impl ExpectConsoleMiddleware {
 
 pub fn signature(line: &str) -> String {
     match line.rfind("] ") {
-        Some(duration) if line.ends_with("ms") || line.ends_with("μs") => line[..=duration].to_string(),
+        Some(duration) if line.ends_with("ms") || line.ends_with("μs") => {
+            line[..=duration].to_string()
+        }
         _ => line.to_string(),
     }
 }

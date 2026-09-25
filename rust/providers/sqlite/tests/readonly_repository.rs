@@ -287,8 +287,8 @@ mod users_view_roles {
         create_repository_options, encode_rows, eq, Casing, ChangeCasingMapper, ConvertSchema,
         Datasource, DictionaryMapper, EnrichedReadonlyRepository, FlatToNestedMapper,
         FlatToNestedReadonlyEnrichmentStrategy, HashsetOptimizedReadonlyEnrichmentStrategy,
-        IReadonlyRepository, Join, MappedValue, Query, QueryStatement, QueryStatementOptions,
-        TransformMapper, TypeMap, TypeMapField, TypeMapGroup, Value, Where,
+        IReadonlyRepository, ISelectStatement, Join, MappedValue, SelectStatement,
+        SelectStatementOptions, TransformMapper, TypeMap, TypeMapField, TypeMapGroup, Value, Where,
     };
     use std::sync::Arc;
 
@@ -468,26 +468,27 @@ mod users_view_roles {
         let ds: &dyn Datasource = &*built;
         let connection = open(ds, &seed()).await;
         let source = ds.create_readonly_repository::<JoinRow>(Some(connection.clone()), None);
-        let command: Arc<dyn Query> = Arc::new(QueryStatement::new(QueryStatementOptions {
-            joins: &[
-                Join::left("user_type", "user_type.id", "user.user_type_id"),
-                Join::left("user_roles", "user_roles.user_id", "user.id"),
-                Join::left("roles", "roles.id", "user_roles.role_id"),
-            ],
-            ..QueryStatementOptions::new(
-                "user",
-                &[
-                    "user.id AS Key",
-                    "user.username AS Login",
-                    "user.is_enabled AS Active",
-                    "user.created AS Opened",
-                    "user_type.name AS UserType",
-                    "user.id AS UserId",
-                    "user_roles.role_id AS RoleId",
-                    "roles.name AS RoleName",
+        let command: Arc<dyn ISelectStatement> =
+            Arc::new(SelectStatement::new(SelectStatementOptions {
+                joins: &[
+                    Join::left("user_type", "user_type.id", "user.user_type_id"),
+                    Join::left("user_roles", "user_roles.user_id", "user.id"),
+                    Join::left("roles", "roles.id", "user_roles.role_id"),
                 ],
-            )
-        }));
+                ..SelectStatementOptions::new(
+                    "user",
+                    &[
+                        "user.id AS Key",
+                        "user.username AS Login",
+                        "user.is_enabled AS Active",
+                        "user.created AS Opened",
+                        "user_type.name AS UserType",
+                        "user.id AS UserId",
+                        "user_roles.role_id AS RoleId",
+                        "roles.name AS RoleName",
+                    ],
+                )
+            }));
         let users_repo = EnrichedReadonlyRepository::with_strategy(
             ds.create_readonly_repository::<UsersView>(Some(connection.clone()), None),
             Arc::new(FlatToNestedReadonlyEnrichmentStrategy::new(

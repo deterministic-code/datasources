@@ -12,7 +12,7 @@ export type {
   IDeleteStatement,
   IExpression,
   IInsertStatement,
-  IQuery,
+  ISelectStatement,
   IText,
   IStatement,
   IExecuteStoredProcedureStatement,
@@ -84,7 +84,7 @@ export {
   PrimaryKey,
   Aggregate,
   OrderBy,
-  QueryStatement,
+  SelectStatement,
   StatementParser,
   Subquery,
   ReferentialAction,
@@ -104,6 +104,8 @@ export type { ParameterDirection as ParameterDirectionName } from "./ParameterDi
 export { responseOf } from "./Response.ts";
 export type { Row } from "./Row.ts";
 export { ArrayReader } from "./ArrayReader.ts";
+export { StreamingReader, statementReader } from "./StreamingReader.ts";
+export { splitStatements } from "./splitStatements.ts";
 export { collectAsync } from "./collectAsync.ts";
 export { CommandMiddlewareHost } from "./CommandMiddlewareHost.ts";
 export {
@@ -144,7 +146,7 @@ export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";
 export { ProviderNotImplementedError } from "./ProviderNotImplementedError.ts";
 export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
-export type { Column, JoinKind, QueryStatementOptions, ReferentialAction as ReferentialActionName, SortDirection } from "./statements/index.ts";
+export type { Column, JoinKind, SelectStatementOptions, ReferentialAction as ReferentialActionName, SortDirection } from "./statements/index.ts";
 export type { Field, Scalar } from "./builders/index.ts";
 export { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 export {
@@ -161,7 +163,7 @@ export {
   MockConnection,
   MockDatasource,
   MockDriver,
-  MockQuery,
+  MockSelectStatement,
   MockReader,
   MockRepository,
   MockTransaction,

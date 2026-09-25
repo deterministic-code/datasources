@@ -7,6 +7,8 @@ describe("MockReader", () => {
     expect(await reader.next()).toBe(true);
     expect(reader.current).toBe("x");
     expect(await reader.next()).toBe(false);
+    expect(await reader.nextResult()).toBe(false);
+    await reader.dispose();
     reader.nextError = new Error("next");
     await expect(reader.next()).rejects.toThrow("next");
   });

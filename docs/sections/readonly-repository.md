@@ -19,7 +19,7 @@ interface IReadonlyRepository<T = unknown> extends IRepository<T>
 Returns the first item, or `undefined` when the result is empty.
 
 ```typescript
-readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
+readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
 ```
 
 - `query` — optional query, where, or stored procedure; omitted uses the default select
@@ -31,7 +31,7 @@ readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<
 Yields every item.
 
 ```typescript
-read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 - `query` — optional query, where, or stored procedure; omitted uses the default select
@@ -73,7 +73,7 @@ readonly type: Constructable<T>
 Yields every item. Table repositories convert then map; subclasses may override.
 
 ```typescript
-abstract read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+abstract read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 - `query` — optional query, where, or stored procedure; omitted uses the default select
@@ -85,7 +85,7 @@ abstract read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Async
 Returns the first item from [read](#readonlyrepository-read-query), or `undefined`.
 
 ```typescript
-readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
+readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
 ```
 
 - `query` — optional query, where, or stored procedure; omitted uses the default select
@@ -131,7 +131,7 @@ columnMappings?: IMapper<string, string>
 Rewrites the finished select. Omitted leaves the statement unchanged.
 
 ```typescript
-query?: IMapper<IQuery, IQuery>
+query?: IMapper<ISelectStatement, ISelectStatement>
 ```
 
 ##### rowsMapper
@@ -288,7 +288,7 @@ IMapper<string, string> ColumnMappings { get; init; }
 Rewrites the finished select. Omitted leaves the statement unchanged.
 
 ```csharp
-IMapper<IQuery, IQuery>? Query { get; init; }
+IMapper<ISelectStatement, ISelectStatement>? Query { get; init; }
 ```
 
 ##### RowsMapper

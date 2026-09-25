@@ -8,7 +8,7 @@ import {
   DatasourceFactory,
   DatasourceError,
   InsertStatement,
-  QueryStatement,
+  SelectStatement,
   UpdateStatement,
   WhereText,
 } from "@datasources/core";
@@ -241,8 +241,8 @@ describe("MemoryCommand and CRUDRepository", () => {
   it("performs repository CRUD", async () => {
     const { repo } = await openRepo([{ id: 1, name: "a" }]);
     expect(await repo.readSingle()).toEqual({ id: 1, name: "a" });
-    expect(await repo.readSingle(new QueryStatement('{"id":9}'))).toBeUndefined();
-    expect(await collectAsync(repo.read(new QueryStatement('{"id":1}')))).toEqual([
+    expect(await repo.readSingle(new SelectStatement('{"id":9}'))).toBeUndefined();
+    expect(await collectAsync(repo.read(new SelectStatement('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
     expect(await repo.readSingle(new WhereText('{"id":1}'))).toEqual({ id: 1, name: "a" });
@@ -306,7 +306,7 @@ describe("Memory datasource", () => {
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     const provider = new MemoryProvider();
     expect(provider.transaction(connection).isolation).toBe("serializable");
-    await expect(command.executeStatement(new QueryStatement("nope"))).rejects.toThrow(
+    await expect(command.executeStatement(new SelectStatement("nope"))).rejects.toThrow(
       "Unsupported Memory",
     );
     await command.executeReaderStatement(new InsertStatement("t", []));

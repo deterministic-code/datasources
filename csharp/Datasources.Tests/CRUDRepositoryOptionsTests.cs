@@ -57,8 +57,8 @@ public class CRUDRepositoryOptionsTests
         var statements = new RepositoryStatements(
             "users",
             ["id", "name"],
-            new TransformMapper<IQuery, IQuery>(
-                query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
+            new TransformMapper<ISelectStatement, ISelectStatement>(
+                query => new SelectStatement($"{query.GetText()} LIMIT 1", query.Where),
                 query => query),
             new TransformMapper<IInsertStatement, IInsertStatement>(
                 insert => new InsertStatement($"{insert.GetText()} RETURNING id"),
@@ -101,8 +101,8 @@ public class CRUDRepositoryOptionsTests
             Entity = "users",
             EntityMapper = Entity(),
             ColumnMappings = Columns(),
-            Query = new TransformMapper<IQuery, IQuery>(
-                query => new QueryStatement($"{query.GetText()} LIMIT 1", query.Where),
+            Query = new TransformMapper<ISelectStatement, ISelectStatement>(
+                query => new SelectStatement($"{query.GetText()} LIMIT 1", query.Where),
                 query => query),
             Insert = new TransformMapper<IInsertStatement, IInsertStatement>(
                 insert => new InsertStatement($"{insert.GetText()} RETURNING id"),

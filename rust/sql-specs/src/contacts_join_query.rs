@@ -1,7 +1,7 @@
-use datasources::{Join, QueryStatement, QueryStatementOptions};
+use datasources::{Join, SelectStatement, SelectStatementOptions};
 
-pub fn contacts_join_query() -> QueryStatement {
-    QueryStatement::new(QueryStatementOptions {
+pub fn contacts_join_query() -> SelectStatement {
+    SelectStatement::new(SelectStatementOptions {
         joins: &[
             Join::inner(
                 "contact_source",
@@ -18,7 +18,7 @@ pub fn contacts_join_query() -> QueryStatement {
             Join::left("phone", "contacts_base.id", "phone.contact_id"),
             Join::left("phone_type", "phone.phone_type_id", "phone_type.id"),
         ],
-        ..QueryStatementOptions::new(
+        ..SelectStatementOptions::new(
             "contacts_base",
             &[
                 "contacts_base.id AS id",

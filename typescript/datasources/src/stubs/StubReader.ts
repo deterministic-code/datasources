@@ -9,4 +9,10 @@ export class StubReader<T = unknown> implements IReader<T> {
   async next(): Promise<boolean> {
     notImplemented(this.provider);
   }
+
+  async nextResult(): Promise<boolean> {
+    notImplemented(this.provider);
+  }
+
+  async dispose(): Promise<void> {}
 }

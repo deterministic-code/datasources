@@ -1,0 +1,99 @@
+import { describe, expect, it } from "vitest";
+import { splitStatements, statementReader, StreamingReader } from "./index.ts";
+
+describe("splitStatements", () => {
+  it("splits on semicolons outside quotes and comments", () => {
+    expect(splitStatements("")).toEqual([]);
+    expect(splitStatements("SELECT 1")).toEqual(["SELECT 1"]);
+    expect(splitStatements("SELECT 1;")).toEqual(["SELECT 1"]);
+    expect(splitStatements("SELECT 1 AS id; SELECT 2 AS id")).toEqual([
+      "SELECT 1 AS id",
+      "SELECT 2 AS id",
+    ]);
+    expect(splitStatements("SELECT ';' AS id; SELECT 2 AS id")).toEqual([
+      "SELECT ';' AS id",
+      "SELECT 2 AS id",
+    ]);
+    expect(splitStatements('SELECT "a""b" AS id; SELECT `c`')).toEqual([
+      'SELECT "a""b" AS id',
+      "SELECT `c`",
+    ]);
+    expect(splitStatements("SELECT 1; -- tail\nSELECT 2")).toEqual([
+      "SELECT 1",
+      "-- tail\nSELECT 2",
+    ]);
+    expect(splitStatements("SELECT 1; /* ; */ SELECT 2")).toEqual([
+      "SELECT 1",
+      "/* ; */ SELECT 2",
+    ]);
+  });
+});
+
+describe("StreamingReader", () => {
+  it("reads the current set and advances on nextResult", async () => {
+    const sets = [[{ id: 1 }], [{ id: 2 }]];
+    let set = 0;
+    let row = 0;
+    let reads = 0;
+    let closed = false;
+    const reader = new StreamingReader(
+      async () => {
+        reads += 1;
+        const rows = sets[set] ?? [];
+        if (row >= rows.length) return undefined;
+        const current = rows[row];
+        row += 1;
+        return current;
+      },
+      async () => {
+        set += 1;
+        row = 0;
+        return set < sets.length;
+      },
+      async () => {
+        closed = true;
+      },
+    );
+    expect(reads).toBe(0);
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 1 });
+    expect(await reader.next()).toBe(false);
+    expect(reader.current).toBeUndefined();
+    expect(await reader.nextResult()).toBe(true);
+    expect(reader.current).toBeUndefined();
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 2 });
+    expect(await reader.nextResult()).toBe(false);
+    await reader.dispose();
+    await reader.dispose();
+    expect(closed).toBe(true);
+  });
+
+  it("loads one statement at a time", async () => {
+    const loaded: string[] = [];
+    const reader = statementReader(["SELECT 1 AS id", "SELECT 2 AS id"], async (sql) => {
+      loaded.push(sql);
+      return sql.endsWith("1 AS id") ? [{ id: 1 }] : [{ id: 2 }];
+    });
+    expect(loaded).toEqual([]);
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 1 });
+    expect(await reader.next()).toBe(false);
+    expect(loaded).toEqual(["SELECT 1 AS id"]);
+    expect(await reader.nextResult()).toBe(true);
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 2 });
+    expect(await reader.nextResult()).toBe(false);
+    expect(await reader.next()).toBe(false);
+    expect(loaded).toEqual(["SELECT 1 AS id", "SELECT 2 AS id"]);
+    await reader.dispose();
+  });
+
+  it("returns false when a statement reader has no statements", async () => {
+    const reader = statementReader([], async () => []);
+    expect(await reader.next()).toBe(false);
+    expect(await reader.nextResult()).toBe(false);
+    const blank = statementReader([""], async () => [{ id: 1 }]);
+    expect(await blank.next()).toBe(false);
+  });
+});

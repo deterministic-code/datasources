@@ -32,6 +32,7 @@ mod expect_console_middleware;
 mod flat_to_nested_readonly_enrichment_strategy;
 mod hashset_optimized_readonly_enrichment_strategy;
 mod i_repository;
+mod i_select_statement;
 mod i_where;
 mod id_key;
 mod identity_filter;
@@ -44,7 +45,6 @@ mod parameter;
 mod parameter_direction;
 mod parameters_to_map;
 mod provider_from_url;
-mod query;
 mod read_input;
 mod reader;
 mod readonly_enrichment_strategy;
@@ -61,12 +61,13 @@ mod reset;
 mod response;
 mod result;
 mod row;
+mod select_statement;
+mod split_statements;
 mod statement_parser;
 pub mod statements;
 pub mod stubs;
 mod table_repository_builder;
 mod table_repository_statements;
-mod text_query;
 mod transaction;
 mod value;
 mod where_text;
@@ -107,6 +108,7 @@ pub use expect_console_middleware::ExpectConsoleMiddleware;
 pub use flat_to_nested_readonly_enrichment_strategy::FlatToNestedReadonlyEnrichmentStrategy;
 pub use hashset_optimized_readonly_enrichment_strategy::HashsetOptimizedReadonlyEnrichmentStrategy;
 pub use i_repository::IRepository;
+pub use i_select_statement::ISelectStatement;
 pub use i_where::IWhere;
 pub use id_key::IdKey;
 pub use identity_filter::identity_filter;
@@ -118,17 +120,17 @@ pub use mappers::{
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
 pub use mocks::{
-    MockCommand, MockConnection, MockDatasource, MockDriver, MockQuery, MockReader, MockRepository,
-    MockTransaction, MockWhere,
+    MockCommand, MockConnection, MockDatasource, MockDriver, MockReader, MockRepository,
+    MockSelectStatement, MockTransaction, MockWhere,
 };
 pub use nest::Nest;
 pub use parameter::Parameter;
 pub use parameter_direction::ParameterDirection;
 pub use parameters_to_map::parameters_to_map;
 pub use provider_from_url::provider_from_url;
-pub use query::Query;
 pub use read_input::ReadInput;
 pub use reader::Reader;
+pub use split_statements::split_statements;
 pub use readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 pub use readonly_repository::ReadonlyRepository;
 pub use readonly_repository_options::ReadonlyRepositoryOptions;
@@ -142,13 +144,14 @@ pub use reset::reset;
 pub use response::Response;
 pub use result::Result;
 pub use row::Row;
+pub use select_statement::SelectStatement;
 pub use statement_parser::StatementParser;
 pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault,
     CreateIndexStatement, CreateTableStatement, DeleteStatement, ExecuteStoredProcedureStatement,
     Expression, ForeignKey, Identifier, InsertStatement, Literal, NotNull, Operator, OrderBy,
-    PrimaryKey, QueryStatementOptions, ReferentialAction, ReturnStatement, SortDirection,
+    PrimaryKey, ReferentialAction, ReturnStatement, SelectStatementOptions, SortDirection,
     Statement, StatementEvaluator, StatementKind, TableConstraint, Text, UniqueConstraint,
     UpdateStatement, Where,
 };
@@ -158,7 +161,6 @@ pub use stubs::{
 };
 pub use table_repository_builder::RepositoryBuilder;
 pub use table_repository_statements::RepositoryStatements;
-pub use text_query::QueryStatement;
 pub use transaction::Transaction;
 pub use value::Value;
 pub use where_text::WhereText;

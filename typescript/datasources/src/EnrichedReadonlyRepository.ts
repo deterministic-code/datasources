@@ -2,7 +2,7 @@ import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentSt
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IEnriched } from "./IEnriched.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
-import type { IQuery } from "./statements/IQuery.ts";
+import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
@@ -66,7 +66,7 @@ export class EnrichedReadonlyRepository<T extends object>
     return items;
   };
 
-  async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
+  async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     if (query instanceof Where || query instanceof WhereText) {
       for await (const sourced of this[tracked](query)) yield sourced.item;
       return;
@@ -75,7 +75,7 @@ export class EnrichedReadonlyRepository<T extends object>
   }
 
   async *[tracked](
-    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
     const items: T[] = [];
     const sources: (Row | undefined)[] = [];

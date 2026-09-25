@@ -122,7 +122,7 @@ enrich(items: T[]): Promise<T[]>
 Reads through the inner repository, then enriches.
 
 ```typescript
-read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 - `query` — optional query, where, or stored procedure
@@ -286,7 +286,7 @@ interface IReadonlyEnrichmentStrategy<T extends object> extends IReadonlyEnrichm
 Reads through `inner`, then enriches.
 
 ```typescript
-read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 - `inner` — [IReadonlyRepository](./readonly-repository.md)

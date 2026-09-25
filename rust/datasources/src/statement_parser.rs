@@ -2,13 +2,13 @@ use crate::builders::{Join, JoinKind};
 use crate::i_where::IWhere;
 use crate::parameter::Parameter;
 use crate::result::Result;
+use crate::select_statement::SelectStatement;
 use crate::statements::statement::Statement;
 use crate::statements::text::Text;
 use crate::statements::{
     ArrayExpression, DeleteStatement, Expression, Identifier, InsertStatement, Literal, Operator,
-    OrderBy, QueryStatementOptions, UpdateStatement, Where,
+    OrderBy, SelectStatementOptions, UpdateStatement, Where,
 };
-use crate::text_query::QueryStatement;
 use crate::value::Value;
 use crate::DatasourceError;
 
@@ -154,7 +154,7 @@ impl<'a> Cursor<'a> {
         }
     }
 
-    fn select_statement(&mut self) -> Result<QueryStatement> {
+    fn select_statement(&mut self) -> Result<SelectStatement> {
         self.expect_word("SELECT")?;
         let distinct = self.try_word("DISTINCT");
         let fields = self.select_list()?;
@@ -195,7 +195,7 @@ impl<'a> Cursor<'a> {
         let group_refs: Vec<&str> = group_by.iter().map(String::as_str).collect();
         let where_ref = where_clause.as_ref().map(|clause| clause as &dyn IWhere);
         let having_ref = having.as_ref().map(|clause| clause as &dyn IWhere);
-        let mut statement = QueryStatement::new(QueryStatementOptions {
+        let mut statement = SelectStatement::new(SelectStatementOptions {
             distinct,
             where_clause: where_ref,
             joins: &joins,
@@ -204,7 +204,7 @@ impl<'a> Cursor<'a> {
             order_by: &order_by,
             limit,
             offset,
-            ..QueryStatementOptions::new(&table, &field_refs)
+            ..SelectStatementOptions::new(&table, &field_refs)
         });
         if let Some(clause) = where_clause {
             statement = statement.replace_where(clause);
@@ -263,7 +263,7 @@ impl<'a> Cursor<'a> {
         Ok(format!("({}) AS {}", nested.get_text(), self.ident()?))
     }
 
-    fn nested(&mut self) -> Result<QueryStatement> {
+    fn nested(&mut self) -> Result<SelectStatement> {
         self.expect_char('(')?;
         let query = self.select_statement()?;
         self.expect_char(')')?;

@@ -15,5 +15,7 @@ describe("ArrayReader", () => {
     expect(reader.current).toEqual({ id: 2 });
     expect(await reader.next()).toBe(false);
     expect(reader.current).toBeUndefined();
+    expect(await reader.nextResult()).toBe(false);
+    await reader.dispose();
   });
 });

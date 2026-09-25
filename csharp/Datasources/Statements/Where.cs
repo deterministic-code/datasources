@@ -196,11 +196,11 @@ public sealed record Where(IExpression Condition) : IWhere
             ? new Literal(value(id.Name, lit.Value))
             : Rewrite(bound, column, value);
 
-    static QueryStatement RewriteQuery(
-        QueryStatement query, Func<string, string> column, Func<string, Value, Value> value) =>
+    static SelectStatement RewriteQuery(
+        SelectStatement query, Func<string, string> column, Func<string, Value, Value> value) =>
         query.Table is null
             ? query
-            : new QueryStatement(new QueryStatementOptions
+            : new SelectStatement(new SelectStatementOptions
             {
                 Distinct = query.Distinct,
                 Table = query.Table,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectAsync, MockConnection, MockQuery, MockRepository, MockWhere } from "../index.ts";
+import { collectAsync, MockConnection, MockSelectStatement, MockRepository, MockWhere } from "../index.ts";
 import { tracked } from "../ReadonlyRepository.ts";
 
 describe("MockRepository", () => {
@@ -7,9 +7,9 @@ describe("MockRepository", () => {
     const repo = new MockRepository<{ id: number }>(new MockConnection());
     expect(await repo.readSingle()).toBeUndefined();
     repo.items = [{ id: 1 }, { id: 2 }];
-    expect(await repo.readSingle(new MockQuery("id=1"))).toEqual({ id: 1 });
+    expect(await repo.readSingle(new MockSelectStatement("id=1"))).toEqual({ id: 1 });
     expect(await collectAsync(repo.read())).toEqual([{ id: 1 }, { id: 2 }]);
-    expect(await collectAsync(repo.read(new MockQuery("all")))).toHaveLength(2);
+    expect(await collectAsync(repo.read(new MockSelectStatement("all")))).toHaveLength(2);
     expect(await repo.readSingle(new MockWhere("id=1"))).toEqual({ id: 1 });
     expect(await collectAsync(repo.read(new MockWhere("all")))).toHaveLength(2);
     expect(await collectAsync(repo[tracked]())).toEqual([{ item: { id: 1 } }, { item: { id: 2 } }]);

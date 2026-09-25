@@ -1,12 +1,12 @@
 namespace Datasources;
 
-public sealed record QueryStatement : IQuery
+public sealed record SelectStatement : ISelectStatement
 {
     readonly string text;
 
-    public QueryStatement(string text, IWhere? where = null) => (this.text, Where) = (text, where);
+    public SelectStatement(string text, IWhere? where = null) => (this.text, Where) = (text, where);
 
-    public QueryStatement(QueryStatementOptions options) : this(Select(options), options.Where)
+    public SelectStatement(SelectStatementOptions options) : this(Select(options), options.Where)
     {
         Distinct = options.Distinct;
         Table = options.Table;
@@ -31,7 +31,7 @@ public sealed record QueryStatement : IQuery
     public int? Offset { get; }
     public string GetText() => text;
 
-    static string Select(QueryStatementOptions options) =>
+    static string Select(SelectStatementOptions options) =>
         $"SELECT {(options.Distinct ? "DISTINCT " : "")}{(options.Fields.Count == 0 ? "*" : string.Join(", ", options.Fields))} FROM {options.Table}{JoinSql(options.Joins)}{WhereSql(options.Where)}{GroupSql(options.GroupBy)}{HavingSql(options.Having)}{OrderSql(options.OrderBy)}{LimitSql(options.Limit)}{OffsetSql(options.Offset)}";
 
     static string WhereSql(IWhere? where) => where is null ? "" : $" WHERE {where.GetText()}";

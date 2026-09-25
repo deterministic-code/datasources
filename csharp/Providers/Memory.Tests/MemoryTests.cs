@@ -96,8 +96,8 @@ public class MemoryTests
         var repo = new CRUDRepository<Dictionary<string, Value>>(conn);
         var command = new MemoryCommand(conn);
         Assert.NotNull(await repo.ReadSingle());
-        Assert.Null(await repo.ReadSingle(new QueryStatement("{\"id\":9}")));
-        Assert.NotEmpty(await repo.Read(new QueryStatement("{\"id\":1}")).ToListAsync());
+        Assert.Null(await repo.ReadSingle(new SelectStatement("{\"id\":9}")));
+        Assert.NotEmpty(await repo.Read(new SelectStatement("{\"id\":1}")).ToListAsync());
         Assert.NotNull(await repo.ReadSingle(new WhereText("{\"id\":1}")));
         Assert.NotEmpty(await repo.Read(new WhereText("{\"id\":1}")).ToListAsync());
         await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });

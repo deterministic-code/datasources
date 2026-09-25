@@ -2,7 +2,7 @@ export { MockCommand } from "./mock-command.ts";
 export { MockConnection } from "./mock-connection.ts";
 export { MockDatasource } from "./mock-datasource.ts";
 export { MockDriver } from "./mock-driver.ts";
-export { MockQuery } from "./mock-query.ts";
+export { MockSelectStatement } from "./mock-select-statement.ts";
 export { MockReader } from "./mock-reader.ts";
 export { MockRepository } from "./mock-repository.ts";
 export { MockTransaction } from "./mock-transaction.ts";

@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class QueryStatementOptions
+public sealed class SelectStatementOptions
 {
     public required string Table { get; init; }
     public required IReadOnlyList<string> Fields { get; init; }

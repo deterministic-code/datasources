@@ -103,6 +103,7 @@ async fn readers() {
     assert!(reader.next().await.unwrap());
     assert!(reader.current().is_some());
     assert!(!reader.next().await.unwrap());
+    assert!(!reader.next_result().await.unwrap());
     let collected = collect_reader(&ArrayReader::new(vec![record(&[("id", Value::Int(2))])]))
         .await
         .unwrap();
@@ -685,12 +686,15 @@ async fn published_mocks() {
         .unwrap()
         .push(record(&[("id", Value::Int(1))]));
     assert!(repo
-        .read_single(Some(&QueryStatement::text("id=1")))
+        .read_single(Some(&SelectStatement::text("id=1")))
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read(Some(&MockQuery::new("all"))).await.unwrap().len(),
+        repo.read(Some(&MockSelectStatement::new("all")))
+            .await
+            .unwrap()
+            .len(),
         1
     );
     assert!(repo
@@ -735,7 +739,7 @@ async fn published_mocks() {
     ds.create_repository::<Cells>(None, None);
     ds.create_readonly_repository::<Cells>(None, None);
 
-    let q = MockQuery::new("q");
+    let q = MockSelectStatement::new("q");
     let w = MockWhere::new("w");
     assert_eq!(q.get_text(), "q");
     assert_eq!(w.get_text(), "w");
@@ -1034,9 +1038,9 @@ fn statements_and_builders() {
     }
 
     let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
-    let query = QueryStatement::new(QueryStatementOptions {
+    let query = SelectStatement::new(SelectStatementOptions {
         where_clause: Some(&where_clause),
-        ..QueryStatementOptions::new("users", &["id", "name"])
+        ..SelectStatementOptions::new("users", &["id", "name"])
     });
     assert_eq!(
         query.get_text(),
@@ -1044,43 +1048,43 @@ fn statements_and_builders() {
     );
     assert!(query.where_clause().is_some());
     assert_eq!(
-        QueryStatement::new(QueryStatementOptions::new("users", &[])).get_text(),
+        SelectStatement::new(SelectStatementOptions::new("users", &[])).get_text(),
         "SELECT * FROM users"
     );
     assert!(
-        QueryStatement::new(QueryStatementOptions::new("users", &[]))
+        SelectStatement::new(SelectStatementOptions::new("users", &[]))
             .where_clause()
             .is_none()
     );
     assert_eq!(
-        QueryStatement::new(QueryStatementOptions::new("users", &["id", "name"])).get_text(),
+        SelectStatement::new(SelectStatementOptions::new("users", &["id", "name"])).get_text(),
         "SELECT id, name FROM users"
     );
     assert_eq!(
-        QueryStatement::new(QueryStatementOptions {
+        SelectStatement::new(SelectStatementOptions {
             joins: &[Join::inner("orders", "users.id", "orders.user_id")],
-            ..QueryStatementOptions::new("users", &["users.id", "orders.total"])
+            ..SelectStatementOptions::new("users", &["users.id", "orders.total"])
         })
         .get_text(),
         "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id"
     );
     assert_eq!(
-        QueryStatement::new(QueryStatementOptions {
+        SelectStatement::new(SelectStatementOptions {
             where_clause: Some(&Where::new(Operator::equals("users.id", 1_i64))),
             joins: &[
                 Join::inner("orders", "users.id", "orders.user_id"),
                 Join::left("payments", "orders.id", "payments.order_id"),
                 Join::right("profiles", "users.id", "profiles.user_id"),
             ],
-            ..QueryStatementOptions::new("users", &["users.id"])
+            ..SelectStatementOptions::new("users", &["users.id"])
         })
         .get_text(),
         "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
     );
     assert_eq!(
-        QueryStatement::new(QueryStatementOptions {
+        SelectStatement::new(SelectStatementOptions {
             joins: &[],
-            ..QueryStatementOptions::new("users", &["id"])
+            ..SelectStatementOptions::new("users", &["id"])
         })
         .get_text(),
         "SELECT id FROM users"
@@ -1088,7 +1092,7 @@ fn statements_and_builders() {
     let count = Aggregate::count("*", Some("n"));
     let total = Aggregate::sum("amount", Some("total"));
     let grouped_fields = ["status", count.as_str(), total.as_str()];
-    let grouped = QueryStatement::new(QueryStatementOptions {
+    let grouped = SelectStatement::new(SelectStatementOptions {
         where_clause: Some(&Where::new(Operator::equals("status", "open"))),
         joins: &[Join::inner(
             "customers",
@@ -1098,39 +1102,39 @@ fn statements_and_builders() {
         group_by: &["status"],
         order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],
         limit: Some(10),
-        ..QueryStatementOptions::new("orders", &grouped_fields)
+        ..SelectStatementOptions::new("orders", &grouped_fields)
     });
     assert_eq!(
         grouped.get_text(),
         "SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10"
     );
-    let by_status = QueryStatement::new(QueryStatementOptions {
+    let by_status = SelectStatement::new(SelectStatementOptions {
         group_by: &["id"],
-        ..QueryStatementOptions::new("users", &["id"])
+        ..SelectStatementOptions::new("users", &["id"])
     });
     assert_eq!(by_status.get_text(), "SELECT id FROM users GROUP BY id");
     let min_n = Aggregate::min("n", None);
     let max_n = Aggregate::max("n", None);
     let bound_fields = [min_n.as_str(), max_n.as_str()];
-    let bounds = QueryStatement::new(QueryStatementOptions::new("users", &bound_fields));
+    let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));
     assert_eq!(bounds.get_text(), "SELECT MIN(n), MAX(n) FROM users");
-    let ordered = QueryStatement::new(QueryStatementOptions {
+    let ordered = SelectStatement::new(SelectStatementOptions {
         order_by: &[OrderBy::asc("id"), OrderBy::desc("name")],
-        ..QueryStatementOptions::new("users", &["id"])
+        ..SelectStatementOptions::new("users", &["id"])
     });
     assert_eq!(
         ordered.get_text(),
         "SELECT id FROM users ORDER BY id ASC, name DESC"
     );
-    let limited = QueryStatement::new(QueryStatementOptions {
+    let limited = SelectStatement::new(SelectStatementOptions {
         limit: Some(10),
-        ..QueryStatementOptions::new("users", &["id"])
+        ..SelectStatementOptions::new("users", &["id"])
     });
     assert_eq!(limited.get_text(), "SELECT id FROM users LIMIT 10");
     assert_eq!(
-        QueryStatement::new(QueryStatementOptions {
+        SelectStatement::new(SelectStatementOptions {
             limit: Some(0),
-            ..QueryStatementOptions::new("users", &["id"])
+            ..SelectStatementOptions::new("users", &["id"])
         })
         .get_text(),
         "SELECT id FROM users LIMIT 0"
@@ -1287,11 +1291,11 @@ fn statements_and_builders() {
     assert!(Response::new(1_i64, 2).parameters.is_none());
     assert_eq!(ReturnStatement::text("x").get_text(), "x");
 
-    let query = QueryStatement::with_where("SELECT 1", WhereText::new("id = 1"));
+    let query = SelectStatement::with_where("SELECT 1", WhereText::new("id = 1"));
     assert_eq!(query.get_text(), "SELECT 1");
     assert!(query.where_clause().is_some());
-    assert!(QueryStatement::text("SELECT 1").where_clause().is_none());
-    let mock = MockQuery::with_where("q", MockWhere::new("w"));
+    assert!(SelectStatement::text("SELECT 1").where_clause().is_none());
+    let mock = MockSelectStatement::with_where("q", MockWhere::new("w"));
     assert!(mock.where_clause().is_some());
     assert_eq!(InsertStatement::text("x").get_text(), "x");
     assert_eq!(UpdateStatement::text("x", None).get_text(), "x");
@@ -1308,9 +1312,9 @@ fn statements_and_builders() {
 #[test]
 #[should_panic(expected = "negative limit")]
 fn rejects_a_negative_limit() {
-    QueryStatement::new(QueryStatementOptions {
+    SelectStatement::new(SelectStatementOptions {
         limit: Some(-1),
-        ..QueryStatementOptions::new("users", &["id"])
+        ..SelectStatementOptions::new("users", &["id"])
     });
 }
 
@@ -1644,9 +1648,9 @@ async fn table_repository() {
     assert!(repo.read_single(None).await.unwrap().is_some());
 
     let where_clause = Where::new(Operator::equals("id", 9_i64));
-    let query = QueryStatement::new(QueryStatementOptions {
+    let query = SelectStatement::new(SelectStatementOptions {
         where_clause: Some(&where_clause),
-        ..QueryStatementOptions::new("users", &["id"])
+        ..SelectStatementOptions::new("users", &["id"])
     });
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.read_single(Some(&query)).await.unwrap().is_none());

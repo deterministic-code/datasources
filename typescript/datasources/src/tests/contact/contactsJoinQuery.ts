@@ -1,7 +1,7 @@
-import { Join, QueryStatement, type IQuery } from "../../index.ts";
+import { Join, SelectStatement, type ISelectStatement } from "../../index.ts";
 
-export const contactsJoinQuery = (): IQuery =>
-  new QueryStatement({
+export const contactsJoinQuery = (): ISelectStatement =>
+  new SelectStatement({
     table: "contacts_base",
     fields: [
       "contacts_base.id AS id",

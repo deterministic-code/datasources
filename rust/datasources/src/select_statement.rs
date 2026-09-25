@@ -1,11 +1,11 @@
 use crate::builders::{Join, JoinKind};
+use crate::i_select_statement::ISelectStatement;
 use crate::i_where::IWhere;
-use crate::query::Query;
 use crate::statements::statement::Statement;
 use crate::statements::text::Text;
-use crate::statements::{OrderBy, QueryStatementOptions};
+use crate::statements::{OrderBy, SelectStatementOptions};
 
-pub struct QueryStatement {
+pub struct SelectStatement {
     text: String,
     where_clause: Option<Box<dyn IWhere>>,
     pub distinct: bool,
@@ -19,7 +19,7 @@ pub struct QueryStatement {
     pub offset: Option<i64>,
 }
 
-impl QueryStatement {
+impl SelectStatement {
     pub fn text(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -52,7 +52,7 @@ impl QueryStatement {
         }
     }
 
-    pub fn new(options: QueryStatementOptions<'_>) -> Self {
+    pub fn new(options: SelectStatementOptions<'_>) -> Self {
         let fields = if options.fields.is_empty() {
             "*".to_string()
         } else {
@@ -114,13 +114,13 @@ impl QueryStatement {
     }
 }
 
-impl Text for QueryStatement {
+impl Text for SelectStatement {
     fn get_text(&self) -> String {
         self.text.clone()
     }
 }
 
-impl Statement for QueryStatement {
+impl Statement for SelectStatement {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -131,20 +131,20 @@ impl Statement for QueryStatement {
             .unwrap_or_default()
     }
     fn kind(&self) -> crate::statements::StatementKind {
-        crate::statements::StatementKind::Query
+        crate::statements::StatementKind::Select
     }
     fn predicate(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
 }
 
-impl crate::ReadInput for QueryStatement {
+impl crate::ReadInput for SelectStatement {
     fn as_statement(&self) -> Option<&dyn crate::Statement> {
         Some(self)
     }
 }
 
-impl Query for QueryStatement {
+impl ISelectStatement for SelectStatement {
     fn where_clause(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
