@@ -49,3 +49,33 @@ pub fn sql_text(lines: &[String]) -> Vec<String> {
         .map(|line| normalize_console_line(line))
         .collect()
 }
+
+fn mask_update_result(line: &str) -> String {
+    let Some(at) = line.find("result: ") else {
+        return line.to_string();
+    };
+    let rest = &line[at + "result: ".len()..];
+    let end = rest.find(|c: char| c == ',' || c == '}').unwrap_or(rest.len());
+    format!("{}result: <id>{}", &line[..at], &rest[end..])
+}
+
+pub fn dialect_transcript(lines: &[String]) -> Vec<String> {
+    let mut update = false;
+    lines
+        .iter()
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let text = normalize_console_line(line)
+                .replace(": True", ": 1")
+                .replace(": False", ": 0");
+            if text.contains("][Start]-") {
+                update = text.contains("][Start]-[UPDATE ");
+            }
+            if update && text.contains("][AfterCommand]-") {
+                mask_update_result(&text)
+            } else {
+                text
+            }
+        })
+        .collect()
+}

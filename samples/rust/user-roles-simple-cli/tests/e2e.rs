@@ -498,8 +498,11 @@ fn replace_mysql_db(url: &str, name: &str) -> String {
 }
 
 fn uuid() -> String {
-    format!("{:?}", std::time::SystemTime::now())
-        .chars()
-        .filter(|ch| ch.is_ascii_hexdigit())
-        .collect()
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(0);
+    let ticks = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("time")
+        .as_nanos();
+    format!("{ticks:x}{:x}", N.fetch_add(1, Ordering::Relaxed))
 }
