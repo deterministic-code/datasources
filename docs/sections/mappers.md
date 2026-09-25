@@ -107,7 +107,7 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ## Remarks
 
-Repository read is convert, then map. [ReadonlyRepositoryOptions.RowsMapper](./readonly-repository.md#rowsmapper) is the read-row mapper. `Repository.Mapper` / `mapper` is that mapper.
+Repository read is convert, then map. [ReadonlyRepositoryOptions.RowsMapper](./readonly-repository.md#rowsmapper) is the read-row mapper.
 
 ## See also
 
