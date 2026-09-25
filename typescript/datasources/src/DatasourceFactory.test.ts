@@ -12,9 +12,9 @@ import {
   untyped,
 } from "./index.ts";
 
-class SelectText<T> extends ReadonlyRepository<T> {
+class SelectText extends ReadonlyRepository<object> {
   static of(repo: object): string | undefined {
-    return (repo as SelectText<T>).statements?.query().getText();
+    return (repo as SelectText).statements?.query().getText();
   }
 }
 
