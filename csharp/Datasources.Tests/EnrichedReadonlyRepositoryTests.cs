@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-public class EnrichedReadonlyRepositoryTests
+public class ReadonlyRepositoryTests
 {
     sealed class Parent
     {
@@ -40,7 +40,7 @@ public class EnrichedReadonlyRepositoryTests
             new Parent { id = 1, type_id = 10 },
             new Parent { id = 2, type_id = 99 });
         var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 10, name = "person" });
-        var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
+        var repo = new ReadonlyRepository<Parent>(parents, strategy);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         var items = new List<Parent>();
         await foreach (var item in repo.Read())
@@ -65,7 +65,7 @@ public class EnrichedReadonlyRepositoryTests
             new Child { parent_id = 1, label = "a" },
             new Child { parent_id = 1, label = "b" },
             new Child { parent_id = 2, label = "x" });
-        var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
+        var repo = new ReadonlyRepository<Parent>(parents, strategy);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         repo.AddEnriched("children", "id", children, "parent_id", many: true);
         var item = await repo.ReadSingle();
@@ -90,7 +90,7 @@ public class EnrichedReadonlyRepositoryTests
         var children = new ListReadonlyRepository<Child>(
             new Child { parent_id = 1, type_id = 3, label = "a" },
             new Child { parent_id = 1, type_id = 9, label = "b" });
-        var repo = new EnrichedReadonlyRepository<Parent>(parents, strategy);
+        var repo = new ReadonlyRepository<Parent>(parents, strategy);
         repo.AddEnriched("type_name", "type_id", types, "id", "name");
         repo.AddEnriched("children", "id", children, "parent_id", many: true,
             nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
@@ -111,7 +111,7 @@ public class EnrichedReadonlyRepositoryTests
             new ListReadonlyRepository<Child>(
                 new Child { parent_id = 1, label = "a" },
                 new Child { parent_id = 2, label = "b" }));
-        var repo = new EnrichedReadonlyRepository<Parent>(
+        var repo = new ReadonlyRepository<Parent>(
             new ListReadonlyRepository<Parent>(
                 new Parent { id = 1, type_id = 10 },
                 new Parent { id = 2, type_id = 11 }),
@@ -132,7 +132,7 @@ public class EnrichedReadonlyRepositoryTests
             new ListReadonlyRepository<TypeRow>(
                 new TypeRow { id = 10, name = "person" },
                 new TypeRow { id = 11, name = "org" }));
-        var repo = new EnrichedReadonlyRepository<Parent>(
+        var repo = new ReadonlyRepository<Parent>(
             new ListReadonlyRepository<Parent>(
                 new Parent { id = 1, type_id = 10 },
                 new Parent { id = 2, type_id = 11 }));
@@ -148,7 +148,7 @@ public class EnrichedReadonlyRepositoryTests
         var source = new ListReadonlyRepository<Row>(
             new Row { ["id"] = 1, ["type_name"] = "person" },
             new Row { ["id"] = 2, ["type_name"] = "org" });
-        var repo = new EnrichedReadonlyRepository<Parent>(
+        var repo = new ReadonlyRepository<Parent>(
             new ListReadonlyRepository<Parent>(),
             new FlatToNestedReadonlyEnrichmentStrategy<Parent>(
                 source,
@@ -179,7 +179,7 @@ public class EnrichedReadonlyRepositoryTests
     public async Task LookupKeyComesFromRenamedRow()
     {
         var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 1, name = "admin" });
-        var repo = new EnrichedReadonlyRepository<View>(new SourcedView());
+        var repo = new ReadonlyRepository<View>(new SourcedView());
         repo.AddEnriched("UserType", "UserType", types, "id", "name");
         var item = await repo.ReadSingle();
         Assert.Equal("admin", item!.UserType);

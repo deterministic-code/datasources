@@ -85,10 +85,6 @@ pages:
     title: CRUD Repository
     group: Code Reference
     parent: Repository
-  - path: sections/enriched-repository.md
-    title: Enriched Repository
-    group: Code Reference
-    parent: Repository
   - path: sections/bulk-repository.md
     title: Bulk Repository
     group: Code Reference

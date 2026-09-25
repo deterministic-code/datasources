@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { collectAsync } from "./collectAsync.ts";
-import { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
+import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";
 import { FlatToNestedReadonlyEnrichmentStrategy } from "./FlatToNestedReadonlyEnrichmentStrategy.ts";
 import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
@@ -37,9 +37,9 @@ class Child {
 const parent = (id: number, type_id: number): Parent =>
   Object.assign(new Parent(), { id, type_id });
 
-describe("EnrichedReadonlyRepository", () => {
+describe("ReadonlyRepository", () => {
   it("reads one row through a where clause", async () => {
-    const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository([parent(1, 0)]));
+    const repo = new ReadonlyRepository(new ListReadonlyRepository([parent(1, 0)]));
     const byClause = await collectAsync(repo.read(new Where(new Operator.Equals("id", 1))));
     const byWhere = await collectAsync(repo.read(new WhereText("id = 1")));
     expect(byClause.map((item) => item.id)).toEqual([1]);
@@ -47,7 +47,7 @@ describe("EnrichedReadonlyRepository", () => {
   });
 
   it("fills lookup select and leaves missing default", async () => {
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository([parent(1, 10), parent(2, 99)]),
     );
     repo.addEnriched(
@@ -65,7 +65,7 @@ describe("EnrichedReadonlyRepository", () => {
   });
 
   it("fills lists and readSingle is enriched", async () => {
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository([parent(1, 10)]),
     );
     repo.addEnriched(
@@ -95,7 +95,7 @@ describe("EnrichedReadonlyRepository", () => {
   });
 
   it("nests list lookup and keeps root sibling", async () => {
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository([parent(1, 10)]),
     );
     repo.addEnriched(
@@ -135,7 +135,7 @@ describe("EnrichedReadonlyRepository", () => {
   });
 
   it("skips missing enrichment keys", async () => {
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository<object>([
         { type_id: null, type_name: "", children: [] },
         { type_name: "" },
@@ -162,18 +162,18 @@ describe("EnrichedReadonlyRepository", () => {
   });
 
   it("readSingle is undefined when empty", async () => {
-    const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository<Parent>([]));
+    const repo = new ReadonlyRepository(new ListReadonlyRepository<Parent>([]));
     expect(await repo.readSingle()).toBeUndefined();
   });
 
   it("enrich returns the same items", async () => {
     const items = [parent(1, 10)];
-    const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository(items));
+    const repo = new ReadonlyRepository(new ListReadonlyRepository(items));
     expect(await repo.enrich(items)).toBe(items);
   });
 
   it("nests on a singular related object and skips strings", async () => {
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository([
         Object.assign(parent(1, 10), { child: "skip" }),
         parent(2, 10),
@@ -205,7 +205,7 @@ describe("EnrichedReadonlyRepository", () => {
   });
 
   it("throws when an enrichment key is an object", async () => {
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository([Object.assign(parent(1, 10), { type_id: { x: 1 } })]),
     );
     repo.addEnriched(
@@ -231,7 +231,7 @@ describe("EnrichedReadonlyRepository", () => {
         Object.assign(new Child(), { parent_id: 2, label: "b" }),
       ]),
     );
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository([parent(1, 10), parent(2, 11)]),
       new HashsetOptimizedReadonlyEnrichmentStrategy(),
     );
@@ -245,7 +245,7 @@ describe("EnrichedReadonlyRepository", () => {
   });
 
   it("hashset assigns the related row when select is omitted", async () => {
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository([parent(1, 10)]),
       new HashsetOptimizedReadonlyEnrichmentStrategy(),
     );
@@ -265,7 +265,7 @@ describe("EnrichedReadonlyRepository", () => {
 
   it("hashset skips missing keys and unmatched rows", async () => {
     const blank = Object.assign(parent(2, 0), { type_id: undefined });
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository([parent(1, 10), parent(3, 99), blank]),
       new HashsetOptimizedReadonlyEnrichmentStrategy(),
     );
@@ -344,7 +344,7 @@ describe("EnrichedReadonlyRepository", () => {
         (item) => item,
       ),
     );
-    const repo = new EnrichedReadonlyRepository(
+    const repo = new ReadonlyRepository(
       new ListReadonlyRepository<Parent>([]),
       strategy,
     );

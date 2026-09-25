@@ -206,7 +206,11 @@ impl IRepository for CRUDRepository {
 #[async_trait]
 impl Enriched for CRUDRepository {
     async fn enrich(&self, items: &mut [Row]) -> Result<()> {
-        self.strategy.enrich(&self.tree, items).await
+        let mut rows = items.to_vec();
+        self.strategy.enrich(&self.tree, &mut rows).await?;
+        let count = items.len().min(rows.len());
+        items[..count].clone_from_slice(&rows[..count]);
+        Ok(())
     }
 }
 

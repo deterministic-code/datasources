@@ -35,6 +35,7 @@ const redirects = {
   "/sections/where-builder": "/sections/where-statement",
   "/sections/stored-procedure-statement": "/sections/execute-stored-procedure-statement",
   "/sections/crud-mapper": "/sections/crud-repository#crudrepositoryoptions",
+  "/sections/enriched-repository": "/sections/readonly-repository",
 };
 
 const watchToc = () => ({

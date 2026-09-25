@@ -4,6 +4,7 @@ import {
   ChangeCasingMapper, Datasource,
   DictionaryMapper,
   PluralizerMapper,
+  ReadonlyRepository,
   Where,
   createRepositoryOptions,
   eq,
@@ -137,7 +138,7 @@ describe("user view", () => {
         ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
     `);
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-    const usersRepo = ds.createReadonlyEnrichedRepository(UsersView, connection, {
+    const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
       entityMapper: new DictionaryMapper([["UsersView", "user"]]),
       columnMappings: new DictionaryMapper([
         ["Key", "id"],
@@ -146,7 +147,7 @@ describe("user view", () => {
         ["Opened", "created"],
         ["UserType", "user_type_id"],
       ]),
-    });
+    }) as ReadonlyRepository<UsersView>;
     const typesRepo = ds.createReadonlyRepository(UserType, connection, {
       entityMapper: casing,
       columnMappings: casing,

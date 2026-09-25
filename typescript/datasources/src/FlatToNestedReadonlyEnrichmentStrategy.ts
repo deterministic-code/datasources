@@ -21,21 +21,27 @@ export class FlatToNestedReadonlyEnrichmentStrategy<T extends object>
   ) {}
 
   async *read(
-    _inner: IReadonlyRepository<T>,
-    _tree: IRepositoryTree,
+    inner: IReadonlyRepository<T>,
+    tree: IRepositoryTree,
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<T> {
-    const rows: Cells[] = [];
-    for await (const row of this.source.read(this.command ?? query)) rows.push(row);
-    for (const item of this.mapper.map(rows).map(this.hydrate.map))
-      yield item;
+    const items: T[] = [];
+    for await (const item of inner.read(query)) items.push(item);
+    await this.enrich(tree, items);
+    yield* items;
   }
 
   enrich = async (
     _tree: IRepositoryTree,
-    _items: T[],
-    _sources?: (Row | undefined)[],
-  ): Promise<void> => {};
+    items: T[],
+    sources?: (Row | undefined)[],
+  ): Promise<void> => {
+    const rows: Cells[] = [];
+    const carried = sources?.filter((row): row is Row => row !== undefined) ?? [];
+    if (carried.length > 0) rows.push(...carried);
+    else for await (const row of this.source.read(this.command)) rows.push(row);
+    items.splice(0, items.length, ...this.mapper.map(rows).map(this.hydrate.map));
+  };
 
   apply = async <TRelated extends object>(
     _via: IReadonlyRepository<TRelated>,

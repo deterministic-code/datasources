@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  EnrichedReadonlyRepository,
   MockCommand,
   MockConnection,
   MockDatasource,
@@ -27,7 +26,6 @@ describe("MockDatasource", () => {
     expect(ds.createCommand()).toBe(ds.command);
     expect(ds.createRepository(untyped())).toBe(ds.repository);
     expect(ds.createReadonlyRepository(untyped())).toBe(ds.repository);
-    expect(ds.createReadonlyEnrichedRepository(untyped())).toBeInstanceOf(EnrichedReadonlyRepository);
 
     const named = new MockDatasource("custom");
     expect(named.provider).toBe("custom");

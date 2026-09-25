@@ -10,7 +10,6 @@ import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
-import { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
 import { createRepositoryOptions } from "./createRepositoryOptions.ts";
 
 export class Datasource implements IDatasource {
@@ -59,15 +58,6 @@ export class Datasource implements IDatasource {
     new ReadonlyRepository(
       connection ?? this.defaultConnection(),
       this.repositoryOptions(type, options),
-    );
-
-  createReadonlyEnrichedRepository = <T extends object>(
-    type: Constructable<T>,
-    connection?: IConnection,
-    options?: ReadonlyRepositoryOptions<T>,
-  ): EnrichedReadonlyRepository<T> =>
-    new EnrichedReadonlyRepository(
-      this.createReadonlyRepository(type, connection, options),
     );
 
   static create: (options?: DatasourceOptions) => IDatasource;

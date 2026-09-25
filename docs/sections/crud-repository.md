@@ -632,7 +632,7 @@ public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRep
 - `many` — collect a list
 - `nest` — child-node callback
 
-**Returns** [IEnriched](./enriched-repository.md#ienriched)`<T>`
+**Returns** [IEnriched](./readonly-repository.md#ienriched)`<T>`
 
 ##### Enrich(items)
 

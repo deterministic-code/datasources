@@ -444,5 +444,4 @@ See [Datasource](./datasource.md) for `CreateRepository` / `createRepository`.
 
 - [Readonly repository](./readonly-repository.md)
 - [CRUD repository](./crud-repository.md)
-- [Enriched repository](./enriched-repository.md)
 - [Bulk repository](./bulk-repository.md)

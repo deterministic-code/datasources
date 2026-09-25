@@ -37,26 +37,33 @@ impl FlatToNestedReadonlyEnrichmentStrategy {
 impl ReadonlyEnrichmentStrategy for FlatToNestedReadonlyEnrichmentStrategy {
     async fn read(
         &self,
-        _inner: &dyn IReadonlyRepository,
-        _tree: &RepositoryTree,
+        inner: &dyn IReadonlyRepository,
+        tree: &RepositoryTree,
         query: Option<&dyn ReadInput>,
     ) -> Result<Vec<Row>> {
-        let rows = match &self.command {
-            Some(command) => {
-                let input = StatementRead(command.as_ref());
-                self.source.read(Some(&input)).await?
+        let mut items = inner.read(query).await?;
+        self.enrich(tree, &mut items).await?;
+        Ok(items)
+    }
+
+    async fn enrich(&self, _tree: &RepositoryTree, items: &mut Vec<Row>) -> Result<()> {
+        let rows = if items.is_empty() {
+            match &self.command {
+                Some(command) => {
+                    let input = StatementRead(command.as_ref());
+                    self.source.read(Some(&input)).await?
+                }
+                None => self.source.read(None).await?,
             }
-            None => self.source.read(query).await?,
+        } else {
+            items.clone()
         };
-        Ok(self
+        *items = self
             .mapper
             .map(rows)
             .into_iter()
             .map(|row| (self.hydrate)(row))
-            .collect())
-    }
-
-    async fn enrich(&self, _tree: &RepositoryTree, _items: &mut [Row]) -> Result<()> {
+            .collect();
         Ok(())
     }
 

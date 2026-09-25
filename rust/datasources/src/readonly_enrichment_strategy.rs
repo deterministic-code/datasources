@@ -15,7 +15,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
         query: Option<&dyn ReadInput>,
     ) -> Result<Vec<Row>>;
 
-    async fn enrich(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()>;
+    async fn enrich(&self, tree: &RepositoryTree, items: &mut Vec<Row>) -> Result<()>;
 
     async fn apply(&self, node: &RepositoryTreeNode, parents: &mut [Row]) -> Result<()>;
 }

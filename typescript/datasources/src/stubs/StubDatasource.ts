@@ -7,8 +7,6 @@ import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { StubCommand } from "./StubCommand.ts";
 import { StubConnection } from "./StubConnection.ts";
 import { StubRepository } from "./StubRepository.ts";
-import { EnrichedReadonlyRepository } from "../EnrichedReadonlyRepository.ts";
-
 export class StubDatasource implements IDatasource {
   private connection?: IConnection;
 
@@ -33,10 +31,4 @@ export class StubDatasource implements IDatasource {
     type: Constructable<T>,
     connection?: IConnection,
   ): IReadonlyRepository<T> => this.createRepository(type, connection);
-
-  createReadonlyEnrichedRepository = <T extends object>(
-    type: Constructable<T>,
-    connection?: IConnection,
-  ): EnrichedReadonlyRepository<T> =>
-    new EnrichedReadonlyRepository(this.createReadonlyRepository(type, connection));
 }

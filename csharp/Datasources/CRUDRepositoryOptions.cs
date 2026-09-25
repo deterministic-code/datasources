@@ -8,6 +8,7 @@ public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> wher
     public IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
     public IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }
     public IMapper<Value, T>? Create { get; init; }
+    public IWriteEnrichmentStrategy<T>? Write { get; init; }
 
     internal static IMapper<Value, T> Identity(IReadOnlyList<string> ids) =>
         new TransformMapper<Value, T>(

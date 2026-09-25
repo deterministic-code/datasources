@@ -5,18 +5,27 @@ use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
 use crate::datasource_error::DatasourceError;
+use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
+use crate::enriched::Enriched;
+use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
-use crate::mappers::Mapper;
+use crate::mappers::{IdentityMapper, Mapper};
+use crate::nest::Nest;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::repository::IReadonlyRepository;
+use crate::repository_tree::RepositoryTree;
+use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
 use crate::select_statement::SelectStatement;
 use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
+use crate::stubs::StubConnection;
+use crate::stubs::StubRepository;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::table_repository_statements::RepositoryStatements;
 use crate::value::Value;
@@ -32,6 +41,9 @@ pub struct ReadonlyRepository {
     pub(crate) column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
     pub(crate) statements: RepositoryStatements,
     pub(crate) entity_type: TypeId,
+    inner_repo: Option<Arc<dyn IReadonlyRepository>>,
+    pub tree: RepositoryTree,
+    strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
 }
 
 impl ReadonlyRepository {
@@ -53,6 +65,8 @@ impl ReadonlyRepository {
     }
 
     pub fn from_built(built: BuiltRepository) -> Self {
+        let strategy: Arc<dyn ReadonlyEnrichmentStrategy> =
+            Arc::new(DefaultReadonlyEnrichmentStrategy);
         Self {
             connection: built.connection,
             middlewares: Vec::new(),
@@ -61,7 +75,59 @@ impl ReadonlyRepository {
             column_mappings: built.column_mappings,
             statements: built.statements,
             entity_type: TypeId::of::<Row>(),
+            inner_repo: None,
+            tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
+                Arc::new(StubRepository::new("readonly")),
+                "",
+                strategy.clone(),
+            )),
+            strategy,
         }
+    }
+
+    pub fn from_repository(inner: Arc<dyn IReadonlyRepository>) -> Self {
+        Self::with_strategy(inner, Arc::new(DefaultReadonlyEnrichmentStrategy))
+    }
+
+    pub fn with_strategy(
+        inner: Arc<dyn IReadonlyRepository>,
+        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    ) -> Self {
+        let entity_type = inner.entity_type();
+        Self {
+            connection: Arc::new(StubConnection::new("readonly")),
+            middlewares: Vec::new(),
+            row_converter: RowTypeConverter::new(Vec::new()),
+            rows_mapper: Box::new(IdentityMapper::<Row>::new()),
+            column_mappings: Box::new(IdentityMapper::<String>::new()),
+            statements: RepositoryStatements::new("", Vec::new()),
+            entity_type,
+            inner_repo: Some(inner.clone()),
+            tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
+                inner,
+                "",
+                strategy.clone(),
+            )),
+            strategy,
+        }
+    }
+
+    pub fn add_enriched(
+        &mut self,
+        into: impl Into<String>,
+        from: impl Into<String>,
+        via: impl EnrichmentVia,
+        by: impl Into<String>,
+        select: Option<String>,
+        many: bool,
+        nest: impl Nest,
+    ) -> &mut Self {
+        nest.apply(self.tree.parent.include(via, into, from, by, select, many));
+        self
+    }
+
+    fn enriched(&self) -> bool {
+        !self.tree.parent.items.is_empty()
     }
 
     pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
@@ -220,8 +286,22 @@ impl IRepository for ReadonlyRepository {
 }
 
 #[async_trait]
+impl Enriched for ReadonlyRepository {
+    async fn enrich(&self, items: &mut [Row]) -> Result<()> {
+        let mut rows = items.to_vec();
+        self.strategy.enrich(&self.tree, &mut rows).await?;
+        let count = items.len().min(rows.len());
+        items[..count].clone_from_slice(&rows[..count]);
+        Ok(())
+    }
+}
+
+#[async_trait]
 impl IReadonlyRepository for ReadonlyRepository {
     async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
+        if self.inner_repo.is_some() || self.enriched() {
+            return Ok(self.read(query).await?.into_iter().next());
+        }
         if let Some(where_clause) = query.and_then(ReadInput::as_where) {
             let (statement, params) = self.stored_query(where_clause)?;
             return self.fetch_one(&statement, params).await;
@@ -240,6 +320,21 @@ impl IReadonlyRepository for ReadonlyRepository {
     }
 
     async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+        if let Some(inner) = &self.inner_repo {
+            let mut rows = inner.read(query).await?;
+            self.strategy.enrich(&self.tree, &mut rows).await?;
+            return Ok(rows);
+        }
+        let mut rows = self.read_sql(query).await?;
+        if self.enriched() {
+            self.strategy.enrich(&self.tree, &mut rows).await?;
+        }
+        Ok(rows)
+    }
+}
+
+impl ReadonlyRepository {
+    async fn read_sql(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
         if let Some(where_clause) = query.and_then(ReadInput::as_where) {
             let (statement, params) = self.stored_query(where_clause)?;
             return self.fetch_all(&statement, params).await;

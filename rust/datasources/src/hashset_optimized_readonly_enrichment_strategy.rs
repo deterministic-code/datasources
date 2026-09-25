@@ -26,7 +26,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
         Ok(items)
     }
 
-    async fn enrich(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()> {
+    async fn enrich(&self, tree: &RepositoryTree, items: &mut Vec<Row>) -> Result<()> {
         tree.parent.enrich_from(items).await
     }
 
