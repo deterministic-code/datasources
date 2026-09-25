@@ -5,6 +5,7 @@ mod contact;
 mod datasource_factory;
 mod items_repository;
 mod list_repository;
+mod statement_parser;
 mod transaction;
 
 use crate::converters::{Cells, RowTypeConverter};
@@ -852,7 +853,7 @@ fn statements_and_builders() {
             right: Box::new(Expression::Literal(Literal::new("b"))),
         })
         .get_text(),
-        "a = b"
+        "'a' = 'b'"
     );
     assert!(WhereClause::new(Operator::Equals {
         left: Box::new(Expression::Literal(Literal::new(Value::Uuid(
@@ -982,7 +983,7 @@ fn statements_and_builders() {
         joins: &[Join::inner(
             "customers",
             "orders.customer_id",
-            "customers.id"
+            "customers.id",
         )],
         group_by: &["status"],
         order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],

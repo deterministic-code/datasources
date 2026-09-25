@@ -126,4 +126,108 @@ export namespace Operator {
       this.argument = argument;
     }
   }
+
+  export class IsNull extends Operator {
+    readonly argument: IExpression;
+    constructor(argument: IExpression) {
+      super();
+      this.argument = argument;
+    }
+  }
+
+  export class IsNotNull extends Operator {
+    readonly argument: IExpression;
+    constructor(argument: IExpression) {
+      super();
+      this.argument = argument;
+    }
+  }
+
+  export class Like extends Operator {
+    readonly left: IExpression;
+    readonly right: IExpression;
+    constructor(field: string, value: Cell);
+    constructor(left: IExpression, right: IExpression);
+    constructor(left: string | IExpression, right: IExpression | Cell) {
+      super();
+      [this.left, this.right] = pair(left, right);
+    }
+  }
+
+  export class NotLike extends Operator {
+    readonly left: IExpression;
+    readonly right: IExpression;
+    constructor(field: string, value: Cell);
+    constructor(left: IExpression, right: IExpression);
+    constructor(left: string | IExpression, right: IExpression | Cell) {
+      super();
+      [this.left, this.right] = pair(left, right);
+    }
+  }
+
+  export class Between extends Operator {
+    readonly value: IExpression;
+    readonly low: IExpression;
+    readonly high: IExpression;
+    constructor(field: string, low: Cell, high: Cell);
+    constructor(value: IExpression, low: IExpression, high: IExpression);
+    constructor(value: string | IExpression, low: IExpression | Cell, high: IExpression | Cell) {
+      super();
+      if (typeof value === "string") {
+        this.value = new Identifier(value);
+        this.low = new Literal(low as Cell);
+        this.high = new Literal(high as Cell);
+      } else {
+        this.value = value;
+        this.low = low as IExpression;
+        this.high = high as IExpression;
+      }
+    }
+  }
+
+  export class NotBetween extends Operator {
+    readonly value: IExpression;
+    readonly low: IExpression;
+    readonly high: IExpression;
+    constructor(field: string, low: Cell, high: Cell);
+    constructor(value: IExpression, low: IExpression, high: IExpression);
+    constructor(value: string | IExpression, low: IExpression | Cell, high: IExpression | Cell) {
+      super();
+      if (typeof value === "string") {
+        this.value = new Identifier(value);
+        this.low = new Literal(low as Cell);
+        this.high = new Literal(high as Cell);
+      } else {
+        this.value = value;
+        this.low = low as IExpression;
+        this.high = high as IExpression;
+      }
+    }
+  }
+
+  export class NotIn extends Operator {
+    readonly left: IExpression;
+    readonly right: IExpression;
+    constructor(field: string, values: Cell[]);
+    constructor(left: IExpression, right: IExpression);
+    constructor(left: string | IExpression, right: Cell[] | IExpression) {
+      super();
+      if (typeof left === "string") {
+        this.left = new Identifier(left);
+        this.right = new ArrayExpression((right as Cell[]).map((value) => new Literal(value)));
+      } else {
+        this.left = left;
+        this.right = right as IExpression;
+      }
+    }
+  }
+
+  /* v8 ignore next */
+  export class Exists extends Operator {
+    readonly argument: IExpression;
+    constructor(argument: IExpression) {
+      super();
+      this.argument = argument;
+    }
+  }
 }

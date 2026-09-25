@@ -42,11 +42,13 @@ import {
   StubReader,
   StubRepository,
   StubTransaction,
+  EnrichedReadonlyRepository,
   untyped,
   Where,
   type IReader,
 } from "./index.ts";
 import { DotEnv } from "./dotEnv.ts";
+import { tracked } from "./ReadonlyRepository.ts";
 
 const envKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "DEFAULT_PROVIDER", "DEFAULT_DATASOURCE_URL", "PROVIDER"] as const;
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
@@ -469,6 +471,9 @@ describe("Datasource registry", () => {
     expect(typedRead instanceof ReadonlyRepository && typedRead.statements?.query().getText()).toBe(
       "SELECT id, name FROM Item",
     );
+    const enriched = ds.createReadonlyEnrichedRepository(Item);
+    expect(enriched).toBeInstanceOf(EnrichedReadonlyRepository);
+    enriched.addLinked("name", "id", typedRead, "id", typed, "id", "name");
     expect(new DatasourceFactory().create({
       provider: "sqlite",
       database_schema: "main",
@@ -548,6 +553,20 @@ describe("stubs", () => {
 
     expect(ds.createRepository(untyped())).toBeInstanceOf(StubRepository);
     expect(ds.createReadonlyRepository(untyped(), provided)).toBeInstanceOf(StubRepository);
+    expect(ds.createReadonlyEnrichedRepository(untyped())).toBeInstanceOf(EnrichedReadonlyRepository);
+    expect(() => repo.readSingleById(1)).toThrow(ProviderNotImplementedError);
+    await expect(collectAsync(repo[tracked]())).rejects.toThrow(ProviderNotImplementedError);
+    await expect(collectAsync(repo[tracked](new Where("1=1")))).rejects.toThrow(
+      ProviderNotImplementedError,
+    );
+    class YieldingStub extends StubRepository<{ id: number }> {
+      override async *read(): AsyncIterable<{ id: number }> {
+        yield { id: 1 };
+      }
+    }
+    expect(await collectAsync(new YieldingStub("text", provided)[tracked]())).toEqual([
+      { item: { id: 1 } },
+    ]);
 
     const txn = new StubTransaction("text", provided);
     await expect(txn.commit()).rejects.toThrow(ProviderNotImplementedError);
@@ -658,7 +677,9 @@ describe("published mocks", () => {
     expect(await collectAsync(repo.read(new MockQuery("all")))).toHaveLength(2);
     expect(await repo.readSingle(new MockWhere("id=1"))).toEqual({ id: 1 });
     expect(await collectAsync(repo.read(new MockWhere("all")))).toHaveLength(2);
-    expect((await repo.create({ id: 3 })).rowsAffected).toBe(1);
+    expect(await collectAsync(repo[tracked]())).toEqual([{ item: { id: 1 } }, { item: { id: 2 } }]);
+    expect(await repo.readSingleById(1)).toEqual({ id: 1 });
+    expect(await repo.create({ id: 3 })).toEqual({ id: 3 });
     expect(
       (await repo.update({ id: 3 }, new MockWhere("id=3"))).rowsAffected,
     ).toBe(1);
@@ -694,6 +715,7 @@ describe("published mocks", () => {
     expect(ds.createCommand()).toBe(ds.command);
     expect(ds.createRepository(untyped())).toBe(ds.repository);
     expect(ds.createReadonlyRepository(untyped())).toBe(ds.repository);
+    expect(ds.createReadonlyEnrichedRepository(untyped())).toBeInstanceOf(EnrichedReadonlyRepository);
 
     const named = new MockDatasource("custom");
     expect(named.provider).toBe("custom");

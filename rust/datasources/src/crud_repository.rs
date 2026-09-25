@@ -23,8 +23,8 @@ use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statements::Text;
 use crate::statement::Statement;
+use crate::statements::Text;
 use crate::stubs::StubRepository;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::value::Value;
@@ -67,10 +67,7 @@ impl CRUDRepository {
         let mut options = create_repository_options::<T>();
         options.row_converter = Some(RowTypeConverter::of::<T>());
         let mut repo = Self::new(connection, options)?;
-        repo.inner
-            .as_mut()
-            .expect("sql repository")
-            .entity_type = TypeId::of::<T>();
+        repo.inner.as_mut().expect("sql repository").entity_type = TypeId::of::<T>();
         Ok(repo)
     }
 
@@ -100,10 +97,7 @@ impl CRUDRepository {
 
     pub fn from_built(mut built: BuiltRepository) -> Self {
         let id = built.ids.clone();
-        let create = built
-            .create
-            .take()
-            .unwrap_or_else(|| identity_mapper(&id));
+        let create = built.create.take().unwrap_or_else(|| identity_mapper(&id));
         let strategy: Arc<dyn ReadonlyEnrichmentStrategy> =
             Arc::new(DefaultReadonlyEnrichmentStrategy);
         Self {
@@ -130,11 +124,7 @@ impl CRUDRepository {
         many: bool,
         nest: impl Nest,
     ) -> &mut Self {
-        nest.apply(
-            self.tree
-                .parent
-                .include(via, into, from, by, select, many),
-        );
+        nest.apply(self.tree.parent.include(via, into, from, by, select, many));
         self
     }
 
@@ -261,7 +251,10 @@ impl ICRUDRepository for CRUDRepository {
         if matches!(id, Value::Null) {
             return Ok(item.clone());
         }
-        Ok(self.read_single_by_id(&id).await?.unwrap_or_else(|| item.clone()))
+        Ok(self
+            .read_single_by_id(&id)
+            .await?
+            .unwrap_or_else(|| item.clone()))
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
@@ -522,11 +515,15 @@ impl CRUDRepository {
             }
         }
         let ids = writer.id_names();
-        let keep: HashSet<String> = related.iter().filter_map(|row| row_key(row, &ids)).collect();
-        for row in existing
+        let keep: HashSet<String> = related
             .iter()
-            .filter(|row| row_key(row, &ids).map(|key| !keep.contains(&key)).unwrap_or(true))
-        {
+            .filter_map(|row| row_key(row, &ids))
+            .collect();
+        for row in existing.iter().filter(|row| {
+            row_key(row, &ids)
+                .map(|key| !keep.contains(&key))
+                .unwrap_or(true)
+        }) {
             let mut doomed = row.clone();
             self.persist(node, std::slice::from_mut(&mut doomed), Mode::Delete)
                 .await?;
@@ -534,7 +531,11 @@ impl CRUDRepository {
         }
         for row in &mut related {
             match row_key(row, &ids) {
-                Some(key) if existing.iter().any(|ex| row_key(ex, &ids) == Some(key.clone())) => {
+                Some(key)
+                    if existing
+                        .iter()
+                        .any(|ex| row_key(ex, &ids) == Some(key.clone())) =>
+                {
                     writer.update(&strip_enriched(row, node), None).await?;
                 }
                 _ => {

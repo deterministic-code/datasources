@@ -5,9 +5,12 @@ import type { OrderBy } from "./OrderBy.ts";
 export type QueryStatementOptions = {
   table: string;
   fields: string[];
+  distinct?: boolean;
   where?: IWhere;
   joins?: Join[];
   groupBy?: string[];
+  having?: IWhere;
   orderBy?: OrderBy[];
   limit?: number;
+  offset?: number;
 };

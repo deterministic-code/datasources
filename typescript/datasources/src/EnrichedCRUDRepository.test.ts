@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { CRUDRepository } from "./CRUDRepository.ts";
+import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
+import { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
+import { RepositoryTree } from "./RepositoryTree.ts";
+import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
@@ -320,6 +324,69 @@ describe("CRUDRepository", () => {
     const item = await repoOf(parents, types, children).readSingle();
     expect(item?.type_name).toBe("org");
     expect(item?.children.map((child) => child.label)).toEqual(["a"]);
+  });
+
+  it("copies nothing when create returns the same parent", async () => {
+    const parents = new ListCRUDRepository<Parent>();
+    const children = new ListCRUDRepository<Child>();
+    const item = assign(Parent, { children: [] });
+    parents.create = async () => item;
+    const repo = new CRUDRepository(parents);
+    repo.addEnriched("children", "id", children, "parent_id", undefined, true);
+    await expect(repo.create(item)).resolves.toBe(item);
+  });
+
+  it("returns the same child object create handed back", async () => {
+    const parents = new ListCRUDRepository<Parent>();
+    const child = assign(Child, { label: "a" });
+    const children = new ListCRUDRepository<Child>();
+    children.create = async () => child;
+    const repo = new CRUDRepository(parents);
+    repo.addEnriched("children", "id", children, "parent_id", undefined, true);
+    await repo.create(assign(Parent, { children: [child] }));
+    expect(child.label).toBe("a");
+  });
+
+  it("returns the parent when the type has no id column", async () => {
+    class LabelOnly {
+      label = "";
+      kids: { label: string }[] = [];
+    }
+    const parents = new ListCRUDRepository<LabelOnly>();
+    const kids = new ListCRUDRepository<{ label: string }>();
+    const repo = new CRUDRepository(parents);
+    repo.addEnriched("kids", "label", kids, "label", undefined, true);
+    const item = Object.assign(new LabelOnly(), { label: "a", kids: [] });
+    await expect(repo.create(item)).resolves.toBe(item);
+  });
+
+  it("skips children that were not loaded", async () => {
+    const parents = new ListCRUDRepository([assign(Parent, { id: 1 })]);
+    const children = new ListCRUDRepository<Child>();
+    const repo = new CRUDRepository(parents, undefined, new LazyWriteEnrichmentStrategy());
+    repo.addEnriched("children", "id", children, "parent_id", undefined, true);
+    await repo.update({ id: 1 } as Parent);
+    expect(children.items).toEqual([]);
+  });
+
+  it("requires a link repository for an association", async () => {
+    const root = new RepositoryTreeNode(new ListCRUDRepository<Parent>(), "");
+    root.items.push(
+      new RepositoryTreeNode(new ListCRUDRepository<Child>(), "children", root, async () => {}, {
+        into: "children",
+        from: "id",
+        by: "parent_id",
+        many: true,
+        association: { parent: "parent_id", related: "child_id" },
+      }),
+    );
+    await expect(
+      new DefaultWriteEnrichmentStrategy<Parent>().persist(
+        new RepositoryTree(root),
+        [assign(Parent, { id: 1, children: [] })],
+        "create",
+      ),
+    ).rejects.toThrow('Deep write requires a CRUD repository for "children"');
   });
 });
 

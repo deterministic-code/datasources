@@ -1,0 +1,76 @@
+# Shared SELECT grammar. C#, Rust, and TypeScript must all pass this file.
+name: select
+grammar: |
+  select      = "SELECT" "DISTINCT"? select_list "FROM" from_item join* where? group? having? order? limit? offset?
+  select_list = "*" | select_item ("," select_item)*
+  select_item = aggregate | column_ref ("AS" ident)?
+  column_ref  = ident
+  aggregate   = ("COUNT" | "SUM" | "MIN" | "MAX") "(" (ident | "*") ")" ("AS" ident)?
+  from_item   = ident | subquery "AS" ident
+  join        = qualified_join | cross_join
+  qualified_join = ("INNER" | "LEFT" | "RIGHT" | "FULL") "JOIN" from_item "ON" expr
+  cross_join  = "CROSS" "JOIN" from_item
+  where       = "WHERE" expr
+  group       = "GROUP BY" ident ("," ident)*
+  having      = "HAVING" expr
+  order       = "ORDER BY" order_item ("," order_item)*
+  order_item  = ident ("ASC" | "DESC")
+  limit       = "LIMIT" integer
+  offset      = "OFFSET" integer
+  subquery    = "(" select ")"
+  expr        = or_expr
+  or_expr     = and_expr ("OR" and_expr)*
+  and_expr    = not_expr ("AND" not_expr)*
+  not_expr    = "NOT" "(" expr ")" | predicate
+  predicate   = "EXISTS" subquery
+              | primary null_test
+              | primary "NOT" "IN" "(" in_list ")"
+              | primary "IN" "(" in_list ")"
+              | primary "NOT" "BETWEEN" param "AND" param
+              | primary "BETWEEN" param "AND" param
+              | primary "NOT" "LIKE" param
+              | primary "LIKE" param
+              | primary (cmp_op primary)?
+  in_list     = param ("," param)* | select
+  null_test   = "IS" "NULL" | "IS" "NOT" "NULL"
+  cmp_op      = "=" | "<>" | ">" | "<" | ">=" | "<="
+  primary     = ident | param | integer | string | "true" | "false" | "null" | subquery | "(" expr ")"
+  param       = "$" ident
+  string      = "'" (any except "'" | "''")* "'"
+  ident       = part ("." part)*
+  part        = name | quoted
+  name        = letter (letter | digit | "_")*
+  quoted      = '"' (any except '"' | '""')* '"'
+examples:
+  - name: not like
+    sql: SELECT id FROM users WHERE name NOT LIKE $name
+    where: { op: notLike, value: name, pattern: name }
+  - name: not between
+    sql: SELECT id FROM users WHERE age NOT BETWEEN $age_0 AND $age_1
+    where: { op: notBetween, value: age, low: age_0, high: age_1 }
+  - name: distinct offset having
+    sql: SELECT DISTINCT status FROM orders GROUP BY status HAVING status = $status ORDER BY status ASC LIMIT 10 OFFSET 5
+    distinct: true
+    groupBy: [status]
+    having: { op: eq, value: status }
+    limit: 10
+    offset: 5
+  - name: alias and quoted ident
+    sql: SELECT "user".id AS user_id FROM "user"
+    fields: ['"user".id AS user_id']
+    table: '"user"'
+  - name: string literal
+    sql: SELECT id FROM users WHERE 'a' = 'b'
+  - name: full join on expression
+    sql: SELECT id FROM users FULL JOIN profiles ON users.id = profiles.user_id AND profiles.active = $profiles.active
+    joins:
+      - kind: full
+        table: profiles
+  - name: subquery
+    sql: SELECT id FROM users WHERE EXISTS (SELECT id FROM posts WHERE posts.user_id = users.id)
+    where: { op: exists }
+  - name: cross join
+    sql: SELECT id FROM users CROSS JOIN tags
+    joins:
+      - kind: cross
+        table: tags

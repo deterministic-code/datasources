@@ -4,11 +4,11 @@ public sealed record UpdateStatement : IUpdateStatement
 {
     readonly string text;
 
-    public UpdateStatement(string text, IWhere? where = null)
+    public UpdateStatement(string text, IWhere? where = null, IReadOnlyList<Parameter>? parameters = null)
     {
         this.text = text;
         Where = where;
-        Parameters = [];
+        Parameters = parameters ?? [];
     }
 
     public UpdateStatement(string table, IReadOnlyList<Parameter> fields, IWhere? where = null)

@@ -45,6 +45,37 @@ pub enum Operator {
     Not {
         argument: Box<Expression>,
     },
+    IsNull {
+        argument: Box<Expression>,
+    },
+    IsNotNull {
+        argument: Box<Expression>,
+    },
+    Like {
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    NotLike {
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    Between {
+        value: Box<Expression>,
+        low: Box<Expression>,
+        high: Box<Expression>,
+    },
+    NotBetween {
+        value: Box<Expression>,
+        low: Box<Expression>,
+        high: Box<Expression>,
+    },
+    NotIn {
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    Exists {
+        argument: Box<Expression>,
+    },
 }
 
 impl Operator {
@@ -108,6 +139,92 @@ impl Operator {
         Self::Not {
             argument: Box::new(argument.into()),
         }
+    }
+
+    pub fn like(field: impl Into<String>, value: impl Into<Value>) -> Self {
+        Self::binary_value(field, value, |left, right| Self::Like { left, right })
+    }
+
+    pub fn not_like(field: impl Into<String>, value: impl Into<Value>) -> Self {
+        Self::binary_value(field, value, |left, right| Self::NotLike { left, right })
+    }
+
+    pub fn is_null(argument: impl Into<Expression>) -> Self {
+        Self::IsNull {
+            argument: Box::new(argument.into()),
+        }
+    }
+
+    pub fn is_not_null(argument: impl Into<Expression>) -> Self {
+        Self::IsNotNull {
+            argument: Box::new(argument.into()),
+        }
+    }
+
+    pub fn between(
+        field: impl Into<String>,
+        low: impl Into<Value>,
+        high: impl Into<Value>,
+    ) -> Self {
+        Self::bounds(field, low, high, |value, low, high| Self::Between {
+            value,
+            low,
+            high,
+        })
+    }
+
+    pub fn not_between(
+        field: impl Into<String>,
+        low: impl Into<Value>,
+        high: impl Into<Value>,
+    ) -> Self {
+        Self::bounds(field, low, high, |value, low, high| Self::NotBetween {
+            value,
+            low,
+            high,
+        })
+    }
+
+    pub fn not_in(field: impl Into<String>, values: Vec<Value>) -> Self {
+        Self::NotIn {
+            left: Box::new(Expression::Identifier(Identifier::new(field))),
+            right: Box::new(Expression::Array(ArrayExpression::new(
+                values
+                    .into_iter()
+                    .map(|value| Expression::Literal(Literal::new(value)))
+                    .collect(),
+            ))),
+        }
+    }
+
+    pub fn exists(argument: impl Into<Expression>) -> Self {
+        Self::Exists {
+            argument: Box::new(argument.into()),
+        }
+    }
+
+    fn binary_value(
+        field: impl Into<String>,
+        value: impl Into<Value>,
+        build: impl FnOnce(Box<Expression>, Box<Expression>) -> Self,
+    ) -> Self {
+        build(
+            Box::new(Expression::Identifier(Identifier::new(field))),
+            Box::new(Expression::Literal(Literal::new(value))),
+        )
+    }
+
+    fn bounds(
+        field: impl Into<String>,
+        low: impl Into<Value>,
+        high: impl Into<Value>,
+        build: impl FnOnce(Box<Expression>, Box<Expression>, Box<Expression>) -> Self,
+    ) -> Self {
+        build(
+            Box::new(Expression::Identifier(Identifier::new(field))),
+            Box::new(Expression::Literal(Literal::new(low))),
+            Box::new(Expression::Literal(Literal::new(high))),
+        )
     }
 
     pub fn in_list(field: impl Into<String>, values: Vec<Value>) -> Self {

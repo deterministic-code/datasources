@@ -3,14 +3,15 @@ pub enum JoinKind {
     Inner,
     Left,
     Right,
+    Full,
+    Cross,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Join {
     pub kind: JoinKind,
     pub table: String,
-    pub left: String,
-    pub right: String,
+    pub on: Option<String>,
 }
 
 impl Join {
@@ -19,7 +20,7 @@ impl Join {
         left: impl Into<String>,
         right: impl Into<String>,
     ) -> Self {
-        Self::new(JoinKind::Inner, table, left, right)
+        Self::equality(JoinKind::Inner, table, left, right)
     }
 
     pub fn left(
@@ -27,7 +28,7 @@ impl Join {
         left: impl Into<String>,
         right: impl Into<String>,
     ) -> Self {
-        Self::new(JoinKind::Left, table, left, right)
+        Self::equality(JoinKind::Left, table, left, right)
     }
 
     pub fn right(
@@ -35,20 +36,45 @@ impl Join {
         left: impl Into<String>,
         right: impl Into<String>,
     ) -> Self {
-        Self::new(JoinKind::Right, table, left, right)
+        Self::equality(JoinKind::Right, table, left, right)
     }
 
-    fn new(
+    pub fn full(
+        table: impl Into<String>,
+        left: impl Into<String>,
+        right: impl Into<String>,
+    ) -> Self {
+        Self::equality(JoinKind::Full, table, left, right)
+    }
+
+    pub fn cross(table: impl Into<String>) -> Self {
+        Self {
+            kind: JoinKind::Cross,
+            table: table.into(),
+            on: None,
+        }
+    }
+
+    pub fn condition(kind: JoinKind, table: impl Into<String>, on: impl Into<String>) -> Self {
+        Self {
+            kind,
+            table: table.into(),
+            on: Some(on.into()),
+        }
+    }
+
+    fn equality(
         kind: JoinKind,
         table: impl Into<String>,
         left: impl Into<String>,
         right: impl Into<String>,
     ) -> Self {
+        let left = left.into();
+        let right = right.into();
         Self {
             kind,
             table: table.into(),
-            left: left.into(),
-            right: right.into(),
+            on: Some(format!("{left} = {right}")),
         }
     }
 }

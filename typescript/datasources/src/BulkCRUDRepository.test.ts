@@ -83,4 +83,18 @@ describe("BulkCRUDRepository", () => {
     expect(parents.items).toHaveLength(0);
     expect(children.items.map((child) => child.label)).toEqual(["keep"]);
   });
+
+  it("reads an Id column and ignores an object id", async () => {
+    class Named {
+      Id = 0;
+    }
+    const named = await new BulkCRUDRepository(new ListCRUDRepository<Named>()).createBulk([new Named()]);
+    expect(named.result).toBe(1);
+
+    const inner = new ListCRUDRepository<{ id: object }>();
+    inner.create = async () => ({ id: { n: 1 } });
+    const boxed = await new BulkCRUDRepository(inner).createBulk([{} as { id: object }]);
+    expect(boxed.result).toBeNull();
+    expect(boxed.rowsAffected).toBe(1);
+  });
 });

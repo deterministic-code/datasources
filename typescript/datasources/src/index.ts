@@ -83,6 +83,8 @@ export {
   Aggregate,
   OrderBy,
   QueryStatement,
+  StatementParser,
+  Subquery,
   ReferentialAction,
   StatementEvaluator,
   ExecuteStoredProcedureStatement,

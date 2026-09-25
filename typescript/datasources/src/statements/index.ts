@@ -28,6 +28,8 @@ export { WhereClause } from "./WhereClause.ts";
 export { StatementEvaluator } from "./StatementEvaluator.ts";
 export { Where } from "./Where.ts";
 export { QueryStatement } from "./QueryStatement.ts";
+export { StatementParser } from "./StatementParser.ts";
+export { Subquery } from "./Subquery.ts";
 export { InsertStatement } from "./InsertStatement.ts";
 export { UpdateStatement } from "./UpdateStatement.ts";
 export { DeleteStatement } from "./DeleteStatement.ts";

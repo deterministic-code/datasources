@@ -107,8 +107,7 @@ const createLinks = async (
   enrichment: Enrichment,
   parent: object,
 ): Promise<void> => {
-  const association = enrichment.association;
-  if (!association) return;
+  const association = enrichment.association!;
   const parentKey = requiredKey(parent, enrichment);
   for (const id of relatedIds(parent, enrichment))
     await writer.create({ [association.parent]: parentKey, [association.related]: id });
@@ -119,8 +118,7 @@ const syncLinks = async (
   enrichment: Enrichment,
   parent: object,
 ): Promise<void> => {
-  const association = enrichment.association;
-  if (!association) return;
+  const association = enrichment.association!;
   const parentKey = requiredKey(parent, enrichment);
   const existing = await loadColumn(writer, association.parent, parentKey);
   const wanted = relatedIds(parent, enrichment);

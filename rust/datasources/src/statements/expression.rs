@@ -9,4 +9,5 @@ pub enum Expression {
     Identifier(Identifier),
     Literal(Literal),
     Array(ArrayExpression),
+    Subquery(String),
 }

@@ -10,6 +10,9 @@ pub struct QueryStatementOptions<'a> {
     pub group_by: &'a [&'a str],
     pub order_by: &'a [OrderBy],
     pub limit: Option<i64>,
+    pub distinct: bool,
+    pub having: Option<&'a dyn Where>,
+    pub offset: Option<i64>,
 }
 
 impl<'a> QueryStatementOptions<'a> {
@@ -22,6 +25,9 @@ impl<'a> QueryStatementOptions<'a> {
             group_by: &[],
             order_by: &[],
             limit: None,
+            distinct: false,
+            having: None,
+            offset: None,
         }
     }
 }

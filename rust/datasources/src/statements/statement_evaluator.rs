@@ -23,6 +23,40 @@ impl StatementEvaluator {
                 is_true(&self.evaluate(left, parameters))
                     || is_true(&self.evaluate(right, parameters)),
             ),
+            Expression::Operator(Operator::IsNull { argument }) => {
+                Value::Bool(matches!(self.evaluate(argument, parameters), Value::Null))
+            }
+            Expression::Operator(Operator::IsNotNull { argument }) => {
+                Value::Bool(!matches!(self.evaluate(argument, parameters), Value::Null))
+            }
+            Expression::Operator(Operator::Like { left, right }) => like(
+                self.evaluate(left, parameters),
+                self.evaluate(right, parameters),
+            ),
+            Expression::Operator(Operator::NotLike { left, right }) => {
+                Value::Bool(!is_true(&like(
+                    self.evaluate(left, parameters),
+                    self.evaluate(right, parameters),
+                )))
+            }
+            Expression::Operator(Operator::Between { value, low, high }) => between(
+                self.evaluate(value, parameters),
+                self.evaluate(low, parameters),
+                self.evaluate(high, parameters),
+            ),
+            Expression::Operator(Operator::NotBetween { value, low, high }) => {
+                Value::Bool(!is_true(&between(
+                    self.evaluate(value, parameters),
+                    self.evaluate(low, parameters),
+                    self.evaluate(high, parameters),
+                )))
+            }
+            Expression::Operator(Operator::NotIn { left, right }) => {
+                Value::Bool(!self.contains(left, right, parameters))
+            }
+            Expression::Operator(Operator::Exists { .. }) | Expression::Subquery(_) => {
+                panic!("subquery is not evaluable")
+            }
             Expression::Operator(Operator::In { left, right }) => {
                 Value::Bool(self.contains(left, right, parameters))
             }
@@ -83,6 +117,39 @@ impl StatementEvaluator {
 
 fn is_true(value: &Value) -> bool {
     matches!(value, Value::Bool(true))
+}
+
+fn like(value: Value, pattern: Value) -> Value {
+    match (value, pattern) {
+        (Value::Null, _) | (_, Value::Null) => Value::Bool(false),
+        (Value::Text(text), Value::Text(pattern)) => Value::Bool(wild(&text, &pattern)),
+        _ => panic!("empty like"),
+    }
+}
+
+fn wild(text: &str, pattern: &str) -> bool {
+    fn walk(text: &[char], pattern: &[char]) -> bool {
+        match pattern.split_first() {
+            None => text.is_empty(),
+            Some(('%', rest)) => (0..=text.len()).any(|i| walk(&text[i..], rest)),
+            Some(('_', rest)) => text
+                .split_first()
+                .is_some_and(|(_, rest_text)| walk(rest_text, rest)),
+            Some((ch, rest)) => text
+                .split_first()
+                .is_some_and(|(head, rest_text)| head == ch && walk(rest_text, rest)),
+        }
+    }
+    let text: Vec<char> = text.chars().collect();
+    let pattern: Vec<char> = pattern.chars().collect();
+    walk(&text, &pattern)
+}
+
+fn between(value: Value, low: Value, high: Value) -> Value {
+    if matches!(value, Value::Null) || matches!(low, Value::Null) || matches!(high, Value::Null) {
+        return Value::Bool(false);
+    }
+    Value::Bool(compare(&value, &low) >= 0 && compare(&value, &high) <= 0)
 }
 
 fn compare(left: &Value, right: &Value) -> i32 {
