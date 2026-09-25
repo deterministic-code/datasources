@@ -33,7 +33,7 @@ public static class WriteLink
             new("p_created", created),
             new("p_updated", updated)
         ];
-        await WriteRow.Execute(app.Command, Schema.Ident(provider, linkTable), procedure, insert, call);
+        await WriteRow.Execute(app.Command, Schema.Ident(provider, linkTable), procedure, insert, call, app.Procedures);
         return "";
     }
 }

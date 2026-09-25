@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using Datasources;
 using Datasources.Mysql;
 using Datasources.Postgres;
@@ -14,7 +15,29 @@ namespace UserRolesSimpleCli.Tests;
 public sealed class ConsoleTranscriptTests
 {
     [Fact]
-    public Task Sqlite() => Match("sqlite", () => Connection("sqlite"));
+    public Task Sqlite() => Match(() => Connection("sqlite"), false, "sqlite.log");
+
+    [Fact]
+    public void SqlLogsMatch()
+    {
+        var sql = new[] { "sqlite", "mysql", "postgres" }.Select(SqlText).ToArray();
+        Assert.Equal(sql[0], sql[1]);
+        Assert.Equal(sql[0], sql[2]);
+    }
+
+    [Fact]
+    public void NormalizeDropsDialectNoise()
+    {
+        Assert.Equal(
+            "[<date>]-[datasource][Request]-[{password: <token>, updated: <token>, blob: <token>, id: <uuid>}]",
+            Normalize("[2026-09-22T00:00:00.000Z]-[datasource][Request]-[{password: hash, updated: AQID, blob: ab12, id: 11111111-1111-1111-1111-111111111111}] 2ms"));
+        Assert.Equal(
+            "[<date>]-[datasource][Start]-[INSERT INTO users (roles) VALUES ($name)]",
+            Normalize("[2026-09-22T00:00:00.000Z]-[datasource][Start]-[INSERT INTO `users` (\"roles\") VALUES ($name)] 3μs"));
+        Assert.Equal("count: 1234", Normalize("count: 1234"));
+        Assert.Equal("plain", Normalize("plain"));
+        Assert.Equal("[x] kept", Normalize("[x] kept"));
+    }
 
     [Fact]
     [Trait("Category", "e2e")]
@@ -23,6 +46,7 @@ public sealed class ConsoleTranscriptTests
         FreshCompose("mysql");
         var url = Environment.GetEnvironmentVariable("MYSQL_URL") ?? "mysql://ds:ds@127.0.0.1:3306/datasources";
         var name = $"ds_{Guid.NewGuid():N}"[..18];
+        var procedures = $"ds_{Guid.NewGuid():N}"[..18];
         try
         {
             await using (var admin = new MySqlConnection(ToMysql(url)))
@@ -32,7 +56,15 @@ public sealed class ConsoleTranscriptTests
                 create.CommandText = $"CREATE DATABASE `{name}`";
                 await create.ExecuteNonQueryAsync();
             }
-            await Match("mysql", () => new MysqlDriver().Connection(new Dictionary<string, string?> { ["url"] = ReplaceMysqlDb(url, name) }));
+            await using (var admin = new MySqlConnection(ToMysql(url)))
+            {
+                await admin.OpenAsync();
+                await using var create = admin.CreateCommand();
+                create.CommandText = $"CREATE DATABASE `{procedures}`";
+                await create.ExecuteNonQueryAsync();
+            }
+            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["url"] = ReplaceMysqlDb(url, name) }), false, "mysql.log");
+            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["url"] = ReplaceMysqlDb(url, procedures) }), true, "mysql-procedures.log");
         }
         finally
         {
@@ -43,6 +75,9 @@ public sealed class ConsoleTranscriptTests
                 await using var drop = admin.CreateCommand();
                 drop.CommandText = $"DROP DATABASE `{name}`";
                 await drop.ExecuteNonQueryAsync();
+                await using var dropProcedures = admin.CreateCommand();
+                dropProcedures.CommandText = $"DROP DATABASE `{procedures}`";
+                await dropProcedures.ExecuteNonQueryAsync();
             }
             finally
             {
@@ -67,7 +102,7 @@ public sealed class ConsoleTranscriptTests
                 create.CommandText = $"CREATE SCHEMA {schema}";
                 await create.ExecuteNonQueryAsync();
             }
-            await Match("postgres", () => new PostgresDriver().Connection(new Dictionary<string, string?> { ["url"] = url, ["schema"] = schema }));
+            await Match(() => new PostgresDriver().Connection(new Dictionary<string, string?> { ["url"] = url, ["schema"] = schema }), false, "postgres.log");
         }
         finally
         {
@@ -86,24 +121,24 @@ public sealed class ConsoleTranscriptTests
         }
     }
 
-    static async Task Match(string provider, Func<IConnection> connect)
+    static async Task Match(Func<IConnection> connect, bool procedures, string file)
     {
-        var path = Path.Combine(Shared(), $"{provider}.log");
+        var path = Path.Combine(Shared(), file);
         if (Environment.GetEnvironmentVariable("RECORD_CONSOLE") == "1")
         {
             var lines = new List<string>();
-            await Run(connect(), line => lines.Add(ExpectConsoleMiddleware.Signature(line)));
+            await Run(connect(), line => lines.Add(ExpectConsoleMiddleware.Signature(line)), procedures);
             await File.WriteAllLinesAsync(path, lines);
             return;
         }
-        var expected = (await File.ReadAllLinesAsync(path)).Where(line => line.Length > 0).ToArray();
+        var expected = (await File.ReadAllLinesAsync(path)).Where(line => line.Length > 0).Select(Normalize).ToArray();
         var specNow = DateTimeOffset.Parse(Spec().Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
-        var middleware = new ExpectConsoleMiddleware(expected, () => specNow);
-        await Run(connect(), middleware);
+        var middleware = new ExpectConsoleMiddleware(expected, () => specNow, Normalize);
+        await Run(connect(), middleware, procedures);
         middleware.Complete();
     }
 
-    static async Task Run(IConnection connection, ICommandMiddleware middleware)
+    static async Task Run(IConnection connection, ICommandMiddleware middleware, bool procedures)
     {
         var spec = Spec();
         await connection.Open();
@@ -111,13 +146,37 @@ public sealed class ConsoleTranscriptTests
         await Migrate.Apply(command);
         var now = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
         command.AddMiddleware(middleware);
-        var app = new App(command, () => now.UtcDateTime, _ => "hash", () => [1, 2, 3]);
+        var app = new App(command, () => now.UtcDateTime, _ => "hash", () => [1, 2, 3], procedures);
         foreach (var step in spec.Steps)
             await app.Run(Parse.Args([.. step.Argv]));
     }
 
-    static async Task Run(IConnection connection, Action<string> write) =>
-        await Run(connection, new ConsoleCommandMiddleware(write, () => DateTimeOffset.Parse(Spec().Now, null, System.Globalization.DateTimeStyles.RoundtripKind), new Dictionary<string, string> { ["isVerbose"] = "true" }));
+    static async Task Run(IConnection connection, Action<string> write, bool procedures) =>
+        await Run(connection, new ConsoleCommandMiddleware(write, () => DateTimeOffset.Parse(Spec().Now, null, System.Globalization.DateTimeStyles.RoundtripKind), new Dictionary<string, string> { ["isVerbose"] = "true" }), procedures);
+
+    static string[] SqlText(string provider) =>
+        File.ReadAllLines(Path.Combine(Shared(), $"{provider}.log"))
+            .Where(line => line.Contains("][Start]-", StringComparison.Ordinal) || line.Contains("][Finish]-", StringComparison.Ordinal))
+            .Select(Normalize)
+            .ToArray();
+
+    static string Normalize(string line)
+    {
+        var text = ExpectConsoleMiddleware.Signature(line);
+        text = Date.Replace(text, "<date>");
+        text = Uuid.Replace(text, "<uuid>");
+        text = Ident.Replace(text, "$1");
+        text = Password.Replace(text, "password: <token>");
+        text = Updated.Replace(text, "updated: <token>");
+        return Token.Replace(text, match => match.Value.Any(char.IsDigit) && match.Value.Any(char.IsLetter) ? "<token>" : match.Value);
+    }
+
+    static readonly Regex Date = new(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", RegexOptions.Compiled);
+    static readonly Regex Uuid = new(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b", RegexOptions.Compiled);
+    static readonly Regex Ident = new(@"[""`]([A-Za-z_][A-Za-z0-9_]*)[""`]", RegexOptions.Compiled);
+    static readonly Regex Password = new(@"password: [^,}\]]+", RegexOptions.Compiled);
+    static readonly Regex Updated = new(@"updated: [^,}\]]+", RegexOptions.Compiled);
+    static readonly Regex Token = new(@"[A-Za-z0-9+/]{4,}={0,2}", RegexOptions.Compiled);
 
     static CliSpec Spec() =>
         new DeserializerBuilder()

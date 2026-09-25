@@ -45,6 +45,7 @@ pub async fn execute(
         procedure,
         &insert,
         &call,
+        app.use_procedures(),
     )
     .await
 }

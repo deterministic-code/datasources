@@ -27,6 +27,7 @@ export const addUser = async (app: App, parsed: AddUser): Promise<string> => {
       { name: "p_created", value: created },
       { name: "p_updated", value: app.bytes(updated) },
     ],
+    app.procedures,
   );
   return "";
 };

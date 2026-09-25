@@ -20,6 +20,14 @@ impl ExpectConsoleMiddleware {
         expected: Vec<String>,
         now: impl Fn() -> String + Send + Sync + 'static,
     ) -> Self {
+        Self::with_normalize(expected, now, signature)
+    }
+
+    pub fn with_normalize(
+        expected: Vec<String>,
+        now: impl Fn() -> String + Send + Sync + 'static,
+        normalize: impl Fn(&str) -> String + Send + Sync + 'static,
+    ) -> Self {
         let expected = Arc::new(expected);
         let index = Arc::new(Mutex::new(0usize));
         let error = Arc::new(Mutex::new(None));
@@ -31,7 +39,7 @@ impl ExpectConsoleMiddleware {
                 if error_write.lock().unwrap().is_some() {
                     return;
                 }
-                let actual = signature(line);
+                let actual = normalize(line);
                 let i = *index_write.lock().unwrap();
                 let want = expected_write.get(i).map(String::as_str).unwrap_or("<missing>");
                 if expected_write.get(i).map(String::as_str) != Some(actual.as_str()) {

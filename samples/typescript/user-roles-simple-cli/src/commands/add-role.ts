@@ -24,6 +24,7 @@ export const addRole = async (app: App, parsed: AddRole): Promise<string> => {
       { name: "p_created", value: created },
       { name: "p_updated", value: app.bytes(updated) },
     ],
+    app.procedures,
   );
   return "";
 };

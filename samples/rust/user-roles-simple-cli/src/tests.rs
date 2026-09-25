@@ -411,6 +411,34 @@ async fn writes_mysql_procedures() {
 }
 
 #[tokio::test]
+async fn mysql_sql_path_inserts_and_updates() {
+    let command = MockCommand::new();
+    *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Int(1))])];
+    let app = App::new(&command, "mysql")
+        .procedures(false)
+        .with_clock(
+            || "2026-09-22T00:00:00.000Z".into(),
+            |password| Ok(format!("#{password}")),
+            || vec![1, 2, 3],
+        );
+    app.run(CliCommand::AddUser(AddUser {
+        username: "alice".into(),
+        password: "secret".into(),
+    }))
+    .await
+    .unwrap();
+    app.run(CliCommand::EnableUser(EnableUser {
+        username: "alice".into(),
+    }))
+    .await
+    .unwrap();
+    let logs = command.execute_logs.lock().expect("mock").clone();
+    assert!(logs.iter().any(|(text, _)| text.contains("INSERT INTO")));
+    assert!(logs.iter().any(|(text, _)| text.contains("UPDATE")));
+    assert!(logs.iter().all(|(text, _)| !text.starts_with("CALL ")));
+}
+
+#[tokio::test]
 async fn migrates_and_rejects_missing() {
     let sqlite = MockCommand::new();
     migrate::apply(&sqlite, "sqlite").await.unwrap();
@@ -457,6 +485,33 @@ struct TranscriptStep {
     argv: Vec<String>,
 }
 
+#[test]
+fn normalizes_dialect_noise_and_matches_sql_text() {
+    assert_eq!(
+        crate::console_log::normalize_console_line("[2026-09-22T00:00:00.000Z]-[datasource][Request]-[{password: hash, updated: AQID, blob: ab12, id: 11111111-1111-1111-1111-111111111111}] 2ms"),
+        "[<date>]-[datasource][Request]-[{password: <token>, updated: <token>, blob: <token>, id: <uuid>}]"
+    );
+    assert_eq!(
+        crate::console_log::normalize_console_line("[2026-09-22T00:00:00.000Z]-[datasource][Start]-[INSERT INTO `users` (\"roles\") VALUES ($name)] 3μs"),
+        "[<date>]-[datasource][Start]-[INSERT INTO users (roles) VALUES ($name)]"
+    );
+    assert_eq!(crate::console_log::normalize_console_line("count: 1234"), "count: 1234");
+    assert_eq!(crate::console_log::normalize_console_line("plain"), "plain");
+    assert_eq!(crate::console_log::normalize_console_line("[x] kept"), "[x] kept");
+    let shared = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../user-roles-simple-cli-shared");
+    let lines = |name: &str| {
+        std::fs::read_to_string(shared.join(name))
+            .unwrap()
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(str::to_string)
+            .collect::<Vec<_>>()
+    };
+    let sqlite = crate::console_log::sql_text(&lines("sqlite.log"));
+    assert_eq!(crate::console_log::sql_text(&lines("mysql.log")), sqlite);
+    assert_eq!(crate::console_log::sql_text(&lines("postgres.log")), sqlite);
+}
+
 #[tokio::test]
 async fn console_transcript_matches_sqlite() {
     use datasources::Driver;
@@ -466,7 +521,7 @@ async fn console_transcript_matches_sqlite() {
         .unwrap()
         .lines()
         .filter(|line| !line.is_empty())
-        .map(str::to_string)
+        .map(crate::console_log::normalize_console_line)
         .collect();
     let mut options = std::collections::HashMap::new();
     options.insert("filename".into(), ":memory:".into());
@@ -475,10 +530,16 @@ async fn console_transcript_matches_sqlite() {
     let command = connection.create_command();
     migrate::apply(command.as_ref(), connection.provider()).await.unwrap();
     let clock = spec.now.clone();
-    let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::new(expected, move || clock.clone()));
+    let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::with_normalize(
+        expected,
+        move || clock.clone(),
+        crate::console_log::normalize_console_line,
+    ));
     command.add_middleware(middleware.clone());
     let stamp = spec.now.clone();
-    let app = App::new(command.as_ref(), connection.provider()).with_clock(
+    let app = App::new(command.as_ref(), connection.provider())
+        .procedures(false)
+        .with_clock(
         move || stamp.clone(),
         |_| Ok("hash".into()),
         || vec![1, 2, 3],

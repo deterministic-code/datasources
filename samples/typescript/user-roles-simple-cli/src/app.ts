@@ -16,6 +16,7 @@ export class App {
     readonly now: () => Date = () => new Date(),
     readonly hash: (password: string) => string = passwordHash,
     readonly token: () => Uint8Array = () => crypto.getRandomValues(new Uint8Array(16)),
+    readonly procedures = true,
   ) {}
 
   run = (parsed: CliCommand): Promise<string> =>

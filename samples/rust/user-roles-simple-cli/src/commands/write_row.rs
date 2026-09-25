@@ -7,8 +7,9 @@ pub async fn execute(
     procedure: &str,
     insert: &[Parameter],
     call: &[Parameter],
+    procedures: bool,
 ) -> Result<String> {
-    if provider == "mysql" {
+    if procedures && provider == "mysql" {
         command
             .execute_statement(&ExecuteStoredProcedureStatement::new(procedure, call), Some(call))
             .await?;

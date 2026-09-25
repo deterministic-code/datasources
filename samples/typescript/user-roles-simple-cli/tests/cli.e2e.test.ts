@@ -11,6 +11,7 @@ import pg from "pg";
 import { describe, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { App } from "../src/app.ts";
+import { normalizeConsoleLine } from "../src/console-log.ts";
 import { migrate } from "../src/migrate.ts";
 import { parse } from "../src/parse.ts";
 import { freshCompose, stopCompose } from "../../../../typescript/ensure-compose.ts";
@@ -151,18 +152,19 @@ describe.sequential("cli e2e", () => {
     }
   }, 180_000);
 
-  const transcript = async (provider: string, connection: IConnection) => {
-    const expected = readFileSync(resolve(sample, "../../user-roles-simple-cli-shared", `${provider}.log`), "utf8")
+  const transcript = async (file: string, connection: IConnection, procedures: boolean) => {
+    const expected = readFileSync(resolve(sample, "../../user-roles-simple-cli-shared", file), "utf8")
       .split("\n")
-      .filter((line) => line.length > 0);
+      .filter((line) => line.length > 0)
+      .map(normalizeConsoleLine);
     await connection.open();
     try {
       const command = connection.createCommand();
       await migrate(command);
       const now = () => new Date(spec.now);
-      const middleware = new ExpectConsoleMiddleware(expected, now);
+      const middleware = new ExpectConsoleMiddleware(expected, now, normalizeConsoleLine);
       command.addMiddleware(middleware);
-      const app = new App(command, now, () => "hash", () => new Uint8Array([1, 2, 3]));
+      const app = new App(command, now, () => "hash", () => new Uint8Array([1, 2, 3]), procedures);
       for (const step of spec.steps) await app.run(parse(step.argv));
       middleware.complete();
     } finally {
@@ -174,14 +176,20 @@ describe.sequential("cli e2e", () => {
     freshCompose("mysql");
     const url = process.env.MYSQL_URL || "mysql://ds:ds@127.0.0.1:3306/datasources";
     const name = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+    const procedures = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
     const admin = await createConnection(url);
     await admin.query(`CREATE DATABASE \`${name}\``);
+    await admin.query(`CREATE DATABASE \`${procedures}\``);
     try {
       const isolated = new URL(url);
       isolated.pathname = `/${name}`;
-      await transcript("mysql", new MysqlDriver().connection({ url: isolated.toString() }));
+      await transcript("mysql.log", new MysqlDriver().connection({ url: isolated.toString() }), false);
+      const procedureUrl = new URL(url);
+      procedureUrl.pathname = `/${procedures}`;
+      await transcript("mysql-procedures.log", new MysqlDriver().connection({ url: procedureUrl.toString() }), true);
     } finally {
       await admin.query(`DROP DATABASE \`${name}\``);
+      await admin.query(`DROP DATABASE \`${procedures}\``);
       await admin.end();
       stopCompose("mysql");
     }
@@ -195,7 +203,7 @@ describe.sequential("cli e2e", () => {
     await admin.connect();
     await admin.query(`CREATE SCHEMA ${schema}`);
     try {
-      await transcript("postgres", new PostgresDriver().connection({ url, schema }));
+      await transcript("postgres.log", new PostgresDriver().connection({ url, schema }), false);
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.end();

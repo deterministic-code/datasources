@@ -9,6 +9,7 @@ pub struct App<'a> {
     now: Box<dyn Fn() -> String + Send + Sync>,
     hash: Box<dyn Fn(&str) -> Result<String> + Send + Sync>,
     token: Box<dyn Fn() -> Vec<u8> + Send + Sync>,
+    procedures: bool,
 }
 
 impl<'a> App<'a> {
@@ -19,7 +20,13 @@ impl<'a> App<'a> {
             now: Box::new(|| Value::iso_datetime(Utc::now())),
             hash: Box::new(password_hash::hash),
             token: Box::new(|| vec![1, 2, 3, 4]),
+            procedures: true,
         }
+    }
+
+    pub fn procedures(mut self, procedures: bool) -> Self {
+        self.procedures = procedures;
+        self
     }
 
     pub fn with_clock(
@@ -58,6 +65,10 @@ impl<'a> App<'a> {
 
     pub(crate) fn provider(&self) -> &str {
         &self.provider
+    }
+
+    pub(crate) fn use_procedures(&self) -> bool {
+        self.procedures
     }
 
     pub(crate) fn stamp(&self) -> String {

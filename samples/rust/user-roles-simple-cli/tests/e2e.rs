@@ -371,15 +371,19 @@ struct TranscriptStep {
     argv: Vec<String>,
 }
 
-async fn console_transcript(provider: &str, connection: std::sync::Arc<dyn datasources::Connection>) {
+async fn console_transcript(
+    file: &str,
+    procedures: bool,
+    connection: std::sync::Arc<dyn datasources::Connection>,
+) {
     let shared = sample().join("../../user-roles-simple-cli-shared");
     let spec: TranscriptSpec =
         serde_yaml::from_str(&fs::read_to_string(shared.join("cli.yaml")).expect("spec")).expect("yaml");
-    let expected = fs::read_to_string(shared.join(format!("{provider}.log")))
+    let expected = fs::read_to_string(shared.join(file))
         .expect("log")
         .lines()
         .filter(|line| !line.is_empty())
-        .map(str::to_string)
+        .map(user_roles_simple_cli::console_log::normalize_console_line)
         .collect();
     connection.open().await.expect("open");
     let command = connection.create_command();
@@ -387,10 +391,16 @@ async fn console_transcript(provider: &str, connection: std::sync::Arc<dyn datas
         .await
         .expect("migrate");
     let clock = spec.now.clone();
-    let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::new(expected, move || clock.clone()));
+    let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::with_normalize(
+        expected,
+        move || clock.clone(),
+        user_roles_simple_cli::console_log::normalize_console_line,
+    ));
     command.add_middleware(middleware.clone());
     let stamp = spec.now.clone();
-    let app = user_roles_simple_cli::app::App::new(command.as_ref(), connection.provider()).with_clock(
+    let app = user_roles_simple_cli::app::App::new(command.as_ref(), connection.provider())
+        .procedures(procedures)
+        .with_clock(
         move || stamp.clone(),
         |_| Ok("hash".into()),
         || vec![1, 2, 3],
@@ -411,21 +421,40 @@ async fn console_transcript_mysql() {
     let _stop = StopCompose("mysql");
     let url = env_or("MYSQL_URL", "mysql://ds:ds@127.0.0.1:3306/datasources");
     let name = format!("ds_{}", &uuid()[..16]);
+    let procedures = format!("ds_{}", &uuid()[..16]);
     let pool = mysql_async::Pool::new(url.as_str());
     {
         let mut conn = pool.get_conn().await.expect("mysql");
         mysql_async::prelude::Queryable::query_drop(&mut conn, format!("CREATE DATABASE `{name}`"))
             .await
             .expect("create");
+        mysql_async::prelude::Queryable::query_drop(&mut conn, format!("CREATE DATABASE `{procedures}`"))
+            .await
+            .expect("procedures");
     }
-    let isolated = replace_mysql_db(&url, &name);
     let mut options = std::collections::HashMap::new();
-    options.insert("url".into(), isolated);
-    console_transcript("mysql", datasources_mysql::MysqlDriver.connection(Some(&options))).await;
+    options.insert("url".into(), replace_mysql_db(&url, &name));
+    console_transcript(
+        "mysql.log",
+        false,
+        datasources_mysql::MysqlDriver.connection(Some(&options)),
+    )
+    .await;
+    let mut procedure_options = std::collections::HashMap::new();
+    procedure_options.insert("url".into(), replace_mysql_db(&url, &procedures));
+    console_transcript(
+        "mysql-procedures.log",
+        true,
+        datasources_mysql::MysqlDriver.connection(Some(&procedure_options)),
+    )
+    .await;
     let mut conn = pool.get_conn().await.expect("mysql");
     mysql_async::prelude::Queryable::query_drop(&mut conn, format!("DROP DATABASE `{name}`"))
         .await
         .expect("drop");
+    mysql_async::prelude::Queryable::query_drop(&mut conn, format!("DROP DATABASE `{procedures}`"))
+        .await
+        .expect("drop procedures");
 }
 
 #[tokio::test]
@@ -450,7 +479,8 @@ async fn console_transcript_postgres() {
     options.insert("url".into(), url);
     options.insert("schema".into(), schema.clone());
     console_transcript(
-        "postgres",
+        "postgres.log",
+        false,
         datasources_postgres::PostgresDriver.connection(Some(&options)),
     )
     .await;
