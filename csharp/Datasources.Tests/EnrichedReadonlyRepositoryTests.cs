@@ -140,32 +140,22 @@ public class ReadonlyRepositoryTests
     [Fact]
     public async Task FlatToNestedCollapsesJoinRows()
     {
-        var rows = new Row[]
-        {
+        Row?[] rows =
+        [
             new() { ["id"] = 1, ["type_name"] = "person" },
             new() { ["id"] = 2, ["type_name"] = "org" }
-        };
-        var hydrate = new TransformMapper<Dictionary<string, MappedValue>, Parent>(
-            row => new Parent
-            {
-                id = row["id"] is MappedValue.Cell(Value.Int(var id)) ? (int)id : 0,
-                type_name = row["type_name"] is MappedValue.Cell(Value.Text(var name)) ? name : ""
-            },
-            _ => throw new InvalidOperationException());
-        var repo = new JoinRows(rows, new TransformMapper<IEnumerable<Row>, IReadOnlyList<Parent>>(
+        ];
+        IList<object> parents = [];
+        var hydrate = new MappedValueMapper<Parent>();
+        await new NestedToObjectEnrichmentStrategy<Parent>(new TransformMapper<IEnumerable<Row>, IReadOnlyList<Parent>>(
             source => new FlatToNestedMapper(new TypeMap
             {
                 Key = "id",
-                Fields = new Dictionary<string, TypeMapField>
-                {
-                    ["id"] = "id",
-                    ["type_name"] = "type_name"
-                }
+                Fields = new Dictionary<string, TypeMapField> { ["id"] = "id", ["type_name"] = "type_name" }
             }).Map(source).Select(hydrate.Map).ToList(),
-            _ => throw new InvalidOperationException()));
-        var items = new List<Parent>();
-        await foreach (var item in repo.Read())
-            items.Add(item);
+            _ => throw new InvalidOperationException()))
+            .Apply(new ListReadonlyRepository<Parent>(), new("type_name", "id", "id"), parents, rows);
+        var items = parents.Cast<Parent>();
         Assert.Equal([1, 2], items.Select(item => item.id));
         Assert.Equal(["person", "org"], items.Select(item => item.type_name));
     }
@@ -195,27 +185,6 @@ public class ReadonlyRepositoryTests
         }
     }
 
-    sealed class JoinRows : ReadonlyRepository<Parent>
-    {
-        readonly IReadOnlyList<Row> rows;
-        public JoinRows(IReadOnlyList<Row> rows, IMapper<IEnumerable<Row>, IReadOnlyList<Parent>> result)
-        {
-            this.rows = rows;
-            AddEnriched(
-                new("type_name", "id", "id"),
-                new ListReadonlyRepository<Parent>(),
-                new NestedToObjectEnrichmentStrategy<Parent>(result));
-        }
-
-        protected override async IAsyncEnumerable<(Parent Item, Row? Source)> ReadItems(
-            IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
-        {
-            await Task.Yield();
-            foreach (var row in rows)
-                yield return (new Parent(), row);
-        }
-    }
-
     sealed class CountingReadonlyRepository<T>(IReadonlyRepository<T> inner) : ReadonlyRepository<T> where T : new()
     {
         public int Reads { get; private set; }
@@ -227,10 +196,6 @@ public class ReadonlyRepositoryTests
             await foreach (var item in inner.Read(query, parameters))
                 yield return item;
         }
-
-        protected override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
-            IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
-            WithoutSource(Read(query, parameters));
 
         public override async Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
         {

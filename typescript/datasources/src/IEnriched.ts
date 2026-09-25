@@ -15,5 +15,4 @@ export interface IEnriched<T> {
     link: ICRUDRepository<TLink>,
     strategy?: IReadonlyEnrichmentStrategy<T & object>,
   ): this;
-  enrich(items: T[]): Promise<void>;
 }
