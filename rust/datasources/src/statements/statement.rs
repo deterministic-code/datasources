@@ -5,7 +5,7 @@ use std::any::Any;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StatementKind {
-    Query,
+    Select,
     Procedure,
     Insert,
     Update,

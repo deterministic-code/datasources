@@ -1,5 +1,5 @@
+use crate::i_select_statement::ISelectStatement;
 use crate::mappers::{FlatToNestedMapper, MappedRow, Mapper};
-use crate::query::Query;
 use crate::read_input::{ReadInput, StatementRead};
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
@@ -14,7 +14,7 @@ pub struct FlatToNestedReadonlyEnrichmentStrategy {
     source: Arc<dyn IReadonlyRepository>,
     mapper: FlatToNestedMapper,
     hydrate: Arc<dyn Fn(MappedRow) -> Row + Send + Sync>,
-    command: Option<Arc<dyn Query>>,
+    command: Option<Arc<dyn ISelectStatement>>,
 }
 
 impl FlatToNestedReadonlyEnrichmentStrategy {
@@ -22,7 +22,7 @@ impl FlatToNestedReadonlyEnrichmentStrategy {
         source: Arc<dyn IReadonlyRepository>,
         mapper: FlatToNestedMapper,
         hydrate: impl Fn(MappedRow) -> Row + Send + Sync + 'static,
-        command: Option<Arc<dyn Query>>,
+        command: Option<Arc<dyn ISelectStatement>>,
     ) -> Self {
         Self {
             source,

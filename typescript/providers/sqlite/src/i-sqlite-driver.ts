@@ -6,6 +6,7 @@ export interface SqliteStatement {
     lastInsertRowid?: Cell;
   };
   all(params?: Record<string, Scalar>): Cells[];
+  iterate(params?: Record<string, Scalar>): IterableIterator<Cells>;
 }
 
 export interface SqliteDatabase {

@@ -260,8 +260,8 @@ public class UsersViewRoleTests
                 ["UserId"] = "user_id",
                 ["Name"] = "name",
             }),
-            Query = new TransformMapper<IQuery, IQuery>(
-                query => new QueryStatement(new()
+            Query = new TransformMapper<ISelectStatement, ISelectStatement>(
+                query => new SelectStatement(new()
                 {
                     Table = "user_roles",
                     Fields = ["user_roles.user_id", "roles.name"],
@@ -325,7 +325,7 @@ public class UsersViewRoleTests
                     }
                 }),
                 new MappedValueMapper<UsersView>(),
-                new QueryStatement(new()
+                new SelectStatement(new()
                 {
                     Table = "user",
                     Fields =

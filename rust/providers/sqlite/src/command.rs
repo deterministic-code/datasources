@@ -5,7 +5,7 @@ use crate::converters::{
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, Parameter, Reader, Response, Result, Row, TypeConverter, Value,
+    DatasourceError, Parameter, Reader, Response, Result, TypeConverter, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
 use std::collections::HashMap;
@@ -70,34 +70,6 @@ impl SqliteCommand {
         })
     }
 
-    fn query_sql(
-        connection: &SqliteConnection,
-        sql: &str,
-        params: &HashMap<String, Value>,
-    ) -> Result<Vec<Row>> {
-        let db = connection.db.lock().unwrap();
-        let conn = db
-            .as_ref()
-            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        let pairs = bind_pairs(params);
-        let bound = as_params(&pairs);
-        let mut statement = conn.prepare(sql).map_err(map_err)?;
-        let column_names: Vec<String> = statement
-            .column_names()
-            .into_iter()
-            .map(ToOwned::to_owned)
-            .collect();
-        let mut rows = statement.query(bound.as_slice()).map_err(map_err)?;
-        let mut records = Vec::new();
-        while let Some(row) = rows.next().map_err(map_err)? {
-            let mut record = Row::new();
-            for (index, name) in column_names.iter().enumerate() {
-                record.insert(name.clone(), from_sql(row.get_ref(index).map_err(map_err)?));
-            }
-            records.push(record);
-        }
-        Ok(records)
-    }
 }
 
 #[async_trait]
@@ -123,15 +95,12 @@ impl Command for SqliteCommand {
                         ));
                     }
                     connection.ensure_open()?;
-                    let rows = SqliteCommand::query_sql(
+                    let reader = crate::reader::SqliteReader::open(
                         &connection,
                         &sql,
                         &parameters_to_map(params.as_deref()),
                     )?;
-                    Ok((
-                        Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
-                        rows,
-                    ))
+                    Ok((Box::new(reader) as Box<dyn Reader>, vec![]))
                 }
             })
             .await
@@ -199,7 +168,7 @@ fn to_sql(value: &Value) -> rusqlite::types::Value {
     }
 }
 
-fn from_sql(value: ValueRef<'_>) -> Value {
+pub(crate) fn from_sql(value: ValueRef<'_>) -> Value {
     match value {
         ValueRef::Null => Value::Null,
         ValueRef::Integer(value) => Value::Int(value),
@@ -209,14 +178,14 @@ fn from_sql(value: ValueRef<'_>) -> Value {
     }
 }
 
-fn bind_pairs(params: &HashMap<String, Value>) -> Vec<(String, rusqlite::types::Value)> {
+pub(crate) fn bind_pairs(params: &HashMap<String, Value>) -> Vec<(String, rusqlite::types::Value)> {
     params
         .iter()
         .map(|(name, value)| (named_key(name), to_sql(value)))
         .collect()
 }
 
-fn as_params(pairs: &[(String, rusqlite::types::Value)]) -> Vec<(&str, &dyn ToSql)> {
+pub(crate) fn as_params(pairs: &[(String, rusqlite::types::Value)]) -> Vec<(&str, &dyn ToSql)> {
     pairs
         .iter()
         .map(|(name, value)| (name.as_str(), value as &dyn ToSql))

@@ -60,23 +60,39 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
 
     protected internal virtual async IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null)
     {
+        foreach (var row in await ReadRows(query))
+            yield return row;
+    }
+
+    async Task<List<(T Item, Row? Source)>> ReadRows(IStatement? query)
+    {
         var statement = query switch
         {
             IExecuteStoredProcedureStatement call => (IStatement)call,
-            IQuery q => q,
+            ISelectStatement q => q,
             null => Statements.Query(),
-            _ => throw new DatasourceException("Read requires IQuery, IWhere, or IExecuteStoredProcedureStatement")
+            _ => throw new DatasourceException("Read requires ISelectStatement, IWhere, or IExecuteStoredProcedureStatement")
         };
         var parameters = statement switch
         {
-            IQuery q => q.Where?.Parameters ?? q.Parameters,
+            ISelectStatement q => q.Where?.Parameters ?? q.Parameters,
             _ => statement.Parameters
         };
         var reader = await Command().ExecuteReader(statement, parameters);
-        while (await reader.Next())
+        try
         {
-            var renamed = Renamed(reader.Current ?? throw new DatasourceException("Reader current must be a row"));
-            yield return (Mapper!.Map(RowConverter.Convert(renamed)), renamed);
+            var rows = new List<(T Item, Row? Source)>();
+            while (await reader.Next())
+            {
+                var renamed = Renamed(reader.Current ?? throw new DatasourceException("Reader current must be a row"));
+                rows.Add((Mapper!.Map(RowConverter.Convert(renamed)), renamed));
+            }
+            return rows;
+        }
+        finally
+        {
+            if (reader is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
         }
     }
 
@@ -120,8 +136,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T> where T : new()
             ? field.ReverseConvert(value)
             : value;
 
-    IQuery Compiled(IWhere where) =>
-        statements is { } sql ? sql.Query(where) : new QueryStatement(where.GetText(), where);
+    ISelectStatement Compiled(IWhere where) =>
+        statements is { } sql ? sql.Query(where) : new SelectStatement(where.GetText(), where);
 
     Row Renamed(Row row) =>
         new(row.Select(pair => KeyValuePair.Create(columns.ReverseMap(pair.Key), pair.Value)));

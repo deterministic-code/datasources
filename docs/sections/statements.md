@@ -123,7 +123,7 @@ Bound values live on [Where](./where-clause.md). [IStatement](#istatement) is no
 
 ## See also
 
-- [QueryStatement](./query-statement.md)
+- [SelectStatement](./select-statement.md)
 - [InsertStatement](./insert-statement.md)
 - [UpdateStatement](./update-statement.md)
 - [DeleteStatement](./delete-statement.md)

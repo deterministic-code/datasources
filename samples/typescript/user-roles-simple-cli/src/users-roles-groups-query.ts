@@ -1,13 +1,13 @@
-import { Join, OrderBy, QueryStatement, type IQuery } from "@datasources/core";
+import { Join, OrderBy, SelectStatement, type ISelectStatement } from "@datasources/core";
 import { ident } from "./schema.ts";
 
-export const usersRolesGroupsQuery = (provider = "sqlite"): IQuery => {
+export const usersRolesGroupsQuery = (provider = "sqlite"): ISelectStatement => {
   const users = ident(provider, "users");
   const roles = ident(provider, "roles");
   const groups = ident(provider, "groups");
   const userRoles = ident(provider, "user_roles");
   const userGroups = ident(provider, "user_groups");
-  return new QueryStatement({
+  return new SelectStatement({
     table: users,
     fields: [
       `${users}.id AS id`,

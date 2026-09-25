@@ -77,13 +77,21 @@ public static class SqlSpec
                     return;
                 }
                 var reader = await cmd.ExecuteReader(op.Sql, Params(op.Parameters));
-                if (op.Expect?.Error is { } err) throw new InvalidOperationException($"{label}: expected {err}");
-                if (expectedRows is not { } expected) return;
-                var actual = new List<Row>();
-                while (await reader.Next()) actual.Add((Row)reader.Current!);
-                Assert.Equal(expected.Count, actual.Count);
-                for (var i = 0; i < expected.Count; i++)
-                    foreach (var (key, value) in expected[i]) Eq(value, actual[i][key]);
+                try
+                {
+                    if (op.Expect?.Error is { } err) throw new InvalidOperationException($"{label}: expected {err}");
+                    if (expectedRows is not { } expected) return;
+                    var actual = new List<Row>();
+                    while (await reader.Next()) actual.Add((Row)reader.Current!);
+                    Assert.Equal(expected.Count, actual.Count);
+                    for (var i = 0; i < expected.Count; i++)
+                        foreach (var (key, value) in expected[i]) Eq(value, actual[i][key]);
+                }
+                finally
+                {
+                    if (reader is IAsyncDisposable disposable)
+                        await disposable.DisposeAsync();
+                }
             }
             catch (DatasourceException ex) when (op.Expect?.Error is { } expected)
             {

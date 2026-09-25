@@ -166,6 +166,7 @@ describe("MysqlCommand", () => {
     expect(reader.current).toEqual({ id: 1 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
+    expect(await (await command.executeReader(";")).next()).toBe(false);
     client.rows = [{ add_one: 5 }];
     expect(await command.execute("SELECT add_one($n)", [{ name: "n", value: 4 }]))
       .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });
@@ -195,6 +196,7 @@ describe("MysqlCommand", () => {
       ]),
     ).toMatchObject({ rowsAffected: 0 });
     client.arrayResult = false;
+    expect(await (await command.executeReader("SELECT 1")).next()).toBe(false);
     expect(
       await command.execute("CALL bump($result)", [
         { name: "result", direction: ParameterDirection.Output },

@@ -59,23 +59,23 @@ public sealed class StatementParserTests
     [Fact]
     public void BuildsTheWhereTree()
     {
-        var notLike = Assert.IsType<QueryStatement>(StatementParser.Parse("SELECT id FROM users WHERE name NOT LIKE $name"));
+        var notLike = Assert.IsType<SelectStatement>(StatementParser.Parse("SELECT id FROM users WHERE name NOT LIKE $name"));
         Assert.IsType<Operator.NotLike>(Assert.IsType<Where>(notLike.Where).Condition);
 
-        var exists = Assert.IsType<QueryStatement>(StatementParser.Parse(
+        var exists = Assert.IsType<SelectStatement>(StatementParser.Parse(
             "SELECT id FROM users WHERE EXISTS (SELECT id FROM posts WHERE posts.user_id = users.id)"));
         Assert.IsType<Operator.Exists>(Assert.IsType<Where>(exists.Where).Condition);
 
-        var full = Assert.IsType<QueryStatement>(StatementParser.Parse(
+        var full = Assert.IsType<SelectStatement>(StatementParser.Parse(
             "SELECT id FROM users FULL JOIN profiles ON users.id = profiles.user_id"));
         Assert.Equal(JoinKind.Full, Assert.Single(full.Joins).Kind);
 
-        var cross = Assert.IsType<QueryStatement>(StatementParser.Parse("SELECT id FROM users CROSS JOIN tags"));
+        var cross = Assert.IsType<SelectStatement>(StatementParser.Parse("SELECT id FROM users CROSS JOIN tags"));
         var join = Assert.Single(cross.Joins);
         Assert.Equal(JoinKind.Cross, join.Kind);
         Assert.Null(join.On);
 
-        var shaped = Assert.IsType<QueryStatement>(StatementParser.Parse(
+        var shaped = Assert.IsType<SelectStatement>(StatementParser.Parse(
             "SELECT DISTINCT status FROM orders GROUP BY status HAVING status = $status ORDER BY status ASC LIMIT 10 OFFSET 5"));
         Assert.True(shaped.Distinct);
         Assert.Equal(10, shaped.Limit);
@@ -86,7 +86,7 @@ public sealed class StatementParserTests
     [Fact]
     public void KeepsAStringBesideAColumnAsItsParameter()
     {
-        var query = Assert.IsType<QueryStatement>(StatementParser.Parse("SELECT id FROM users WHERE name = 'ada'"));
+        var query = Assert.IsType<SelectStatement>(StatementParser.Parse("SELECT id FROM users WHERE name = 'ada'"));
         Assert.Equal("SELECT id FROM users WHERE name = $name", query.GetText());
         Assert.Equal("ada", Assert.IsType<Value.Text>(Assert.Single(query.Where!.Parameters).Value).Item);
     }

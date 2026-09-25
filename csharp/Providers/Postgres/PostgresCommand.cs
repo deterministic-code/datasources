@@ -17,8 +17,8 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
             if (string.IsNullOrWhiteSpace(query))
                 return ((IReader<Row>)new ArrayReader<Row>([]), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
-            var rows = await Read(query, Helpers.ParametersToRecord(paramsList));
-            return ((IReader<Row>)new ArrayReader<Row>(rows), rows);
+            var reader = await Open(query, Helpers.ParametersToRecord(paramsList));
+            return (reader, (IReadOnlyList<Row>)[]);
         });
 
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
@@ -54,6 +54,38 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         }
         var rows = await command.ExecuteNonQueryAsync();
         return new PostgresExecuteResult(Math.Max(rows, 0), Value.Null.Instance, ReadBack(command, parameters, bound));
+    }
+
+    async Task<StreamingReader> Open(string sql, Row parameters)
+    {
+        var (text, values) = PostgresBind.ToPostgres(sql, parameters);
+        var command = Typed.Require().CreateCommand();
+        command.CommandText = text;
+        Bind(command, values);
+        try
+        {
+            var reader = await command.ExecuteReaderAsync();
+            return new StreamingReader(
+                async () =>
+                {
+                    if (!await reader.ReadAsync()) return null;
+                    var row = new Row();
+                    for (var i = 0; i < reader.FieldCount; i++)
+                        row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                    return row;
+                },
+                () => reader.NextResultAsync(),
+                async () =>
+                {
+                    await reader.DisposeAsync();
+                    await command.DisposeAsync();
+                });
+        }
+        catch
+        {
+            await command.DisposeAsync();
+            throw;
+        }
     }
 
     async Task<IReadOnlyList<Row>> Read(string sql, Row parameters)

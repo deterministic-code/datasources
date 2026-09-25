@@ -4,6 +4,8 @@ public interface IReader<out T>
 {
     T? Current { get; }
     Task<bool> Next();
+    Task<bool> NextResult() => Task.FromResult(false);
 }
 
 public interface IReader : IReader<object>;
+    

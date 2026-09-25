@@ -1,6 +1,6 @@
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
-import type { IQuery } from "../statements/IQuery.ts";
+import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
 import { ReadonlyRepository, tracked, untyped, withoutSource, type Sourced } from "../ReadonlyRepository.ts";
@@ -15,12 +15,12 @@ export class ListReadonlyRepository<T extends object> extends ReadonlyRepository
     super(type);
   }
 
-  async *read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
+  async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     for (const item of this.items) if (matches(item, query)) yield item;
   }
 
   async *[tracked](
-    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
     yield* withoutSource(this.read(query));
   }
@@ -33,7 +33,7 @@ const fieldOf = (name: string): string => {
     : name;
 };
 
-const matches = <T extends object>(item: T, query?: IQuery | IWhere | IExecuteStoredProcedureStatement): boolean => {
+const matches = <T extends object>(item: T, query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): boolean => {
   if (query && "getText" in query && query.getText() === "1 = 0") return false;
   const groups = new Map<string, { name: string; value: Scalar }[]>();
   for (const parameter of parametersOf(query)) {
@@ -48,7 +48,7 @@ const matches = <T extends object>(item: T, query?: IQuery | IWhere | IExecuteSt
 };
 
 const parametersOf = (
-  query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+  query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
 ): { name: string; value: Scalar }[] => {
   if (!query) return [];
   const where = "where" in query ? query.where : query;

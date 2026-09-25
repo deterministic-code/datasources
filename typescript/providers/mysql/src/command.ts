@@ -3,6 +3,8 @@ import {
   CommandMiddlewareHost,
   ParameterDirection,
   responseOf,
+  splitStatements,
+  statementReader,
   type Cells,
   type ICommand,
   type IReader,
@@ -41,8 +43,13 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     return this.run(text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new ArrayReader([]), rows: [] };
       this.connection.ensureOpen();
-      const rows = await this.query(query, bindParameters(params));
-      return { value: new ArrayReader(rows), rows };
+      const statements = splitStatements(query);
+      if (statements.length === 0) return { value: new ArrayReader([]), rows: [] };
+      const bound = bindParameters(params);
+      return {
+        value: statementReader(statements, (sql) => this.query(sql, bound)),
+        rows: [],
+      };
     });
   }
 

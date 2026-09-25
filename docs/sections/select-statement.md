@@ -1,15 +1,15 @@
-# Query Statement
+# Select Statement
 
-`SELECT` text, or a compiled `SELECT` from [QueryStatementOptions](#querystatementoptions): table, fields, optional [IWhere](./where-clause.md#iwhere), joins, grouping, order, and limit.
+`SELECT` text, or a compiled `SELECT` from [SelectStatementOptions](#selectstatementoptions): table, fields, optional [IWhere](./where-clause.md#iwhere), joins, grouping, order, and limit.
 
 ## Classes
 
 ::: reference
 ### typescript
-#### IQuery
+#### ISelectStatement
 
 ```typescript
-interface IQuery extends IStatement
+interface ISelectStatement extends IStatement
 ```
 
 **Properties**
@@ -22,15 +22,15 @@ Optional [IWhere](./where-clause.md#iwhere) used to build this query.
 readonly where?: IWhere
 ```
 
-#### QueryStatement
+#### SelectStatement
 
 ```typescript
-class QueryStatement implements IQuery
+class SelectStatement implements ISelectStatement
 ```
 
 **Constructor**
 
-##### QueryStatement(text, where?)
+##### SelectStatement(text, where?)
 
 Wraps query text and an optional [IWhere](./where-clause.md#iwhere).
 
@@ -41,12 +41,12 @@ constructor(text: string, where?: IWhere)
 - `text` — command text
 - `where` — optional [IWhere](./where-clause.md#iwhere)
 
-##### QueryStatement(options)
+##### SelectStatement(options)
 
-Compiles a `SELECT` from [QueryStatementOptions](#querystatementoptions).
+Compiles a `SELECT` from [SelectStatementOptions](#selectstatementoptions).
 
 ```typescript
-constructor(options: QueryStatementOptions)
+constructor(options: SelectStatementOptions)
 ```
 
 - `options` — table, fields, and optional where, joins, group, order, and limit
@@ -73,10 +73,10 @@ getText(): string
 
 **Returns** `string`
 
-#### QueryStatementOptions
+#### SelectStatementOptions
 
 ```typescript
-type QueryStatementOptions = {
+type SelectStatementOptions = {
   table: string
   fields: string[]
   where?: IWhere
@@ -305,10 +305,10 @@ type JoinKind = "inner" | "left" | "right"
 ```
 
 ### csharp
-#### IQuery
+#### ISelectStatement
 
 ```csharp
-public interface IQuery : IStatement
+public interface ISelectStatement : IStatement
 ```
 
 **Properties**
@@ -321,31 +321,31 @@ Optional [IWhere](./where-clause.md#iwhere) used to build this query.
 IWhere? Where { get; }
 ```
 
-#### QueryStatement
+#### SelectStatement
 
 ```csharp
-public sealed record QueryStatement : IQuery
+public sealed record SelectStatement : ISelectStatement
 ```
 
 **Constructor**
 
-##### QueryStatement(text, where)
+##### SelectStatement(text, where)
 
 Wraps query text and an optional [IWhere](./where-clause.md#iwhere).
 
 ```csharp
-public QueryStatement(string text, IWhere? where = null)
+public SelectStatement(string text, IWhere? where = null)
 ```
 
 - `text` — command text
 - `where` — optional [IWhere](./where-clause.md#iwhere)
 
-##### QueryStatement(options)
+##### SelectStatement(options)
 
-Compiles a `SELECT` from [QueryStatementOptions](#querystatementoptions).
+Compiles a `SELECT` from [SelectStatementOptions](#selectstatementoptions).
 
 ```csharp
-public QueryStatement(QueryStatementOptions options)
+public SelectStatement(SelectStatementOptions options)
 ```
 
 - `options` — table, fields, and optional where, joins, group, order, and limit
@@ -372,10 +372,10 @@ public string GetText()
 
 **Returns** `string`
 
-#### QueryStatementOptions
+#### SelectStatementOptions
 
 ```csharp
-public sealed class QueryStatementOptions
+public sealed class SelectStatementOptions
 ```
 
 **Properties**
@@ -591,10 +591,10 @@ public enum JoinKind
 ```
 
 ### rust
-#### Query
+#### ISelectStatement
 
 ```rust
-pub trait Query: Statement
+pub trait ISelectStatement: Statement
 ```
 
 **Methods**
@@ -609,10 +609,10 @@ fn where_clause(&self) -> Option<&dyn IWhere>
 
 **Returns** `Option<&dyn `[IWhere](./where-clause.md#iwhere)`>`
 
-#### QueryStatement
+#### SelectStatement
 
 ```rust
-pub struct QueryStatement
+pub struct SelectStatement
 ```
 
 **Constructor**
@@ -627,7 +627,7 @@ pub fn text(text: impl Into<String>) -> Self
 
 - `text` — command text
 
-**Returns** [QueryStatement](#querystatement)
+**Returns** [SelectStatement](#selectstatement)
 
 ##### with_where(text, where_clause)
 
@@ -640,19 +640,19 @@ pub fn with_where(text: impl Into<String>, where_clause: impl IWhere + 'static) 
 - `text` — command text
 - `where_clause` — [IWhere](./where-clause.md#iwhere)
 
-**Returns** [QueryStatement](#querystatement)
+**Returns** [SelectStatement](#selectstatement)
 
 ##### new(options)
 
-Compiles a `SELECT` from [QueryStatementOptions](#querystatementoptions).
+Compiles a `SELECT` from [SelectStatementOptions](#selectstatementoptions).
 
 ```rust
-pub fn new(options: QueryStatementOptions<'_>) -> Self
+pub fn new(options: SelectStatementOptions<'_>) -> Self
 ```
 
 - `options` — table, fields, and optional where, joins, group, order, and limit
 
-**Returns** [QueryStatement](#querystatement)
+**Returns** [SelectStatement](#selectstatement)
 
 **Methods**
 
@@ -676,10 +676,10 @@ fn where_clause(&self) -> Option<&dyn IWhere>
 
 **Returns** `Option<&dyn `[IWhere](./where-clause.md#iwhere)`>`
 
-#### QueryStatementOptions
+#### SelectStatementOptions
 
 ```rust
-pub struct QueryStatementOptions<'a>
+pub struct SelectStatementOptions<'a>
 ```
 
 **Constructor**
@@ -695,7 +695,7 @@ pub fn new(table: &'a str, fields: &'a [&'a str]) -> Self
 - `table` — table name
 - `fields` — selected columns (`*` when empty)
 
-**Returns** [QueryStatementOptions](#querystatementoptions)
+**Returns** [SelectStatementOptions](#selectstatementoptions)
 
 **Properties**
 

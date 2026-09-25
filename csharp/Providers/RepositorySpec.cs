@@ -194,8 +194,8 @@ public static class RepositorySpec
                 name => quote(type.CRUDMapper?.Entity ?? name),
                 name => name),
             RowsMapper = MappingsMapper<T>(type.Mappings),
-            Query = Suffix<IQuery>(
-                (text, query) => new QueryStatement(text, query.Where),
+            Query = Suffix<ISelectStatement>(
+                (text, query) => new SelectStatement(text, query.Where),
                 type.CRUDMapper?.QuerySuffix),
             Insert = Suffix<IInsertStatement>(
                 (text, _) => new InsertStatement(text),
@@ -223,9 +223,9 @@ public static class RepositorySpec
             yield return step switch
             {
                 { Create: { } create } => WithStatementSql(new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col))).GetText(), true, spec.Type),
-                { Read: { } read } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) }).GetText(), false, spec.Type),
-                { Query: { } query } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null }).GetText(), false, spec.Type),
-                { ReadBy: { } readBy } => WithStatementSql(new QueryStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) }).GetText(), false, spec.Type),
+                { Read: { } read } => WithStatementSql(new SelectStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) }).GetText(), false, spec.Type),
+                { Query: { } query } => WithStatementSql(new SelectStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null }).GetText(), false, spec.Type),
+                { ReadBy: { } readBy } => WithStatementSql(new SelectStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) }).GetText(), false, spec.Type),
                 { Update: { } update } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), new Where(new Operator.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"])))).GetText(), true, spec.Type),
                 { UpdateBy: { } updateBy } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(), true, spec.Type),
                 { Delete: { } delete } => WithStatementSql(new DeleteStatement(table, new Where(new Operator.Equals("id", Value.From(delete.Id)))).GetText(), true, spec.Type),

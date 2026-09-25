@@ -2,7 +2,7 @@ import type { Join } from "./Join.ts";
 import type { IWhere } from "./IWhere.ts";
 import type { OrderBy } from "./OrderBy.ts";
 
-export type QueryStatementOptions = {
+export type SelectStatementOptions = {
   table: string;
   fields: string[];
   distinct?: boolean;

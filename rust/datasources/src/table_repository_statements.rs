@@ -4,7 +4,7 @@ use crate::mappers::TransformMapper;
 use crate::parameter::Parameter;
 use crate::statements::{DeleteStatement, InsertStatement, Statement, Text, UpdateStatement};
 use crate::where_text::WhereText;
-use crate::{QueryStatement, QueryStatementOptions};
+use crate::{SelectStatement, SelectStatementOptions};
 use std::sync::Arc;
 
 pub struct RepositoryStatements {
@@ -39,18 +39,18 @@ impl RepositoryStatements {
         }
     }
 
-    pub fn query(&self, where_clause: Option<&dyn IWhere>) -> QueryStatement {
+    pub fn query(&self, where_clause: Option<&dyn IWhere>) -> SelectStatement {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
-        let built = QueryStatement::new(QueryStatementOptions {
+        let built = SelectStatement::new(SelectStatementOptions {
             where_clause,
-            ..QueryStatementOptions::new(&self.table, &refs)
+            ..SelectStatementOptions::new(&self.table, &refs)
         });
         let text = map_sql(&self.query, built.get_text());
         match where_clause {
             Some(predicate) => {
-                QueryStatement::with_where(text, WhereText::new(predicate.get_text()))
+                SelectStatement::with_where(text, WhereText::new(predicate.get_text()))
             }
-            None => QueryStatement::text(text),
+            None => SelectStatement::text(text),
         }
     }
 

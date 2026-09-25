@@ -131,7 +131,7 @@ internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
 
     static string FilterText(IStatement statement)
     {
-        var where = statement is IQuery query ? query.Where?.GetText() : null;
+        var where = statement is ISelectStatement query ? query.Where?.GetText() : null;
         if (LooksJson(where)) return where!;
         var text = statement.GetText();
         return LooksJson(text) || string.IsNullOrWhiteSpace(text) ? text : "";

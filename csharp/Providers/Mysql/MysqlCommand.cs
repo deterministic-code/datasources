@@ -16,8 +16,8 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             if (string.IsNullOrWhiteSpace(query))
                 return ((IReader<Row>)new ArrayReader<Row>([]), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
-            var rows = await Read(query, Helpers.ParametersToRecord(paramsList));
-            return ((IReader<Row>)new ArrayReader<Row>(rows), rows);
+            var reader = await Open(query, Helpers.ParametersToRecord(paramsList));
+            return (reader, (IReadOnlyList<Row>)[]);
         });
 
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
@@ -40,6 +40,35 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         }
         var rows = await command.ExecuteNonQueryAsync();
         return new MysqlExecuteResult(rows, Value.From(command.LastInsertedId), ReadBack(command, parameters));
+    }
+
+    async Task<StreamingReader> Open(string sql, Row parameters)
+    {
+        var command = Bind(sql, parameters);
+        try
+        {
+            var reader = await command.ExecuteReaderAsync();
+            return new StreamingReader(
+                async () =>
+                {
+                    if (!await reader.ReadAsync()) return null;
+                    var row = new Row();
+                    for (var i = 0; i < reader.FieldCount; i++)
+                        row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                    return row;
+                },
+                () => reader.NextResultAsync(),
+                async () =>
+                {
+                    await reader.DisposeAsync();
+                    await command.DisposeAsync();
+                });
+        }
+        catch
+        {
+            await command.DisposeAsync();
+            throw;
+        }
     }
 
     async Task<IReadOnlyList<Row>> Read(string sql, Row parameters)

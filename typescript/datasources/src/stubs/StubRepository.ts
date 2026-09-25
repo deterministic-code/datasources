@@ -3,7 +3,7 @@ import type { Cells } from "../converters/Cell.ts";
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
-import type { IQuery } from "../statements/IQuery.ts";
+import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { ReadonlyRepository, tracked, untyped, withoutSource, type Sourced } from "../ReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
@@ -20,12 +20,12 @@ export class StubRepository<T = unknown> extends ReadonlyRepository<T> implement
     super(type);
   }
 
-  async *read(_query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
+  async *read(_query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
     notImplemented(this.provider);
   }
 
   async *[tracked](
-    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
     yield* withoutSource(this.read(query));
   }

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { MockQuery } from "../index.ts";
+import { MockSelectStatement } from "../index.ts";
 
-describe("MockQuery", () => {
+describe("MockSelectStatement", () => {
   it("counts text access", () => {
-    const query = new MockQuery("q");
+    const query = new MockSelectStatement("q");
     expect(query.getText()).toBe("q");
     expect(query.getTextCalls).toBe(1);
   });

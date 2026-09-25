@@ -1,5 +1,5 @@
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
-import type { IQuery } from "./statements/IQuery.ts";
+import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IReadonlyEnrichmentBinder } from "./IReadonlyEnrichmentBinder.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
@@ -10,7 +10,7 @@ export interface IReadonlyEnrichmentStrategy<T extends object>
   read(
     inner: IReadonlyRepository<T>,
     tree: IRepositoryTree,
-    query?: IQuery | IWhere | IExecuteStoredProcedureStatement,
+    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<T>;
   enrich(tree: IRepositoryTree, items: T[]): Promise<void>;
 }

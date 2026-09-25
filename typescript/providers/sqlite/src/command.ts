@@ -3,6 +3,8 @@ import {
   CommandMiddlewareHost,
   parametersToRecord,
   responseOf,
+  splitStatements,
+  StreamingReader,
   type Cells,
   type Scalar,
   type ICommand,
@@ -35,8 +37,31 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     return this.run(text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new ArrayReader([]), rows: [] };
       this.connection.ensureOpen();
-      const rows = this.connection.require().prepare(query).all(bound(params));
-      return { value: new ArrayReader(rows), rows };
+      const statements = splitStatements(query);
+      if (statements.length === 0) return { value: new ArrayReader([]), rows: [] };
+      const paramsBound = bound(params);
+      let index = 0;
+      let iter = this.iterate(statements[0] as string, paramsBound);
+      return {
+        value: new StreamingReader(
+          async () => {
+            const step = iter.next();
+            return step.done ? undefined : step.value;
+          },
+          async () => {
+            iter.return();
+            index += 1;
+            const sql = statements[index];
+            if (!sql) return false;
+            iter = this.iterate(sql, paramsBound);
+            return true;
+          },
+          async () => {
+            iter.return();
+          },
+        ),
+        rows: [],
+      };
     });
   }
 
@@ -58,5 +83,16 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
         rows: [],
       };
     });
+  }
+
+  private iterate(sql: string, params: Record<string, Scalar>): IterableIterator<Cells> & {
+    return(): IteratorResult<Cells>;
+  } {
+    const iter = this.connection.require().prepare(sql).iterate(params);
+    const stop = iter.return;
+    return {
+      next: () => iter.next(),
+      return: () => (stop ? stop.call(iter) : { done: true, value: undefined }),
+    };
   }
 }

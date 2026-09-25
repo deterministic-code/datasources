@@ -22,7 +22,12 @@ describe("MockCommand", () => {
     const reader = await command.executeReader("");
     expect(reader).toBe(command.reader);
 
-    command.reader = { current: undefined, next: async () => false };
+    command.reader = {
+      current: undefined,
+      next: async () => false,
+      nextResult: async () => false,
+      dispose: async () => {},
+    };
     expect(await command.executeReader("plain")).toBe(command.reader);
 
     command.executeError = new Error("exec");

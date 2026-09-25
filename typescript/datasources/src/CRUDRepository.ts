@@ -24,7 +24,7 @@ import type { IEnriched } from "./IEnriched.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
-import type { IQuery } from "./statements/IQuery.ts";
+import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
@@ -32,7 +32,7 @@ import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import type { Row } from "./Row.ts";
 
 type Props = Record<string, Scalar | object>;
-type ReadQuery = IQuery | IWhere | IExecuteStoredProcedureStatement;
+type ReadQuery = ISelectStatement | IWhere | IExecuteStoredProcedureStatement;
 
 const fieldsOf = (
   record: Cells,

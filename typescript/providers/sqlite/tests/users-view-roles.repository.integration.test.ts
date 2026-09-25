@@ -8,7 +8,7 @@ import {
   FlatToNestedReadonlyEnrichmentStrategy,
   HashsetOptimizedReadonlyEnrichmentStrategy,
   Join,
-  QueryStatement,
+  SelectStatement,
   TransformMapper,
   Where,
   eq,
@@ -113,7 +113,7 @@ describe("users view roles", () => {
       ]),
       query: new TransformMapper(
         (query) =>
-          new QueryStatement({
+          new SelectStatement({
             table: "user_roles",
             fields: ["user_roles.user_id AS user_id", "roles.name AS name"],
             where: query.where,
@@ -161,7 +161,7 @@ describe("users view roles", () => {
             throw new Error("UsersView hydrate does not reverse");
           },
         ),
-        new QueryStatement({
+        new SelectStatement({
           table: "user",
           fields: [
             "user.id AS Key",

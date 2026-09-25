@@ -73,7 +73,7 @@ public class RepositoryTests
         var (repo, command) = Create();
         command.Reader = new MockReader<Row>([]);
         var where = new Where(new Operator.Equals("id", 9));
-        await repo.ReadSingle(new QueryStatement(new() { Table = "users", Fields = ["id"], Where = where }));
+        await repo.ReadSingle(new SelectStatement(new() { Table = "users", Fields = ["id"], Where = where }));
         Assert.Equal("SELECT id FROM users WHERE id = $id", command.ExecuteReaderCalls[0].Text);
         Assert.Equal(new Value.Int(9), command.ExecuteReaderCalls[0].Parameters![0].Value);
         Assert.Null(await repo.ReadSingle());

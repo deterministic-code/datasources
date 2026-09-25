@@ -112,7 +112,6 @@ describe("PostgresConnection", () => {
       "INSERT INTO items (id) VALUES (1) RETURNING id",
       "UPDATE items SET n = 1",
       "SELECT * FROM items",
-      "SELECT * FROM items",
       "BEGIN ISOLATION LEVEL SERIALIZABLE",
       "BEGIN ISOLATION LEVEL READ UNCOMMITTED",
       "BEGIN ISOLATION LEVEL READ COMMITTED",
@@ -196,6 +195,7 @@ describe("PostgresCommand", () => {
     expect(reader.current).toEqual({ id: 5 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
+    expect(await (await command.executeReader(";")).next()).toBe(false);
     client.result = { rowCount: 1, rows: [{ add_one: 5 }] };
     expect(await command.execute("SELECT add_one($n)", [{ name: "n", value: 4 }]))
       .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });

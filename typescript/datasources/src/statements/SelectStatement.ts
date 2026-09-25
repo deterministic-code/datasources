@@ -1,9 +1,9 @@
-import type { IQuery } from "./IQuery.ts";
+import type { ISelectStatement } from "./ISelectStatement.ts";
 import type { IWhere } from "./IWhere.ts";
 import type { Join, JoinKind } from "./Join.ts";
 import { orderText } from "./OrderBy.ts";
 import type { OrderBy } from "./OrderBy.ts";
-import type { QueryStatementOptions } from "./QueryStatementOptions.ts";
+import type { SelectStatementOptions } from "./SelectStatementOptions.ts";
 import { Where } from "./Where.ts";
 
 const joinWord: Record<Exclude<JoinKind, "cross">, string> = {
@@ -39,7 +39,7 @@ const bound = (keyword: string, value: number | undefined): string => {
   return ` ${keyword} ${value}`;
 };
 
-const select = (options: QueryStatementOptions): string =>
+const select = (options: SelectStatementOptions): string =>
   `SELECT ${options.distinct ? "DISTINCT " : ""}${
     options.fields.length === 0 ? "*" : options.fields.join(", ")
   } FROM ${options.table}${joinSql(options.joins)}${withClause("WHERE", options.where)}${listSql(
@@ -50,7 +50,7 @@ const select = (options: QueryStatementOptions): string =>
     options.orderBy?.map(orderText),
   )}${bound("LIMIT", options.limit)}${bound("OFFSET", options.offset)}`;
 
-export class QueryStatement implements IQuery {
+export class SelectStatement implements ISelectStatement {
   readonly where?: IWhere;
   readonly distinct: boolean;
   readonly table?: string;
@@ -64,8 +64,8 @@ export class QueryStatement implements IQuery {
   private readonly text: string;
 
   constructor(text: string, where?: IWhere);
-  constructor(options: QueryStatementOptions);
-  constructor(textOrOptions: string | QueryStatementOptions, where?: IWhere) {
+  constructor(options: SelectStatementOptions);
+  constructor(textOrOptions: string | SelectStatementOptions, where?: IWhere) {
     if (typeof textOrOptions === "string") {
       this.text = textOrOptions;
       this.where = where;

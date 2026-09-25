@@ -138,8 +138,12 @@ const cells = (row: Cells): Cells =>
 
 const collect = async (reader: IReader) => {
   const rows: Cells[] = [];
-  while (await reader.next()) if (reader.current) rows.push(reader.current as Cells);
-  return rows;
+  try {
+    while (await reader.next()) if (reader.current) rows.push(reader.current as Cells);
+    return rows;
+  } finally {
+    await reader.dispose();
+  }
 };
 
 const iso = (name?: IsolationLevelName): IsolationLevelName =>

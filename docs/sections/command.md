@@ -244,6 +244,26 @@ next(): Promise<boolean>
 
 **Returns** `Promise<boolean>`
 
+##### nextResult()
+
+Moves to the next result set and clears [current](#ireader-current). Returns false when there is no further set. [next](#ireader-next) then reads that set. Calling only [next](#ireader-next) leaves later sets unread.
+
+```typescript
+nextResult(): Promise<boolean>
+```
+
+**Returns** `Promise<boolean>`
+
+##### dispose()
+
+Releases the reader.
+
+```typescript
+dispose(): Promise<void>
+```
+
+**Returns** `Promise<void>`
+
 ### csharp
 #### ICommand
 
@@ -494,6 +514,16 @@ Advances to the next row.
 
 ```csharp
 Task<bool> Next()
+```
+
+**Returns** `Task<bool>`
+
+##### NextResult()
+
+Moves to the next result set and clears [Current](#ireader-current). Returns false when there is no further set. [Next](#ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#ireader-next) leaves later sets unread.
+
+```csharp
+Task<bool> NextResult()
 ```
 
 **Returns** `Task<bool>`
@@ -794,6 +824,16 @@ async fn next(&self) -> Result<bool>
 ```
 
 **Returns** `Result<bool>`
+
+##### next_result()
+
+Moves to the next result set and clears [current](#reader-current). Returns false when there is no further set. [next](#reader-next) then reads that set. The default returns false. Calling only [next](#reader-next) leaves later sets unread.
+
+```rust
+async fn next_result(&self) -> Result<bool>
+```
+
+**Returns** `Result<bool>`
 :::
 
 ## Remarks
@@ -805,6 +845,8 @@ The connection must be open before `Execute` / `execute` / `execute` or `Execute
 Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
 
 The Rust `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection today.
+
+`ExecuteReader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next`. SQL `AfterCommand` for `ExecuteReader` receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
 
 `ExecuteReader` returns rows. Convert with [RowTypeConverter](./row-type-converter.md), then map with a [Mapper](./mappers.md).
 
@@ -820,6 +862,17 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 ```rust rust/datasources/src/tests/command.rs#L60-L82
 ```
 ```typescript typescript/datasources/src/Command.test.ts#L45-L56
+```
+:::
+
+### Read the next result set
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L20-L42
+```
+```rust rust/providers/sqlite/src/lib.rs#L87-L99
+```
+```typescript typescript/providers/sqlite/src/sqlite.test.ts#L159-L165
 ```
 :::
 

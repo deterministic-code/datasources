@@ -26,6 +26,7 @@ class FakeDatabase implements SqliteDatabase {
   execs: string[] = [];
   closed = false;
   rows: Cells[] = [{ id: 1 }];
+  bySql?: Record<string, Cells[]>;
   omitRowid = false;
 
   constructor(public filename: string) {
@@ -40,7 +41,11 @@ class FakeDatabase implements SqliteDatabase {
       },
       all: (params) => {
         this.alls.push({ sql, params });
-        return this.rows;
+        return this.bySql?.[sql] ?? this.rows;
+      },
+      iterate: (params) => {
+        this.alls.push({ sql, params });
+        return (this.bySql?.[sql] ?? this.rows)[Symbol.iterator]();
       },
     };
   }
@@ -141,12 +146,28 @@ describe("SqliteCommand", () => {
       result: undefined,
       rowsAffected: 1,
     });
-    db.rows = [{ id: 1, name: "a" }];
+    db.rows = [{ id: 1, name: "a" }, { id: 2, name: "b" }];
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1, name: "a" });
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 2, name: "b" });
+    await reader.dispose();
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
+    expect(await (await command.executeReader(";")).next()).toBe(false);
+    db.bySql = { "SELECT 1 AS id": [{ id: 1 }], "SELECT 2 AS id": [{ id: 2 }] };
+    const sets = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
+    const first: Cells[] = [];
+    while (await sets.next()) first.push(sets.current!);
+    const moved = await sets.nextResult();
+    const second: Cells[] = [];
+    while (await sets.next()) second.push(sets.current!);
+    expect(moved).toBe(true);
+    expect(first).toEqual([{ id: 1 }]);
+    expect(second).toEqual([{ id: 2 }]);
+    expect(await sets.nextResult()).toBe(false);
+    await sets.dispose();
     await connection.close();
     await expect(command.execute("DELETE FROM items")).rejects.toThrow("not open");
   });

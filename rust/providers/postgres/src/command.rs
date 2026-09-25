@@ -4,12 +4,12 @@ use crate::pg_value::PgValue;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
-    parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, Parameter, Reader, Response, Result, Value,
+    parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
+    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, Value,
 };
 use rust_decimal::Decimal;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio_postgres::types::ToSql;
 use tokio_postgres::Row;
 use uuid::Uuid;
@@ -108,15 +108,20 @@ impl Command for PostgresCommand {
                         ));
                     }
                     connection.ensure_open()?;
-                    let rows = PostgresCommand::query_sql(
-                        &connection,
-                        &sql,
-                        &parameters_to_map(params.as_deref()),
-                    )
-                    .await?;
+                    let statements = split_statements(&sql);
+                    if statements.is_empty() {
+                        return Ok((
+                            Box::new(ArrayReader::new(vec![])) as Box<dyn Reader>,
+                            vec![],
+                        ));
+                    }
                     Ok((
-                        Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
-                        rows,
+                        Box::new(PostgresReader::new(
+                            connection,
+                            statements,
+                            parameters_to_map(params.as_deref()),
+                        )) as Box<dyn Reader>,
+                        vec![],
                     ))
                 }
             })
@@ -217,4 +222,88 @@ fn row_record(row: &Row) -> datasources::Row {
         record.insert(column.name().to_string(), from_cell(row, index));
     }
     record
+}
+
+struct BatchState {
+    index: usize,
+    rows: Vec<datasources::Row>,
+    at: usize,
+    loaded: bool,
+    current: Option<datasources::Row>,
+}
+
+struct PostgresReader {
+    connection: Arc<PostgresConnection>,
+    statements: Vec<String>,
+    params: HashMap<String, Value>,
+    state: Mutex<BatchState>,
+}
+
+impl PostgresReader {
+    fn new(
+        connection: Arc<PostgresConnection>,
+        statements: Vec<String>,
+        params: HashMap<String, Value>,
+    ) -> Self {
+        Self {
+            connection,
+            statements,
+            params,
+            state: Mutex::new(BatchState {
+                index: 0,
+                rows: Vec::new(),
+                at: 0,
+                loaded: false,
+                current: None,
+            }),
+        }
+    }
+}
+
+#[async_trait]
+impl Reader for PostgresReader {
+    fn current(&self) -> Option<datasources::Row> {
+        self.state.lock().expect("reader").current.clone()
+    }
+
+    async fn next(&self) -> Result<bool> {
+        let index = {
+            let state = self.state.lock().expect("reader");
+            if state.loaded {
+                None
+            } else if state.index >= self.statements.len() {
+                return Ok(false);
+            } else {
+                Some(state.index)
+            }
+        };
+        if let Some(index) = index {
+            let rows = PostgresCommand::query_sql(
+                &self.connection,
+                &self.statements[index],
+                &self.params,
+            )
+            .await?;
+            let mut state = self.state.lock().expect("reader");
+            state.rows = rows;
+            state.at = 0;
+            state.loaded = true;
+        }
+        let mut state = self.state.lock().expect("reader");
+        if state.at >= state.rows.len() {
+            state.current = None;
+            return Ok(false);
+        }
+        state.current = Some(state.rows[state.at].clone());
+        state.at += 1;
+        Ok(true)
+    }
+
+    async fn next_result(&self) -> Result<bool> {
+        let mut state = self.state.lock().expect("reader");
+        state.index += 1;
+        state.loaded = false;
+        state.current = None;
+        Ok(state.index < self.statements.len())
+    }
 }

@@ -1,5 +1,6 @@
 mod command;
 mod connection;
+mod reader;
 mod connection_string;
 mod converters;
 mod driver;
@@ -27,7 +28,7 @@ mod tests {
     use crate::connection::SqliteConnection;
     use crate::transaction::SqliteTransaction;
     use datasources::{
-        converters::Cells, create, downcast_connection, register, reset, BuiltDatasource, Command,
+        converters::Cells, create, downcast_connection, register, reset,         BuiltDatasource, Command,
         Connection, Datasource, Driver, IsolationLevel, Transaction,
     };
     use std::collections::HashMap;
@@ -83,6 +84,30 @@ mod tests {
             .await
             .unwrap();
         command.execute_reader("SELECT 1", None).await.unwrap();
+        let sets = command
+            .execute_reader("SELECT 1 AS id; SELECT 2 AS id", None)
+            .await
+            .unwrap();
+        let mut first = Vec::new();
+        while sets.next().await.unwrap() {
+            first.push(sets.current());
+        }
+        let moved = sets.next_result().await.unwrap();
+        let mut second = Vec::new();
+        while sets.next().await.unwrap() {
+            second.push(sets.current());
+        }
+        assert!(moved);
+        assert_eq!(
+            first[0].as_ref().unwrap().get("id"),
+            Some(&datasources::Value::Int(1))
+        );
+        assert_eq!(
+            second[0].as_ref().unwrap().get("id"),
+            Some(&datasources::Value::Int(2))
+        );
+        assert!(!sets.next_result().await.unwrap());
+        drop(sets);
         command.execute_reader("", None).await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
         assert_eq!(

@@ -16,8 +16,8 @@ mod tests {
     use crate::store::{MemoryData, MemoryStore};
     use datasources::{
         converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
-        Connection, ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter,
-        QueryStatement, Row, Value, WhereText,
+        Connection, ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter, Row,
+        SelectStatement, Value, WhereText,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -105,12 +105,12 @@ mod tests {
         let repo = crud(conn.clone());
         assert!(repo.read_single(None).await.unwrap().is_some());
         assert!(repo
-            .read_single(Some(&QueryStatement::text("{\"id\":9}")))
+            .read_single(Some(&SelectStatement::text("{\"id\":9}")))
             .await
             .unwrap()
             .is_none());
         assert!(!repo
-            .read(Some(&QueryStatement::text("{\"id\":1}")))
+            .read(Some(&SelectStatement::text("{\"id\":1}")))
             .await
             .unwrap()
             .is_empty());

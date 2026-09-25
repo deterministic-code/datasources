@@ -66,7 +66,7 @@ internal sealed class ListCRUDRepository<T> : ReadonlyRepository<T>, ICRUDReposi
     static IReadOnlyList<Parameter> ParametersOf(IStatement? query) =>
         query switch
         {
-            IQuery q => q.Where?.Parameters ?? q.Parameters,
+            ISelectStatement q => q.Where?.Parameters ?? q.Parameters,
             IWhere w => w.Parameters,
             null => [],
             _ => query.Parameters

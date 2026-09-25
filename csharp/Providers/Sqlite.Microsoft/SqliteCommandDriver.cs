@@ -18,6 +18,41 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
             ? Task.FromResult<IReadOnlyList<Row>>([])
             : Read(sql, parameters);
 
+    public async Task<IReader<Row>> Open(string sql, Row parameters)
+    {
+        var command = Bind(sql, parameters);
+        try
+        {
+            var reader = await command.ExecuteReaderAsync();
+            string[]? names = null;
+            return new StreamingReader(
+                async () =>
+                {
+                    if (!await reader.ReadAsync()) return null;
+                    names ??= ColumnNames(reader);
+                    var row = new Row();
+                    for (var i = 0; i < reader.FieldCount; i++)
+                        row[names[i]] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                    return row;
+                },
+                async () =>
+                {
+                    names = null;
+                    return await reader.NextResultAsync();
+                },
+                async () =>
+                {
+                    await reader.DisposeAsync();
+                    await command.DisposeAsync();
+                });
+        }
+        catch
+        {
+            await command.DisposeAsync();
+            throw;
+        }
+    }
+
     internal async Task Exec(string sql)
     {
         using var command = connection.Require().CreateCommand();

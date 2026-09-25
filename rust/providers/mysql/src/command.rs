@@ -5,13 +5,14 @@ use crate::converters::{
 use crate::engine::to_mysql;
 use async_trait::async_trait;
 use datasources::{
-    parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, Parameter, Reader, Response, Result, TypeConverter, Value,
+    parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
+    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, TypeConverter,
+    Value,
 };
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Row, Value as MysqlValue};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 struct MysqlExecuteResult {
     rows_affected: i64,
@@ -104,15 +105,20 @@ impl Command for MysqlCommand {
                         ));
                     }
                     connection.ensure_open()?;
-                    let rows = MysqlCommand::query_sql(
-                        &connection,
-                        &sql,
-                        &parameters_to_map(params.as_deref()),
-                    )
-                    .await?;
+                    let statements = split_statements(&sql);
+                    if statements.is_empty() {
+                        return Ok((
+                            Box::new(ArrayReader::new(vec![])) as Box<dyn Reader>,
+                            vec![],
+                        ));
+                    }
                     Ok((
-                        Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
-                        rows,
+                        Box::new(MysqlReader::new(
+                            connection,
+                            statements,
+                            parameters_to_map(params.as_deref()),
+                        )) as Box<dyn Reader>,
+                        vec![],
                     ))
                 }
             })
@@ -203,4 +209,85 @@ fn row_record(row: Row) -> datasources::Row {
         record.insert(column.name_str().into_owned(), from_mysql_value(value));
     }
     record
+}
+
+struct BatchState {
+    index: usize,
+    rows: Vec<datasources::Row>,
+    at: usize,
+    loaded: bool,
+    current: Option<datasources::Row>,
+}
+
+struct MysqlReader {
+    connection: Arc<MysqlConnection>,
+    statements: Vec<String>,
+    params: HashMap<String, Value>,
+    state: Mutex<BatchState>,
+}
+
+impl MysqlReader {
+    fn new(
+        connection: Arc<MysqlConnection>,
+        statements: Vec<String>,
+        params: HashMap<String, Value>,
+    ) -> Self {
+        Self {
+            connection,
+            statements,
+            params,
+            state: Mutex::new(BatchState {
+                index: 0,
+                rows: Vec::new(),
+                at: 0,
+                loaded: false,
+                current: None,
+            }),
+        }
+    }
+}
+
+#[async_trait]
+impl Reader for MysqlReader {
+    fn current(&self) -> Option<datasources::Row> {
+        self.state.lock().expect("reader").current.clone()
+    }
+
+    async fn next(&self) -> Result<bool> {
+        let index = {
+            let state = self.state.lock().expect("reader");
+            if state.loaded {
+                None
+            } else if state.index >= self.statements.len() {
+                return Ok(false);
+            } else {
+                Some(state.index)
+            }
+        };
+        if let Some(index) = index {
+            let rows =
+                MysqlCommand::query_sql(&self.connection, &self.statements[index], &self.params)
+                    .await?;
+            let mut state = self.state.lock().expect("reader");
+            state.rows = rows;
+            state.at = 0;
+            state.loaded = true;
+        }
+        let mut state = self.state.lock().expect("reader");
+        if state.at >= state.rows.len() {
+            state.current = None;
+            return Ok(false);
+        }
+        state.current = Some(state.rows[state.at].clone());
+        state.at += 1;
+        Ok(true)
+    }
+
+    async fn next_result(&self) -> Result<bool> {
+        let mut state = self.state.lock().expect("reader");
+        state.index += 1;
+        state.loaded = false;
+        state.current = None;
+        Ok(state.index < self.statements.len())
+    }
 }

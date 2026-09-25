@@ -95,7 +95,7 @@ public static class StatementParser
             if (i != text.Length) throw new InvalidOperationException("empty statement");
         }
 
-        QueryStatement SelectStatement()
+        SelectStatement SelectStatement()
         {
             ExpectWord("SELECT");
             var distinct = TryWord("DISTINCT");
@@ -109,7 +109,7 @@ public static class StatementParser
             IReadOnlyList<OrderBy>? order = TryWord("ORDER") ? Order() : null;
             int? limit = TryWord("LIMIT") ? Integer() : null;
             int? offset = TryWord("OFFSET") ? Integer() : null;
-            return new QueryStatement(new QueryStatementOptions
+            return new SelectStatement(new SelectStatementOptions
             {
                 Distinct = distinct,
                 Table = table,
@@ -159,7 +159,7 @@ public static class StatementParser
             return $"({nested.GetText()}) AS {Ident()}";
         }
 
-        QueryStatement Nested()
+        SelectStatement Nested()
         {
             Expect('(');
             var query = SelectStatement();

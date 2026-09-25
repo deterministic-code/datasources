@@ -19,7 +19,7 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T> where T 
         WithoutSource(Read(query));
 
     static bool Matches(T item, IStatement? query) =>
-        query is IQuery { Where: { } where } && where.GetText() == "1 = 0"
+        query is ISelectStatement { Where: { } where } && where.GetText() == "1 = 0"
             ? false
             : ParametersOf(query)
                 .GroupBy(parameter => FieldOf(parameter.Name))
@@ -34,7 +34,7 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T> where T 
     static IReadOnlyList<Parameter> ParametersOf(IStatement? query) =>
         query switch
         {
-            IQuery q => q.Where?.Parameters ?? q.Parameters,
+            ISelectStatement q => q.Where?.Parameters ?? q.Parameters,
             IWhere w => w.Parameters,
             null => [],
             _ => query.Parameters

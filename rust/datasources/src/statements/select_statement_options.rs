@@ -2,7 +2,7 @@ use crate::builders::Join;
 use crate::i_where::IWhere;
 use crate::statements::OrderBy;
 
-pub struct QueryStatementOptions<'a> {
+pub struct SelectStatementOptions<'a> {
     pub table: &'a str,
     pub fields: &'a [&'a str],
     pub where_clause: Option<&'a dyn IWhere>,
@@ -15,7 +15,7 @@ pub struct QueryStatementOptions<'a> {
     pub offset: Option<i64>,
 }
 
-impl<'a> QueryStatementOptions<'a> {
+impl<'a> SelectStatementOptions<'a> {
     pub fn new(table: &'a str, fields: &'a [&'a str]) -> Self {
         Self {
             table,

@@ -82,6 +82,8 @@ describe("StubDatasource", () => {
     const reader = new StubReader("text");
     expect(reader.current).toBeUndefined();
     await expect(reader.next()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(reader.nextResult()).rejects.toThrow(ProviderNotImplementedError);
+    await reader.dispose();
 
     const named = new StubDatasource("yaml");
     expect(named.createCommand().connection).toBeInstanceOf(StubConnection);

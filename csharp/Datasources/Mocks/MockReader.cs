@@ -23,6 +23,12 @@ public class MockReader<T> : IReader<T>
         Current = default;
         return Task.FromResult(false);
     }
+
+    public Task<bool> NextResult()
+    {
+        Current = default;
+        return Task.FromResult(false);
+    }
 }
 
 public sealed class MockReader : MockReader<object>, IReader

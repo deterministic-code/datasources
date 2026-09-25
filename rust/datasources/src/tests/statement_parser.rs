@@ -74,7 +74,7 @@ fn builds_the_write_trees() {
 fn builds_the_where_tree() {
     let not_like =
         StatementParser::parse("SELECT id FROM users WHERE name NOT LIKE $name").unwrap();
-    let not_like = not_like.as_any().downcast_ref::<QueryStatement>().unwrap();
+    let not_like = not_like.as_any().downcast_ref::<SelectStatement>().unwrap();
     let clause = not_like
         .where_clause()
         .unwrap()
@@ -90,7 +90,7 @@ fn builds_the_where_tree() {
         "SELECT id FROM users WHERE EXISTS (SELECT id FROM posts WHERE posts.user_id = users.id)",
     )
     .unwrap();
-    let exists = exists.as_any().downcast_ref::<QueryStatement>().unwrap();
+    let exists = exists.as_any().downcast_ref::<SelectStatement>().unwrap();
     let clause = exists
         .where_clause()
         .unwrap()
@@ -106,12 +106,12 @@ fn builds_the_where_tree() {
         "SELECT id FROM users FULL JOIN profiles ON users.id = profiles.user_id",
     )
     .unwrap();
-    let full = full.as_any().downcast_ref::<QueryStatement>().unwrap();
+    let full = full.as_any().downcast_ref::<SelectStatement>().unwrap();
     assert_eq!(full.joins.len(), 1);
     assert_eq!(full.joins[0].kind, JoinKind::Full);
 
     let cross = StatementParser::parse("SELECT id FROM users CROSS JOIN tags").unwrap();
-    let cross = cross.as_any().downcast_ref::<QueryStatement>().unwrap();
+    let cross = cross.as_any().downcast_ref::<SelectStatement>().unwrap();
     assert_eq!(cross.joins.len(), 1);
     assert_eq!(cross.joins[0].kind, JoinKind::Cross);
     assert!(cross.joins[0].on.is_none());
@@ -120,7 +120,7 @@ fn builds_the_where_tree() {
         "SELECT DISTINCT status FROM orders GROUP BY status HAVING status = $status ORDER BY status ASC LIMIT 10 OFFSET 5",
     )
     .unwrap();
-    let shaped = shaped.as_any().downcast_ref::<QueryStatement>().unwrap();
+    let shaped = shaped.as_any().downcast_ref::<SelectStatement>().unwrap();
     assert!(shaped.distinct);
     assert_eq!(shaped.limit, Some(10));
     assert_eq!(shaped.offset, Some(5));

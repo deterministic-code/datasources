@@ -2238,6 +2238,8 @@ interface IReader<T>
 | Name | Description |
 | --- | --- |
 | [next()](#typescript-ireader-reader-next) | Advances to the next row. |
+| [nextResult()](#typescript-ireader-reader-nextresult) | Moves to the next result set and clears [current](#typescript-ireader-current). Returns false when there is no further set. [next](#typescript-ireader-next) then reads that set. Calling only [next](#typescript-ireader-next) leaves later sets unread. |
+| [dispose()](#typescript-ireader-reader-dispose) | Releases the reader. |
 
 ###### next() {#typescript-ireader-reader-next}
 
@@ -2252,6 +2254,34 @@ next(): Promise<boolean>
 **Returns**
 
 `Promise<boolean>`
+
+###### nextResult() {#typescript-ireader-reader-nextresult}
+
+Moves to the next result set and clears [current](#typescript-ireader-current). Returns false when there is no further set. [next](#typescript-ireader-next) then reads that set. Calling only [next](#typescript-ireader-next) leaves later sets unread.
+
+**Definition**
+
+```typescript
+nextResult(): Promise<boolean>
+```
+
+**Returns**
+
+`Promise<boolean>`
+
+###### dispose() {#typescript-ireader-reader-dispose}
+
+Releases the reader.
+
+**Definition**
+
+```typescript
+dispose(): Promise<void>
+```
+
+**Returns**
+
+`Promise<void>`
 
 ##### C#
 
@@ -2537,6 +2567,7 @@ public interface IReader<out T>
 | Name | Description |
 | --- | --- |
 | [Next()](#csharp-ireader-reader-next) | Advances to the next row. |
+| [NextResult()](#csharp-ireader-reader-nextresult) | Moves to the next result set and clears [Current](#csharp-ireader-current). Returns false when there is no further set. [Next](#csharp-ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#csharp-ireader-next) leaves later sets unread. |
 
 ###### Next() {#csharp-ireader-reader-next}
 
@@ -2546,6 +2577,20 @@ Advances to the next row.
 
 ```csharp
 Task<bool> Next()
+```
+
+**Returns**
+
+`Task<bool>`
+
+###### NextResult() {#csharp-ireader-reader-nextresult}
+
+Moves to the next result set and clears [Current](#csharp-ireader-current). Returns false when there is no further set. [Next](#csharp-ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#csharp-ireader-next) leaves later sets unread.
+
+**Definition**
+
+```csharp
+Task<bool> NextResult()
 ```
 
 **Returns**
@@ -2916,6 +2961,7 @@ pub trait Reader<T = Row>: Send + Sync
 | --- | --- |
 | [current()](#rust-reader-reader-current) | The row from the last successful [next](#rust-reader-next). |
 | [next()](#rust-reader-reader-next) | Advances to the next row. |
+| [next_result()](#rust-reader-reader-next_result) | Moves to the next result set and clears [current](#rust-reader-current). Returns false when there is no further set. [next](#rust-reader-next) then reads that set. The default returns false. Calling only [next](#rust-reader-next) leaves later sets unread. |
 
 ###### current() {#rust-reader-reader-current}
 
@@ -2945,6 +2991,20 @@ async fn next(&self) -> Result<bool>
 
 `Result<bool>`
 
+###### next_result() {#rust-reader-reader-next_result}
+
+Moves to the next result set and clears [current](#rust-reader-current). Returns false when there is no further set. [next](#rust-reader-next) then reads that set. The default returns false. Calling only [next](#rust-reader-next) leaves later sets unread.
+
+**Definition**
+
+```rust
+async fn next_result(&self) -> Result<bool>
+```
+
+**Returns**
+
+`Result<bool>`
+
 ### Remarks
 
 The connection must be open before `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader`.
@@ -2954,6 +3014,8 @@ The connection must be open before `Execute` / `execute` / `execute` or `Execute
 Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
 
 The Rust `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection today.
+
+`ExecuteReader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next`. SQL `AfterCommand` for `ExecuteReader` receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
 
 `ExecuteReader` returns rows. Convert with [RowTypeConverter](#row-type-converter), then map with a [Mapper](#mapper).
 
@@ -3007,6 +3069,57 @@ const items: NameValue[] = [];
 while (await reader.next()) {
   items.push(converter.convert(reader.current!, NameValue));
 }
+```
+
+#### Read the next result set
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L20-L42)
+
+```csharp
+var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
+await conn.Open();
+var command = new SqliteCommand(conn);
+var reader = await command.ExecuteReader("SELECT 1 AS id; SELECT 2 AS id");
+var first = new List<Row>();
+while (await reader.Next())
+    first.Add(reader.Current!);
+var moved = await reader.NextResult();
+var second = new List<Row>();
+while (await reader.Next())
+    second.Add(reader.Current!);
+var again = await reader.NextResult();
+if (reader is IAsyncDisposable disposable)
+    await disposable.DisposeAsync();
+await conn.Close();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/src/lib.rs#L87-L99)
+
+```rust
+let sets = command
+    .execute_reader("SELECT 1 AS id; SELECT 2 AS id", None)
+    .await
+    .unwrap();
+let mut first = Vec::new();
+while sets.next().await.unwrap() {
+    first.push(sets.current());
+}
+let moved = sets.next_result().await.unwrap();
+let mut second = Vec::new();
+while sets.next().await.unwrap() {
+    second.push(sets.current());
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/src/sqlite.test.ts#L159-L165)
+
+```typescript
+const sets = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
+const first: Cells[] = [];
+while (await sets.next()) first.push(sets.current!);
+const moved = await sets.nextResult();
+const second: Cells[] = [];
+while (await sets.next()) second.push(sets.current!);
 ```
 
 #### Execute insert, update, and delete
@@ -3149,8 +3262,7 @@ Assert.Throws<InvalidOperationException>(() =>
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1114-L1124)
 
 ```rust
-let bound_fields = [min_n.as_str(), max_n.as_str()];
-let bounds = QueryStatement::new(QueryStatementOptions::new("users", &bound_fields));
+});
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L325-L328)
@@ -3336,7 +3448,7 @@ Bound values live on [Where](#where). [IStatement](#istatement) is not an [IExpr
 
 ### See also
 
-- [QueryStatement](#query-statement)
+- [SelectStatement](#select-statement)
 - [InsertStatement](#insert-statement)
 - [UpdateStatement](#update-statement)
 - [DeleteStatement](#delete-statement)
@@ -3348,18 +3460,18 @@ Bound values live on [Where](#where). [IStatement](#istatement) is not an [IExpr
 - [Expressions](#expressions)
 - [StatementEvaluator](#statement-evaluator)
 
-## Query Statement
+## Select Statement
 
-`SELECT` text, or a compiled `SELECT` from [QueryStatementOptions](#querystatementoptions): table, fields, optional [IWhere](#iwhere), joins, grouping, order, and limit.
+`SELECT` text, or a compiled `SELECT` from [SelectStatementOptions](#selectstatementoptions): table, fields, optional [IWhere](#iwhere), joins, grouping, order, and limit.
 
 ### Classes
 
 ##### TypeScript
 
-##### IQuery {#typescript-iquery}
+##### ISelectStatement {#typescript-iselectstatement}
 
 ```typescript
-interface IQuery extends IStatement
+interface ISelectStatement extends IStatement
 ```
 
 **Properties**
@@ -3368,18 +3480,18 @@ interface IQuery extends IStatement
 | --- | --- |
 | where | Optional [IWhere](#typescript-iwhere) used to build this query. |
 
-##### QueryStatement {#typescript-querystatement}
+##### SelectStatement {#typescript-selectstatement}
 
 ```typescript
-class QueryStatement implements IQuery
+class SelectStatement implements ISelectStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [QueryStatement(text, where?)](#typescript-querystatement-querystatement-text-where) | Wraps query text and an optional [IWhere](#typescript-iwhere). |
-| [QueryStatement(options)](#typescript-querystatement-querystatement-options) | Compiles a `SELECT` from [QueryStatementOptions](#typescript-querystatementoptions). |
+| [SelectStatement(text, where?)](#typescript-selectstatement-selectstatement-text-where) | Wraps query text and an optional [IWhere](#typescript-iwhere). |
+| [SelectStatement(options)](#typescript-selectstatement-selectstatement-options) | Compiles a `SELECT` from [SelectStatementOptions](#typescript-selectstatementoptions). |
 
 **Properties**
 
@@ -3391,9 +3503,9 @@ class QueryStatement implements IQuery
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-querystatement-gettext) | Command text. |
+| [getText()](#typescript-selectstatement-gettext) | Command text. |
 
-###### QueryStatement(text, where?) {#typescript-querystatement-querystatement-text-where}
+###### SelectStatement(text, where?) {#typescript-selectstatement-selectstatement-text-where}
 
 Wraps query text and an optional [IWhere](#typescript-iwhere).
 
@@ -3410,14 +3522,14 @@ constructor(text: string, where?: IWhere)
 | `text` | command text |
 | `where` | optional [IWhere](#typescript-iwhere) |
 
-###### QueryStatement(options) {#typescript-querystatement-querystatement-options}
+###### SelectStatement(options) {#typescript-selectstatement-selectstatement-options}
 
-Compiles a `SELECT` from [QueryStatementOptions](#typescript-querystatementoptions).
+Compiles a `SELECT` from [SelectStatementOptions](#typescript-selectstatementoptions).
 
 **Definition**
 
 ```typescript
-constructor(options: QueryStatementOptions)
+constructor(options: SelectStatementOptions)
 ```
 
 **Parameters**
@@ -3426,7 +3538,7 @@ constructor(options: QueryStatementOptions)
 | --- | --- |
 | `options` | table, fields, and optional where, joins, group, order, and limit |
 
-###### getText() {#typescript-querystatement-gettext}
+###### getText() {#typescript-selectstatement-gettext}
 
 Command text.
 
@@ -3440,10 +3552,10 @@ getText(): string
 
 `string`
 
-##### QueryStatementOptions {#typescript-querystatementoptions}
+##### SelectStatementOptions {#typescript-selectstatementoptions}
 
 ```typescript
-type QueryStatementOptions = {
+type SelectStatementOptions = {
   table: string
   fields: string[]
   where?: IWhere
@@ -3717,10 +3829,10 @@ type JoinKind = "inner" | "left" | "right"
 
 ##### C#
 
-##### IQuery {#csharp-iquery}
+##### ISelectStatement {#csharp-iselectstatement}
 
 ```csharp
-public interface IQuery : IStatement
+public interface ISelectStatement : IStatement
 ```
 
 **Properties**
@@ -3729,18 +3841,18 @@ public interface IQuery : IStatement
 | --- | --- |
 | Where | Optional [IWhere](#csharp-iwhere) used to build this query. |
 
-##### QueryStatement {#csharp-querystatement}
+##### SelectStatement {#csharp-selectstatement}
 
 ```csharp
-public sealed record QueryStatement : IQuery
+public sealed record SelectStatement : ISelectStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [QueryStatement(text, where)](#csharp-querystatement-querystatement-text-where) | Wraps query text and an optional [IWhere](#csharp-iwhere). |
-| [QueryStatement(options)](#csharp-querystatement-querystatement-options) | Compiles a `SELECT` from [QueryStatementOptions](#csharp-querystatementoptions). |
+| [SelectStatement(text, where)](#csharp-selectstatement-selectstatement-text-where) | Wraps query text and an optional [IWhere](#csharp-iwhere). |
+| [SelectStatement(options)](#csharp-selectstatement-selectstatement-options) | Compiles a `SELECT` from [SelectStatementOptions](#csharp-selectstatementoptions). |
 
 **Properties**
 
@@ -3752,16 +3864,16 @@ public sealed record QueryStatement : IQuery
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-querystatement-gettext) | Command text. |
+| [GetText()](#csharp-selectstatement-gettext) | Command text. |
 
-###### QueryStatement(text, where) {#csharp-querystatement-querystatement-text-where}
+###### SelectStatement(text, where) {#csharp-selectstatement-selectstatement-text-where}
 
 Wraps query text and an optional [IWhere](#csharp-iwhere).
 
 **Definition**
 
 ```csharp
-public QueryStatement(string text, IWhere? where = null)
+public SelectStatement(string text, IWhere? where = null)
 ```
 
 **Parameters**
@@ -3771,14 +3883,14 @@ public QueryStatement(string text, IWhere? where = null)
 | `text` | command text |
 | `where` | optional [IWhere](#csharp-iwhere) |
 
-###### QueryStatement(options) {#csharp-querystatement-querystatement-options}
+###### SelectStatement(options) {#csharp-selectstatement-selectstatement-options}
 
-Compiles a `SELECT` from [QueryStatementOptions](#csharp-querystatementoptions).
+Compiles a `SELECT` from [SelectStatementOptions](#csharp-selectstatementoptions).
 
 **Definition**
 
 ```csharp
-public QueryStatement(QueryStatementOptions options)
+public SelectStatement(SelectStatementOptions options)
 ```
 
 **Parameters**
@@ -3787,7 +3899,7 @@ public QueryStatement(QueryStatementOptions options)
 | --- | --- |
 | `options` | table, fields, and optional where, joins, group, order, and limit |
 
-###### GetText() {#csharp-querystatement-gettext}
+###### GetText() {#csharp-selectstatement-gettext}
 
 Command text.
 
@@ -3801,10 +3913,10 @@ public string GetText()
 
 `string`
 
-##### QueryStatementOptions {#csharp-querystatementoptions}
+##### SelectStatementOptions {#csharp-selectstatementoptions}
 
 ```csharp
-public sealed class QueryStatementOptions
+public sealed class SelectStatementOptions
 ```
 
 **Properties**
@@ -4065,19 +4177,19 @@ public enum JoinKind
 
 ##### Rust
 
-##### Query {#rust-query}
+##### ISelectStatement {#rust-iselectstatement}
 
 ```rust
-pub trait Query: Statement
+pub trait ISelectStatement: Statement
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [where_clause()](#rust-query-where_clause) | Optional [IWhere](#rust-iwhere) used to build this query. |
+| [where_clause()](#rust-iselectstatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this query. |
 
-###### where_clause() {#rust-query-where_clause}
+###### where_clause() {#rust-iselectstatement-where_clause}
 
 Optional [IWhere](#rust-iwhere) used to build this query.
 
@@ -4091,28 +4203,28 @@ fn where_clause(&self) -> Option<&dyn IWhere>
 
 `Option<&dyn `[IWhere](#rust-iwhere)`>`
 
-##### QueryStatement {#rust-querystatement}
+##### SelectStatement {#rust-selectstatement}
 
 ```rust
-pub struct QueryStatement
+pub struct SelectStatement
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [text(text)](#rust-querystatement-text-text) | Wraps query text. |
-| [with_where(text, where_clause)](#rust-querystatement-with_where-text-where_clause) | Wraps query text and an [IWhere](#rust-iwhere). |
-| [new(options)](#rust-querystatement-new-options) | Compiles a `SELECT` from [QueryStatementOptions](#rust-querystatementoptions). |
+| [text(text)](#rust-selectstatement-text-text) | Wraps query text. |
+| [with_where(text, where_clause)](#rust-selectstatement-with_where-text-where_clause) | Wraps query text and an [IWhere](#rust-iwhere). |
+| [new(options)](#rust-selectstatement-new-options) | Compiles a `SELECT` from [SelectStatementOptions](#rust-selectstatementoptions). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-querystatement-get_text) | Command text. |
-| [where_clause()](#rust-querystatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this query. |
+| [get_text()](#rust-selectstatement-get_text) | Command text. |
+| [where_clause()](#rust-selectstatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this query. |
 
-###### text(text) {#rust-querystatement-text-text}
+###### text(text) {#rust-selectstatement-text-text}
 
 Wraps query text.
 
@@ -4130,9 +4242,9 @@ pub fn text(text: impl Into<String>) -> Self
 
 **Returns**
 
-[QueryStatement](#rust-querystatement)
+[SelectStatement](#rust-selectstatement)
 
-###### with_where(text, where_clause) {#rust-querystatement-with_where-text-where_clause}
+###### with_where(text, where_clause) {#rust-selectstatement-with_where-text-where_clause}
 
 Wraps query text and an [IWhere](#rust-iwhere).
 
@@ -4151,16 +4263,16 @@ pub fn with_where(text: impl Into<String>, where_clause: impl IWhere + 'static) 
 
 **Returns**
 
-[QueryStatement](#rust-querystatement)
+[SelectStatement](#rust-selectstatement)
 
-###### new(options) {#rust-querystatement-new-options}
+###### new(options) {#rust-selectstatement-new-options}
 
-Compiles a `SELECT` from [QueryStatementOptions](#rust-querystatementoptions).
+Compiles a `SELECT` from [SelectStatementOptions](#rust-selectstatementoptions).
 
 **Definition**
 
 ```rust
-pub fn new(options: QueryStatementOptions<'_>) -> Self
+pub fn new(options: SelectStatementOptions<'_>) -> Self
 ```
 
 **Parameters**
@@ -4171,9 +4283,9 @@ pub fn new(options: QueryStatementOptions<'_>) -> Self
 
 **Returns**
 
-[QueryStatement](#rust-querystatement)
+[SelectStatement](#rust-selectstatement)
 
-###### get_text() {#rust-querystatement-get_text}
+###### get_text() {#rust-selectstatement-get_text}
 
 Command text.
 
@@ -4187,7 +4299,7 @@ fn get_text(&self) -> String
 
 `String`
 
-###### where_clause() {#rust-querystatement-where_clause}
+###### where_clause() {#rust-selectstatement-where_clause}
 
 Optional [IWhere](#rust-iwhere) used to build this query.
 
@@ -4201,17 +4313,17 @@ fn where_clause(&self) -> Option<&dyn IWhere>
 
 `Option<&dyn `[IWhere](#rust-iwhere)`>`
 
-##### QueryStatementOptions {#rust-querystatementoptions}
+##### SelectStatementOptions {#rust-selectstatementoptions}
 
 ```rust
-pub struct QueryStatementOptions<'a>
+pub struct SelectStatementOptions<'a>
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(table, fields)](#rust-querystatementoptions-new-table-fields) | Table and fields, with where, joins, group, order, and limit unset. |
+| [new(table, fields)](#rust-selectstatementoptions-new-table-fields) | Table and fields, with where, joins, group, order, and limit unset. |
 
 **Properties**
 
@@ -4225,7 +4337,7 @@ pub struct QueryStatementOptions<'a>
 | order_by | [OrderBy](#rust-orderby) list. Empty leaves the clause off. |
 | limit | Optional `LIMIT`. `Some(0)` is kept. A negative value panics. |
 
-###### new(table, fields) {#rust-querystatementoptions-new-table-fields}
+###### new(table, fields) {#rust-selectstatementoptions-new-table-fields}
 
 Table and fields, with where, joins, group, order, and limit unset.
 
@@ -4244,7 +4356,7 @@ pub fn new(table: &'a str, fields: &'a [&'a str]) -> Self
 
 **Returns**
 
-[QueryStatementOptions](#rust-querystatementoptions)
+[SelectStatementOptions](#rust-selectstatementoptions)
 
 ##### Aggregate {#rust-aggregate}
 
@@ -4501,26 +4613,26 @@ pub enum JoinKind
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L33-L38)
 
 ```csharp
-var select = new QueryStatement("SELECT 1");
+var select = new SelectStatement("SELECT 1");
 var byId = new WhereText("id = 1");
-var withWhere = new QueryStatement("SELECT 1", byId);
+var withWhere = new SelectStatement("SELECT 1", byId);
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1177-L1180)
 
 ```rust
-    Column::new("tenant_id", "INTEGER"),
-    Column::new("user_id", "INTEGER"),
-    Column::new("qty", "INTEGER"),
-],
+&[
+    Column::new("id", "INTEGER")
+        .default(ColumnDefault::new("0", Some("df_id")))
+        .not_null(NotNull::new(Some("nn_id"))),
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L41-L43)
 
 ```typescript
-const select = new QueryStatement("SELECT 1");
+const select = new SelectStatement("SELECT 1");
 const where = new WhereText("id = 1");
-const withWhere = new QueryStatement("SELECT 1", where);
+const withWhere = new SelectStatement("SELECT 1", where);
 ```
 
 #### Compile a SELECT
@@ -4528,7 +4640,7 @@ const withWhere = new QueryStatement("SELECT 1", where);
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L128-L130)
 
 ```csharp
-var query = new QueryStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
+var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
 ```
 
 **After: select**
@@ -4540,11 +4652,7 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L926-L933)
 
 ```rust
-        left: Box::new(Expression::Literal(Literal::new(true))),
-        right: Box::new(Expression::Literal(Literal::new(false))),
-    })
-    .get_text(),
-    "true = false"
+    "1 IN 2"
 );
 ```
 
@@ -4571,7 +4679,7 @@ SELECT id, name FROM users WHERE id = $id
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L157-L166)
 
 ```csharp
-var grouped = new QueryStatement(new()
+var grouped = new SelectStatement(new()
 {
     Table = "orders",
     Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
@@ -4592,6 +4700,10 @@ SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN custom
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L977-L991)
 
 ```rust
+        uuid::Uuid::nil()
+    )))),
+})
+.get_text()
 .contains('='));
 assert!(Where::new(Operator::Equals {
     left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
@@ -4603,10 +4715,6 @@ assert!(Where::new(Operator::Equals {
 })
 .get_text()
 .contains('='));
-assert!(Where::new(Operator::Equals {
-    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-})
 ```
 
 **After: grouped select**
@@ -4633,7 +4741,7 @@ SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN custom
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L168-L168)
 
 ```csharp
-var byStatus = new QueryStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
+var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
 ```
 
 **After: group by**
@@ -4645,10 +4753,10 @@ SELECT id FROM users GROUP BY id
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L996-L999)
 
 ```rust
-    right: Box::new(Expression::Literal(Literal::new(2_i64))),
-})
-.parameters()
-.is_empty());
+.get_text()
+.contains('='));
+assert!(Where::new(Operator::In {
+    left: Box::new(Expression::Literal(Literal::new(1_i64))),
 ```
 
 **After: group by**
@@ -4674,7 +4782,7 @@ SELECT id FROM users GROUP BY id
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L170-L170)
 
 ```csharp
-var bounds = new QueryStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
+var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
 ```
 
 **After: min and max**
@@ -4686,10 +4794,9 @@ SELECT MIN(n), MAX(n) FROM users
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1001-L1004)
 
 ```rust
-Where::new(Operator::and(
-    Operator::not(Operator::equals("id", 1_i64)),
-    Operator::equals("age", 18_i64)
-))
+})
+.parameters()
+.is_empty());
 ```
 
 **After: min and max**
@@ -4715,7 +4822,7 @@ SELECT MIN(n), MAX(n) FROM users
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L172-L172)
 
 ```csharp
-var ordered = new QueryStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
+var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
 ```
 
 **After: order by**
@@ -4727,8 +4834,10 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1006-L1009)
 
 ```rust
-    "(NOT (id = $id)) AND age = $age"
-);
+    Operator::not(Operator::equals("id", 1_i64)),
+    Operator::equals("age", 18_i64)
+))
+.get_text(),
 ```
 
 **After: order by**
@@ -4741,7 +4850,7 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 
 ```typescript
 );
-const byStatus = new QueryStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
+const byStatus = new SelectStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
 ```
 
 **After: order by**
@@ -4755,7 +4864,7 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L174-L174)
 
 ```csharp
-var limited = new QueryStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
+var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
 ```
 
 **After: limit**
@@ -4767,8 +4876,10 @@ SELECT id FROM users LIMIT 10
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1014-L1017)
 
 ```rust
-    .is_empty());
-let in_ids = Where::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)]));
+    "1 = 0"
+);
+assert!(Where::new(Operator::in_list("id", vec![]))
+    .parameters()
 ```
 
 **After: limit**
@@ -5056,11 +5167,11 @@ INSERT INTO users (id, name) VALUES ($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L975-L979)
 
 ```rust
+    )))),
+    right: Box::new(Expression::Literal(Literal::new(Value::Uuid(
+        uuid::Uuid::nil()
+    )))),
 })
-.get_text()
-.contains('='));
-assert!(Where::new(Operator::Equals {
-    left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
 ```
 
 **After: insert**
@@ -5384,12 +5495,12 @@ UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L985)
 
 ```rust
+.get_text()
+.contains('='));
+assert!(Where::new(Operator::Equals {
+    left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
         chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
     )))),
-    right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
-        chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
-    )))),
-})
 ```
 
 **After: update**
@@ -5719,12 +5830,12 @@ DELETE FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L994)
 
 ```rust
-    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
 })
 .get_text()
 .contains('='));
-assert!(Where::new(Operator::In {
+assert!(Where::new(Operator::Equals {
+    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
 ```
 
 **After: delete**
@@ -6652,6 +6763,10 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L995-L1003)
 
 ```rust
+})
+.get_text()
+.contains('='));
+assert!(Where::new(Operator::In {
     left: Box::new(Expression::Literal(Literal::new(1_i64))),
     right: Box::new(Expression::Literal(Literal::new(2_i64))),
 })
@@ -6700,7 +6815,10 @@ CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1008-L1031)
 
 ```rust
-
+    ))
+    .get_text(),
+    "(NOT (id = $id)) AND age = $age"
+);
 ```
 
 **After: named constraints**
@@ -6981,6 +7099,10 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1076-L1083)
 
 ```rust
+            Join::left("payments", "orders.id", "payments.order_id"),
+            Join::right("profiles", "users.id", "profiles.user_id"),
+        ],
+        ..SelectStatementOptions::new("users", &["users.id"])
     })
     .get_text(),
     "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
@@ -7025,9 +7147,9 @@ CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1085-L1087)
 
 ```rust
-    .get_text(),
-    "SELECT id FROM users"
-);
+SelectStatement::new(SelectStatementOptions {
+    joins: &[],
+    ..SelectStatementOptions::new("users", &["id"])
 ```
 
 **After: create unique index**
@@ -7302,8 +7424,8 @@ CALL save($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1089-L1090)
 
 ```rust
-let total = Aggregate::sum("amount", Some("total"));
-let grouped_fields = ["status", count.as_str(), total.as_str()];
+.get_text(),
+"SELECT id FROM users"
 ```
 
 **After: call**
@@ -7578,8 +7700,8 @@ SELECT add($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1095-L1096)
 
 ```rust
-"orders.customer_id",
-"customers.id",
+let grouped = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&Where::new(Operator::equals("status", "open"))),
 ```
 
 **After: return**
@@ -8161,7 +8283,7 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-Construct the predicate with [Operator](#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [QueryStatement](#query-statement) / [UpdateStatement](#update-statement) / [DeleteStatement](#delete-statement) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [StatementEvaluator](#statement-evaluator) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
+Construct the predicate with [Operator](#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [SelectStatement](#select-statement) / [UpdateStatement](#update-statement) / [DeleteStatement](#delete-statement) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [StatementEvaluator](#statement-evaluator) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
 
 ### Examples
 
@@ -8189,11 +8311,11 @@ id IN ($id_0, $id_1)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L659-L663)
 
 ```rust
+txn.abort().await.unwrap();
 assert!(txn.aborted());
 txn.set_commit_error("c");
 assert!(txn.commit().await.is_err());
 txn.set_abort_error("a");
-assert!(txn.abort().await.is_err());
 ```
 
 **After: and**
@@ -8257,12 +8379,8 @@ username = $username AND is_enabled = $is_enabled
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2490-L2496)
 
 ```rust
-    stored
-        .iter()
-        .find(|row| row["id"] == Value::Int(1))
-        .unwrap()["label"],
-    Value::from("aa")
-);
+.unwrap();
+let stored = children.snapshot();
 ```
 
 **After: equals**
@@ -8301,7 +8419,7 @@ username = $username AND is_enabled = $is_enabled
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
-var query = new QueryStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
+var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
 ```
 
 **After: select**
@@ -8313,6 +8431,10 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L935)
 
 ```rust
+    Where::new(Operator::Equals {
+        left: Box::new(Expression::Literal(Literal::new(true))),
+        right: Box::new(Expression::Literal(Literal::new(false))),
+    })
     .get_text(),
     "true = false"
 );
@@ -8820,7 +8942,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L743-L758)
 
 ```rust
-
+let w = MockWhere::new("w");
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L63-L73)
@@ -8858,12 +8980,8 @@ username = $username AND is_enabled = $is_enabled
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2490-L2496)
 
 ```rust
-    stored
-        .iter()
-        .find(|row| row["id"] == Value::Int(1))
-        .unwrap()["label"],
-    Value::from("aa")
-);
+.unwrap();
+let stored = children.snapshot();
 ```
 
 **After: equals**
@@ -9024,6 +9142,10 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1166-L1170)
 
 ```rust
+let create_table = CreateTableStatement::new(
+    "users",
+    &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
+    &[],
 );
 ```
 
@@ -9707,7 +9829,7 @@ Returns the first item, or `undefined` when the result is empty.
 **Definition**
 
 ```typescript
-readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
+readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
 ```
 
 **Parameters**
@@ -9727,7 +9849,7 @@ Yields every item.
 **Definition**
 
 ```typescript
-read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -9788,7 +9910,7 @@ Yields every item. Table repositories convert then map; subclasses may override.
 **Definition**
 
 ```typescript
-abstract read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+abstract read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -9808,7 +9930,7 @@ Returns the first item from [read](#typescript-readonlyrepository-read-query), o
 **Definition**
 
 ```typescript
-readSingle(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
+readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
 ```
 
 **Parameters**
@@ -10472,12 +10594,6 @@ await foreach (var row in repo.Read(call))
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1428-L1444)
 
 ```rust
-            left: Box::new(Expression::Literal(Literal::new(1_i64))),
-            right: Box::new(Expression::Literal(Literal::new(0_i64))),
-        }),
-        &row
-    ),
-    no
 );
 ```
 
@@ -10533,6 +10649,10 @@ it("calls a stored procedure and maps rows", async () => {
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1465-L1471)
 
 ```rust
+            left: Box::new(Expression::Literal(Literal::new(2.5_f64))),
+            right: Box::new(Expression::Literal(Literal::new(1.5_f64))),
+        }),
+        &row
     ),
     Value::Bool(true)
 );
@@ -10821,7 +10941,7 @@ Reads rows through [rowConverter](#typescript-repository-rowconverter) then [map
 **Definition**
 
 ```typescript
-read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -11817,49 +11937,51 @@ no row
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L623-L676)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "
-    CREATE TABLE User (
-        id INTEGER PRIMARY KEY,
-        is_enabled INTEGER NOT NULL,
-        username TEXT NOT NULL
-    );
-    ",
-)
-.await;
-let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
-let mut created = datasources::Row::new();
-created.insert("username".into(), Value::from("ada"));
-created.insert("is_enabled".into(), Value::Bool(true));
-users_repo.create(&mut created).await.unwrap();
-let by_id = users_repo
-    .read_single_by_id(created.get("id").unwrap())
-    .await
-    .unwrap()
-    .unwrap();
-let matches = users_repo
-    .read(Some(&Where::binary("username", eq, "ada").and(
-        "is_enabled",
-        eq,
-        Value::Bool(true),
-    )))
-    .await
-    .unwrap();
-created.insert("username".into(), Value::from("ada-v2"));
-users_repo.update(&created, None).await.unwrap();
-let renamed = users_repo
-    .read_single_by_id(created.get("id").unwrap())
-    .await
-    .unwrap()
-    .unwrap();
-users_repo.delete(&created, None).await.unwrap();
-let gone = users_repo
-    .read_single_by_id(created.get("id").unwrap())
-    .await
-    .unwrap();
+#[tokio::test]
+async fn writes_user_from_the_type() {
+    let built = datasource();
+    let ds: &dyn Datasource = &*built;
+    let connection = open(
+        ds,
+        "
+        CREATE TABLE User (
+            id INTEGER PRIMARY KEY,
+            is_enabled INTEGER NOT NULL,
+            username TEXT NOT NULL
+        );
+        ",
+    )
+    .await;
+    let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
+    let mut created = datasources::Row::new();
+    created.insert("username".into(), Value::from("ada"));
+    created.insert("is_enabled".into(), Value::Bool(true));
+    users_repo.create(&mut created).await.unwrap();
+    let by_id = users_repo
+        .read_single_by_id(created.get("id").unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    let matches = users_repo
+        .read(Some(&Where::binary("username", eq, "ada").and(
+            "is_enabled",
+            eq,
+            Value::Bool(true),
+        )))
+        .await
+        .unwrap();
+    created.insert("username".into(), Value::from("ada-v2"));
+    users_repo.update(&created, None).await.unwrap();
+    let renamed = users_repo
+        .read_single_by_id(created.get("id").unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    users_repo.delete(&created, None).await.unwrap();
+    let gone = users_repo
+        .read_single_by_id(created.get("id").unwrap())
+        .await
+        .unwrap();
 ```
 
 **Created**
@@ -12082,128 +12204,130 @@ no row
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L678-L814)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "
-    CREATE TABLE user_type (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL
-    );
-    CREATE TABLE user (
-        id INTEGER PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL,
-        created TEXT NOT NULL,
-        user_type_id INTEGER NOT NULL,
-        version INTEGER NOT NULL
-    );
-    CREATE TABLE user_role (
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL
-    );
-    ",
-)
-.await;
-let mut users_options = create_repository_options::<UsersView>();
-users_options.ids = vec!["Key".into()];
-users_options.entity_mapper = Box::new(DictionaryMapper::new([(
-    "UsersView".to_string(),
-    "user".to_string(),
-)]));
-users_options.column_mappings = Box::new(DictionaryMapper::new([
-    ("Key".to_string(), "id".to_string()),
-    ("Login".to_string(), "username".to_string()),
-    ("Active".to_string(), "is_enabled".to_string()),
-    ("Opened".to_string(), "created".to_string()),
-    ("UserTypeId".to_string(), "user_type_id".to_string()),
-    ("Version".to_string(), "version".to_string()),
-]));
-users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
-let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-let mut type_options = create_repository_options::<UserType>();
-type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings = Box::new(casing);
-type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
-let mut role_options = create_repository_options::<UserRole>();
-role_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-role_options.column_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
-let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
-let user_types_repo =
-    Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
-let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
-users_repo.add_enriched(
-    "UserType",
-    "UserTypeId",
-    user_types_repo.clone(),
-    "Id",
-    Some("Name".into()),
-    false,
-    (),
-);
-users_repo.add_enriched(
-    "Roles",
-    "Key",
-    user_roles_repo.clone(),
-    "UserId",
-    None,
-    true,
-    (),
-);
-let mut admin = datasources::Row::new();
-admin.insert("Name".into(), Value::from("admin"));
-user_types_repo.create(&mut admin).await.unwrap();
-let mut admin_role = datasources::Row::new();
-admin_role.insert("Name".into(), Value::from("admin"));
-let mut editor_role = datasources::Row::new();
-editor_role.insert("Name".into(), Value::from("editor"));
-let mut user = datasources::Row::new();
-user.insert("Login".into(), Value::from("ada"));
-user.insert("Active".into(), Value::Bool(true));
-user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
-user.insert("UserTypeId".into(), admin.get("Id").cloned().unwrap());
-user.insert("Version".into(), Value::Int(1));
-user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
-users_repo.create(&mut user).await.unwrap();
-let key = user.get("Key").cloned().unwrap();
-let mut loaded = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())))
-    .await
-    .unwrap()
-    .unwrap();
-let version = loaded.get("Version").cloned().unwrap();
-loaded.insert("Login".into(), Value::from("ada-v2"));
-loaded.insert("Version".into(), Value::Int(2));
-let updated = users_repo
-    .update(
-        &loaded,
-        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+#[tokio::test]
+async fn updates_users_view_when_the_version_matches() {
+    let built = datasource();
+    let ds: &dyn Datasource = &*built;
+    let connection = open(
+        ds,
+        "
+        CREATE TABLE user_type (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        );
+        CREATE TABLE user (
+            id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL,
+            is_enabled INTEGER NOT NULL,
+            created TEXT NOT NULL,
+            user_type_id INTEGER NOT NULL,
+            version INTEGER NOT NULL
+        );
+        CREATE TABLE user_role (
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL
+        );
+        ",
     )
-    .await
-    .unwrap();
-let current = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())))
-    .await
-    .unwrap()
-    .unwrap();
-let stale = users_repo
-    .update(
-        &loaded,
-        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
-    )
-    .await
-    .unwrap();
-users_repo.delete(&loaded, None).await.unwrap();
-let gone = users_repo.read_single_by_id(&key).await.unwrap();
-let roles = user_roles_repo
-    .read(Some(&Where::binary("UserId", eq, key.clone())))
-    .await
-    .unwrap();
+    .await;
+    let mut users_options = create_repository_options::<UsersView>();
+    users_options.ids = vec!["Key".into()];
+    users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+        "UsersView".to_string(),
+        "user".to_string(),
+    )]));
+    users_options.column_mappings = Box::new(DictionaryMapper::new([
+        ("Key".to_string(), "id".to_string()),
+        ("Login".to_string(), "username".to_string()),
+        ("Active".to_string(), "is_enabled".to_string()),
+        ("Opened".to_string(), "created".to_string()),
+        ("UserTypeId".to_string(), "user_type_id".to_string()),
+        ("Version".to_string(), "version".to_string()),
+    ]));
+    users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+    let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+    let mut type_options = create_repository_options::<UserType>();
+    type_options.entity_mapper =
+        Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    type_options.column_mappings = Box::new(casing);
+    type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+    let mut role_options = create_repository_options::<UserRole>();
+    role_options.entity_mapper =
+        Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    role_options.column_mappings =
+        Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
+    let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
+    let user_types_repo =
+        Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
+    let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
+    users_repo.add_enriched(
+        "UserType",
+        "UserTypeId",
+        user_types_repo.clone(),
+        "Id",
+        Some("Name".into()),
+        false,
+        (),
+    );
+    users_repo.add_enriched(
+        "Roles",
+        "Key",
+        user_roles_repo.clone(),
+        "UserId",
+        None,
+        true,
+        (),
+    );
+    let mut admin = datasources::Row::new();
+    admin.insert("Name".into(), Value::from("admin"));
+    user_types_repo.create(&mut admin).await.unwrap();
+    let mut admin_role = datasources::Row::new();
+    admin_role.insert("Name".into(), Value::from("admin"));
+    let mut editor_role = datasources::Row::new();
+    editor_role.insert("Name".into(), Value::from("editor"));
+    let mut user = datasources::Row::new();
+    user.insert("Login".into(), Value::from("ada"));
+    user.insert("Active".into(), Value::Bool(true));
+    user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
+    user.insert("UserTypeId".into(), admin.get("Id").cloned().unwrap());
+    user.insert("Version".into(), Value::Int(1));
+    user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
+    users_repo.create(&mut user).await.unwrap();
+    let key = user.get("Key").cloned().unwrap();
+    let mut loaded = users_repo
+        .read_single(Some(&Where::binary("Key", eq, key.clone())))
+        .await
+        .unwrap()
+        .unwrap();
+    let version = loaded.get("Version").cloned().unwrap();
+    loaded.insert("Login".into(), Value::from("ada-v2"));
+    loaded.insert("Version".into(), Value::Int(2));
+    let updated = users_repo
+        .update(
+            &loaded,
+            Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+        )
+        .await
+        .unwrap();
+    let current = users_repo
+        .read_single(Some(&Where::binary("Key", eq, key.clone())))
+        .await
+        .unwrap()
+        .unwrap();
+    let stale = users_repo
+        .update(
+            &loaded,
+            Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
+        )
+        .await
+        .unwrap();
+    users_repo.delete(&loaded, None).await.unwrap();
+    let gone = users_repo.read_single_by_id(&key).await.unwrap();
+    let roles = user_roles_repo
+        .read(Some(&Where::binary("UserId", eq, key.clone())))
+        .await
+        .unwrap();
 ```
 
 **Created**
@@ -12539,7 +12663,7 @@ Reads through the inner repository, then enriches.
 **Definition**
 
 ```typescript
-read(query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -12664,7 +12788,7 @@ Reads through `inner`, then enriches.
 **Definition**
 
 ```typescript
-read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: IQuery | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
 ```
 
 **Parameters**
@@ -13317,16 +13441,16 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1845-L1854)
 
 ```rust
+    .reader_rows
+    .lock()
+    .unwrap()
+    .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
 let connection = MockConnection::with_command_provider(command.clone(), "memory");
 let mut options = CRUDRepositoryOptions::default();
 options.entity = "users".into();
 options.row_converter = Some(users_mapping());
 options.rows_mapper = Box::new(TransformMapper::new(
     |mut row: Row| {
-        if let Some(Value::Text(name)) = row.get("name").cloned() {
-            row.insert("name".into(), Value::from(name.to_uppercase()));
-        }
-        row
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -13601,7 +13725,7 @@ public async Task FillsRolesFromAJoin()
                 }
             }),
             new MappedValueMapper<UsersView>(),
-            new QueryStatement(new()
+            new SelectStatement(new()
             {
                 Table = "user",
                 Fields =
@@ -13669,94 +13793,97 @@ public async Task FillsRolesFromAJoin()
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L465-L567)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let connection = open(ds, &seed()).await;
-let source = ds.create_readonly_repository::<JoinRow>(Some(connection.clone()), None);
-let command: Arc<dyn Query> = Arc::new(QueryStatement::new(QueryStatementOptions {
-    joins: &[
-        Join::left("user_type", "user_type.id", "user.user_type_id"),
-        Join::left("user_roles", "user_roles.user_id", "user.id"),
-        Join::left("roles", "roles.id", "user_roles.role_id"),
-    ],
-    ..QueryStatementOptions::new(
-        "user",
-        &[
-            "user.id AS Key",
-            "user.username AS Login",
-            "user.is_enabled AS Active",
-            "user.created AS Opened",
-            "user_type.name AS UserType",
-            "user.id AS UserId",
-            "user_roles.role_id AS RoleId",
-            "roles.name AS RoleName",
-        ],
-    )
-}));
-let users_repo = EnrichedReadonlyRepository::with_strategy(
-    ds.create_readonly_repository::<UsersView>(Some(connection.clone()), None),
-    Arc::new(FlatToNestedReadonlyEnrichmentStrategy::new(
-        source,
-        FlatToNestedMapper::new(TypeMap::new(
-            "Key",
-            vec![
-                ("Key".into(), TypeMapField::column("Key")),
-                ("Login".into(), TypeMapField::column("Login")),
-                ("Active".into(), TypeMapField::column("Active")),
-                ("Opened".into(), TypeMapField::column("Opened")),
-                ("UserType".into(), TypeMapField::column("UserType")),
-                (
-                    "Roles".into(),
-                    TypeMapField::Group(TypeMapGroup::new(
-                        "RoleId",
-                        vec![
-                            ("RoleId".into(), TypeMapField::column("RoleId")),
-                            ("UserId".into(), TypeMapField::column("UserId")),
-                            ("Name".into(), TypeMapField::column("RoleName")),
-                        ],
-                    )),
-                ),
+#[tokio::test]
+async fn fills_roles_from_a_join() {
+    let built = datasource();
+    let ds: &dyn Datasource = &*built;
+    let connection = open(ds, &seed()).await;
+    let source = ds.create_readonly_repository::<JoinRow>(Some(connection.clone()), None);
+    let command: Arc<dyn ISelectStatement> =
+        Arc::new(SelectStatement::new(SelectStatementOptions {
+            joins: &[
+                Join::left("user_type", "user_type.id", "user.user_type_id"),
+                Join::left("user_roles", "user_roles.user_id", "user.id"),
+                Join::left("roles", "roles.id", "user_roles.role_id"),
             ],
-        )),
-        |row| {
-            let mut view = datasources::Row::new();
-            for key in ["Key", "Login", "Active", "Opened", "UserType"] {
-                if let Some(MappedValue::Cell(value)) = row.get(key) {
-                    view.insert(key.into(), value.clone());
+            ..SelectStatementOptions::new(
+                "user",
+                &[
+                    "user.id AS Key",
+                    "user.username AS Login",
+                    "user.is_enabled AS Active",
+                    "user.created AS Opened",
+                    "user_type.name AS UserType",
+                    "user.id AS UserId",
+                    "user_roles.role_id AS RoleId",
+                    "roles.name AS RoleName",
+                ],
+            )
+        }));
+    let users_repo = EnrichedReadonlyRepository::with_strategy(
+        ds.create_readonly_repository::<UsersView>(Some(connection.clone()), None),
+        Arc::new(FlatToNestedReadonlyEnrichmentStrategy::new(
+            source,
+            FlatToNestedMapper::new(TypeMap::new(
+                "Key",
+                vec![
+                    ("Key".into(), TypeMapField::column("Key")),
+                    ("Login".into(), TypeMapField::column("Login")),
+                    ("Active".into(), TypeMapField::column("Active")),
+                    ("Opened".into(), TypeMapField::column("Opened")),
+                    ("UserType".into(), TypeMapField::column("UserType")),
+                    (
+                        "Roles".into(),
+                        TypeMapField::Group(TypeMapGroup::new(
+                            "RoleId",
+                            vec![
+                                ("RoleId".into(), TypeMapField::column("RoleId")),
+                                ("UserId".into(), TypeMapField::column("UserId")),
+                                ("Name".into(), TypeMapField::column("RoleName")),
+                            ],
+                        )),
+                    ),
+                ],
+            )),
+            |row| {
+                let mut view = datasources::Row::new();
+                for key in ["Key", "Login", "Active", "Opened", "UserType"] {
+                    if let Some(MappedValue::Cell(value)) = row.get(key) {
+                        view.insert(key.into(), value.clone());
+                    }
                 }
-            }
-            let roles = match row.get("Roles") {
-                Some(MappedValue::Many(items)) => items
-                    .iter()
-                    .map(|item| {
-                        let mut role = datasources::Row::new();
-                        for key in ["UserId", "Name"] {
-                            if let Some(MappedValue::Cell(value)) = item.get(key) {
-                                role.insert(key.into(), value.clone());
+                let roles = match row.get("Roles") {
+                    Some(MappedValue::Many(items)) => items
+                        .iter()
+                        .map(|item| {
+                            let mut role = datasources::Row::new();
+                            for key in ["UserId", "Name"] {
+                                if let Some(MappedValue::Cell(value)) = item.get(key) {
+                                    role.insert(key.into(), value.clone());
+                                }
                             }
-                        }
-                        role
-                    })
-                    .collect(),
-                _ => Vec::new(),
-            };
-            view.insert("Roles".into(), encode_rows(&roles));
-            view
-        },
-        Some(command),
-    )),
-);
-let items = users_repo.read(None).await.unwrap();
-let view = |login: &str| {
-    items
-        .iter()
-        .find(|item| item.get("Login") == Some(&Value::from(login)))
-        .unwrap()
-        .clone()
-};
-let ada = view("ada");
-let grace = view("grace");
-let lin = view("lin");
+                            role
+                        })
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                view.insert("Roles".into(), encode_rows(&roles));
+                view
+            },
+            Some(command),
+        )),
+    );
+    let items = users_repo.read(None).await.unwrap();
+    let view = |login: &str| {
+        items
+            .iter()
+            .find(|item| item.get("Login") == Some(&Value::from(login)))
+            .unwrap()
+            .clone()
+    };
+    let ada = view("ada");
+    let grace = view("grace");
+    let lin = view("lin");
 ```
 
 **Users with roles**
@@ -13823,7 +13950,7 @@ const usersRepo = new EnrichedReadonlyRepository(
         throw new Error("UsersView hydrate does not reverse");
       },
     ),
-    new QueryStatement({
+    new SelectStatement({
       table: "user",
       fields: [
         "user.id AS Key",
@@ -14294,6 +14421,10 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1862-L1879)
 
 ```rust
+            row.insert("name".into(), Value::from(name.to_lowercase()));
+        }
+        row
+    },
 ));
 let repo = CRUDRepository::new(connection, options).unwrap();
 let rows = repo.read(None).await.unwrap();

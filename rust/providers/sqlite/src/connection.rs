@@ -15,7 +15,7 @@ pub(crate) fn map_err(error: rusqlite::Error) -> DatasourceError {
 
 pub struct SqliteConnection {
     pub filename: String,
-    opened: Arc<Mutex<bool>>,
+    pub(crate) opened: Arc<Mutex<bool>>,
     pub(crate) db: Arc<Mutex<Option<SqliteDb>>>,
 }
 
@@ -110,8 +110,9 @@ impl Connection for SqliteConnection {
     }
 
     async fn close(&self) -> Result<()> {
-        *self.db.lock().unwrap() = None;
+        let mut db = self.db.lock().unwrap();
         *self.opened.lock().unwrap() = false;
+        *db = None;
         Ok(())
     }
 

@@ -14,11 +14,11 @@ use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::select_statement::SelectStatement;
 use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::table_repository_statements::RepositoryStatements;
-use crate::text_query::QueryStatement;
 use crate::value::Value;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -79,18 +79,18 @@ impl ReadonlyRepository {
     pub(crate) fn query_of(
         &self,
         query: Option<&dyn Statement>,
-    ) -> (QueryStatement, Vec<Parameter>) {
+    ) -> (SelectStatement, Vec<Parameter>) {
         if let Some(query) = query {
             let params = query
                 .predicate()
                 .map(|predicate| predicate.parameters())
                 .unwrap_or_else(|| query.parameters());
             let statement = match query.predicate() {
-                Some(predicate) => QueryStatement::with_where(
+                Some(predicate) => SelectStatement::with_where(
                     query.get_text(),
                     crate::where_text::WhereText::new(predicate.get_text()),
                 ),
-                None => QueryStatement::text(query.get_text()),
+                None => SelectStatement::text(query.get_text()),
             };
             (statement, params)
         } else {
@@ -154,7 +154,7 @@ impl ReadonlyRepository {
             .reverse_convert(&Mapper::reverse_map(&self.rows_mapper, item.clone()))
     }
 
-    fn stored_query(&self, where_clause: &dyn IWhere) -> Result<(QueryStatement, Vec<Parameter>)> {
+    fn stored_query(&self, where_clause: &dyn IWhere) -> Result<(SelectStatement, Vec<Parameter>)> {
         match self.store_where(where_clause, false)? {
             Some(stored) => Ok((self.statements.query(Some(&stored)), stored.parameters())),
             None => Ok((

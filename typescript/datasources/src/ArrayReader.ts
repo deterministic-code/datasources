@@ -15,4 +15,11 @@ export class ArrayReader<T = unknown> implements IReader<T> {
     this.current = undefined;
     return false;
   }
+
+  async nextResult(): Promise<boolean> {
+    this.current = undefined;
+    return false;
+  }
+
+  async dispose(): Promise<void> {}
 }

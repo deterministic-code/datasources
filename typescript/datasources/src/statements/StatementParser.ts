@@ -9,7 +9,7 @@ import { Join, type JoinKind } from "./Join.ts";
 import { Literal } from "./Literal.ts";
 import { Operator } from "./Operator.ts";
 import { OrderBy } from "./OrderBy.ts";
-import { QueryStatement } from "./QueryStatement.ts";
+import { SelectStatement } from "./SelectStatement.ts";
 import { Subquery } from "./Subquery.ts";
 import { UpdateStatement } from "./UpdateStatement.ts";
 import { Where } from "./Where.ts";
@@ -95,7 +95,7 @@ class Cursor {
     if (this.i !== this.text.length) empty();
   }
 
-  private selectStatement(): QueryStatement {
+  private selectStatement(): SelectStatement {
     this.expectWord("SELECT");
     const distinct = this.tryWord("DISTINCT");
     const fields = this.selectList();
@@ -108,7 +108,7 @@ class Cursor {
     const orderBy = this.tryWord("ORDER") ? this.order() : undefined;
     const limit = this.tryWord("LIMIT") ? this.integer() : undefined;
     const offset = this.tryWord("OFFSET") ? this.integer() : undefined;
-    return new QueryStatement({
+    return new SelectStatement({
       distinct,
       table,
       fields,
@@ -152,7 +152,7 @@ class Cursor {
     return `(${nested.getText()}) AS ${this.ident()}`;
   }
 
-  private nested(): QueryStatement {
+  private nested(): SelectStatement {
     this.expectChar("(");
     const query = this.selectStatement();
     this.expectChar(")");

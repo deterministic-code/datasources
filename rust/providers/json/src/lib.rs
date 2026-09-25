@@ -16,7 +16,7 @@ mod tests {
     use crate::filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
     use datasources::{
         converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
-        Connection, ICRUDRepository, IReadonlyRepository, Parameter, QueryStatement, Row, Value,
+        Connection, ICRUDRepository, IReadonlyRepository, Parameter, Row, SelectStatement, Value,
         WhereText,
     };
     use serde_json::{Map, Value as JsonValue};
@@ -49,12 +49,12 @@ mod tests {
         let repo = crud(conn.clone());
         assert!(repo.read_single(None).await.unwrap().is_some());
         assert!(repo
-            .read_single(Some(&QueryStatement::text("{\"id\":9}")))
+            .read_single(Some(&SelectStatement::text("{\"id\":9}")))
             .await
             .unwrap()
             .is_none());
         assert!(!repo
-            .read(Some(&QueryStatement::text("{\"id\":1}")))
+            .read(Some(&SelectStatement::text("{\"id\":1}")))
             .await
             .unwrap()
             .is_empty());

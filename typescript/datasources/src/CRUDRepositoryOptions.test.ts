@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DeleteStatement } from "./statements/DeleteStatement.ts";
 import { InsertStatement } from "./statements/InsertStatement.ts";
 import { ReturnStatement } from "./statements/ReturnStatement.ts";
-import { QueryStatement } from "./statements/QueryStatement.ts";
+import { SelectStatement } from "./statements/SelectStatement.ts";
 import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import { statementsOf } from "./RepositoryStatements.ts";
 import { parts } from "./RepositoryBuilder.ts";
@@ -34,7 +34,7 @@ describe("CRUDRepositoryOptions", () => {
       "users",
       ["id", "name"],
       new TransformMapper(
-        (query) => new QueryStatement(`${query.getText()} LIMIT 1`, query.where),
+        (query) => new SelectStatement(`${query.getText()} LIMIT 1`, query.where),
         (query) => query,
       ),
       new TransformMapper(

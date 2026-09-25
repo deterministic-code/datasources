@@ -1,7 +1,7 @@
-import type { IQuery } from "../statements/IQuery.ts";
+import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 
-export class MockQuery implements IQuery {
+export class MockSelectStatement implements ISelectStatement {
   getTextCalls = 0;
 
   constructor(
