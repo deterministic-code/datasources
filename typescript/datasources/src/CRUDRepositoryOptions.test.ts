@@ -42,7 +42,8 @@ describe("CRUDRepositoryOptions", () => {
         (insert) => insert,
       ),
       new TransformMapper(
-        (update) => new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
+        (update) =>
+          new UpdateStatement(`${update.getText()} RETURNING id`, update.where, update.parameters),
         (update) => update,
       ),
       new TransformMapper(
@@ -57,6 +58,9 @@ describe("CRUDRepositoryOptions", () => {
     expect(statements.update([{ name: "name", value: "a" }]).getText()).toBe(
       "UPDATE users SET name = $name RETURNING id",
     );
+    expect(statements.update([{ name: "name", value: "a" }]).parameters).toEqual([
+      { name: "name", value: "a" },
+    ]);
     expect(statements.delete().getText()).toBe("DELETE FROM users RETURNING id");
   });
 

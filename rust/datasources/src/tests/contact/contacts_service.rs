@@ -1,4 +1,3 @@
-use crate::CRUDRepository;
 use crate::i_repository::IRepository;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
@@ -8,6 +7,7 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::where_trait::Where;
+use crate::CRUDRepository;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;

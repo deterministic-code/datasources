@@ -56,6 +56,7 @@ mod reset;
 mod response;
 mod result;
 mod row;
+mod statement_parser;
 pub mod statements;
 pub mod stubs;
 mod table_repository_builder;
@@ -132,6 +133,7 @@ pub use reset::reset;
 pub use response::Response;
 pub use result::Result;
 pub use row::Row;
+pub use statement_parser::StatementParser;
 pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault,

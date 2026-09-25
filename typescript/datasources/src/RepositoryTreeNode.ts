@@ -96,8 +96,7 @@ const applyLinked = async <TRelated extends object>(
   parents: object[],
   sources?: (Row | undefined)[],
 ): Promise<void> => {
-  const association = enrichment.association;
-  if (!association) return;
+  const association = enrichment.association!;
   for (const [index, parent] of parents.entries()) {
     const key = sourceKey(parent, enrichment.from, sources, index);
     if (key === undefined || key === null) continue;

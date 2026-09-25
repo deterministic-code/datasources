@@ -168,7 +168,10 @@ const crudFieldsOf = (
     rowsMapper: rows,
     query: suffix((text, query) => new QueryStatement(text, query.where), mapper.querySuffix),
     insert: suffix((text) => new InsertStatement(text), mapper.writeSuffix),
-    update: suffix((text, update) => new UpdateStatement(text, update.where), mapper.writeSuffix),
+    update: suffix(
+      (text, update) => new UpdateStatement(text, update.where, update.parameters),
+      mapper.writeSuffix,
+    ),
     delete: suffix((text, remove) => DeleteStatement.raw(text, remove.where), mapper.writeSuffix),
   };
 };

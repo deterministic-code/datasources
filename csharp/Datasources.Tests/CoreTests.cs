@@ -92,7 +92,7 @@ public class CoreTests
         Assert.Equal("null = null", new WhereClause(new Operator.Equals(new Literal(Value.Null.Instance), new Literal(Value.Null.Instance))).GetText());
         Assert.Equal("1.5 = 2.5", new WhereClause(new Operator.Equals(new Literal(1.5), new Literal(2.5))).GetText());
         Assert.Equal("1.5 = 2.5", new WhereClause(new Operator.Equals(new Literal(1.5m), new Literal(2.5m))).GetText());
-        Assert.Equal("a = b", new WhereClause(new Operator.Equals(new Literal("a"), new Literal("b"))).GetText());
+        Assert.Equal("'a' = 'b'", new WhereClause(new Operator.Equals(new Literal("a"), new Literal("b"))).GetText());
         Assert.Contains("=", new WhereClause(new Operator.Equals(new Literal(Guid.Empty), new Literal(Guid.Empty))).GetText());
         Assert.Contains("=", new WhereClause(new Operator.Equals(new Literal(new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc)), new Literal(new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc)))).GetText());
         Assert.Contains("=", new WhereClause(new Operator.Equals(new Literal(new Value.Binary([1])), new Literal(new Value.Binary([1])))).GetText());

@@ -32,4 +32,12 @@ describe("RowTypeConverter", () => {
     }
     expect(converter.convert({ flag: 1 }, Item)).toBeInstanceOf(Item);
   });
+
+  it("keeps a null in a string field", () => {
+    class Item {
+      name = "";
+    }
+    const converter = new RowTypeConverter<Item>();
+    expect(converter.convert({ name: null }, Item).name).toBeNull();
+  });
 });

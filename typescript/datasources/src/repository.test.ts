@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CRUDRepository,
+  collectAsync,
   ExecuteStoredProcedureStatement,
   QueryStatement,
   RowTypeConverter,
@@ -18,7 +19,10 @@ import {
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
-import type { Cells } from "./converters/Cell.ts";
+import type { Cell, Cells } from "./converters/Cell.ts";
+import { TypeConverter } from "./converters/TypeConverter.ts";
+import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
+import { readTracked } from "./ReadonlyRepository.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 
@@ -386,7 +390,7 @@ describe("CRUDRepository", () => {
       ),
       update: new TransformMapper(
         (update) =>
-          new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
+          new UpdateStatement(`${update.getText()} RETURNING id`, update.where, update.parameters),
         (update) => update,
       ),
       delete: new TransformMapper(
@@ -413,5 +417,64 @@ describe("CRUDRepository", () => {
     expect(command.executeCalls[2]?.text).toBe(
       "DELETE FROM people WHERE user_id = $user_id RETURNING id",
     );
+  });
+
+  it("tracks a repository that has no tracked reader", async () => {
+    class Count {
+      value = 0;
+    }
+    const bare: IReadonlyRepository<Count> = {
+      type: Count,
+      read: async function* () {
+        yield new Count();
+      },
+      readSingle: async () => new Count(),
+    };
+    expect(await collectAsync(readTracked(bare))).toEqual([{ item: new Count() }]);
+  });
+
+  it("reverse-converts a field only before values are applied", async () => {
+    class Flag extends TypeConverter<Cell, Cell> {
+      convert = (value: Cell): Cell => value;
+      reverseConvert = (value: Cell): Cell => (value === true ? 1 : 0);
+    }
+    class Row {
+      id = 0;
+      on = false;
+    }
+    const connection = new MockConnection();
+    const command = new MockCommand(connection);
+    connection.command = command;
+    const repo = new CRUDRepository<Row>(connection, {
+      type: Row,
+      entity: "rows",
+      rowConverter: new RowTypeConverter<Row>({}, { on: new Flag() }),
+    });
+    await repo.create(Object.assign(new Row(), { id: 1, on: true }));
+    await repo.update(
+      Object.assign(new Row(), { id: 1, on: true }),
+      new WhereClause(new Operator.Equals("on", true)),
+    );
+    expect(command.executeCalls[1]?.parameters).toContainEqual({ name: "on", value: 1 });
+  });
+
+  it("keeps a where value when the converter has no fields", async () => {
+    class Plain extends TypeConverter<Item, Cells> {
+      convert = (row: Cells): Item => Object.assign(new Item(), row);
+      reverseConvert = (row: Item): Cells => ({ id: row.id, name: row.name });
+    }
+    const connection = new MockConnection();
+    const command = new MockCommand(connection);
+    connection.command = command;
+    const repo = new CRUDRepository<Item>(connection, {
+      type: Item,
+      entity: "items",
+      rowConverter: new Plain(),
+    });
+    await repo.update(
+      Object.assign(new Item(), { id: 1, name: "a" }),
+      new WhereClause(new Operator.Equals("name", "a")),
+    );
+    expect(command.executeCalls[0]?.parameters).toContainEqual({ name: "name", value: "a" });
   });
 });

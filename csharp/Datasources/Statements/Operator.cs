@@ -56,3 +56,47 @@ public sealed record In(IExpression Left, IExpression Right) : IExpression
 }
 
 public sealed record Not(IExpression Argument) : IExpression;
+
+public sealed record IsNull(IExpression Argument) : IExpression;
+
+public sealed record IsNotNull(IExpression Argument) : IExpression;
+
+public sealed record Like(IExpression Left, IExpression Right) : IExpression
+{
+    public Like(string field, Value? value)
+        : this(new Identifier(field), new Literal(value ?? Value.Null.Instance)) { }
+}
+
+public sealed record NotLike(IExpression Left, IExpression Right) : IExpression
+{
+    public NotLike(string field, Value? value)
+        : this(new Identifier(field), new Literal(value ?? Value.Null.Instance)) { }
+}
+
+public sealed record Between(IExpression Value, IExpression Low, IExpression High) : IExpression
+{
+    public Between(string field, Datasources.Value? low, Datasources.Value? high)
+        : this(
+            new Identifier(field),
+            new Literal(low ?? Datasources.Value.Null.Instance),
+            new Literal(high ?? Datasources.Value.Null.Instance)) { }
+}
+
+public sealed record NotBetween(IExpression Value, IExpression Low, IExpression High) : IExpression
+{
+    public NotBetween(string field, Datasources.Value? low, Datasources.Value? high)
+        : this(
+            new Identifier(field),
+            new Literal(low ?? Datasources.Value.Null.Instance),
+            new Literal(high ?? Datasources.Value.Null.Instance)) { }
+}
+
+public sealed record NotIn(IExpression Left, IExpression Right) : IExpression
+{
+    public NotIn(string field, IReadOnlyList<Value> values)
+        : this(
+            new Identifier(field),
+            new ArrayExpression(values.Select(value => (IExpression)new Literal(value)).ToArray())) { }
+}
+
+public sealed record Exists(IExpression Argument) : IExpression;

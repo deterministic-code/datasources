@@ -28,8 +28,8 @@ const bind = (
   if (!where) return { text: sql, parameters: fields };
   const text = `${sql} WHERE ${where.getText()}`;
   const split = text.lastIndexOf(" WHERE ");
-  const head = split < 0 ? text : text.slice(0, split);
-  let tail = split < 0 ? "" : text.slice(split);
+  const head = text.slice(0, split);
+  let tail = text.slice(split);
   const parameters: Parameter[] = [...fields];
   const values = new Map<string, Scalar>();
   for (const field of fields) values.set(field.name, field.value);
@@ -50,10 +50,15 @@ export class UpdateStatement implements IUpdateStatement {
   readonly parameters: Parameter[];
   private readonly text: string;
 
-  constructor(text: string, where?: IWhere);
+  constructor(text: string, where?: IWhere, parameters?: Parameter[]);
   constructor(table: string, fields: Field[], where?: IWhere);
-  constructor(tableOrText: string, fieldsOrWhere?: Field[] | IWhere, where?: IWhere) {
+  constructor(
+    tableOrText: string,
+    fieldsOrWhere?: Field[] | IWhere,
+    whereOrParameters?: IWhere | Parameter[],
+  ) {
     if (Array.isArray(fieldsOrWhere)) {
+      const where = whereOrParameters as IWhere | undefined;
       const bound = bind(
         `UPDATE ${tableOrText} SET ${fieldsOrWhere.map((field) => `${field.name} = $${field.name}`).join(", ")}`,
         fieldsOrWhere,
@@ -66,7 +71,7 @@ export class UpdateStatement implements IUpdateStatement {
     }
     this.text = tableOrText;
     this.where = fieldsOrWhere;
-    this.parameters = [];
+    this.parameters = Array.isArray(whereOrParameters) ? whereOrParameters : [];
   }
 
   getText = (): string => this.text;

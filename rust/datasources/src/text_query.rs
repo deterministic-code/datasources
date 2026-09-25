@@ -8,6 +8,15 @@ use crate::where_trait::Where;
 pub struct QueryStatement {
     text: String,
     where_clause: Option<Box<dyn Where>>,
+    pub distinct: bool,
+    pub table: String,
+    pub fields: Vec<String>,
+    pub joins: Vec<Join>,
+    pub group_by: Vec<String>,
+    pub having: Option<Box<dyn Where>>,
+    pub order_by: Vec<OrderBy>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 impl QueryStatement {
@@ -15,6 +24,15 @@ impl QueryStatement {
         Self {
             text: text.into(),
             where_clause: None,
+            distinct: false,
+            table: String::new(),
+            fields: Vec::new(),
+            joins: Vec::new(),
+            group_by: Vec::new(),
+            having: None,
+            order_by: Vec::new(),
+            limit: None,
+            offset: None,
         }
     }
 
@@ -22,6 +40,15 @@ impl QueryStatement {
         Self {
             text: text.into(),
             where_clause: Some(Box::new(where_clause)),
+            distinct: false,
+            table: String::new(),
+            fields: Vec::new(),
+            joins: Vec::new(),
+            group_by: Vec::new(),
+            having: None,
+            order_by: Vec::new(),
+            limit: None,
+            offset: None,
         }
     }
 
@@ -31,26 +58,59 @@ impl QueryStatement {
         } else {
             options.fields.join(", ")
         };
+        let distinct = if options.distinct { "DISTINCT " } else { "" };
         let sql = format!(
-            "{}{}{}{}",
+            "{}{}{}{}{}{}",
             with_where(
                 format!(
-                    "SELECT {fields} FROM {}{}",
+                    "SELECT {distinct}{fields} FROM {}{}",
                     options.table,
                     join_sql(options.joins)
                 ),
                 options.where_clause,
             ),
             group_by(options.group_by),
+            having_sql(options.having),
             order_by(options.order_by),
-            limit_sql(options.limit),
+            bound("LIMIT", options.limit),
+            bound("OFFSET", options.offset),
         );
-        match options.where_clause {
+        let mut statement = match options.where_clause {
             Some(predicate) => {
                 Self::with_where(sql, crate::text_where::TextWhere::new(predicate.get_text()))
             }
             None => Self::text(sql),
-        }
+        };
+        statement.distinct = options.distinct;
+        statement.table = options.table.to_string();
+        statement.fields = options
+            .fields
+            .iter()
+            .map(|field| (*field).to_string())
+            .collect();
+        statement.joins = options.joins.to_vec();
+        statement.group_by = options
+            .group_by
+            .iter()
+            .map(|column| (*column).to_string())
+            .collect();
+        statement.having = options.having.map(|predicate| {
+            Box::new(crate::text_where::TextWhere::new(predicate.get_text())) as Box<dyn Where>
+        });
+        statement.order_by = options.order_by.to_vec();
+        statement.limit = options.limit;
+        statement.offset = options.offset;
+        statement
+    }
+
+    pub fn replace_where(mut self, where_clause: impl Where + 'static) -> Self {
+        self.where_clause = Some(Box::new(where_clause));
+        self
+    }
+
+    pub fn replace_having(mut self, having: impl Where + 'static) -> Self {
+        self.having = Some(Box::new(having));
+        self
     }
 }
 
@@ -115,29 +175,42 @@ fn order_by(order: &[OrderBy]) -> String {
     }
 }
 
-fn limit_sql(limit: Option<i64>) -> String {
-    match limit {
+fn having_sql(having: Option<&dyn Where>) -> String {
+    match having {
+        Some(predicate) => format!(" HAVING {}", predicate.get_text()),
         None => String::new(),
-        Some(n) if n < 0 => panic!("negative limit"),
-        Some(n) => format!(" LIMIT {n}"),
+    }
+}
+
+fn bound(keyword: &str, value: Option<i64>) -> String {
+    match value {
+        None => String::new(),
+        Some(n) if n < 0 => panic!("negative {}", keyword.to_lowercase()),
+        Some(n) => format!(" {keyword} {n}"),
     }
 }
 
 fn join_sql(joins: &[Join]) -> String {
     joins
         .iter()
-        .map(|join| {
-            format!(
-                " {} {} ON {} = {}",
-                match join.kind {
-                    JoinKind::Inner => "INNER JOIN",
-                    JoinKind::Left => "LEFT JOIN",
-                    JoinKind::Right => "RIGHT JOIN",
-                },
+        .map(|join| match join.kind {
+            JoinKind::Cross => format!(" CROSS JOIN {}", join.table),
+            kind => format!(
+                " {} {} ON {}",
+                join_word(kind),
                 join.table,
-                join.left,
-                join.right
-            )
+                join.on.as_deref().expect("empty join")
+            ),
         })
         .collect()
+}
+
+fn join_word(kind: JoinKind) -> &'static str {
+    match kind {
+        JoinKind::Inner => "INNER JOIN",
+        JoinKind::Left => "LEFT JOIN",
+        JoinKind::Right => "RIGHT JOIN",
+        JoinKind::Full => "FULL JOIN",
+        JoinKind::Cross => "CROSS JOIN",
+    }
 }

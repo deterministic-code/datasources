@@ -212,4 +212,58 @@ describe("CRUDRepository user view", () => {
     expect(seeded.groups.items.map((group) => group.name).sort()).toEqual(["engineering", "ops"]);
     expect(seeded.userTypes.items.map((type) => type.name)).toEqual(["admin"]);
   });
+
+  it("rejects a link without an id and skips a missing key", async () => {
+    const seeded = await graph();
+    const repo = repoOf(seeded);
+    await expect(
+      repo.create(
+        assign(UserView, {
+          username: "ada",
+          user_type_id: seeded.adminType.id,
+          roles: [assign(Role, { id: 0, name: "x" })],
+        }),
+      ),
+    ).rejects.toThrow('roles requires "id"');
+
+    const created = await repo.create(
+      assign(UserView, {
+        username: "ada",
+        user_type_id: seeded.adminType.id,
+        roles: [seeded.adminRole, assign(Role, { id: seeded.adminRole.id, name: "again" })],
+      }),
+    );
+    expect(seeded.userRoles.items).toHaveLength(1);
+
+    const dangling = assign(UserRole, { user_id: created.id });
+    Object.assign(dangling, { role_id: undefined });
+    seeded.userRoles.items.push(dangling);
+    await repo.update(
+      assign(UserView, {
+        id: created.id,
+        username: "ada",
+        user_type_id: seeded.adminType.id,
+        roles: [seeded.editorRole],
+      }),
+    );
+    await repo.delete(assign(UserView, { id: created.id }));
+    await expect(
+      repo.update(assign(UserView, { id: 0, roles: [seeded.adminRole] })),
+    ).rejects.toThrow('roles requires "id"');
+    await repo.delete(assign(UserView, { id: 0 }));
+
+    const missing = assign(UserView, { username: "none" });
+    Object.assign(missing, { id: undefined });
+    seeded.users.items.push(missing);
+    seeded.users.items.push(assign(UserView, { id: 9, username: "ada" }));
+    seeded.userRoles.items.push({ user_id: 9, role_id: { bad: 1 } } as UserRole);
+    const rows = await collect(repo.read());
+    expect(rows.find((row) => row.id === 9)?.roles).toEqual([]);
+  });
 });
+
+const collect = async <T>(items: AsyncIterable<T>): Promise<T[]> => {
+  const rows: T[] = [];
+  for await (const row of items) rows.push(row);
+  return rows;
+};

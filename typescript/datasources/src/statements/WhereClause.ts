@@ -8,6 +8,8 @@ import { Literal } from "./Literal.ts";
 import { Operator } from "./Operator.ts";
 import type { Comparison } from "./Cmp.ts";
 import { eq } from "./Cmp.ts";
+import { QueryStatement } from "./QueryStatement.ts";
+import { Subquery } from "./Subquery.ts";
 
 const symbol = (op: Operator): string =>
   op instanceof Operator.Equals
@@ -22,23 +24,34 @@ const symbol = (op: Operator): string =>
             ? ">="
             : op instanceof Operator.LessThanOrEqual
               ? "<="
-              : "IN";
+              : op instanceof Operator.Like
+                ? "LIKE"
+                : op instanceof Operator.NotLike
+                  ? "NOT LIKE"
+                  : "IN";
 
 const inline = (value: Cell): string =>
-  value === null ? "null" : typeof value === "boolean" ? String(value) : String(value);
+  value === null
+    ? "null"
+    : typeof value === "boolean"
+      ? String(value)
+      : typeof value === "string"
+        ? `'${value.replace(/'/g, "''")}'`
+        : String(value);
 
 const needsParens = (child: IExpression, and: boolean): boolean =>
   child instanceof WhereClause
     ? needsParens(child.condition, and)
     : child instanceof Operator.Not ||
       child instanceof Operator.In ||
+      child instanceof Operator.NotIn ||
       (child instanceof Operator.And && !and) ||
       (child instanceof Operator.Or && and);
 
 const wrap = (child: IExpression, and: boolean): string =>
   needsParens(child, and) ? `(${render(child)})` : render(child);
 
-const operands = (
+const pair = (
   expression: Operator,
 ): { left: IExpression; right: IExpression } | undefined =>
   expression instanceof Operator.Equals ||
@@ -49,80 +62,83 @@ const operands = (
   expression instanceof Operator.LessThanOrEqual ||
   expression instanceof Operator.And ||
   expression instanceof Operator.Or ||
-  expression instanceof Operator.In
+  expression instanceof Operator.In ||
+  expression instanceof Operator.Like ||
+  expression instanceof Operator.NotLike
     ? expression
     : undefined;
 
-const render = (expression: IExpression): string =>
-  expression instanceof WhereClause
-    ? render(expression.condition)
-    : expression instanceof Identifier
-      ? expression.name
-      : expression instanceof Literal
-        ? inline(expression.value)
-        : expression instanceof ArrayExpression
-          ? expression.elements.map(render).join(", ")
-          : expression instanceof Operator.Not
-            ? `NOT (${render(expression.argument)})`
-            : expression instanceof Operator.In &&
-                expression.left instanceof Identifier &&
-                expression.right instanceof ArrayExpression
-              ? expression.right.elements.length === 0
-                ? "1 = 0"
-                : `${expression.left.name} IN (${expression.right.elements.map((_, i) => `$${expression.left.name}_${i}`).join(", ")})`
-              : (() => {
-                  const pair = expression instanceof Operator ? operands(expression) : undefined;
-                  return pair && pair.left instanceof Identifier && pair.right instanceof Literal
-                    ? `${pair.left.name} ${symbol(expression as Operator)} $${pair.left.name}`
-                    : pair && pair.left instanceof Literal && pair.right instanceof Literal
-                      ? `${inline(pair.left.value)} ${symbol(expression as Operator)} ${inline(pair.right.value)}`
-                      : expression instanceof Operator.And
-                        ? `${wrap(expression.left, true)} AND ${wrap(expression.right, true)}`
-                        : expression instanceof Operator.Or
-                          ? `${wrap(expression.left, false)} OR ${wrap(expression.right, false)}`
-                          : pair
-                            ? `${render(pair.left)} ${symbol(expression as Operator)} ${render(pair.right)}`
-                            : (() => {
-                                throw new Error("empty expression");
-                              })();
-                })();
+const parameterName = (name: string): string =>
+  parts(name)
+    .map((part) =>
+      part.length >= 2 && part.startsWith('"') && part.endsWith('"')
+        ? part.slice(1, -1).replace(/""/g, '"')
+        : part,
+    )
+    .join(".");
 
-const rewrite = (
-  expression: IExpression,
-  column: (name: string) => string,
-  value: (name: string, cell: Cell) => Cell,
-): IExpression =>
-  expression instanceof WhereClause
-    ? rewrite(expression.condition, column, value)
-    : expression instanceof Identifier
-      ? new Identifier(column(expression.name))
-      : expression instanceof Literal
-        ? expression
-        : expression instanceof ArrayExpression
-          ? new ArrayExpression(expression.elements.map((element) => rewrite(element, column, value)))
-          : expression instanceof Operator.Not
-            ? new Operator.Not(rewrite(expression.argument, column, value))
-            : expression instanceof Operator.And
-              ? new Operator.And(rewrite(expression.left, column, value), rewrite(expression.right, column, value))
-              : expression instanceof Operator.Or
-                ? new Operator.Or(rewrite(expression.left, column, value), rewrite(expression.right, column, value))
-                : expression instanceof Operator.In
-                  ? new Operator.In(rewrite(expression.left, column, value), inRight(expression.left, expression.right, column, value))
-                  : expression instanceof Operator.Equals
-                    ? new Operator.Equals(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
-                    : expression instanceof Operator.NotEquals
-                      ? new Operator.NotEquals(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
-                      : expression instanceof Operator.GreaterThan
-                        ? new Operator.GreaterThan(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
-                        : expression instanceof Operator.LessThan
-                          ? new Operator.LessThan(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
-                          : expression instanceof Operator.GreaterThanOrEqual
-                            ? new Operator.GreaterThanOrEqual(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
-                            : expression instanceof Operator.LessThanOrEqual
-                              ? new Operator.LessThanOrEqual(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
-                              : (() => {
-                                  throw new Error("empty expression");
-                                })();
+const parts = (name: string): string[] => {
+  const found: string[] = [];
+  let start = 0;
+  let quoted = false;
+  for (let i = 0; i < name.length; i++) {
+    if (name[i] === '"') quoted = !quoted;
+    if (name[i] !== "." || quoted) continue;
+    found.push(name.slice(start, i));
+    start = i + 1;
+  }
+  found.push(name.slice(start));
+  return found;
+};
+
+const slots = (name: string, count: number): string =>
+  Array.from({ length: count }, (_, i) => `$${parameterName(name)}_${i}`).join(", ");
+
+const render = (expression: IExpression): string => {
+  if (expression instanceof WhereClause) return render(expression.condition);
+  if (expression instanceof Identifier) return expression.name;
+  if (expression instanceof Literal) return inline(expression.value);
+  if (expression instanceof ArrayExpression) return expression.elements.map(render).join(", ");
+  if (expression instanceof Subquery) return `(${expression.query.getText()})`;
+  if (expression instanceof Operator.Not) return `NOT (${render(expression.argument)})`;
+  if (expression instanceof Operator.IsNull) return `${render(expression.argument)} IS NULL`;
+  if (expression instanceof Operator.IsNotNull) return `${render(expression.argument)} IS NOT NULL`;
+  if (expression instanceof Operator.Exists) return `EXISTS ${render(expression.argument)}`;
+  if (expression instanceof Operator.In && expression.left instanceof Identifier && expression.right instanceof ArrayExpression)
+    return expression.right.elements.length === 0
+      ? "1 = 0"
+      : `${expression.left.name} IN (${slots(expression.left.name, expression.right.elements.length)})`;
+  if (expression instanceof Operator.In && expression.left instanceof Identifier && expression.right instanceof Subquery)
+    return `${expression.left.name} IN ${render(expression.right)}`;
+  if (expression instanceof Operator.NotIn && expression.left instanceof Identifier && expression.right instanceof ArrayExpression)
+    return expression.right.elements.length === 0
+      ? "1 = 1"
+      : `${expression.left.name} NOT IN (${slots(expression.left.name, expression.right.elements.length)})`;
+  if (expression instanceof Operator.NotIn && expression.left instanceof Identifier && expression.right instanceof Subquery)
+    return `${expression.left.name} NOT IN ${render(expression.right)}`;
+  if (
+    (expression instanceof Operator.Between || expression instanceof Operator.NotBetween) &&
+    expression.value instanceof Identifier &&
+    expression.low instanceof Literal &&
+    expression.high instanceof Literal
+  ) {
+    const word = expression instanceof Operator.NotBetween ? "NOT BETWEEN" : "BETWEEN";
+    return `${expression.value.name} ${word} $${parameterName(expression.value.name)}_0 AND $${parameterName(expression.value.name)}_1`;
+  }
+  if (expression instanceof Operator.Between)
+    return `${render(expression.value)} BETWEEN ${render(expression.low)} AND ${render(expression.high)}`;
+  if (expression instanceof Operator.NotBetween)
+    return `${render(expression.value)} NOT BETWEEN ${render(expression.low)} AND ${render(expression.high)}`;
+  if (expression instanceof Operator.And) return `${wrap(expression.left, true)} AND ${wrap(expression.right, true)}`;
+  if (expression instanceof Operator.Or) return `${wrap(expression.left, false)} OR ${wrap(expression.right, false)}`;
+  const operands = expression instanceof Operator ? pair(expression) : undefined;
+  if (operands && operands.left instanceof Identifier && operands.right instanceof Literal)
+    return `${operands.left.name} ${symbol(expression as Operator)} $${parameterName(operands.left.name)}`;
+  if (operands && operands.left instanceof Literal && operands.right instanceof Literal)
+    return `${inline(operands.left.value)} ${symbol(expression as Operator)} ${inline(operands.right.value)}`;
+  if (operands) return `${render(operands.left)} ${symbol(expression as Operator)} ${render(operands.right)}`;
+  throw new Error("empty expression");
+};
 
 const side = (
   expression: IExpression,
@@ -150,37 +166,147 @@ const inRight = (
       )
     : rewrite(right, column, value);
 
-const collect = (expression: IExpression): Parameter<Cell>[] =>
+const bound = (
+  subject: IExpression,
+  edge: IExpression,
+  column: (name: string) => string,
+  value: (name: string, cell: Cell) => Cell,
+): IExpression =>
+  subject instanceof Identifier && edge instanceof Literal
+    ? new Literal(value(subject.name, edge.value))
+    : rewrite(edge, column, value);
+
+const rewriteWhere = (
+  where: IWhere | undefined,
+  column: (name: string) => string,
+  value: (name: string, cell: Cell) => Cell,
+): IWhere | undefined =>
+  where instanceof WhereClause ? new WhereClause(rewrite(where.condition, column, value)) : where;
+
+const rewriteQuery = (
+  query: QueryStatement,
+  column: (name: string) => string,
+  value: (name: string, cell: Cell) => Cell,
+): QueryStatement =>
+  query.table === undefined
+    ? query
+    : new QueryStatement({
+        distinct: query.distinct,
+        table: query.table,
+        fields: query.fields,
+        where: rewriteWhere(query.where, column, value),
+        joins: query.joins.map((join) =>
+          join.on ? { ...join, on: rewrite(join.on, column, value) } : join,
+        ),
+        groupBy: query.groupBy,
+        having: rewriteWhere(query.having, column, value),
+        orderBy: query.orderBy,
+        limit: query.limit,
+        offset: query.offset,
+      });
+
+const rewrite = (
+  expression: IExpression,
+  column: (name: string) => string,
+  value: (name: string, cell: Cell) => Cell,
+): IExpression =>
   expression instanceof WhereClause
-    ? collect(expression.condition)
-    : expression instanceof Literal || expression instanceof Identifier
-      ? []
-      : expression instanceof Operator.Not
-        ? collect(expression.argument)
-        : expression instanceof Operator.In &&
-            expression.left instanceof Identifier &&
-            expression.right instanceof ArrayExpression
-          ? expression.right.elements.map((element, i) =>
-              element instanceof Literal
-                ? { name: `${expression.left.name}_${i}`, value: element.value }
-                : (() => {
-                    throw new Error("empty in");
-                  })(),
-            )
-          : (() => {
-              const pair = expression instanceof Operator ? operands(expression) : undefined;
-              return pair && pair.left instanceof Identifier && pair.right instanceof Literal
-                ? [{ name: pair.left.name, value: pair.right.value }]
-                : pair && pair.left instanceof Literal && pair.right instanceof Literal
-                  ? []
-                  : pair
-                    ? [...collect(pair.left), ...collect(pair.right)]
-                    : expression instanceof ArrayExpression
-                      ? expression.elements.flatMap(collect)
-                      : (() => {
-                          throw new Error("empty expression");
-                        })();
-            })();
+    ? rewrite(expression.condition, column, value)
+    : expression instanceof Identifier
+      ? new Identifier(column(expression.name))
+      : expression instanceof Literal
+        ? expression
+        : expression instanceof ArrayExpression
+          ? new ArrayExpression(expression.elements.map((element) => rewrite(element, column, value)))
+          : expression instanceof Subquery
+            ? new Subquery(rewriteQuery(expression.query, column, value))
+            : expression instanceof Operator.Not
+              ? new Operator.Not(rewrite(expression.argument, column, value))
+              : expression instanceof Operator.IsNull
+                ? new Operator.IsNull(rewrite(expression.argument, column, value))
+                : expression instanceof Operator.IsNotNull
+                  ? new Operator.IsNotNull(rewrite(expression.argument, column, value))
+                  : expression instanceof Operator.Exists
+                    ? new Operator.Exists(rewrite(expression.argument, column, value))
+                    : expression instanceof Operator.And
+                      ? new Operator.And(rewrite(expression.left, column, value), rewrite(expression.right, column, value))
+                      : expression instanceof Operator.Or
+                        ? new Operator.Or(rewrite(expression.left, column, value), rewrite(expression.right, column, value))
+                        : expression instanceof Operator.In
+                          ? new Operator.In(rewrite(expression.left, column, value), inRight(expression.left, expression.right, column, value))
+                          : expression instanceof Operator.NotIn
+                            ? new Operator.NotIn(rewrite(expression.left, column, value), inRight(expression.left, expression.right, column, value))
+                            : expression instanceof Operator.Like
+                              ? new Operator.Like(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                              : expression instanceof Operator.NotLike
+                                ? new Operator.NotLike(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                                : expression instanceof Operator.Between
+                                  ? new Operator.Between(rewrite(expression.value, column, value), bound(expression.value, expression.low, column, value), bound(expression.value, expression.high, column, value))
+                                  : expression instanceof Operator.NotBetween
+                                    ? new Operator.NotBetween(rewrite(expression.value, column, value), bound(expression.value, expression.low, column, value), bound(expression.value, expression.high, column, value))
+                                    : expression instanceof Operator.Equals
+                                      ? new Operator.Equals(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                                      : expression instanceof Operator.NotEquals
+                                        ? new Operator.NotEquals(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                                        : expression instanceof Operator.GreaterThan
+                                          ? new Operator.GreaterThan(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                                          : expression instanceof Operator.LessThan
+                                            ? new Operator.LessThan(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                                            : expression instanceof Operator.GreaterThanOrEqual
+                                              ? new Operator.GreaterThanOrEqual(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                                              : expression instanceof Operator.LessThanOrEqual
+                                                ? new Operator.LessThanOrEqual(side(expression.left, expression.right, column, value), side(expression.right, expression.left, column, value))
+                                                : (() => {
+                                                    throw new Error("empty expression");
+                                                  })();
+
+const listed = (name: string, elements: IExpression[]): Parameter<Cell>[] =>
+  elements.map((element, i) =>
+    element instanceof Literal
+      ? { name: `${parameterName(name)}_${i}`, value: element.value }
+      : (() => {
+          throw new Error("empty in");
+        })(),
+  );
+
+const collect = (expression: IExpression): Parameter<Cell>[] => {
+  if (expression instanceof WhereClause) return collect(expression.condition);
+  if (expression instanceof Literal || expression instanceof Identifier) return [];
+  if (expression instanceof Operator.Not || expression instanceof Operator.IsNull || expression instanceof Operator.IsNotNull)
+    return collect(expression.argument);
+  if (expression instanceof Operator.Exists) return collect(expression.argument);
+  if (expression instanceof Subquery)
+    return [
+      ...(expression.query.where ? collect(expression.query.where) : []),
+      ...(expression.query.having ? collect(expression.query.having) : []),
+      ...expression.query.joins.flatMap((join) => (join.on ? collect(join.on) : [])),
+    ];
+  if (expression instanceof Operator.In && expression.left instanceof Identifier && expression.right instanceof ArrayExpression)
+    return listed(expression.left.name, expression.right.elements);
+  if (expression instanceof Operator.NotIn && expression.left instanceof Identifier && expression.right instanceof ArrayExpression)
+    return listed(expression.left.name, expression.right.elements);
+  if (expression instanceof Operator.In || expression instanceof Operator.NotIn)
+    return [...collect(expression.left), ...collect(expression.right)];
+  if (
+    (expression instanceof Operator.Between || expression instanceof Operator.NotBetween) &&
+    expression.value instanceof Identifier &&
+    expression.low instanceof Literal &&
+    expression.high instanceof Literal
+  )
+    return [
+      { name: `${parameterName(expression.value.name)}_0`, value: expression.low.value },
+      { name: `${parameterName(expression.value.name)}_1`, value: expression.high.value },
+    ];
+  if (expression instanceof Operator.Between || expression instanceof Operator.NotBetween)
+    return [...collect(expression.value), ...collect(expression.low), ...collect(expression.high)];
+  const operands = expression instanceof Operator ? pair(expression) : undefined;
+  if (operands && operands.left instanceof Identifier && operands.right instanceof Literal)
+    return [{ name: parameterName(operands.left.name), value: operands.right.value }];
+  if (operands && operands.left instanceof Literal && operands.right instanceof Literal) return [];
+  if (operands) return [...collect(operands.left), ...collect(operands.right)];
+  if (expression instanceof ArrayExpression) return expression.elements.flatMap(collect);
+  throw new Error("empty expression");
+};
 
 export class WhereClause implements IWhere {
   readonly condition: IExpression;
@@ -189,9 +315,7 @@ export class WhereClause implements IWhere {
   constructor(column: string, op: Comparison, value: Cell);
   constructor(columnOrCondition: IExpression | string, op: Comparison = eq, value: Cell = null) {
     this.condition =
-      typeof columnOrCondition === "string"
-        ? op(columnOrCondition, value)
-        : columnOrCondition;
+      typeof columnOrCondition === "string" ? op(columnOrCondition, value) : columnOrCondition;
   }
 
   and(column: string, op: Comparison, value: Cell): WhereClause {
