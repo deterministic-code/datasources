@@ -13,18 +13,18 @@ public class MysqlRepositorySpecTests
         var url = Environment.GetEnvironmentVariable("MYSQL_URL");
         if (string.IsNullOrEmpty(url)) return;
         _ = MysqlRowTypeConverters.All;
-        foreach (var path in RepositorySpec.Files())
+        foreach (var path in RepositoryTestsSpec.Files())
         {
             var isolated = await Isolate(url);
             try
             {
-                await RepositorySpec.Run(path, () =>
+                await RepositoryTestsSpec.Run(path, () =>
                 {
                     var conn = new MysqlConnection(new MysqlConnectionOptions
                     {
                         Url = isolated.Url,
                     });
-                    return new RepositorySpec.Session(conn, new MysqlCommand(conn), MysqlRowTypeConverters.All);
+                    return new RepositoryTestsSpec.Session(conn, new MysqlCommand(conn), MysqlRowTypeConverters.All);
                 }, CreateTable, Quote);
             }
             finally

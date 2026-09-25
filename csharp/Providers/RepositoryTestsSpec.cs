@@ -9,7 +9,7 @@ namespace Datasources.SqlSpecs;
 
 public sealed record SpecColumn(string Name, string Type, bool Id = false);
 
-public static class RepositorySpec
+public static class RepositoryTestsSpec
 {
     public static IEnumerable<string> Files() =>
         Directory.GetFiles(Path.Combine(SqlSpec.SpecsDir(), "repositories"), "*.yaml");
