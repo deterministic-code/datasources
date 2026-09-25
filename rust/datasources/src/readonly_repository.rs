@@ -5,7 +5,6 @@ use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-use crate::enriched::Enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
@@ -43,7 +42,7 @@ pub struct ReadonlyRepository {
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
     pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
-    pub tree: RepositoryTree,
+    pub(crate) tree: RepositoryTree,
 }
 
 impl ReadonlyRepository {
@@ -347,13 +346,6 @@ impl ReadonlyRepository {
 impl IRepository for ReadonlyRepository {
     fn entity_type(&self) -> TypeId {
         self.entity_type
-    }
-}
-
-#[async_trait]
-impl Enriched for ReadonlyRepository {
-    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
-        self.fill(items, None).await
     }
 }
 

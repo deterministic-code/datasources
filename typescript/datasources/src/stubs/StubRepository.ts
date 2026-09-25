@@ -6,7 +6,7 @@ import type { Parameter } from "../Parameter.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
-import { ReadonlyRepository, tracked, untyped, withoutSource, type Sourced } from "../ReadonlyRepository.ts";
+import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import { notImplemented } from "./notImplemented.ts";
@@ -26,13 +26,6 @@ export class StubRepository<T = unknown> extends ReadonlyRepository<T> implement
     _parameters?: Parameter[],
   ): AsyncIterable<T> {
     notImplemented(this.provider);
-  }
-
-  async *[tracked](
-    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-    parameters?: Parameter[],
-  ): AsyncIterable<Sourced<T>> {
-    yield* withoutSource(this.read(query, parameters));
   }
 
   create = async (_item: T): Promise<T> => notImplemented(this.provider);

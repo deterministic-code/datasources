@@ -22,10 +22,6 @@ public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
         foreach (var item in Items) yield return item;
     }
 
-    protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
-        IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
-        WithoutSource(Read(query, parameters));
-
     public IReadOnlyList<string> Ids { get; } = [];
     public Task<T> Create(T item)
     {

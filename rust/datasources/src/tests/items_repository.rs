@@ -1,4 +1,3 @@
-use crate::enriched::Enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::read_input::ReadInput;
@@ -51,13 +50,6 @@ impl DerefMut for ItemsRepository {
 impl IRepository for ItemsRepository {
     fn entity_type(&self) -> TypeId {
         self.inner.entity_type()
-    }
-}
-
-#[async_trait]
-impl Enriched for ItemsRepository {
-    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
-        self.inner.enrich(items).await
     }
 }
 

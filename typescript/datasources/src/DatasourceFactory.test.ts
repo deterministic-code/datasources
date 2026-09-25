@@ -12,6 +12,12 @@ import {
   untyped,
 } from "./index.ts";
 
+class SelectText<T> extends ReadonlyRepository<T> {
+  static of(repo: object): string | undefined {
+    return (repo as SelectText<T>).statements?.query().getText();
+  }
+}
+
 const envKeys = [
   "INSTALLED_PROVIDERS",
   "DATASOURCE_URL",
@@ -99,12 +105,10 @@ describe("Datasource registry", () => {
     const typedRead = ds.createReadonlyRepository(Item);
     expect(typed).toBeInstanceOf(CRUDRepository);
     expect(typed.type).toBe(Item);
-    expect(typed instanceof CRUDRepository && typed.statements?.query().getText()).toBe(
-      "SELECT id, name FROM Item",
-    );
+    expect(typed instanceof CRUDRepository && SelectText.of(typed)).toBe("SELECT id, name FROM Item");
     expect(typedRead.constructor).toBe(ReadonlyRepository);
     expect(typedRead.type).toBe(Item);
-    expect(typedRead instanceof ReadonlyRepository && typedRead.statements?.query().getText()).toBe(
+    expect(typedRead instanceof ReadonlyRepository && SelectText.of(typedRead)).toBe(
       "SELECT id, name FROM Item",
     );
     const enriched = ds.createReadonlyRepository(Item) as ReadonlyRepository<Item>;
