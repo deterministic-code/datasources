@@ -2,7 +2,13 @@ namespace Datasources;
 
 public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 {
-    public BulkCRUDRepository(ICRUDRepository<T> inner) : base(inner) { }
+    public BulkCRUDRepository(IConnection connection) : base(connection) { }
+
+    public BulkCRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) : base(connection, options) { }
+
+    public BulkCRUDRepository(BuiltRepository<T> built) : base(built) { }
+
+    protected BulkCRUDRepository(IWriteEnrichmentStrategy<T>? write = null) : base(write) { }
 
     public async Task<Response> Create(IReadOnlyList<T> items)
     {

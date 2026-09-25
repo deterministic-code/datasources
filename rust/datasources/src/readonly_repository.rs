@@ -11,7 +11,6 @@ use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::mappers::{IdentityMapper, Mapper};
-use crate::nest::Nest;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -22,6 +21,7 @@ use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
 use crate::select_statement::SelectStatement;
+use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
 use crate::stubs::StubConnection;
@@ -38,12 +38,12 @@ pub struct ReadonlyRepository {
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: RowTypeConverter,
     pub(crate) rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
+    pub(crate) result: Option<Box<dyn Mapper<Vec<Row>, Vec<Row>> + Send + Sync>>,
     pub(crate) column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
     pub(crate) statements: RepositoryStatements,
     pub(crate) entity_type: TypeId,
-    inner_repo: Option<Arc<dyn IReadonlyRepository>>,
+    pub(crate) memory: Option<Arc<SharedItems>>,
     pub tree: RepositoryTree,
-    strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
 }
 
 impl ReadonlyRepository {
@@ -65,50 +65,47 @@ impl ReadonlyRepository {
     }
 
     pub fn from_built(built: BuiltRepository) -> Self {
-        let strategy: Arc<dyn ReadonlyEnrichmentStrategy> =
-            Arc::new(DefaultReadonlyEnrichmentStrategy);
         Self {
             connection: built.connection,
             middlewares: Vec::new(),
             row_converter: built.row_converter,
             rows_mapper: built.rows_mapper,
+            result: built.result,
             column_mappings: built.column_mappings,
             statements: built.statements,
             entity_type: TypeId::of::<Row>(),
-            inner_repo: None,
-            tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
+            memory: None,
+            tree: RepositoryTree::new(RepositoryTreeNode::with_binder(
                 Arc::new(StubRepository::new("readonly")),
                 "",
-                strategy.clone(),
+                Arc::new(DefaultReadonlyEnrichmentStrategy),
             )),
-            strategy,
         }
     }
 
-    pub fn from_repository(inner: Arc<dyn IReadonlyRepository>) -> Self {
-        Self::with_strategy(inner, Arc::new(DefaultReadonlyEnrichmentStrategy))
+    pub fn memory(items: Vec<Row>) -> Self {
+        Self::memory_with(items, None)
     }
 
-    pub fn with_strategy(
-        inner: Arc<dyn IReadonlyRepository>,
-        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    pub fn memory_with(
+        items: Vec<Row>,
+        result: Option<Box<dyn Mapper<Vec<Row>, Vec<Row>> + Send + Sync>>,
     ) -> Self {
-        let entity_type = inner.entity_type();
         Self {
-            connection: Arc::new(StubConnection::new("readonly")),
+            connection: Arc::new(StubConnection::new("memory")),
             middlewares: Vec::new(),
             row_converter: RowTypeConverter::new(Vec::new()),
             rows_mapper: Box::new(IdentityMapper::<Row>::new()),
+            result,
             column_mappings: Box::new(IdentityMapper::<String>::new()),
             statements: RepositoryStatements::new("", Vec::new()),
-            entity_type,
-            inner_repo: Some(inner.clone()),
-            tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
-                inner,
+            entity_type: TypeId::of::<Row>(),
+            memory: Some(SharedItems::new(items)),
+            tree: RepositoryTree::new(RepositoryTreeNode::with_binder(
+                Arc::new(StubRepository::new("memory")),
                 "",
-                strategy.clone(),
+                Arc::new(DefaultReadonlyEnrichmentStrategy),
             )),
-            strategy,
         }
     }
 
@@ -120,18 +117,43 @@ impl ReadonlyRepository {
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
-        nest: impl Nest,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
-        nest.apply(self.tree.parent.include(via, into, from, by, select, many));
+        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        self.tree
+            .parent
+            .include_with(via, into, from, by, select, many, strategy);
         self
     }
 
-    fn enriched(&self) -> bool {
+    pub fn add_linked(
+        &mut self,
+        into: impl Into<String>,
+        from: impl Into<String>,
+        via: impl EnrichmentVia,
+        by: impl Into<String>,
+        link: Arc<dyn crate::repository::ICRUDRepository>,
+        parent: impl Into<String>,
+        related: impl Into<String>,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
+    ) -> &mut Self {
+        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        self.tree.parent.include_linked_with(
+            via, into, from, by, link, parent, related, strategy,
+        );
+        self
+    }
+
+    pub(crate) fn enriched(&self) -> bool {
         !self.tree.parent.items.is_empty()
     }
 
     pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
         self.middlewares.push(middleware);
+    }
+
+    pub(crate) fn memory_items(&self) -> Option<&Arc<SharedItems>> {
+        self.memory.as_ref()
     }
 
     pub(crate) fn command(&self) -> Arc<dyn Command> {
@@ -166,47 +188,100 @@ impl ReadonlyRepository {
         }
     }
 
-    pub(crate) async fn fetch_one(
-        &self,
-        statement: &dyn crate::statement::Statement,
-        params: Vec<Parameter>,
-    ) -> Result<Option<Row>> {
-        let reader = self
-            .command()
-            .execute_reader_statement(statement, Some(&params))
-            .await?;
-        if !reader.next().await? {
-            return Ok(None);
+    async fn read_sources(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+        if let Some(memory) = &self.memory {
+            return Ok(memory.filter_input(query));
         }
-        reader
-            .current()
-            .map(|row| {
-                self.row_converter
-                    .convert(&self.renamed(row))
-                    .map(|converted| Mapper::map(&self.rows_mapper, converted))
-            })
-            .transpose()
+        if let Some(where_clause) = query.and_then(ReadInput::as_where) {
+            let (statement, params) = self.stored_query(where_clause)?;
+            return self.fetch_sources(&statement, params).await;
+        }
+        let statement = query.and_then(ReadInput::as_statement);
+        self.ensure_readable(statement)?;
+        match statement {
+            Some(statement) if statement.kind() == StatementKind::Procedure => {
+                self.fetch_sources(statement, statement.parameters()).await
+            }
+            statement => {
+                let (statement, params) = self.query_of(statement);
+                self.fetch_sources(&statement, params).await
+            }
+        }
     }
 
-    pub(crate) async fn fetch_all(
+    async fn fetch_sources(
         &self,
-        statement: &dyn crate::statement::Statement,
+        statement: &dyn Statement,
         params: Vec<Parameter>,
     ) -> Result<Vec<Row>> {
         let reader = self
             .command()
             .execute_reader_statement(statement, Some(&params))
             .await?;
-        let mut items = Vec::new();
+        let mut rows = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                items.push(Mapper::map(
-                    &self.rows_mapper,
-                    self.row_converter.convert(&self.renamed(row))?,
-                ));
+                rows.push(self.renamed(row));
             }
         }
-        Ok(items)
+        Ok(rows)
+    }
+
+    async fn read_items(&self, query: Option<&dyn ReadInput>) -> Result<Vec<(Row, Option<Row>)>> {
+        if self.result.is_some() {
+            return self.collapse(query).await;
+        }
+        if self.memory.is_some() {
+            return Ok(self
+                .read_sources(query)
+                .await?
+                .into_iter()
+                .map(|row| (row, None))
+                .collect());
+        }
+        let mut pairs = Vec::new();
+        for renamed in self.read_sources(query).await? {
+            let item = Mapper::map(
+                &self.rows_mapper,
+                self.row_converter.convert(&renamed)?,
+            );
+            pairs.push((item, Some(renamed)));
+        }
+        Ok(pairs)
+    }
+
+    async fn collapse(&self, query: Option<&dyn ReadInput>) -> Result<Vec<(Row, Option<Row>)>> {
+        let rows = self.read_sources(query).await?;
+        let mapped = self.result.as_ref().expect("result").map(rows);
+        Ok(mapped.into_iter().map(|item| (item, None)).collect())
+    }
+
+    async fn apply(
+        &self,
+        mut pairs: Vec<(Row, Option<Row>)>,
+    ) -> Result<Vec<(Row, Option<Row>)>> {
+        if !self.enriched() {
+            return Ok(pairs);
+        }
+        let mut items: Vec<Row> = pairs.iter().map(|(item, _)| item.clone()).collect();
+        let sources: Vec<Option<Row>> = pairs.iter().map(|(_, source)| source.clone()).collect();
+        self.tree
+            .parent
+            .enrich_from_sourced(&mut items, Some(&sources))
+            .await?;
+        for (index, item) in items.into_iter().enumerate() {
+            if let Some(pair) = pairs.get_mut(index) {
+                pair.0 = item;
+            }
+        }
+        Ok(pairs)
+    }
+
+    pub(crate) async fn read_tracked(
+        &self,
+        query: Option<&dyn ReadInput>,
+    ) -> Result<Vec<(Row, Option<Row>)>> {
+        self.apply(self.read_items(query).await?).await
     }
 
     fn renamed(&self, row: Row) -> Row {
@@ -288,67 +363,22 @@ impl IRepository for ReadonlyRepository {
 #[async_trait]
 impl Enriched for ReadonlyRepository {
     async fn enrich(&self, items: &mut [Row]) -> Result<()> {
-        let mut rows = items.to_vec();
-        self.strategy.enrich(&self.tree, &mut rows).await?;
-        let count = items.len().min(rows.len());
-        items[..count].clone_from_slice(&rows[..count]);
-        Ok(())
+        self.tree.parent.enrich_from(items).await
     }
 }
 
 #[async_trait]
 impl IReadonlyRepository for ReadonlyRepository {
     async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        if self.inner_repo.is_some() || self.enriched() {
-            return Ok(self.read(query).await?.into_iter().next());
-        }
-        if let Some(where_clause) = query.and_then(ReadInput::as_where) {
-            let (statement, params) = self.stored_query(where_clause)?;
-            return self.fetch_one(&statement, params).await;
-        }
-        let statement = query.and_then(ReadInput::as_statement);
-        self.ensure_readable(statement)?;
-        match statement {
-            Some(statement) if statement.kind() == StatementKind::Procedure => {
-                self.fetch_one(statement, statement.parameters()).await
-            }
-            statement => {
-                let (statement, params) = self.query_of(statement);
-                self.fetch_one(&statement, params).await
-            }
-        }
+        Ok(self.read(query).await?.into_iter().next())
     }
 
     async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        if let Some(inner) = &self.inner_repo {
-            let mut rows = inner.read(query).await?;
-            self.strategy.enrich(&self.tree, &mut rows).await?;
-            return Ok(rows);
-        }
-        let mut rows = self.read_sql(query).await?;
-        if self.enriched() {
-            self.strategy.enrich(&self.tree, &mut rows).await?;
-        }
-        Ok(rows)
-    }
-}
-
-impl ReadonlyRepository {
-    async fn read_sql(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        if let Some(where_clause) = query.and_then(ReadInput::as_where) {
-            let (statement, params) = self.stored_query(where_clause)?;
-            return self.fetch_all(&statement, params).await;
-        }
-        let statement = query.and_then(ReadInput::as_statement);
-        self.ensure_readable(statement)?;
-        match statement {
-            Some(statement) if statement.kind() == StatementKind::Procedure => {
-                self.fetch_all(statement, statement.parameters()).await
-            }
-            statement => {
-                let (statement, params) = self.query_of(statement);
-                self.fetch_all(&statement, params).await
-            }
-        }
+        Ok(self
+            .read_tracked(query)
+            .await?
+            .into_iter()
+            .map(|(item, _)| item)
+            .collect())
     }
 }

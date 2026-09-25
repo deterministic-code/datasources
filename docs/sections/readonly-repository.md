@@ -195,12 +195,12 @@ interface IEnriched<T>
 
 **Methods**
 
-##### addEnriched(into, from, via, by, select?, many?, nest?)
+##### addEnriched(into, from, via, by, select?, many?)
 
-Adds a related fill. Fluent for siblings; `nest` receives the child node.
+Adds a related fill. Fluent for siblings. A related repository fills its own fields.
 
 ```typescript
-addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean, nest?: (node: IRepositoryTreeNode) => void): this
+addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean): this
 ```
 
 - `into` — destination property on `T`
@@ -209,7 +209,6 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 - `by` — key on the related item
 - `select` — optional related property to copy; omitted copies the whole row
 - `many` — collect a list; default `false`
-- `nest` — optional child-node callback
 
 **Returns** `this`
 
@@ -571,12 +570,12 @@ public interface IEnriched<T>
 
 **Methods**
 
-##### AddEnriched(into, from, via, by, select, many, nest)
+##### AddEnriched(into, from, via, by, select, many, strategy)
 
-Adds a related fill. Fluent for siblings; `nest` receives the child node.
+Adds a related fill. Fluent for siblings. A related repository fills its own fields.
 
 ```csharp
-IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, Action<IRepositoryTreeNode>? nest = null)
+IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
 - `into` — destination property on `T`
@@ -585,7 +584,7 @@ IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository
 - `by` — key on the related item
 - `select` — optional related property to copy; omitted copies the whole row
 - `many` — collect a list
-- `nest` — optional child-node callback
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** [IEnriched](#ienriched)`<T>`
 
@@ -844,12 +843,12 @@ pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn Read
 
 **Methods**
 
-##### add_enriched(into, from, via, by, select, many, nest)
+##### add_enriched(into, from, via, by, select, many)
 
-Adds a related fill. Pass `()` for `nest` when the child has no further fill.
+Adds a related fill. A related repository fills its own fields.
 
 ```rust
-pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool, nest: impl Nest) -> &mut Self
+pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
 ```
 
 - `into` — destination field
@@ -858,7 +857,6 @@ pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>,
 - `by` — key on the related row
 - `select` — optional related field to copy
 - `many` — collect a list
-- `nest` — child-node callback, or `()`
 
 **Returns** `&mut Self`
 
@@ -1137,13 +1135,13 @@ Writes use [CRUDRepository](./crud-repository.md). Register the same tree with `
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
 - **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
-Nest only on walkable objects (`many: true` or a whole related row). A `select` scalar is not walked. Depth is unbounded; each node applies, then children run on the related items. See [Bulk repository](./bulk-repository.md) for list writes.
+A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. See [Bulk repository](./bulk-repository.md) for list writes.
 
-`AddEnriched` stays fluent for siblings:
+`AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 
 ```
-AddEnriched("children", "id", children, "parent_id", many: true,
-    nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
+children.AddEnriched("type_name", "type_id", childTypes, "id", "name");
+parents.AddEnriched("children", "id", children, "parent_id", many: true);
 ```
 
 Repository read is convert, then map. See [TypeConverter](./type-converters.md) and [Mapper](./mappers.md).

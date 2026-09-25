@@ -23,12 +23,12 @@ public sealed class ContactsRepository : CRUDRepository<ContactsView>
         Phones = new PhoneRepository(connection);
         Groups = new ContactGroupRepository(connection);
         Members = new ContactGroupMemberRepository(connection);
+        Addresses.AddEnriched("address_type", "address_type_id", AddressTypes, "id", "name");
+        Phones.AddEnriched("phone_type", "phone_type_id", PhoneTypes, "id", "name");
         AddEnriched("contact_source", "contact_source_id", Sources, "id", "name");
         AddEnriched("contact_type", "contact_type_id", Types, "id", "name");
-        AddEnriched("addresses", "id", Addresses, "contact_id", many: true,
-            nest: node => node.Include(AddressTypes, "address_type", "address_type_id", "id", "name"));
-        AddEnriched("phones", "id", Phones, "contact_id", many: true,
-            nest: node => node.Include(PhoneTypes, "phone_type", "phone_type_id", "id", "name"));
+        AddEnriched("addresses", "id", Addresses, "contact_id", many: true);
+        AddEnriched("phones", "id", Phones, "contact_id", many: true);
         AddLinked("groups", "id", Groups, "id", Members, "contact_id", "contact_group_id");
     }
 

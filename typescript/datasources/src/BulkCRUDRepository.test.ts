@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import { ListCRUDRepository } from "./tests/listCRUDRepository.ts";
 
 class Parent {
@@ -19,10 +18,9 @@ const assign = <T extends object>(type: new () => T, values: Partial<T>): T =>
 const repoOf = (
   parents: ListCRUDRepository<Parent>,
   children: ListCRUDRepository<Child>,
-): BulkCRUDRepository<Parent> => {
-  const repo = new BulkCRUDRepository(parents);
-  repo.addEnriched("children", "id", children, "parent_id", undefined, true);
-  return repo;
+): ListCRUDRepository<Parent> => {
+  parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+  return parents;
 };
 
 describe("BulkCRUDRepository", () => {
@@ -38,6 +36,12 @@ describe("BulkCRUDRepository", () => {
     expect(parents.items.map((parent) => parent.id)).toEqual([1, 2]);
     expect(children.items.map((child) => child.parent_id)).toEqual([1, 2, 2]);
     expect(response.rowsAffected).toBe(2);
+  });
+
+  it("bulkCreate matches list create", async () => {
+    const parents = new ListCRUDRepository<Parent>();
+    await parents.bulkCreate([new Parent(), new Parent()]);
+    expect(parents.items).toHaveLength(2);
   });
 
   it("update replace-syncs each parent", async () => {
@@ -84,17 +88,28 @@ describe("BulkCRUDRepository", () => {
     expect(children.items.map((child) => child.label)).toEqual(["keep"]);
   });
 
-  it("reads an Id column and ignores an object id", async () => {
+  it("bulk aliases match list writes", async () => {
+    const parents = new ListCRUDRepository<Parent>();
+    await parents.bulkUpdate([assign(Parent, { id: 1 })]);
+    await parents.bulkDelete([assign(Parent, { id: 1 })]);
+    expect(parents.items).toHaveLength(0);
+  });
+
+  it("reads an Id column", async () => {
     class Named {
       Id = 0;
     }
-    const named = await new BulkCRUDRepository(new ListCRUDRepository<Named>()).createBulk([new Named()]);
+    const named = await new ListCRUDRepository<Named>([], Named).createBulk([new Named()]);
     expect(named.result).toBe(1);
+  });
 
-    const inner = new ListCRUDRepository<{ id: object }>();
-    inner.create = async () => ({ id: { n: 1 } });
-    const boxed = await new BulkCRUDRepository(inner).createBulk([{} as { id: object }]);
-    expect(boxed.result).toBeNull();
-    expect(boxed.rowsAffected).toBe(1);
+  it("ignores missing and object ids when folding create results", async () => {
+    class Boxed {
+      id: object | null = null;
+    }
+    const empty = await new ListCRUDRepository<Boxed>([], Boxed).createBulk([
+      Object.assign(new Boxed(), { id: { n: 1 } }),
+    ]);
+    expect(empty.result).toBeNull();
   });
 });

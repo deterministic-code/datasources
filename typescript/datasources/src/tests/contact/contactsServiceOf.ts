@@ -16,12 +16,12 @@ import { PhoneType } from "./PhoneType.ts";
 export const contactsServiceOf = (
   connection: IConnection,
   middleware?: ICommandMiddleware,
-): ContactsService => {
+) => {
   const of = <T>(type: Constructable<T>, entity: string, readProperties?: string[]) => {
     const repo = new CRUDRepository(connection, { type, entity, readProperties });
     return middleware ? repo.addMiddleware(middleware) : repo;
   };
-  return new ContactsService(
+  return ContactsService.open(
     of(Contact, "contacts_base", fieldNamesOf(ContactBase)),
     of(ContactType, "contact_type"),
     of(ContactSource, "contact_source"),

@@ -11,15 +11,6 @@ pub trait ReadInput: Send + Sync {
     }
 }
 
-pub(crate) struct StatementRead<'a>(pub &'a dyn Statement);
-
-impl ReadInput for StatementRead<'_> {
-    fn as_statement(&self) -> Option<&dyn Statement> {
-        Some(self.0)
-    }
-}
-
-#[cfg(test)]
 pub fn where_of<'a>(query: Option<&'a dyn ReadInput>) -> Option<&'a dyn IWhere> {
     let input = query?;
     input

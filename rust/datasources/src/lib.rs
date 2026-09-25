@@ -18,6 +18,7 @@ mod crud_repository_options;
 mod datasource;
 mod datasource_error;
 mod default_readonly_enrichment_strategy;
+mod default_write_enrichment_strategy;
 mod defaults;
 mod delete_enrichment_strategy;
 mod delete_nested;
@@ -28,7 +29,6 @@ mod enriched;
 mod enrichment;
 mod enrichment_via;
 mod expect_console_middleware;
-mod flat_to_nested_readonly_enrichment_strategy;
 mod hashset_optimized_readonly_enrichment_strategy;
 mod i_repository;
 mod i_select_statement;
@@ -37,9 +37,9 @@ mod id_key;
 mod identity_filter;
 mod identity_where_text;
 mod isolation_level;
+mod lazy_write_enrichment_strategy;
 pub mod mappers;
 pub mod mocks;
-mod nest;
 mod parameter;
 mod parameter_direction;
 mod parameters_to_map;
@@ -61,6 +61,7 @@ mod response;
 mod result;
 mod row;
 mod select_statement;
+mod shared_items;
 mod split_statements;
 mod statement_parser;
 pub mod statements;
@@ -70,6 +71,8 @@ mod table_repository_statements;
 mod transaction;
 mod value;
 mod where_text;
+mod write_enrichment_strategy;
+mod write_mode;
 
 pub use array_reader::ArrayReader;
 pub use association::Association;
@@ -94,6 +97,7 @@ pub use crud_repository_options::CRUDRepositoryOptions;
 pub use datasource::{BuiltDatasource, Datasource};
 pub use datasource_error::DatasourceError;
 pub use default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
+pub use default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 pub use defaults::{bind_install, defaults};
 pub use delete_enrichment_strategy::DeleteEnrichmentStrategy;
 pub use delete_nested::DeleteNested;
@@ -103,7 +107,6 @@ pub use enriched::Enriched;
 pub use enrichment::Enrichment;
 pub use enrichment_via::EnrichmentVia;
 pub use expect_console_middleware::ExpectConsoleMiddleware;
-pub use flat_to_nested_readonly_enrichment_strategy::FlatToNestedReadonlyEnrichmentStrategy;
 pub use hashset_optimized_readonly_enrichment_strategy::HashsetOptimizedReadonlyEnrichmentStrategy;
 pub use i_repository::IRepository;
 pub use i_select_statement::ISelectStatement;
@@ -112,6 +115,7 @@ pub use id_key::IdKey;
 pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
+pub use lazy_write_enrichment_strategy::LazyWriteEnrichmentStrategy;
 pub use mappers::{
     ChangeCasingMapper, DictionaryMapper, FlatToNestedMapper, FlatToNestedMapperTrait,
     IdentityMapper, MappedRow, MappedValue, Mapper, PluralizerMapper, RowTypeMapper,
@@ -121,7 +125,6 @@ pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockDriver, MockReader, MockRepository,
     MockSelectStatement, MockTransaction, MockWhere,
 };
-pub use nest::Nest;
 pub use parameter::Parameter;
 pub use parameter_direction::ParameterDirection;
 pub use parameters_to_map::parameters_to_map;
@@ -162,6 +165,8 @@ pub use table_repository_statements::RepositoryStatements;
 pub use transaction::Transaction;
 pub use value::Value;
 pub use where_text::WhereText;
+pub use write_enrichment_strategy::WriteEnrichmentStrategy;
+pub use write_mode::WriteMode;
 
 #[cfg(test)]
 mod tests;

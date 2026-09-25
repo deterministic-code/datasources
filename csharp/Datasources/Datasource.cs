@@ -35,6 +35,7 @@ public sealed class Datasource(
                 ColumnMappings = crud.ColumnMappings,
                 Query = crud.Query,
                 RowsMapper = crud.RowsMapper,
+                Result = crud.Result,
                 RowConverter = crud.RowConverter,
                 ReadProperties = crud.ReadProperties,
                 RowTypeConverters = types,
@@ -44,6 +45,7 @@ public sealed class Datasource(
                 Delete = crud.Delete,
                 Return = crud.Return,
                 Create = crud.Create,
+                Write = crud.Write,
             },
             { } read => new()
             {
@@ -52,6 +54,7 @@ public sealed class Datasource(
                 ColumnMappings = read.ColumnMappings,
                 Query = read.Query,
                 RowsMapper = read.RowsMapper,
+                Result = read.Result,
                 RowConverter = read.RowConverter,
                 ReadProperties = read.ReadProperties,
                 RowTypeConverters = types,

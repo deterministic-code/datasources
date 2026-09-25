@@ -19,7 +19,7 @@ public class ContactsServiceTests
         var addresses = new ListCRUDRepository<Address>(
             new Address { id = 11, contact_id = 9, line1 = "other", city = "x" });
         var phones = new ListCRUDRepository<Phone>();
-        var service = new ContactsService(
+        var service = ContactsService.Open(
             contacts, types, sources, addressTypes, phoneTypes, addresses, phones);
         await service.Create(new Contact
         {

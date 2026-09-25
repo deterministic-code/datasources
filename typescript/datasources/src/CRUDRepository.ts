@@ -18,7 +18,6 @@ import { isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
-import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 
@@ -60,14 +59,12 @@ const copyIds = (item: object, created: object, names: readonly string[]): void 
 };
 
 const crudBuilt = <T>(
-  typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
+  typeOrConnection: Constructable<T> | IConnection,
   connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
 ): BuiltRepository<T> =>
-  typeof typeOrConnectionOrBuilt === "function"
-    ? parts(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnectionOrBuilt))
-    : isBuilt(typeOrConnectionOrBuilt)
-      ? typeOrConnectionOrBuilt
-      : parts(typeOrConnectionOrBuilt, withIds(connectionOrOptions as CRUDRepositoryOptions<T>));
+  typeof typeOrConnection === "function"
+    ? parts(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnection))
+    : parts(typeOrConnection, withIds(connectionOrOptions as CRUDRepositoryOptions<T>));
 
 const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T> =>
   "ids" in options
@@ -77,15 +74,6 @@ const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T>
         ids: options.type ? defaultId(fieldNamesOf(options.type)) : ["id"],
       };
 
-const isDelegate = <T>(
-  value: Constructable<T> | IConnection | BuiltRepository<T> | ICRUDRepository<T>,
-): value is ICRUDRepository<T> =>
-  typeof value === "object" &&
-  value !== null &&
-  "readSingleById" in value &&
-  typeof value.create === "function" &&
-  !("createCommand" in value);
-
 export class CRUDRepository<T = Cells>
   extends ReadonlyRepository<T>
   implements ICRUDRepository<T>
@@ -94,76 +82,76 @@ export class CRUDRepository<T = Cells>
   private readonly createMapper?: IMapper<Scalar, T>;
   private readonly write: IWriteEnrichmentStrategy<T>;
 
-  private get stored(): ICRUDRepository<T> | undefined {
-    return this.innerRepo && "readSingleById" in this.innerRepo
-      ? (this.innerRepo as ICRUDRepository<T>)
-      : undefined;
-  }
-
-  constructor(
-    inner: ICRUDRepository<T>,
-    strategy?: IReadonlyEnrichmentStrategy<T>,
-    write?: IWriteEnrichmentStrategy<T>,
-  );
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>);
-  constructor(built: BuiltRepository<T>);
+  constructor(built: BuiltRepository<T>, write?: IWriteEnrichmentStrategy<T>);
+  constructor(write?: IWriteEnrichmentStrategy<T>);
   constructor(
-    typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T> | ICRUDRepository<T>,
-    connectionOrOptions?: IConnection | CRUDRepositoryOptions<T> | IReadonlyEnrichmentStrategy<T>,
-    write?: IWriteEnrichmentStrategy<T>,
+    typeOrConnectionOrBuiltOrWrite?:
+      | Constructable<T>
+      | IConnection
+      | BuiltRepository<T>
+      | IWriteEnrichmentStrategy<T>,
+    connectionOrOptionsOrWrite?: IConnection | CRUDRepositoryOptions<T> | IWriteEnrichmentStrategy<T>,
   ) {
-    if (isDelegate(typeOrConnectionOrBuilt)) {
-      super(typeOrConnectionOrBuilt, connectionOrOptions as IReadonlyEnrichmentStrategy<T> | undefined);
-      this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
-      this.ids = typeOrConnectionOrBuilt.ids;
-      this.createMapper =
-        typeOrConnectionOrBuilt instanceof CRUDRepository && typeOrConnectionOrBuilt.createMapper
-          ? typeOrConnectionOrBuilt.createMapper
-          : identityCreate<T>(this.ids);
+    if (
+      typeOrConnectionOrBuiltOrWrite === undefined ||
+      isWrite(typeOrConnectionOrBuiltOrWrite)
+    ) {
+      super();
+      this.ids = createRepositoryOptions(Object as never as Constructable<T>).ids!;
+      this.createMapper = identityCreate<T>(this.ids);
+      this.write = (typeOrConnectionOrBuiltOrWrite as IWriteEnrichmentStrategy<T> | undefined)
+        ?? new DefaultWriteEnrichmentStrategy<T>();
       return;
     }
-    const built = crudBuilt(typeOrConnectionOrBuilt, connectionOrOptions as IConnection | CRUDRepositoryOptions<T>);
+    if (isBuilt(typeOrConnectionOrBuiltOrWrite)) {
+      super(typeOrConnectionOrBuiltOrWrite);
+      this.createMapper = typeOrConnectionOrBuiltOrWrite.create;
+      this.ids = typeOrConnectionOrBuiltOrWrite.ids;
+      this.write =
+        (connectionOrOptionsOrWrite as IWriteEnrichmentStrategy<T> | undefined) ??
+        new DefaultWriteEnrichmentStrategy<T>();
+      return;
+    }
+    const options = connectionOrOptionsOrWrite as IConnection | CRUDRepositoryOptions<T>;
+    const built = crudBuilt(typeOrConnectionOrBuiltOrWrite, options);
     super(built);
     this.createMapper = built.create;
     this.ids = built.ids;
-    this.write = new DefaultWriteEnrichmentStrategy<T>();
+    this.write =
+      (typeof options === "object" && options !== null && "write" in options
+        ? (options as CRUDRepositoryOptions<T>).write
+        : undefined) ?? new DefaultWriteEnrichmentStrategy<T>();
   }
 
   create = async (item: T): Promise<T> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
-    const created = this.stored ? await this.stored.create(stored) : await this.inserted(stored);
+    const created = await this.inserted(stored);
     if (!this.enriched) return created;
-    const names = this.ids.length > 0 ? this.ids : defaultId(Object.keys(item as object));
-    copyIds(item, created, names);
+    copyIds(item as object, created as object, this.ids);
     await this.write.persist(this.tree, [item], "create");
-    const id = names.length === 1 ? scalarOf((item as Props)[names[0]!]) : undefined;
+    if (this.ids.length !== 1) return item;
+    const id = scalarOf((item as Props)[this.ids[0]!]);
     return id === undefined ? item : (await this.readSingleById(id)) ?? item;
   };
 
   update = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
-    const response = this.stored
-      ? await this.stored.update(stored, byWhere)
-      : await this.save(stored, byWhere);
+    const response = await this.save(stored, byWhere);
     if (this.enriched) await this.write.persist(this.tree, [item], "update");
     return response;
   };
 
   delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
     if (this.enriched) await this.write.persist(this.tree, [item], "delete");
-    return this.stored ? this.stored.delete(item, byWhere) : this.remove(item, byWhere);
+    return this.remove(item, byWhere);
   };
 
-  readSingleById = async (id: Scalar | Cells): Promise<T | undefined> => {
-    if (!this.stored) return this.readSingle(this.byId(id));
-    const item = await this.stored.readSingleById(id);
-    if (!item || !this.enriched) return item;
-    await this.enrich([item]);
-    return item;
-  };
+  readSingleById = async (id: Scalar | Cells): Promise<T | undefined> =>
+    this.readSingle(this.byId(id));
 
-  private inserted = async (item: T): Promise<T> => {
+  protected inserted = async (item: T): Promise<T> => {
     await this.insert(item);
     return item;
   };
@@ -176,7 +164,7 @@ export class CRUDRepository<T = Cells>
     return response;
   };
 
-  private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  protected save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ? this.stored(byWhere) : this.stored(this.idWhere(record), true);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
@@ -185,7 +173,7 @@ export class CRUDRepository<T = Cells>
     return this.command().execute(statement.getText(), statement.parameters);
   };
 
-  private remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  protected remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ? this.stored(byWhere) : this.stored(this.idWhere(record), true);
     const statement = this.statements!.delete(where);
@@ -232,3 +220,13 @@ export class CRUDRepository<T = Cells>
     return copy;
   };
 }
+
+const isWrite = <T>(
+  value: Constructable<T> | IConnection | BuiltRepository<T> | IWriteEnrichmentStrategy<T>,
+): value is IWriteEnrichmentStrategy<T> =>
+  typeof value === "object" &&
+  value !== null &&
+  "persist" in value &&
+  typeof value.persist === "function" &&
+  !("createCommand" in value) &&
+  !isBuilt(value as BuiltRepository<T>);

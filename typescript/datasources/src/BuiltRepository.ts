@@ -10,6 +10,7 @@ export type BuiltRepository<T = Cells> = {
   connection: IConnection;
   rowConverter: TypeConverter<T, Cells>;
   rowsMapper: IMapper<T, T>;
+  result?: IMapper<Iterable<Cells>, T[]>;
   columnMappings: IMapper<string, string>;
   statements: RepositoryStatements;
   readColumns: string[];

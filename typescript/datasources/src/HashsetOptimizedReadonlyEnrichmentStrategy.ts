@@ -1,43 +1,22 @@
 import type { Scalar } from "./builders/Scalar.ts";
 import { Operator, Where } from "./statements/index.ts";
 import type { Enrichment } from "./Enrichment.ts";
-import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
-import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
-import type { IRepositoryTree } from "./IRepositoryTree.ts";
-import type { IWhere } from "./statements/IWhere.ts";
+import type { ITrackedApply } from "./ITrackedApply.ts";
 import type { Row } from "./Row.ts";
-import { readTracked } from "./ReadonlyRepository.ts";
-import { RepositoryTreeNode, keyOf, props, scalar, sourceKey } from "./RepositoryTreeNode.ts";
+import { keyOf, props, scalar, sourceKey } from "./RepositoryTreeNode.ts";
 
 export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
-  implements IReadonlyEnrichmentStrategy<T>
+  implements IReadonlyEnrichmentStrategy<T>, ITrackedApply
 {
-  async *read(
-    inner: IReadonlyRepository<T>,
-    tree: IRepositoryTree,
-    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-  ): AsyncIterable<T> {
-    const items: T[] = [];
-    const sources: (Row | undefined)[] = [];
-    for await (const sourced of readTracked(inner, query)) {
-      items.push(sourced.item);
-      sources.push(sourced.source);
-    }
-    await this.enrich(tree, items, sources);
-    for (const item of items) yield item;
-  }
+  apply = <TRelated extends object>(
+    via: IReadonlyRepository<TRelated>,
+    enrichment: Enrichment,
+    parents: object[],
+  ): Promise<void> => this.applyTracked(via, enrichment, parents);
 
-  enrich = async (
-    tree: IRepositoryTree,
-    items: T[],
-    sources?: (Row | undefined)[],
-  ): Promise<void> => {
-    await tree.parent.enrichFrom(items, sources);
-  };
-
-  apply = async <TRelated extends object>(
+  applyTracked = <TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
     parents: object[],

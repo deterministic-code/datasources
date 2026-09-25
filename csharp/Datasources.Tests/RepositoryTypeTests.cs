@@ -18,9 +18,7 @@ public class RepositoryTypeTests
     [Fact]
     public void CRUDRepositoryReportsSameTypeAsInner()
     {
-        var inner = new ListCRUDRepository<Item>();
-        var repo = new CRUDRepository<Item>(inner);
-        Assert.Equal(typeof(Item), inner.Type);
+        var repo = new ListCRUDRepository<Item>();
         Assert.Equal(typeof(Item), repo.Type);
     }
 

@@ -1,9 +1,9 @@
 import { Operator, Where } from "../../statements/index.ts";
 import { collectAsync } from "../../collectAsync.ts";
+import type { ICRUDRepository } from "../../ICRUDRepository.ts";
 import { Address } from "./Address.ts";
 import { Contact } from "./Contact.ts";
 import type { ContactLookups } from "./contactLookups.ts";
-import type { ContactsService } from "./ContactsService.ts";
 import { Phone } from "./Phone.ts";
 
 const stamp = "2024-01-01T00:00:00Z";
@@ -31,7 +31,7 @@ export const extraContact = (ids: ContactLookups): Contact =>
   });
 
 export const addExtraContact = async (
-  service: ContactsService,
+  service: ICRUDRepository<Contact>,
   ids: ContactLookups,
 ): Promise<Contact> => {
   const contact = extraContact(ids);
@@ -39,6 +39,6 @@ export const addExtraContact = async (
   const loaded = (
     await collectAsync(service.read(new Where(new Operator.Equals("id", contact.id))))
   )[0];
-  if (!loaded) throw new Error(`extra contact ${contact.id} missing`);
+  if (!loaded) throw new Error("extra contact missing after create");
   return loaded;
 };

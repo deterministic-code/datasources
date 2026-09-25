@@ -28,7 +28,8 @@ const isCrud = <T>(options: ReadonlyRepositoryOptions<T>): options is CRUDReposi
   "update" in options ||
   "delete" in options ||
   "return" in options ||
-  "create" in options;
+  "create" in options ||
+  "write" in options;
 
 export const parts = <T>(
   connection: IConnection,
@@ -53,6 +54,7 @@ export const parts = <T>(
     connection,
     rowConverter,
     rowsMapper,
+    result: options.result,
     columnMappings,
     statements: statementsOf(entity, columns, options.query, crud?.insert, crud?.update, crud?.delete),
     readColumns: columns,

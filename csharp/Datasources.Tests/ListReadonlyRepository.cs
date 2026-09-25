@@ -7,16 +7,13 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T> where T 
     readonly IReadOnlyList<T> items;
     public ListReadonlyRepository(params T[] items) => this.items = items;
 
-    public override async IAsyncEnumerable<T> Read(IStatement? query = null)
+    protected override async IAsyncEnumerable<(T Item, Row? Source)> ReadItems(IStatement? query = null)
     {
         await Task.Yield();
         foreach (var item in items)
             if (Matches(item, query))
-                yield return item;
+                yield return (item, null);
     }
-
-    protected override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
-        WithoutSource(Read(query));
 
     static bool Matches(T item, IStatement? query) =>
         query is ISelectStatement { Where: { } where } && where.GetText() == "1 = 0"

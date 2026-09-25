@@ -6,6 +6,7 @@ import type { Scalar } from "./builders/Scalar.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import type { Cells } from "./converters/Cell.ts";
+import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 
 export type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & {
   ids?: string[];
@@ -14,4 +15,5 @@ export type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & {
   delete?: IMapper<IDeleteStatement, IDeleteStatement>;
   return?: IMapper<IReturnStatement, IReturnStatement>;
   create?: IMapper<Scalar, T>;
+  write?: IWriteEnrichmentStrategy<T>;
 };

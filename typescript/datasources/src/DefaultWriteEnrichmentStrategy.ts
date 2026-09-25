@@ -126,26 +126,24 @@ const syncLinks = async (
   }
 };
 
-const isWriter = (via: object): via is ICRUDRepository<object> =>
-  "create" in via && typeof via.create === "function";
-
-const writerOf = (via: object, into: string): ICRUDRepository<object> =>
-  isWriter(via)
-    ? via
-    : (() => {
-        throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
-      })();
+const writerOf = (child: IRepositoryTreeNode, into: string): ICRUDRepository<object> => {
+  const persist = (child as RepositoryTreeNode).persist;
+  if (persist) return persist;
+  throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
+};
 
 const linkWriter = (child: IRepositoryTreeNode, into: string): ICRUDRepository<object> => {
   const link = (child as RepositoryTreeNode).link;
-  if (!link) throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
-  return link;
+  if (link) return link;
+  throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
 };
 
 const stripNode = (node: IRepositoryTreeNode, item: object): object => {
   const copy = { ...item } as Props;
-  for (const child of node.items)
-    if (child.enrichment) delete copy[child.enrichment.into];
+  for (const into of node.items
+    .map((child) => child.enrichment?.into)
+    .filter((name): name is string => !!name))
+    delete copy[into];
   return copy;
 };
 
@@ -187,7 +185,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       return;
     }
     if (!enrichment?.many || enrichment.select) return;
-    const writer = writerOf(child.value, enrichment.into);
+    const writer = writerOf(child, enrichment.into);
     for (const parent of parents) {
       if (this.skip(parent, enrichment.into, mode)) continue;
       await dispatch(mode, {

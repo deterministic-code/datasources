@@ -1,60 +1,43 @@
 use crate::built_repository::BuiltRepository;
-use crate::cascade_delete_enrichment_strategy::CascadeDeleteEnrichmentStrategy;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
 use crate::crud_repository_options::{identity_mapper, CRUDRepositoryOptions};
 use crate::datasource_error::DatasourceError;
-use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
-use crate::delete_nested::DeleteNested;
+use crate::default_write_enrichment_strategy::{
+    copy_ids, strip_enriched, DefaultWriteEnrichmentStrategy,
+};
 use crate::enriched::Enriched;
-use crate::enrichment::Enrichment;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::mappers::{Mapper, TransformMapper};
-use crate::nest::Nest;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
-use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
-use crate::repository_tree::RepositoryTree;
-use crate::repository_tree_node::{encode_rows, RepositoryTreeNode};
+use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statement::Statement;
-use crate::statements::Text;
-use crate::stubs::StubRepository;
+use crate::shared_items::SharedItems;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::value::Value;
-use crate::{Expression, Literal, Operator, Where};
+use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
+use crate::write_mode::WriteMode;
+use crate::{Expression, Literal, Operator, Statement, Text, Where};
 use async_trait::async_trait;
 use std::any::TypeId;
-use std::collections::HashSet;
-use std::future::Future;
-use std::pin::Pin;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
-#[derive(Clone, Copy)]
-enum Mode {
-    Create,
-    Update,
-    Delete,
-}
-
 pub struct CRUDRepository {
-    inner: Option<ReadonlyRepository>,
+    pub(crate) readonly: ReadonlyRepository,
     create: TransformMapper<Value, Row>,
     ids: Vec<String>,
-    delegate: Option<Arc<dyn ICRUDRepository>>,
-    pub tree: RepositoryTree,
-    strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
-    delete_strategy: Arc<dyn DeleteEnrichmentStrategy>,
+    write: Arc<dyn WriteEnrichmentStrategy>,
 }
 
 impl RepositoryBuilder {
@@ -71,7 +54,7 @@ impl CRUDRepository {
         let mut options = create_repository_options::<T>();
         options.row_converter = Some(RowTypeConverter::of::<T>());
         let mut repo = Self::new(connection, options)?;
-        repo.inner.as_mut().expect("sql repository").entity_type = TypeId::of::<T>();
+        repo.readonly.entity_type = TypeId::of::<T>();
         Ok(repo)
     }
 
@@ -81,50 +64,37 @@ impl CRUDRepository {
         )?))
     }
 
-    pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self {
-        let strategy: Arc<dyn ReadonlyEnrichmentStrategy> =
-            Arc::new(DefaultReadonlyEnrichmentStrategy);
-        let id = inner.id_names();
-        Self {
-            inner: None,
-            create: identity_mapper(&id),
-            ids: id,
-            tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
-                as_readonly(inner.clone()),
-                "",
-                strategy.clone(),
-            )),
-            strategy,
-            delegate: Some(inner),
-            delete_strategy: default_delete(),
-        }
-    }
-
     pub fn from_built(mut built: BuiltRepository) -> Self {
         let id = built.ids.clone();
         let create = built.create.take().unwrap_or_else(|| identity_mapper(&id));
-        let strategy: Arc<dyn ReadonlyEnrichmentStrategy> =
-            Arc::new(DefaultReadonlyEnrichmentStrategy);
+        let write = built
+            .write
+            .take()
+            .unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default()));
         Self {
-            inner: Some(ReadonlyRepository::from_built(built)),
+            readonly: ReadonlyRepository::from_built(built),
             create,
             ids: id,
-            delegate: None,
-            tree: RepositoryTree::new(RepositoryTreeNode::with_strategy(
-                Arc::new(StubRepository::new("crud")),
-                "",
-                strategy.clone(),
-            )),
-            strategy,
-            delete_strategy: default_delete(),
+            write,
         }
     }
 
-    pub fn with_delete_strategy(
-        &mut self,
-        strategy: Arc<dyn DeleteEnrichmentStrategy>,
-    ) -> &mut Self {
-        self.delete_strategy = strategy;
+    pub fn memory(items: Vec<Row>) -> Self {
+        Self::memory_with(items, None)
+    }
+
+    pub fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
+        let ids = vec!["id".into()];
+        Self {
+            readonly: ReadonlyRepository::memory(items),
+            create: identity_mapper(&ids),
+            ids,
+            write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
+        }
+    }
+
+    pub fn with_write(mut self, write: Arc<dyn WriteEnrichmentStrategy>) -> Self {
+        self.write = write;
         self
     }
 
@@ -136,26 +106,23 @@ impl CRUDRepository {
         by: impl Into<String>,
         select: Option<String>,
         many: bool,
-        nest: impl Nest,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
-        nest.apply(self.tree.parent.include(via, into, from, by, select, many));
+        self.readonly
+            .add_enriched(into, from, via, by, select, many, strategy);
         self
     }
 
-    fn sql(&self) -> &ReadonlyRepository {
-        self.inner.as_ref().expect("sql repository")
+    pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
+        self.readonly.add_middleware(middleware);
     }
 
-    fn sql_mut(&mut self) -> &mut ReadonlyRepository {
-        self.inner.as_mut().expect("sql repository")
+    pub fn items(&self) -> Option<&Arc<SharedItems>> {
+        self.readonly.memory_items()
     }
 
     fn enriched(&self) -> bool {
-        !self.tree.parent.items.is_empty()
-    }
-
-    pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
-        self.sql_mut().add_middleware(middleware);
+        self.readonly.enriched()
     }
 
     fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
@@ -169,8 +136,8 @@ impl CRUDRepository {
             .into_iter()
             .map(|(name, value)| {
                 Ok(Parameter::new(
-                    self.sql().column(&name),
-                    self.sql().cell(&name, &value, true)?,
+                    self.readonly.column(&name),
+                    self.readonly.cell(&name, &value, true)?,
                 ))
             })
             .collect()
@@ -192,164 +159,21 @@ impl CRUDRepository {
             .collect::<Result<Vec<_>>>()?;
         Ok(Where::new(and_all(children)))
     }
-}
 
-impl IRepository for CRUDRepository {
-    fn entity_type(&self) -> TypeId {
-        self.delegate
-            .as_ref()
-            .map(|repo| repo.entity_type())
-            .unwrap_or_else(|| self.sql().entity_type())
-    }
-}
-
-#[async_trait]
-impl Enriched for CRUDRepository {
-    async fn enrich(&self, items: &mut [Row]) -> Result<()> {
-        let mut rows = items.to_vec();
-        self.strategy.enrich(&self.tree, &mut rows).await?;
-        let count = items.len().min(rows.len());
-        items[..count].clone_from_slice(&rows[..count]);
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl IReadonlyRepository for CRUDRepository {
-    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
-        Some(self)
-    }
-
-    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        if self.enriched() {
-            return Ok(self.read(query).await?.into_iter().next());
+    pub(crate) async fn inserted(&self, item: &mut Row) -> Result<Row> {
+        if let Some(memory) = self.readonly.memory_items() {
+            return Ok(memory.insert(item));
         }
-        match &self.delegate {
-            Some(repo) => repo.read_single(query).await,
-            None => self.sql().read_single(query).await,
-        }
-    }
-
-    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        let mut rows = match &self.delegate {
-            Some(repo) => repo.read(query).await?,
-            None => self.sql().read(query).await?,
-        };
-        if self.enriched() {
-            self.strategy.enrich(&self.tree, &mut rows).await?;
-        }
-        Ok(rows)
-    }
-}
-
-#[async_trait]
-impl ICRUDRepository for CRUDRepository {
-    async fn create(&self, item: &mut Row) -> Result<Row> {
-        if !self.enriched() {
-            return match &self.delegate {
-                Some(repo) => repo.create(item).await,
-                None => self.inserted(item).await,
-            };
-        }
-        let mut stripped = strip_enriched(item, &self.tree.parent);
-        let created = match &self.delegate {
-            Some(repo) => repo.create(&mut stripped).await?,
-            None => self.inserted(&mut stripped).await?,
-        };
-        let ids = self.id_names();
-        copy_ids(item, &created, &ids);
-        self.persist(&self.tree.parent, std::slice::from_mut(item), Mode::Create)
-            .await?;
-        if ids.len() != 1 {
-            return Ok(item.clone());
-        }
-        let Some(id) = item.get(&ids[0]).cloned() else {
-            return Ok(item.clone());
-        };
-        if matches!(id, Value::Null) {
-            return Ok(item.clone());
-        }
-        Ok(self
-            .read_single_by_id(&id)
-            .await?
-            .unwrap_or_else(|| item.clone()))
-    }
-
-    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        if !self.enriched() {
-            return match &self.delegate {
-                Some(repo) => repo.update(item, by_where).await,
-                None => self.save(item, by_where).await,
-            };
-        }
-        let mut parent = item.clone();
-        let response = match &self.delegate {
-            Some(repo) => {
-                repo.update(&strip_enriched(&parent, &self.tree.parent), by_where)
-                    .await?
-            }
-            None => {
-                self.save(&strip_enriched(&parent, &self.tree.parent), by_where)
-                    .await?
-            }
-        };
-        self.persist(
-            &self.tree.parent,
-            std::slice::from_mut(&mut parent),
-            Mode::Update,
-        )
-        .await?;
-        Ok(response)
-    }
-
-    async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        if self.enriched() {
-            let mut parent = item.clone();
-            self.persist(
-                &self.tree.parent,
-                std::slice::from_mut(&mut parent),
-                Mode::Delete,
-            )
-            .await?;
-        }
-        match &self.delegate {
-            Some(repo) => repo.delete(item, by_where).await,
-            None => self.remove(item, by_where).await,
-        }
-    }
-
-    fn id_names(&self) -> Vec<String> {
-        self.ids.clone()
-    }
-
-    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
-        if let Some(repo) = &self.delegate {
-            return match repo.read_single_by_id(id).await? {
-                Some(mut row) if self.enriched() => {
-                    self.enrich(std::slice::from_mut(&mut row)).await?;
-                    Ok(Some(row))
-                }
-                other => Ok(other),
-            };
-        }
-        let record = self.id_record(id)?;
-        let clause = self.id_where(&record)?;
-        self.read_single(Some(&clause)).await
-    }
-}
-
-impl CRUDRepository {
-    async fn inserted(&self, item: &mut Row) -> Result<Row> {
         self.insert(item).await?;
         Ok(item.clone())
     }
 
     async fn insert(&self, item: &mut Row) -> Result<Response> {
-        let record = self.sql().reverse_convert(item)?;
+        let record = self.readonly.reverse_convert(item)?;
         let fields = self.params(&record, false)?;
-        let statement = self.sql().statements.insert(&fields);
+        let statement = self.readonly.statements.insert(&fields);
         let response = self
-            .sql()
+            .readonly
             .command()
             .execute_statement(&statement, Some(&fields))
             .await?;
@@ -359,8 +183,15 @@ impl CRUDRepository {
         Ok(response)
     }
 
-    async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let record = self.sql().reverse_convert(item)?;
+    pub(crate) async fn save(
+        &self,
+        item: &Row,
+        by_where: Option<&dyn IWhere>,
+    ) -> Result<Response> {
+        if let Some(memory) = self.readonly.memory_items() {
+            return Ok(memory.save(item));
+        }
+        let record = self.readonly.reverse_convert(item)?;
         let fields = self.params(&record, false)?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
@@ -373,30 +204,37 @@ impl CRUDRepository {
             (None, Some(clause)) => clause,
             _ => unreachable!(),
         };
-        let statement = self.sql().statements.update(&fields, predicate);
+        let statement = self.readonly.statements.update(&fields, predicate);
         let parameters = statement.parameters();
-        self.sql()
+        self.readonly
             .command()
             .execute(&statement.get_text(), Some(&parameters))
             .await
     }
 
-    async fn remove(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let record = self.sql().reverse_convert(item)?;
+    pub(crate) async fn remove(
+        &self,
+        item: &Row,
+        by_where: Option<&dyn IWhere>,
+    ) -> Result<Response> {
+        if let Some(memory) = self.readonly.memory_items() {
+            return Ok(memory.remove(item, by_where));
+        }
+        let record = self.readonly.reverse_convert(item)?;
         let (owned, raw) = self.stored_predicate(&record, by_where)?;
         let predicate: &dyn IWhere = match (owned.as_ref(), raw) {
             (Some(clause), _) => clause,
             (None, Some(clause)) => clause,
             _ => unreachable!(),
         };
-        let statement = self.sql().statements.delete(predicate);
+        let statement = self.readonly.statements.delete(predicate);
         let parameters = predicate.parameters();
         let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
             self.params(&record, true)?
         } else {
             parameters
         };
-        self.sql()
+        self.readonly
             .command()
             .execute_statement(&statement, Some(&parameters))
             .await
@@ -408,12 +246,12 @@ impl CRUDRepository {
         by_where: Option<&'a dyn IWhere>,
     ) -> Result<(Option<Where>, Option<&'a dyn IWhere>)> {
         match by_where {
-            Some(clause) => match self.sql().store_where(clause, false)? {
+            Some(clause) => match self.readonly.store_where(clause, false)? {
                 Some(stored) => Ok((Some(stored), None)),
                 None => Ok((None, Some(clause))),
             },
             None => Ok((
-                Some(self.sql().store_clause(&self.id_where(record)?, true)?),
+                Some(self.readonly.store_clause(&self.id_where(record)?, true)?),
                 None,
             )),
         }
@@ -440,147 +278,133 @@ impl CRUDRepository {
             )),
         }
     }
+}
 
-    fn persist<'a>(
-        &'a self,
-        node: &'a RepositoryTreeNode,
-        parents: &'a mut [Row],
-        mode: Mode,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async move {
-            for child in &node.items {
-                self.persist_node(child, parents, mode).await?;
-            }
-            Ok(())
-        })
+impl Deref for CRUDRepository {
+    type Target = ReadonlyRepository;
+
+    fn deref(&self) -> &Self::Target {
+        &self.readonly
     }
+}
 
-    fn persist_node<'a>(
-        &'a self,
-        child: &'a RepositoryTreeNode,
-        parents: &'a mut [Row],
-        mode: Mode,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async move {
-            let Some(enrichment) = child.enrichment.as_ref() else {
-                return Ok(());
-            };
-            if !enrichment.many || enrichment.select.is_some() {
-                return Ok(());
-            }
-            let writer = child.write.as_ref().ok_or_else(|| {
-                DatasourceError::message(format!(
-                    "Deep write requires a CRUD repository for \"{}\"",
-                    enrichment.into
-                ))
-            })?;
-            for parent in parents.iter_mut() {
-                match mode {
-                    Mode::Create => {
-                        self.create_children(child, writer.as_ref(), enrichment, parent)
-                            .await?
-                    }
-                    Mode::Update => {
-                        self.sync_children(child, writer.as_ref(), enrichment, parent)
-                            .await?
-                    }
-                    Mode::Delete => {
-                        let strategy = Arc::clone(&self.delete_strategy);
-                        strategy
-                            .delete_owned(child, enrichment, parent, self)
-                            .await?
-                    }
-                }
-            }
-            Ok(())
-        })
+impl DerefMut for CRUDRepository {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.readonly
     }
+}
 
-    async fn create_children(
-        &self,
-        node: &RepositoryTreeNode,
-        writer: &dyn ICRUDRepository,
-        enrichment: &Enrichment,
-        parent: &mut Row,
-    ) -> Result<()> {
-        let mut related = decode_rows(parent.get(&enrichment.into));
-        let key = parent.get(&enrichment.from).cloned();
-        for row in &mut related {
-            if let Some(key) = &key {
-                row.insert(enrichment.by.clone(), key.clone());
-            }
-            let mut stripped = strip_enriched(row, node);
-            let created = writer.create(&mut stripped).await?;
-            let ids = writer.id_names();
-            copy_ids(row, &created, &ids);
-            self.persist(node, std::slice::from_mut(row), Mode::Create)
-                .await?;
-        }
-        parent.insert(enrichment.into.clone(), encode_rows(&related));
-        Ok(())
-    }
-
-    async fn sync_children(
-        &self,
-        node: &RepositoryTreeNode,
-        writer: &dyn ICRUDRepository,
-        enrichment: &Enrichment,
-        parent: &mut Row,
-    ) -> Result<()> {
-        let existing = load(writer, enrichment, parent).await?;
-        let mut related = decode_rows(parent.get(&enrichment.into));
-        if let Some(key) = parent.get(&enrichment.from).cloned() {
-            for row in &mut related {
-                row.insert(enrichment.by.clone(), key.clone());
-            }
-        }
-        let ids = writer.id_names();
-        let keep: HashSet<String> = related
-            .iter()
-            .filter_map(|row| row_key(row, &ids))
-            .collect();
-        for row in existing.iter().filter(|row| {
-            row_key(row, &ids)
-                .map(|key| !keep.contains(&key))
-                .unwrap_or(true)
-        }) {
-            let mut doomed = row.clone();
-            self.persist(node, std::slice::from_mut(&mut doomed), Mode::Delete)
-                .await?;
-            writer.delete(row, None).await?;
-        }
-        for row in &mut related {
-            match row_key(row, &ids) {
-                Some(key)
-                    if existing
-                        .iter()
-                        .any(|ex| row_key(ex, &ids) == Some(key.clone())) =>
-                {
-                    writer.update(&strip_enriched(row, node), None).await?;
-                }
-                _ => {
-                    let mut stripped = strip_enriched(row, node);
-                    let created = writer.create(&mut stripped).await?;
-                    copy_ids(row, &created, &ids);
-                }
-            }
-            self.persist(node, std::slice::from_mut(row), Mode::Update)
-                .await?;
-        }
-        parent.insert(enrichment.into.clone(), encode_rows(&related));
-        Ok(())
+impl IRepository for CRUDRepository {
+    fn entity_type(&self) -> TypeId {
+        self.readonly.entity_type()
     }
 }
 
 #[async_trait]
-impl DeleteNested for CRUDRepository {
-    async fn delete_nested(&self, node: &RepositoryTreeNode, rows: &mut [Row]) -> Result<()> {
-        self.persist(node, rows, Mode::Delete).await
+impl Enriched for CRUDRepository {
+    async fn enrich(&self, items: &mut [Row]) -> Result<()> {
+        self.readonly.enrich(items).await
     }
 }
 
-fn default_delete() -> Arc<dyn DeleteEnrichmentStrategy> {
-    Arc::new(CascadeDeleteEnrichmentStrategy)
+#[async_trait]
+impl IReadonlyRepository for CRUDRepository {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
+        Some(self)
+    }
+
+    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
+        self.readonly.read_single(query).await
+    }
+
+    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
+        self.readonly.read(query).await
+    }
+}
+
+#[async_trait]
+impl ICRUDRepository for CRUDRepository {
+    async fn create(&self, item: &mut Row) -> Result<Row> {
+        if !self.enriched() {
+            return self.inserted(item).await;
+        }
+        let mut stored = strip_enriched(item, &self.readonly.tree.parent);
+        let created = self.inserted(&mut stored).await?;
+        copy_ids(item, &created, &self.ids);
+        self.write
+            .persist(
+                &self.readonly.tree,
+                std::slice::from_mut(item),
+                WriteMode::Create,
+            )
+            .await?;
+        if self.ids.len() != 1 {
+            return Ok(item.clone());
+        }
+        let Some(id) = item.get(&self.ids[0]).cloned() else {
+            return Ok(item.clone());
+        };
+        if matches!(id, Value::Null) {
+            return Ok(item.clone());
+        }
+        Ok(self
+            .read_single_by_id(&id)
+            .await?
+            .unwrap_or_else(|| item.clone()))
+    }
+
+    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        let stored = if self.enriched() {
+            strip_enriched(item, &self.readonly.tree.parent)
+        } else {
+            item.clone()
+        };
+        let response = self.save(&stored, by_where).await?;
+        if self.enriched() {
+            let mut parent = item.clone();
+            self.write
+                .persist(
+                    &self.readonly.tree,
+                    std::slice::from_mut(&mut parent),
+                    WriteMode::Update,
+                )
+                .await?;
+        }
+        Ok(response)
+    }
+
+    async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        if self.enriched() {
+            let mut parent = item.clone();
+            self.write
+                .persist(
+                    &self.readonly.tree,
+                    std::slice::from_mut(&mut parent),
+                    WriteMode::Delete,
+                )
+                .await?;
+        }
+        self.remove(item, by_where).await
+    }
+
+    fn id_names(&self) -> Vec<String> {
+        self.ids.clone()
+    }
+
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
+        if let Some(memory) = self.readonly.memory_items() {
+            let mut row = memory.by_id(id)?;
+            if let Some(item) = row.as_mut() {
+                if self.enriched() {
+                    self.enrich(std::slice::from_mut(item)).await?;
+                }
+            }
+            return Ok(row);
+        }
+        let record = self.id_record(id)?;
+        let clause = self.id_where(&record)?;
+        self.read_single(Some(&clause)).await
+    }
 }
 
 fn apply(item: &mut Row, identity: Row) {
@@ -588,78 +412,6 @@ fn apply(item: &mut Row, identity: Row) {
         if value != Value::Null {
             item.insert(key, value);
         }
-    }
-}
-
-fn strip_enriched(item: &Row, node: &RepositoryTreeNode) -> Row {
-    let mut row = item.clone();
-    for child in &node.items {
-        if let Some(enrichment) = &child.enrichment {
-            row.remove(&enrichment.into);
-        }
-    }
-    row
-}
-
-fn copy_ids(item: &mut Row, created: &Row, ids: &[String]) {
-    for name in ids {
-        if let Some(value) = created.get(name) {
-            if *value != Value::Null && *value != Value::Int(0) {
-                item.insert(name.clone(), value.clone());
-            }
-        }
-    }
-}
-
-fn assigned(value: &Value) -> bool {
-    match value {
-        Value::Null | Value::Int(0) => false,
-        Value::Text(text) if text.is_empty() => false,
-        _ => true,
-    }
-}
-
-fn row_key(row: &Row, ids: &[String]) -> Option<String> {
-    if ids.is_empty()
-        || ids.iter().any(|name| match row.get(name) {
-            Some(value) => !assigned(value),
-            None => true,
-        })
-    {
-        return None;
-    }
-    Some(
-        ids.iter()
-            .map(|name| row.get(name).map(Value::wire_text).unwrap_or_default())
-            .collect::<Vec<_>>()
-            .join("\u{1f}"),
-    )
-}
-
-fn decode_rows(value: Option<&Value>) -> Vec<Row> {
-    match value {
-        Some(Value::Text(text)) if !text.is_empty() => text.split('|').map(decode_row).collect(),
-        _ => Vec::new(),
-    }
-}
-
-fn decode_row(text: &str) -> Row {
-    text.split(',')
-        .filter_map(|pair| {
-            let (key, value) = pair.split_once('=')?;
-            Some((key.to_string(), parse_value(value)))
-        })
-        .collect()
-}
-
-fn parse_value(text: &str) -> Value {
-    match text {
-        "true" => Value::Bool(true),
-        "false" => Value::Bool(false),
-        _ => text
-            .parse::<i64>()
-            .map(Value::Int)
-            .unwrap_or_else(|_| Value::Text(text.into())),
     }
 }
 

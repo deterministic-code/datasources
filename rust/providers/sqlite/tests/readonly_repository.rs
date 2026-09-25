@@ -241,23 +241,23 @@ mod user_view {
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         type_options.column_mappings =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        let users = ds.create_readonly_repository::<UserAccount>(
-            Some(connection.clone()),
-            Some(users_options.read),
-        );
+        let mut users_repo = ReadonlyRepository::new(
+            connection.clone(),
+            users_options.read,
+        )
+        .unwrap();
         let types =
             ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
-        let mut enriched = ReadonlyRepository::from_repository(users);
-        enriched.add_enriched(
+        users_repo.add_enriched(
             "UserType",
             "UserTypeId",
             types,
             "Id",
             Some("Name".into()),
             false,
-            (),
+            None,
         );
-        let account = enriched
+        let account = users_repo
             .read_single(Some(&Where::binary(
                 "Key",
                 eq,
@@ -285,10 +285,10 @@ mod users_view_roles {
     use super::{datasource, open, ADA, GRACE, LIN};
     use datasources::{
         create_repository_options, encode_rows, eq, Casing, ChangeCasingMapper, ConvertSchema,
-        Datasource, DictionaryMapper, FlatToNestedMapper, FlatToNestedReadonlyEnrichmentStrategy,
-        HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join, MappedValue,
-        ReadonlyRepository, SelectStatement, SelectStatementOptions, TransformMapper, TypeMap,
-        TypeMapField, TypeMapGroup, Value, Where,
+        Datasource, DictionaryMapper, FlatToNestedMapper,
+        HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join, MappedValue, Mapper,
+        ReadonlyRepository, ReadonlyRepositoryOptions, SelectStatement, SelectStatementOptions,
+        TransformMapper, TypeMap, TypeMapField, TypeMapGroup, Value, Where,
     };
     use std::sync::Arc;
 
@@ -319,14 +319,6 @@ mod users_view_roles {
                 ("Opened", "TEXT"),
                 ("UserType", "TEXT"),
             ]
-        }
-    }
-
-    struct JoinRow;
-
-    impl ConvertSchema for JoinRow {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            Vec::new()
         }
     }
 
@@ -422,20 +414,18 @@ mod users_view_roles {
             ("Name".to_string(), "name".to_string()),
         ]));
         role_options.query = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
-        let users = ds.create_readonly_repository::<UsersView>(
-            Some(connection.clone()),
-            Some(users_options.read),
-        );
+        let mut users_repo = ReadonlyRepository::new(
+            connection.clone(),
+            users_options.read,
+        )
+        .unwrap();
         let types = ds.create_readonly_repository::<UserType>(
             Some(connection.clone()),
             Some(type_options.read),
         );
         let roles =
             ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
-        let mut users_repo = ReadonlyRepository::with_strategy(
-            users,
-            Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy),
-        );
+        let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
         users_repo.add_enriched(
             "UserType",
             "UserType",
@@ -443,9 +433,17 @@ mod users_view_roles {
             "Id",
             Some("Name".into()),
             false,
-            (),
+            Some(strategy.clone()),
         );
-        users_repo.add_enriched("Roles", "Key", roles, "UserId", None, true, ());
+        users_repo.add_enriched(
+            "Roles",
+            "Key",
+            roles,
+            "UserId",
+            None,
+            true,
+            Some(strategy),
+        );
         let users_view = users_repo
             .read_single(Some(&Where::binary("Key", eq, ADA)))
             .await
@@ -467,7 +465,6 @@ mod users_view_roles {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
         let connection = open(ds, &seed()).await;
-        let source = ds.create_readonly_repository::<JoinRow>(Some(connection.clone()), None);
         let command = Arc::new(SelectStatement::new(SelectStatementOptions {
             joins: &[
                 Join::left("user_type", "user_type.id", "user.user_type_id"),
@@ -488,59 +485,63 @@ mod users_view_roles {
                 ],
             )
         }));
-        let users_repo = ReadonlyRepository::with_strategy(
-            ds.create_readonly_repository::<UsersView>(Some(connection.clone()), None),
-            Arc::new(FlatToNestedReadonlyEnrichmentStrategy::new(
-                source,
-                FlatToNestedMapper::new(TypeMap::new(
-                    "Key",
-                    vec![
-                        ("Key".into(), TypeMapField::column("Key")),
-                        ("Login".into(), TypeMapField::column("Login")),
-                        ("Active".into(), TypeMapField::column("Active")),
-                        ("Opened".into(), TypeMapField::column("Opened")),
-                        ("UserType".into(), TypeMapField::column("UserType")),
-                        (
-                            "Roles".into(),
-                            TypeMapField::Group(TypeMapGroup::new(
-                                "RoleId",
-                                vec![
-                                    ("RoleId".into(), TypeMapField::column("RoleId")),
-                                    ("UserId".into(), TypeMapField::column("UserId")),
-                                    ("Name".into(), TypeMapField::column("RoleName")),
-                                ],
-                            )),
-                        ),
-                    ],
-                )),
-                |row| {
-                    let mut view = datasources::Row::new();
-                    for key in ["Key", "Login", "Active", "Opened", "UserType"] {
-                        if let Some(MappedValue::Cell(value)) = row.get(key) {
-                            view.insert(key.into(), value.clone());
+        let mapper = FlatToNestedMapper::new(TypeMap::new(
+            "Key",
+            vec![
+                ("Key".into(), TypeMapField::column("Key")),
+                ("Login".into(), TypeMapField::column("Login")),
+                ("Active".into(), TypeMapField::column("Active")),
+                ("Opened".into(), TypeMapField::column("Opened")),
+                ("UserType".into(), TypeMapField::column("UserType")),
+                (
+                    "Roles".into(),
+                    TypeMapField::Group(TypeMapGroup::new(
+                        "RoleId",
+                        vec![
+                            ("RoleId".into(), TypeMapField::column("RoleId")),
+                            ("UserId".into(), TypeMapField::column("UserId")),
+                            ("Name".into(), TypeMapField::column("RoleName")),
+                        ],
+                    )),
+                ),
+            ],
+        ));
+        let result = TransformMapper::new(
+            move |rows: Vec<datasources::Row>| {
+                Mapper::map(&mapper, rows)
+                    .into_iter()
+                    .map(|row| {
+                        let mut view = datasources::Row::new();
+                        for key in ["Key", "Login", "Active", "Opened", "UserType"] {
+                            if let Some(MappedValue::Cell(value)) = row.get(key) {
+                                view.insert(key.into(), value.clone());
+                            }
                         }
-                    }
-                    let roles = match row.get("Roles") {
-                        Some(MappedValue::Many(items)) => items
-                            .iter()
-                            .map(|item| {
-                                let mut role = datasources::Row::new();
-                                for key in ["UserId", "Name"] {
-                                    if let Some(MappedValue::Cell(value)) = item.get(key) {
-                                        role.insert(key.into(), value.clone());
+                        let roles = match row.get("Roles") {
+                            Some(MappedValue::Many(items)) => items
+                                .iter()
+                                .map(|item| {
+                                    let mut role = datasources::Row::new();
+                                    for key in ["UserId", "Name"] {
+                                        if let Some(MappedValue::Cell(value)) = item.get(key) {
+                                            role.insert(key.into(), value.clone());
+                                        }
                                     }
-                                }
-                                role
-                            })
-                            .collect(),
-                        _ => Vec::new(),
-                    };
-                    view.insert("Roles".into(), encode_rows(&roles));
-                    view
-                },
-                Some(command.clone()),
-            )),
+                                    role
+                                })
+                                .collect(),
+                            _ => Vec::new(),
+                        };
+                        view.insert("Roles".into(), encode_rows(&roles));
+                        view
+                    })
+                    .collect()
+            },
+            |_| Vec::new(),
         );
+        let mut options = ReadonlyRepositoryOptions::default();
+        options.result = Some(Box::new(result));
+        let users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
         let items = users_repo.read(Some(command.as_ref())).await.unwrap();
         let view = |login: &str| {
             items
@@ -739,7 +740,7 @@ mod user_crud {
             "Id",
             Some("Name".into()),
             false,
-            (),
+            None,
         );
         users_repo.add_enriched(
             "Roles",
@@ -748,7 +749,7 @@ mod user_crud {
             "UserId",
             None,
             true,
-            (),
+            None,
         );
         let mut admin = datasources::Row::new();
         admin.insert("Name".into(), Value::from("admin"));

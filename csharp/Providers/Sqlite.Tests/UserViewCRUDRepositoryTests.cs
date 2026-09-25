@@ -62,7 +62,7 @@ public class UserViewCRUDRepositoryTests
         Group Engineering,
         Group Ops);
 
-    static async Task<Graph> GraphAsync()
+    static async Task<Graph> GraphAsync(IWriteEnrichmentStrategy<UserView>? write = null)
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
         var connection = await Open(ds, """
@@ -95,7 +95,7 @@ public class UserViewCRUDRepositoryTests
                 PRIMARY KEY (user_id, group_id)
             );
             """);
-        var usersRepo = BuildRepo<UserView>(connection, "Users");
+        var usersRepo = BuildRepo<UserView>(connection, "Users", write);
         var userTypesRepo = BuildRepo<UserType>(connection, "UserTypes");
         var rolesRepo = BuildRepo<Role>(connection, "Roles");
         var groupsRepo = BuildRepo<Group>(connection, "Groups");
@@ -115,22 +115,22 @@ public class UserViewCRUDRepositoryTests
             await groupsRepo.Create(new Group { Name = "ops" }));
     }
 
-    static CRUDRepository<T> BuildRepo<T>(IConnection connection, string entity) where T : new() =>
+    static CRUDRepository<T> BuildRepo<T>(IConnection connection, string entity, IWriteEnrichmentStrategy<T>? write = null) where T : new() =>
         new(connection, new CRUDRepositoryOptions<T>
         {
             Entity = entity,
             EntityMapper = Snake,
             ColumnMappings = Snake,
             Ids = CreateRepositoryOptions.FromType<T>().Ids,
+            Write = write,
         });
 
-    static CRUDRepository<UserView> Repo(Graph graph, IWriteEnrichmentStrategy<UserView>? write = null)
+    static CRUDRepository<UserView> Enrich(CRUDRepository<UserView> users, Graph graph)
     {
-        var userViewRepo = new CRUDRepository<UserView>(graph.UsersRepo, write: write);
-        userViewRepo.AddEnriched("UserType", "UserTypeId", graph.UserTypesRepo, "Id");
-        userViewRepo.AddLinked("Roles", "Id", graph.RolesRepo, "Id", graph.UserRolesRepo, "UserId", "RoleId");
-        userViewRepo.AddLinked("Groups", "Id", graph.GroupsRepo, "Id", graph.UserGroupsRepo, "UserId", "GroupId");
-        return userViewRepo;
+        users.AddEnriched("UserType", "UserTypeId", graph.UserTypesRepo, "Id");
+        users.AddLinked("Roles", "Id", graph.RolesRepo, "Id", graph.UserRolesRepo, "UserId", "RoleId");
+        users.AddLinked("Groups", "Id", graph.GroupsRepo, "Id", graph.UserGroupsRepo, "UserId", "GroupId");
+        return users;
     }
 
     [Fact]
@@ -178,12 +178,11 @@ public class UserViewCRUDRepositoryTests
         var editorRole = await rolesRepo.Create(new Role { Name = "editor" });
         var engineering = await groupsRepo.Create(new Group { Name = "engineering" });
         var ops = await groupsRepo.Create(new Group { Name = "ops" });
-        var userViewRepo = new CRUDRepository<UserView>(usersRepo);
-        userViewRepo.AddEnriched("UserType", "UserTypeId", userTypesRepo, "Id");
-        userViewRepo.AddLinked("Roles", "Id", rolesRepo, "Id", userRolesRepo, "UserId", "RoleId");
-        userViewRepo.AddLinked("Groups", "Id", groupsRepo, "Id", userGroupsRepo, "UserId", "GroupId");
+        usersRepo.AddEnriched("UserType", "UserTypeId", userTypesRepo, "Id");
+        usersRepo.AddLinked("Roles", "Id", rolesRepo, "Id", userRolesRepo, "UserId", "RoleId");
+        usersRepo.AddLinked("Groups", "Id", groupsRepo, "Id", userGroupsRepo, "UserId", "GroupId");
 
-        var created = await userViewRepo.Create(new UserView
+        var created = await usersRepo.Create(new UserView
         {
             Username = "ada",
             IsEnabled = true,
@@ -213,7 +212,7 @@ public class UserViewCRUDRepositoryTests
         Assert.Equal(["admin", "editor"], (await rolesRepo.Read().ToListAsync()).Select(role => role.Name).OrderBy(name => name));
         Assert.Equal("admin", Assert.Single(await userTypesRepo.Read().ToListAsync()).Name);
 
-        await userViewRepo.Update(new UserView
+        await usersRepo.Update(new UserView
         {
             Id = created.Id,
             Username = "ada",
@@ -222,7 +221,7 @@ public class UserViewCRUDRepositoryTests
             Roles = [editorRole],
             Groups = [engineering, ops]
         });
-        var updated = await userViewRepo.ReadSingle(new Where("Username", eq, "ada"));
+        var updated = await usersRepo.ReadSingle(new Where("Username", eq, "ada"));
         Assert.Equal(["editor"], updated!.Roles!.Select(role => role.Name));
         Assert.Equal([editorRole.Id], updated.Roles!.Select(role => role.Id));
         Assert.True(updated.Roles![0].Id > 0);
@@ -240,7 +239,7 @@ public class UserViewCRUDRepositoryTests
         Assert.Equal(["admin", "editor"], (await rolesRepo.Read().ToListAsync()).Select(role => role.Name).OrderBy(name => name));
         Assert.Equal(["engineering", "ops"], (await groupsRepo.Read().ToListAsync()).Select(group => group.Name).OrderBy(name => name));
 
-        await userViewRepo.Delete(new UserView { Id = created.Id });
+        await usersRepo.Delete(new UserView { Id = created.Id });
         Assert.Empty(await usersRepo.Read().ToListAsync());
         Assert.Empty(await userRolesRepo.Read().ToListAsync());
         Assert.Empty(await userGroupsRepo.Read().ToListAsync());
@@ -252,8 +251,8 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task LazyCreateAndUpdateSkipUnloadedCollectionsAndDeleteCascades()
     {
-        var graph = await GraphAsync();
-        var userViewRepo = Repo(graph, new LazyWriteEnrichmentStrategy<UserView>());
+        var graph = await GraphAsync(new LazyWriteEnrichmentStrategy<UserView>());
+        var userViewRepo = Enrich(graph.UsersRepo, graph);
 
         var created = await userViewRepo.Create(new UserView
         {

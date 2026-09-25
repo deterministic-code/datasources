@@ -151,8 +151,7 @@ A `CRUDRepository` fills related fields after `read` once enrichments are regist
 ```csharp
 var contacts = new CRUDRepository<Contact>(contactRepo);
 contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
-contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
-    nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
+contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true);
 
 var loaded = await contacts.ReadSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
@@ -163,10 +162,8 @@ await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address
 ```rust
 let mut contacts = CRUDRepository::from_repository(contact_repo);
 contacts
-    .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false, ())
-    .add_enriched("addresses", "id", addresses, "contact_id", None, true, |node| {
-        node.include(address_types, "address_type_name", "address_type_id", "id", Some("name".into()), false);
-    });
+    .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false)
+    .add_enriched("addresses", "id", addresses, "contact_id", None, true);
 
 let loaded = contacts.read_single(Some(&Where::new(Operator::equals("id", 10)))).await?;
 contacts.create(contact).await?;
@@ -177,9 +174,7 @@ contacts.create(contact).await?;
 ```typescript
 const contacts = new CRUDRepository(contactRepo);
 contacts.addEnriched("contact_type_name", "contact_type_id", types, "id", "name");
-contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true, (node) =>
-  node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
-);
+contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true);
 
 const loaded = await contacts.readSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
@@ -9994,17 +9989,17 @@ interface IEnriched<T>
 
 | Name | Description |
 | --- | --- |
-| [addEnriched(into, from, via, by, select?, many?, nest?)](#typescript-ienriched-addenriched-into-from-via-by-select-many-nest) | Adds a related fill. Fluent for siblings; `nest` receives the child node. |
+| [addEnriched(into, from, via, by, select?, many?, nest?)](#typescript-ienriched-addenriched-into-from-via-by-select-many-nest) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. |
 | [enrich(items)](#typescript-ienriched-enrich-items) | Fills `items` in place from the tree. |
 
 ###### addEnriched(into, from, via, by, select?, many?, nest?) {#typescript-ienriched-addenriched-into-from-via-by-select-many-nest}
 
-Adds a related fill. Fluent for siblings; `nest` receives the child node.
+Adds a related fill. Fluent for siblings. A related repository fills its own fields.
 
 **Definition**
 
 ```typescript
-addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean, nest?: (node: IRepositoryTreeNode) => void): this
+addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean): this
 ```
 
 **Parameters**
@@ -10017,7 +10012,6 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 | `by` | key on the related item |
 | `select` | optional related property to copy; omitted copies the whole row |
 | `many` | collect a list; default `false` |
-| `nest` | optional child-node callback |
 
 **Returns**
 
@@ -10353,17 +10347,17 @@ public interface IEnriched<T>
 
 | Name | Description |
 | --- | --- |
-| [AddEnriched(into, from, via, by, select, many, nest)](#csharp-ienriched-addenriched-into-from-via-by-select-many-nest) | Adds a related fill. Fluent for siblings; `nest` receives the child node. |
+| [AddEnriched(into, from, via, by, select, many, nest)](#csharp-ienriched-addenriched-into-from-via-by-select-many-nest) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. |
 | [Enrich(items)](#csharp-ienriched-enrich-items) | Fills `items` in place from the tree. |
 
 ###### AddEnriched(into, from, via, by, select, many, nest) {#csharp-ienriched-addenriched-into-from-via-by-select-many-nest}
 
-Adds a related fill. Fluent for siblings; `nest` receives the child node.
+Adds a related fill. Fluent for siblings. A related repository fills its own fields.
 
 **Definition**
 
 ```csharp
-IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, Action<IRepositoryTreeNode>? nest = null)
+IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
 **Parameters**
@@ -10376,7 +10370,6 @@ IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository
 | `by` | key on the related item |
 | `select` | optional related property to copy; omitted copies the whole row |
 | `many` | collect a list |
-| `nest` | optional child-node callback |
 
 **Returns**
 
@@ -10615,7 +10608,7 @@ pub struct ReadonlyRepository
 
 | Name | Description |
 | --- | --- |
-| [add_enriched(into, from, via, by, select, many, nest)](#rust-readonlyrepository-add_enriched-into-from-via-by-select-many-nest) | Adds a related fill. Pass `()` for `nest` when the child has no further fill. |
+| [add_enriched(into, from, via, by, select, many, nest)](#rust-readonlyrepository-add_enriched-into-from-via-by-select-many-nest) | Adds a related fill. A related repository fills its own fields. |
 
 ###### from_repository(inner) {#rust-readonlyrepository-from_repository-inner}
 
@@ -10660,12 +10653,12 @@ pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn Read
 
 ###### add_enriched(into, from, via, by, select, many, nest) {#rust-readonlyrepository-add_enriched-into-from-via-by-select-many-nest}
 
-Adds a related fill. Pass `()` for `nest` when the child has no further fill.
+Adds a related fill. A related repository fills its own fields.
 
 **Definition**
 
 ```rust
-pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool, nest: impl Nest) -> &mut Self
+pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
 ```
 
 **Parameters**
@@ -10678,7 +10671,6 @@ pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>,
 | `by` | key on the related row |
 | `select` | optional related field to copy |
 | `many` | collect a list |
-| `nest` | child-node callback, or `()` |
 
 **Returns**
 
@@ -10904,11 +10896,11 @@ Writes use [CRUDRepository](#crud-repository). Register the same tree with `AddE
 
 Nest only on walkable objects (`many: true` or a whole related row). A `select` scalar is not walked. Depth is unbounded; each node applies, then children run on the related items. See [Bulk repository](#bulk-repository) for list writes.
 
-`AddEnriched` stays fluent for siblings:
+`AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 
 ```
-AddEnriched("children", "id", children, "parent_id", many: true,
-    nest: node => node.Include(childTypes, "type_name", "type_id", "id", "name"));
+children.AddEnriched("type_name", "type_id", childTypes, "id", "name");
+parents.AddEnriched("children", "id", children, "parent_id", many: true);
 ```
 
 Repository read is convert, then map. See [TypeConverter](#type-converter) and [Mapper](#mapper).
@@ -12431,7 +12423,7 @@ Registers a lookup or a `many` list. Returns this repository.
 **Definition**
 
 ```typescript
-addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean, nest?: (node: IRepositoryTreeNode) => void): this
+addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean): this
 ```
 
 **Parameters**
@@ -12444,7 +12436,6 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 | `by` | key on the related row |
 | `select` | optional related field to copy |
 | `many` | collect a list |
-| `nest` | child-node callback |
 
 **Returns**
 
@@ -12876,7 +12867,7 @@ Registers a lookup or a `many` list. Returns this repository.
 **Definition**
 
 ```csharp
-public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, Action<IRepositoryTreeNode>? nest = null)
+public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
 **Parameters**
@@ -12889,7 +12880,6 @@ public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRep
 | `by` | key on the related row |
 | `select` | optional related field to copy |
 | `many` | collect a list |
-| `nest` | child-node callback |
 
 **Returns**
 
@@ -13158,7 +13148,7 @@ Registers a lookup or a `many` list.
 **Definition**
 
 ```rust
-pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool, nest: impl Nest) -> &mut Self
+pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
 ```
 
 **Parameters**
@@ -13171,7 +13161,6 @@ pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>,
 | `by` | key on the related row |
 | `select` | optional related field to copy |
 | `many` | collect a list |
-| `nest` | child-node callback, or `()` |
 
 **Returns**
 

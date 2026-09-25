@@ -1,103 +1,72 @@
 use crate::enrichment::Enrichment;
-use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
-use crate::repository_tree::RepositoryTree;
-use crate::repository_tree_node::{encode_row, encode_rows, RepositoryTreeNode};
+use crate::repository_tree_node::{encode_row, encode_rows, source_key, RepositoryTreeNode};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub struct HashsetOptimizedReadonlyEnrichmentStrategy;
 
 #[async_trait]
 impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
-    async fn read(
+    async fn apply(
         &self,
-        inner: &dyn IReadonlyRepository,
-        tree: &RepositoryTree,
-        query: Option<&dyn ReadInput>,
-    ) -> Result<Vec<Row>> {
-        let mut items = inner.read(query).await?;
-        self.enrich(tree, &mut items).await?;
-        Ok(items)
-    }
-
-    async fn enrich(&self, tree: &RepositoryTree, items: &mut Vec<Row>) -> Result<()> {
-        tree.parent.enrich_from(items).await
-    }
-
-    async fn apply(&self, node: &RepositoryTreeNode, parents: &mut [Row]) -> Result<()> {
-        match &node.enrichment {
-            Some(enrichment) => apply(node.value.as_ref(), enrichment, parents, &node.items).await,
-            None => {
-                for child in &node.items {
-                    child.enrich_from(parents).await?;
-                }
-                Ok(())
-            }
+        via: Arc<dyn IReadonlyRepository>,
+        enrichment: &Enrichment,
+        parents: &mut [Row],
+        sources: Option<&[Option<Row>]>,
+    ) -> Result<()> {
+        if enrichment.many {
+            apply_many(via.as_ref(), enrichment, parents, sources).await
+        } else {
+            apply_lookup(via.as_ref(), enrichment, parents, sources).await
         }
     }
 }
 
-async fn apply(
-    via: &dyn IReadonlyRepository,
-    enrichment: &Enrichment,
-    parents: &mut [Row],
-    children: &[RepositoryTreeNode],
-) -> Result<()> {
-    if enrichment.many {
-        apply_many(via, enrichment, parents, children).await
-    } else {
-        apply_lookup(via, enrichment, parents, children).await
-    }
-}
-
-fn keys(parents: &[Row], from: &str) -> Vec<Value> {
-    let mut unique = HashMap::new();
-    for parent in parents {
-        if let Some(key) = parent.get(from) {
-            unique.entry(key.wire_text()).or_insert_with(|| key.clone());
+fn keys(parents: &[Row], sources: Option<&[Option<Row>]>, from: &str) -> HashMap<String, Value> {
+    let mut keys = HashMap::new();
+    for (index, parent) in parents.iter().enumerate() {
+        if let Some(key) = source_key(parent, from, at(sources, index)) {
+            keys.entry(RepositoryTreeNode::key_of(&key))
+                .or_insert(key);
         }
     }
-    unique.into_values().collect()
+    keys
 }
 
 async fn apply_lookup(
     via: &dyn IReadonlyRepository,
     enrichment: &Enrichment,
     parents: &mut [Row],
-    children: &[RepositoryTreeNode],
+    sources: Option<&[Option<Row>]>,
 ) -> Result<()> {
-    let values = keys(parents, &enrichment.from);
-    if values.is_empty() {
+    let keys = keys(parents, sources, &enrichment.from);
+    if keys.is_empty() {
         return Ok(());
     }
     let loaded = via
         .read(Some(&Where::new(Operator::in_list(
             enrichment.by.clone(),
-            values,
+            keys.values().cloned().collect(),
         ))))
         .await?;
     let mut index = HashMap::new();
-    for mut related in loaded {
-        for child in children {
-            child
-                .enrich_from(std::slice::from_mut(&mut related))
-                .await?;
-        }
-        if let Some(by) = related.get(&enrichment.by).cloned() {
-            index.insert(by.wire_text(), related);
+    for related in loaded {
+        if let Some(by) = related.get(&enrichment.by) {
+            index.insert(RepositoryTreeNode::key_of(by), related);
         }
     }
-    for parent in parents.iter_mut() {
-        let Some(key) = parent.get(&enrichment.from).cloned() else {
+    for (index_i, parent) in parents.iter_mut().enumerate() {
+        let Some(key) = source_key(parent, &enrichment.from, at(sources, index_i)) else {
             continue;
         };
-        let Some(related) = index.get(&key.wire_text()) else {
+        let Some(related) = index.get(&RepositoryTreeNode::key_of(&key)) else {
             continue;
         };
         let value = enrichment
@@ -114,35 +83,42 @@ async fn apply_many(
     via: &dyn IReadonlyRepository,
     enrichment: &Enrichment,
     parents: &mut [Row],
-    children: &[RepositoryTreeNode],
+    sources: Option<&[Option<Row>]>,
 ) -> Result<()> {
-    let values = keys(parents, &enrichment.from);
-    if values.is_empty() {
+    let keys = keys(parents, sources, &enrichment.from);
+    if keys.is_empty() {
         return Ok(());
     }
     let loaded = via
         .read(Some(&Where::new(Operator::in_list(
             enrichment.by.clone(),
-            values,
+            keys.values().cloned().collect(),
         ))))
         .await?;
     let mut index: HashMap<String, Vec<Row>> = HashMap::new();
     for row in loaded {
         if let Some(by) = row.get(&enrichment.by) {
-            index.entry(by.wire_text()).or_default().push(row);
+            index
+                .entry(RepositoryTreeNode::key_of(by))
+                .or_default()
+                .push(row);
         }
     }
-    for related in index.values_mut() {
-        for child in children {
-            child.enrich_from(related).await?;
-        }
-    }
-    for parent in parents.iter_mut() {
-        let Some(key) = parent.get(&enrichment.from).cloned() else {
+    for (index_i, parent) in parents.iter_mut().enumerate() {
+        let Some(key) = source_key(parent, &enrichment.from, at(sources, index_i)) else {
             continue;
         };
-        let related = index.get(&key.wire_text()).cloned().unwrap_or_default();
+        let related = index
+            .get(&RepositoryTreeNode::key_of(&key))
+            .cloned()
+            .unwrap_or_default();
         parent.insert(enrichment.into.clone(), encode_rows(&related));
     }
     Ok(())
+}
+
+fn at<'a>(sources: Option<&'a [Option<Row>]>, index: usize) -> Option<&'a Row> {
+    sources
+        .and_then(|rows| rows.get(index))
+        .and_then(|row| row.as_ref())
 }

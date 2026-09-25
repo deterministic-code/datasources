@@ -159,6 +159,7 @@ describe("StatementParser", () => {
       "SELECT id FROM users WHERE id = $id",
     );
     expect(() => StatementParser.parse("INSERT INTO users")).toThrow("empty statement");
+    expect(() => StatementParser.parse("ALTER TABLE users")).toThrow("empty statement");
     expect(() => StatementParser.parse("SELECT id FROM users extra")).toThrow("empty statement");
     expect(() => StatementParser.parse("SELECT id FROM users WHERE 'ab")).toThrow("empty statement");
     expect(() => StatementParser.parse('SELECT id FROM "user')).toThrow("empty statement");

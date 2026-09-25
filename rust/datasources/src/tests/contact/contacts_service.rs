@@ -3,31 +3,47 @@ use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::CRUDRepository;
+use crate::tests::list_repository::ListRepository;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct ContactsService {
-    inner: CRUDRepository,
+    contacts: ListRepository,
 }
 
 impl ContactsService {
     pub fn new(
-        contacts: Arc<dyn ICRUDRepository>,
+        mut contacts: ListRepository,
         types: Arc<dyn IReadonlyRepository>,
         sources: Arc<dyn IReadonlyRepository>,
         address_types: Arc<dyn IReadonlyRepository>,
         phone_types: Arc<dyn IReadonlyRepository>,
-        addresses: Arc<dyn ICRUDRepository>,
-        phones: Arc<dyn ICRUDRepository>,
+        mut addresses: ListRepository,
+        mut phones: ListRepository,
     ) -> Self {
-        let mut inner = CRUDRepository::from_repository(contacts);
-        inner
+        addresses.add_enriched(
+            "address_type_name",
+            "address_type_id",
+            address_types,
+            "id",
+            Some("name".into()),
+            false,
+            None,
+        );
+        phones.add_enriched(
+            "phone_type_name",
+            "phone_type_id",
+            phone_types,
+            "id",
+            Some("name".into()),
+            false,
+            None,
+        );
+        contacts
             .add_enriched(
                 "contact_type_name",
                 "contact_type_id",
@@ -35,7 +51,7 @@ impl ContactsService {
                 "id",
                 Some("name".into()),
                 false,
-                (),
+                None,
             )
             .add_enriched(
                 "contact_source_name",
@@ -44,51 +60,33 @@ impl ContactsService {
                 "id",
                 Some("name".into()),
                 false,
-                (),
+                None,
             )
             .add_enriched(
                 "addresses",
                 "id",
-                addresses,
+                Arc::new(addresses),
                 "contact_id",
                 None,
                 true,
-                |node: &mut RepositoryTreeNode| {
-                    node.include(
-                        address_types,
-                        "address_type_name",
-                        "address_type_id",
-                        "id",
-                        Some("name".into()),
-                        false,
-                    );
-                },
+                None,
             )
             .add_enriched(
                 "phones",
                 "id",
-                phones,
+                Arc::new(phones),
                 "contact_id",
                 None,
                 true,
-                |node: &mut RepositoryTreeNode| {
-                    node.include(
-                        phone_types,
-                        "phone_type_name",
-                        "phone_type_id",
-                        "id",
-                        Some("name".into()),
-                        false,
-                    );
-                },
+                None,
             );
-        Self { inner }
+        Self { contacts }
     }
 }
 
 impl IRepository for ContactsService {
     fn entity_type(&self) -> TypeId {
-        self.inner.entity_type()
+        self.contacts.entity_type()
     }
 }
 
@@ -99,29 +97,29 @@ impl IReadonlyRepository for ContactsService {
     }
 
     async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        self.inner.read_single(query).await
+        self.contacts.read_single(query).await
     }
 
     async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        self.inner.read(query).await
+        self.contacts.read(query).await
     }
 }
 
 #[async_trait]
 impl ICRUDRepository for ContactsService {
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        self.inner.create(item).await
+        self.contacts.create(item).await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.inner.update(item, by_where).await
+        self.contacts.update(item, by_where).await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.inner.delete(item, by_where).await
+        self.contacts.delete(item, by_where).await
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
-        self.inner.read_single_by_id(id).await
+        self.contacts.read_single_by_id(id).await
     }
 }

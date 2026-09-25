@@ -184,7 +184,7 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 **Methods**
 
-##### add_enriched(into, from, via, by, select, many, nest)
+##### add_enriched(into, from, via, by, select, many)
 
 Forwards to the inner [CRUDRepository](./crud-repository.md). A CRUD `via` is kept so `many` children can be written.
 

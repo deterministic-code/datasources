@@ -30,15 +30,55 @@ export class Datasource implements IDatasource {
   createCommand = (connection?: IConnection): ICommand =>
     this.driver.command(connection ?? this.defaultConnection());
 
-  private repositoryOptions = <T>(
+  private apply = <T>(
     type: Constructable<T>,
     options?: ReadonlyRepositoryOptions<T>,
-  ): CRUDRepositoryOptions<T> => ({
-    ...createRepositoryOptions(type, this.driver.rowTypeConverters),
-    ...options,
-    type,
-    rowTypeConverters: this.driver.rowTypeConverters,
-  });
+  ): CRUDRepositoryOptions<T> => {
+    const built = createRepositoryOptions(type, this.driver.rowTypeConverters);
+    const types = this.driver.rowTypeConverters;
+    return options === undefined
+      ? { ...built, rowTypeConverters: types }
+      : "ids" in options ||
+          "insert" in options ||
+          "update" in options ||
+          "delete" in options ||
+          "return" in options ||
+          "create" in options ||
+          "write" in options
+        ? {
+            entity: options.entity ?? built.entity,
+            entityMapper: options.entityMapper,
+            columnMappings: options.columnMappings,
+            query: options.query,
+            rowsMapper: options.rowsMapper,
+            result: options.result,
+            rowConverter: options.rowConverter,
+            readProperties: options.readProperties,
+            rowTypeConverters: types,
+            type,
+            ids: (options as CRUDRepositoryOptions<T>).ids ?? built.ids,
+            insert: (options as CRUDRepositoryOptions<T>).insert,
+            update: (options as CRUDRepositoryOptions<T>).update,
+            delete: (options as CRUDRepositoryOptions<T>).delete,
+            return: (options as CRUDRepositoryOptions<T>).return,
+            create: (options as CRUDRepositoryOptions<T>).create,
+            write: (options as CRUDRepositoryOptions<T>).write,
+          }
+        : {
+            entity: options.entity ?? built.entity,
+            entityMapper: options.entityMapper,
+            columnMappings: options.columnMappings,
+            query: options.query,
+            rowsMapper: options.rowsMapper,
+            result: options.result,
+            rowConverter: options.rowConverter,
+            readProperties: options.readProperties,
+            rowTypeConverters: types,
+            type,
+            ids: built.ids,
+            create: built.create,
+          };
+  };
 
   createRepository = <T>(
     type: Constructable<T>,
@@ -47,7 +87,7 @@ export class Datasource implements IDatasource {
   ): ICRUDRepository<T> =>
     new CRUDRepository(
       connection ?? this.defaultConnection(),
-      this.repositoryOptions(type, options),
+      this.apply(type, options),
     );
 
   createReadonlyRepository = <T>(
@@ -57,7 +97,7 @@ export class Datasource implements IDatasource {
   ): IReadonlyRepository<T> =>
     new ReadonlyRepository(
       connection ?? this.defaultConnection(),
-      this.repositoryOptions(type, options),
+      this.apply(type, options),
     );
 
   static create: (options?: DatasourceOptions) => IDatasource;

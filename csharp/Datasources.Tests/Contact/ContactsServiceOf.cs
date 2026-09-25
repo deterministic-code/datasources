@@ -4,7 +4,7 @@ namespace Datasources.Tests.Contact;
 
 internal static class ContactsServiceOf
 {
-    public static ContactsService Create(IConnection connection, ICommandMiddleware? middleware = null)
+    public static CRUDRepository<Contact> Create(IConnection connection, ICommandMiddleware? middleware = null)
     {
         CRUDRepository<T> Of<T>(string entity, string[] columns) where T : new()
         {
@@ -15,7 +15,7 @@ internal static class ContactsServiceOf
             });
             return middleware is null ? repo : repo.AddMiddleware(middleware);
         }
-        return new ContactsService(
+        return ContactsService.Open(
             Of<Contact>("contacts_base", [
                 "id", "uuid", "created", "updated", "version",
                 "contact_source_id", "contact_type_id", "first_name", "last_name", "email", "notes"

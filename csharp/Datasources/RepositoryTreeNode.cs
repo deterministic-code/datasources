@@ -50,16 +50,26 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         string from,
         string by,
         string? select = null,
-        bool many = false)
+        bool many = false) =>
+        Include(via, into, from, by, select, many, binder);
+
+    internal RepositoryTreeNode Include<TRelated>(
+        IReadonlyRepository<TRelated> via,
+        string into,
+        string from,
+        string by,
+        string? select,
+        bool many,
+        IReadonlyEnrichmentBinder strategy)
     {
         var enrichment = new Enrichment(into, from, by, select, many);
         var child = new RepositoryTreeNode(
             via,
             into,
             this,
-            (parents, sources) => ((ITrackedApply)binder).ApplyTracked(via, enrichment, parents, sources),
+            (parents, sources) => ((ITrackedApply)strategy).ApplyTracked(via, enrichment, parents, sources),
             enrichment,
-            binder)
+            strategy)
         {
             Persist = via is ICRUDRepository<TRelated> crud ? new ChildPersist<TRelated>(crud) : null
         };
@@ -74,7 +84,18 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
         string by,
         ICRUDRepository<TLink> link,
         string parent,
-        string related)
+        string related) =>
+        IncludeLinked(via, into, from, by, link, parent, related, binder);
+
+    internal RepositoryTreeNode IncludeLinked<TRelated, TLink>(
+        IReadonlyRepository<TRelated> via,
+        string into,
+        string from,
+        string by,
+        ICRUDRepository<TLink> link,
+        string parent,
+        string related,
+        IReadonlyEnrichmentBinder strategy)
     {
         var enrichment = new Enrichment(into, from, by, null, true, new Association(parent, related));
         var writer = new ChildPersist<TLink>(link);
@@ -84,7 +105,7 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
             this,
             (parents, sources) => ApplyLinked(via, writer, enrichment, parents, sources),
             enrichment,
-            binder)
+            strategy)
         {
             Link = writer
         };

@@ -3,8 +3,7 @@ namespace Datasources;
 public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where T : new()
 {
     readonly IConnection? connection;
-    readonly IReadonlyRepository<T>? innerRepo;
-    readonly IReadonlyEnrichmentStrategy<T> strategy;
+    readonly IMapper<IEnumerable<Row>, IReadOnlyList<T>>? result;
     readonly List<ICommandMiddleware> middlewares = [];
     readonly TypeConverter<T, Row>? rowConverter;
     readonly IMapper<string, string> columns = new IdentityMapper<string>();
@@ -14,7 +13,6 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
     public IMapper<T, T>? Mapper { get; }
     public IRepositoryTree Tree { get; }
     protected bool Enriched => Tree.Parent.Items.Count > 0;
-    protected IReadonlyRepository<T>? InnerRepo => innerRepo;
 
     public ReadonlyRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
@@ -23,35 +21,29 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
         this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
     public ReadonlyRepository(BuiltRepository<T> built) :
-        this(built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements) { }
+        this(built.Connection, built.RowConverter, built.RowsMapper, built.Result, built.ColumnMappings, built.Statements) { }
 
-    public ReadonlyRepository(IReadonlyRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
+    protected ReadonlyRepository(IMapper<IEnumerable<Row>, IReadOnlyList<T>>? result = null)
     {
-        innerRepo = inner;
-        this.strategy = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
-        Tree = new RepositoryTree(new RepositoryTreeNode(inner, "", binder: this.strategy));
-    }
-
-    protected ReadonlyRepository()
-    {
-        strategy = new DefaultReadonlyEnrichmentStrategy<T>();
-        Tree = new RepositoryTree(new RepositoryTreeNode(this, "", binder: strategy));
+        this.result = result;
+        Tree = new RepositoryTree(new RepositoryTreeNode(this, "", binder: new DefaultReadonlyEnrichmentStrategy<T>()));
     }
 
     protected ReadonlyRepository(
         IConnection connection,
         TypeConverter<T, Row> rowConverter,
         IMapper<T, T> mapper,
+        IMapper<IEnumerable<Row>, IReadOnlyList<T>>? result,
         IMapper<string, string> columns,
         RepositoryStatements statements)
     {
         this.connection = connection;
         this.rowConverter = rowConverter;
         Mapper = mapper;
+        this.result = result;
         this.columns = columns;
         this.statements = statements;
-        strategy = new DefaultReadonlyEnrichmentStrategy<T>();
-        Tree = new RepositoryTree(new RepositoryTreeNode(this, "", binder: strategy));
+        Tree = new RepositoryTree(new RepositoryTreeNode(this, "", binder: new DefaultReadonlyEnrichmentStrategy<T>()));
     }
 
     public ReadonlyRepository<T> AddMiddleware(ICommandMiddleware middleware)
@@ -67,10 +59,10 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
         string by,
         string? select = null,
         bool many = false,
-        Action<IRepositoryTreeNode>? nest = null)
+        IReadonlyEnrichmentStrategy<T>? strategy = null)
     {
-        var child = Tree.Parent.Include(via, into, from, by, select, many);
-        nest?.Invoke(child);
+        ((RepositoryTreeNode)Tree.Parent).Include(
+            via, into, from, by, select, many, strategy ?? new DefaultReadonlyEnrichmentStrategy<T>());
         return this;
     }
 
@@ -81,45 +73,48 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
         string by,
         ICRUDRepository<TLink> link,
         string parent,
-        string related)
+        string related,
+        IReadonlyEnrichmentStrategy<T>? strategy = null)
     {
-        Tree.Parent.IncludeLinked(via, into, from, by, link, parent, related);
+        ((RepositoryTreeNode)Tree.Parent).IncludeLinked(
+            via, into, from, by, link, parent, related, strategy ?? new DefaultReadonlyEnrichmentStrategy<T>());
         return this;
     }
 
-    public Task Enrich(IList<T> items) => strategy.Enrich(Tree, items);
+    public Task Enrich(IList<T> items) =>
+        ((RepositoryTreeNode)Tree.Parent).EnrichFrom(items.Cast<object>().ToList());
 
     public virtual IAsyncEnumerable<T> Read(IWhere where) =>
-        innerRepo is not null ? Items(ReadTracked(where)) : Read(Compiled(Stored(where)));
+        Read(Compiled(Stored(where)));
 
     protected internal virtual IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
-        innerRepo is not null ? Sourced(Tracked(innerRepo, where)) : ReadTracked(Compiled(Stored(where)));
+        ReadTracked(Compiled(Stored(where)));
 
-    public virtual async Task<T?> ReadSingle(IWhere where)
-    {
-        if (innerRepo is null)
-            return await ReadSingle(Compiled(Stored(where)));
-        await foreach (var item in Read(where))
-            return item;
-        return default;
-    }
+    public virtual Task<T?> ReadSingle(IWhere where) =>
+        ReadSingle(Compiled(Stored(where)));
 
     public virtual IAsyncEnumerable<T> Read(IStatement? query = null) =>
         Items(ReadTracked(query));
 
-    internal static IAsyncEnumerable<(T Item, Row? Source)> Tracked(IReadonlyRepository<T> repo, IStatement? query = null) =>
-        repo is ReadonlyRepository<T> stored ? stored.ReadTracked(query) : WithoutSource(repo.Read(query));
-
-    internal static IAsyncEnumerable<(T Item, Row? Source)> Tracked(IReadonlyRepository<T> repo, IWhere where) =>
-        repo is ReadonlyRepository<T> stored ? stored.ReadTracked(where) : WithoutSource(repo.Read(where));
-
     protected internal virtual IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
-        innerRepo is not null ? Sourced(Tracked(innerRepo, query)) : Apply(ReadRows(query));
+        Apply(ReadItems(query));
+
+    protected virtual IAsyncEnumerable<(T Item, Row? Source)> ReadItems(IStatement? query = null) =>
+        result is null ? ReadRows(query) : Collapse(query);
 
     IAsyncEnumerable<(T Item, Row? Source)> Apply(IAsyncEnumerable<(T Item, Row? Source)> pairs) =>
         Enriched ? Sourced(pairs) : pairs;
 
-    async IAsyncEnumerable<(T Item, Row? Source)> ReadRows(IStatement? query)
+    async IAsyncEnumerable<(T Item, Row? Source)> Collapse(IStatement? query)
+    {
+        var rows = new List<Row>();
+        await foreach (var row in ReadSources(query))
+            rows.Add(row);
+        foreach (var item in result!.Map(rows))
+            yield return (item, null);
+    }
+
+    protected virtual async IAsyncEnumerable<Row> ReadSources(IStatement? query = null)
     {
         var statement = query switch
         {
@@ -137,16 +132,19 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
         try
         {
             while (await reader.Next())
-            {
-                var renamed = Renamed(reader.Current ?? throw new DatasourceException("Reader current must be a row"));
-                yield return (Mapper!.Map(RowConverter.Convert(renamed)), renamed);
-            }
+                yield return Renamed(reader.Current ?? throw new DatasourceException("Reader current must be a row"));
         }
         finally
         {
             if (reader is IAsyncDisposable disposable)
                 await disposable.DisposeAsync();
         }
+    }
+
+    async IAsyncEnumerable<(T Item, Row? Source)> ReadRows(IStatement? query)
+    {
+        await foreach (var renamed in ReadSources(query))
+            yield return (Mapper!.Map(RowConverter.Convert(renamed)), renamed);
     }
 
     async IAsyncEnumerable<(T Item, Row? Source)> Sourced(IAsyncEnumerable<(T Item, Row? Source)> pairs)
@@ -158,7 +156,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
             items.Add(item);
             sources.Add(source);
         }
-        await strategy.Enrich(Tree, items, sources);
+        await ((RepositoryTreeNode)Tree.Parent).EnrichFrom(items.Cast<object>().ToList(), sources);
         for (var i = 0; i < items.Count; i++)
             yield return (items[i], i < sources.Count ? sources[i] : null);
     }
