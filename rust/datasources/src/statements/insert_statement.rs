@@ -44,6 +44,9 @@ impl crate::ReadInput for InsertStatement {
 }
 
 impl Statement for InsertStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn kind(&self) -> super::statement::StatementKind {
         super::statement::StatementKind::Insert
     }

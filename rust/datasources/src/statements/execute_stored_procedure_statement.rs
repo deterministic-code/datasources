@@ -37,6 +37,9 @@ impl crate::ReadInput for ExecuteStoredProcedureStatement {
 }
 
 impl Statement for ExecuteStoredProcedureStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn parameters(&self) -> Vec<Parameter> {
         self.parameters.clone()
     }

@@ -120,6 +120,9 @@ impl crate::ReadInput for UpdateStatement {
 }
 
 impl Statement for UpdateStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn parameters(&self) -> Vec<Parameter> {
         self.parameters.clone()
     }

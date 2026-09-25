@@ -26,9 +26,55 @@ fn round_trips_the_select_examples() {
 }
 
 #[test]
+fn round_trips_the_write_examples() {
+    for sql in [
+        "INSERT INTO users (id, name) VALUES ($id, $name)",
+        "INSERT INTO \"user\" (id) VALUES ($id)",
+        "INSERT INTO users (name) VALUES ('ada')",
+        "UPDATE users SET name = $name WHERE id = $id",
+        "UPDATE users SET name = $name, age = $age",
+        "UPDATE users SET name = $name WHERE name NOT LIKE $name",
+        "UPDATE users SET name = name WHERE id = $id",
+        "DELETE FROM users WHERE id = $id",
+        "DELETE FROM users",
+        "DELETE FROM \"user\" WHERE id = $id",
+        "DELETE FROM users WHERE name NOT LIKE $name",
+    ] {
+        assert_eq!(StatementParser::parse(sql).unwrap().get_text(), sql);
+    }
+}
+
+#[test]
+fn builds_the_write_trees() {
+    let insert =
+        StatementParser::parse("INSERT INTO users (id, name) VALUES ($id, $name)").unwrap();
+    assert!(insert.as_any().is::<InsertStatement>());
+
+    let update = StatementParser::parse("UPDATE users SET name = $name WHERE id = $id").unwrap();
+    let update = update.as_any().downcast_ref::<UpdateStatement>().unwrap();
+    assert_eq!(update.predicate().unwrap().get_text(), "id = $id");
+
+    let not_like =
+        StatementParser::parse("UPDATE users SET name = $name WHERE name NOT LIKE $name").unwrap();
+    assert_eq!(
+        not_like.predicate().unwrap().get_text(),
+        "name NOT LIKE $name"
+    );
+
+    let delete = StatementParser::parse("DELETE FROM users WHERE id = $id").unwrap();
+    let delete = delete.as_any().downcast_ref::<DeleteStatement>().unwrap();
+    assert_eq!(delete.predicate().unwrap().get_text(), "id = $id");
+
+    let all = StatementParser::parse("DELETE FROM users").unwrap();
+    let all = all.as_any().downcast_ref::<DeleteStatement>().unwrap();
+    assert!(all.where_clause().is_none());
+}
+
+#[test]
 fn builds_the_where_tree() {
     let not_like =
         StatementParser::parse("SELECT id FROM users WHERE name NOT LIKE $name").unwrap();
+    let not_like = not_like.as_any().downcast_ref::<QueryStatement>().unwrap();
     let clause = not_like
         .where_clause()
         .unwrap()
@@ -44,6 +90,7 @@ fn builds_the_where_tree() {
         "SELECT id FROM users WHERE EXISTS (SELECT id FROM posts WHERE posts.user_id = users.id)",
     )
     .unwrap();
+    let exists = exists.as_any().downcast_ref::<QueryStatement>().unwrap();
     let clause = exists
         .where_clause()
         .unwrap()
@@ -59,10 +106,12 @@ fn builds_the_where_tree() {
         "SELECT id FROM users FULL JOIN profiles ON users.id = profiles.user_id",
     )
     .unwrap();
+    let full = full.as_any().downcast_ref::<QueryStatement>().unwrap();
     assert_eq!(full.joins.len(), 1);
     assert_eq!(full.joins[0].kind, JoinKind::Full);
 
     let cross = StatementParser::parse("SELECT id FROM users CROSS JOIN tags").unwrap();
+    let cross = cross.as_any().downcast_ref::<QueryStatement>().unwrap();
     assert_eq!(cross.joins.len(), 1);
     assert_eq!(cross.joins[0].kind, JoinKind::Cross);
     assert!(cross.joins[0].on.is_none());
@@ -71,6 +120,7 @@ fn builds_the_where_tree() {
         "SELECT DISTINCT status FROM orders GROUP BY status HAVING status = $status ORDER BY status ASC LIMIT 10 OFFSET 5",
     )
     .unwrap();
+    let shaped = shaped.as_any().downcast_ref::<QueryStatement>().unwrap();
     assert!(shaped.distinct);
     assert_eq!(shaped.limit, Some(10));
     assert_eq!(shaped.offset, Some(5));

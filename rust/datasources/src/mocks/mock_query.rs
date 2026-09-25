@@ -46,6 +46,9 @@ impl crate::ReadInput for MockQuery {
 }
 
 impl Statement for MockQuery {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn kind(&self) -> crate::statements::StatementKind {
         crate::statements::StatementKind::Query
     }

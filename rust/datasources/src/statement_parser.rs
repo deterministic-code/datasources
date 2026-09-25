@@ -1,9 +1,11 @@
 use crate::builders::{Join, JoinKind};
+use crate::parameter::Parameter;
 use crate::result::Result;
+use crate::statements::statement::Statement;
 use crate::statements::text::Text;
 use crate::statements::{
-    ArrayExpression, Expression, Identifier, Literal, Operator, OrderBy, QueryStatementOptions,
-    WhereClause,
+    ArrayExpression, DeleteStatement, Expression, Identifier, InsertStatement, Literal, Operator,
+    OrderBy, QueryStatementOptions, UpdateStatement, WhereClause,
 };
 use crate::text_query::QueryStatement;
 use crate::value::Value;
@@ -13,7 +15,7 @@ use crate::DatasourceError;
 pub struct StatementParser;
 
 impl StatementParser {
-    pub fn parse(text: &str) -> Result<QueryStatement> {
+    pub fn parse(text: &str) -> Result<Box<dyn Statement>> {
         let mut cursor = Cursor::new(text);
         let statement = cursor.statement()?;
         cursor.end()?;
@@ -31,12 +33,116 @@ impl<'a> Cursor<'a> {
         Self { text, i: 0 }
     }
 
-    fn statement(&mut self) -> Result<QueryStatement> {
-        if self.peek_word("SELECT") {
-            self.select_statement()
-        } else {
-            empty()
+    fn statement(&mut self) -> Result<Box<dyn Statement>> {
+        match self.word() {
+            Some("SELECT") => Ok(Box::new(self.select_statement()?)),
+            Some("INSERT") => Ok(Box::new(self.parse_insert()?)),
+            Some("UPDATE") => Ok(Box::new(self.parse_update()?)),
+            Some("DELETE") => Ok(Box::new(self.parse_delete()?)),
+            _ => empty(),
         }
+    }
+
+    fn word(&mut self) -> Option<&'static str> {
+        ["SELECT", "INSERT", "UPDATE", "DELETE"]
+            .into_iter()
+            .find(|word| self.peek_word(word))
+    }
+
+    fn parse_insert(&mut self) -> Result<InsertStatement> {
+        let start = self.i;
+        self.expect_word("INSERT")?;
+        self.expect_word("INTO")?;
+        let table = self.ident()?;
+        self.expect_char('(')?;
+        let mut columns = vec![self.ident()?];
+        while self.try_char(',') {
+            columns.push(self.ident()?);
+        }
+        self.expect_char(')')?;
+        self.expect_word("VALUES")?;
+        self.expect_char('(')?;
+        let mut values = vec![self.raw_expr()?];
+        while self.try_char(',') {
+            values.push(self.raw_expr()?);
+        }
+        self.expect_char(')')?;
+        if values.len() == columns.len()
+            && values
+                .iter()
+                .zip(&columns)
+                .all(|(value, column)| value == &format!("${column}"))
+        {
+            let fields: Vec<Parameter> = columns
+                .into_iter()
+                .map(|name| Parameter::new(name, Value::Null))
+                .collect();
+            return Ok(InsertStatement::new(&table, &fields));
+        }
+        Ok(InsertStatement::text(&self.text[start..self.i]))
+    }
+
+    fn parse_update(&mut self) -> Result<UpdateStatement> {
+        let start = self.i;
+        self.expect_word("UPDATE")?;
+        let table = self.ident()?;
+        self.expect_word("SET")?;
+        let mut columns = Vec::new();
+        let mut canonical = self.assignment(&mut columns)?;
+        while self.try_char(',') {
+            canonical = self.assignment(&mut columns)? && canonical;
+        }
+        let clause = if self.try_word("WHERE") {
+            Some(WhereClause::new(self.expr()?))
+        } else {
+            None
+        };
+        if canonical {
+            let fields: Vec<Parameter> = columns
+                .iter()
+                .map(|name| Parameter::new(name.clone(), Value::Null))
+                .collect();
+            return Ok(UpdateStatement::new(
+                &table,
+                &fields,
+                clause.as_ref().map(|predicate| predicate as &dyn Where),
+            ));
+        }
+        Ok(UpdateStatement::text(
+            &self.text[start..self.i],
+            clause.map(|predicate| Box::new(predicate) as Box<dyn Where>),
+        ))
+    }
+
+    fn assignment(&mut self, columns: &mut Vec<String>) -> Result<bool> {
+        let column = self.ident()?;
+        self.expect_char('=')?;
+        let raw = self.raw_expr()?;
+        let canonical = raw == format!("${column}");
+        columns.push(column);
+        Ok(canonical)
+    }
+
+    fn parse_delete(&mut self) -> Result<DeleteStatement> {
+        self.expect_word("DELETE")?;
+        self.expect_word("FROM")?;
+        let table = self.ident()?;
+        let clause = if self.try_word("WHERE") {
+            Some(WhereClause::new(self.expr()?))
+        } else {
+            None
+        };
+        Ok(DeleteStatement::new(
+            &table,
+            clause.as_ref().map(|predicate| predicate as &dyn Where),
+        ))
+    }
+
+    fn raw_expr(&mut self) -> Result<String> {
+        self.skip();
+        let start = self.i;
+        self.expr()?;
+        Ok(self.text[start..self.i].to_string())
     }
 
     fn end(&mut self) -> Result<()> {

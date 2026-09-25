@@ -50,6 +50,9 @@ impl crate::ReadInput for DeleteStatement {
 }
 
 impl Statement for DeleteStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
     fn kind(&self) -> super::statement::StatementKind {
         super::statement::StatementKind::Delete
     }

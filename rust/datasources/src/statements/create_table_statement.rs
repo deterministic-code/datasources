@@ -36,7 +36,11 @@ impl Text for CreateTableStatement {
     }
 }
 
-impl Statement for CreateTableStatement {}
+impl Statement for CreateTableStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
 
 impl crate::ReadInput for CreateTableStatement {
     fn as_statement(&self) -> Option<&dyn crate::Statement> {
