@@ -4,11 +4,13 @@ public sealed class ExpectConsoleMiddleware : ICommandMiddleware
 {
     readonly ConsoleCommandMiddleware inner;
     readonly IReadOnlyList<string> expected;
+    readonly Func<string, string> normalize;
     int index;
 
-    public ExpectConsoleMiddleware(IReadOnlyList<string> expected, Func<DateTimeOffset> now)
+    public ExpectConsoleMiddleware(IReadOnlyList<string> expected, Func<DateTimeOffset> now, Func<string, string>? normalize = null)
     {
         this.expected = expected;
+        this.normalize = normalize ?? Signature;
         inner = new ConsoleCommandMiddleware(Check, now, new Dictionary<string, string> { ["isVerbose"] = "true" });
     }
 
@@ -41,7 +43,7 @@ public sealed class ExpectConsoleMiddleware : ICommandMiddleware
 
     void Check(string line)
     {
-        var actual = Signature(line);
+        var actual = normalize(line);
         if (index >= expected.Count || actual != expected[index])
             throw new InvalidOperationException($"console mismatch at {index}\nexpected: {(index < expected.Count ? expected[index] : "<missing>")}\nactual:   {actual}");
         index++;

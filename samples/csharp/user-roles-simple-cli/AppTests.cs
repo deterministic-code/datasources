@@ -70,6 +70,18 @@ public sealed class AppTests
     }
 
     [Fact]
+    public async Task MysqlSqlPathInsertsAndUpdates()
+    {
+        var (app, command) = Create("mysql", false);
+        await app.Run(new AddUser("alice", "secret"));
+        command.Reader = new MockReader<Row>([new Row { ["id"] = 1 }]);
+        await app.Run(new EnableUser("alice"));
+        Assert.Contains(command.ExecuteCalls, call => call.Text.Contains("INSERT INTO", StringComparison.Ordinal));
+        Assert.Contains(command.ExecuteCalls, call => call.Text.Contains("UPDATE", StringComparison.Ordinal));
+        Assert.DoesNotContain(command.ExecuteCalls, call => call.Text.StartsWith("CALL ", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task MigratesSqliteAndMysql()
     {
         var sqlite = new MockConnection { Provider = "sqlite" };
@@ -105,12 +117,12 @@ public sealed class AppTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => app.Run(new FakeCommand()));
     }
 
-    static (App App, MockCommand Command) Create(string provider)
+    static (App App, MockCommand Command) Create(string provider, bool procedures = true)
     {
         var connection = new MockConnection { Provider = provider };
         var command = new MockCommand(connection);
         connection.Command = command;
-        return (new App(command, () => Frozen, password => $"#{password}", () => Token), command);
+        return (new App(command, () => Frozen, password => $"#{password}", () => Token, procedures), command);
     }
 
     sealed record FakeCommand : CliCommand

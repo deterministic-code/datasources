@@ -26,6 +26,24 @@ public sealed class ExpectConsoleMiddlewareTests
     }
 
     [Fact]
+    public async Task AppliesACustomLineCheck()
+    {
+        var middleware = new ExpectConsoleMiddleware(
+            [
+                "[<date>]-[datasource][Start]-[SELECT 1]",
+                "[<date>]-[datasource][Request]-[{id: 1}]",
+                "[<date>]-[datasource][Finish]-[SELECT 1]",
+                "[<date>]-[datasource][AfterCommand]-[{id: 1}]"
+            ],
+            () => Stamp,
+            line => ExpectConsoleMiddleware.Signature(line).Replace("2026-08-28T01:54:12.101Z", "<date>", StringComparison.Ordinal));
+        var host = new RecordingCommand();
+        host.AddMiddleware(middleware);
+        await host.Run("SELECT 1", [new Parameter("id", 1L)], (_, _) => Task.FromResult((1, Rows(new Row { ["id"] = 1L }))));
+        middleware.Complete();
+    }
+
+    [Fact]
     public async Task RejectsADifferentLine()
     {
         var middleware = new ExpectConsoleMiddleware(["[nope]"], () => Stamp);

@@ -24,7 +24,8 @@ public sealed record AddRole(string Name) : CliCommand
                 new Parameter("p_is_enabled", true),
                 new Parameter("p_created", created),
                 new Parameter("p_updated", updated)
-            ]);
+            ],
+            app.Procedures);
         return "";
     }
 }

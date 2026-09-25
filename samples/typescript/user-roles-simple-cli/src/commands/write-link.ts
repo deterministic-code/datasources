@@ -31,6 +31,6 @@ export const writeLink = async (
     { name: "p_created", value: created },
     { name: "p_updated", value: app.bytes(updated) },
   ];
-  await writeRow(app.command, ident(provider, linkTable), procedure, insert, call);
+  await writeRow(app.command, ident(provider, linkTable), procedure, insert, call, app.procedures);
   return "";
 };

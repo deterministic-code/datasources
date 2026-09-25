@@ -17,6 +17,7 @@ export class ExpectConsoleMiddleware implements ICommandMiddleware {
   constructor(
     private readonly expected: readonly string[],
     now: () => Date,
+    private readonly normalize: (line: string) => string = consoleSignature,
   ) {
     this.inner = new ConsoleCommandMiddleware((line) => this.check(line), now, { isVerbose: "true" });
   }
@@ -38,7 +39,7 @@ export class ExpectConsoleMiddleware implements ICommandMiddleware {
   };
 
   private check = (line: string): void => {
-    const actual = consoleSignature(line);
+    const actual = this.normalize(line);
     if (this.index >= this.expected.length || actual !== this.expected[this.index])
       throw new Error(`console mismatch at ${this.index}\nexpected: ${this.index < this.expected.length ? this.expected[this.index] : "<missing>"}\nactual:   ${actual}`);
     this.index++;

@@ -8,7 +8,7 @@ public static class SetUserEnabled
     {
         var provider = app.Command.Connection.Provider;
         var updated = app.Token();
-        if (provider == "mysql")
+        if (app.Procedures && provider == "mysql")
         {
             Parameter[] fields =
             [

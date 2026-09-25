@@ -7,7 +7,7 @@ use datasources::{
 
 pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<String> {
     let updated = app.token_bytes();
-    if app.provider() == "mysql" {
+    if app.use_procedures() && app.provider() == "mysql" {
         let fields = [
             Parameter::new("p_username", username),
             Parameter::new("p_is_enabled", schema::flag(app.provider(), enabled)),

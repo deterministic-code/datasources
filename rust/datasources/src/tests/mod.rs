@@ -470,6 +470,31 @@ async fn expect_console_matches_transcript() {
 }
 
 #[tokio::test]
+async fn expect_console_applies_a_custom_line_check() {
+    let now = || "2026-08-28T01:54:12.101Z".to_string();
+    let middleware = Arc::new(ExpectConsoleMiddleware::with_normalize(
+        vec![
+            "[<date>]-[datasource][Start]-[SELECT 1]".into(),
+            "[<date>]-[datasource][Request]-[{id: 1}]".into(),
+            "[<date>]-[datasource][Finish]-[SELECT 1]".into(),
+            "[<date>]-[datasource][AfterCommand]-[{id: 1}]".into(),
+        ],
+        now,
+        |line| crate::expect_console_middleware::signature(line).replace("2026-08-28T01:54:12.101Z", "<date>"),
+    ));
+    let host = CommandMiddlewareHost::new();
+    host.add_middleware(middleware.clone());
+    host.run(
+        "SELECT 1",
+        Some(&[Parameter::new("id", 1i64)]),
+        |_q, _p| async { Ok(((), vec![record(&[("id", Value::Int(1))])])) },
+    )
+    .await
+    .unwrap();
+    middleware.complete().unwrap();
+}
+
+#[tokio::test]
 async fn expect_console_rejects_a_different_line() {
     let middleware = Arc::new(ExpectConsoleMiddleware::new(
         vec!["[nope]".into()],

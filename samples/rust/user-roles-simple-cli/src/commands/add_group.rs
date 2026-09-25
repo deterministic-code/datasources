@@ -31,6 +31,7 @@ impl AddGroup {
                 Parameter::new("p_created", created.as_str()),
                 Parameter::new("p_updated", updated),
             ],
+            app.use_procedures(),
         )
         .await
     }

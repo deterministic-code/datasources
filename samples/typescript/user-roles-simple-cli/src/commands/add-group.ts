@@ -26,6 +26,7 @@ export const addGroup = async (app: App, parsed: AddGroup): Promise<string> => {
       { name: "p_created", value: created },
       { name: "p_updated", value: app.bytes(updated) },
     ],
+    app.procedures,
   );
   return "";
 };

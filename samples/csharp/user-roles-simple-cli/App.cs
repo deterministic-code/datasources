@@ -12,15 +12,19 @@ public sealed class App
         ICommand command,
         Func<DateTime>? now = null,
         Func<string, string>? hash = null,
-        Func<byte[]>? token = null)
+        Func<byte[]>? token = null,
+        bool procedures = true)
     {
         Command = command;
+        Procedures = procedures;
         this.now = now ?? (() => DateTime.UtcNow);
         this.hash = hash ?? PasswordHash.Hash;
         this.token = token ?? (() => Guid.NewGuid().ToByteArray());
     }
 
     public ICommand Command { get; }
+
+    public bool Procedures { get; }
 
     public Task<string> Run(CliCommand parsed) => parsed.Run(this);
 

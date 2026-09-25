@@ -6,7 +6,7 @@ import { lookupId } from "./lookup-id.ts";
 export const setUserEnabled = async (app: App, username: string, enabled: boolean): Promise<string> => {
   const provider = app.command.connection.provider;
   const updated = app.token();
-  if (provider === "mysql") {
+  if (app.procedures && provider === "mysql") {
     const fields: Parameter[] = [
       { name: "p_username", value: username },
       { name: "p_is_enabled", value: flag(provider, enabled) },

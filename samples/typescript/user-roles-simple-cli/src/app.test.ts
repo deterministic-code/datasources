@@ -16,11 +16,11 @@ import { usersView } from "./users-view.ts";
 const frozen = new Date("2026-09-22T00:00:00.000Z");
 const token = () => new Uint8Array([1, 2, 3]);
 
-const create = (provider: string) => {
+const create = (provider: string, procedures = true) => {
   const connection = new MockConnection(undefined, provider);
   const command = new MockCommand(connection);
   connection.command = command;
-  return { app: new App(command, () => frozen, (password) => `#${password}`, token), command };
+  return { app: new App(command, () => frozen, (password) => `#${password}`, token, procedures), command };
 };
 
 describe("parse", () => {
@@ -238,6 +238,16 @@ describe("app", () => {
     await app.run({ kind: "enable-user", username: "alice" });
     await app.run({ kind: "disable-user", username: "alice" });
     expect(command.executeCalls.every((call) => call.text.startsWith("CALL "))).toBe(true);
+  });
+
+  it("mysql sql path inserts and updates", async () => {
+    const { app, command } = create("mysql", false);
+    await app.run({ kind: "add-user", username: "alice", password: "secret" });
+    command.reader = new MockReader([{ id: 1 }]);
+    await app.run({ kind: "enable-user", username: "alice" });
+    expect(command.executeCalls.some((call) => call.text.includes("INSERT INTO"))).toBe(true);
+    expect(command.executeCalls.some((call) => call.text.includes("UPDATE"))).toBe(true);
+    expect(command.executeCalls.some((call) => call.text.startsWith("CALL "))).toBe(false);
   });
 
   it("uses default clock and hash", async () => {

@@ -2368,6 +2368,7 @@ dependencies = [
  "datasources-register",
  "datasources-sqlite",
  "mysql_async",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml",

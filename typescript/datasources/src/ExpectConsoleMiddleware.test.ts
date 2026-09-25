@@ -33,6 +33,27 @@ describe("ExpectConsoleMiddleware", () => {
     );
   });
 
+  it("applies a custom line check", async () => {
+    const normalize = (line: string) => consoleSignature(line).replaceAll("2026-08-28T01:54:12.101Z", "<date>");
+    const middleware = new ExpectConsoleMiddleware(
+      [
+        "[<date>]-[datasource][Start]-[SELECT 1]",
+        "[<date>]-[datasource][Request]-[{id: 1}]",
+        "[<date>]-[datasource][Finish]-[SELECT 1]",
+        "[<date>]-[datasource][AfterCommand]-[{id: 1}]",
+      ],
+      now,
+      normalize,
+    );
+    const host = new CommandMiddlewareHost();
+    host.addMiddleware(middleware);
+    await host.run("SELECT 1", [{ name: "id", value: 1 }], async () => ({
+      value: 1,
+      rows: [{ id: 1 }],
+    }));
+    middleware.complete();
+  });
+
   it("rejects a different line and a short transcript", async () => {
     const host = new CommandMiddlewareHost();
     const mismatch = new ExpectConsoleMiddleware(["[nope]"], now);
