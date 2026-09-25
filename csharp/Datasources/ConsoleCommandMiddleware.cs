@@ -52,7 +52,7 @@ public sealed class ConsoleCommandMiddleware : ICommandMiddleware
         $"{{{string.Join(", ", (parameters ?? []).Select(param => $"{param.Name}: {Cell(param.Value)}"))}}}";
 
     static string RowsOf(IReadOnlyList<Row> results) =>
-        string.Join(", ", results.Select(row => $"{{{string.Join(", ", row.Select(pair => $"{pair.Key}: {Cell(pair.Value)}"))}}}"));
+        string.Join(", ", results.Select(row => $"{{{string.Join(", ", row.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}: {Cell(pair.Value)}"))}}}"));
 
     static string Cell(Value value) => value switch
     {

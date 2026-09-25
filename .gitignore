@@ -17,6 +17,8 @@ TestResults/
 .idea/
 .DS_Store
 *.log
+!samples/user-roles-simple-cli-shared/*.log
+!samples/contacts-crud-enriched-medium-rest-shared/*.log
 lcov.info
 coverage.cobertura.xml
 coverage.info

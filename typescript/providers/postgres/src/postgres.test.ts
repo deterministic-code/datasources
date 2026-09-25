@@ -87,7 +87,7 @@ describe("PostgresConnection", () => {
     client.result = { rowCount: 0, rows: [] };
     expect(await command.execute("INSERT INTO items (id) VALUES (1)")).toEqual({
       rowsAffected: 0,
-      result: undefined,
+      result: null,
       parameters: undefined,
     });
     client.result = { rowCount: null, rows: [{ id: 9 }] };
@@ -201,10 +201,14 @@ describe("PostgresCommand", () => {
       .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });
     client.result = { rowCount: 0, rows: [] };
     expect(await command.execute("SELECT 1")).toEqual({
-      result: undefined,
+      result: null,
       rowsAffected: 0,
       parameters: undefined,
     });
+    client.result = { rowCount: 1, rows: [{ id: null }] };
+    expect(await command.execute("SELECT flag($b)", [{ name: "b", value: true }])).toMatchObject({ result: null });
+    expect(await command.execute("SELECT when($d)", [{ name: "d", value: new Date("2026-09-22T00:00:00.000Z") }])).toMatchObject({ result: null });
+    expect(await command.execute("SELECT blob($b)", [{ name: "b", value: new Uint8Array([1, 2, 3]) }])).toMatchObject({ result: null });
     const inout = { name: "result", value: 4, direction: ParameterDirection.InputOutput };
     client.result = { rowCount: 1, rows: [{ result: 5 }] };
     expect(await command.execute("CALL bump($result)", [inout])).toMatchObject({

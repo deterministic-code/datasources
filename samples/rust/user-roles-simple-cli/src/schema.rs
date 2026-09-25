@@ -1,8 +1,16 @@
 use crate::column_types;
 use datasources::{
     Column, ColumnDefault, CreateTableStatement, ForeignKey, NotNull, PrimaryKey, Result,
-    TableConstraint,
+    TableConstraint, Value,
 };
+
+pub fn flag(provider: &str, value: bool) -> Value {
+    if provider == "sqlite" {
+        Value::Int(if value { 1 } else { 0 })
+    } else {
+        Value::Bool(value)
+    }
+}
 
 pub fn ident(provider: &str, name: &str) -> String {
     quote(provider, name)

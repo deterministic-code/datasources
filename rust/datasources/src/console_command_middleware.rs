@@ -127,11 +127,20 @@ impl CommandMiddleware for ConsoleCommandMiddleware {
     }
 }
 
+fn log_cell(value: &crate::value::Value) -> String {
+    match value {
+        crate::value::Value::Null => "null".to_string(),
+        crate::value::Value::Bool(true) => "True".to_string(),
+        crate::value::Value::Bool(false) => "False".to_string(),
+        other => other.wire_text(),
+    }
+}
+
 fn params_of(params: Option<&[Parameter]>) -> String {
     let body = params
         .unwrap_or(&[])
         .iter()
-        .map(|param| format!("{}: {}", param.name, param.value.wire_text()))
+        .map(|param| format!("{}: {}", param.name, log_cell(&param.value)))
         .collect::<Vec<_>>()
         .join(", ");
     format!("{{{body}}}")
@@ -141,9 +150,11 @@ fn rows_of(results: &[Row]) -> String {
     results
         .iter()
         .map(|row| {
-            let cells = row
-                .iter()
-                .map(|(key, value)| format!("{}: {}", key, value.wire_text()))
+            let mut pairs = row.iter().collect::<Vec<_>>();
+            pairs.sort_by(|left, right| left.0.cmp(right.0));
+            let cells = pairs
+                .into_iter()
+                .map(|(key, value)| format!("{}: {}", key, log_cell(value)))
                 .collect::<Vec<_>>()
                 .join(", ");
             format!("{{{cells}}}")

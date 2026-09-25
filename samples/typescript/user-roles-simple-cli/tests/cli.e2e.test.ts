@@ -1,3 +1,6 @@
+import { ExpectConsoleMiddleware, type IConnection } from "@datasources/core";
+import { MysqlDriver } from "@datasources/mysql";
+import { PostgresDriver } from "@datasources/postgres";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -7,6 +10,9 @@ import { createConnection } from "mysql2/promise";
 import pg from "pg";
 import { describe, it } from "vitest";
 import { parse as parseYaml } from "yaml";
+import { App } from "../src/app.ts";
+import { migrate } from "../src/migrate.ts";
+import { parse } from "../src/parse.ts";
 import { freshCompose, stopCompose } from "../../../../typescript/ensure-compose.ts";
 
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -138,6 +144,58 @@ describe.sequential("cli e2e", () => {
     await admin.query(`CREATE SCHEMA ${schema}`);
     try {
       script(setup(url, schema), "postgres");
+    } finally {
+      await admin.query(`DROP SCHEMA ${schema} CASCADE`);
+      await admin.end();
+      stopCompose("postgres");
+    }
+  }, 180_000);
+
+  const transcript = async (provider: string, connection: IConnection) => {
+    const expected = readFileSync(resolve(sample, "../../user-roles-simple-cli-shared", `${provider}.log`), "utf8")
+      .split("\n")
+      .filter((line) => line.length > 0);
+    await connection.open();
+    try {
+      const command = connection.createCommand();
+      await migrate(command);
+      const now = () => new Date(spec.now);
+      const middleware = new ExpectConsoleMiddleware(expected, now);
+      command.addMiddleware(middleware);
+      const app = new App(command, now, () => "hash", () => new Uint8Array([1, 2, 3]));
+      for (const step of spec.steps) await app.run(parse(step.argv));
+      middleware.complete();
+    } finally {
+      await connection.close();
+    }
+  };
+
+  it("mysql console transcript", async () => {
+    freshCompose("mysql");
+    const url = process.env.MYSQL_URL || "mysql://ds:ds@127.0.0.1:3306/datasources";
+    const name = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+    const admin = await createConnection(url);
+    await admin.query(`CREATE DATABASE \`${name}\``);
+    try {
+      const isolated = new URL(url);
+      isolated.pathname = `/${name}`;
+      await transcript("mysql", new MysqlDriver().connection({ url: isolated.toString() }));
+    } finally {
+      await admin.query(`DROP DATABASE \`${name}\``);
+      await admin.end();
+      stopCompose("mysql");
+    }
+  }, 180_000);
+
+  it("postgres console transcript", async () => {
+    freshCompose("postgres");
+    const url = process.env.POSTGRES_URL || "postgres://ds:ds@127.0.0.1:5432/datasources";
+    const schema = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+    const admin = new pg.Client({ connectionString: url });
+    await admin.connect();
+    await admin.query(`CREATE SCHEMA ${schema}`);
+    try {
+      await transcript("postgres", new PostgresDriver().connection({ url, schema }));
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.end();

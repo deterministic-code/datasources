@@ -110,6 +110,7 @@ export {
   ConsoleCommandMiddleware,
   formatElapsed,
 } from "./ConsoleCommandMiddleware.ts";
+export { ExpectConsoleMiddleware } from "./ExpectConsoleMiddleware.ts";
 export { Datasource } from "./Datasource.ts";
 import { Datasource } from "./Datasource.ts";
 import { DatasourceFactory } from "./DatasourceFactory.ts";

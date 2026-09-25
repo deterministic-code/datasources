@@ -68,7 +68,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
       const row = rows[0];
       return {
         rowsAffected: row ? 1 : 0,
-        result: row ? Object.values(row)[0] : undefined,
+        result: row ? Object.values(row)[0] ?? null : null,
         parameters: row && parameters
           ? parameters.map((parameter) =>
               parameter.direction &&
@@ -84,7 +84,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     const queried = await this.connection.require().query(text, values);
     return {
       rowsAffected: queried.rowCount ?? queried.rows.length,
-      result: queried.rows[0]?.id,
+      result: queried.rows[0]?.id ?? null,
       parameters,
     };
   }

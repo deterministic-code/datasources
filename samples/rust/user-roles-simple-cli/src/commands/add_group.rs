@@ -21,7 +21,7 @@ impl AddGroup {
             "add_group",
             &[
                 Parameter::new(column.as_str(), self.name.as_str()),
-                Parameter::new("is_enabled", true),
+                Parameter::new("is_enabled", schema::flag(app.provider(), true)),
                 Parameter::new("created", created.as_str()),
                 Parameter::new("updated", updated.clone()),
             ],

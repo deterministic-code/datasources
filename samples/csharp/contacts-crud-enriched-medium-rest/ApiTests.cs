@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Datasources;
 using Datasources.Sqlite;
 
 namespace ContactsCrudEnrichedMediumRest.Tests;
@@ -8,7 +9,20 @@ public sealed class ApiTests
     [Fact]
     public async Task ContactsRoundTripAndLegacyContacts()
     {
-        var api = await Open();
+        var stamp = new DateTime(2026, 9, 22, 0, 0, 0, DateTimeKind.Utc);
+        var now = Clock.UtcNow;
+        var uuid = Clock.Uuid;
+        var n = 0;
+        var lines = new List<string>();
+        var record = Environment.GetEnvironmentVariable("RECORD_CONSOLE") == "1";
+        ICommandMiddleware middleware = record
+            ? new ConsoleCommandMiddleware(line => lines.Add(ExpectConsoleMiddleware.Signature(line)), () => new DateTimeOffset(stamp), new Dictionary<string, string> { ["isVerbose"] = "true" })
+            : new ExpectConsoleMiddleware((await File.ReadAllLinesAsync(Log())).Where(line => line.Length > 0).ToArray(), () => new DateTimeOffset(stamp));
+        try
+        {
+        Clock.UtcNow = () => stamp;
+        Clock.Uuid = () => Guid.Parse($"00000000-0000-0000-0000-{++n:D12}");
+        var api = await Open(middleware);
         var created = await api.Handle("POST", "/contacts/", """
             {
               "first_name": "Ada",
@@ -88,6 +102,16 @@ public sealed class ApiTests
         Assert.Equal(204, (await api.Handle("DELETE", "/legacy_contacts/?key=ada", null)).Status);
         using var legacyGone = JsonDocument.Parse((await api.Handle("GET", "/legacy_contacts", null)).Body);
         Assert.Equal(0, legacyGone.RootElement.GetArrayLength());
+        if (record)
+            await File.WriteAllLinesAsync(Log(), lines);
+        else
+            ((ExpectConsoleMiddleware)middleware).Complete();
+        }
+        finally
+        {
+            Clock.UtcNow = now;
+            Clock.Uuid = uuid;
+        }
     }
 
     [Fact]
@@ -124,11 +148,31 @@ public sealed class ApiTests
         Assert.Equal(200, (await api.Handle("GET", "/contacts/?id=&lonely&first_name=Ada%20Lovelace", null)).Status);
     }
 
-    static async Task<Api> Open()
+    static async Task<Api> Open(ICommandMiddleware? middleware = null)
     {
         var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["filename"] = ":memory:" });
         await connection.Open();
         await Migrate.Apply(connection.CreateCommand());
-        return new Api(new ContactsRepository(connection), new LegacyContactRepository(connection));
+        var contacts = new ContactsRepository(connection);
+        var legacy = new LegacyContactRepository(connection);
+        if (middleware is not null)
+        {
+            contacts.AddMiddleware(middleware);
+            legacy.AddMiddleware(middleware);
+        }
+        return new Api(contacts, legacy);
+    }
+
+    static string Log()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            var samples = Path.Combine(dir.FullName, "samples");
+            if (!Directory.Exists(samples)) continue;
+            var path = Path.Combine(samples, "contacts-crud-enriched-medium-rest-shared");
+            Directory.CreateDirectory(path);
+            return Path.Combine(path, "sqlite.log");
+        }
+        throw new InvalidOperationException("shared spec");
     }
 }

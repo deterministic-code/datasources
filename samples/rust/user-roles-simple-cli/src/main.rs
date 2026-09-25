@@ -47,12 +47,14 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     connection.open().await?;
     let command = connection.create_command();
     migrate::apply(command.as_ref(), connection.provider()).await?;
+    let stamp = env("CLI_NOW");
+    let clock = stamp.clone();
     command.add_middleware(Arc::new(ConsoleCommandMiddleware::with_sink(
         |line| eprintln!("{line}"),
-        || utc_iso_millis(SystemTime::now()),
+        move || clock.clone().unwrap_or_else(|| utc_iso_millis(SystemTime::now())),
     )));
     let app = App::new(command.as_ref(), connection.provider());
-    let app = match env("CLI_NOW") {
+    let app = match stamp {
         Some(stamp) => app.with_now(move || stamp.clone()),
         None => app,
     };

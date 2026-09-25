@@ -22,7 +22,7 @@ impl AddUser {
             &[
                 Parameter::new("username", self.username.as_str()),
                 Parameter::new("password", hashed.as_str()),
-                Parameter::new("is_enabled", true),
+                Parameter::new("is_enabled", schema::flag(app.provider(), true)),
                 Parameter::new("created", created.as_str()),
                 Parameter::new("updated", updated.clone()),
             ],

@@ -61,10 +61,7 @@ impl MysqlCommand {
         }
         Ok(MysqlExecuteResult {
             rows_affected: conn.affected_rows() as i64,
-            result: conn
-                .last_insert_id()
-                .map(|id| Value::Int(id as i64))
-                .unwrap_or(Value::Null),
+            result: Value::Int(conn.last_insert_id().unwrap_or(0) as i64),
         })
     }
 

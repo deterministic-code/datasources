@@ -124,7 +124,26 @@ describe("ConsoleCommandMiddleware", () => {
       "[2026-08-28T01:54:12.101Z]-[datasource][Request]-[{when: 2026-08-28T01:54:12.000Z, blob: AQID, n: 1}]",
     );
     expect(lines[3]).toBe(
-      "[2026-08-28T01:54:12.101Z]-[datasource][AfterCommand]-[{when: 2026-08-28T01:54:12.000Z, blob: AQID, n: 1}]",
+      "[2026-08-28T01:54:12.101Z]-[datasource][AfterCommand]-[{blob: AQID, n: 1, when: 2026-08-28T01:54:12.000Z}]",
+    );
+    lines.length = 0;
+    middleware.beforeCommand("SELECT 1", [
+      { name: "name", value: "Ada" },
+      { name: "missing", value: null },
+      { name: "on", value: true },
+      { name: "off", value: false },
+    ]);
+    middleware.afterCommand(
+      "SELECT 1",
+      undefined,
+      [{ name: "Ada", missing: null, on: true, off: false }],
+      2,
+    );
+    expect(lines[1]).toBe(
+      "[2026-08-28T01:54:12.101Z]-[datasource][Request]-[{name: Ada, missing: null, on: True, off: False}]",
+    );
+    expect(lines[3]).toBe(
+      "[2026-08-28T01:54:12.101Z]-[datasource][AfterCommand]-[{missing: null, name: Ada, off: False, on: True}]",
     );
   });
 });
