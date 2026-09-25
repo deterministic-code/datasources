@@ -1,8 +1,8 @@
 use crate::contact_lookups::ContactLookups;
 use chrono::{DateTime, Utc};
 use datasources::{
-    encode_rows, CRUDRepository, DatasourceError, ICRUDRepository, IReadonlyRepository,
-    Operator, Result, Row, Value, WhereClause,
+    encode_rows, CRUDRepository, DatasourceError, ICRUDRepository, IReadonlyRepository, Operator,
+    Result, Row, Value, Where,
 };
 use uuid::Uuid;
 
@@ -13,10 +13,7 @@ fn record(pairs: &[(&str, Value)]) -> Row {
         .collect()
 }
 
-pub async fn add_extra_contact(
-    service: &CRUDRepository,
-    ids: &ContactLookups,
-) -> Result<Row> {
+pub async fn add_extra_contact(service: &CRUDRepository, ids: &ContactLookups) -> Result<Row> {
     let stamp = Value::DateTime(
         DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
             .expect("stamp")
@@ -63,7 +60,7 @@ pub async fn add_extra_contact(
         return Err(DatasourceError::message("expected insert id"));
     };
     service
-        .read_single(Some(&WhereClause::new(Operator::equals("id", Value::Int(id)))))
+        .read_single(Some(&Where::new(Operator::equals("id", Value::Int(id)))))
         .await?
         .ok_or_else(|| DatasourceError::message(format!("extra contact {id} missing")))
 }

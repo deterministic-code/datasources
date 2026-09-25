@@ -44,13 +44,13 @@ public sealed class StatementParserTests
         Assert.IsType<InsertStatement>(StatementParser.Parse("INSERT INTO users (id, name) VALUES ($id, $name)"));
 
         var update = Assert.IsType<UpdateStatement>(StatementParser.Parse("UPDATE users SET name = $name WHERE id = $id"));
-        Assert.IsType<Operator.Equals>(Assert.IsType<WhereClause>(update.Where).Condition);
+        Assert.IsType<Operator.Equals>(Assert.IsType<Where>(update.Where).Condition);
 
         var notLike = Assert.IsType<UpdateStatement>(StatementParser.Parse("UPDATE users SET name = $name WHERE name NOT LIKE $name"));
-        Assert.IsType<Operator.NotLike>(Assert.IsType<WhereClause>(notLike.Where).Condition);
+        Assert.IsType<Operator.NotLike>(Assert.IsType<Where>(notLike.Where).Condition);
 
         var delete = Assert.IsType<DeleteStatement>(StatementParser.Parse("DELETE FROM users WHERE id = $id"));
-        Assert.IsType<Operator.Equals>(Assert.IsType<WhereClause>(delete.Where).Condition);
+        Assert.IsType<Operator.Equals>(Assert.IsType<Where>(delete.Where).Condition);
 
         var all = Assert.IsType<DeleteStatement>(StatementParser.Parse("DELETE FROM users"));
         Assert.Null(all.Where);
@@ -60,11 +60,11 @@ public sealed class StatementParserTests
     public void BuildsTheWhereTree()
     {
         var notLike = Assert.IsType<QueryStatement>(StatementParser.Parse("SELECT id FROM users WHERE name NOT LIKE $name"));
-        Assert.IsType<Operator.NotLike>(Assert.IsType<WhereClause>(notLike.Where).Condition);
+        Assert.IsType<Operator.NotLike>(Assert.IsType<Where>(notLike.Where).Condition);
 
         var exists = Assert.IsType<QueryStatement>(StatementParser.Parse(
             "SELECT id FROM users WHERE EXISTS (SELECT id FROM posts WHERE posts.user_id = users.id)"));
-        Assert.IsType<Operator.Exists>(Assert.IsType<WhereClause>(exists.Where).Condition);
+        Assert.IsType<Operator.Exists>(Assert.IsType<Where>(exists.Where).Condition);
 
         var full = Assert.IsType<QueryStatement>(StatementParser.Parse(
             "SELECT id FROM users FULL JOIN profiles ON users.id = profiles.user_id"));
@@ -80,7 +80,7 @@ public sealed class StatementParserTests
         Assert.True(shaped.Distinct);
         Assert.Equal(10, shaped.Limit);
         Assert.Equal(5, shaped.Offset);
-        Assert.IsType<Operator.Equals>(Assert.IsType<WhereClause>(shaped.Having).Condition);
+        Assert.IsType<Operator.Equals>(Assert.IsType<Where>(shaped.Having).Condition);
     }
 
     [Fact]
@@ -102,9 +102,9 @@ public sealed class StatementParserTests
         Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new Operator.Between("age", 18, 40), row));
         Assert.Equal(new Value.Bool(false), evaluator.Evaluate(new Operator.NotBetween("age", 18, 40), row));
         Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new Operator.NotIn("age", [1, 2]), row));
-        Assert.Equal("name NOT LIKE $name", new WhereClause(new Operator.NotLike("name", "%a")).GetText());
-        Assert.Equal("age NOT BETWEEN $age_0 AND $age_1", new WhereClause(new Operator.NotBetween("age", 1, 2)).GetText());
-        Assert.Equal("1 = 1", new WhereClause(new Operator.NotIn("id", [])).GetText());
-        Assert.Equal("NOT (name LIKE $name)", new WhereClause(new Operator.Not(new Operator.Like("name", "%a"))).GetText());
+        Assert.Equal("name NOT LIKE $name", new Where(new Operator.NotLike("name", "%a")).GetText());
+        Assert.Equal("age NOT BETWEEN $age_0 AND $age_1", new Where(new Operator.NotBetween("age", 1, 2)).GetText());
+        Assert.Equal("1 = 1", new Where(new Operator.NotIn("id", [])).GetText());
+        Assert.Equal("NOT (name LIKE $name)", new Where(new Operator.Not(new Operator.Like("name", "%a"))).GetText());
     }
 }

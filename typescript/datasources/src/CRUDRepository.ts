@@ -7,7 +7,7 @@ import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
 import { Literal } from "./statements/Literal.ts";
-import { Operator, WhereClause } from "./statements/index.ts";
+import { Operator, Where } from "./statements/index.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -287,7 +287,7 @@ export class CRUDRepository<T = Cells>
         throw new DatasourceError(`Missing Id value "${col}"`);
       return new Operator.Equals(col, record[col] as Scalar);
     });
-    return new WhereClause(
+    return new Where(
       parts.length === 0
         ? new Operator.Equals(new Literal(1), new Literal(1))
         : parts.reduce((left, right) => new Operator.And(left, right)),

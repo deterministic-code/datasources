@@ -46,7 +46,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         var keys = Keys(parents, sources, enrichment.From);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, TRelated>();
-        await foreach (var item in via.Read(new WhereClause(new Operator.In(enrichment.By, keys.Values.ToList()))))
+        await foreach (var item in via.Read(new Where(new Operator.In(enrichment.By, keys.Values.ToList()))))
         {
             var by = RepositoryTreeNode.Get(item!, enrichment.By);
             if (by is not null)
@@ -74,7 +74,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         var keys = Keys(parents, sources, enrichment.From);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, List<TRelated>>();
-        await foreach (var item in via.Read(new WhereClause(new Operator.In(enrichment.By, keys.Values.ToList()))))
+        await foreach (var item in via.Read(new Where(new Operator.In(enrichment.By, keys.Values.ToList()))))
         {
             var by = RepositoryTreeNode.Get(item!, enrichment.By);
             if (by is null) continue;

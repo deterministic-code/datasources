@@ -1,12 +1,12 @@
 use super::not_implemented::fail;
 use crate::i_repository::IRepository;
+use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;
@@ -56,11 +56,11 @@ impl ICRUDRepository for StubRepository {
         Err(fail(&self.provider))
     }
 
-    async fn update(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 
-    async fn delete(&self, _item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 

@@ -1,9 +1,9 @@
+use crate::i_where::IWhere;
 use crate::mappers::Mapper;
 use crate::mappers::TransformMapper;
 use crate::parameter::Parameter;
 use crate::statements::{DeleteStatement, InsertStatement, Statement, Text, UpdateStatement};
-use crate::text_where::TextWhere;
-use crate::where_trait::Where;
+use crate::where_text::WhereText;
 use crate::{QueryStatement, QueryStatementOptions};
 use std::sync::Arc;
 
@@ -39,7 +39,7 @@ impl RepositoryStatements {
         }
     }
 
-    pub fn query(&self, where_clause: Option<&dyn Where>) -> QueryStatement {
+    pub fn query(&self, where_clause: Option<&dyn IWhere>) -> QueryStatement {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
         let built = QueryStatement::new(QueryStatementOptions {
             where_clause,
@@ -48,7 +48,7 @@ impl RepositoryStatements {
         let text = map_sql(&self.query, built.get_text());
         match where_clause {
             Some(predicate) => {
-                QueryStatement::with_where(text, TextWhere::new(predicate.get_text()))
+                QueryStatement::with_where(text, WhereText::new(predicate.get_text()))
             }
             None => QueryStatement::text(text),
         }
@@ -61,22 +61,22 @@ impl RepositoryStatements {
         ))
     }
 
-    pub fn update(&self, fields: &[Parameter], where_clause: &dyn Where) -> UpdateStatement {
+    pub fn update(&self, fields: &[Parameter], where_clause: &dyn IWhere) -> UpdateStatement {
         let built = UpdateStatement::new(&self.table, fields, Some(where_clause));
         UpdateStatement::bound(
             map_sql(&self.update, built.get_text()),
-            Some(Box::new(TextWhere::new(where_clause.get_text()))),
+            Some(Box::new(WhereText::new(where_clause.get_text()))),
             built.parameters(),
         )
     }
 
-    pub fn delete(&self, where_clause: &dyn Where) -> DeleteStatement {
+    pub fn delete(&self, where_clause: &dyn IWhere) -> DeleteStatement {
         DeleteStatement::raw(
             map_sql(
                 &self.delete,
                 DeleteStatement::new(&self.table, Some(where_clause)).get_text(),
             ),
-            Some(Box::new(TextWhere::new(where_clause.get_text()))),
+            Some(Box::new(WhereText::new(where_clause.get_text()))),
         )
     }
 }

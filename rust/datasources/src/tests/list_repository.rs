@@ -1,14 +1,14 @@
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
+use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::{where_of, ReadInput};
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statements::{Operator, StatementEvaluator, WhereClause};
+use crate::statements::{Operator, StatementEvaluator, Where};
 use crate::value::Value;
-use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 
@@ -38,7 +38,7 @@ impl ListRepository {
         self.items.lock().expect("list").clone()
     }
 
-    fn filter(&self, where_clause: Option<&dyn Where>) -> Vec<Row> {
+    fn filter(&self, where_clause: Option<&dyn IWhere>) -> Vec<Row> {
         let items = self.items.lock().expect("list");
         match where_clause {
             None => items.clone(),
@@ -49,7 +49,7 @@ impl ListRepository {
                     .filter(|row| {
                         predicate
                             .as_any()
-                            .downcast_ref::<WhereClause>()
+                            .downcast_ref::<Where>()
                             .map(|statement| {
                                 evaluator.evaluate(&statement.condition, row) == Value::Bool(true)
                             })
@@ -96,7 +96,7 @@ impl ICRUDRepository for ListRepository {
         Ok(item.clone())
     }
 
-    async fn update(&self, item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         let id = item.get("id").cloned();
         let mut items = self.items.lock().expect("list");
         if let Some(index) = items.iter().position(|row| row.get("id") == id.as_ref()) {
@@ -105,7 +105,7 @@ impl ICRUDRepository for ListRepository {
         Ok(Response::new(Value::Null, 1))
     }
 
-    async fn delete(&self, item: &Row, _by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         let id = item.get("id").cloned();
         self.items
             .lock()
@@ -120,14 +120,14 @@ impl ICRUDRepository for ListRepository {
     }
 }
 
-fn id_clause(id: &dyn IdKey) -> Result<WhereClause> {
+fn id_clause(id: &dyn IdKey) -> Result<Where> {
     match (id.as_value(), id.as_row()) {
-        (Some(value), _) => Ok(WhereClause::new(Operator::equals("id", value.clone()))),
+        (Some(value), _) => Ok(Where::new(Operator::equals("id", value.clone()))),
         (_, Some(row)) => row
             .iter()
             .map(|(key, value)| Operator::equals(key.clone(), value.clone()))
             .reduce(|left, right| Operator::and(left, right))
-            .map(WhereClause::new)
+            .map(Where::new)
             .ok_or_else(|| DatasourceError::message("ReadSingleById requires an Id column")),
         _ => Err(DatasourceError::message(
             "ReadSingleById requires an Id column",

@@ -1,5 +1,5 @@
 import type { Scalar } from "./builders/Scalar.ts";
-import { Operator, WhereClause } from "./statements/index.ts";
+import { Operator, Where } from "./statements/index.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { IQuery } from "./statements/IQuery.ts";
@@ -75,7 +75,7 @@ const applyLookup = async <TRelated extends object>(
   if (keys.size === 0) return;
   const index = new Map<string, TRelated>();
   for await (const item of via.read(
-    new WhereClause(new Operator.In(enrichment.by, [...keys.values()])),
+    new Where(new Operator.In(enrichment.by, [...keys.values()])),
   )) {
     const by = props(item)[enrichment.by];
     if (hasKey(by)) index.set(keyOf(by), item);
@@ -103,7 +103,7 @@ const applyMany = async <TRelated extends object>(
   if (keys.size === 0) return;
   const index = new Map<string, TRelated[]>();
   for await (const item of via.read(
-    new WhereClause(new Operator.In(enrichment.by, [...keys.values()])),
+    new Where(new Operator.In(enrichment.by, [...keys.values()])),
   )) {
     const by = props(item)[enrichment.by];
     if (hasKey(by)) {

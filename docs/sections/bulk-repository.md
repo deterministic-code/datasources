@@ -205,7 +205,7 @@ pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
 Updates each item, then replace-syncs nested `many` lists.
 
 ```rust
-pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn Where>) -> Result<Response>
+pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 - `items` — parents to update
@@ -218,7 +218,7 @@ pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn Where>) -> 
 Deletes nested `many` rows for each item, then the parents.
 
 ```rust
-pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn Where>) -> Result<Response>
+pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 - `items` — parents to delete

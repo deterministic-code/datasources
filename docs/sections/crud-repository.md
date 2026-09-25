@@ -780,7 +780,7 @@ async fn create(&self, item: &mut Row) -> Result<Response>
 Updates one row. `None` `by_where` uses id columns.
 
 ```rust
-async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>
+async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 - `item` — row to update
@@ -793,7 +793,7 @@ async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Respo
 Deletes one row. `None` `by_where` uses id columns.
 
 ```rust
-async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>
+async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 - `item` — row to delete
@@ -1101,7 +1101,7 @@ no row
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L491-L578
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L678-L818
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L678-L814
 ```
 ```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L226-L306
 ```

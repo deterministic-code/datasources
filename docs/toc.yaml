@@ -63,7 +63,7 @@ pages:
     group: Code Reference
     parent: Statements
   - path: sections/where-clause.md
-    title: Where Clause
+    title: Where
     group: Code Reference
     parent: Statements
   - path: sections/expressions.md

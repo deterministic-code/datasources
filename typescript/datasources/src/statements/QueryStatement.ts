@@ -4,7 +4,7 @@ import type { Join, JoinKind } from "./Join.ts";
 import { orderText } from "./OrderBy.ts";
 import type { OrderBy } from "./OrderBy.ts";
 import type { QueryStatementOptions } from "./QueryStatementOptions.ts";
-import { WhereClause } from "./WhereClause.ts";
+import { Where } from "./Where.ts";
 
 const joinWord: Record<Exclude<JoinKind, "cross">, string> = {
   inner: "INNER JOIN",
@@ -15,7 +15,7 @@ const joinWord: Record<Exclude<JoinKind, "cross">, string> = {
 
 const joinOn = (join: Join): string => {
   if (!join.on) throw new Error("empty join");
-  return new WhereClause(join.on).getText();
+  return new Where(join.on).getText();
 };
 
 const joinSql = (joins: Join[] = []): string =>

@@ -154,7 +154,7 @@ contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name"
 contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true,
     nest: node => node.Include(addressTypes, "address_type_name", "address_type_id", "id", "name"));
 
-var loaded = await contacts.ReadSingle(new WhereClause(new Operator.Equals("id", 10)));
+var loaded = await contacts.ReadSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
 ```
 
@@ -168,7 +168,7 @@ contacts
         node.include(address_types, "address_type_name", "address_type_id", "id", Some("name".into()), false);
     });
 
-let loaded = contacts.read_single(Some(&WhereClause::new(Operator::equals("id", 10)))).await?;
+let loaded = contacts.read_single(Some(&Where::new(Operator::equals("id", 10)))).await?;
 contacts.create(contact).await?;
 ```
 
@@ -181,7 +181,7 @@ contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true
   node.include(addressTypes, "address_type_name", "address_type_id", "id", "name"),
 );
 
-const loaded = await contacts.readSingle(new WhereClause(new Operator.Equals("id", 10)));
+const loaded = await contacts.readSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 
@@ -782,10 +782,10 @@ let ds = default().expect("default");
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L34-L38)
 
 ```typescript
-DatasourceFactory.register("sqlite", new MockDriver());
-process.env.PROVIDER = "sqlite";
-process.env.DATASOURCE_URL = "sqlite:///:memory:";
-const ds = DatasourceFactory.default;
+afterAll(() => {
+  for (const key of envKeys) {
+    if (savedEnv[key] === undefined) delete process.env[key];
+    else process.env[key] = savedEnv[key];
 ```
 
 #### Register and Create
@@ -831,7 +831,10 @@ create(Some(&HashMap::from([("provider".into(), "missing".into())])));
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L41-L45)
 
 ```typescript
-DatasourceFactory.create({ provider: "missing" });
+describe("DatasourceFactory", () => {
+  it("default from environment", () => {
+    DatasourceFactory.register("sqlite", new MockDriver());
+    process.env.PROVIDER = "sqlite";
 ```
 
 ## Datasource
@@ -3137,22 +3140,26 @@ while (await reader.next()) {
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L226-L229)
 
 ```csharp
-new ReturnStatement("add", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)]).GetText());
+        "t",
+        [new Column("id", "INTEGER")],
+        [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)]).GetText());
+Assert.Throws<InvalidOperationException>(() =>
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1114-L1124)
 
 ```rust
-);
+let bound_fields = [min_n.as_str(), max_n.as_str()];
+let bounds = QueryStatement::new(QueryStatementOptions::new("users", &bound_fields));
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L325-L328)
 
 ```typescript
-).toBe("CALL save($id)");
-expect(
-  new ReturnStatement("add", [
-    { name: "id", value: 1 },
+    [{ name: "id", type: "INTEGER" }],
+    [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)],
+  ).getText(),
+).toBe(
 ```
 
 ## Statements
@@ -3325,7 +3332,7 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-Bound values live on [WhereClause](#where-clause). [IStatement](#istatement) is not an [IExpression](#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](#iwhere) is a clause ([IExpression](#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
+Bound values live on [Where](#where). [IStatement](#istatement) is not an [IExpression](#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](#iwhere) is a clause ([IExpression](#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
 
 ### See also
 
@@ -3337,13 +3344,13 @@ Bound values live on [WhereClause](#where-clause). [IStatement](#istatement) is 
 - [CreateIndexStatement](#create-index-statement)
 - [ExecuteStoredProcedureStatement](#execute-stored-procedure-statement)
 - [ReturnStatement](#return-statement)
-- [WhereClause](#where-clause)
+- [Where](#where)
 - [Expressions](#expressions)
 - [StatementEvaluator](#statement-evaluator)
 
 ## Query Statement
 
-`SELECT` text, or a compiled `SELECT` from a table, fields, optional [IWhere](#iwhere), and joins.
+`SELECT` text, or a compiled `SELECT` from [QueryStatementOptions](#querystatementoptions): table, fields, optional [IWhere](#iwhere), joins, grouping, order, and limit.
 
 ### Classes
 
@@ -3372,7 +3379,7 @@ class QueryStatement implements IQuery
 | Name | Description |
 | --- | --- |
 | [QueryStatement(text, where?)](#typescript-querystatement-querystatement-text-where) | Wraps query text and an optional [IWhere](#typescript-iwhere). |
-| [QueryStatement(table, fields, where?, joins?)](#typescript-querystatement-querystatement-table-fields-where-joins) | Compiles a `SELECT` from a table, fields, optional [IWhere](#typescript-iwhere), and joins. |
+| [QueryStatement(options)](#typescript-querystatement-querystatement-options) | Compiles a `SELECT` from [QueryStatementOptions](#typescript-querystatementoptions). |
 
 **Properties**
 
@@ -3403,24 +3410,21 @@ constructor(text: string, where?: IWhere)
 | `text` | command text |
 | `where` | optional [IWhere](#typescript-iwhere) |
 
-###### QueryStatement(table, fields, where?, joins?) {#typescript-querystatement-querystatement-table-fields-where-joins}
+###### QueryStatement(options) {#typescript-querystatement-querystatement-options}
 
-Compiles a `SELECT` from a table, fields, optional [IWhere](#typescript-iwhere), and joins.
+Compiles a `SELECT` from [QueryStatementOptions](#typescript-querystatementoptions).
 
 **Definition**
 
 ```typescript
-constructor(table: string, fields: string[], where?: IWhere, joins?: Join[])
+constructor(options: QueryStatementOptions)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `table` | table name |
-| `fields` | selected columns (`*` when empty) |
-| `where` | optional [IWhere](#typescript-iwhere) |
-| `joins` | optional [Join](#typescript-join) list |
+| `options` | table, fields, and optional where, joins, group, order, and limit |
 
 ###### getText() {#typescript-querystatement-gettext}
 
@@ -3435,6 +3439,195 @@ getText(): string
 **Returns**
 
 `string`
+
+##### QueryStatementOptions {#typescript-querystatementoptions}
+
+```typescript
+type QueryStatementOptions = {
+  table: string
+  fields: string[]
+  where?: IWhere
+  joins?: Join[]
+  groupBy?: string[]
+  orderBy?: OrderBy[]
+  limit?: number
+}
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| table | Table name. |
+| fields | Selected columns. Empty compiles `SELECT *`. Aggregate fragments from [Aggregate](#typescript-aggregate) belong here. |
+| where | Optional [IWhere](#typescript-iwhere). |
+| joins | Optional [Join](#typescript-join) list. |
+| groupBy | Optional `GROUP BY` columns. Empty or omitted leaves the clause off. |
+| orderBy | Optional [OrderBy](#typescript-orderby) list. Empty or omitted leaves the clause off. |
+| limit | Optional `LIMIT`. `0` is kept. A negative value throws. |
+
+##### Aggregate {#typescript-aggregate}
+
+```typescript
+const Aggregate: {
+  count: (column: string, alias?: string) => string
+  sum: (column: string, alias?: string) => string
+  min: (column: string, alias?: string) => string
+  max: (column: string, alias?: string) => string
+}
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [count(column, alias?)](#typescript-aggregate-count-column-alias) | `COUNT(column)`, or `COUNT(column) AS alias`. Pass `"*"` for `COUNT(*)`. |
+| [sum(column, alias?)](#typescript-aggregate-sum-column-alias) | `SUM(column)`, or `SUM(column) AS alias`. |
+| [min(column, alias?)](#typescript-aggregate-min-column-alias) | `MIN(column)`, or `MIN(column) AS alias`. |
+| [max(column, alias?)](#typescript-aggregate-max-column-alias) | `MAX(column)`, or `MAX(column) AS alias`. |
+
+###### count(column, alias?) {#typescript-aggregate-count-column-alias}
+
+`COUNT(column)`, or `COUNT(column) AS alias`. Pass `"*"` for `COUNT(*)`.
+
+**Definition**
+
+```typescript
+count(column: string, alias?: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column or `*` |
+| `alias` | optional result name |
+
+**Returns**
+
+`string`
+
+###### sum(column, alias?) {#typescript-aggregate-sum-column-alias}
+
+`SUM(column)`, or `SUM(column) AS alias`.
+
+**Definition**
+
+```typescript
+sum(column: string, alias?: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`string`
+
+###### min(column, alias?) {#typescript-aggregate-min-column-alias}
+
+`MIN(column)`, or `MIN(column) AS alias`.
+
+**Definition**
+
+```typescript
+min(column: string, alias?: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`string`
+
+###### max(column, alias?) {#typescript-aggregate-max-column-alias}
+
+`MAX(column)`, or `MAX(column) AS alias`.
+
+**Definition**
+
+```typescript
+max(column: string, alias?: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`string`
+
+##### OrderBy {#typescript-orderby}
+
+```typescript
+type OrderBy = { column: string; direction: SortDirection }
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [asc(column)](#typescript-orderby-asc-column) | Sort ascending. |
+| [desc(column)](#typescript-orderby-desc-column) | Sort descending. |
+
+###### asc(column) {#typescript-orderby-asc-column}
+
+Sort ascending.
+
+**Definition**
+
+```typescript
+asc(column: string): OrderBy
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | sort column |
+
+**Returns**
+
+[OrderBy](#typescript-orderby)
+
+###### desc(column) {#typescript-orderby-desc-column}
+
+Sort descending.
+
+**Definition**
+
+```typescript
+desc(column: string): OrderBy
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | sort column |
+
+**Returns**
+
+[OrderBy](#typescript-orderby)
+
+##### SortDirection {#typescript-sortdirection}
+
+```typescript
+type SortDirection = "asc" | "desc"
+```
 
 ##### Join {#typescript-join}
 
@@ -3547,7 +3740,7 @@ public sealed record QueryStatement : IQuery
 | Name | Description |
 | --- | --- |
 | [QueryStatement(text, where)](#csharp-querystatement-querystatement-text-where) | Wraps query text and an optional [IWhere](#csharp-iwhere). |
-| [QueryStatement(table, fields, where, joins)](#csharp-querystatement-querystatement-table-fields-where-joins) | Compiles a `SELECT` from a table, fields, optional [IWhere](#csharp-iwhere), and joins. |
+| [QueryStatement(options)](#csharp-querystatement-querystatement-options) | Compiles a `SELECT` from [QueryStatementOptions](#csharp-querystatementoptions). |
 
 **Properties**
 
@@ -3578,28 +3771,21 @@ public QueryStatement(string text, IWhere? where = null)
 | `text` | command text |
 | `where` | optional [IWhere](#csharp-iwhere) |
 
-###### QueryStatement(table, fields, where, joins) {#csharp-querystatement-querystatement-table-fields-where-joins}
+###### QueryStatement(options) {#csharp-querystatement-querystatement-options}
 
-Compiles a `SELECT` from a table, fields, optional [IWhere](#csharp-iwhere), and joins.
+Compiles a `SELECT` from [QueryStatementOptions](#csharp-querystatementoptions).
 
 **Definition**
 
 ```csharp
-public QueryStatement(
-    string table,
-    IReadOnlyList<string> fields,
-    IWhere? where = null,
-    IReadOnlyList<Join>? joins = null)
+public QueryStatement(QueryStatementOptions options)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `table` | table name |
-| `fields` | selected columns (`*` when empty) |
-| `where` | optional [IWhere](#csharp-iwhere) |
-| `joins` | optional [Join](#csharp-join) list |
+| `options` | table, fields, and optional where, joins, group, order, and limit |
 
 ###### GetText() {#csharp-querystatement-gettext}
 
@@ -3614,6 +3800,182 @@ public string GetText()
 **Returns**
 
 `string`
+
+##### QueryStatementOptions {#csharp-querystatementoptions}
+
+```csharp
+public sealed class QueryStatementOptions
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Table | Table name. |
+| Fields | Selected columns. Empty compiles `SELECT *`. Aggregate fragments from [Aggregate](#csharp-aggregate) belong here. |
+| Where | Optional [IWhere](#csharp-iwhere). |
+| Joins | Optional [Join](#csharp-join) list. |
+| GroupBy | Optional `GROUP BY` columns. Empty or omitted leaves the clause off. |
+| OrderBy | Optional [OrderBy](#csharp-orderby) list. Empty or omitted leaves the clause off. |
+| Limit | Optional `LIMIT`. `0` is kept. A negative value throws. |
+
+##### Aggregate {#csharp-aggregate}
+
+```csharp
+public static class Aggregate
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Count(column, alias)](#csharp-aggregate-count-column-alias) | `COUNT(column)`, or `COUNT(column) AS alias`. Pass `"*"` for `COUNT(*)`. |
+| [Sum(column, alias)](#csharp-aggregate-sum-column-alias) | `SUM(column)`, or `SUM(column) AS alias`. |
+| [Min(column, alias)](#csharp-aggregate-min-column-alias) | `MIN(column)`, or `MIN(column) AS alias`. |
+| [Max(column, alias)](#csharp-aggregate-max-column-alias) | `MAX(column)`, or `MAX(column) AS alias`. |
+
+###### Count(column, alias) {#csharp-aggregate-count-column-alias}
+
+`COUNT(column)`, or `COUNT(column) AS alias`. Pass `"*"` for `COUNT(*)`.
+
+**Definition**
+
+```csharp
+public static string Count(string column, string? alias = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column or `*` |
+| `alias` | optional result name |
+
+**Returns**
+
+`string`
+
+###### Sum(column, alias) {#csharp-aggregate-sum-column-alias}
+
+`SUM(column)`, or `SUM(column) AS alias`.
+
+**Definition**
+
+```csharp
+public static string Sum(string column, string? alias = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`string`
+
+###### Min(column, alias) {#csharp-aggregate-min-column-alias}
+
+`MIN(column)`, or `MIN(column) AS alias`.
+
+**Definition**
+
+```csharp
+public static string Min(string column, string? alias = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`string`
+
+###### Max(column, alias) {#csharp-aggregate-max-column-alias}
+
+`MAX(column)`, or `MAX(column) AS alias`.
+
+**Definition**
+
+```csharp
+public static string Max(string column, string? alias = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`string`
+
+##### OrderBy {#csharp-orderby}
+
+```csharp
+public sealed record OrderBy(string Column, SortDirection Direction)
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Asc(column)](#csharp-orderby-asc-column) | Sort ascending. |
+| [Desc(column)](#csharp-orderby-desc-column) | Sort descending. |
+
+###### Asc(column) {#csharp-orderby-asc-column}
+
+Sort ascending.
+
+**Definition**
+
+```csharp
+public static OrderBy Asc(string column)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | sort column |
+
+**Returns**
+
+[OrderBy](#csharp-orderby)
+
+###### Desc(column) {#csharp-orderby-desc-column}
+
+Sort descending.
+
+**Definition**
+
+```csharp
+public static OrderBy Desc(string column)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | sort column |
+
+**Returns**
+
+[OrderBy](#csharp-orderby)
+
+##### SortDirection {#csharp-sortdirection}
+
+```csharp
+public enum SortDirection
+```
 
 ##### Join {#csharp-join}
 
@@ -3713,21 +4075,21 @@ pub trait Query: Statement
 
 | Name | Description |
 | --- | --- |
-| [where_clause()](#rust-query-where_clause) | Optional [Where](#rust-where) used to build this query. |
+| [where_clause()](#rust-query-where_clause) | Optional [IWhere](#rust-iwhere) used to build this query. |
 
 ###### where_clause() {#rust-query-where_clause}
 
-Optional [Where](#rust-where) used to build this query.
+Optional [IWhere](#rust-iwhere) used to build this query.
 
 **Definition**
 
 ```rust
-fn where_clause(&self) -> Option<&dyn Where>
+fn where_clause(&self) -> Option<&dyn IWhere>
 ```
 
 **Returns**
 
-`Option<&dyn `[Where](#rust-where)`>`
+`Option<&dyn `[IWhere](#rust-iwhere)`>`
 
 ##### QueryStatement {#rust-querystatement}
 
@@ -3740,15 +4102,15 @@ pub struct QueryStatement
 | Name | Description |
 | --- | --- |
 | [text(text)](#rust-querystatement-text-text) | Wraps query text. |
-| [with_where(text, where_clause)](#rust-querystatement-with_where-text-where_clause) | Wraps query text and a [Where](#rust-where). |
-| [new(table, fields, where_clause, joins)](#rust-querystatement-new-table-fields-where_clause-joins) | Compiles a `SELECT` from a table, fields, optional [Where](#rust-where), and joins. |
+| [with_where(text, where_clause)](#rust-querystatement-with_where-text-where_clause) | Wraps query text and an [IWhere](#rust-iwhere). |
+| [new(options)](#rust-querystatement-new-options) | Compiles a `SELECT` from [QueryStatementOptions](#rust-querystatementoptions). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
 | [get_text()](#rust-querystatement-get_text) | Command text. |
-| [where_clause()](#rust-querystatement-where_clause) | Optional [Where](#rust-where) used to build this query. |
+| [where_clause()](#rust-querystatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this query. |
 
 ###### text(text) {#rust-querystatement-text-text}
 
@@ -3772,12 +4134,12 @@ pub fn text(text: impl Into<String>) -> Self
 
 ###### with_where(text, where_clause) {#rust-querystatement-with_where-text-where_clause}
 
-Wraps query text and a [Where](#rust-where).
+Wraps query text and an [IWhere](#rust-iwhere).
 
 **Definition**
 
 ```rust
-pub fn with_where(text: impl Into<String>, where_clause: impl Where + 'static) -> Self
+pub fn with_where(text: impl Into<String>, where_clause: impl IWhere + 'static) -> Self
 ```
 
 **Parameters**
@@ -3785,35 +4147,27 @@ pub fn with_where(text: impl Into<String>, where_clause: impl Where + 'static) -
 | Name | Description |
 | --- | --- |
 | `text` | command text |
-| `where_clause` | [Where](#rust-where) |
+| `where_clause` | [IWhere](#rust-iwhere) |
 
 **Returns**
 
 [QueryStatement](#rust-querystatement)
 
-###### new(table, fields, where_clause, joins) {#rust-querystatement-new-table-fields-where_clause-joins}
+###### new(options) {#rust-querystatement-new-options}
 
-Compiles a `SELECT` from a table, fields, optional [Where](#rust-where), and joins.
+Compiles a `SELECT` from [QueryStatementOptions](#rust-querystatementoptions).
 
 **Definition**
 
 ```rust
-pub fn new(
-    table: impl AsRef<str>,
-    fields: &[&str],
-    where_clause: Option<&dyn Where>,
-    joins: &[Join],
-) -> Self
+pub fn new(options: QueryStatementOptions<'_>) -> Self
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `table` | table name |
-| `fields` | selected columns (`*` when empty) |
-| `where_clause` | optional [Where](#rust-where) |
-| `joins` | [Join](#rust-join) list |
+| `options` | table, fields, and optional where, joins, group, order, and limit |
 
 **Returns**
 
@@ -3835,17 +4189,220 @@ fn get_text(&self) -> String
 
 ###### where_clause() {#rust-querystatement-where_clause}
 
-Optional [Where](#rust-where) used to build this query.
+Optional [IWhere](#rust-iwhere) used to build this query.
 
 **Definition**
 
 ```rust
-fn where_clause(&self) -> Option<&dyn Where>
+fn where_clause(&self) -> Option<&dyn IWhere>
 ```
 
 **Returns**
 
-`Option<&dyn `[Where](#rust-where)`>`
+`Option<&dyn `[IWhere](#rust-iwhere)`>`
+
+##### QueryStatementOptions {#rust-querystatementoptions}
+
+```rust
+pub struct QueryStatementOptions<'a>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(table, fields)](#rust-querystatementoptions-new-table-fields) | Table and fields, with where, joins, group, order, and limit unset. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| table | Table name. |
+| fields | Selected columns. Empty compiles `SELECT *`. Aggregate fragments from [Aggregate](#rust-aggregate) belong here. |
+| where_clause | Optional [IWhere](#rust-iwhere). |
+| joins | [Join](#rust-join) list. Empty leaves the clause off. |
+| group_by | `GROUP BY` columns. Empty leaves the clause off. |
+| order_by | [OrderBy](#rust-orderby) list. Empty leaves the clause off. |
+| limit | Optional `LIMIT`. `Some(0)` is kept. A negative value panics. |
+
+###### new(table, fields) {#rust-querystatementoptions-new-table-fields}
+
+Table and fields, with where, joins, group, order, and limit unset.
+
+**Definition**
+
+```rust
+pub fn new(table: &'a str, fields: &'a [&'a str]) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `table` | table name |
+| `fields` | selected columns (`*` when empty) |
+
+**Returns**
+
+[QueryStatementOptions](#rust-querystatementoptions)
+
+##### Aggregate {#rust-aggregate}
+
+```rust
+pub struct Aggregate
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [count(column, alias)](#rust-aggregate-count-column-alias) | `COUNT(column)`, or `COUNT(column) AS alias`. Pass `"*"` for `COUNT(*)`. |
+| [sum(column, alias)](#rust-aggregate-sum-column-alias) | `SUM(column)`, or `SUM(column) AS alias`. |
+| [min(column, alias)](#rust-aggregate-min-column-alias) | `MIN(column)`, or `MIN(column) AS alias`. |
+| [max(column, alias)](#rust-aggregate-max-column-alias) | `MAX(column)`, or `MAX(column) AS alias`. |
+
+###### count(column, alias) {#rust-aggregate-count-column-alias}
+
+`COUNT(column)`, or `COUNT(column) AS alias`. Pass `"*"` for `COUNT(*)`.
+
+**Definition**
+
+```rust
+pub fn count(column: &str, alias: Option<&str>) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column or `*` |
+| `alias` | optional result name |
+
+**Returns**
+
+`String`
+
+###### sum(column, alias) {#rust-aggregate-sum-column-alias}
+
+`SUM(column)`, or `SUM(column) AS alias`.
+
+**Definition**
+
+```rust
+pub fn sum(column: &str, alias: Option<&str>) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`String`
+
+###### min(column, alias) {#rust-aggregate-min-column-alias}
+
+`MIN(column)`, or `MIN(column) AS alias`.
+
+**Definition**
+
+```rust
+pub fn min(column: &str, alias: Option<&str>) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`String`
+
+###### max(column, alias) {#rust-aggregate-max-column-alias}
+
+`MAX(column)`, or `MAX(column) AS alias`.
+
+**Definition**
+
+```rust
+pub fn max(column: &str, alias: Option<&str>) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | column |
+| `alias` | optional result name |
+
+**Returns**
+
+`String`
+
+##### OrderBy {#rust-orderby}
+
+```rust
+pub struct OrderBy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [asc(column)](#rust-orderby-asc-column) | Sort ascending. |
+| [desc(column)](#rust-orderby-desc-column) | Sort descending. |
+
+###### asc(column) {#rust-orderby-asc-column}
+
+Sort ascending.
+
+**Definition**
+
+```rust
+pub fn asc(column: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | sort column |
+
+**Returns**
+
+[OrderBy](#rust-orderby)
+
+###### desc(column) {#rust-orderby-desc-column}
+
+Sort descending.
+
+**Definition**
+
+```rust
+pub fn desc(column: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `column` | sort column |
+
+**Returns**
+
+[OrderBy](#rust-orderby)
+
+##### SortDirection {#rust-sortdirection}
+
+```rust
+pub enum SortDirection
+```
 
 ##### Join {#rust-join}
 
@@ -3935,7 +4492,7 @@ pub enum JoinKind
 
 ### Remarks
 
-[Command](#command) uses `GetText()` / `getText()` / `get_text()` only. Keep the [WhereClause](#where-clause) when the caller needs bound parameters. Empty `fields` compiles `SELECT *`.
+[Command](#command) uses `GetText()` / `getText()` / `get_text()` only. Keep the [Where](#where) when the caller needs bound parameters. Empty `fields` compiles `SELECT *`. Clauses append as `GROUP BY`, `ORDER BY`, then `LIMIT`. An empty group or order list is omitted. `Aggregate` returns a select-list fragment such as `COUNT(*) AS n`.
 
 ### Examples
 
@@ -3945,33 +4502,33 @@ pub enum JoinKind
 
 ```csharp
 var select = new QueryStatement("SELECT 1");
-var byId = new Where("id = 1");
+var byId = new WhereText("id = 1");
 var withWhere = new QueryStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1126-L1129)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1177-L1180)
 
 ```rust
-assert!(QueryStatement::text("SELECT 1").where_clause().is_none());
-let mock = MockQuery::with_where("q", MockWhere::new("w"));
-assert!(mock.where_clause().is_some());
+    Column::new("tenant_id", "INTEGER"),
+    Column::new("user_id", "INTEGER"),
+    Column::new("qty", "INTEGER"),
+],
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L33-L35)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L41-L43)
 
 ```typescript
-} from "../index.ts";
-import type { ITableConstraint, TableConstraintKind } from "../index.ts";
-import type { Parameter } from "../index.ts";
+const select = new QueryStatement("SELECT 1");
+const where = new WhereText("id = 1");
+const withWhere = new QueryStatement("SELECT 1", where);
 ```
 
 #### Compile a SELECT
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L127-L130)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L128-L130)
 
 ```csharp
-var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
-var query = new QueryStatement("users", ["id", "name"], where);
+var query = new QueryStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
 ```
 
 **After: select**
@@ -3980,12 +4537,15 @@ var query = new QueryStatement("users", ["id", "name"], where);
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L935)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L926-L933)
 
 ```rust
-    "SELECT id, name FROM users WHERE id = $id AND age > $age"
+        left: Box::new(Expression::Literal(Literal::new(true))),
+        right: Box::new(Expression::Literal(Literal::new(false))),
+    })
+    .get_text(),
+    "true = false"
 );
-assert!(query.where_clause().is_some());
 ```
 
 **After: select**
@@ -3994,21 +4554,239 @@ assert!(query.where_clause().is_some());
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L175-L180)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L193-L196)
 
 ```typescript
-    () =>
-      new WhereClause(
-        new Operator.In(new Identifier("id"), new ArrayExpression([new Identifier("x")])),
-      ).parameters,
-  ).toThrow("empty in");
-});
+name: "name", value: "a" 
 ```
 
 **After: select**
 
 ```
 SELECT id, name FROM users WHERE id = $id
+```
+
+#### Group, aggregate, order, and limit
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L157-L166)
+
+```csharp
+var grouped = new QueryStatement(new()
+{
+    Table = "orders",
+    Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
+    Where = new Where(new Operator.Equals("status", "open")),
+    Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
+    GroupBy = ["status"],
+    OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
+    Limit = 10,
+});
+```
+
+**After: grouped select**
+
+```
+SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L977-L991)
+
+```rust
+.contains('='));
+assert!(Where::new(Operator::Equals {
+    left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
+        chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
+    )))),
+    right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
+        chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
+    )))),
+})
+.get_text()
+.contains('='));
+assert!(Where::new(Operator::Equals {
+    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+})
+```
+
+**After: grouped select**
+
+```
+SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L231-L239)
+
+```typescript
+  "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
+);
+```
+
+**After: grouped select**
+
+```
+SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
+```
+
+#### Group rows
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L168-L168)
+
+```csharp
+var byStatus = new QueryStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
+```
+
+**After: group by**
+
+```
+SELECT id FROM users GROUP BY id
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L996-L999)
+
+```rust
+    right: Box::new(Expression::Literal(Literal::new(2_i64))),
+})
+.parameters()
+.is_empty());
+```
+
+**After: group by**
+
+```
+SELECT id FROM users GROUP BY id
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L243-L243)
+
+```typescript
+limit: 10,
+```
+
+**After: group by**
+
+```
+SELECT id FROM users GROUP BY id
+```
+
+#### Aggregate without grouping
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L170-L170)
+
+```csharp
+var bounds = new QueryStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
+```
+
+**After: min and max**
+
+```
+SELECT MIN(n), MAX(n) FROM users
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1001-L1004)
+
+```rust
+Where::new(Operator::and(
+    Operator::not(Operator::equals("id", 1_i64)),
+    Operator::equals("age", 18_i64)
+))
+```
+
+**After: min and max**
+
+```
+SELECT MIN(n), MAX(n) FROM users
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L245-L245)
+
+```typescript
+
+```
+
+**After: min and max**
+
+```
+SELECT MIN(n), MAX(n) FROM users
+```
+
+#### Order rows
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L172-L172)
+
+```csharp
+var ordered = new QueryStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
+```
+
+**After: order by**
+
+```
+SELECT id FROM users ORDER BY id ASC, name DESC
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1006-L1009)
+
+```rust
+    "(NOT (id = $id)) AND age = $age"
+);
+```
+
+**After: order by**
+
+```
+SELECT id FROM users ORDER BY id ASC, name DESC
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L247-L251)
+
+```typescript
+);
+const byStatus = new QueryStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
+```
+
+**After: order by**
+
+```
+SELECT id FROM users ORDER BY id ASC, name DESC
+```
+
+#### Limit rows
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L174-L174)
+
+```csharp
+var limited = new QueryStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
+```
+
+**After: limit**
+
+```
+SELECT id FROM users LIMIT 10
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1014-L1017)
+
+```rust
+    .is_empty());
+let in_ids = Where::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)]));
+```
+
+**After: limit**
+
+```
+SELECT id FROM users LIMIT 10
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L253-L253)
+
+```typescript
+table: "users",
+```
+
+**After: limit**
+
+```
+SELECT id FROM users LIMIT 10
 ```
 
 ## Insert Statement
@@ -4265,7 +5043,8 @@ Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](#command) 
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L151-L152)
 
 ```csharp
-var insert = new InsertStatement("users", fields);
+Join.Inner("orders", "users.id", "orders.user_id"),
+Join.Left("payments", "orders.id", "payments.order_id"),
 ```
 
 **After: insert**
@@ -4277,8 +5056,11 @@ INSERT INTO users (id, name) VALUES ($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L975-L979)
 
 ```rust
-);
-let update = UpdateStatement::new("users", &fields, Some(&where_clause));
+})
+.get_text()
+.contains('='));
+assert!(Where::new(Operator::Equals {
+    left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
 ```
 
 **After: insert**
@@ -4290,9 +5072,10 @@ INSERT INTO users (id, name) VALUES ($id, $name)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L221-L224)
 
 ```typescript
-).toBe(
-  "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
-);
+table: "users",
+fields: ["users.id"],
+where: new Where(new Operator.Equals("users.id", 1)),
+joins: [
 ```
 
 **After: insert**
@@ -4495,7 +5278,7 @@ pub struct UpdateStatement
 
 | Name | Description |
 | --- | --- |
-| [text(text, where_clause)](#rust-updatestatement-text-text-where_clause) | Wraps update text and an optional [Where](#rust-where). |
+| [text(text, where_clause)](#rust-updatestatement-text-text-where_clause) | Wraps update text and an optional [IWhere](#rust-iwhere). |
 | [new(table, fields, where_clause)](#rust-updatestatement-new-table-fields-where_clause) | Compiles an `UPDATE`. |
 
 **Methods**
@@ -4503,16 +5286,16 @@ pub struct UpdateStatement
 | Name | Description |
 | --- | --- |
 | [get_text()](#rust-updatestatement-get_text) | Command text. |
-| [where_clause()](#rust-updatestatement-where_clause) | Optional [Where](#rust-where) used to build this update. |
+| [where_clause()](#rust-updatestatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this update. |
 
 ###### text(text, where_clause) {#rust-updatestatement-text-text-where_clause}
 
-Wraps update text and an optional [Where](#rust-where).
+Wraps update text and an optional [IWhere](#rust-iwhere).
 
 **Definition**
 
 ```rust
-pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn IWhere>>) -> Self
 ```
 
 **Parameters**
@@ -4520,7 +5303,7 @@ pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Se
 | Name | Description |
 | --- | --- |
 | `text` | command text |
-| `where_clause` | optional [Where](#rust-where) |
+| `where_clause` | optional [IWhere](#rust-iwhere) |
 
 **Returns**
 
@@ -4533,7 +5316,7 @@ Compiles an `UPDATE`.
 **Definition**
 
 ```rust
-pub fn new(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&dyn Where>) -> Self
+pub fn new(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&dyn IWhere>) -> Self
 ```
 
 **Parameters**
@@ -4542,7 +5325,7 @@ pub fn new(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&d
 | --- | --- |
 | `table` | table name |
 | `fields` | [Parameter](#rust-parameter) columns and bound values |
-| `where_clause` | optional [Where](#rust-where) |
+| `where_clause` | optional [IWhere](#rust-iwhere) |
 
 **Returns**
 
@@ -4564,21 +5347,21 @@ fn get_text(&self) -> String
 
 ###### where_clause() {#rust-updatestatement-where_clause}
 
-Optional [Where](#rust-where) used to build this update.
+Optional [IWhere](#rust-iwhere) used to build this update.
 
 **Definition**
 
 ```rust
-fn where_clause(&self) -> Option<&dyn Where>
+fn where_clause(&self) -> Option<&dyn IWhere>
 ```
 
 **Returns**
 
-`Option<&dyn `[Where](#rust-where)`>`
+`Option<&dyn `[IWhere](#rust-iwhere)`>`
 
 ### Remarks
 
-Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iwhere) is present. Keep the [WhereClause](#where-clause) when the caller needs bound parameters.
+Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iwhere) is present. Keep the [Where](#where) when the caller needs bound parameters.
 
 ### Examples
 
@@ -4587,7 +5370,9 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L153-L155)
 
 ```csharp
-var update = new UpdateStatement("users", fields, where);
+        Join.Right("profiles", "users.id", "profiles.user_id"),
+    ],
+}).GetText());
 ```
 
 **After: update**
@@ -4599,12 +5384,12 @@ UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L985)
 
 ```rust
-);
-assert!(update.where_clause().is_some());
-assert!(UpdateStatement::new("users", &fields, None)
-    .where_clause()
-    .is_none());
-let delete = DeleteStatement::new("users", Some(&where_clause));
+        chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
+    )))),
+    right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
+        chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
+    )))),
+})
 ```
 
 **After: update**
@@ -4616,9 +5401,11 @@ UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L225-L229)
 
 ```typescript
-  "SELECT id FROM users",
-);
-const insert = new InsertStatement("users", [...fields]);
+    Join.inner("orders", "users.id", "orders.user_id"),
+    Join.left("payments", "orders.id", "payments.order_id"),
+    Join.right("profiles", "users.id", "profiles.user_id"),
+  ],
+}).getText(),
 ```
 
 **After: update**
@@ -4828,14 +5615,14 @@ pub struct DeleteStatement
 | Name | Description |
 | --- | --- |
 | [new(table, where_clause)](#rust-deletestatement-new-table-where_clause) | Compiles a `DELETE`. |
-| [raw(text, where_clause)](#rust-deletestatement-raw-text-where_clause) | Wraps delete text and an optional [Where](#rust-where). |
+| [raw(text, where_clause)](#rust-deletestatement-raw-text-where_clause) | Wraps delete text and an optional [IWhere](#rust-iwhere). |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
 | [get_text()](#rust-deletestatement-get_text) | Command text. |
-| [where_clause()](#rust-deletestatement-where_clause) | Optional [Where](#rust-where) used to build this delete. |
+| [where_clause()](#rust-deletestatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this delete. |
 
 ###### new(table, where_clause) {#rust-deletestatement-new-table-where_clause}
 
@@ -4844,7 +5631,7 @@ Compiles a `DELETE`.
 **Definition**
 
 ```rust
-pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> Self
+pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn IWhere>) -> Self
 ```
 
 **Parameters**
@@ -4852,7 +5639,7 @@ pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> Self
 | Name | Description |
 | --- | --- |
 | `table` | table name |
-| `where_clause` | optional [Where](#rust-where) |
+| `where_clause` | optional [IWhere](#rust-iwhere) |
 
 **Returns**
 
@@ -4860,12 +5647,12 @@ pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> Self
 
 ###### raw(text, where_clause) {#rust-deletestatement-raw-text-where_clause}
 
-Wraps delete text and an optional [Where](#rust-where).
+Wraps delete text and an optional [IWhere](#rust-iwhere).
 
 **Definition**
 
 ```rust
-pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn IWhere>>) -> Self
 ```
 
 **Parameters**
@@ -4873,7 +5660,7 @@ pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Sel
 | Name | Description |
 | --- | --- |
 | `text` | command text |
-| `where_clause` | optional [Where](#rust-where) |
+| `where_clause` | optional [IWhere](#rust-iwhere) |
 
 **Returns**
 
@@ -4895,21 +5682,21 @@ fn get_text(&self) -> String
 
 ###### where_clause() {#rust-deletestatement-where_clause}
 
-Optional [Where](#rust-where) used to build this delete.
+Optional [IWhere](#rust-iwhere) used to build this delete.
 
 **Definition**
 
 ```rust
-fn where_clause(&self) -> Option<&dyn Where>
+fn where_clause(&self) -> Option<&dyn IWhere>
 ```
 
 **Returns**
 
-`Option<&dyn `[Where](#rust-where)`>`
+`Option<&dyn `[IWhere](#rust-iwhere)`>`
 
 ### Remarks
 
-Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is present. `Raw` / `raw` wraps command text without compiling. Keep the [WhereClause](#where-clause) when the caller needs bound parameters.
+Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is present. `Raw` / `raw` wraps command text without compiling. Keep the [Where](#where) when the caller needs bound parameters.
 
 ### Examples
 
@@ -4918,7 +5705,9 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L158-L160)
 
 ```csharp
-var delete = new DeleteStatement("users", where);
+{
+    Table = "orders",
+    Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
 ```
 
 **After: delete**
@@ -4930,8 +5719,12 @@ DELETE FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L994)
 
 ```rust
-);
-assert!(delete.where_clause().is_some());
+    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+})
+.get_text()
+.contains('='));
+assert!(Where::new(Operator::In {
 ```
 
 **After: delete**
@@ -4943,8 +5736,7 @@ DELETE FROM users WHERE id = $id AND age > $age
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L233-L235)
 
 ```typescript
-  "UPDATE users SET id = $id, name = $name WHERE id = $id",
-);
+
 ```
 
 **After: delete**
@@ -5847,7 +6639,8 @@ Compiled form is `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTR
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L162-L163)
 
 ```csharp
-var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
+Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
+GroupBy = ["status"],
 ```
 
 **After: create table**
@@ -5859,11 +6652,11 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L995-L1003)
 
 ```rust
-let create_table = CreateTableStatement::new(
-    "users",
-    &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
-    &[],
-);
+    left: Box::new(Expression::Literal(Literal::new(1_i64))),
+    right: Box::new(Expression::Literal(Literal::new(2_i64))),
+})
+.parameters()
+.is_empty());
 ```
 
 **After: create table**
@@ -5875,7 +6668,11 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L239-L243)
 
 ```typescript
-const del = new DeleteStatement("users", where);
+where: new Where(new Operator.Equals("status", "open")),
+joins: [Join.inner("customers", "orders.customer_id", "customers.id")],
+groupBy: ["status"],
+orderBy: [OrderBy.desc("total"), OrderBy.asc("status")],
+limit: 10,
 ```
 
 **After: create table**
@@ -5889,20 +6686,9 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L164-L177)
 
 ```csharp
-var namedTable = new CreateTableStatement(
-    "orders",
-    [
-        new Column("id", "INTEGER", new ColumnDefault("0", "df_id"), new NotNull("nn_id")),
-        new Column("tenant_id", "INTEGER"),
-        new Column("user_id", "INTEGER"),
-        new Column("qty", "INTEGER")
-    ],
-    [
-        new PrimaryKey("pk_orders", ["id", "tenant_id"]),
-        new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
-        new UniqueConstraint("uq_orders_user", ["user_id"]),
-        new CheckConstraint("chk_orders_qty", "qty > 0")
-    ]);
+    OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
+    Limit = 10,
+});
 ```
 
 **After: named constraints**
@@ -5914,26 +6700,7 @@ CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1008-L1031)
 
 ```rust
-            .default(ColumnDefault::new("0", Some("df_id")))
-            .not_null(NotNull::new(Some("nn_id"))),
-        Column::new("tenant_id", "INTEGER"),
-        Column::new("user_id", "INTEGER"),
-        Column::new("qty", "INTEGER"),
-    ],
-    &[
-        PrimaryKey::new("pk_orders", &["id", "tenant_id"]),
-        ForeignKey::new(
-            "fk_orders_user",
-            &["user_id"],
-            "users",
-            &["id"],
-            Some(ReferentialAction::Cascade),
-            None,
-        ),
-        UniqueConstraint::new("uq_orders_user", &["user_id"]),
-        CheckConstraint::new("chk_orders_qty", "qty > 0"),
-    ],
-);
+
 ```
 
 **After: named constraints**
@@ -5945,11 +6712,7 @@ CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L244-L258)
 
 ```typescript
-);
-const createTable = new CreateTableStatement("users", [
-  { name: "id", type: "INTEGER" },
-  { name: "name", type: "TEXT" },
-]);
+});
 ```
 
 **After: named constraints**
@@ -6205,7 +6968,8 @@ Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX nam
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L209-L210)
 
 ```csharp
-var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
+"CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
+new CreateTableStatement(
 ```
 
 **After: create index**
@@ -6217,7 +6981,10 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1076-L1083)
 
 ```rust
-let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);
+    })
+    .get_text(),
+    "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
+);
 ```
 
 **After: create index**
@@ -6229,8 +6996,8 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L300-L301)
 
 ```typescript
-);
-expect(() =>
+new UniqueConstraint("uq_orders_user", ["user_id"]),
+new CheckConstraint("chk_orders_qty", "qty > 0"),
 ```
 
 **After: create index**
@@ -6244,7 +7011,9 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L211-L213)
 
 ```csharp
-
+"items",
+[new Column("id", "INTEGER", new ColumnDefault("0")), new Column("name", "TEXT", NotNull: new NotNull())],
+[new ForeignKey("fk_items_user", ["id"], "users", ["id"])]).GetText());
 ```
 
 **After: create unique index**
@@ -6256,7 +7025,9 @@ CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1085-L1087)
 
 ```rust
-let call = ExecuteStoredProcedureStatement::new("save", &fields);
+    .get_text(),
+    "SELECT id FROM users"
+);
 ```
 
 **After: create unique index**
@@ -6268,9 +7039,8 @@ CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L302-L304)
 
 ```typescript
-new CreateTableStatement("t", [{ name: "id", type: "INTEGER" }], [
-  { kind: "nope" as TableConstraintKind, name: "x" } as ITableConstraint,
-]).getText(),
+  ],
+);
 ```
 
 **After: create unique index**
@@ -6520,7 +7290,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L214-L215)
 
 ```csharp
-var call = new ExecuteStoredProcedureStatement("save", fields);
+
 ```
 
 **After: call**
@@ -6532,8 +7302,8 @@ CALL save($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1089-L1090)
 
 ```rust
-ExecuteStoredProcedureStatement::new("save", &[]).get_text(),
-"CALL save()"
+let total = Aggregate::sum("amount", Some("total"));
+let grouped_fields = ["status", count.as_str(), total.as_str()];
 ```
 
 **After: call**
@@ -6545,8 +7315,8 @@ CALL save($id, $name)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L305-L306)
 
 ```typescript
-).toThrow("empty constraint");
-const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
+  "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
+);
 ```
 
 **After: call**
@@ -6808,7 +7578,8 @@ SELECT add($id, $name)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1095-L1096)
 
 ```rust
-
+"orders.customer_id",
+"customers.id",
 ```
 
 **After: return**
@@ -6820,8 +7591,8 @@ SELECT add($id, $name)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L310-L311)
 
 ```typescript
-);
-const call = new ExecuteStoredProcedureStatement("save", [...fields]);
+[
+  { name: "id", type: "INTEGER", default: new ColumnDefault("0") },
 ```
 
 **After: return**
@@ -6830,7 +7601,7 @@ const call = new ExecuteStoredProcedureStatement("save", [...fields]);
 SELECT add($id, $name)
 ```
 
-## Where Clause
+## Where
 
 [IWhere](#iwhere) over an [IExpression](#iexpression) tree. A clause is an expression, not a statement. Placeholders are `$field` and `$field_0` for `In`.
 
@@ -6838,18 +7609,18 @@ SELECT add($id, $name)
 
 ##### TypeScript
 
-##### WhereClause {#typescript-whereclause}
+##### Where {#typescript-where}
 
 ```typescript
-class WhereClause implements IWhere
+class Where implements IWhere
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [WhereClause(condition)](#typescript-whereclause-whereclause-condition) | Builds a where clause from an [IExpression](#typescript-iexpression). |
-| [WhereClause(column, op, value)](#typescript-whereclause-whereclause-column-op-value) | Builds a comparison from a column, a [Cmp](#typescript-cmp) alias, and a literal. |
+| [Where(condition)](#typescript-where-where-condition) | Builds a where clause from an [IExpression](#typescript-iexpression). |
+| [Where(column, op, value)](#typescript-where-where-column-op-value) | Builds a comparison from a column, a [Cmp](#typescript-cmp) alias, and a literal. |
 
 **Properties**
 
@@ -6862,11 +7633,11 @@ class WhereClause implements IWhere
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-whereclause-gettext) | Predicate text. |
-| [and(column, op, value) / or(column, op, value)](#typescript-whereclause-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under [Operator.And](#typescript-operator) or `Operator.Or`. |
-| [map(column, value)](#typescript-whereclause-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
+| [getText()](#typescript-where-gettext) | Predicate text. |
+| [and(column, op, value) / or(column, op, value)](#typescript-where-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under [Operator.And](#typescript-operator) or `Operator.Or`. |
+| [map(column, value)](#typescript-where-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
 
-###### WhereClause(condition) {#typescript-whereclause-whereclause-condition}
+###### Where(condition) {#typescript-where-where-condition}
 
 Builds a where clause from an [IExpression](#typescript-iexpression).
 
@@ -6882,7 +7653,7 @@ constructor(condition: IExpression)
 | --- | --- |
 | `condition` | [IExpression](#typescript-iexpression) |
 
-###### WhereClause(column, op, value) {#typescript-whereclause-whereclause-column-op-value}
+###### Where(column, op, value) {#typescript-where-where-column-op-value}
 
 Builds a comparison from a column, a [Cmp](#typescript-cmp) alias, and a literal.
 
@@ -6900,7 +7671,7 @@ constructor(column: string, op: Comparison, value: Cell)
 | `op` | [Cmp](#typescript-cmp) alias such as `eq` or `gt` |
 | `value` | [Cell](#typescript-cell) |
 
-###### getText() {#typescript-whereclause-gettext}
+###### getText() {#typescript-where-gettext}
 
 Predicate text.
 
@@ -6914,15 +7685,15 @@ getText(): string
 
 `string`
 
-###### and(column, op, value) / or(column, op, value) {#typescript-whereclause-and-column-op-value-or-column-op-value}
+###### and(column, op, value) / or(column, op, value) {#typescript-where-and-column-op-value-or-column-op-value}
 
 Nests this clause with another comparison under [Operator.And](#typescript-operator) or `Operator.Or`.
 
 **Definition**
 
 ```typescript
-and(column: string, op: Comparison, value: Cell): WhereClause
-or(column: string, op: Comparison, value: Cell): WhereClause
+and(column: string, op: Comparison, value: Cell): Where
+or(column: string, op: Comparison, value: Cell): Where
 ```
 
 **Parameters**
@@ -6935,16 +7706,16 @@ or(column: string, op: Comparison, value: Cell): WhereClause
 
 **Returns**
 
-[WhereClause](#typescript-whereclause)
+[Where](#typescript-where)
 
-###### map(column, value) {#typescript-whereclause-map-column-value}
+###### map(column, value) {#typescript-where-map-column-value}
 
 Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
 
 **Definition**
 
 ```typescript
-map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): WhereClause
+map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): Where
 ```
 
 **Parameters**
@@ -6956,7 +7727,7 @@ map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell)
 
 **Returns**
 
-[WhereClause](#typescript-whereclause)
+[Where](#typescript-where)
 
 ##### IWhere {#typescript-iwhere}
 
@@ -6964,25 +7735,25 @@ map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell)
 interface IWhere extends IExpression, IText {}
 ```
 
-##### Where {#typescript-where}
+##### WhereText {#typescript-wheretext}
 
 ```typescript
-class Where implements IWhere
+class WhereText implements IWhere
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [Where(text)](#typescript-where-where-text) | Wraps predicate text. |
+| [WhereText(text)](#typescript-wheretext-wheretext-text) | Wraps predicate text. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-where-gettext) | Predicate text. |
+| [getText()](#typescript-wheretext-gettext) | Predicate text. |
 
-###### Where(text) {#typescript-where-where-text}
+###### WhereText(text) {#typescript-wheretext-wheretext-text}
 
 Wraps predicate text.
 
@@ -6998,7 +7769,7 @@ constructor(text: string)
 | --- | --- |
 | `text` | predicate text |
 
-###### getText() {#typescript-where-gettext}
+###### getText() {#typescript-wheretext-gettext}
 
 Predicate text.
 
@@ -7020,18 +7791,18 @@ type Scalar = string | number | boolean | bigint | null
 
 ##### C#
 
-##### WhereClause {#csharp-whereclause}
+##### Where {#csharp-where}
 
 ```csharp
-public sealed record WhereClause(IExpression Condition) : IWhere
+public sealed record Where(IExpression Condition) : IWhere
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [WhereClause(condition)](#csharp-whereclause-whereclause-condition) | Builds a where clause from an [IExpression](#csharp-iexpression). |
-| [WhereClause(column, op, value)](#csharp-whereclause-whereclause-column-op-value) | Builds a comparison from a column, a [Cmp](#csharp-cmp) alias, and a literal. |
+| [Where(condition)](#csharp-where-where-condition) | Builds a where clause from an [IExpression](#csharp-iexpression). |
+| [Where(column, op, value)](#csharp-where-where-column-op-value) | Builds a comparison from a column, a [Cmp](#csharp-cmp) alias, and a literal. |
 
 **Properties**
 
@@ -7044,18 +7815,18 @@ public sealed record WhereClause(IExpression Condition) : IWhere
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-whereclause-gettext) | Predicate text. |
-| [And(column, op, value) / Or(column, op, value)](#csharp-whereclause-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under `Operator.And` or `Operator.Or`. |
-| [Map(column, value)](#csharp-whereclause-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
+| [GetText()](#csharp-where-gettext) | Predicate text. |
+| [And(column, op, value) / Or(column, op, value)](#csharp-where-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under `Operator.And` or `Operator.Or`. |
+| [Map(column, value)](#csharp-where-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
 
-###### WhereClause(condition) {#csharp-whereclause-whereclause-condition}
+###### Where(condition) {#csharp-where-where-condition}
 
 Builds a where clause from an [IExpression](#csharp-iexpression).
 
 **Definition**
 
 ```csharp
-public WhereClause(IExpression Condition)
+public Where(IExpression Condition)
 ```
 
 **Parameters**
@@ -7064,14 +7835,14 @@ public WhereClause(IExpression Condition)
 | --- | --- |
 | `condition` | [IExpression](#csharp-iexpression) |
 
-###### WhereClause(column, op, value) {#csharp-whereclause-whereclause-column-op-value}
+###### Where(column, op, value) {#csharp-where-where-column-op-value}
 
 Builds a comparison from a column, a [Cmp](#csharp-cmp) alias, and a literal.
 
 **Definition**
 
 ```csharp
-public WhereClause(string column, Comparison op, Value? value)
+public Where(string column, Comparison op, Value? value)
 ```
 
 **Parameters**
@@ -7082,7 +7853,7 @@ public WhereClause(string column, Comparison op, Value? value)
 | `op` | [Cmp](#csharp-cmp) alias such as `eq` or `gt` |
 | `value` | cell value |
 
-###### GetText() {#csharp-whereclause-gettext}
+###### GetText() {#csharp-where-gettext}
 
 Predicate text.
 
@@ -7096,15 +7867,15 @@ public string GetText()
 
 `string`
 
-###### And(column, op, value) / Or(column, op, value) {#csharp-whereclause-and-column-op-value-or-column-op-value}
+###### And(column, op, value) / Or(column, op, value) {#csharp-where-and-column-op-value-or-column-op-value}
 
 Nests this clause with another comparison under `Operator.And` or `Operator.Or`.
 
 **Definition**
 
 ```csharp
-public WhereClause And(string column, Comparison op, Value? value)
-public WhereClause Or(string column, Comparison op, Value? value)
+public Where And(string column, Comparison op, Value? value)
+public Where Or(string column, Comparison op, Value? value)
 ```
 
 **Parameters**
@@ -7117,16 +7888,16 @@ public WhereClause Or(string column, Comparison op, Value? value)
 
 **Returns**
 
-[WhereClause](#csharp-whereclause)
+[Where](#csharp-where)
 
-###### Map(column, value) {#csharp-whereclause-map-column-value}
+###### Map(column, value) {#csharp-where-map-column-value}
 
 Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
 
 **Definition**
 
 ```csharp
-public WhereClause Map(Func<string, string> column, Func<string, Value, Value> value)
+public Where Map(Func<string, string> column, Func<string, Value, Value> value)
 ```
 
 **Parameters**
@@ -7138,7 +7909,7 @@ public WhereClause Map(Func<string, string> column, Func<string, Value, Value> v
 
 **Returns**
 
-[WhereClause](#csharp-whereclause)
+[Where](#csharp-where)
 
 ##### IWhere {#csharp-iwhere}
 
@@ -7146,32 +7917,32 @@ public WhereClause Map(Func<string, string> column, Func<string, Value, Value> v
 public interface IWhere : IExpression, IText
 ```
 
-##### Where {#csharp-where}
+##### WhereText {#csharp-wheretext}
 
 ```csharp
-public sealed class Where : IWhere
+public sealed record WhereText : IWhere
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [Where(text)](#csharp-where-where-text) | Wraps predicate text. |
+| [WhereText(text)](#csharp-wheretext-wheretext-text) | Wraps predicate text. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-where-gettext) | Predicate text. |
+| [GetText()](#csharp-wheretext-gettext) | Predicate text. |
 
-###### Where(text) {#csharp-where-where-text}
+###### WhereText(text) {#csharp-wheretext-wheretext-text}
 
 Wraps predicate text.
 
 **Definition**
 
 ```csharp
-public Where(string text)
+public WhereText(string text)
 ```
 
 **Parameters**
@@ -7180,7 +7951,7 @@ public Where(string text)
 | --- | --- |
 | `text` | predicate text |
 
-###### GetText() {#csharp-where-gettext}
+###### GetText() {#csharp-wheretext-gettext}
 
 Predicate text.
 
@@ -7196,24 +7967,24 @@ string GetText()
 
 ##### Rust
 
-##### WhereClause {#rust-whereclause}
+##### Where {#rust-where}
 
 ```rust
-pub struct WhereClause
+pub struct Where
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(condition)](#rust-whereclause-new-condition) | Builds a where clause from an [Expression](#rust-expression). |
-| [binary(column, op, value)](#rust-whereclause-binary-column-op-value) | Builds a comparison from a column, a [Cmp](#rust-cmp) alias, and a literal. |
-| [and(column, op, value) / or(column, op, value)](#rust-whereclause-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under `Operator::and` or `Operator::or`. |
-| [map(column, value)](#rust-whereclause-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
-| [get_text()](#rust-whereclause-get_text) | Predicate text. |
-| [parameters()](#rust-whereclause-parameters) | Bound [Parameter](#rust-parameter) list. |
+| [new(condition)](#rust-where-new-condition) | Builds a where clause from an [Expression](#rust-expression). |
+| [binary(column, op, value)](#rust-where-binary-column-op-value) | Builds a comparison from a column, a [Cmp](#rust-cmp) alias, and a literal. |
+| [and(column, op, value) / or(column, op, value)](#rust-where-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under `Operator::and` or `Operator::or`. |
+| [map(column, value)](#rust-where-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
+| [get_text()](#rust-where-get_text) | Predicate text. |
+| [parameters()](#rust-where-parameters) | Bound [Parameter](#rust-parameter) list. |
 
-###### new(condition) {#rust-whereclause-new-condition}
+###### new(condition) {#rust-where-new-condition}
 
 Builds a where clause from an [Expression](#rust-expression).
 
@@ -7231,9 +8002,9 @@ pub fn new(condition: impl Into<Expression>) -> Self
 
 **Returns**
 
-[WhereClause](#rust-whereclause)
+[Where](#rust-where)
 
-###### binary(column, op, value) {#rust-whereclause-binary-column-op-value}
+###### binary(column, op, value) {#rust-where-binary-column-op-value}
 
 Builds a comparison from a column, a [Cmp](#rust-cmp) alias, and a literal.
 
@@ -7253,9 +8024,9 @@ pub fn binary(column: &str, op: fn(&str, Value) -> Operator, value: impl Into<Va
 
 **Returns**
 
-[WhereClause](#rust-whereclause)
+[Where](#rust-where)
 
-###### and(column, op, value) / or(column, op, value) {#rust-whereclause-and-column-op-value-or-column-op-value}
+###### and(column, op, value) / or(column, op, value) {#rust-where-and-column-op-value-or-column-op-value}
 
 Nests this clause with another comparison under `Operator::and` or `Operator::or`.
 
@@ -7276,9 +8047,9 @@ pub fn or(self, column: &str, op: fn(&str, Value) -> Operator, value: impl Into<
 
 **Returns**
 
-[WhereClause](#rust-whereclause)
+[Where](#rust-where)
 
-###### map(column, value) {#rust-whereclause-map-column-value}
+###### map(column, value) {#rust-where-map-column-value}
 
 Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
 
@@ -7300,9 +8071,9 @@ where
 
 **Returns**
 
-`Result<`[WhereClause](#rust-whereclause)`>`
+`Result<`[Where](#rust-where)`>`
 
-###### get_text() {#rust-whereclause-get_text}
+###### get_text() {#rust-where-get_text}
 
 Predicate text.
 
@@ -7316,7 +8087,7 @@ fn get_text(&self) -> String
 
 `String`
 
-###### parameters() {#rust-whereclause-parameters}
+###### parameters() {#rust-where-parameters}
 
 Bound [Parameter](#rust-parameter) list.
 
@@ -7330,31 +8101,31 @@ fn parameters(&self) -> Vec<Parameter>
 
 `Vec<`[Parameter](#rust-parameter)`>`
 
-##### Where {#rust-where}
+##### IWhere {#rust-iwhere}
 
 ```rust
-pub trait Where: Text {}
+pub trait IWhere: Text {}
 ```
 
-##### TextWhere {#rust-textwhere}
+##### WhereText {#rust-wheretext}
 
 ```rust
-pub struct TextWhere
+pub struct WhereText
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(text)](#rust-textwhere-new-text) | Wraps predicate text. |
+| [new(text)](#rust-wheretext-new-text) | Wraps predicate text. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-textwhere-get_text) | Predicate text. |
+| [get_text()](#rust-wheretext-get_text) | Predicate text. |
 
-###### new(text) {#rust-textwhere-new-text}
+###### new(text) {#rust-wheretext-new-text}
 
 Wraps predicate text.
 
@@ -7372,9 +8143,9 @@ pub fn new(text: impl Into<String>) -> Self
 
 **Returns**
 
-[TextWhere](#rust-textwhere)
+[WhereText](#rust-wheretext)
 
-###### get_text() {#rust-textwhere-get_text}
+###### get_text() {#rust-wheretext-get_text}
 
 Predicate text.
 
@@ -7390,7 +8161,7 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-Construct the predicate with [Operator](#operator) records, then wrap it: `new WhereClause(new Operator.Equals("id", 9))`. A column, [Cmp](#cmp) alias, and literal is the same tree: `new WhereClause("id", eq, 9)`. [QueryStatement](#query-statement) / [UpdateStatement](#update-statement) / [DeleteStatement](#delete-statement) embed `WhereClause.GetText()` in the command SQL. Keep the [WhereClause](#whereclause) when the caller needs bound parameters. [StatementEvaluator](#statement-evaluator) interprets the same tree against a parameter map. Raw text [Where](#where) is not evaluable.
+Construct the predicate with [Operator](#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [QueryStatement](#query-statement) / [UpdateStatement](#update-statement) / [DeleteStatement](#delete-statement) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [StatementEvaluator](#statement-evaluator) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
 
 ### Examples
 
@@ -7418,7 +8189,11 @@ id IN ($id_0, $id_1)
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L659-L663)
 
 ```rust
-));
+assert!(txn.aborted());
+txn.set_commit_error("c");
+assert!(txn.commit().await.is_err());
+txn.set_abort_error("a");
+assert!(txn.abort().await.is_err());
 ```
 
 **After: and**
@@ -7436,9 +8211,9 @@ id IN ($id_0, $id_1)
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L31-L33)
 
 ```typescript
-  ge,
-  le,
-} from "../index.ts";
+gt,
+lt,
+ge,
 ```
 
 **After: and**
@@ -7458,12 +8233,12 @@ id IN ($id_0, $id_1)
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ComparisonAliasTests.cs#L11-L17)
 
 ```csharp
-var equals = new WhereClause("username", eq, "grace");
-var notEquals = new WhereClause("id", ne, 2);
-var greater = new WhereClause("n", gt, 0);
-var less = new WhereClause("n", lt, 0);
-var greaterOrEqual = new WhereClause("n", ge, 0);
-var lessOrEqual = new WhereClause("n", le, 0);
+var equals = new Where("username", eq, "grace");
+var notEquals = new Where("id", ne, 2);
+var greater = new Where("n", gt, 0);
+var less = new Where("n", lt, 0);
+var greaterOrEqual = new Where("n", ge, 0);
+var lessOrEqual = new Where("n", le, 0);
 var both = equals.And("is_enabled", eq, 0);
 ```
 
@@ -7482,13 +8257,12 @@ username = $username AND is_enabled = $is_enabled
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2490-L2496)
 
 ```rust
-    "children",
-    encode_rows(&[record(&[("label", Value::from("a"))])]),
-)]),
-record(&[(
-    "children",
-    encode_rows(&[
-        record(&[("label", Value::from("b"))]),
+    stored
+        .iter()
+        .find(|row| row["id"] == Value::Int(1))
+        .unwrap()["label"],
+    Value::from("aa")
+);
 ```
 
 **After: equals**
@@ -7506,13 +8280,7 @@ username = $username AND is_enabled = $is_enabled
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L350-L356)
 
 ```typescript
-describe("comparison aliases", () => {
-  it("renders comparison symbols", () => {
-    const equals = new WhereClause("username", eq, "grace");
-    const notEquals = new WhereClause("id", ne, 2);
-    const greater = new WhereClause("n", gt, 0);
-    const less = new WhereClause("n", lt, 0);
-    const greaterOrEqual = new WhereClause("n", ge, 0);
+const call = new ExecuteStoredProcedureStatement("save", [...fields]);
 ```
 
 **After: equals**
@@ -7533,7 +8301,7 @@ username = $username AND is_enabled = $is_enabled
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
-var query = new QueryStatement("users", ["id", "name"], where);
+var query = new QueryStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
 ```
 
 **After: select**
@@ -7545,9 +8313,9 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L935)
 
 ```rust
-    "SELECT id, name FROM users WHERE id = $id AND age > $age"
+    .get_text(),
+    "true = false"
 );
-assert!(query.where_clause().is_some());
 ```
 
 **After: select**
@@ -7559,12 +8327,11 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L175-L180)
 
 ```typescript
-    () =>
-      new WhereClause(
-        new Operator.In(new Identifier("id"), new ArrayExpression([new Identifier("x")])),
-      ).parameters,
-  ).toThrow("empty in");
-});
+).toEqual([]);
+class Ghost extends Operator {}
+expect(() => evaluator.evaluate(new Ghost(), row)).toThrow("empty expression");
+expect(() => new Where(new Ghost()).getText()).toThrow("empty expression");
+expect(() => new Where(new Ghost()).parameters).toThrow("empty expression");
 ```
 
 **After: select**
@@ -7575,7 +8342,7 @@ SELECT id, name FROM users WHERE id = $id
 
 ## Expressions
 
-AST nodes for [WhereClause](#where-clause). `Operator` records hold operands; `GetText()` maps them to SQL.
+AST nodes for [Where](#where). `Operator` records hold operands; `GetText()` maps them to SQL.
 
 ### Classes
 
@@ -8053,19 +8820,13 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L743-L758)
 
 ```rust
-    .parameters()
-    .len(),
-    3
-);
-let not_where = WhereClause::new(Operator::not(WhereClause::new(Operator::equals(
-    "id", 1_i64,
-))));
+
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L63-L73)
 
 ```typescript
-
+]);
 ```
 
 #### Column, alias, literal
@@ -8073,12 +8834,12 @@ let not_where = WhereClause::new(Operator::not(WhereClause::new(Operator::equals
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ComparisonAliasTests.cs#L11-L17)
 
 ```csharp
-var equals = new WhereClause("username", eq, "grace");
-var notEquals = new WhereClause("id", ne, 2);
-var greater = new WhereClause("n", gt, 0);
-var less = new WhereClause("n", lt, 0);
-var greaterOrEqual = new WhereClause("n", ge, 0);
-var lessOrEqual = new WhereClause("n", le, 0);
+var equals = new Where("username", eq, "grace");
+var notEquals = new Where("id", ne, 2);
+var greater = new Where("n", gt, 0);
+var less = new Where("n", lt, 0);
+var greaterOrEqual = new Where("n", ge, 0);
+var lessOrEqual = new Where("n", le, 0);
 var both = equals.And("is_enabled", eq, 0);
 ```
 
@@ -8097,13 +8858,12 @@ username = $username AND is_enabled = $is_enabled
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2490-L2496)
 
 ```rust
-    "children",
-    encode_rows(&[record(&[("label", Value::from("a"))])]),
-)]),
-record(&[(
-    "children",
-    encode_rows(&[
-        record(&[("label", Value::from("b"))]),
+    stored
+        .iter()
+        .find(|row| row["id"] == Value::Int(1))
+        .unwrap()["label"],
+    Value::from("aa")
+);
 ```
 
 **After: equals**
@@ -8121,13 +8881,7 @@ username = $username AND is_enabled = $is_enabled
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L350-L356)
 
 ```typescript
-describe("comparison aliases", () => {
-  it("renders comparison symbols", () => {
-    const equals = new WhereClause("username", eq, "grace");
-    const notEquals = new WhereClause("id", ne, 2);
-    const greater = new WhereClause("n", gt, 0);
-    const less = new WhereClause("n", lt, 0);
-    const greaterOrEqual = new WhereClause("n", ge, 0);
+const call = new ExecuteStoredProcedureStatement("save", [...fields]);
 ```
 
 **After: equals**
@@ -8144,7 +8898,7 @@ username = $username AND is_enabled = $is_enabled
 
 ## StatementEvaluator
 
-Interprets an [IExpression](#expressions) against a name→value map. [WhereClause.GetText](#where-clause) materializes SQL; this type evaluates.
+Interprets an [IExpression](#expressions) against a name→value map. [Where.GetText](#where) materializes SQL; this type evaluates.
 
 ### Classes
 
@@ -8255,7 +9009,7 @@ pub fn evaluate(&self, expression: &Expression, parameters: &Row) -> Value
 
 ### Remarks
 
-Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A raw text [Where](#where) is not evaluable.
+Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A raw text [WhereText](#wheretext) is not evaluable.
 
 ### Examples
 
@@ -8264,23 +9018,19 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L244-L245)
 
 ```csharp
-var evaluator = new StatementEvaluator();
-IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };
+
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1166-L1170)
 
 ```rust
-        &row
-    ),
-    yes
 );
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L100-L101)
 
 ```typescript
-});
+
 ```
 
 ## Repository
@@ -9326,9 +10076,9 @@ var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryO
     EntityMapper = new PluralizerMapper(),
 });
 
-var byId = await repo.ReadSingle(new WhereClause("id", eq, 1));
+var byId = await repo.ReadSingle(new Where("id", eq, 1));
 var disabled = new List<User>();
-await foreach (var row in repo.Read(new WhereClause("username", eq, "grace").And("is_enabled", eq, 0)))
+await foreach (var row in repo.Read(new Where("username", eq, "grace").And("is_enabled", eq, 0)))
     disabled.Add(row);
 ```
 
@@ -9377,12 +10127,12 @@ let mut options = create_repository_options::<User>();
 options.entity_mapper = Box::new(PluralizerMapper::new());
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let by_id = repo
-    .read_single(Some(&WhereClause::binary("id", eq, 1_i64)))
+    .read_single(Some(&Where::binary("id", eq, 1_i64)))
     .await
     .unwrap()
     .unwrap();
 let disabled = repo
-    .read(Some(&WhereClause::binary("username", eq, "grace").and(
+    .read(Some(&Where::binary("username", eq, "grace").and(
         "is_enabled",
         eq,
         0_i64,
@@ -9430,9 +10180,9 @@ const connection = await open(ds, `
 const repo = ds.createReadonlyRepository(User, connection, {
   entityMapper: new PluralizerMapper(),
 });
-const byId = await repo.readSingle(new WhereClause("id", eq, 1));
+const byId = await repo.readSingle(new Where("id", eq, 1));
 const disabled: User[] = [];
-for await (const row of repo.read(new WhereClause("username", eq, "grace").and("is_enabled", eq, 0)))
+for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
   disabled.push(row);
 ```
 
@@ -9489,12 +10239,12 @@ var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepo
 });
 
 var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-var byId = await repo.ReadSingle(new WhereClause("Key", eq, Ada));
+var byId = await repo.ReadSingle(new Where("Key", eq, Ada));
 var byLogin = new List<UserAccount>();
-await foreach (var row in repo.Read(new WhereClause("Login", eq, "ada").And("Active", eq, true)))
+await foreach (var row in repo.Read(new Where("Login", eq, "ada").And("Active", eq, true)))
     byLogin.Add(row);
 var later = new List<UserAccount>();
-await foreach (var row in repo.Read(new WhereClause("Active", eq, true).And("Opened", gt, opened)))
+await foreach (var row in repo.Read(new Where("Active", eq, true).And("Opened", gt, opened)))
     later.Add(row);
 ```
 
@@ -9569,7 +10319,7 @@ options.column_mappings = Box::new(DictionaryMapper::new([
 let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
-    .read_single(Some(&WhereClause::binary(
+    .read_single(Some(&Where::binary(
         "Key",
         eq,
         Uuid::parse_str(ADA).unwrap(),
@@ -9579,13 +10329,13 @@ let by_id = repo
     .unwrap();
 let by_login = repo
     .read(Some(
-        &WhereClause::binary("Login", eq, "ada").and("Active", eq, true),
+        &Where::binary("Login", eq, "ada").and("Active", eq, true),
     ))
     .await
     .unwrap();
 let later = repo
     .read(Some(
-        &WhereClause::binary("Active", eq, true).and("Opened", gt, opened),
+        &Where::binary("Active", eq, true).and("Opened", gt, opened),
     ))
     .await
     .unwrap();
@@ -9654,12 +10404,12 @@ const repo = ds.createReadonlyRepository(UserAccount, connection, {
   ]),
 });
 const opened = new Date("2024-01-01T00:00:00.000Z");
-const byId = await repo.readSingle(new WhereClause("Key", eq, ada));
+const byId = await repo.readSingle(new Where("Key", eq, ada));
 const byLogin: UserAccount[] = [];
-for await (const row of repo.read(new WhereClause("Login", eq, "ada").and("Active", eq, true)))
+for await (const row of repo.read(new Where("Login", eq, "ada").and("Active", eq, true)))
   byLogin.push(row);
 const later: UserAccount[] = [];
-for await (const row of repo.read(new WhereClause("Active", eq, true).and("Opened", gt, opened)))
+for await (const row of repo.read(new Where("Active", eq, true).and("Opened", gt, opened)))
   later.push(row);
 ```
 
@@ -9722,8 +10472,13 @@ await foreach (var row in repo.Read(call))
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1428-L1444)
 
 ```rust
-let call = ExecuteStoredProcedureStatement::new("get_user", &[Parameter::new("id", 9_i64)]);
-let rows = repo.read(Some(&call)).await.unwrap();
+            left: Box::new(Expression::Literal(Literal::new(1_i64))),
+            right: Box::new(Expression::Literal(Literal::new(0_i64))),
+        }),
+        &row
+    ),
+    no
+);
 ```
 
 **After: rows**
@@ -9737,9 +10492,12 @@ let rows = repo.read(Some(&call)).await.unwrap();
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L102-L109)
 
 ```typescript
-const call = new ExecuteStoredProcedureStatement("get_user", [{ name: "id", value: 9 }]);
-const rows: Cells[] = [];
-for await (const row of repo.read(call)) rows.push(row);
+it("calls a stored procedure and maps rows", async () => {
+  const { repo, command } = create();
+  command.reader = new MockReader([{ id: 1, name: "a" }]);
+  const call = new ExecuteStoredProcedureStatement("get_user", [{ name: "id", value: 9 }]);
+  const rows: Cells[] = [];
+  for await (const row of repo.read(call)) rows.push(row);
 ```
 
 **After: rows**
@@ -9775,7 +10533,9 @@ for await (const row of repo.read(call)) rows.push(row);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1465-L1471)
 
 ```rust
-let rows = repo.read(None).await.unwrap();
+    ),
+    Value::Bool(true)
+);
 ```
 
 **After: read**
@@ -9795,13 +10555,17 @@ let rows = repo.read(None).await.unwrap();
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
 
 ```typescript
-const { repo, command } = create();
-repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
-command.reader = new MockReader([
-  { id: 1, name: "a" },
-]);
-const rows: Cells[] = [];
-for await (const row of repo.read()) rows.push(row);
+};
+
+describe("CRUDRepository", () => {
+  it("builds select and maps rows", async () => {
+    const { repo, command } = create();
+    repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
+    command.reader = new MockReader([
+      { id: 1, name: "a" },
+    ]);
+    const rows: Cells[] = [];
+    for await (const row of repo.read()) rows.push(row);
 ```
 
 **After: read**
@@ -10720,7 +11484,7 @@ Updates one row. `None` `by_where` uses id columns.
 **Definition**
 
 ```rust
-async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>
+async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -10741,7 +11505,7 @@ Deletes one row. `None` `by_where` uses id columns.
 **Definition**
 
 ```rust
-async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response>
+async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -10991,15 +11755,23 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 
 The table, columns, and id come from `User`. Create omits `id`. SQLite writes `last_insert_rowid` back onto `user.id`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L427-L438)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L421-L452)
 
 ```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, """
+    CREATE TABLE User (
+        id INTEGER PRIMARY KEY,
+        is_enabled INTEGER NOT NULL,
+        username TEXT NOT NULL
+    );
+    """);
 var usersRepo = new CRUDRepository<User>(connection);
 var created = new User { username = "ada", is_enabled = true };
 await usersRepo.Create(created);
 var byId = await usersRepo.ReadSingleById(created.id);
 var matches = new List<User>();
-await foreach (var row in usersRepo.Read(new WhereClause("username", eq, "ada").And("is_enabled", eq, true)))
+await foreach (var row in usersRepo.Read(new Where("username", eq, "ada").And("is_enabled", eq, true)))
     matches.Add(row);
 created.username = "ada-v2";
 await usersRepo.Update(created);
@@ -11042,9 +11814,22 @@ ada-v2
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L637-L666)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L623-L676)
 
 ```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    "
+    CREATE TABLE User (
+        id INTEGER PRIMARY KEY,
+        is_enabled INTEGER NOT NULL,
+        username TEXT NOT NULL
+    );
+    ",
+)
+.await;
 let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
 let mut created = datasources::Row::new();
 created.insert("username".into(), Value::from("ada"));
@@ -11056,7 +11841,7 @@ let by_id = users_repo
     .unwrap()
     .unwrap();
 let matches = users_repo
-    .read(Some(&WhereClause::binary("username", eq, "ada").and(
+    .read(Some(&Where::binary("username", eq, "ada").and(
         "is_enabled",
         eq,
         Value::Bool(true),
@@ -11111,15 +11896,23 @@ ada-v2
 no row
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L184-L195)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L175-L201)
 
 ```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, `
+  CREATE TABLE User (
+    id INTEGER PRIMARY KEY,
+    is_enabled INTEGER NOT NULL,
+    username TEXT NOT NULL
+  );
+`);
 const usersRepo = new CRUDRepository(User, connection);
 const created = Object.assign(new User(), { username: "ada", is_enabled: true });
 await usersRepo.create(created);
 const byId = await usersRepo.readSingleById(created.id);
 const matches: User[] = [];
-for await (const row of usersRepo.read(new WhereClause("username", eq, "ada").and("is_enabled", eq, true)))
+for await (const row of usersRepo.read(new Where("username", eq, "ada").and("is_enabled", eq, true)))
   matches.push(row);
 created.username = "ada-v2";
 await usersRepo.update(created);
@@ -11166,9 +11959,29 @@ no row
 
 `UsersView` maps onto `user`. `UserTypeId` is written to `user_type_id`. `UserType` is the enriched name from `user_type` and is not a column. `Roles` is a `many` list from `user_role`. Create writes the generated id back onto `Key`. `Update` passes a where on `Key` and `Version`, so a stale version changes no row. Delete removes the user and its roles.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L509-L561)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L491-L578)
 
 ```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, """
+    CREATE TABLE user_type (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+    );
+    CREATE TABLE user (
+        id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL,
+        user_type_id INTEGER NOT NULL,
+        version INTEGER NOT NULL
+    );
+    CREATE TABLE user_role (
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL
+    );
+    """);
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
 {
     Ids = ["Key"],
@@ -11210,17 +12023,17 @@ var user = new UsersView
     Roles = [new UserRole { Name = "admin" }, new UserRole { Name = "editor" }],
 };
 await usersRepo.Create(user);
-var loaded = await usersRepo.ReadSingle(new WhereClause("Key", eq, user.Key));
+var loaded = await usersRepo.ReadSingle(new Where("Key", eq, user.Key));
 var version = loaded!.Version;
 loaded.Login = "ada-v2";
 loaded.Version = version + 1;
-var updated = await usersRepo.Update(loaded, new WhereClause("Key", eq, loaded.Key).And("Version", eq, version));
-var current = await usersRepo.ReadSingle(new WhereClause("Key", eq, loaded.Key));
-var stale = await usersRepo.Update(loaded, new WhereClause("Key", eq, loaded.Key).And("Version", eq, version));
+var updated = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
+var current = await usersRepo.ReadSingle(new Where("Key", eq, loaded.Key));
+var stale = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
 await usersRepo.Delete(loaded);
 var gone = await usersRepo.ReadSingleById(loaded.Key);
 var roles = new List<UserRole>();
-await foreach (var role in userRolesRepo.Read(new WhereClause("UserId", eq, loaded.Key)))
+await foreach (var role in userRolesRepo.Read(new Where("UserId", eq, loaded.Key)))
     roles.Add(role);
 ```
 
@@ -11266,9 +12079,33 @@ await foreach (var role in userRolesRepo.Read(new WhereClause("UserId", eq, load
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L703-L804)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L678-L814)
 
 ```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    "
+    CREATE TABLE user_type (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+    );
+    CREATE TABLE user (
+        id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL,
+        user_type_id INTEGER NOT NULL,
+        version INTEGER NOT NULL
+    );
+    CREATE TABLE user_role (
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL
+    );
+    ",
+)
+.await;
 let mut users_options = create_repository_options::<UsersView>();
 users_options.ids = vec!["Key".into()];
 users_options.entity_mapper = Box::new(DictionaryMapper::new([(
@@ -11335,7 +12172,7 @@ user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
 users_repo.create(&mut user).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(Some(&WhereClause::binary("Key", eq, key.clone())))
+    .read_single(Some(&Where::binary("Key", eq, key.clone())))
     .await
     .unwrap()
     .unwrap();
@@ -11345,30 +12182,26 @@ loaded.insert("Version".into(), Value::Int(2));
 let updated = users_repo
     .update(
         &loaded,
-        Some(&WhereClause::binary("Key", eq, key.clone()).and(
-            "Version",
-            eq,
-            version.clone(),
-        )),
+        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
     )
     .await
     .unwrap();
 let current = users_repo
-    .read_single(Some(&WhereClause::binary("Key", eq, key.clone())))
+    .read_single(Some(&Where::binary("Key", eq, key.clone())))
     .await
     .unwrap()
     .unwrap();
 let stale = users_repo
     .update(
         &loaded,
-        Some(&WhereClause::binary("Key", eq, key.clone()).and("Version", eq, version)),
+        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
     )
     .await
     .unwrap();
 users_repo.delete(&loaded, None).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
 let roles = user_roles_repo
-    .read(Some(&WhereClause::binary("UserId", eq, key.clone())))
+    .read(Some(&Where::binary("UserId", eq, key.clone())))
     .await
     .unwrap();
 ```
@@ -11415,9 +12248,29 @@ let roles = user_roles_repo
 no row
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L247-L295)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L226-L306)
 
 ```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, `
+  CREATE TABLE user_type (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+  );
+  CREATE TABLE user (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL,
+    created TEXT NOT NULL,
+    user_type_id INTEGER NOT NULL,
+    version INTEGER NOT NULL
+  );
+  CREATE TABLE user_role (
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL
+  );
+`);
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
   ...createRepositoryOptions(UsersView),
   ids: ["Key"],
@@ -11455,17 +12308,17 @@ const user = Object.assign(new UsersView(), {
   Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
 });
 await usersRepo.create(user);
-const loaded = await usersRepo.readSingle(new WhereClause("Key", eq, user.Key));
+const loaded = await usersRepo.readSingle(new Where("Key", eq, user.Key));
 const version = loaded!.Version;
 loaded!.Login = "ada-v2";
 loaded!.Version = version + 1;
-const updated = await usersRepo.update(loaded!, new WhereClause("Key", eq, loaded!.Key).and("Version", eq, version));
-const current = await usersRepo.readSingle(new WhereClause("Key", eq, loaded!.Key));
-const stale = await usersRepo.update(loaded!, new WhereClause("Key", eq, loaded!.Key).and("Version", eq, version));
+const updated = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+const current = await usersRepo.readSingle(new Where("Key", eq, loaded!.Key));
+const stale = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
 await usersRepo.delete(loaded!);
 const gone = await usersRepo.readSingleById(loaded!.Key);
 const roles: UserRole[] = [];
-for await (const role of userRolesRepo.read(new WhereClause("UserId", eq, loaded!.Key)))
+for await (const role of userRolesRepo.read(new Where("UserId", eq, loaded!.Key)))
   roles.push(role);
 ```
 
@@ -11521,7 +12374,7 @@ Writes use [CRUDRepository](#crud-repository). Register the same tree with `AddE
 
 - **Create** — write the parent, apply the generated identity through the create mapper, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
-- **Delete** — delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+- **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
 [EnrichedReadonlyRepository](#enrichedreadonlyrepository) is the read-only wrapper.
 
@@ -12464,16 +13317,16 @@ await foreach (var item in repo.Read())
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1845-L1854)
 
 ```rust
-let generated = Arc::new(MockCommand::new());
-let connection = MockConnection::with_command_provider(generated.clone(), "memory");
+let connection = MockConnection::with_command_provider(command.clone(), "memory");
 let mut options = CRUDRepositoryOptions::default();
-options.ids = vec!["org_id".into(), "user_id".into()];
 options.entity = "users".into();
-options.row_converter = Some(RowTypeConverter::of::<Composite>());
-let repo = CRUDRepository::new(connection, options).unwrap();
-assert!(repo
-    .read_single_by_id(&record(&[
-        ("org_id", Value::Int(1)),
+options.row_converter = Some(users_mapping());
+options.rows_mapper = Box::new(TransformMapper::new(
+    |mut row: Row| {
+        if let Some(Value::Text(name)) = row.get("name").cloned() {
+            row.insert("name".into(), Value::from(name.to_uppercase()));
+        }
+        row
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L39-L51)
@@ -12482,8 +13335,8 @@ assert!(repo
 describe("EnrichedReadonlyRepository", () => {
   it("reads one row through a where clause", async () => {
     const repo = new EnrichedReadonlyRepository(new ListReadonlyRepository([parent(1, 0)]));
-    const byClause = await collectAsync(repo.read(new WhereClause(new Operator.Equals("id", 1))));
-    const byWhere = await collectAsync(repo.read(new Where("id = 1")));
+    const byClause = await collectAsync(repo.read(new Where(new Operator.Equals("id", 1))));
+    const byWhere = await collectAsync(repo.read(new WhereText("id = 1")));
 ```
 
 #### Fill user type on a user view
@@ -12534,7 +13387,7 @@ var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRe
     ColumnMappings = casing,
 });
 usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name");
-var usersView = await usersRepo.ReadSingle(new WhereClause("Key", eq, Ada));
+var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 ```
 
 **User view**
@@ -12613,7 +13466,7 @@ enriched.add_enriched(
     (),
 );
 let account = enriched
-    .read_single(Some(&WhereClause::binary(
+    .read_single(Some(&Where::binary(
         "Key",
         eq,
         Uuid::parse_str(ADA).unwrap(),
@@ -12678,7 +13531,7 @@ const typesRepo = ds.createReadonlyRepository(UserType, connection, {
   columnMappings: casing,
 });
 usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name");
-const usersView = await usersRepo.readSingle(new WhereClause("Key", eq, ada));
+const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
 ```
 
 **User view**
@@ -12700,73 +13553,81 @@ const usersView = await usersRepo.readSingle(new WhereClause("Key", eq, ada));
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L280-L356)
 
 ```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, Seed());
-var source = ds.CreateReadonlyRepository<Row>(connection, new ReadonlyRepositoryOptions<Row>
+}
+
+[Fact]
+public async Task FillsRolesFromAJoin()
 {
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+    var connection = await Open(ds, Seed());
+    var source = ds.CreateReadonlyRepository<Row>(connection, new ReadonlyRepositoryOptions<Row>
     {
-        ["Key"] = "id",
-        ["Login"] = "username",
-        ["Active"] = "is_enabled",
-        ["Opened"] = "created",
-        ["UserType"] = "user_type.name",
-        ["UserId"] = "user_id",
-        ["RoleId"] = "role_id",
-        ["Name"] = "roles.name",
-    }),
-});
-var usersRepo = new EnrichedReadonlyRepository<UsersView>(
-    ds.CreateReadonlyRepository<UsersView>(connection),
-    new FlatToNestedReadonlyEnrichmentStrategy<UsersView>(
-        source,
-        new FlatToNestedMapper(new TypeMap
+        ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
         {
-            Key = "Key",
-            Fields = new Dictionary<string, TypeMapField>
+            ["Key"] = "id",
+            ["Login"] = "username",
+            ["Active"] = "is_enabled",
+            ["Opened"] = "created",
+            ["UserType"] = "user_type.name",
+            ["UserId"] = "user_id",
+            ["RoleId"] = "role_id",
+            ["Name"] = "roles.name",
+        }),
+    });
+    var usersRepo = new EnrichedReadonlyRepository<UsersView>(
+        ds.CreateReadonlyRepository<UsersView>(connection),
+        new FlatToNestedReadonlyEnrichmentStrategy<UsersView>(
+            source,
+            new FlatToNestedMapper(new TypeMap
             {
-                ["Key"] = "Key",
-                ["Login"] = "Login",
-                ["Active"] = "Active",
-                ["Opened"] = "Opened",
-                ["UserType"] = "UserType",
-                ["Roles"] = new TypeMapGroup
+                Key = "Key",
+                Fields = new Dictionary<string, TypeMapField>
                 {
-                    Key = "RoleId",
-                    Fields = new Dictionary<string, TypeMapField>
+                    ["Key"] = "Key",
+                    ["Login"] = "Login",
+                    ["Active"] = "Active",
+                    ["Opened"] = "Opened",
+                    ["UserType"] = "UserType",
+                    ["Roles"] = new TypeMapGroup
                     {
-                        ["RoleId"] = "RoleId",
-                        ["UserId"] = "UserId",
-                        ["Name"] = "Name",
+                        Key = "RoleId",
+                        Fields = new Dictionary<string, TypeMapField>
+                        {
+                            ["RoleId"] = "RoleId",
+                            ["UserId"] = "UserId",
+                            ["Name"] = "Name",
+                        }
                     }
                 }
-            }
-        }),
-        new MappedValueMapper<UsersView>(),
-        new QueryStatement(
-            "user",
-            [
-                "user.id",
-                "user.username",
-                "user.is_enabled",
-                "user.created",
-                "user_type.name",
-                "user_roles.user_id",
-                "user_roles.role_id",
-                "roles.name",
-            ],
-            joins:
-            [
-                new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
-                new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
-                new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
-            ])));
-var items = new List<UsersView>();
-await foreach (var item in usersRepo.Read())
-    items.Add(item);
-var ada = Assert.Single(items, item => item.Login == "ada");
-var grace = Assert.Single(items, item => item.Login == "grace");
-var lin = Assert.Single(items, item => item.Login == "lin");
+            }),
+            new MappedValueMapper<UsersView>(),
+            new QueryStatement(new()
+            {
+                Table = "user",
+                Fields =
+                [
+                    "user.id",
+                    "user.username",
+                    "user.is_enabled",
+                    "user.created",
+                    "user_type.name",
+                    "user_roles.user_id",
+                    "user_roles.role_id",
+                    "roles.name",
+                ],
+                Joins =
+                [
+                    new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
+                    new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
+                    new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
+                ],
+            })));
+    var items = new List<UsersView>();
+    await foreach (var item in usersRepo.Read())
+        items.Add(item);
+    var ada = Assert.Single(items, item => item.Login == "ada");
+    var grace = Assert.Single(items, item => item.Login == "grace");
+    var lin = Assert.Single(items, item => item.Login == "lin");
 ```
 
 **Users with roles**
@@ -12812,25 +13673,26 @@ let built = datasource();
 let ds: &dyn Datasource = &*built;
 let connection = open(ds, &seed()).await;
 let source = ds.create_readonly_repository::<JoinRow>(Some(connection.clone()), None);
-let command: Arc<dyn Query> = Arc::new(QueryStatement::new(
-    "user",
-    &[
-        "user.id AS Key",
-        "user.username AS Login",
-        "user.is_enabled AS Active",
-        "user.created AS Opened",
-        "user_type.name AS UserType",
-        "user.id AS UserId",
-        "user_roles.role_id AS RoleId",
-        "roles.name AS RoleName",
-    ],
-    None,
-    &[
+let command: Arc<dyn Query> = Arc::new(QueryStatement::new(QueryStatementOptions {
+    joins: &[
         Join::left("user_type", "user_type.id", "user.user_type_id"),
         Join::left("user_roles", "user_roles.user_id", "user.id"),
         Join::left("roles", "roles.id", "user_roles.role_id"),
     ],
-));
+    ..QueryStatementOptions::new(
+        "user",
+        &[
+            "user.id AS Key",
+            "user.username AS Login",
+            "user.is_enabled AS Active",
+            "user.created AS Opened",
+            "user_type.name AS UserType",
+            "user.id AS UserId",
+            "user_roles.role_id AS RoleId",
+            "roles.name AS RoleName",
+        ],
+    )
+}));
 let users_repo = EnrichedReadonlyRepository::with_strategy(
     ds.create_readonly_repository::<UsersView>(Some(connection.clone()), None),
     Arc::new(FlatToNestedReadonlyEnrichmentStrategy::new(
@@ -12961,9 +13823,9 @@ const usersRepo = new EnrichedReadonlyRepository(
         throw new Error("UsersView hydrate does not reverse");
       },
     ),
-    new QueryStatement(
-      "user",
-      [
+    new QueryStatement({
+      table: "user",
+      fields: [
         "user.id AS Key",
         "user.username AS Login",
         "user.is_enabled AS Active",
@@ -12973,13 +13835,12 @@ const usersRepo = new EnrichedReadonlyRepository(
         "user_roles.role_id AS RoleId",
         "roles.name AS RoleName",
       ],
-      undefined,
-      [
+      joins: [
         Join.left("user_type", "user_type.id", "user.user_type_id"),
         Join.left("user_roles", "user_roles.user_id", "user.id"),
         Join.left("roles", "roles.id", "user_roles.role_id"),
       ],
-    ),
+    }),
   ),
 );
 const items: UsersView[] = [];
@@ -13372,7 +14233,7 @@ Updates each item, then replace-syncs nested `many` lists.
 **Definition**
 
 ```rust
-pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn Where>) -> Result<Response>
+pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -13393,7 +14254,7 @@ Deletes nested `many` rows for each item, then the parents.
 **Definition**
 
 ```rust
-pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn Where>) -> Result<Response>
+pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -13433,24 +14294,9 @@ var response = await repo.Create(
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1862-L1879)
 
 ```rust
-        .contains("org_id = $org_id AND user_id = $user_id"));
-    assert!(repo
-        .read_single_by_id(&Value::Int(1))
-        .await
-        .unwrap_err()
-        .to_string()
-        .contains("Composite id requires a row keyed by each Id column"));
-    assert!(repo
-        .read_single_by_id(&record(&[("org_id", Value::Int(1))]))
-        .await
-        .unwrap_err()
-        .to_string()
-        .contains("Missing Id value"));
-}
-
-struct Label;
-
-impl ConvertSchema for Label {
+));
+let repo = CRUDRepository::new(connection, options).unwrap();
+let rows = repo.read(None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L29-L37)

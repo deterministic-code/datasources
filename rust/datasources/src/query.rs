@@ -1,6 +1,6 @@
+use crate::i_where::IWhere;
 use crate::statement::Statement;
-use crate::where_trait::Where;
 
 pub trait Query: Statement {
-    fn where_clause(&self) -> Option<&dyn Where>;
+    fn where_clause(&self) -> Option<&dyn IWhere>;
 }

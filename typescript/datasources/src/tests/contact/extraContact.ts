@@ -1,4 +1,4 @@
-import { Operator, WhereClause } from "../../statements/index.ts";
+import { Operator, Where } from "../../statements/index.ts";
 import { collectAsync } from "../../collectAsync.ts";
 import { Address } from "./Address.ts";
 import { Contact } from "./Contact.ts";
@@ -37,7 +37,7 @@ export const addExtraContact = async (
   const contact = extraContact(ids);
   await service.create(contact);
   const loaded = (
-    await collectAsync(service.read(new WhereClause(new Operator.Equals("id", contact.id))))
+    await collectAsync(service.read(new Where(new Operator.Equals("id", contact.id))))
   )[0];
   if (!loaded) throw new Error(`extra contact ${contact.id} missing`);
   return loaded;

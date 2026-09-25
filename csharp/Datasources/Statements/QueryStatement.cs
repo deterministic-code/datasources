@@ -60,7 +60,7 @@ public sealed record QueryStatement : IQuery
             ? ""
             : string.Concat(joins.Select(join => join.Kind == JoinKind.Cross
                 ? $" CROSS JOIN {join.Table}"
-                : $" {Keyword(join.Kind)} {join.Table} ON {new WhereClause(join.On ?? throw new InvalidOperationException("empty join")).GetText()}"));
+                : $" {Keyword(join.Kind)} {join.Table} ON {new Where(join.On ?? throw new InvalidOperationException("empty join")).GetText()}"));
 
     static string Keyword(JoinKind kind) => kind switch
     {

@@ -5,7 +5,7 @@ use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
     InsertStatement, Literal, Operator, Parameter, QueryStatement, QueryStatementOptions, Result,
-    Row, Text, TransformMapper, TypeConverter, UpdateStatement, Value, WhereClause,
+    Row, Text, TransformMapper, TypeConverter, UpdateStatement, Value, Where,
 };
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -195,16 +195,16 @@ fn and_all(parts: Vec<Expression>) -> Expression {
         })
 }
 
-fn where_sql(map: &BTreeMap<String, serde_yaml::Value>) -> WhereClause {
-    WhereClause::new(and_all(
+fn where_sql(map: &BTreeMap<String, serde_yaml::Value>) -> Where {
+    Where::new(and_all(
         map.iter()
             .map(|(name, value)| Operator::equals(name.clone(), yaml_value(value)).into())
             .collect(),
     ))
 }
 
-fn where_of(mapping: &RowTypeConverter, map: &BTreeMap<String, serde_yaml::Value>) -> WhereClause {
-    WhereClause::new(and_all(
+fn where_of(mapping: &RowTypeConverter, map: &BTreeMap<String, serde_yaml::Value>) -> Where {
+    Where::new(and_all(
         map.iter()
             .map(|(name, value)| {
                 let raw = yaml_value(value);
@@ -527,7 +527,7 @@ fn queries(spec: &Spec) -> Vec<String> {
                     &spec.type_spec,
                 )
             } else if let Some(read) = &step.read {
-                let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&read.id)));
+                let where_clause = Where::new(Operator::equals("id", yaml_value(&read.id)));
                 with_statement_sql(
                     QueryStatement::new(QueryStatementOptions {
                         where_clause: Some(&where_clause),
@@ -541,7 +541,7 @@ fn queries(spec: &Spec) -> Vec<String> {
                 let where_clause = query.where_clause.as_ref().map(where_sql);
                 with_statement_sql(
                     QueryStatement::new(QueryStatementOptions {
-                        where_clause: where_clause.as_ref().map(|w| w as &dyn datasources::Where),
+                        where_clause: where_clause.as_ref().map(|w| w as &dyn datasources::IWhere),
                         ..QueryStatementOptions::new(&table, &refs)
                     })
                     .get_text(),
@@ -562,8 +562,7 @@ fn queries(spec: &Spec) -> Vec<String> {
             } else if let Some(update) = &step.update {
                 let flat = flatten_yaml(&update.row, &spec.type_spec.mappings);
                 let fields = fields_of(&flat, |col| !ids.contains(col));
-                let where_clause =
-                    WhereClause::new(Operator::equals("id", yaml_value(&flat["id"])));
+                let where_clause = Where::new(Operator::equals("id", yaml_value(&flat["id"])));
                 with_statement_sql(
                     UpdateStatement::new(&table, &fields, Some(&where_clause)).get_text(),
                     true,
@@ -581,7 +580,7 @@ fn queries(spec: &Spec) -> Vec<String> {
                     &spec.type_spec,
                 )
             } else if let Some(delete) = &step.delete {
-                let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&delete.id)));
+                let where_clause = Where::new(Operator::equals("id", yaml_value(&delete.id)));
                 with_statement_sql(
                     DeleteStatement::new(&table, Some(&where_clause)).get_text(),
                     true,
@@ -705,7 +704,7 @@ pub async fn run(
             Step {
                 read: Some(read), ..
             } => {
-                let where_clause = WhereClause::new(Operator::equals("id", yaml_value(&read.id)));
+                let where_clause = Where::new(Operator::equals("id", yaml_value(&read.id)));
                 let row = repo.read_single(Some(&where_clause)).await.unwrap();
                 if let Some(expect) = &read.expect {
                     assert_row(&format!("{} READ", spec.name), row.as_ref(), expect);

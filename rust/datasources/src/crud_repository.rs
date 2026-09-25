@@ -13,6 +13,7 @@ use crate::enriched::Enriched;
 use crate::enrichment::Enrichment;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
+use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::mappers::{Mapper, TransformMapper};
 use crate::nest::Nest;
@@ -31,8 +32,7 @@ use crate::statements::Text;
 use crate::stubs::StubRepository;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::value::Value;
-use crate::where_trait::Where;
-use crate::{Expression, Literal, Operator, WhereClause};
+use crate::{Expression, Literal, Operator, Where};
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::collections::HashSet;
@@ -176,7 +176,7 @@ impl CRUDRepository {
             .collect()
     }
 
-    fn id_where(&self, record: &Row) -> Result<WhereClause> {
+    fn id_where(&self, record: &Row) -> Result<Where> {
         let children = self
             .ids
             .iter()
@@ -190,7 +190,7 @@ impl CRUDRepository {
                 )))
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(WhereClause::new(and_all(children)))
+        Ok(Where::new(and_all(children)))
     }
 }
 
@@ -271,7 +271,7 @@ impl ICRUDRepository for CRUDRepository {
             .unwrap_or_else(|| item.clone()))
     }
 
-    async fn update(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if !self.enriched() {
             return match &self.delegate {
                 Some(repo) => repo.update(item, by_where).await,
@@ -298,7 +298,7 @@ impl ICRUDRepository for CRUDRepository {
         Ok(response)
     }
 
-    async fn delete(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if self.enriched() {
             let mut parent = item.clone();
             self.persist(
@@ -355,7 +355,7 @@ impl CRUDRepository {
         Ok(response)
     }
 
-    async fn save(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         let record = self.sql().reverse_convert(item)?;
         let fields = self.params(&record, false)?;
         if fields.is_empty() {
@@ -364,7 +364,7 @@ impl CRUDRepository {
             ));
         }
         let (owned, raw) = self.stored_predicate(&record, by_where)?;
-        let predicate: &dyn Where = match (owned.as_ref(), raw) {
+        let predicate: &dyn IWhere = match (owned.as_ref(), raw) {
             (Some(clause), _) => clause,
             (None, Some(clause)) => clause,
             _ => unreachable!(),
@@ -377,10 +377,10 @@ impl CRUDRepository {
             .await
     }
 
-    async fn remove(&self, item: &Row, by_where: Option<&dyn Where>) -> Result<Response> {
+    async fn remove(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         let record = self.sql().reverse_convert(item)?;
         let (owned, raw) = self.stored_predicate(&record, by_where)?;
-        let predicate: &dyn Where = match (owned.as_ref(), raw) {
+        let predicate: &dyn IWhere = match (owned.as_ref(), raw) {
             (Some(clause), _) => clause,
             (None, Some(clause)) => clause,
             _ => unreachable!(),
@@ -401,8 +401,8 @@ impl CRUDRepository {
     fn stored_predicate<'a>(
         &'a self,
         record: &Row,
-        by_where: Option<&'a dyn Where>,
-    ) -> Result<(Option<WhereClause>, Option<&'a dyn Where>)> {
+        by_where: Option<&'a dyn IWhere>,
+    ) -> Result<(Option<Where>, Option<&'a dyn IWhere>)> {
         match by_where {
             Some(clause) => match self.sql().store_where(clause, false)? {
                 Some(stored) => Ok((Some(stored), None)),

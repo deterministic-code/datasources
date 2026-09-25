@@ -21,7 +21,7 @@ public static class SetUserEnabled
         }
         var id = await LookupId.Of(app.Command, Schema.Ident(provider, "users"), "username", username);
         Parameter[] fieldsSql = [new("is_enabled", Schema.Flag(provider, enabled)), new("updated", updated)];
-        var where = new WhereClause(new Datasources.Operator.Equals("id", id));
+        var where = new Where(new Datasources.Operator.Equals("id", id));
         await app.Command.Execute(new UpdateStatement(Schema.Ident(provider, "users"), fieldsSql, where), [.. fieldsSql, .. where.Parameters]);
         return "";
     }

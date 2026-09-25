@@ -8,12 +8,12 @@ public class ComparisonAliasTests
     [Fact]
     public void RendersComparisonSymbols()
     {
-        var equals = new WhereClause("username", eq, "grace");
-        var notEquals = new WhereClause("id", ne, 2);
-        var greater = new WhereClause("n", gt, 0);
-        var less = new WhereClause("n", lt, 0);
-        var greaterOrEqual = new WhereClause("n", ge, 0);
-        var lessOrEqual = new WhereClause("n", le, 0);
+        var equals = new Where("username", eq, "grace");
+        var notEquals = new Where("id", ne, 2);
+        var greater = new Where("n", gt, 0);
+        var less = new Where("n", lt, 0);
+        var greaterOrEqual = new Where("n", ge, 0);
+        var lessOrEqual = new Where("n", le, 0);
         var both = equals.And("is_enabled", eq, 0);
         var either = equals.Or("is_enabled", eq, 0);
         Assert.Equal("username = $username", equals.GetText());

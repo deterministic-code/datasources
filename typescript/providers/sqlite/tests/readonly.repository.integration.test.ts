@@ -4,7 +4,7 @@ import {
   ChangeCasingMapper, Datasource,
   DictionaryMapper,
   PluralizerMapper,
-  WhereClause,
+  Where,
   createRepositoryOptions,
   eq,
   gt,
@@ -46,9 +46,9 @@ describe("readonly repository", () => {
     const repo = ds.createReadonlyRepository(User, connection, {
       entityMapper: new PluralizerMapper(),
     });
-    const byId = await repo.readSingle(new WhereClause("id", eq, 1));
+    const byId = await repo.readSingle(new Where("id", eq, 1));
     const disabled: User[] = [];
-    for await (const row of repo.read(new WhereClause("username", eq, "grace").and("is_enabled", eq, 0)))
+    for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
       disabled.push(row);
     expect(byId?.username).toBe("ada");
     expect(byId?.is_enabled).toBe(1);
@@ -81,12 +81,12 @@ describe("readonly repository", () => {
       ]),
     });
     const opened = new Date("2024-01-01T00:00:00.000Z");
-    const byId = await repo.readSingle(new WhereClause("Key", eq, ada));
+    const byId = await repo.readSingle(new Where("Key", eq, ada));
     const byLogin: UserAccount[] = [];
-    for await (const row of repo.read(new WhereClause("Login", eq, "ada").and("Active", eq, true)))
+    for await (const row of repo.read(new Where("Login", eq, "ada").and("Active", eq, true)))
       byLogin.push(row);
     const later: UserAccount[] = [];
-    for await (const row of repo.read(new WhereClause("Active", eq, true).and("Opened", gt, opened)))
+    for await (const row of repo.read(new Where("Active", eq, true).and("Opened", gt, opened)))
       later.push(row);
     expect(byId?.Login).toBe("ada");
     expect(byId?.Key).toBe(ada);
@@ -152,7 +152,7 @@ describe("user view", () => {
       columnMappings: casing,
     });
     usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name");
-    const usersView = await usersRepo.readSingle(new WhereClause("Key", eq, ada));
+    const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
     expect(usersView?.UserType).toBe("admin");
     expect(usersView?.Login).toBe("ada");
     expect(usersView?.Key).toBe(ada);
@@ -186,7 +186,7 @@ describe("user crud", () => {
     await usersRepo.create(created);
     const byId = await usersRepo.readSingleById(created.id);
     const matches: User[] = [];
-    for await (const row of usersRepo.read(new WhereClause("username", eq, "ada").and("is_enabled", eq, true)))
+    for await (const row of usersRepo.read(new Where("username", eq, "ada").and("is_enabled", eq, true)))
       matches.push(row);
     created.username = "ada-v2";
     await usersRepo.update(created);
@@ -281,17 +281,17 @@ describe("users view crud", () => {
       Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
     });
     await usersRepo.create(user);
-    const loaded = await usersRepo.readSingle(new WhereClause("Key", eq, user.Key));
+    const loaded = await usersRepo.readSingle(new Where("Key", eq, user.Key));
     const version = loaded!.Version;
     loaded!.Login = "ada-v2";
     loaded!.Version = version + 1;
-    const updated = await usersRepo.update(loaded!, new WhereClause("Key", eq, loaded!.Key).and("Version", eq, version));
-    const current = await usersRepo.readSingle(new WhereClause("Key", eq, loaded!.Key));
-    const stale = await usersRepo.update(loaded!, new WhereClause("Key", eq, loaded!.Key).and("Version", eq, version));
+    const updated = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+    const current = await usersRepo.readSingle(new Where("Key", eq, loaded!.Key));
+    const stale = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
     await usersRepo.delete(loaded!);
     const gone = await usersRepo.readSingleById(loaded!.Key);
     const roles: UserRole[] = [];
-    for await (const role of userRolesRepo.read(new WhereClause("UserId", eq, loaded!.Key)))
+    for await (const role of userRolesRepo.read(new Where("UserId", eq, loaded!.Key)))
       roles.push(role);
     expect(admin.Id).toBe(1);
     expect(user.Key).toBe(1);

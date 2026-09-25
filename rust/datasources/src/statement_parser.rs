@@ -1,15 +1,15 @@
 use crate::builders::{Join, JoinKind};
+use crate::i_where::IWhere;
 use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::statements::statement::Statement;
 use crate::statements::text::Text;
 use crate::statements::{
     ArrayExpression, DeleteStatement, Expression, Identifier, InsertStatement, Literal, Operator,
-    OrderBy, QueryStatementOptions, UpdateStatement, WhereClause,
+    OrderBy, QueryStatementOptions, UpdateStatement, Where,
 };
 use crate::text_query::QueryStatement;
 use crate::value::Value;
-use crate::where_trait::Where;
 use crate::DatasourceError;
 
 pub struct StatementParser;
@@ -93,7 +93,7 @@ impl<'a> Cursor<'a> {
             canonical = self.assignment(&mut columns)? && canonical;
         }
         let clause = if self.try_word("WHERE") {
-            Some(WhereClause::new(self.expr()?))
+            Some(Where::new(self.expr()?))
         } else {
             None
         };
@@ -105,12 +105,12 @@ impl<'a> Cursor<'a> {
             return Ok(UpdateStatement::new(
                 &table,
                 &fields,
-                clause.as_ref().map(|predicate| predicate as &dyn Where),
+                clause.as_ref().map(|predicate| predicate as &dyn IWhere),
             ));
         }
         Ok(UpdateStatement::text(
             &self.text[start..self.i],
-            clause.map(|predicate| Box::new(predicate) as Box<dyn Where>),
+            clause.map(|predicate| Box::new(predicate) as Box<dyn IWhere>),
         ))
     }
 
@@ -128,13 +128,13 @@ impl<'a> Cursor<'a> {
         self.expect_word("FROM")?;
         let table = self.ident()?;
         let clause = if self.try_word("WHERE") {
-            Some(WhereClause::new(self.expr()?))
+            Some(Where::new(self.expr()?))
         } else {
             None
         };
         Ok(DeleteStatement::new(
             &table,
-            clause.as_ref().map(|predicate| predicate as &dyn Where),
+            clause.as_ref().map(|predicate| predicate as &dyn IWhere),
         ))
     }
 
@@ -162,7 +162,7 @@ impl<'a> Cursor<'a> {
         let table = self.from_item()?;
         let joins = self.joins()?;
         let where_clause = if self.try_word("WHERE") {
-            Some(WhereClause::new(self.expr()?))
+            Some(Where::new(self.expr()?))
         } else {
             None
         };
@@ -172,7 +172,7 @@ impl<'a> Cursor<'a> {
             Vec::new()
         };
         let having = if self.try_word("HAVING") {
-            Some(WhereClause::new(self.expr()?))
+            Some(Where::new(self.expr()?))
         } else {
             None
         };
@@ -193,8 +193,8 @@ impl<'a> Cursor<'a> {
         };
         let field_refs: Vec<&str> = fields.iter().map(String::as_str).collect();
         let group_refs: Vec<&str> = group_by.iter().map(String::as_str).collect();
-        let where_ref = where_clause.as_ref().map(|clause| clause as &dyn Where);
-        let having_ref = having.as_ref().map(|clause| clause as &dyn Where);
+        let where_ref = where_clause.as_ref().map(|clause| clause as &dyn IWhere);
+        let having_ref = having.as_ref().map(|clause| clause as &dyn IWhere);
         let mut statement = QueryStatement::new(QueryStatementOptions {
             distinct,
             where_clause: where_ref,
@@ -285,7 +285,7 @@ impl<'a> Cursor<'a> {
             joins.push(if kind == JoinKind::Cross {
                 Join::cross(table)
             } else {
-                Join::condition(kind, table, WhereClause::new(self.on()?).get_text())
+                Join::condition(kind, table, Where::new(self.on()?).get_text())
             });
         }
         Ok(joins)

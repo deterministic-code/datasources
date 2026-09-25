@@ -5,8 +5,8 @@ public sealed class StatementEvaluator
     public Value Evaluate(IExpression expression, IReadOnlyDictionary<string, Value>? parameters) =>
         expression switch
         {
-            WhereClause where => Evaluate(where.Condition, parameters),
-            Where => throw new InvalidOperationException("text where is not evaluable"),
+            Where where => Evaluate(where.Condition, parameters),
+            WhereText => throw new InvalidOperationException("text where is not evaluable"),
             Identifier id => parameters is not null && parameters.TryGetValue(id.Name, out var value)
                 ? value : Value.Null.Instance,
             Literal lit => lit.Value,

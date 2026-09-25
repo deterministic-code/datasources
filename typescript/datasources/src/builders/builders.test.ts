@@ -24,8 +24,8 @@ import {
   UniqueConstraint,
   ExecuteStoredProcedureStatement,
   UpdateStatement,
+  WhereText,
   Where,
-  WhereClause,
   eq,
   ne,
   gt,
@@ -39,7 +39,7 @@ import type { Parameter } from "../index.ts";
 describe("Query and Where", () => {
   it("keeps optional where on the query", () => {
     const select = new QueryStatement("SELECT 1");
-    const where = new Where("id = 1");
+    const where = new WhereText("id = 1");
     const withWhere = new QueryStatement("SELECT 1", where);
     expect(select.where).toBeUndefined();
     expect(withWhere.where).toBe(where);
@@ -47,13 +47,13 @@ describe("Query and Where", () => {
 
   it("returns constructor text", () => {
     expect(new QueryStatement("SELECT 1").getText()).toBe("SELECT 1");
-    expect(new Where("id = 1").getText()).toBe("id = 1");
+    expect(new WhereText("id = 1").getText()).toBe("id = 1");
   });
 });
 
-describe("WhereClause", () => {
+describe("Where", () => {
   it("renders compare, groups, and not", () => {
-    const where = new WhereClause(
+    const where = new Where(
       new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
     );
     expect(where.getText()).toBe("id = $id AND age > $age");
@@ -61,34 +61,34 @@ describe("WhereClause", () => {
       { name: "id", value: 1 },
       { name: "age", value: 18 },
     ]);
-    expect(new WhereClause(new Operator.NotEquals("id", 2)).getText()).toBe("id <> $id");
-    expect(new WhereClause(new Operator.LessThan("n", 0)).getText()).toBe("n < $n");
-    expect(new WhereClause(new Operator.GreaterThanOrEqual("n", 0)).getText()).toBe("n >= $n");
-    expect(new WhereClause(new Operator.LessThanOrEqual("n", 0)).getText()).toBe("n <= $n");
-    expect(new WhereClause(new Operator.Equals(new Literal(1), new Literal(1))).getText()).toBe("1 = 1");
-    expect(new WhereClause(new Operator.Equals(new Literal(1), new Literal(0))).getText()).toBe("1 = 0");
-    expect(new WhereClause(new Operator.Equals("id", 1)).getText()).toBe("id = $id");
-    expect(new WhereClause(new Operator.Or(where, new Operator.Equals("name", "a"))).getText()).toBe(
+    expect(new Where(new Operator.NotEquals("id", 2)).getText()).toBe("id <> $id");
+    expect(new Where(new Operator.LessThan("n", 0)).getText()).toBe("n < $n");
+    expect(new Where(new Operator.GreaterThanOrEqual("n", 0)).getText()).toBe("n >= $n");
+    expect(new Where(new Operator.LessThanOrEqual("n", 0)).getText()).toBe("n <= $n");
+    expect(new Where(new Operator.Equals(new Literal(1), new Literal(1))).getText()).toBe("1 = 1");
+    expect(new Where(new Operator.Equals(new Literal(1), new Literal(0))).getText()).toBe("1 = 0");
+    expect(new Where(new Operator.Equals("id", 1)).getText()).toBe("id = $id");
+    expect(new Where(new Operator.Or(where, new Operator.Equals("name", "a"))).getText()).toBe(
       "(id = $id AND age > $age) OR name = $name",
     );
     expect(
-      new WhereClause(
+      new Where(
         new Operator.And(
           new Operator.Or(new Operator.Equals("id", 1), new Operator.Equals("id", 2)),
           new Operator.Equals("age", 18),
         ),
       ).getText(),
     ).toBe("(id = $id OR id = $id) AND age = $age");
-    expect(new WhereClause(new Operator.Not(new WhereClause(new Operator.Equals("id", 1)))).getText()).toBe(
+    expect(new Where(new Operator.Not(new Where(new Operator.Equals("id", 1)))).getText()).toBe(
       "NOT (id = $id)",
     );
-    expect(new WhereClause(new Operator.Not(new WhereClause(new Operator.Equals("id", 1)))).parameters).toEqual([
+    expect(new Where(new Operator.Not(new Where(new Operator.Equals("id", 1)))).parameters).toEqual([
       { name: "id", value: 1 },
     ]);
-    expect(new WhereClause(new Operator.In("id", [])).getText()).toBe("1 = 0");
-    expect(new WhereClause(new Operator.In("id", [])).parameters).toEqual([]);
-    expect(new WhereClause(new Operator.In("id", [1, 2])).getText()).toBe("id IN ($id_0, $id_1)");
-    expect(new WhereClause(new Operator.In("id", [1, 2])).parameters).toEqual([
+    expect(new Where(new Operator.In("id", [])).getText()).toBe("1 = 0");
+    expect(new Where(new Operator.In("id", [])).parameters).toEqual([]);
+    expect(new Where(new Operator.In("id", [1, 2])).getText()).toBe("id IN ($id_0, $id_1)");
+    expect(new Where(new Operator.In("id", [1, 2])).parameters).toEqual([
       { name: "id_0", value: 1 },
       { name: "id_1", value: 2 },
     ]);
@@ -110,30 +110,30 @@ describe("StatementEvaluator", () => {
   it("evaluates compare, groups, not, and in", () => {
     const evaluator = new StatementEvaluator();
     const row = { id: 1, age: 21, name: "a" };
-    expect(evaluator.evaluate(new WhereClause(new Operator.Equals("id", 1)), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.Equals("id", 2)), row)).toBe(false);
-    expect(evaluator.evaluate(new WhereClause(new Operator.NotEquals("id", 2)), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.GreaterThan("age", 18)), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.LessThan("age", 30)), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.GreaterThanOrEqual("age", 21)), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.LessThanOrEqual("age", 21)), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.Equals("id", 1)), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.Equals("id", 2)), row)).toBe(false);
+    expect(evaluator.evaluate(new Where(new Operator.NotEquals("id", 2)), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.GreaterThan("age", 18)), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.LessThan("age", 30)), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.GreaterThanOrEqual("age", 21)), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.LessThanOrEqual("age", 21)), row)).toBe(true);
     expect(
       evaluator.evaluate(
-        new WhereClause(new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18))),
+        new Where(new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18))),
         row,
       ),
     ).toBe(true);
     expect(
       evaluator.evaluate(
-        new WhereClause(new Operator.Or(new Operator.Equals("id", 0), new Operator.Equals("name", "a"))),
+        new Where(new Operator.Or(new Operator.Equals("id", 0), new Operator.Equals("name", "a"))),
         row,
       ),
     ).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.Not(new Operator.Equals("id", 1))), row)).toBe(false);
-    expect(evaluator.evaluate(new WhereClause(new Operator.In("id", [1, 2])), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.Equals(new Literal(1), new Literal(1))), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.Equals(new Literal(1), new Literal(0))), row)).toBe(false);
-    expect(() => evaluator.evaluate(new Where("id = 1"), row)).toThrow("text where is not evaluable");
+    expect(evaluator.evaluate(new Where(new Operator.Not(new Operator.Equals("id", 1))), row)).toBe(false);
+    expect(evaluator.evaluate(new Where(new Operator.In("id", [1, 2])), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.Equals(new Literal(1), new Literal(1))), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.Equals(new Literal(1), new Literal(0))), row)).toBe(false);
+    expect(() => evaluator.evaluate(new WhereText("id = 1"), row)).toThrow("text where is not evaluable");
     expect(() => evaluator.evaluate(new ArrayExpression([]), row)).toThrow("array is not a scalar");
     expect(() =>
       evaluator.evaluate(new Operator.GreaterThan(new Literal(true), new Literal(1)), row),
@@ -141,46 +141,46 @@ describe("StatementEvaluator", () => {
     expect(() =>
       evaluator.evaluate(new Operator.In(new Identifier("id"), new Literal(1)), row),
     ).toThrow("empty in");
-    expect(evaluator.evaluate(new WhereClause(new Operator.LessThan("name", "b")), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.GreaterThanOrEqual("name", "a")), row)).toBe(true);
-    expect(evaluator.evaluate(new WhereClause(new Operator.GreaterThan("name", "Z")), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.LessThan("name", "b")), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.GreaterThanOrEqual("name", "a")), row)).toBe(true);
+    expect(evaluator.evaluate(new Where(new Operator.GreaterThan("name", "Z")), row)).toBe(true);
     expect(
-      new WhereClause(new Operator.In(new Identifier("id"), new ArrayExpression([]))).getText(),
+      new Where(new Operator.In(new Identifier("id"), new ArrayExpression([]))).getText(),
     ).toBe("1 = 0");
-    expect(new WhereClause(new Identifier("id")).parameters).toEqual([]);
-    expect(new WhereClause(new ArrayExpression([new Literal(1)])).parameters).toEqual([]);
-    expect(() => new WhereClause(new Where("x")).parameters).toThrow("empty expression");
+    expect(new Where(new Identifier("id")).parameters).toEqual([]);
+    expect(new Where(new ArrayExpression([new Literal(1)])).parameters).toEqual([]);
+    expect(() => new Where(new WhereText("x")).parameters).toThrow("empty expression");
     expect(
       evaluator.evaluate(new Operator.GreaterThan(new Literal(2n), new Literal(1n)), row),
     ).toBe(true);
     expect(
-      new WhereClause(new Operator.Equals(new Identifier("a"), new Identifier("b"))).getText(),
+      new Where(new Operator.Equals(new Identifier("a"), new Identifier("b"))).getText(),
     ).toBe("a = b");
     expect(
-      new WhereClause(new Operator.Equals(new Identifier("a"), new Identifier("b"))).parameters,
+      new Where(new Operator.Equals(new Identifier("a"), new Identifier("b"))).parameters,
     ).toEqual([]);
-    expect(new WhereClause(new Operator.In(new Literal(1), new Literal(2))).getText()).toBe("1 IN 2");
-    expect(() => new WhereClause(new Where("x")).getText()).toThrow("empty expression");
+    expect(new Where(new Operator.In(new Literal(1), new Literal(2))).getText()).toBe("1 IN 2");
+    expect(() => new Where(new WhereText("x")).getText()).toThrow("empty expression");
     expect(evaluator.evaluate(new Identifier("missing"), row)).toBeNull();
     expect(evaluator.evaluate(new Literal(null), row)).toBeNull();
-    expect(() => evaluator.evaluate(new Where("x"), row)).toThrow("text where is not evaluable");
+    expect(() => evaluator.evaluate(new WhereText("x"), row)).toThrow("text where is not evaluable");
     expect(
-      new WhereClause(new Operator.Equals(new Literal(true), new Literal(false))).getText(),
+      new Where(new Operator.Equals(new Literal(true), new Literal(false))).getText(),
     ).toBe("true = false");
     expect(
-      new WhereClause(new Operator.Equals(new Literal(null), new Literal(null))).getText(),
+      new Where(new Operator.Equals(new Literal(null), new Literal(null))).getText(),
     ).toBe("null = null");
     expect(
-      new WhereClause(new Operator.Equals(new Literal(true), new Literal(false))).parameters,
+      new Where(new Operator.Equals(new Literal(true), new Literal(false))).parameters,
     ).toEqual([]);
     class Ghost extends Operator {}
     expect(() => evaluator.evaluate(new Ghost(), row)).toThrow("empty expression");
-    expect(() => new WhereClause(new Ghost()).getText()).toThrow("empty expression");
-    expect(() => new WhereClause(new Ghost()).parameters).toThrow("empty expression");
-    expect(new WhereClause(new ArrayExpression([new Literal(1)])).getText()).toBe("1");
+    expect(() => new Where(new Ghost()).getText()).toThrow("empty expression");
+    expect(() => new Where(new Ghost()).parameters).toThrow("empty expression");
+    expect(new Where(new ArrayExpression([new Literal(1)])).getText()).toBe("1");
     expect(
       () =>
-        new WhereClause(
+        new Where(
           new Operator.In(new Identifier("id"), new ArrayExpression([new Identifier("x")])),
         ).parameters,
     ).toThrow("empty in");
@@ -194,7 +194,7 @@ describe("statements", () => {
   ] as const;
 
   it("creates write and ddl statements", () => {
-    const where = new WhereClause(new Operator.Equals("id", 1));
+    const where = new Where(new Operator.Equals("id", 1));
     const query = new QueryStatement({ table: "users", fields: ["id", "name"], where });
     expect(query.getText()).toBe(
       "SELECT id, name FROM users WHERE id = $id",
@@ -220,7 +220,7 @@ describe("statements", () => {
       new QueryStatement({
         table: "users",
         fields: ["users.id"],
-        where: new WhereClause(new Operator.Equals("users.id", 1)),
+        where: new Where(new Operator.Equals("users.id", 1)),
         joins: [
           Join.inner("orders", "users.id", "orders.user_id"),
           Join.left("payments", "orders.id", "payments.order_id"),
@@ -236,7 +236,7 @@ describe("statements", () => {
     const grouped = new QueryStatement({
       table: "orders",
       fields: ["status", Aggregate.count("*", "n"), Aggregate.sum("amount", "total")],
-      where: new WhereClause(new Operator.Equals("status", "open")),
+      where: new Where(new Operator.Equals("status", "open")),
       joins: [Join.inner("customers", "orders.customer_id", "customers.id")],
       groupBy: ["status"],
       orderBy: [OrderBy.desc("total"), OrderBy.asc("status")],
@@ -388,12 +388,12 @@ describe("statements", () => {
 
 describe("comparison aliases", () => {
   it("renders comparison symbols", () => {
-    const equals = new WhereClause("username", eq, "grace");
-    const notEquals = new WhereClause("id", ne, 2);
-    const greater = new WhereClause("n", gt, 0);
-    const less = new WhereClause("n", lt, 0);
-    const greaterOrEqual = new WhereClause("n", ge, 0);
-    const lessOrEqual = new WhereClause("n", le, 0);
+    const equals = new Where("username", eq, "grace");
+    const notEquals = new Where("id", ne, 2);
+    const greater = new Where("n", gt, 0);
+    const less = new Where("n", lt, 0);
+    const greaterOrEqual = new Where("n", ge, 0);
+    const lessOrEqual = new Where("n", le, 0);
     const both = equals.and("is_enabled", eq, 0);
     const either = equals.or("is_enabled", eq, 0);
     expect(equals.getText()).toBe("username = $username");

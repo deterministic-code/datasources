@@ -6,6 +6,7 @@ use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
+use crate::i_where::IWhere;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
@@ -14,12 +15,11 @@ use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
 use crate::statement::{Statement, StatementKind};
-use crate::statements::WhereClause;
+use crate::statements::Where;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::table_repository_statements::RepositoryStatements;
 use crate::text_query::QueryStatement;
 use crate::value::Value;
-use crate::where_trait::Where;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;
@@ -88,7 +88,7 @@ impl ReadonlyRepository {
             let statement = match query.predicate() {
                 Some(predicate) => QueryStatement::with_where(
                     query.get_text(),
-                    crate::text_where::TextWhere::new(predicate.get_text()),
+                    crate::where_text::WhereText::new(predicate.get_text()),
                 ),
                 None => QueryStatement::text(query.get_text()),
             };
@@ -154,7 +154,7 @@ impl ReadonlyRepository {
             .reverse_convert(&Mapper::reverse_map(&self.rows_mapper, item.clone()))
     }
 
-    fn stored_query(&self, where_clause: &dyn Where) -> Result<(QueryStatement, Vec<Parameter>)> {
+    fn stored_query(&self, where_clause: &dyn IWhere) -> Result<(QueryStatement, Vec<Parameter>)> {
         match self.store_where(where_clause, false)? {
             Some(stored) => Ok((self.statements.query(Some(&stored)), stored.parameters())),
             None => Ok((
@@ -166,20 +166,16 @@ impl ReadonlyRepository {
 
     pub(crate) fn store_where(
         &self,
-        where_clause: &dyn Where,
+        where_clause: &dyn IWhere,
         fields_applied: bool,
-    ) -> Result<Option<WhereClause>> {
-        match where_clause.as_any().downcast_ref::<WhereClause>() {
+    ) -> Result<Option<Where>> {
+        match where_clause.as_any().downcast_ref::<Where>() {
             Some(clause) => Ok(Some(self.store_clause(clause, fields_applied)?)),
             None => Ok(None),
         }
     }
 
-    pub(crate) fn store_clause(
-        &self,
-        clause: &WhereClause,
-        fields_applied: bool,
-    ) -> Result<WhereClause> {
+    pub(crate) fn store_clause(&self, clause: &Where, fields_applied: bool) -> Result<Where> {
         clause.map(
             |name| self.column(name),
             |name, cell| self.cell(name, cell, fields_applied),

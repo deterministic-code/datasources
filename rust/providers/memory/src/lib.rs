@@ -17,7 +17,7 @@ mod tests {
     use datasources::{
         converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
         Connection, ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter,
-        QueryStatement, Row, TextWhere, Value,
+        QueryStatement, Row, Value, WhereText,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -115,21 +115,21 @@ mod tests {
             .unwrap()
             .is_empty());
         assert!(repo
-            .read_single(Some(&TextWhere::new("{\"id\":1}")))
+            .read_single(Some(&WhereText::new("{\"id\":1}")))
             .await
             .unwrap()
             .is_some());
         assert!(!repo
-            .read(Some(&TextWhere::new("{\"id\":1}")))
+            .read(Some(&WhereText::new("{\"id\":1}")))
             .await
             .unwrap()
             .is_empty());
         repo.create(&mut rec(2, "b")).await.unwrap();
         repo.update(&rec(2, "B"), None).await.unwrap();
-        repo.update(&rec(2, "C"), Some(&TextWhere::new("{\"id\":2}")))
+        repo.update(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
             .await
             .unwrap();
-        repo.delete(&rec(2, "C"), Some(&TextWhere::new("{\"id\":2}")))
+        repo.delete(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
             .await
             .unwrap();
 

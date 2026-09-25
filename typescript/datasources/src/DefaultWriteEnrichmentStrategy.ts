@@ -9,7 +9,7 @@ import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { defaultId } from "./createRepositoryOptions.ts";
-import { Operator, WhereClause } from "./statements/index.ts";
+import { Operator, Where } from "./statements/index.ts";
 import type { WriteMode } from "./WriteMode.ts";
 
 type Props = Record<string, Scalar | object>;
@@ -65,8 +65,8 @@ const linkWhere = (
   association: NonNullable<Enrichment["association"]>,
   parentKey: Scalar,
   relatedKey: Scalar,
-): WhereClause =>
-  new WhereClause(
+): Where =>
+  new Where(
     new Operator.And(
       new Operator.Equals(association.parent, parentKey),
       new Operator.Equals(association.related, relatedKey),

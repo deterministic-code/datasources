@@ -10,7 +10,7 @@ import {
   Join,
   QueryStatement,
   TransformMapper,
-  WhereClause,
+  Where,
   eq,
   type IConnection,
   type IDatasource,
@@ -124,7 +124,7 @@ describe("users view roles", () => {
     });
     usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name");
     usersRepo.addEnriched("Roles", "Key", rolesRepo, "UserId", undefined, true);
-    const usersView = await usersRepo.readSingle(new WhereClause("Key", eq, ada));
+    const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
     expect(usersView?.UserType).toBe("admin");
     expect(names(usersView?.Roles ?? [])).toEqual(["admin", "editor"]);
     expect(usersView?.Roles.every((role) => role.UserId === ada)).toBe(true);

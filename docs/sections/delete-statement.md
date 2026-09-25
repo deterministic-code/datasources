@@ -161,24 +161,24 @@ pub struct DeleteStatement
 Compiles a `DELETE`.
 
 ```rust
-pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn Where>) -> Self
+pub fn new(table: impl AsRef<str>, where_clause: Option<&dyn IWhere>) -> Self
 ```
 
 - `table` — table name
-- `where_clause` — optional [Where](./where-clause.md#where)
+- `where_clause` — optional [IWhere](./where-clause.md#iwhere)
 
 **Returns** [DeleteStatement](#deletestatement)
 
 ##### raw(text, where_clause)
 
-Wraps delete text and an optional [Where](./where-clause.md#where).
+Wraps delete text and an optional [IWhere](./where-clause.md#iwhere).
 
 ```rust
-pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn Where>>) -> Self
+pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn IWhere>>) -> Self
 ```
 
 - `text` — command text
-- `where_clause` — optional [Where](./where-clause.md#where)
+- `where_clause` — optional [IWhere](./where-clause.md#iwhere)
 
 **Returns** [DeleteStatement](#deletestatement)
 
@@ -196,18 +196,18 @@ fn get_text(&self) -> String
 
 ##### where_clause()
 
-Optional [Where](./where-clause.md#where) used to build this delete.
+Optional [IWhere](./where-clause.md#iwhere) used to build this delete.
 
 ```rust
-fn where_clause(&self) -> Option<&dyn Where>
+fn where_clause(&self) -> Option<&dyn IWhere>
 ```
 
-**Returns** `Option<&dyn `[Where](./where-clause.md#where)`>`
+**Returns** `Option<&dyn `[IWhere](./where-clause.md#iwhere)`>`
 :::
 
 ## Remarks
 
-Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](./where-clause.md#iwhere) is present. `Raw` / `raw` wraps command text without compiling. Keep the [WhereClause](./where-clause.md) when the caller needs bound parameters.
+Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](./where-clause.md#iwhere) is present. `Raw` / `raw` wraps command text without compiling. Keep the [Where](./where-clause.md) when the caller needs bound parameters.
 
 ## Examples
 

@@ -6,7 +6,7 @@ use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
-use crate::{Operator, WhereClause};
+use crate::{Operator, Where};
 use async_trait::async_trait;
 
 pub struct CascadeDeleteEnrichmentStrategy;
@@ -57,7 +57,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
             return Ok(());
         }
         let existing = writer
-            .read(Some(&WhereClause::new(Operator::equals(
+            .read(Some(&Where::new(Operator::equals(
                 association.parent.clone(),
                 parent_key.clone(),
             ))))
@@ -66,7 +66,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
             let Some(related) = row.get(&association.related).cloned() else {
                 continue;
             };
-            let clause = WhereClause::new(Operator::and(
+            let clause = Where::new(Operator::and(
                 Operator::equals(association.parent.clone(), parent_key.clone()),
                 Operator::equals(association.related.clone(), related),
             ));
