@@ -124,12 +124,6 @@ impl Statement for SelectStatement {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
-    fn parameters(&self) -> Vec<crate::parameter::Parameter> {
-        self.where_clause
-            .as_ref()
-            .map(|predicate| predicate.parameters())
-            .unwrap_or_default()
-    }
     fn kind(&self) -> crate::statements::StatementKind {
         crate::statements::StatementKind::Select
     }

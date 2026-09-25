@@ -47,24 +47,24 @@ mod tests {
         conn.open().await.unwrap();
         assert_eq!(conn.path(), "db.json");
         let repo = crud(conn.clone());
-        assert!(repo.read_single(None).await.unwrap().is_some());
+        assert!(repo.read_single(None, None).await.unwrap().is_some());
         assert!(repo
-            .read_single(Some(&SelectStatement::text("{\"id\":9}")))
+            .read_single(Some(&SelectStatement::text("{\"id\":9}")), None)
             .await
             .unwrap()
             .is_none());
         assert!(!repo
-            .read(Some(&SelectStatement::text("{\"id\":1}")))
+            .read(Some(&SelectStatement::text("{\"id\":1}")), None)
             .await
             .unwrap()
             .is_empty());
         assert!(repo
-            .read_single(Some(&WhereText::new("{\"id\":1}")))
+            .read_single(Some(&WhereText::new("{\"id\":1}")), None)
             .await
             .unwrap()
             .is_some());
         assert!(!repo
-            .read(Some(&WhereText::new("{\"id\":1}")))
+            .read(Some(&WhereText::new("{\"id\":1}")), None)
             .await
             .unwrap()
             .is_empty());

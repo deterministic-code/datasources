@@ -7,6 +7,7 @@ import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
+import type { Parameter } from "./Parameter.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -428,13 +429,13 @@ const counting = <T extends object>(
     get readSingles() {
       return state.readSingles;
     },
-    readSingle: async (query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement) => {
+    readSingle: async (query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement, parameters?: Parameter[]) => {
       state.readSingles += 1;
-      return inner.readSingle(query);
+      return inner.readSingle(query, parameters);
     },
-    async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement) {
+    async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement, parameters?: Parameter[]) {
       state.reads += 1;
-      yield* inner.read(query);
+      yield* inner.read(query, parameters);
     },
   };
 };

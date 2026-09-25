@@ -187,7 +187,8 @@ public class ReadonlyRepositoryTests
 
     sealed class SourcedView : ReadonlyRepository<View>
     {
-        protected override async IAsyncEnumerable<(View Item, Row? Source)> ReadItems(IStatement? query = null)
+        protected override async IAsyncEnumerable<(View Item, Row? Source)> ReadItems(
+            IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
         {
             await Task.Yield();
             yield return (new View(), new Row { ["UserType"] = Value.From(1) });
@@ -197,7 +198,8 @@ public class ReadonlyRepositoryTests
     sealed class JoinRows(IReadOnlyList<Row> rows, IMapper<IEnumerable<Row>, IReadOnlyList<Parent>> result)
         : ReadonlyRepository<Parent>(result)
     {
-        protected override async IAsyncEnumerable<Row> ReadSources(IStatement? query = null)
+        protected override async IAsyncEnumerable<Row> ReadSources(
+            IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
         {
             await Task.Yield();
             foreach (var row in rows)
@@ -210,20 +212,21 @@ public class ReadonlyRepositoryTests
         public int Reads { get; private set; }
         public int ReadSingles { get; private set; }
 
-        public override async IAsyncEnumerable<T> Read(IStatement? query = null)
+        public override async IAsyncEnumerable<T> Read(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
         {
             Reads++;
-            await foreach (var item in inner.Read(query))
+            await foreach (var item in inner.Read(query, parameters))
                 yield return item;
         }
 
-        protected override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
-            WithoutSource(Read(query));
+        protected override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
+            IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+            WithoutSource(Read(query, parameters));
 
-        public override async Task<T?> ReadSingle(IStatement? query = null)
+        public override async Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
         {
             ReadSingles++;
-            return await inner.ReadSingle(query);
+            return await inner.ReadSingle(query, parameters);
         }
     }
 }

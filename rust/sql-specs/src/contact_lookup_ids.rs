@@ -12,10 +12,13 @@ async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> 
     options.row_converter = Some(RowTypeConverter::new(vec!["id".into(), "name".into()]));
     let repo = CRUDRepository::new(connection, options)?;
     let row = repo
-        .read_single(Some(&Where::new(Operator::equals(
-            "name",
-            Value::from(name),
-        ))))
+        .read_single(
+            Some(&Where::new(Operator::equals(
+                "name",
+                Value::from(name),
+            ))),
+            None,
+        )
         .await?
         .ok_or_else(|| DatasourceError::message(format!("{entity} '{name}' missing")))?;
     match row.get("id") {

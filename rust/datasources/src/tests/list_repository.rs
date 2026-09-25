@@ -89,12 +89,20 @@ impl IReadonlyRepository for ListRepository {
         Some(self)
     }
 
-    async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>> {
-        self.inner.read_single(query).await
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Option<Row>> {
+        self.inner.read_single(query, parameters).await
     }
 
-    async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>> {
-        self.inner.read(query).await
+    async fn read(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[crate::Parameter]>,
+    ) -> Result<Vec<Row>> {
+        self.inner.read(query, parameters).await
     }
 }
 

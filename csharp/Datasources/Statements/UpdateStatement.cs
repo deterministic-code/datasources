@@ -4,27 +4,18 @@ public sealed record UpdateStatement : IUpdateStatement
 {
     readonly string text;
 
-    public UpdateStatement(string text, IWhere? where = null, IReadOnlyList<Parameter>? parameters = null)
-    {
-        this.text = text;
-        Where = where;
-        Parameters = parameters ?? [];
-    }
+    public UpdateStatement(string text, IWhere? where = null) => (this.text, Where) = (text, where);
 
     public UpdateStatement(string table, IReadOnlyList<Parameter> fields, IWhere? where = null)
-    {
-        Where = where;
-        (text, Parameters) = Bind(
-            $"UPDATE {table} SET {string.Join(", ", fields.Select(field => $"{field.Name} = ${field.Name}"))}",
-            where,
-            fields);
-    }
+        : this(Compose($"UPDATE {table} SET {Set(fields)}", where, fields).Text, where) { }
 
     public IWhere? Where { get; }
-    public IReadOnlyList<Parameter> Parameters { get; }
     public string GetText() => text;
 
-    static (string Text, IReadOnlyList<Parameter> Parameters) Bind(
+    public static IReadOnlyList<Parameter> ParameterList(IReadOnlyList<Parameter> fields, IWhere? where = null) =>
+        Compose("", where, fields).Parameters;
+
+    public static (string Text, IReadOnlyList<Parameter> Parameters) Compose(
         string sql, IWhere? where, IReadOnlyList<Parameter> fields)
     {
         if (where is null) return (sql, fields);
@@ -32,19 +23,22 @@ public sealed record UpdateStatement : IUpdateStatement
         var split = text.LastIndexOf(" WHERE ", StringComparison.Ordinal);
         var head = split < 0 ? text : text[..split];
         var tail = split < 0 ? "" : text[split..];
-        var bound = fields.ToList();
+        var parameters = fields.ToList();
         var values = fields.GroupBy(field => field.Name).ToDictionary(group => group.Key, group => group.Last().Value);
         foreach (var parameter in where.Parameters)
             if (values.TryGetValue(parameter.Name, out var current) && !Equals(current, parameter.Value))
             {
                 var alias = $"{parameter.Name}__where";
                 tail = Rename(tail, parameter.Name, alias);
-                bound.Add(new Parameter(alias, parameter.Value));
+                parameters.Add(new Parameter(alias, parameter.Value));
             }
             else
-                bound.Add(parameter);
-        return (head + tail, bound);
+                parameters.Add(parameter);
+        return (head + tail, parameters);
     }
+
+    static string Set(IReadOnlyList<Parameter> fields) =>
+        string.Join(", ", fields.Select(field => $"{field.Name} = ${field.Name}"));
 
     static string Rename(string text, string name, string alias)
     {

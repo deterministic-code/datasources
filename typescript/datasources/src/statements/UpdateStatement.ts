@@ -20,7 +20,7 @@ const rename = (text: string, name: string, alias: string): string => {
   return result + text.slice(index);
 };
 
-const bind = (
+const compose = (
   sql: string,
   fields: Field[],
   where?: IWhere,
@@ -47,32 +47,27 @@ const bind = (
 
 export class UpdateStatement implements IUpdateStatement {
   readonly where?: IWhere;
-  readonly parameters: Parameter[];
   private readonly text: string;
 
-  constructor(text: string, where?: IWhere, parameters?: Parameter[]);
+  constructor(text: string, where?: IWhere);
   constructor(table: string, fields: Field[], where?: IWhere);
-  constructor(
-    tableOrText: string,
-    fieldsOrWhere?: Field[] | IWhere,
-    whereOrParameters?: IWhere | Parameter[],
-  ) {
+  constructor(tableOrText: string, fieldsOrWhere?: Field[] | IWhere, where?: IWhere) {
     if (Array.isArray(fieldsOrWhere)) {
-      const where = whereOrParameters as IWhere | undefined;
-      const bound = bind(
+      const bound = compose(
         `UPDATE ${tableOrText} SET ${fieldsOrWhere.map((field) => `${field.name} = $${field.name}`).join(", ")}`,
         fieldsOrWhere,
         where,
       );
       this.text = bound.text;
-      this.parameters = bound.parameters;
       this.where = where;
       return;
     }
     this.text = tableOrText;
     this.where = fieldsOrWhere;
-    this.parameters = Array.isArray(whereOrParameters) ? whereOrParameters : [];
   }
 
   getText = (): string => this.text;
+
+  static parameterList = (fields: Field[], where?: IWhere): Parameter[] =>
+    compose("", fields, where).parameters;
 }

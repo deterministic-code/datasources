@@ -201,7 +201,7 @@ public static class RepositoryTestsSpec
                 (text, _) => new InsertStatement(text),
                 type.CRUDMapper?.WriteSuffix),
             Update = Suffix<IUpdateStatement>(
-                (text, update) => new UpdateStatement(text, update.Where, update.Parameters),
+                (text, update) => new UpdateStatement(text, update.Where),
                 type.CRUDMapper?.WriteSuffix),
             Delete = Suffix<IDeleteStatement>(
                 (text, delete) => DeleteStatement.Raw(text, delete.Where),

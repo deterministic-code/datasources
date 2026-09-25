@@ -7,18 +7,19 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T> where T 
     readonly IReadOnlyList<T> items;
     public ListReadonlyRepository(params T[] items) => this.items = items;
 
-    protected override async IAsyncEnumerable<(T Item, Row? Source)> ReadItems(IStatement? query = null)
+    protected override async IAsyncEnumerable<(T Item, Row? Source)> ReadItems(
+        IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
         await Task.Yield();
         foreach (var item in items)
-            if (Matches(item, query))
+            if (Matches(item, query, parameters))
                 yield return (item, null);
     }
 
-    static bool Matches(T item, IStatement? query) =>
+    static bool Matches(T item, IStatement? query, IReadOnlyList<Parameter>? parameters) =>
         query is ISelectStatement { Where: { } where } && where.GetText() == "1 = 0"
             ? false
-            : ParametersOf(query)
+            : (parameters ?? [])
                 .GroupBy(parameter => FieldOf(parameter.Name))
                 .All(group => group.Any(parameter => Same(Get(item, group.Key), parameter.Value)));
 
@@ -27,15 +28,6 @@ internal sealed class ListReadonlyRepository<T> : ReadonlyRepository<T> where T 
         var split = name.LastIndexOf('_');
         return split > 0 && name[(split + 1)..].All(char.IsDigit) ? name[..split] : name;
     }
-
-    static IReadOnlyList<Parameter> ParametersOf(IStatement? query) =>
-        query switch
-        {
-            ISelectStatement q => q.Where?.Parameters ?? q.Parameters,
-            IWhere w => w.Parameters,
-            null => [],
-            _ => query.Parameters
-        };
 
     static object? Get(T item, string name) =>
         typeof(T).GetProperty(name)?.GetValue(item);

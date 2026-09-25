@@ -12,11 +12,7 @@ public static class MysqlCalls
 
     public static IMapper<IUpdateStatement, IUpdateStatement> Update(string procedure) =>
         new TransformMapper<IUpdateStatement, IUpdateStatement>(
-            statement =>
-            {
-                var update = (UpdateStatement)statement;
-                return new UpdateStatement(Call(procedure, update.Parameters.Select(parameter => parameter.Name)), update.Where, update.Parameters);
-            },
+            statement => new UpdateStatement(Call(procedure, Placeholders(statement.GetText())), statement.Where),
             static statement => statement);
 
     public static IMapper<IDeleteStatement, IDeleteStatement> Delete(string procedure) =>

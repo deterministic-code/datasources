@@ -51,10 +51,13 @@ async fn apply_lookup(
         return Ok(());
     }
     let loaded = via
-        .read(Some(&Where::new(Operator::in_list(
-            enrichment.by.clone(),
-            keys.values().cloned().collect(),
-        ))))
+        .read(
+            Some(&Where::new(Operator::in_list(
+                enrichment.by.clone(),
+                keys.values().cloned().collect(),
+            ))),
+            None,
+        )
         .await?;
     let mut index = HashMap::new();
     for related in loaded {
@@ -90,10 +93,13 @@ async fn apply_many(
         return Ok(());
     }
     let loaded = via
-        .read(Some(&Where::new(Operator::in_list(
-            enrichment.by.clone(),
-            keys.values().cloned().collect(),
-        ))))
+        .read(
+            Some(&Where::new(Operator::in_list(
+                enrichment.by.clone(),
+                keys.values().cloned().collect(),
+            ))),
+            None,
+        )
         .await?;
     let mut index: HashMap<String, Vec<Row>> = HashMap::new();
     for row in loaded {

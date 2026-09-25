@@ -2,6 +2,7 @@ import type { Scalar } from "../builders/Scalar.ts";
 import type { Cells } from "../converters/Cell.ts";
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
+import type { Parameter } from "../Parameter.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
@@ -20,14 +21,18 @@ export class StubRepository<T = unknown> extends ReadonlyRepository<T> implement
     super(type);
   }
 
-  async *read(_query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
+  async *read(
+    _query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
+    _parameters?: Parameter[],
+  ): AsyncIterable<T> {
     notImplemented(this.provider);
   }
 
   async *[tracked](
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
+    parameters?: Parameter[],
   ): AsyncIterable<Sourced<T>> {
-    yield* withoutSource(this.read(query));
+    yield* withoutSource(this.read(query, parameters));
   }
 
   create = async (_item: T): Promise<T> => notImplemented(this.provider);

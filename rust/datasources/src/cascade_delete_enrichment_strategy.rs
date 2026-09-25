@@ -57,10 +57,13 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
             return Ok(());
         }
         let existing = writer
-            .read(Some(&Where::new(Operator::equals(
-                association.parent.clone(),
-                parent_key.clone(),
-            ))))
+            .read(
+                Some(&Where::new(Operator::equals(
+                    association.parent.clone(),
+                    parent_key.clone(),
+                ))),
+                None,
+            )
             .await?;
         for row in existing {
             let Some(related) = row.get(&association.related).cloned() else {

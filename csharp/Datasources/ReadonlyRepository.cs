@@ -93,42 +93,32 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
     public virtual Task<T?> ReadSingle(IWhere where) =>
         ReadSingle(Compiled(Stored(where)));
 
-    public virtual IAsyncEnumerable<T> Read(IStatement? query = null) =>
-        Items(ReadTracked(query));
+    public virtual IAsyncEnumerable<T> Read(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+        Items(ReadTracked(query, parameters));
 
-    protected internal virtual IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
-        Apply(ReadItems(query));
+    protected internal virtual IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
+        IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+        Apply(ReadItems(query, parameters ?? (query as ISelectStatement)?.Where?.Parameters));
 
-    protected virtual IAsyncEnumerable<(T Item, Row? Source)> ReadItems(IStatement? query = null) =>
-        result is null ? ReadRows(query) : Collapse(query);
+    protected virtual IAsyncEnumerable<(T Item, Row? Source)> ReadItems(
+        IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+        result is null ? ReadRows(query, parameters) : Collapse(query, parameters);
 
     IAsyncEnumerable<(T Item, Row? Source)> Apply(IAsyncEnumerable<(T Item, Row? Source)> pairs) =>
         Enriched ? Sourced(pairs) : pairs;
 
-    async IAsyncEnumerable<(T Item, Row? Source)> Collapse(IStatement? query)
+    async IAsyncEnumerable<(T Item, Row? Source)> Collapse(IStatement? query, IReadOnlyList<Parameter>? parameters)
     {
         var rows = new List<Row>();
-        await foreach (var row in ReadSources(query))
+        await foreach (var row in ReadSources(query, parameters))
             rows.Add(row);
         foreach (var item in result!.Map(rows))
             yield return (item, null);
     }
 
-    protected virtual async IAsyncEnumerable<Row> ReadSources(IStatement? query = null)
+    protected virtual async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
-        var statement = query switch
-        {
-            IExecuteStoredProcedureStatement call => (IStatement)call,
-            ISelectStatement q => q,
-            null => Statements.Query(),
-            _ => throw new DatasourceException("Read requires ISelectStatement, IWhere, or IExecuteStoredProcedureStatement")
-        };
-        var parameters = statement switch
-        {
-            ISelectStatement q => q.Where?.Parameters ?? q.Parameters,
-            _ => statement.Parameters
-        };
-        var reader = await Command().ExecuteReader(statement, parameters);
+        var reader = await Command().ExecuteReader(query ?? Statements.Query(), parameters);
         try
         {
             while (await reader.Next())
@@ -141,9 +131,9 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
         }
     }
 
-    async IAsyncEnumerable<(T Item, Row? Source)> ReadRows(IStatement? query)
+    async IAsyncEnumerable<(T Item, Row? Source)> ReadRows(IStatement? query, IReadOnlyList<Parameter>? parameters)
     {
-        await foreach (var renamed in ReadSources(query))
+        await foreach (var renamed in ReadSources(query, parameters))
             yield return (Mapper!.Map(RowConverter.Convert(renamed)), renamed);
     }
 
@@ -173,8 +163,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T> where 
             yield return (item, null);
     }
 
-    public virtual async Task<T?> ReadSingle(IStatement? query = null) =>
-        await Read(query).FirstOrDefaultAsync() ?? default;
+    public virtual async Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+        await Read(query, parameters).FirstOrDefaultAsync() ?? default;
 
     protected ICommand Command() =>
         middlewares.Aggregate(

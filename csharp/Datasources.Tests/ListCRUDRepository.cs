@@ -13,11 +13,12 @@ internal sealed class ListCRUDRepository<T> : BulkCRUDRepository<T> where T : ne
         nextId = items.Select(IdInt).DefaultIfEmpty(0).Max() + 1;
     }
 
-    protected override async IAsyncEnumerable<(T Item, Row? Source)> ReadItems(IStatement? query = null)
+    protected override async IAsyncEnumerable<(T Item, Row? Source)> ReadItems(
+        IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
         await Task.Yield();
         foreach (var item in Items)
-            if (Matches(item, query))
+            if ((parameters ?? []).All(parameter => Same(Get(item, parameter.Name), parameter.Value)))
                 yield return (item, null);
     }
 
@@ -46,18 +47,6 @@ internal sealed class ListCRUDRepository<T> : BulkCRUDRepository<T> where T : ne
             Items.RemoveAll(row => IdKey(Id(row)) == IdKey(Id(item)));
         return Task.FromResult(new Response(Value.Null.Instance, 1));
     }
-
-    static bool Matches(T item, IStatement? query) =>
-        ParametersOf(query).All(parameter => Same(Get(item, parameter.Name), parameter.Value));
-
-    static IReadOnlyList<Parameter> ParametersOf(IStatement? query) =>
-        query switch
-        {
-            ISelectStatement q => q.Where?.Parameters ?? q.Parameters,
-            IWhere w => w.Parameters,
-            null => [],
-            _ => query.Parameters
-        };
 
     static object? Get(T item, string name) =>
         typeof(T).GetProperty(name)?.GetValue(item);

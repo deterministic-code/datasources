@@ -1,6 +1,6 @@
 import type { Constructable } from "../converters/Constructable.ts";
-import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
-import type { ISelectStatement } from "../statements/ISelectStatement.ts";
+import type { Parameter } from "../Parameter.ts";
+import type { IStatement } from "../statements/IStatement.ts";
 import { BulkCRUDRepository } from "../BulkCRUDRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
@@ -13,24 +13,8 @@ type Props = Record<string, Scalar | object>;
 
 const props = (item: object): Props => item as Props;
 
-const matches = <T extends object>(
-  item: T,
-  query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-): boolean =>
-  parametersOf(query).every(
-    ({ name, value }) => String(props(item)[name]) === String(value),
-  );
-
-const parametersOf = (
-  query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-): { name: string; value: Scalar }[] => {
-  if (!query) return [];
-  const where = "where" in query ? query.where : query;
-  return (where?.parameters ?? query.parameters ?? []).map((parameter) => ({
-    name: parameter.name,
-    value: parameter.value as Scalar,
-  }));
-};
+const matches = <T extends object>(item: T, parameters?: Parameter[]): boolean =>
+  (parameters ?? []).every(({ name, value }) => String(props(item)[name]) === String(value));
 
 const idOf = (item: object): Scalar | object | undefined => {
   const value = props(item).id ?? props(item).Id;
@@ -84,11 +68,9 @@ export class ListCRUDRepository<T extends object> extends BulkCRUDRepository<T> 
       }, 0) + 1;
   }
 
-  protected async *readItems(
-    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-  ): AsyncIterable<Sourced<T>> {
+  protected async *readItems(_query?: IStatement, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
     for (const item of this.items)
-      if (matches(item, query)) yield { item };
+      if (matches(item, parameters)) yield { item };
   }
 
   protected inserted = async (item: T): Promise<T> => {
@@ -107,7 +89,7 @@ export class ListCRUDRepository<T extends object> extends BulkCRUDRepository<T> 
   protected remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     if (byWhere) {
       for (let index = this.items.length - 1; index >= 0; index--)
-        if (matches(this.items[index]!, byWhere)) this.items.splice(index, 1);
+        if (matches(this.items[index]!, byWhere.parameters)) this.items.splice(index, 1);
       return { result: null, rowsAffected: 1 };
     }
     const key = idKey(idOf(item));

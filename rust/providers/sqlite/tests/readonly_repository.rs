@@ -66,16 +66,19 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     options.entity_mapper = Box::new(PluralizerMapper::new());
     let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
     let by_id = repo
-        .read_single(Some(&Where::binary("id", eq, 1_i64)))
+        .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
         .await
         .unwrap()
         .unwrap();
     let disabled = repo
-        .read(Some(&Where::binary("username", eq, "grace").and(
-            "is_enabled",
-            eq,
-            0_i64,
-        )))
+        .read(
+            Some(&Where::binary("username", eq, "grace").and(
+                "is_enabled",
+                eq,
+                0_i64,
+            )),
+            None,
+        )
         .await
         .unwrap();
     assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
@@ -118,24 +121,29 @@ async fn reads_user_by_guid_username_and_created() {
     let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
-        .read_single(Some(&Where::binary(
-            "Key",
-            eq,
-            Uuid::parse_str(ADA).unwrap(),
-        )))
+        .read_single(
+            Some(&Where::binary(
+                "Key",
+                eq,
+                Uuid::parse_str(ADA).unwrap(),
+            )),
+            None,
+        )
         .await
         .unwrap()
         .unwrap();
     let by_login = repo
-        .read(Some(
-            &Where::binary("Login", eq, "ada").and("Active", eq, true),
-        ))
+        .read(
+            Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
+            None,
+        )
         .await
         .unwrap();
     let later = repo
-        .read(Some(
-            &Where::binary("Active", eq, true).and("Opened", gt, opened),
-        ))
+        .read(
+            Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
+            None,
+        )
         .await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
@@ -258,11 +266,14 @@ mod user_view {
             None,
         );
         let account = users_repo
-            .read_single(Some(&Where::binary(
-                "Key",
-                eq,
-                Uuid::parse_str(ADA).unwrap(),
-            )))
+            .read_single(
+                Some(&Where::binary(
+                    "Key",
+                    eq,
+                    Uuid::parse_str(ADA).unwrap(),
+                )),
+                None,
+            )
             .await
             .unwrap()
             .unwrap();
@@ -445,7 +456,7 @@ mod users_view_roles {
             Some(strategy),
         );
         let users_view = users_repo
-            .read_single(Some(&Where::binary("Key", eq, ADA)))
+            .read_single(Some(&Where::binary("Key", eq, ADA)), None)
             .await
             .unwrap()
             .unwrap();
@@ -542,7 +553,7 @@ mod users_view_roles {
         let mut options = ReadonlyRepositoryOptions::default();
         options.result = Some(Box::new(result));
         let users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
-        let items = users_repo.read(Some(command.as_ref())).await.unwrap();
+        let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
         let view = |login: &str| {
             items
                 .iter()
@@ -647,11 +658,14 @@ mod user_crud {
             .unwrap()
             .unwrap();
         let matches = users_repo
-            .read(Some(&Where::binary("username", eq, "ada").and(
-                "is_enabled",
-                eq,
-                Value::Bool(true),
-            )))
+            .read(
+                Some(&Where::binary("username", eq, "ada").and(
+                    "is_enabled",
+                    eq,
+                    Value::Bool(true),
+                )),
+                None,
+            )
             .await
             .unwrap();
         created.insert("username".into(), Value::from("ada-v2"));
@@ -768,7 +782,7 @@ mod user_crud {
         users_repo.create(&mut user).await.unwrap();
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
-            .read_single(Some(&Where::binary("Key", eq, key.clone())))
+            .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
             .await
             .unwrap()
             .unwrap();
@@ -783,7 +797,7 @@ mod user_crud {
             .await
             .unwrap();
         let current = users_repo
-            .read_single(Some(&Where::binary("Key", eq, key.clone())))
+            .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
             .await
             .unwrap()
             .unwrap();
@@ -797,7 +811,7 @@ mod user_crud {
         users_repo.delete(&loaded, None).await.unwrap();
         let gone = users_repo.read_single_by_id(&key).await.unwrap();
         let roles = user_roles_repo
-            .read(Some(&Where::binary("UserId", eq, key.clone())))
+            .read(Some(&Where::binary("UserId", eq, key.clone())), None)
             .await
             .unwrap();
         assert_eq!(admin.get("Id"), Some(&Value::Int(1)));

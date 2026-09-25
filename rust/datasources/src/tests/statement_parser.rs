@@ -141,7 +141,7 @@ fn builds_the_where_tree() {
 fn keeps_a_string_beside_a_column_as_its_parameter() {
     let query = StatementParser::parse("SELECT id FROM users WHERE name = 'ada'").unwrap();
     assert_eq!(query.get_text(), "SELECT id FROM users WHERE name = $name");
-    let parameters = query.parameters();
+    let parameters = query.predicate().unwrap().parameters();
     assert_eq!(parameters.len(), 1);
     assert_eq!(parameters[0].value, Value::Text("ada".into()));
 }
