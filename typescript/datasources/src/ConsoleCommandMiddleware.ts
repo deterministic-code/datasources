@@ -9,19 +9,27 @@ export const formatElapsed = (elapsedMs: number): string =>
     : `${Math.round(elapsedMs)}ms`;
 
 const cellOf = (value: Cell): string =>
-  value instanceof Date
-    ? value.toISOString()
-    : value instanceof Uint8Array
-      ? Buffer.from(value).toString("base64")
-      : typeof value === "bigint"
-        ? String(value)
-        : JSON.stringify(value);
+  value === null
+    ? "null"
+    : value instanceof Date
+      ? value.toISOString()
+      : value instanceof Uint8Array
+        ? Buffer.from(value).toString("base64")
+        : typeof value === "bigint"
+          ? String(value)
+          : typeof value === "boolean"
+            ? value ? "True" : "False"
+            : typeof value === "string"
+              ? value
+              : String(value);
 
 const paramsOf = (params?: ReadonlyArray<Parameter>) =>
   `{${(params ?? []).map((param) => `${param.name}: ${cellOf(param.value as Cell)}`).join(", ")}}`;
 
 const rowsOf = (rows: ReadonlyArray<Row>) =>
-  rows.map((row) => `{${Object.entries(row).map(([key, value]) => `${key}: ${cellOf(value)}`).join(", ")}}`).join(", ");
+  rows
+    .map((row) => `{${Object.entries(row).sort(([left], [right]) => left < right ? -1 : 1).map(([key, value]) => `${key}: ${cellOf(value)}`).join(", ")}}`)
+    .join(", ");
 
 export class ConsoleCommandMiddleware implements ICommandMiddleware {
   constructor(

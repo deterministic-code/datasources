@@ -31,4 +31,8 @@ public sealed class MigrateTests
     [Fact]
     public void IfNotExistsLeavesOtherStatements() =>
         Assert.Equal("SELECT 1", Migrate.IfNotExists("SELECT 1"));
+
+    [Fact]
+    public void SeedUuidRejectsUnknownTables() =>
+        Assert.Throws<InvalidOperationException>(() => Migrate.SeedUuid("nope", 1));
 }

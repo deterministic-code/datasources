@@ -405,6 +405,92 @@ async fn console_verbose_bodies() {
     assert!(deleted.contains("[AfterCommand]-[{"));
     assert!(deleted.contains("rowsAffected: 1"));
     assert!(deleted.contains("result: null"));
+    lines.lock().unwrap().clear();
+    stamps.lock().unwrap().extend([
+        "2026-08-28T01:54:12.101Z".to_string(),
+        "2026-08-28T01:54:12.102Z".to_string(),
+        "2026-08-28T01:54:12.103Z".to_string(),
+        "2026-08-28T01:54:12.104Z".to_string(),
+    ]);
+    host.run(
+        "SELECT 1",
+        Some(&[
+            Parameter::new("name", "Ada"),
+            Parameter::new("missing", Value::Null),
+            Parameter::new("on", true),
+            Parameter::new("off", false),
+        ]),
+        |_q, _p| async {
+            Ok((
+                (),
+                vec![record(&[
+                    ("name", Value::Text("Ada".into())),
+                    ("missing", Value::Null),
+                    ("on", Value::Bool(true)),
+                    ("off", Value::Bool(false)),
+                ])],
+            ))
+        },
+    )
+    .await
+    .unwrap();
+    let logged = lines.lock().unwrap().clone();
+    assert_eq!(
+        logged[1],
+        "[2026-08-28T01:54:12.102Z]-[datasource][Request]-[{name: Ada, missing: null, on: True, off: False}]"
+    );
+    assert_eq!(
+        logged[3],
+        "[2026-08-28T01:54:12.104Z]-[datasource][AfterCommand]-[{missing: null, name: Ada, off: False, on: True}]"
+    );
+}
+
+#[tokio::test]
+async fn expect_console_matches_transcript() {
+    let now = || "2026-08-28T01:54:12.101Z".to_string();
+    let middleware = Arc::new(ExpectConsoleMiddleware::new(
+        vec![
+            "[2026-08-28T01:54:12.101Z]-[datasource][Start]-[SELECT 1]".into(),
+            "[2026-08-28T01:54:12.101Z]-[datasource][Request]-[{id: 1}]".into(),
+            "[2026-08-28T01:54:12.101Z]-[datasource][Finish]-[SELECT 1]".into(),
+            "[2026-08-28T01:54:12.101Z]-[datasource][AfterCommand]-[{id: 1}]".into(),
+        ],
+        now,
+    ));
+    let host = CommandMiddlewareHost::new();
+    host.add_middleware(middleware.clone());
+    host.run(
+        "SELECT 1",
+        Some(&[Parameter::new("id", 1i64)]),
+        |_q, _p| async { Ok(((), vec![record(&[("id", Value::Int(1))])])) },
+    )
+    .await
+    .unwrap();
+    middleware.complete().unwrap();
+}
+
+#[tokio::test]
+async fn expect_console_rejects_a_different_line() {
+    let middleware = Arc::new(ExpectConsoleMiddleware::new(
+        vec!["[nope]".into()],
+        || "2026-08-28T01:54:12.101Z".to_string(),
+    ));
+    let host = CommandMiddlewareHost::new();
+    host.add_middleware(middleware.clone());
+    let error = host
+        .run(
+            "SELECT 1",
+            Some(&[Parameter::new("id", 1i64)]),
+            |_q, _p| async { Ok(((), vec![record(&[("id", Value::Int(1))])])) },
+        )
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("console mismatch at 0"));
+    let short = ExpectConsoleMiddleware::new(
+        vec!["[missing]".into()],
+        || "2026-08-28T01:54:12.101Z".to_string(),
+    );
+    assert!(short.complete().unwrap_err().to_string().contains("actual:   <missing>"));
 }
 
 #[test]

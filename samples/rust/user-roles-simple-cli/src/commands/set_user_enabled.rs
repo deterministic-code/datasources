@@ -10,7 +10,7 @@ pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<Str
     if app.provider() == "mysql" {
         let fields = [
             Parameter::new("p_username", username),
-            Parameter::new("p_is_enabled", enabled),
+            Parameter::new("p_is_enabled", schema::flag(app.provider(), enabled)),
             Parameter::new("p_updated", updated),
         ];
         app.command()
@@ -24,7 +24,7 @@ pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<Str
     let users = schema::ident(app.provider(), "users");
     let id = lookup_id::of(app.command(), &users, "username", username).await?;
     let fields = [
-        Parameter::new("is_enabled", enabled),
+        Parameter::new("is_enabled", schema::flag(app.provider(), enabled)),
         Parameter::new("updated", updated),
     ];
     let where_clause = WhereClause::new(Operator::equals("id", id));

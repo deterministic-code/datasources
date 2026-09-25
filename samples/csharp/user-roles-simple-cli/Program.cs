@@ -23,10 +23,13 @@ static async Task<int> Run(string[] args)
         await connection.Open();
         var command = connection.CreateCommand();
         await Migrate.Apply(command);
-        command.AddMiddleware(new ConsoleCommandMiddleware(Console.Error.WriteLine));
-        Console.Write(await new App(command, Env("CLI_NOW") is { } stamp
-            ? () => DateTime.Parse(stamp, null, System.Globalization.DateTimeStyles.RoundtripKind)
-            : null).Run(parsed));
+        var stamp = Env("CLI_NOW");
+        command.AddMiddleware(new ConsoleCommandMiddleware(
+            Console.Error.WriteLine,
+            stamp is null ? null : () => DateTimeOffset.Parse(stamp, null, System.Globalization.DateTimeStyles.RoundtripKind)));
+        Console.Write(await new App(command, stamp is null
+            ? null
+            : () => DateTime.Parse(stamp, null, System.Globalization.DateTimeStyles.RoundtripKind)).Run(parsed));
         return 0;
     }
     catch (Exception ex)

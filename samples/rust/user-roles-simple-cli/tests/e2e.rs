@@ -360,6 +360,106 @@ async fn postgres() {
         .expect("drop");
 }
 
+#[derive(Deserialize)]
+struct TranscriptSpec {
+    now: String,
+    steps: Vec<TranscriptStep>,
+}
+
+#[derive(Deserialize)]
+struct TranscriptStep {
+    argv: Vec<String>,
+}
+
+async fn console_transcript(provider: &str, connection: std::sync::Arc<dyn datasources::Connection>) {
+    let shared = sample().join("../../user-roles-simple-cli-shared");
+    let spec: TranscriptSpec =
+        serde_yaml::from_str(&fs::read_to_string(shared.join("cli.yaml")).expect("spec")).expect("yaml");
+    let expected = fs::read_to_string(shared.join(format!("{provider}.log")))
+        .expect("log")
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect();
+    connection.open().await.expect("open");
+    let command = connection.create_command();
+    user_roles_simple_cli::migrate::apply(command.as_ref(), connection.provider())
+        .await
+        .expect("migrate");
+    let clock = spec.now.clone();
+    let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::new(expected, move || clock.clone()));
+    command.add_middleware(middleware.clone());
+    let stamp = spec.now.clone();
+    let app = user_roles_simple_cli::app::App::new(command.as_ref(), connection.provider()).with_clock(
+        move || stamp.clone(),
+        |_| Ok("hash".into()),
+        || vec![1, 2, 3],
+    );
+    for step in spec.steps {
+        app.run(user_roles_simple_cli::parse::args(&step.argv).expect("parse"))
+            .await
+            .expect("step");
+    }
+    middleware.complete().expect("transcript");
+}
+
+#[tokio::test]
+async fn console_transcript_mysql() {
+    use datasources::Driver;
+    let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    fresh_compose("mysql");
+    let _stop = StopCompose("mysql");
+    let url = env_or("MYSQL_URL", "mysql://ds:ds@127.0.0.1:3306/datasources");
+    let name = format!("ds_{}", &uuid()[..16]);
+    let pool = mysql_async::Pool::new(url.as_str());
+    {
+        let mut conn = pool.get_conn().await.expect("mysql");
+        mysql_async::prelude::Queryable::query_drop(&mut conn, format!("CREATE DATABASE `{name}`"))
+            .await
+            .expect("create");
+    }
+    let isolated = replace_mysql_db(&url, &name);
+    let mut options = std::collections::HashMap::new();
+    options.insert("url".into(), isolated);
+    console_transcript("mysql", datasources_mysql::MysqlDriver.connection(Some(&options))).await;
+    let mut conn = pool.get_conn().await.expect("mysql");
+    mysql_async::prelude::Queryable::query_drop(&mut conn, format!("DROP DATABASE `{name}`"))
+        .await
+        .expect("drop");
+}
+
+#[tokio::test]
+async fn console_transcript_postgres() {
+    use datasources::Driver;
+    let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    fresh_compose("postgres");
+    let _stop = StopCompose("postgres");
+    let url = env_or("POSTGRES_URL", "postgres://ds:ds@127.0.0.1:5432/datasources");
+    let schema = format!("ds_{}", &uuid()[..16]);
+    let (client, connection) = tokio_postgres::connect(&url, tokio_postgres::NoTls)
+        .await
+        .expect("pg");
+    tokio::spawn(async move {
+        let _ = connection.await;
+    });
+    client
+        .execute(&format!("CREATE SCHEMA {schema}"), &[])
+        .await
+        .expect("schema");
+    let mut options = std::collections::HashMap::new();
+    options.insert("url".into(), url);
+    options.insert("schema".into(), schema.clone());
+    console_transcript(
+        "postgres",
+        datasources_postgres::PostgresDriver.connection(Some(&options)),
+    )
+    .await;
+    client
+        .execute(&format!("DROP SCHEMA {schema} CASCADE"), &[])
+        .await
+        .expect("drop");
+}
+
 fn replace_mysql_db(url: &str, name: &str) -> String {
     match url.trim_end_matches('/').rfind('/') {
         Some(index) => format!("{}/{name}", &url[..index]),

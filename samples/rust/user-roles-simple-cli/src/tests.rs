@@ -446,3 +446,46 @@ async fn migrates_and_rejects_missing() {
         .is_err());
 }
 
+#[derive(serde::Deserialize)]
+struct TranscriptSpec {
+    now: String,
+    steps: Vec<TranscriptStep>,
+}
+
+#[derive(serde::Deserialize)]
+struct TranscriptStep {
+    argv: Vec<String>,
+}
+
+#[tokio::test]
+async fn console_transcript_matches_sqlite() {
+    use datasources::Driver;
+    let shared = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../user-roles-simple-cli-shared");
+    let spec: TranscriptSpec = serde_yaml::from_str(&std::fs::read_to_string(shared.join("cli.yaml")).unwrap()).unwrap();
+    let expected = std::fs::read_to_string(shared.join("sqlite.log"))
+        .unwrap()
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect();
+    let mut options = std::collections::HashMap::new();
+    options.insert("filename".into(), ":memory:".into());
+    let connection = datasources_sqlite::SqliteDriver.connection(Some(&options));
+    connection.open().await.unwrap();
+    let command = connection.create_command();
+    migrate::apply(command.as_ref(), connection.provider()).await.unwrap();
+    let clock = spec.now.clone();
+    let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::new(expected, move || clock.clone()));
+    command.add_middleware(middleware.clone());
+    let stamp = spec.now.clone();
+    let app = App::new(command.as_ref(), connection.provider()).with_clock(
+        move || stamp.clone(),
+        |_| Ok("hash".into()),
+        || vec![1, 2, 3],
+    );
+    for step in spec.steps {
+        app.run(parse::args(&step.argv).unwrap()).await.unwrap();
+    }
+    middleware.complete().unwrap();
+}
+

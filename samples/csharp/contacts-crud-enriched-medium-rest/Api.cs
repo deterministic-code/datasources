@@ -145,25 +145,25 @@ public sealed class Api(ContactsRepository contacts, LegacyContactRepository leg
 
     static void Stamp(Contact contact)
     {
-        contact.uuid = contact.uuid == Guid.Empty ? Guid.NewGuid() : contact.uuid;
-        contact.created = contact.created == default ? DateTime.UtcNow : contact.created;
-        contact.updated = DateTime.UtcNow;
+        contact.uuid = contact.uuid == Guid.Empty ? Clock.Uuid() : contact.uuid;
+        contact.created = contact.created == default ? Clock.UtcNow() : contact.created;
+        contact.updated = Clock.UtcNow();
         contact.version = [0];
     }
 
     static void Stamp(Address address)
     {
-        address.uuid = address.uuid == Guid.Empty ? Guid.NewGuid() : address.uuid;
-        address.created = address.created == default ? DateTime.UtcNow : address.created;
-        address.updated = DateTime.UtcNow;
+        address.uuid = address.uuid == Guid.Empty ? Clock.Uuid() : address.uuid;
+        address.created = address.created == default ? Clock.UtcNow() : address.created;
+        address.updated = Clock.UtcNow();
         address.version = [0];
     }
 
     static void Stamp(Phone phone)
     {
-        phone.uuid = phone.uuid == Guid.Empty ? Guid.NewGuid() : phone.uuid;
-        phone.created = phone.created == default ? DateTime.UtcNow : phone.created;
-        phone.updated = DateTime.UtcNow;
+        phone.uuid = phone.uuid == Guid.Empty ? Clock.Uuid() : phone.uuid;
+        phone.created = phone.created == default ? Clock.UtcNow() : phone.created;
+        phone.updated = Clock.UtcNow();
         phone.version = [0];
     }
 
@@ -205,7 +205,7 @@ public sealed class Api(ContactsRepository contacts, LegacyContactRepository leg
         row.first_name = Text(row.first_name);
         row.last_name = Text(row.last_name);
         row.email = Text(row.email);
-        row.imported_at ??= DateTime.UtcNow;
+        row.imported_at ??= Clock.UtcNow();
         return row;
     }
 

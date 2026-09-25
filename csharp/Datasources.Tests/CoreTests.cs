@@ -483,6 +483,13 @@ public class CoreTests
             [new Parameter("id", 2L)],
             (_, _) => Task.FromResult((new Response(Value.Null.Instance, 1), EmptyRows())));
         Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][AfterCommand]-[{result: null, rowsAffected: 1}]", lines[3]);
+        lines.Clear();
+        await host.Run(
+            "SELECT 1",
+            [new Parameter("name", "Ada"), new Parameter("missing", Value.Null.Instance), new Parameter("on", true), new Parameter("off", false)],
+            (_, _) => Task.FromResult((1, Rows(new Row { ["name"] = "Ada", ["missing"] = Value.Null.Instance, ["on"] = true, ["off"] = false }))));
+        Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][Request]-[{name: Ada, missing: null, on: True, off: False}]", lines[1]);
+        Assert.Equal("[2026-08-28T01:54:12.104Z]-[datasource][AfterCommand]-[{missing: null, name: Ada, off: False, on: True}]", lines[3]);
     }
 
     [Fact]

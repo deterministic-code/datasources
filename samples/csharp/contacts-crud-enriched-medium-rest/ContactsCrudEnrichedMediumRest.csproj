@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="*Tests.cs" />
+    <InternalsVisibleTo Include="ContactsCrudEnrichedMediumRest.Tests" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\csharp\Datasources\Datasources.csproj" />

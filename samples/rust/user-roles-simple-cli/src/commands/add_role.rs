@@ -19,7 +19,7 @@ impl AddRole {
             "add_role",
             &[
                 Parameter::new("name", self.name.as_str()),
-                Parameter::new("is_enabled", true),
+                Parameter::new("is_enabled", schema::flag(app.provider(), true)),
                 Parameter::new("created", created.as_str()),
                 Parameter::new("updated", updated.clone()),
             ],

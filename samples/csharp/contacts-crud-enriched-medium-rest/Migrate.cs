@@ -61,7 +61,7 @@ public static class Migrate
             var fields = new Parameter[]
             {
                 new(Names.Column("id"), row.Id),
-                new(Names.Column("uuid"), Guid.NewGuid().ToString()),
+                new(Names.Column("uuid"), SeedUuid(table, row.Id).ToString()),
                 new(Names.Column("created"), "2024-01-01T00:00:00Z"),
                 new(Names.Column("updated"), "2024-01-01T00:00:00Z"),
                 new(Names.Column("version"), new byte[] { 0 }),
@@ -71,4 +71,15 @@ public static class Migrate
             await command.Execute(new InsertStatement(Schema.Ident(provider, Names.Table(table)), fields), fields);
         }
     }
+
+    internal static Guid SeedUuid(string table, int id) =>
+        new((table switch
+        {
+            "contact_source" => 1,
+            "contact_type" => 2,
+            "address_type" => 3,
+            "phone_type" => 4,
+            "contact_groups" => 5,
+            _ => throw new InvalidOperationException(table)
+        } * 100 + id), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }

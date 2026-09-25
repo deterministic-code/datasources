@@ -10,6 +10,7 @@ mod command_middleware;
 mod command_middleware_host;
 mod connection;
 mod console_command_middleware;
+mod expect_console_middleware;
 pub mod converters;
 mod create;
 mod create_repository_options;
@@ -82,6 +83,7 @@ pub use command_middleware::CommandMiddleware;
 pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
 pub use console_command_middleware::{format_elapsed, utc_iso_millis, ConsoleCommandMiddleware};
+pub use expect_console_middleware::ExpectConsoleMiddleware;
 pub use converters::{
     Casing, ChangeCasingConverter, ConvertSchema, PluralizerConverter, RegexConverter,
     ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter,

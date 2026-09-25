@@ -30,5 +30,9 @@
     <Compile Include="*Tests.cs" />
     <ProjectReference Include="UserRolesSimpleCli.csproj" />
     <ProjectReference Include="..\..\..\csharp\Datasources\Datasources.csproj" />
+    <ProjectReference Include="..\..\..\csharp\Providers\Sqlite\Datasources.Sqlite.csproj" />
+    <ProjectReference Include="..\..\..\csharp\Providers\Sqlite.Microsoft\Datasources.Sqlite.Microsoft.csproj" />
+    <ProjectReference Include="..\..\..\csharp\Providers\Mysql\Datasources.Mysql.csproj" />
+    <ProjectReference Include="..\..\..\csharp\Providers\Postgres\Datasources.Postgres.csproj" />
   </ItemGroup>
 </Project>
