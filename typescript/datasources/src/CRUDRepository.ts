@@ -1,6 +1,5 @@
 import type { IConnection } from "./IConnection.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
-import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./IWhere.ts";
 import type { Field } from "./builders/Field.ts";
@@ -15,24 +14,15 @@ import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
 import { identityCreate, parts } from "./RepositoryBuilder.ts";
-import { isBuilt, ReadonlyRepository, readTracked, tracked, type Sourced } from "./ReadonlyRepository.ts";
+import { isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
-import type { IEnriched } from "./IEnriched.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
-import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
-import type { ISelectStatement } from "./statements/ISelectStatement.ts";
-import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
-import { RepositoryTree } from "./RepositoryTree.ts";
-import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
-import type { Row } from "./Row.ts";
 
 type Props = Record<string, Scalar | object>;
-type ReadQuery = ISelectStatement | IWhere | IExecuteStoredProcedureStatement;
 
 const fieldsOf = (
   record: Cells,
@@ -98,14 +88,17 @@ const isDelegate = <T>(
 
 export class CRUDRepository<T = Cells>
   extends ReadonlyRepository<T>
-  implements ICRUDRepository<T>, IEnriched<T>
+  implements ICRUDRepository<T>
 {
-  readonly tree: IRepositoryTree;
   readonly ids: readonly string[];
-  private readonly delegate?: ICRUDRepository<T>;
-  private readonly strategy: IReadonlyEnrichmentStrategy<T>;
   private readonly createMapper?: IMapper<Scalar, T>;
   private readonly write: IWriteEnrichmentStrategy<T>;
+
+  private get stored(): ICRUDRepository<T> | undefined {
+    return this.innerRepo && "readSingleById" in this.innerRepo
+      ? (this.innerRepo as ICRUDRepository<T>)
+      : undefined;
+  }
 
   constructor(
     inner: ICRUDRepository<T>,
@@ -121,15 +114,8 @@ export class CRUDRepository<T = Cells>
     write?: IWriteEnrichmentStrategy<T>,
   ) {
     if (isDelegate(typeOrConnectionOrBuilt)) {
-      super(typeOrConnectionOrBuilt.type);
-      this.delegate = typeOrConnectionOrBuilt;
-      this.strategy =
-        (connectionOrOptions as IReadonlyEnrichmentStrategy<T> | undefined) ??
-        new DefaultReadonlyEnrichmentStrategy<T>();
+      super(typeOrConnectionOrBuilt, connectionOrOptions as IReadonlyEnrichmentStrategy<T> | undefined);
       this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
-      this.tree = new RepositoryTree(
-        new RepositoryTreeNode(typeOrConnectionOrBuilt, "", undefined, undefined, undefined, this.strategy),
-      );
       this.ids = typeOrConnectionOrBuilt.ids;
       this.createMapper =
         typeOrConnectionOrBuilt instanceof CRUDRepository && typeOrConnectionOrBuilt.createMapper
@@ -141,69 +127,12 @@ export class CRUDRepository<T = Cells>
     super(built);
     this.createMapper = built.create;
     this.ids = built.ids;
-    this.strategy = new DefaultReadonlyEnrichmentStrategy<T>();
     this.write = new DefaultWriteEnrichmentStrategy<T>();
-    this.tree = new RepositoryTree(
-      new RepositoryTreeNode(this, "", undefined, undefined, undefined, this.strategy),
-    );
-  }
-
-  private get enriched(): boolean {
-    return this.tree.parent.items.length > 0;
-  }
-
-  addEnriched<TRelated extends object>(
-    into: keyof T & string,
-    from: keyof T & string,
-    via: IReadonlyRepository<TRelated>,
-    by: keyof TRelated & string,
-    select?: keyof TRelated & string,
-    many?: boolean,
-    nest?: (node: IRepositoryTreeNode) => void,
-  ): this {
-    const child = this.tree.parent.include(via, into, from, by, select, many);
-    nest?.(child);
-    return this;
-  }
-
-  addLinked<TRelated extends object, TLink extends object>(
-    into: keyof T & string,
-    from: keyof T & string,
-    via: IReadonlyRepository<TRelated>,
-    by: keyof TRelated & string,
-    link: ICRUDRepository<TLink>,
-    parent: keyof TLink & string,
-    related: keyof TLink & string,
-  ): this {
-    this.tree.parent.includeLinked(via, into, from, by, link, parent, related);
-    return this;
-  }
-
-  enrich = async (items: T[]): Promise<T[]> => {
-    await this.strategy.enrich(this.tree, items);
-    return items;
-  };
-
-  async *[tracked](query?: ReadQuery): AsyncIterable<Sourced<T>> {
-    const source = this.delegate ? readTracked(this.delegate, query) : super[tracked](query);
-    if (!this.enriched) {
-      yield* source;
-      return;
-    }
-    const items: T[] = [];
-    const sources: (Row | undefined)[] = [];
-    for await (const sourced of source) {
-      items.push(sourced.item);
-      sources.push(sourced.source);
-    }
-    await this.strategy.enrich(this.tree, items, sources);
-    for (let index = 0; index < items.length; index++)
-      yield { item: items[index]!, source: sources[index] };
   }
 
   create = async (item: T): Promise<T> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
-    const created = this.delegate ? await this.delegate.create(stored) : await this.inserted(stored);
+    const created = this.stored ? await this.stored.create(stored) : await this.inserted(stored);
     if (!this.enriched) return created;
     const names = this.ids.length > 0 ? this.ids : defaultId(Object.keys(item as object));
     copyIds(item, created, names);
@@ -214,8 +143,8 @@ export class CRUDRepository<T = Cells>
 
   update = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
-    const response = this.delegate
-      ? await this.delegate.update(stored, byWhere)
+    const response = this.stored
+      ? await this.stored.update(stored, byWhere)
       : await this.save(stored, byWhere);
     if (this.enriched) await this.write.persist(this.tree, [item], "update");
     return response;
@@ -223,12 +152,12 @@ export class CRUDRepository<T = Cells>
 
   delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
     if (this.enriched) await this.write.persist(this.tree, [item], "delete");
-    return this.delegate ? this.delegate.delete(item, byWhere) : this.remove(item, byWhere);
+    return this.stored ? this.stored.delete(item, byWhere) : this.remove(item, byWhere);
   };
 
   readSingleById = async (id: Scalar | Cells): Promise<T | undefined> => {
-    if (!this.delegate) return this.readSingle(this.byId(id));
-    const item = await this.delegate.readSingleById(id);
+    if (!this.stored) return this.readSingle(this.byId(id));
+    const item = await this.stored.readSingleById(id);
     if (!item || !this.enriched) return item;
     await this.enrich([item]);
     return item;

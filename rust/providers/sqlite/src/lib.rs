@@ -1,9 +1,9 @@
 mod command;
 mod connection;
-mod reader;
 mod connection_string;
 mod converters;
 mod driver;
+mod reader;
 mod sqlite_path;
 mod transaction;
 
@@ -28,7 +28,7 @@ mod tests {
     use crate::connection::SqliteConnection;
     use crate::transaction::SqliteTransaction;
     use datasources::{
-        converters::Cells, create, downcast_connection, register, reset,         BuiltDatasource, Command,
+        converters::Cells, create, downcast_connection, register, reset, BuiltDatasource, Command,
         Connection, Datasource, Driver, IsolationLevel, Transaction,
     };
     use std::collections::HashMap;

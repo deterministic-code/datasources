@@ -21,6 +21,14 @@ import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
 import type { RepositoryStatements } from "./RepositoryStatements.ts";
+import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import type { ICRUDRepository } from "./ICRUDRepository.ts";
+import type { IEnriched } from "./IEnriched.ts";
+import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
+import type { IRepositoryTree } from "./IRepositoryTree.ts";
+import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
+import { RepositoryTree } from "./RepositoryTree.ts";
+import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 
 export const untyped = <T>(): Constructable<T> => Object as never as Constructable<T>;
 
@@ -67,7 +75,17 @@ export const builtOf = <T>(
       ? typeOrConnectionOrBuilt
       : parts(typeOrConnectionOrBuilt, connectionOrOptions as ReadonlyRepositoryOptions<T>);
 
-export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
+const isRepository = <T>(
+  value: Constructable<T> | IConnection | BuiltRepository<T> | IReadonlyRepository<T>,
+): value is IReadonlyRepository<T> =>
+  typeof value === "object" &&
+  value !== null &&
+  "read" in value &&
+  typeof value.read === "function" &&
+  !("createCommand" in value) &&
+  !isBuilt(value);
+
+export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<T> {
   readonly type: Constructable<T>;
   protected connection?: IConnection;
   readonly rowConverter?: TypeConverter<T, Cells>;
@@ -75,16 +93,35 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
   private readonly columnMappings: IMapper<string, string> = new IdentityMapper();
   readonly statements?: RepositoryStatements;
   protected readonly middlewares: ICommandMiddleware[] = [];
+  readonly tree: IRepositoryTree;
+  protected innerRepo?: IReadonlyRepository<T>;
+  private readonly strategy: IReadonlyEnrichmentStrategy<T>;
 
   constructor(type: Constructable<T>);
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(connection: IConnection, options: ReadonlyRepositoryOptions<T>);
   constructor(built: BuiltRepository<T>);
+  constructor(inner: IReadonlyRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>);
   constructor(
-    typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
-    connectionOrOptions?: IConnection | ReadonlyRepositoryOptions<T>,
+    typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T> | IReadonlyRepository<T>,
+    connectionOrOptions?: IConnection | ReadonlyRepositoryOptions<T> | IReadonlyEnrichmentStrategy<T>,
   ) {
-    const built = builtOf(typeOrConnectionOrBuilt, connectionOrOptions);
+    if (isRepository(typeOrConnectionOrBuilt)) {
+      this.type = typeOrConnectionOrBuilt.type;
+      this.innerRepo = typeOrConnectionOrBuilt;
+      this.strategy =
+        (connectionOrOptions as IReadonlyEnrichmentStrategy<T> | undefined) ??
+        new DefaultReadonlyEnrichmentStrategy<T>();
+      this.tree = new RepositoryTree(
+        new RepositoryTreeNode(typeOrConnectionOrBuilt, "", undefined, undefined, undefined, this.strategy),
+      );
+      return;
+    }
+    const built = builtOf(typeOrConnectionOrBuilt, connectionOrOptions as IConnection | ReadonlyRepositoryOptions<T>);
+    this.strategy = new DefaultReadonlyEnrichmentStrategy<T>();
+    this.tree = new RepositoryTree(
+      new RepositoryTreeNode(this, "", undefined, undefined, undefined, this.strategy),
+    );
     if (!built) {
       this.type = typeOrConnectionOrBuilt as Constructable<T>;
       return;
@@ -97,9 +134,45 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
     this.statements = built.statements;
   }
 
+  protected get enriched(): boolean {
+    return this.tree.parent.items.length > 0;
+  }
+
   addMiddleware = (middleware: ICommandMiddleware): this => {
     this.middlewares.push(middleware);
     return this;
+  };
+
+  addEnriched<TRelated extends object>(
+    into: keyof T & string,
+    from: keyof T & string,
+    via: IReadonlyRepository<TRelated>,
+    by: keyof TRelated & string,
+    select?: keyof TRelated & string,
+    many?: boolean,
+    nest?: (node: IRepositoryTreeNode) => void,
+  ): this {
+    const child = this.tree.parent.include(via, into, from, by, select, many);
+    nest?.(child);
+    return this;
+  }
+
+  addLinked<TRelated extends object, TLink extends object>(
+    into: keyof T & string,
+    from: keyof T & string,
+    via: IReadonlyRepository<TRelated>,
+    by: keyof TRelated & string,
+    link: ICRUDRepository<TLink>,
+    parent: keyof TLink & string,
+    related: keyof TLink & string,
+  ): this {
+    this.tree.parent.includeLinked(via, into, from, by, link, parent, related);
+    return this;
+  }
+
+  enrich = async (items: T[]): Promise<T[]> => {
+    await this.strategy.enrich(this.tree, items);
+    return items;
   };
 
   async *read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T> {
@@ -109,12 +182,29 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
   async *[tracked](
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
   ): AsyncIterable<Sourced<T>> {
-    for (const row of await this.rows(query)) yield row;
+    const origin = this.innerRepo ? readTracked(this.innerRepo, query) : this.rows(query);
+    if (this.innerRepo || this.enriched) {
+      yield* this.sourced(origin);
+      return;
+    }
+    yield* origin;
   }
 
-  private rows = async (
+  private async *sourced(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {
+    const items: T[] = [];
+    const sources: (Row | undefined)[] = [];
+    for await (const sourced of pairs) {
+      items.push(sourced.item);
+      sources.push(sourced.source);
+    }
+    await this.strategy.enrich(this.tree, items, sources);
+    for (let index = 0; index < items.length; index++)
+      yield { item: items[index]!, source: sources[index] };
+  }
+
+  private async *rows(
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-  ): Promise<Sourced<T>[]> => {
+  ): AsyncIterable<Sourced<T>> {
     const statement =
       query instanceof ExecuteStoredProcedureStatement ? query : this.readQuery(query);
     const parameters =
@@ -123,7 +213,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
         : (statement.where?.parameters ?? statement.parameters);
     const reader = await executeReader(this.command(), statement, parameters);
     try {
-      const rows: Sourced<T>[] = [];
       while (await reader.next()) {
         const renamed = this.renamed(
           reader.current ??
@@ -131,16 +220,15 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
               throw new DatasourceError("Reader current must be a row");
             })(),
         );
-        rows.push({
+        yield {
           item: this.mapper!.map(this.rowConverter!.convert(renamed)),
           source: renamed,
-        });
+        };
       }
-      return rows;
     } finally {
       await reader.dispose();
     }
-  };
+  }
 
   async readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined> {
     for await (const item of this.read(query)) return item;

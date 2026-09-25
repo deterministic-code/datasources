@@ -3,15 +3,13 @@ using System.Reflection;
 
 namespace Datasources;
 
-public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnriched<T> where T : new()
+public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where T : new()
 {
-    readonly ICRUDRepository<T>? inner;
-    readonly IReadonlyEnrichmentStrategy<T> strategy;
     readonly IWriteEnrichmentStrategy<T> write;
     readonly IReadOnlyList<string> ids;
     readonly IMapper<Value, T>? create;
 
-    public IRepositoryTree Tree { get; }
+    ICRUDRepository<T>? Delegate => InnerRepo as ICRUDRepository<T>;
 
     public CRUDRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
@@ -22,12 +20,11 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     public CRUDRepository(
         ICRUDRepository<T> inner,
         IReadonlyEnrichmentStrategy<T>? strategy = null,
-        IWriteEnrichmentStrategy<T>? write = null)
+        IWriteEnrichmentStrategy<T>? write = null) : base(
+            inner,
+            strategy ?? new DefaultReadonlyEnrichmentStrategy<T>())
     {
-        this.inner = inner;
-        this.strategy = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
         this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
-        Tree = new RepositoryTree(new RepositoryTreeNode(inner, "", binder: this.strategy));
         if (inner is CRUDRepository<T> crud)
         {
             ids = crud.ids;
@@ -45,12 +42,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     {
         create = built.Create;
         ids = built.Ids;
-        strategy = new DefaultReadonlyEnrichmentStrategy<T>();
         write = new DefaultWriteEnrichmentStrategy<T>();
-        Tree = new RepositoryTree(new RepositoryTreeNode(this, "", binder: strategy));
     }
-
-    bool Enriched => Tree.Parent.Items.Count > 0;
 
     public IReadOnlyList<string> Ids => ids;
 
@@ -60,67 +53,10 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
         return this;
     }
 
-    public IEnriched<T> AddEnriched<TRelated>(
-        string into,
-        string from,
-        IReadonlyRepository<TRelated> via,
-        string by,
-        string? select = null,
-        bool many = false,
-        Action<IRepositoryTreeNode>? nest = null)
-    {
-        var child = Tree.Parent.Include(via, into, from, by, select, many);
-        nest?.Invoke(child);
-        return this;
-    }
-
-    public IEnriched<T> AddLinked<TRelated, TLink>(
-        string into,
-        string from,
-        IReadonlyRepository<TRelated> via,
-        string by,
-        ICRUDRepository<TLink> link,
-        string parent,
-        string related)
-    {
-        Tree.Parent.IncludeLinked(via, into, from, by, link, parent, related);
-        return this;
-    }
-
-    public Task Enrich(IList<T> items) => strategy.Enrich(Tree, items);
-
-    public override IAsyncEnumerable<T> Read(IStatement? query = null) =>
-        inner is null ? base.Read(query) : Rows(ReadTracked(query));
-
-    public override IAsyncEnumerable<T> Read(IWhere where) =>
-        inner is null ? base.Read(where) : Rows(ReadTracked(where));
-
-    public override async Task<T?> ReadSingle(IWhere where)
-    {
-        if (inner is null) return await base.ReadSingle(where);
-        await foreach (var item in Read(where))
-            return item;
-        return default;
-    }
-
-    public override async Task<T?> ReadSingle(IStatement? query = null)
-    {
-        if (inner is null) return await base.ReadSingle(query);
-        await foreach (var item in Read(query))
-            return item;
-        return default;
-    }
-
-    protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IStatement? query = null) =>
-        Enriched ? Sourced(Source(query)) : Source(query);
-
-    protected internal override IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
-        Enriched ? Sourced(Source(where)) : Source(where);
-
     public async Task<T> Create(T item)
     {
         var stored = Enriched ? StripEnriched(item) : item;
-        var created = inner is null ? await Inserted(stored) : await inner.Create(stored);
+        var created = Delegate is null ? await Inserted(stored) : await Delegate.Create(stored);
         if (!Enriched) return created;
         CopyIds(item, created);
         await write.Persist(Tree, [item!], WriteMode.Create);
@@ -132,7 +68,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     public async Task<Response> Update(T item, IWhere? byWhere = null)
     {
         var stored = Enriched ? StripEnriched(item) : item;
-        var response = inner is null ? await Save(stored, byWhere) : await inner.Update(stored, byWhere);
+        var response = Delegate is null ? await Save(stored, byWhere) : await Delegate.Update(stored, byWhere);
         if (Enriched)
             await write.Persist(Tree, [item!], WriteMode.Update);
         return response;
@@ -142,13 +78,13 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
     {
         if (Enriched)
             await write.Persist(Tree, [item!], WriteMode.Delete);
-        return inner is null ? await Remove(item, byWhere) : await inner.Delete(item, byWhere);
+        return Delegate is null ? await Remove(item, byWhere) : await Delegate.Delete(item, byWhere);
     }
 
     public async Task<T?> ReadSingleById(Value id)
     {
-        if (inner is null) return await ReadSingle(IdWhere(Single(id)));
-        var item = await inner.ReadSingleById(id);
+        if (Delegate is null) return await ReadSingle(IdWhere(Single(id)));
+        var item = await Delegate.ReadSingleById(id);
         if (item is null || !Enriched) return item;
         await Enrich([item]);
         return item;
@@ -156,9 +92,9 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
 
     public async Task<T?> ReadSingleById(Row key)
     {
-        if (inner is not null)
+        if (Delegate is not null)
         {
-            var item = await inner.ReadSingleById(key);
+            var item = await Delegate.ReadSingleById(key);
             if (item is null || !Enriched) return item;
             await Enrich([item]);
             return item;
@@ -203,32 +139,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
             ? listed
             : statement.GetText().Contains('$') ? Params(record, _ => true) : [];
         return await Command().Execute(statement, parameters);
-    }
-
-    IAsyncEnumerable<(T Item, Row? Source)> Source(IStatement? query) =>
-        inner is null ? base.ReadTracked(query) : Tracked(inner, query);
-
-    IAsyncEnumerable<(T Item, Row? Source)> Source(IWhere where) =>
-        inner is null ? base.ReadTracked(where) : Tracked(inner, where);
-
-    async IAsyncEnumerable<(T Item, Row? Source)> Sourced(IAsyncEnumerable<(T Item, Row? Source)> pairs)
-    {
-        var items = new List<T>();
-        var sources = new List<Row?>();
-        await foreach (var (item, source) in pairs)
-        {
-            items.Add(item);
-            sources.Add(source);
-        }
-        await strategy.Enrich(Tree, items, sources);
-        for (var i = 0; i < items.Count; i++)
-            yield return (items[i], sources[i]);
-    }
-
-    static async IAsyncEnumerable<T> Rows(IAsyncEnumerable<(T Item, Row? Source)> pairs)
-    {
-        await foreach (var (item, _) in pairs)
-            yield return item;
     }
 
     Row Single(Value id) =>

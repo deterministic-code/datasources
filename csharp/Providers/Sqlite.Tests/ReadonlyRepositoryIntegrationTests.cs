@@ -159,7 +159,7 @@ public class UserViewEnrichmentTests
                 ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
             """);
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-        var usersRepo = ds.CreateReadonlyEnrichedRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+        var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
             ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -244,7 +244,7 @@ public class UsersViewRoleTests
                 ["UserType"] = "user_type_id",
             }),
         });
-        var usersRepo = new EnrichedReadonlyRepository<UsersView>(
+        var usersRepo = new ReadonlyRepository<UsersView>(
             users,
             new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>());
         var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
@@ -298,8 +298,21 @@ public class UsersViewRoleTests
                 ["Name"] = "roles.name",
             }),
         });
-        var usersRepo = new EnrichedReadonlyRepository<UsersView>(
-            ds.CreateReadonlyRepository<UsersView>(connection),
+        var usersRepo = new ReadonlyRepository<UsersView>(
+            ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+            {
+                ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Key"] = "id",
+                    ["Login"] = "username",
+                    ["Active"] = "is_enabled",
+                    ["Opened"] = "created",
+                    ["UserType"] = "user_type.name",
+                    ["UserId"] = "user_id",
+                    ["RoleId"] = "role_id",
+                    ["Name"] = "roles.name",
+                }),
+            }),
             new FlatToNestedReadonlyEnrichmentStrategy<UsersView>(
                 source,
                 new FlatToNestedMapper(new TypeMap
@@ -347,7 +360,27 @@ public class UsersViewRoleTests
                     ],
                 })));
         var items = new List<UsersView>();
-        await foreach (var item in usersRepo.Read())
+        await foreach (var item in usersRepo.Read(new SelectStatement(new()
+        {
+            Table = "user",
+            Fields =
+            [
+                "user.id",
+                "user.username",
+                "user.is_enabled",
+                "user.created",
+                "user_type.name",
+                "user_roles.user_id",
+                "user_roles.role_id",
+                "roles.name",
+            ],
+            Joins =
+            [
+                new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
+                new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
+                new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
+            ],
+        })))
             items.Add(item);
         var ada = Assert.Single(items, item => item.Login == "ada");
         var grace = Assert.Single(items, item => item.Login == "grace");

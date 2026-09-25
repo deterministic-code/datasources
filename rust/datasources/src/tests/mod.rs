@@ -2072,7 +2072,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
         ("id", Value::Int(10)),
         ("name", Value::from("person")),
     ])]));
-    let mut repo = EnrichedReadonlyRepository::new(parents);
+    let mut repo = ReadonlyRepository::from_repository(parents);
     repo.add_enriched(
         "type_name",
         "type_id",
@@ -2102,7 +2102,7 @@ async fn enriched_fills_lists_and_read_single_is_enriched() {
         record(&[("parent_id", Value::Int(1)), ("label", Value::from("b"))]),
         record(&[("parent_id", Value::Int(2)), ("label", Value::from("x"))]),
     ]));
-    let mut repo = EnrichedReadonlyRepository::new(parents);
+    let mut repo = ReadonlyRepository::from_repository(parents);
     repo.add_enriched(
         "type_name",
         "type_id",
@@ -2146,7 +2146,7 @@ async fn enriched_nests_list_lookup_and_keeps_root_sibling() {
             ("label", Value::from("b")),
         ]),
     ]));
-    let mut repo = EnrichedReadonlyRepository::new(parents);
+    let mut repo = ReadonlyRepository::from_repository(parents);
     repo.add_enriched(
         "type_name",
         "type_id",
@@ -2229,7 +2229,7 @@ async fn hashset_uses_one_read_per_edge() {
         record(&[("id", Value::Int(1)), ("type_id", Value::Int(10))]),
         record(&[("id", Value::Int(2)), ("type_id", Value::Int(11))]),
     ]));
-    let mut repo = EnrichedReadonlyRepository::with_strategy(
+    let mut repo = ReadonlyRepository::with_strategy(
         parents,
         Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy),
     );
@@ -2285,7 +2285,7 @@ async fn flat_to_nested_collapses_join_rows() {
         },
         None,
     );
-    let repo = EnrichedReadonlyRepository::with_strategy(
+    let repo = ReadonlyRepository::with_strategy(
         Arc::new(items_repository::ItemsRepository::new(vec![])),
         Arc::new(strategy),
     );

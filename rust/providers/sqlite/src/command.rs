@@ -69,7 +69,6 @@ impl SqliteCommand {
             result: Value::Int(conn.last_insert_rowid()),
         })
     }
-
 }
 
 #[async_trait]

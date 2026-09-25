@@ -3,7 +3,7 @@ import {
   ChangeCasingMapper,
   Datasource,
   DictionaryMapper,
-  EnrichedReadonlyRepository,
+  ReadonlyRepository,
   FlatToNestedMapper,
   FlatToNestedReadonlyEnrichmentStrategy,
   HashsetOptimizedReadonlyEnrichmentStrategy,
@@ -97,7 +97,7 @@ describe("users view roles", () => {
         ["UserType", "user_type_id"],
       ]),
     });
-    const usersRepo = new EnrichedReadonlyRepository(
+    const usersRepo = new ReadonlyRepository(
       users,
       new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>(),
     );
@@ -134,7 +134,7 @@ describe("users view roles", () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
     const connection = await open(ds, seed());
     const source = ds.createReadonlyRepository(JoinRow, connection);
-    const usersRepo = new EnrichedReadonlyRepository(
+    const usersRepo = new ReadonlyRepository(
       ds.createReadonlyRepository(UsersView, connection),
       new FlatToNestedReadonlyEnrichmentStrategy(
         source,
@@ -182,7 +182,24 @@ describe("users view roles", () => {
       ),
     );
     const items: UsersView[] = [];
-    for await (const item of usersRepo.read()) items.push(item);
+    for await (const item of usersRepo.read(new SelectStatement({
+      table: "user",
+      fields: [
+        "user.id AS Key",
+        "user.username AS Login",
+        "user.is_enabled AS Active",
+        "user.created AS Opened",
+        "user_type.name AS UserType",
+        "user.id AS UserId",
+        "user_roles.role_id AS RoleId",
+        "roles.name AS RoleName",
+      ],
+      joins: [
+        Join.left("user_type", "user_type.id", "user.user_type_id"),
+        Join.left("user_roles", "user_roles.user_id", "user.id"),
+        Join.left("roles", "roles.id", "user_roles.role_id"),
+      ],
+    }))) items.push(item);
     const found = (login: string) => items.find((item) => item.Login === login);
     const adaView = found("ada");
     const graceView = found("grace");

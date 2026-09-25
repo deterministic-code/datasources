@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   collectAsync,
   createStubDatasource,
-  EnrichedReadonlyRepository,
   ProviderNotImplementedError,
   StubCommand,
   StubConnection,
@@ -60,7 +59,6 @@ describe("StubDatasource", () => {
 
     expect(ds.createRepository(untyped())).toBeInstanceOf(StubRepository);
     expect(ds.createReadonlyRepository(untyped(), provided)).toBeInstanceOf(StubRepository);
-    expect(ds.createReadonlyEnrichedRepository(untyped())).toBeInstanceOf(EnrichedReadonlyRepository);
     expect(() => repo.readSingleById(1)).toThrow(ProviderNotImplementedError);
     await expect(collectAsync(repo[tracked]())).rejects.toThrow(ProviderNotImplementedError);
     await expect(collectAsync(repo[tracked](new WhereText("1=1")))).rejects.toThrow(

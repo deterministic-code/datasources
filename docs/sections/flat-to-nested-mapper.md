@@ -547,7 +547,7 @@ A mapped graph row. Keys are destination field names.
 
 C# and Rust map to a [MappedValue](#mappedvalue) graph. TypeScript maps to generic `T`. Nested group fields on a collection are omitted.
 
-This is a collapse mapper, not enrichment. Related fills after read use [Enriched repository](./enriched-repository.md).
+This is a collapse mapper, not enrichment. Related fills after read use [Readonly repository](./readonly-repository.md#ienriched).
 
 ## Examples
 

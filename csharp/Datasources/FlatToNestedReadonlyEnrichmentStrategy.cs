@@ -11,17 +11,27 @@ public sealed class FlatToNestedReadonlyEnrichmentStrategy<T>(
         IRepositoryTree tree,
         IStatement? query)
     {
-        _ = inner;
-        _ = tree;
-        var rows = new List<Row>();
-        await foreach (var row in source.Read(command ?? query))
-            rows.Add(row);
-        foreach (var item in mapper.Map(rows).Select(hydrate.Map))
+        var items = new List<T>();
+        await foreach (var item in inner.Read(query))
+            items.Add(item);
+        await Enrich(tree, items);
+        foreach (var item in items)
             yield return item;
     }
 
-    public Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null) =>
-        Task.CompletedTask;
+    public async Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null)
+    {
+        _ = tree;
+        var rows = new List<Row>();
+        if (sources?.Any(row => row is not null) == true)
+            rows.AddRange(sources.OfType<Row>());
+        else
+            await foreach (var row in source.Read(command))
+                rows.Add(row);
+        items.Clear();
+        foreach (var item in mapper.Map(rows).Select(hydrate.Map))
+            items.Add(item);
+    }
 
     public Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,

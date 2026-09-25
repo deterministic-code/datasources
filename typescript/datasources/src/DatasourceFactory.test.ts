@@ -5,7 +5,6 @@ import {
   Datasource,
   DatasourceError,
   DatasourceFactory,
-  EnrichedReadonlyRepository,
   MockCommand,
   MockDriver,
   ProviderNotInstalledError,
@@ -108,8 +107,8 @@ describe("Datasource registry", () => {
     expect(typedRead instanceof ReadonlyRepository && typedRead.statements?.query().getText()).toBe(
       "SELECT id, name FROM Item",
     );
-    const enriched = ds.createReadonlyEnrichedRepository(Item);
-    expect(enriched).toBeInstanceOf(EnrichedReadonlyRepository);
+    const enriched = ds.createReadonlyRepository(Item) as ReadonlyRepository<Item>;
+    expect(enriched).toBeInstanceOf(ReadonlyRepository);
     enriched.addLinked("name", "id", typedRead, "id", typed, "id", "name");
     expect(new DatasourceFactory().create({
       provider: "sqlite",

@@ -46,7 +46,6 @@ export { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrate
 export { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 export { FlatToNestedReadonlyEnrichmentStrategy } from "./FlatToNestedReadonlyEnrichmentStrategy.ts";
-export { EnrichedReadonlyRepository } from "./EnrichedReadonlyRepository.ts";
 export { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 export { RepositoryTree } from "./RepositoryTree.ts";
 export { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
