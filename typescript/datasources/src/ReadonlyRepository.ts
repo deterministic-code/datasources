@@ -4,7 +4,6 @@ import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
 import { ExecuteStoredProcedureStatement } from "./statements/ExecuteStoredProcedureStatement.ts";
 import type { Parameter } from "./Parameter.ts";
-import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IStatement } from "./statements/IStatement.ts";
 import type { IReadonlyRepository, ReadQuery } from "./IReadonlyRepository.ts";
