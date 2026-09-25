@@ -8,7 +8,6 @@ use crate::datasource_error::DatasourceError;
 use crate::default_write_enrichment_strategy::{
     copy_ids, strip_enriched, DefaultWriteEnrichmentStrategy,
 };
-use crate::enriched::Enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
@@ -296,13 +295,6 @@ impl IRepository for CRUDRepository {
 }
 
 #[async_trait]
-impl Enriched for CRUDRepository {
-    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
-        self.readonly.enrich(items).await
-    }
-}
-
-#[async_trait]
 impl IReadonlyRepository for CRUDRepository {
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
         Some(self)
@@ -404,7 +396,7 @@ impl ICRUDRepository for CRUDRepository {
             if self.enriched() {
                 if let Some(item) = row.take() {
                     let mut rows = vec![item];
-                    self.enrich(&mut rows).await?;
+                    self.readonly.fill(&mut rows, None).await?;
                     return Ok(rows.into_iter().next());
                 }
             }

@@ -6,7 +6,7 @@ import type { Parameter } from "../Parameter.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
-import { ReadonlyRepository, tracked, untyped, withoutSource, type Sourced } from "../ReadonlyRepository.ts";
+import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 
@@ -56,13 +56,6 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     for (const item of this.items) {
       yield item;
     }
-  }
-
-  async *[tracked](
-    query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
-    parameters?: Parameter[],
-  ): AsyncIterable<Sourced<T>> {
-    yield* withoutSource(this.read(query, parameters));
   }
 
   async create(item: T): Promise<T> {

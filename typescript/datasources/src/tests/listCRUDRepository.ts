@@ -7,6 +7,7 @@ import type { IWhere } from "../statements/IWhere.ts";
 import type { Scalar } from "../builders/Scalar.ts";
 import { defaultId, fieldNamesOf } from "../createRepositoryOptions.ts";
 import type { IWriteEnrichmentStrategy } from "../IWriteEnrichmentStrategy.ts";
+import type { IRepositoryTree } from "../IRepositoryTree.ts";
 import { untyped, type Sourced } from "../ReadonlyRepository.ts";
 
 type Props = Record<string, Scalar | object>;
@@ -67,6 +68,8 @@ export class ListCRUDRepository<T extends object> extends BulkCRUDRepository<T> 
         return typeof id === "number" && id > max ? id : max;
       }, 0) + 1;
   }
+
+  enrichmentTree = (): IRepositoryTree => this.tree;
 
   protected async *readItems(_query?: IStatement, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
     for (const item of this.items)

@@ -11,5 +11,4 @@ public interface IEnriched<T>
         IReadonlyRepository<TRelated> via,
         ICRUDRepository<TLink> link,
         IReadonlyEnrichmentStrategy<T>? strategy = null);
-    Task Enrich(IList<T> items);
 }

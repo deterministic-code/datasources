@@ -3,7 +3,7 @@ import { DatasourceError } from "./DatasourceError.ts";
 import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
-import type { IEnrichmentHost } from "./IEnrichmentHost.ts";
+import { enrichmentsOf } from "./ReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
@@ -126,12 +126,11 @@ const syncLinks = async (
   }
 };
 
-const hostOf = (value: object): IEnrichmentHost | undefined =>
-  "enrichments" in value ? (value as IEnrichmentHost) : undefined;
-
-export const strip = (host: IEnrichmentHost, item: object): object => {
+export const strip = (host: object, item: object): object => {
+  const entries = enrichmentsOf(host);
+  if (!entries) return item;
   const copy = { ...item } as Props;
-  for (const entry of host.enrichments) delete copy[entry.enrichment.into];
+  for (const entry of entries) delete copy[entry.enrichment.into];
   return copy;
 };
 
@@ -161,9 +160,9 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
   };
 
   private walk = async (host: object, parents: object[], mode: WriteMode): Promise<void> => {
-    const enriched = hostOf(host);
-    if (!enriched) return;
-    for (const entry of enriched.enrichments) await this.persistEntry(entry, parents, mode);
+    const entries = enrichmentsOf(host);
+    if (!entries) return;
+    for (const entry of entries) await this.persistEntry(entry, parents, mode);
   };
 
   private persistEntry = async (

@@ -10,10 +10,10 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     readonly RepositoryStatements? statements;
 
     public Type Type => typeof(T);
-    public IMapper<T, T>? Mapper { get; }
-    public IRepositoryTree Tree { get; }
+    internal IMapper<T, T>? Mapper { get; }
+    internal IRepositoryTree Tree { get; }
     IReadOnlyList<StoredEnrichment> IEnrichmentHost.Enrichments => enrichments;
-    protected bool Enriched => enrichments.Count > 0;
+    internal bool Enriched => enrichments.Count > 0;
 
     public ReadonlyRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
@@ -75,19 +75,10 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         return this;
     }
 
-    public async Task Enrich(IList<T> items)
-    {
-        var box = items.Cast<object>().ToList();
-        await Enrich(box, null);
-        items.Clear();
-        foreach (var item in box)
-            items.Add((T)item);
-    }
-
     public virtual IAsyncEnumerable<T> Read(IWhere where) =>
         Read(Compiled(Stored(where)));
 
-    protected internal virtual IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
+    IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
         ReadTracked(Compiled(Stored(where)));
 
     public virtual Task<T?> ReadSingle(IWhere where) =>
@@ -96,7 +87,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     public virtual IAsyncEnumerable<T> Read(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
         Items(ReadTracked(query, parameters));
 
-    protected internal virtual IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
+    IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
         IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
         Apply(ReadItems(query, parameters ?? (query as ISelectStatement)?.Where?.Parameters));
 
@@ -107,7 +98,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     IAsyncEnumerable<(T Item, Row? Source)> Apply(IAsyncEnumerable<(T Item, Row? Source)> pairs) =>
         Enriched ? Sourced(pairs) : pairs;
 
-    protected virtual async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
+    async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
         var reader = await Command().ExecuteReader(query ?? Statements.Query(), parameters);
         try
@@ -159,34 +150,28 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
             yield return item;
     }
 
-    protected static async IAsyncEnumerable<(T Item, Row? Source)> WithoutSource(IAsyncEnumerable<T> items)
-    {
-        await foreach (var item in items)
-            yield return (item, null);
-    }
-
     public virtual async Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
         await Read(query, parameters).FirstOrDefaultAsync() ?? default;
 
-    protected ICommand Command() =>
+    internal ICommand Command() =>
         middlewares.Aggregate(
             (connection ?? throw new DatasourceException("Connection required")).CreateCommand(),
             (command, middleware) => command.AddMiddleware(middleware));
 
-    protected RepositoryStatements Statements =>
+    internal RepositoryStatements Statements =>
         statements ?? throw new DatasourceException("Statements required");
 
-    protected TypeConverter<T, Row> RowConverter =>
+    internal TypeConverter<T, Row> RowConverter =>
         rowConverter ?? throw new DatasourceException("Row converter required");
 
-    protected IWhere Stored(IWhere where, bool fieldsApplied = false) =>
+    internal IWhere Stored(IWhere where, bool fieldsApplied = false) =>
         where is Where clause
             ? clause.Map(Column, (name, cell) => Cell(name, cell, fieldsApplied))
             : where;
 
-    protected string Column(string property) => columns.Map(property);
+    internal string Column(string property) => columns.Map(property);
 
-    protected Value Cell(string property, Value value, bool fieldsApplied) =>
+    internal Value Cell(string property, Value value, bool fieldsApplied) =>
         rowConverter is RowTypeConverter<T> typed
         && !fieldsApplied
         && typed.Fields.TryGetValue(property, out var field)

@@ -149,7 +149,7 @@ query?: IMapper<ISelectStatement, ISelectStatement>
 
 ##### rowsMapper
 
-Maps each converted item. `Repository.mapper` is this mapper. Default is [IdentityMapper](./identity-mapper.md).
+Maps each converted item. Default is [IdentityMapper](./identity-mapper.md).
 
 ```typescript
 rowsMapper?: IMapper<T, T>
@@ -211,18 +211,6 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 - `many` — collect a list; default `false`
 
 **Returns** `this`
-
-##### enrich(items)
-
-Fills `items` in place from the tree.
-
-```typescript
-enrich(items: T[]): Promise<T[]>
-```
-
-- `items` — parents to fill
-
-**Returns** `Promise<T[]>`
 
 #### IRepositoryTree
 
@@ -532,7 +520,7 @@ IMapper<ISelectStatement, ISelectStatement>? Query { get; init; }
 
 ##### RowsMapper
 
-Maps each converted item. `Repository.Mapper` is this mapper. Default is [IdentityMapper](./identity-mapper.md).
+Maps each converted item. Default is [IdentityMapper](./identity-mapper.md).
 
 ```csharp
 IMapper<T, T> RowsMapper { get; init; }
@@ -587,16 +575,6 @@ IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository
 - `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** [IEnriched](#ienriched)`<T>`
-
-##### Enrich(items)
-
-Fills `items` in place from the tree.
-
-```csharp
-Task Enrich(IList<T> items)
-```
-
-- `items` — parents to fill
 
 #### IRepositoryTree
 
@@ -925,26 +903,6 @@ Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`
 ```rust
 pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
 ```
-
-#### Enriched
-
-```rust
-pub trait Enriched
-```
-
-**Methods**
-
-##### enrich(items)
-
-Fills `items` in place from the tree.
-
-```rust
-async fn enrich(&self, items: &mut [Row]) -> Result<()>
-```
-
-- `items` — parents to fill
-
-**Returns** `Result<()>`
 
 #### RepositoryTree
 

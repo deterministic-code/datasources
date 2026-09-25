@@ -127,38 +127,6 @@ Configured id property names.
 readonly ids: readonly string[]
 ```
 
-##### tree
-
-Enrichment tree. Empty until `addEnriched`.
-
-```typescript
-readonly tree: IRepositoryTree
-```
-
-##### rowConverter
-
-Row [TypeConverter](./type-converters.md). Convert uses this, then [mapper](#repository-mapper).
-
-```typescript
-readonly rowConverter: TypeConverter<T, Cells>
-```
-
-##### mapper
-
-Read-row [Mapper](./mappers.md). This is [ReadonlyRepositoryOptions.rowsMapper](./readonly-repository.md#rowsmapper).
-
-```typescript
-readonly mapper: IMapper<T, T>
-```
-
-##### statements
-
-SQL fragments for query / insert / update / delete.
-
-```typescript
-readonly statements: RepositoryStatements
-```
-
 **Methods**
 
 ##### addMiddleware(middleware)
@@ -175,7 +143,7 @@ addMiddleware(middleware: ICommandMiddleware): this
 
 ##### read(query?)
 
-Reads rows through [rowConverter](#repository-rowconverter) then [mapper](#repository-mapper).
+Reads rows. Convert the database row, then map it.
 
 ```typescript
 read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
@@ -251,18 +219,6 @@ addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & str
 - `many` — collect a list
 
 **Returns** `this`
-
-##### enrich(items)
-
-Fills `items` from the registered tree.
-
-```typescript
-enrich(items: T[]): Promise<T[]>
-```
-
-- `items` — parents to fill
-
-**Returns** `Promise<T[]>`
 
 #### CRUDRepositoryOptions
 
@@ -511,22 +467,6 @@ Configured id property names.
 IReadOnlyList<string> Ids { get; }
 ```
 
-##### Tree
-
-Enrichment tree. Empty until `AddEnriched`.
-
-```csharp
-IRepositoryTree Tree { get; }
-```
-
-##### Mapper
-
-Read-row [Mapper](./mappers.md). This is [ReadonlyRepositoryOptions.RowsMapper](./readonly-repository.md#rowsmapper).
-
-```csharp
-IMapper<T, T> Mapper { get; }
-```
-
 **Methods**
 
 ##### AddMiddleware(middleware)
@@ -543,7 +483,7 @@ public Repository<T> AddMiddleware(ICommandMiddleware middleware)
 
 ##### Read(query)
 
-Reads rows through the row converter then [Mapper](#repository-mapper).
+Reads rows. Convert the database row, then map it.
 
 ```csharp
 public override IAsyncEnumerable<T> Read(IStatement? query = null)
@@ -632,18 +572,6 @@ public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRep
 - `strategy` — optional read strategy for this edge
 
 **Returns** [IEnriched](./readonly-repository.md#ienriched)`<T>`
-
-##### Enrich(items)
-
-Fills `items` from the registered tree.
-
-```csharp
-public Task Enrich(IList<T> items)
-```
-
-- `items` — parents to fill
-
-**Returns** `Task`
 
 #### CRUDRepositoryOptions
 
@@ -1032,8 +960,6 @@ pub ids: Vec<String>
 Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the configured id through the create mapper.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
-
-`Mapper` / `mapper` is [ReadonlyRepositoryOptions.RowsMapper](./readonly-repository.md#rowsmapper).
 
 `AddEnriched` registers a lookup or a `many` list on this repository. Lookups are filled on read and are not written. `many` children are created, replace-synced, and deleted with the parent. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 

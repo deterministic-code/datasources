@@ -12,7 +12,6 @@ import {
   untyped,
   WhereText,
 } from "../index.ts";
-import { tracked } from "../ReadonlyRepository.ts";
 
 describe("StubDatasource", () => {
   it("creates stub objects that throw on IO", async () => {
@@ -60,8 +59,8 @@ describe("StubDatasource", () => {
     expect(ds.createRepository(untyped())).toBeInstanceOf(StubRepository);
     expect(ds.createReadonlyRepository(untyped(), provided)).toBeInstanceOf(StubRepository);
     expect(() => repo.readSingleById(1)).toThrow(ProviderNotImplementedError);
-    await expect(collectAsync(repo[tracked]())).rejects.toThrow(ProviderNotImplementedError);
-    await expect(collectAsync(repo[tracked](new WhereText("1=1")))).rejects.toThrow(
+    await expect(collectAsync(repo.read())).rejects.toThrow(ProviderNotImplementedError);
+    await expect(collectAsync(repo.read(new WhereText("1=1")))).rejects.toThrow(
       ProviderNotImplementedError,
     );
     class YieldingStub extends StubRepository<{ id: number }> {
@@ -69,9 +68,7 @@ describe("StubDatasource", () => {
         yield { id: 1 };
       }
     }
-    expect(await collectAsync(new YieldingStub("text", provided)[tracked]())).toEqual([
-      { item: { id: 1 } },
-    ]);
+    expect(await collectAsync(new YieldingStub("text", provided).read())).toEqual([{ id: 1 }]);
 
     const txn = new StubTransaction("text", provided);
     await expect(txn.commit()).rejects.toThrow(ProviderNotImplementedError);

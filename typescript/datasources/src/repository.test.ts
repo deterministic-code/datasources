@@ -21,8 +21,6 @@ import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
-import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
-import { readTracked } from "./ReadonlyRepository.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 
@@ -428,20 +426,6 @@ describe("CRUDRepository", () => {
     expect(command.executeCalls[2]?.text).toBe(
       "DELETE FROM people WHERE user_id = $user_id RETURNING id",
     );
-  });
-
-  it("tracks a repository that has no tracked reader", async () => {
-    class Count {
-      value = 0;
-    }
-    const bare: IReadonlyRepository<Count> = {
-      type: Count,
-      read: async function* () {
-        yield new Count();
-      },
-      readSingle: async () => new Count(),
-    };
-    expect(await collectAsync(readTracked(bare))).toEqual([{ item: new Count() }]);
   });
 
   it("reverse-converts a field only before values are applied", async () => {

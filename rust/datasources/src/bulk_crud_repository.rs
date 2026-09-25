@@ -2,7 +2,6 @@ use crate::built_repository::BuiltRepository;
 use crate::connection::Connection;
 use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
-use crate::enriched::Enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
@@ -115,13 +114,6 @@ impl Deref for BulkCRUDRepository {
 impl DerefMut for BulkCRUDRepository {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.crud
-    }
-}
-
-#[async_trait]
-impl Enriched for BulkCRUDRepository {
-    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
-        self.crud.enrich(items).await
     }
 }
 

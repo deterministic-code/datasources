@@ -7,14 +7,11 @@ import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedRe
 import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
-import { TransformMapper } from "./mappers/TransformMapper.ts";
 import type { Parameter } from "./Parameter.ts";
 import type { IExecuteStoredProcedureStatement } from "./statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "./statements/ISelectStatement.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
-import type { Cells } from "./converters/Cell.ts";
-import type { IMapper } from "./mappers/IMapper.ts";
 import { Operator, Where } from "./statements/index.ts";
 import { WhereText } from "./statements/WhereText.ts";
 import type { IWhere } from "./statements/IWhere.ts";
@@ -47,24 +44,6 @@ class View {
 class SourcedView extends ReadonlyRepository<View> {
   protected async *readItems() {
     yield { item: new View(), source: { UserType: 1 } };
-  }
-}
-
-class JoinRows extends ReadonlyRepository<Parent> {
-  constructor(
-    private readonly rows: Cells[],
-    result: IMapper<Iterable<Cells>, Parent[]>,
-  ) {
-    super();
-    this.addEnriched(
-      { into: "type_name", from: "id", by: "id" },
-      new ListReadonlyRepository<Parent>(),
-      new NestedToObjectEnrichmentStrategy(result),
-    );
-  }
-
-  protected async *readItems() {
-    for (const row of this.rows) yield { item: new Parent(), source: row };
   }
 }
 
@@ -161,12 +140,6 @@ describe("ReadonlyRepository", () => {
 
   it("readSingle is undefined when empty", async () => {
     expect(await new ListReadonlyRepository<Parent>([]).readSingle()).toBeUndefined();
-  });
-
-  it("enrich returns void", async () => {
-    const items = [parent(1, 10)];
-    const repo = new ListReadonlyRepository(items);
-    await expect(repo.enrich(items)).resolves.toBeUndefined();
   });
 
   it("nests on a singular related object and skips strings", async () => {
@@ -299,30 +272,22 @@ describe("ReadonlyRepository", () => {
   });
 
   it("collapses join rows with Result", async () => {
-    const hydrate = new TransformMapper(
-      (row: Parent) => row,
-      () => {
-        throw new Error("hydrate does not reverse");
-      },
-    );
-    const flat = new FlatToNestedMapper<Parent>({
-      key: "id",
-      fields: { id: "id", type_name: "type_name" },
-    });
-    const result = new TransformMapper(
-      (rows: Iterable<Cells>) => flat.map(rows).map((row) => hydrate.map(row)),
-      () => {
-        throw new Error("result does not reverse");
-      },
-    );
-    const repo = new JoinRows(
+    const parents: object[] = [];
+    await new NestedToObjectEnrichmentStrategy(
+      new FlatToNestedMapper<Parent>({
+        key: "id",
+        fields: { id: "id", type_name: "type_name" },
+      }),
+    ).apply(
+      new ListReadonlyRepository<Parent>(),
+      { into: "type_name", from: "id", by: "id" },
+      parents,
       [
         { id: 1, type_name: "person" },
         { id: 2, type_name: "org" },
       ],
-      result,
     );
-    const items = await collectAsync(repo.read());
+    const items = parents as Parent[];
     expect(items.map((item) => item.id)).toEqual([1, 2]);
     expect(items.map((item) => item.type_name)).toEqual(["person", "org"]);
   });
@@ -352,26 +317,6 @@ describe("ReadonlyRepository", () => {
     );
   });
 
-  it("readTracked uses tracked when present", async () => {
-    const { readTracked } = await import("./ReadonlyRepository.ts");
-    const repo = new ListReadonlyRepository([parent(1, 0)]);
-    const items = await collectAsync(readTracked(repo));
-    expect(items.map((row) => row.item.id)).toEqual([1]);
-  });
-
-  it("readTracked falls back to read", async () => {
-    const { readTracked } = await import("./ReadonlyRepository.ts");
-    const items = await collectAsync(
-      readTracked({
-        type: Parent,
-        readSingle: async () => undefined,
-        async *read() {
-          yield parent(1, 0);
-        },
-      }),
-    );
-    expect(items.map((row) => row.item.id)).toEqual([1]);
-  });
 });
 
 const counting = <T extends object>(

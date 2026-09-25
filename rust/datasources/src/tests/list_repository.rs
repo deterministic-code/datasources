@@ -1,5 +1,4 @@
 use crate::bulk_crud_repository::BulkCRUDRepository;
-use crate::enriched::Enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
@@ -68,13 +67,6 @@ impl DerefMut for ListRepository {
 impl IRepository for ListRepository {
     fn entity_type(&self) -> TypeId {
         self.inner.entity_type()
-    }
-}
-
-#[async_trait]
-impl Enriched for ListRepository {
-    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
-        self.inner.enrich(items).await
     }
 }
 
