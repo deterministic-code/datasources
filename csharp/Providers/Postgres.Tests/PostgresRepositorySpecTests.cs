@@ -13,7 +13,7 @@ public class PostgresRepositorySpecTests
         var url = Environment.GetEnvironmentVariable("POSTGRES_URL");
         if (string.IsNullOrEmpty(url)) return;
         _ = PostgresRowTypeConverters.All;
-        foreach (var path in RepositorySpec.Files())
+        foreach (var path in RepositoryTestsSpec.Files())
         {
             var schema = $"ds_{Guid.NewGuid():N}"[..18];
             await using (var admin = new NpgsqlConnection(PostgresConnectionString.ToConnectionString(url)))
@@ -25,14 +25,14 @@ public class PostgresRepositorySpecTests
             }
             try
             {
-                await RepositorySpec.Run(path, () =>
+                await RepositoryTestsSpec.Run(path, () =>
                 {
                     var conn = new PostgresConnection(new PostgresConnectionOptions
                     {
                         Url = url,
                         Schema = schema,
                     });
-                    return new RepositorySpec.Session(conn, new PostgresCommand(conn), PostgresRowTypeConverters.All);
+                    return new RepositoryTestsSpec.Session(conn, new PostgresCommand(conn), PostgresRowTypeConverters.All);
                 }, CreateTable, Quote);
             }
             finally

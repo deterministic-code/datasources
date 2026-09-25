@@ -9,15 +9,15 @@ public class SqliteRepositorySpecTests
     [Fact]
     public async Task UserCrud()
     {
-        foreach (var path in RepositorySpec.Files())
+        foreach (var path in RepositoryTestsSpec.Files())
         {
-            await RepositorySpec.Run(path, () =>
+            await RepositoryTestsSpec.Run(path, () =>
             {
                 var conn = new SqliteConnection(new SqliteConnectionOptions
                 {
                     Filename = ":memory:",
                 });
-                return new RepositorySpec.Session(conn, new SqliteCommand(conn), SqliteRowTypeConverters.All);
+                return new RepositoryTestsSpec.Session(conn, new SqliteCommand(conn), SqliteRowTypeConverters.All);
             }, CreateTable, Quote);
         }
     }
