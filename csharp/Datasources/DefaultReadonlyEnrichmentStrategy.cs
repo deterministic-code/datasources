@@ -1,26 +1,44 @@
 namespace Datasources;
 
-public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T>, ITrackedApply where T : new()
+public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T> where T : new()
 {
-    public Task Apply<TRelated>(
+    public virtual Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents) =>
-        ((ITrackedApply)this).ApplyTracked(via, enrichment, parents, null);
-
-    Task ITrackedApply.ApplyTracked<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        Enrichment enrichment,
-        IReadOnlyList<object> parents,
-        IReadOnlyList<Row?>? sources) =>
+        IList<object> parents,
+        IReadOnlyList<Row?>? sources = null) =>
         enrichment.Many
             ? ApplyMany(via, enrichment, parents, sources)
             : ApplyLookup(via, enrichment, parents, sources);
 
-    static async Task ApplyLookup<TRelated>(
+    public virtual async Task ApplyLinked<TRelated, TLink>(
+        IReadonlyRepository<TRelated> via,
+        ICRUDRepository<TLink> link,
+        Enrichment enrichment,
+        IList<object> parents,
+        IReadOnlyList<Row?>? sources = null)
+    {
+        var association = enrichment.Association ?? throw new DatasourceException("Missing association");
+        for (var i = 0; i < parents.Count; i++)
+        {
+            var key = RepositoryTreeNode.SourceKey(parents[i], enrichment.From, At(sources, i));
+            if (key is null) continue;
+            var related = new List<TRelated>();
+            await foreach (var row in link.Read(new Where(new Operator.Equals(association.Parent, Value.From(key)))))
+            {
+                if (RepositoryTreeNode.Get(row!, association.Related) is not { } id) continue;
+                var entity = await via.ReadSingle(new Where(new Operator.Equals(enrichment.By, Value.From(id))));
+                if (entity is not null)
+                    related.Add(entity);
+            }
+            RepositoryTreeNode.Set(parents[i], enrichment.Into, related);
+        }
+    }
+
+    protected virtual async Task ApplyLookup<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents,
+        IList<object> parents,
         IReadOnlyList<Row?>? sources)
     {
         var cache = new Dictionary<string, TRelated?>();
@@ -43,10 +61,10 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
         }
     }
 
-    static async Task ApplyMany<TRelated>(
+    protected virtual async Task ApplyMany<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents,
+        IList<object> parents,
         IReadOnlyList<Row?>? sources)
     {
         for (var i = 0; i < parents.Count; i++)
@@ -61,6 +79,6 @@ public sealed class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentSt
         }
     }
 
-    static Row? At(IReadOnlyList<Row?>? sources, int index) =>
+    protected static Row? At(IReadOnlyList<Row?>? sources, int index) =>
         sources is not null && index < sources.Count ? sources[index] : null;
 }

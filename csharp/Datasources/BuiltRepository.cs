@@ -4,7 +4,6 @@ public sealed record BuiltRepository<T>(
     IConnection Connection,
     TypeConverter<T, Row> RowConverter,
     IMapper<T, T> RowsMapper,
-    IMapper<IEnumerable<Row>, IReadOnlyList<T>>? Result,
     IMapper<string, string> ColumnMappings,
     RepositoryStatements Statements,
     IReadOnlyList<string> Ids,

@@ -1,26 +1,11 @@
 namespace Datasources;
 
-public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T>, ITrackedApply where T : new()
+public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReadonlyEnrichmentStrategy<T> where T : new()
 {
-    public Task Apply<TRelated>(
+    protected override async Task ApplyLookup<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents) =>
-        ((ITrackedApply)this).ApplyTracked(via, enrichment, parents, null);
-
-    Task ITrackedApply.ApplyTracked<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        Enrichment enrichment,
-        IReadOnlyList<object> parents,
-        IReadOnlyList<Row?>? sources) =>
-        enrichment.Many
-            ? ApplyMany(via, enrichment, parents, sources)
-            : ApplyLookup(via, enrichment, parents, sources);
-
-    static async Task ApplyLookup<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        Enrichment enrichment,
-        IReadOnlyList<object> parents,
+        IList<object> parents,
         IReadOnlyList<Row?>? sources)
     {
         var keys = Keys(parents, sources, enrichment.From);
@@ -45,10 +30,10 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         }
     }
 
-    static async Task ApplyMany<TRelated>(
+    protected override async Task ApplyMany<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents,
+        IList<object> parents,
         IReadOnlyList<Row?>? sources)
     {
         var keys = Keys(parents, sources, enrichment.From);
@@ -75,10 +60,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         }
     }
 
-    static Dictionary<string, Value> Keys(
-        IReadOnlyList<object> parents,
-        IReadOnlyList<Row?>? sources,
-        string from)
+    static Dictionary<string, Value> Keys(IList<object> parents, IReadOnlyList<Row?>? sources, string from)
     {
         var keys = new Dictionary<string, Value>();
         for (var i = 0; i < parents.Count; i++)
@@ -89,7 +71,4 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : IReadonlyEnr
         }
         return keys;
     }
-
-    static Row? At(IReadOnlyList<Row?>? sources, int index) =>
-        sources is not null && index < sources.Count ? sources[index] : null;
 }

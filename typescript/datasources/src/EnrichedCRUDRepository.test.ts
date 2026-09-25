@@ -4,8 +4,6 @@ import { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrate
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
-import { RepositoryTree } from "./RepositoryTree.ts";
-import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { ListCRUDRepository } from "./tests/listCRUDRepository.ts";
 import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
 
@@ -71,7 +69,7 @@ describe("CRUDRepository", () => {
   it("applies generated parent id before child FKs", async () => {
     const parents = new ListCRUDRepository([assign(Parent, { id: 4 })]);
     const children = new ListCRUDRepository<Child>();
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.create(assign(Parent, { children: [assign(Child, { label: "n" })] }));
     expect(children.items[0]?.parent_id).toBe(5);
   });
@@ -82,7 +80,7 @@ describe("CRUDRepository", () => {
       assign(Child, { id: 1, parent_id: 1, label: "a" }),
       assign(Child, { id: 2, parent_id: 1, label: "b" }),
     ]);
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.update(
       assign(Parent, {
         id: 1,
@@ -107,8 +105,8 @@ describe("CRUDRepository", () => {
       assign(Note, { id: 8, child_id: 3, text: "n" }),
       assign(Note, { id: 9, child_id: 9, text: "other" }),
     ]);
-    children.addEnriched("notes", "id", notes, "child_id", undefined, true);
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    children.addEnriched({ into: "notes", from: "id", by: "child_id", many: true }, notes);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.delete(assign(Parent, { id: 1 }));
     expect(parents.items).toHaveLength(0);
     expect(children.items).toHaveLength(0);
@@ -123,7 +121,7 @@ describe("CRUDRepository", () => {
       new DefaultWriteEnrichmentStrategy(new SkipDelete()),
       [assign(Parent, { id: 1 })],
     );
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.delete(assign(Parent, { id: 1 }));
     expect(parents.items).toHaveLength(0);
     expect(children.items.map((child) => child.label)).toEqual(["a"]);
@@ -136,9 +134,9 @@ describe("CRUDRepository", () => {
     const childTypes = new ListCRUDRepository([
       assign(TypeRow, { id: 3, name: "home" }),
     ]);
-    children.addEnriched("type_name", "type_id", childTypes, "id", "name");
-    children.addEnriched("notes", "id", notes, "child_id", undefined, true);
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    children.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, childTypes);
+    children.addEnriched({ into: "notes", from: "id", by: "child_id", many: true }, notes);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.create(
       assign(Parent, {
         children: [
@@ -157,14 +155,7 @@ describe("CRUDRepository", () => {
 
   it("throws when many via is readonly", async () => {
     const parents = new ListCRUDRepository<Parent>();
-    parents.addEnriched(
-      "children",
-      "id",
-      new ListReadonlyRepository<Child>([]),
-      "parent_id",
-      undefined,
-      true,
-    );
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, new ListReadonlyRepository<Child>([]));
     await expect(
       parents.create(assign(Parent, { children: [assign(Child, { label: "a" })] })),
     ).rejects.toThrow(/children/);
@@ -174,7 +165,7 @@ describe("CRUDRepository", () => {
   it("skips non-list child payloads", async () => {
     const parents = new ListCRUDRepository<Parent>();
     const children = new ListCRUDRepository<Child>();
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.create(Object.assign(assign(Parent, {}), { children: "x" }));
     await parents.create(Object.assign(assign(Parent, {}), { children: { label: "o" } }));
     expect(children.items).toHaveLength(0);
@@ -197,25 +188,26 @@ describe("CRUDRepository", () => {
       [assign(Parent, { id: 1 })],
     );
     const children = new ListCRUDRepository<Child>();
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.update({ id: 1 } as Parent);
     expect(children.items).toEqual([]);
   });
 
   it("requires a link repository for an association", async () => {
-    const root = new RepositoryTreeNode(new ListCRUDRepository<Parent>(), "");
-    root.items.push(
-      new RepositoryTreeNode(new ListCRUDRepository<Child>(), "children", root, async () => {}, {
+    const parents = new ListCRUDRepository<Parent>();
+    parents.addEnriched(
+      {
         into: "children",
         from: "id",
         by: "parent_id",
         many: true,
         association: { parent: "parent_id", related: "child_id" },
-      }),
+      },
+      new ListCRUDRepository<Child>(),
     );
     await expect(
       new DefaultWriteEnrichmentStrategy<Parent>().persist(
-        new RepositoryTree(root),
+        parents.tree,
         [assign(Parent, { id: 1, children: [] })],
         "create",
       ),
@@ -224,7 +216,7 @@ describe("CRUDRepository", () => {
 
   it("rejects unknown persist mode", async () => {
     const parents = new ListCRUDRepository<Parent>();
-    parents.addEnriched("children", "id", new ListCRUDRepository<Child>(), "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, new ListCRUDRepository<Child>());
     const write = Reflect.get(parents, "write") as {
       persist(tree: typeof parents.tree, items: Parent[], mode: string): Promise<void>;
     };
@@ -257,16 +249,12 @@ describe("CRUDRepository", () => {
       { parent_id: 1, child_id: null as never },
       { parent_id: 9, child_id: 2 },
     ]);
-    parents.tree.parent.includeLinked(
+    parents.addLinked(
+      { into: "children", from: "id", by: "id", association: { parent: "parent_id", related: "child_id" } },
       children,
-      "children",
-      "id",
-      "id",
       links,
-      "parent_id",
-      "child_id",
     );
-    expect((parents.tree.parent.items[0] as RepositoryTreeNode).link).toBe(links);
+    expect(parents.enrichments[0]?.link).toBe(links);
     parents.items.push(assign(Parent, { id: 1 }), Object.assign(assign(Parent, {}), { id: null }));
     const loaded = await collectAsync(parents.read());
     expect(loaded[0]?.children.map((child) => child.label)).toEqual(["a"]);
@@ -276,7 +264,7 @@ describe("CRUDRepository", () => {
   it("skips object ids when loading children", async () => {
     const parents = new ListCRUDRepository<Parent>();
     const children = new ListCRUDRepository<Child>();
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     children.items.push(Object.assign({ parent_id: 1, label: "ghost" }));
     await parents.delete(Object.assign(assign(Parent, {}), { id: { x: 1 } }));
     await parents.update(
@@ -298,7 +286,7 @@ describe("CRUDRepository", () => {
     }
     const parents = new ListCRUDRepository<LabelOnly>([], LabelOnly);
     const kids = new ListCRUDRepository<{ label: string }>();
-    parents.addEnriched("kids", "label", kids, "label", undefined, true);
+    parents.addEnriched({ into: "kids", from: "label", by: "label", many: true }, kids);
     const kid = { label: "a" };
     kids.create = async () => kid;
     await parents.create(Object.assign(new LabelOnly(), { label: "a", kids: [kid] }));
@@ -322,7 +310,7 @@ describe("CRUDRepository", () => {
       { parent_id: 1, child_id: null as never },
       { parent_id: 1, child_id: 2 },
     ]);
-    parents.addLinked("children", "id", children, "id", links, "parent_id", "child_id");
+    parents.addLinked({ into: "children", from: "id", by: "id", association: { parent: "parent_id", related: "child_id" } }, children, links);
     await parents.update(
       assign(Parent, {
         id: 1,
@@ -339,7 +327,7 @@ describe("CRUDRepository", () => {
     }
     const parents = new ListCRUDRepository<LabelOnly>([], LabelOnly);
     const kids = new ListCRUDRepository<{ label: string }>();
-    parents.addEnriched("kids", "label", kids, "label", undefined, true);
+    parents.addEnriched({ into: "kids", from: "label", by: "label", many: true }, kids);
     const item = Object.assign(new LabelOnly(), { label: "a", kids: [] });
     await expect(parents.create(item)).resolves.toBe(item);
   });
@@ -349,7 +337,7 @@ describe("CRUDRepository", () => {
     const children = new ListCRUDRepository<Child>();
     const item = assign(Parent, { children: [] });
     parents.inserted = async () => item;
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await expect(parents.create(item)).resolves.toBe(item);
   });
 
@@ -371,13 +359,7 @@ describe("CRUDRepository", () => {
         return item;
       },
     });
-    parents.addEnriched(
-      "name",
-      "id",
-      new ListReadonlyRepository([{ id: 1, name: "x" } as never]),
-      "id",
-      "name",
-    );
+    parents.addEnriched({ into: "name", from: "id", by: "id", select: "name" }, new ListReadonlyRepository([{ id: 1, name: "x" } as never]));
     const item = Object.assign(new Soft(), { name: "ada" });
     await expect(parents.create(item)).resolves.toBe(item);
   });
@@ -388,7 +370,7 @@ describe("CRUDRepository", () => {
       assign(Child, { id: 2, label: "a" }),
     ]);
     const links = new ListCRUDRepository<{ parent_id: number; child_id: number }>();
-    parents.addLinked("children", "id", children, "id", links, "parent_id", "child_id");
+    parents.addLinked({ into: "children", from: "id", by: "id", association: { parent: "parent_id", related: "child_id" } }, children, links);
     await expect(
       parents.create(
         assign(Parent, {
@@ -408,7 +390,7 @@ describe("CRUDRepository", () => {
     const parents = new ListCRUDRepository<Parent>();
     const children = new ListCRUDRepository<Child>();
     (children as { ids: readonly string[] }).ids = [];
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.create(
       assign(Parent, { children: [assign(Child, { label: "a" })] }),
     );
@@ -428,18 +410,13 @@ describe("CRUDRepository", () => {
 
   it("rejects write through a readonly many edge", async () => {
     const parents = new ListCRUDRepository<Parent>();
-    const node = new RepositoryTreeNode(parents, "");
-    node.items.push(
-      new RepositoryTreeNode(new ListReadonlyRepository<Child>([]), "children", node, async () => {}, {
-        into: "children",
-        from: "id",
-        by: "parent_id",
-        many: true,
-      }),
+    parents.addEnriched(
+      { into: "children", from: "id", by: "parent_id", many: true },
+      new ListReadonlyRepository<Child>([]),
     );
     await expect(
       new DefaultWriteEnrichmentStrategy<Parent>().persist(
-        new RepositoryTree(node),
+        parents.tree,
         [assign(Parent, { id: 1, children: [assign(Child, { label: "a" })] })],
         "create",
       ),
@@ -450,7 +427,7 @@ describe("CRUDRepository", () => {
     const parents = new ListCRUDRepository<Parent>();
     const children = new ListCRUDRepository([assign(Child, { id: 2, label: "a" })]);
     const links = new ListCRUDRepository<{ parent_id: number; child_id: number }>();
-    parents.addLinked("children", "id", children, "id", links, "parent_id", "child_id");
+    parents.addLinked({ into: "children", from: "id", by: "id", association: { parent: "parent_id", related: "child_id" } }, children, links);
     await expect(
       new DefaultWriteEnrichmentStrategy<Parent>().persist(
         parents.tree,
@@ -460,21 +437,12 @@ describe("CRUDRepository", () => {
     ).rejects.toThrow(/requires "id"/);
   });
 
-  it("strips known enrichment fields while ignoring bare nodes", async () => {
+  it("strips known enrichment fields", async () => {
     const parents = new ListCRUDRepository<Parent>();
     const children = new ListCRUDRepository<Child>();
     const notes = new ListCRUDRepository<Note>();
-    parents.addEnriched("children", "id", children, "parent_id", undefined, true);
-    const childNode = parents.tree.parent.items[0] as RepositoryTreeNode;
-    childNode.include(
-      notes,
-      "notes",
-      "id",
-      "child_id",
-      undefined,
-      true,
-    );
-    childNode.items.push(new RepositoryTreeNode(notes, "extra", childNode));
+    children.addEnriched({ into: "notes", from: "id", by: "child_id", many: true }, notes);
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
     await parents.create(
       assign(Parent, {
         children: [assign(Child, { label: "a", notes: [assign(Note, { text: "n" })] })],
@@ -490,22 +458,13 @@ describe("CRUDRepository", () => {
       { parent_id: 1, child_id: null as never },
       { parent_id: 1, child_id: 2 },
     ]);
-    parents.addLinked("children", "id", children, "id", links, "parent_id", "child_id");
+    parents.addLinked({ into: "children", from: "id", by: "id", association: { parent: "parent_id", related: "child_id" } }, children, links);
+    const entry = parents.enrichments[0]!;
     await parents.delete(assign(Parent, { id: 1 }));
-    await new CascadeDeleteEnrichmentStrategy().deleteLinked(
-      parents.tree.parent.items[0]!,
-      {
-        into: "children",
-        from: "id",
-        by: "id",
-        many: true,
-        association: { parent: "parent_id", related: "child_id" },
-      },
-      {},
-    );
+    await new CascadeDeleteEnrichmentStrategy().deleteLinked(entry, entry.enrichment, {});
     await expect(
       new CascadeDeleteEnrichmentStrategy().deleteLinked(
-        parents.tree.parent.items[0]!,
+        entry,
         { into: "children", from: "id", by: "id", many: true },
         { id: 1 },
       ),
@@ -513,19 +472,13 @@ describe("CRUDRepository", () => {
   });
 
   it("cascade delete requires CRUD writers", async () => {
-    const root = new RepositoryTreeNode(new ListCRUDRepository<Parent>(), "");
-    const owned = new RepositoryTreeNode(
-      new ListReadonlyRepository<Child>([]),
-      "children",
-      root,
-      async () => {},
+    const ownedParents = new ListCRUDRepository<Parent>();
+    ownedParents.addEnriched(
       { into: "children", from: "id", by: "parent_id", many: true },
-    );
-    const linked = new RepositoryTreeNode(
       new ListReadonlyRepository<Child>([]),
-      "children",
-      root,
-      async () => {},
+    );
+    const linkedParents = new ListCRUDRepository<Parent>();
+    linkedParents.addEnriched(
       {
         into: "children",
         from: "id",
@@ -533,12 +486,15 @@ describe("CRUDRepository", () => {
         many: true,
         association: { parent: "parent_id", related: "child_id" },
       },
+      new ListReadonlyRepository<Child>([]),
     );
+    const owned = ownedParents.enrichments[0]!;
+    const linked = linkedParents.enrichments[0]!;
     await expect(
-      new CascadeDeleteEnrichmentStrategy().deleteOwned(owned, owned.enrichment!, { id: 1 }, async () => {}),
+      new CascadeDeleteEnrichmentStrategy().deleteOwned(owned, owned.enrichment, { id: 1 }, async () => {}),
     ).rejects.toThrow(/children/);
     await expect(
-      new CascadeDeleteEnrichmentStrategy().deleteLinked(linked, linked.enrichment!, { id: 1 }),
+      new CascadeDeleteEnrichmentStrategy().deleteLinked(linked, linked.enrichment, { id: 1 }),
     ).rejects.toThrow(/children/);
   });
 });
@@ -548,7 +504,7 @@ const repoOf = (
   types: ListCRUDRepository<TypeRow>,
   children: ListCRUDRepository<Child>,
 ): ListCRUDRepository<Parent> => {
-  parents.addEnriched("type_name", "type_id", types, "id", "name");
-  parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+  parents.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, types);
+  parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
   return parents;
 };

@@ -4,5 +4,5 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait Enriched: Send + Sync {
-    async fn enrich(&self, items: &mut [Row]) -> Result<()>;
+    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()>;
 }

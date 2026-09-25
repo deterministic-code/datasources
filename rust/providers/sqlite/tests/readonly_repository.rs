@@ -256,15 +256,7 @@ mod user_view {
         .unwrap();
         let types =
             ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
-        users_repo.add_enriched(
-            "UserType",
-            "UserTypeId",
-            types,
-            "Id",
-            Some("Name".into()),
-            false,
-            None,
-        );
+        users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), types, None);
         let account = users_repo
             .read_single(
                 Some(&Where::binary(
@@ -437,24 +429,8 @@ mod users_view_roles {
         let roles =
             ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
         let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
-        users_repo.add_enriched(
-            "UserType",
-            "UserType",
-            types,
-            "Id",
-            Some("Name".into()),
-            false,
-            Some(strategy.clone()),
-        );
-        users_repo.add_enriched(
-            "Roles",
-            "Key",
-            roles,
-            "UserId",
-            None,
-            true,
-            Some(strategy),
-        );
+        users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), false), types, Some(strategy.clone()));
+        users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), roles, Some(strategy));
         let users_view = users_repo
             .read_single(Some(&Where::binary("Key", eq, ADA)), None)
             .await
@@ -550,9 +526,13 @@ mod users_view_roles {
             },
             |_| Vec::new(),
         );
-        let mut options = ReadonlyRepositoryOptions::default();
-        options.result = Some(Box::new(result));
-        let users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
+        let options = ReadonlyRepositoryOptions::default();
+        let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
+        users_repo.add_enriched(
+            datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+            Arc::new(ReadonlyRepository::memory(vec![])),
+            Some(Arc::new(datasources::NestedToObjectEnrichmentStrategy::new(Box::new(result)))),
+        );
         let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
         let view = |login: &str| {
             items
@@ -747,24 +727,8 @@ mod user_crud {
         let user_types_repo =
             Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
         let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
-        users_repo.add_enriched(
-            "UserType",
-            "UserTypeId",
-            user_types_repo.clone(),
-            "Id",
-            Some("Name".into()),
-            false,
-            None,
-        );
-        users_repo.add_enriched(
-            "Roles",
-            "Key",
-            user_roles_repo.clone(),
-            "UserId",
-            None,
-            true,
-            None,
-        );
+        users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
+        users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
         let mut admin = datasources::Row::new();
         admin.insert("Name".into(), Value::from("admin"));
         user_types_repo.create(&mut admin).await.unwrap();

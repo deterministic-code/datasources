@@ -1,6 +1,6 @@
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
-import type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
+import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { Operator, Where } from "./statements/index.ts";
 
@@ -14,13 +14,13 @@ export abstract class DeleteEnrichmentStrategy<T> {
   declare private readonly subject: T; // keeps T paired with the write strategy
 
   abstract deleteOwned(
-    node: IRepositoryTreeNode,
+    entry: StoredEnrichment,
     enrichment: Enrichment,
     parent: object,
     deleteNested: (rows: object[]) => Promise<void>,
   ): Promise<void>;
 
-  abstract deleteLinked(node: IRepositoryTreeNode, enrichment: Enrichment, parent: object): Promise<void>;
+  abstract deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>;
 
   static load = async (
     writer: ICRUDRepository<object>,

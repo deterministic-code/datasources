@@ -1,7 +1,6 @@
 use crate::enriched::Enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
-use crate::mappers::Mapper;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
@@ -24,27 +23,13 @@ impl ItemsRepository {
         }
     }
 
-    pub fn with_result(
-        items: Vec<Row>,
-        result: Box<dyn Mapper<Vec<Row>, Vec<Row>> + Send + Sync>,
-    ) -> Self {
-        Self {
-            inner: ReadonlyRepository::memory_with(items, Some(result)),
-        }
-    }
-
     pub fn add_enriched(
         &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
+        enrichment: crate::enrichment::Enrichment,
         via: impl EnrichmentVia,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
-        self.inner
-            .add_enriched(into, from, via, by, select, many, strategy);
+        self.inner.add_enriched(enrichment, via, strategy);
         self
     }
 }
@@ -71,7 +56,7 @@ impl IRepository for ItemsRepository {
 
 #[async_trait]
 impl Enriched for ItemsRepository {
-    async fn enrich(&self, items: &mut [Row]) -> Result<()> {
+    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
         self.inner.enrich(items).await
     }
 }

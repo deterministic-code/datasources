@@ -5,6 +5,7 @@ import {
   DictionaryMapper,
   FlatToNestedMapper,
   HashsetOptimizedReadonlyEnrichmentStrategy,
+  NestedToObjectEnrichmentStrategy,
   Join,
   ReadonlyRepository,
   SelectStatement,
@@ -118,8 +119,8 @@ describe("users view roles", () => {
         (query) => query,
       ),
     });
-    usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name", undefined, strategy);
-    usersRepo.addEnriched("Roles", "Key", rolesRepo, "UserId", undefined, true, strategy);
+    usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo, strategy);
+    usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, rolesRepo, strategy);
     const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
     expect(usersView?.UserType).toBe("admin");
     expect(names(usersView?.Roles ?? [])).toEqual(["admin", "editor"]);
@@ -152,6 +153,12 @@ describe("users view roles", () => {
         },
       },
     });
+    const joined = new TransformMapper(
+      (rows: Iterable<Cells>) => flat.map(rows).map((row) => hydrate.map(row)),
+      () => {
+        throw new Error("result does not reverse");
+      },
+    );
     const usersRepo = new ReadonlyRepository(connection, {
       type: UsersView,
       columnMappings: new DictionaryMapper([
@@ -164,13 +171,12 @@ describe("users view roles", () => {
         ["RoleId", "role_id"],
         ["Name", "roles.name"],
       ]),
-      result: new TransformMapper(
-        (rows: Iterable<Cells>) => flat.map(rows).map((row) => hydrate.map(row)),
-        () => {
-          throw new Error("result does not reverse");
-        },
-      ),
     });
+    usersRepo.addEnriched(
+      { into: "Roles", from: "Key", by: "UserId", many: true },
+      usersRepo,
+      new NestedToObjectEnrichmentStrategy(joined),
+    );
     const items: UsersView[] = [];
     for await (const item of usersRepo.read(
       new SelectStatement({

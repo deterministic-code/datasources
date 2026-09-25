@@ -152,7 +152,7 @@ describe("user view", () => {
       entityMapper: casing,
       columnMappings: casing,
     });
-    usersRepo.addEnriched("UserType", "UserType", typesRepo, "Id", "Name");
+    usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
     const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
     expect(usersView?.UserType).toBe("admin");
     expect(usersView?.Login).toBe("ada");
@@ -269,8 +269,8 @@ describe("users view crud", () => {
       entityMapper: casing,
       columnMappings: casing,
     });
-    usersRepo.addEnriched("UserType", "UserTypeId", userTypesRepo, "Id", "Name");
-    usersRepo.addEnriched("Roles", "Key", userRolesRepo, "UserId", undefined, true);
+    usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
+    usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
     const admin = Object.assign(new UserType(), { Name: "admin" });
     await userTypesRepo.create(admin);
     const user = Object.assign(new UsersView(), {

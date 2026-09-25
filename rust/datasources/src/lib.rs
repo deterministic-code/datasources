@@ -38,6 +38,7 @@ mod identity_filter;
 mod identity_where_text;
 mod isolation_level;
 mod lazy_write_enrichment_strategy;
+mod nested_to_object_enrichment_strategy;
 pub mod mappers;
 pub mod mocks;
 mod parameter;
@@ -62,6 +63,7 @@ mod result;
 mod row;
 mod select_statement;
 mod shared_items;
+mod stored_enrichment;
 mod split_statements;
 mod statement_parser;
 pub mod statements;
@@ -116,6 +118,7 @@ pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use lazy_write_enrichment_strategy::LazyWriteEnrichmentStrategy;
+pub use nested_to_object_enrichment_strategy::NestedToObjectEnrichmentStrategy;
 pub use mappers::{
     ChangeCasingMapper, DictionaryMapper, FlatToNestedMapper, FlatToNestedMapperTrait,
     IdentityMapper, MappedRow, MappedValue, Mapper, PluralizerMapper, RowTypeMapper,
@@ -140,6 +143,7 @@ pub use repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 pub use repository_factory::{CRUDRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory};
 pub use repository_tree::RepositoryTree;
 pub use repository_tree_node::{encode_rows, RepositoryTreeNode};
+pub use stored_enrichment::StoredEnrichment;
 pub use reset::reset;
 pub use response::Response;
 pub use result::Result;

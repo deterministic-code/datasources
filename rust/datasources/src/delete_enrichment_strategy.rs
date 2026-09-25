@@ -1,9 +1,9 @@
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
-use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
+use crate::stored_enrichment::StoredEnrichment;
 use crate::{Operator, Where};
 use async_trait::async_trait;
 
@@ -11,7 +11,7 @@ use async_trait::async_trait;
 pub trait DeleteEnrichmentStrategy: Send + Sync {
     async fn delete_owned(
         &self,
-        node: &RepositoryTreeNode,
+        entry: &StoredEnrichment,
         enrichment: &Enrichment,
         parent: &Row,
         delete_nested: &dyn DeleteNested,
@@ -19,7 +19,7 @@ pub trait DeleteEnrichmentStrategy: Send + Sync {
 
     async fn delete_linked(
         &self,
-        node: &RepositoryTreeNode,
+        entry: &StoredEnrichment,
         enrichment: &Enrichment,
         parent: &Row,
     ) -> Result<()>;

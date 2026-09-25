@@ -16,7 +16,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         this(RepositoryBuilder<T>.Parts(connection, options), options.Write) { }
 
     public CRUDRepository(BuiltRepository<T> built, IWriteEnrichmentStrategy<T>? write = null) : base(
-        built.Connection, built.RowConverter, built.RowsMapper, built.Result, built.ColumnMappings, built.Statements)
+        built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
     {
         create = built.Create;
         ids = built.Ids;
@@ -184,33 +184,5 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         }
     }
 
-    T StripEnriched(T item) => (T)Strip(Tree.Parent, item!);
-
-    static object Strip(IRepositoryTreeNode node, object item)
-    {
-        var skip = node.Items
-            .Select(child => child.Enrichment?.Into)
-            .OfType<string>()
-            .ToHashSet();
-        if (item is IDictionary<string, Value> row)
-        {
-            var copy = new Row(row);
-            foreach (var name in skip)
-                copy.Remove(name);
-            return copy;
-        }
-        var dest = Activator.CreateInstance(item.GetType())!;
-        foreach (var prop in item.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(prop => prop is { CanRead: true, CanWrite: true } && prop.GetIndexParameters().Length == 0))
-        {
-            if (skip.Contains(prop.Name))
-            {
-                if (!prop.PropertyType.IsValueType)
-                    prop.SetValue(dest, null);
-                continue;
-            }
-            prop.SetValue(dest, prop.GetValue(item));
-        }
-        return dest;
-    }
+    T StripEnriched(T item) => (T)DefaultWriteEnrichmentStrategy<T>.Strip(this, item!);
 }

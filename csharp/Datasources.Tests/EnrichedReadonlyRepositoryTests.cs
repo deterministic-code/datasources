@@ -40,7 +40,7 @@ public class ReadonlyRepositoryTests
             new Parent { id = 1, type_id = 10 },
             new Parent { id = 2, type_id = 99 });
         var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 10, name = "person" });
-        parents.AddEnriched("type_name", "type_id", types, "id", "name", strategy: strategy);
+        parents.AddEnriched(new("type_name", "type_id", "id", "name"), types, strategy);
         var items = new List<Parent>();
         await foreach (var item in parents.Read())
             items.Add(item);
@@ -64,8 +64,8 @@ public class ReadonlyRepositoryTests
             new Child { parent_id = 1, label = "a" },
             new Child { parent_id = 1, label = "b" },
             new Child { parent_id = 2, label = "x" });
-        parents.AddEnriched("type_name", "type_id", types, "id", "name", strategy: strategy);
-        parents.AddEnriched("children", "id", children, "parent_id", many: true, strategy: strategy);
+        parents.AddEnriched(new("type_name", "type_id", "id", "name"), types, strategy);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children, strategy);
         var item = await parents.ReadSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal(["a", "b"], item.children.Select(child => child.label));
@@ -88,9 +88,9 @@ public class ReadonlyRepositoryTests
         var children = new ListReadonlyRepository<Child>(
             new Child { parent_id = 1, type_id = 3, label = "a" },
             new Child { parent_id = 1, type_id = 9, label = "b" });
-        children.AddEnriched("type_name", "type_id", childTypes, "id", "name");
-        parents.AddEnriched("type_name", "type_id", types, "id", "name", strategy: strategy);
-        parents.AddEnriched("children", "id", children, "parent_id", many: true, strategy: strategy);
+        children.AddEnriched(new("type_name", "type_id", "id", "name"), childTypes);
+        parents.AddEnriched(new("type_name", "type_id", "id", "name"), types, strategy);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children, strategy);
         var item = await parents.ReadSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal("home", item.children[0].type_name);
@@ -112,8 +112,8 @@ public class ReadonlyRepositoryTests
             new Parent { id = 1, type_id = 10 },
             new Parent { id = 2, type_id = 11 });
         var strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-        parents.AddEnriched("type_name", "type_id", types, "id", "name", strategy: strategy);
-        parents.AddEnriched("children", "id", children, "parent_id", many: true, strategy: strategy);
+        parents.AddEnriched(new("type_name", "type_id", "id", "name"), types, strategy);
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children, strategy);
         await foreach (var _ in parents.Read()) { }
         Assert.Equal(1, types.Reads);
         Assert.Equal(0, types.ReadSingles);
@@ -131,7 +131,7 @@ public class ReadonlyRepositoryTests
         var parents = new ListReadonlyRepository<Parent>(
             new Parent { id = 1, type_id = 10 },
             new Parent { id = 2, type_id = 11 });
-        parents.AddEnriched("type_name", "type_id", types, "id", "name");
+        parents.AddEnriched(new("type_name", "type_id", "id", "name"), types);
         await foreach (var _ in parents.Read()) { }
         Assert.Equal(2, types.ReadSingles);
         Assert.Equal(0, types.Reads);
@@ -175,7 +175,7 @@ public class ReadonlyRepositoryTests
     {
         var types = new ListReadonlyRepository<TypeRow>(new TypeRow { id = 1, name = "admin" });
         var repo = new SourcedView();
-        repo.AddEnriched("UserType", "UserType", types, "id", "name");
+        repo.AddEnriched(new("UserType", "UserType", "id", "name"), types);
         var item = await repo.ReadSingle();
         Assert.Equal("admin", item!.UserType);
     }
@@ -195,15 +195,24 @@ public class ReadonlyRepositoryTests
         }
     }
 
-    sealed class JoinRows(IReadOnlyList<Row> rows, IMapper<IEnumerable<Row>, IReadOnlyList<Parent>> result)
-        : ReadonlyRepository<Parent>(result)
+    sealed class JoinRows : ReadonlyRepository<Parent>
     {
-        protected override async IAsyncEnumerable<Row> ReadSources(
+        readonly IReadOnlyList<Row> rows;
+        public JoinRows(IReadOnlyList<Row> rows, IMapper<IEnumerable<Row>, IReadOnlyList<Parent>> result)
+        {
+            this.rows = rows;
+            AddEnriched(
+                new("type_name", "id", "id"),
+                new ListReadonlyRepository<Parent>(),
+                new NestedToObjectEnrichmentStrategy<Parent>(result));
+        }
+
+        protected override async IAsyncEnumerable<(Parent Item, Row? Source)> ReadItems(
             IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
         {
             await Task.Yield();
             foreach (var row in rows)
-                yield return row;
+                yield return (new Parent(), row);
         }
     }
 

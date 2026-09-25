@@ -5,124 +5,20 @@ namespace Datasources;
 
 public sealed class RepositoryTreeNode : IRepositoryTreeNode
 {
-    readonly List<RepositoryTreeNode> items = [];
-    readonly Func<IReadOnlyList<object>, IReadOnlyList<Row?>?, Task> apply;
-    readonly IReadonlyEnrichmentBinder binder;
-
-    public RepositoryTreeNode(
-        object value,
-        string propertyName,
-        IRepositoryTreeNode? parent = null,
-        Func<IReadOnlyList<object>, Task>? apply = null,
-        Enrichment? enrichment = null,
-        IReadonlyEnrichmentBinder? binder = null) :
-        this(value, propertyName, parent, (parents, _) => (apply ?? (_ => Task.CompletedTask))(parents), enrichment, binder)
-    {
-    }
-
-    internal RepositoryTreeNode(
-        object value,
-        string propertyName,
-        IRepositoryTreeNode? parent,
-        Func<IReadOnlyList<object>, IReadOnlyList<Row?>?, Task> apply,
-        Enrichment? enrichment,
-        IReadonlyEnrichmentBinder? binder)
+    public RepositoryTreeNode(object value, string propertyName, IRepositoryTreeNode? parent = null, Enrichment? enrichment = null)
     {
         Value = value;
         PropertyName = propertyName;
         Parent = parent;
         Enrichment = enrichment;
-        this.binder = binder ?? new DefaultReadonlyEnrichmentStrategy<object>();
-        this.apply = apply;
     }
 
     public object Value { get; }
     public string PropertyName { get; }
     public IRepositoryTreeNode? Parent { get; }
-    public IReadOnlyList<IRepositoryTreeNode> Items => items;
     public Enrichment? Enrichment { get; }
-    internal IChildPersist? Persist { get; private set; }
-    internal IChildPersist? Link { get; private set; }
 
-    public IRepositoryTreeNode Include<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        string into,
-        string from,
-        string by,
-        string? select = null,
-        bool many = false) =>
-        Include(via, into, from, by, select, many, binder);
-
-    internal RepositoryTreeNode Include<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        string into,
-        string from,
-        string by,
-        string? select,
-        bool many,
-        IReadonlyEnrichmentBinder strategy)
-    {
-        var enrichment = new Enrichment(into, from, by, select, many);
-        var child = new RepositoryTreeNode(
-            via,
-            into,
-            this,
-            (parents, sources) => ((ITrackedApply)strategy).ApplyTracked(via, enrichment, parents, sources),
-            enrichment,
-            strategy)
-        {
-            Persist = via is ICRUDRepository<TRelated> crud ? new ChildPersist<TRelated>(crud) : null
-        };
-        items.Add(child);
-        return child;
-    }
-
-    public IRepositoryTreeNode IncludeLinked<TRelated, TLink>(
-        IReadonlyRepository<TRelated> via,
-        string into,
-        string from,
-        string by,
-        ICRUDRepository<TLink> link,
-        string parent,
-        string related) =>
-        IncludeLinked(via, into, from, by, link, parent, related, binder);
-
-    internal RepositoryTreeNode IncludeLinked<TRelated, TLink>(
-        IReadonlyRepository<TRelated> via,
-        string into,
-        string from,
-        string by,
-        ICRUDRepository<TLink> link,
-        string parent,
-        string related,
-        IReadonlyEnrichmentBinder strategy)
-    {
-        var enrichment = new Enrichment(into, from, by, null, true, new Association(parent, related));
-        var writer = new ChildPersist<TLink>(link);
-        var child = new RepositoryTreeNode(
-            via,
-            into,
-            this,
-            (parents, sources) => ApplyLinked(via, writer, enrichment, parents, sources),
-            enrichment,
-            strategy)
-        {
-            Link = writer
-        };
-        items.Add(child);
-        return child;
-    }
-
-    public Task EnrichFrom(IReadOnlyList<object> parents) => EnrichFrom(parents, null);
-
-    internal async Task EnrichFrom(IReadOnlyList<object> parents, IReadOnlyList<Row?>? sources)
-    {
-        await apply(parents, sources);
-        var next = Related(parents, PropertyName);
-        var nested = PropertyName.Length == 0 ? sources : null;
-        foreach (var child in items)
-            await child.EnrichFrom(next, nested);
-    }
+    internal static IChildPersist Writer<T>(ICRUDRepository<T> repository) => new ChildPersist<T>(repository);
 
     internal static object? SourceKey(object parent, string name, Row? source) =>
         source is not null && source.TryGetValue(name, out var cell) && cell is not global::Datasources.Value.Null
@@ -131,9 +27,9 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
 
     internal static string KeyOf(object? key) => key?.ToString() ?? "";
 
-    internal static IReadOnlyList<object> Related(IReadOnlyList<object> parents, string propertyName)
+    internal static IList<object> Related(IList<object> parents, string propertyName)
     {
-        if (propertyName.Length == 0) return parents;
+        if (propertyName.Length == 0) return parents as IList<object> ?? [.. parents];
         var next = new List<object>();
         foreach (var parent in parents)
             switch (Get(parent, propertyName))
@@ -157,33 +53,6 @@ public sealed class RepositoryTreeNode : IRepositoryTreeNode
     static PropertyInfo Prop(object obj, string name) =>
         obj.GetType().GetProperty(name)
         ?? throw new DatasourceException($"Unknown property \"{name}\"");
-
-    static async Task ApplyLinked<TRelated>(
-        IReadonlyRepository<TRelated> via,
-        IChildPersist link,
-        Enrichment enrichment,
-        IReadOnlyList<object> parents,
-        IReadOnlyList<Row?>? sources)
-    {
-        var association = enrichment.Association ?? throw new DatasourceException("Missing association");
-        for (var i = 0; i < parents.Count; i++)
-        {
-            var key = SourceKey(parents[i], enrichment.From, At(sources, i));
-            if (key is null) continue;
-            var related = new List<TRelated>();
-            await foreach (var row in link.Read(new Where(new Operator.Equals(association.Parent, global::Datasources.Value.From(key)))))
-            {
-                if (Get(row, association.Related) is not { } id) continue;
-                var entity = await via.ReadSingle(new Where(new Operator.Equals(enrichment.By, global::Datasources.Value.From(id))));
-                if (entity is not null)
-                    related.Add(entity);
-            }
-            Set(parents[i], enrichment.Into, related);
-        }
-    }
-
-    static Row? At(IReadOnlyList<Row?>? sources, int index) =>
-        sources is not null && index < sources.Count ? sources[index] : null;
 
     internal interface IChildPersist
     {

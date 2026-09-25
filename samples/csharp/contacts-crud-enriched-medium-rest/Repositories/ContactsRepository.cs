@@ -23,13 +23,13 @@ public sealed class ContactsRepository : CRUDRepository<ContactsView>
         Phones = new PhoneRepository(connection);
         Groups = new ContactGroupRepository(connection);
         Members = new ContactGroupMemberRepository(connection);
-        Addresses.AddEnriched("address_type", "address_type_id", AddressTypes, "id", "name");
-        Phones.AddEnriched("phone_type", "phone_type_id", PhoneTypes, "id", "name");
-        AddEnriched("contact_source", "contact_source_id", Sources, "id", "name");
-        AddEnriched("contact_type", "contact_type_id", Types, "id", "name");
-        AddEnriched("addresses", "id", Addresses, "contact_id", many: true);
-        AddEnriched("phones", "id", Phones, "contact_id", many: true);
-        AddLinked("groups", "id", Groups, "id", Members, "contact_id", "contact_group_id");
+        Addresses.AddEnriched(new("address_type", "address_type_id", "id", "name"), AddressTypes);
+        Phones.AddEnriched(new("phone_type", "phone_type_id", "id", "name"), PhoneTypes);
+        AddEnriched(new("contact_source", "contact_source_id", "id", "name"), Sources);
+        AddEnriched(new("contact_type", "contact_type_id", "id", "name"), Types);
+        AddEnriched(new("addresses", "id", "contact_id", Many: true), Addresses);
+        AddEnriched(new("phones", "id", "contact_id", Many: true), Phones);
+        AddLinked(new("groups", "id", "id", Association: new("contact_id", "contact_group_id")), Groups, Members);
     }
 
     public new ContactsRepository AddMiddleware(ICommandMiddleware middleware)

@@ -100,16 +100,11 @@ impl CRUDRepository {
 
     pub fn add_enriched(
         &mut self,
-        into: impl Into<String>,
-        from: impl Into<String>,
+        enrichment: crate::enrichment::Enrichment,
         via: impl EnrichmentVia,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
-        self.readonly
-            .add_enriched(into, from, via, by, select, many, strategy);
+        self.readonly.add_enriched(enrichment, via, strategy);
         self
     }
 
@@ -302,7 +297,7 @@ impl IRepository for CRUDRepository {
 
 #[async_trait]
 impl Enriched for CRUDRepository {
-    async fn enrich(&self, items: &mut [Row]) -> Result<()> {
+    async fn enrich(&self, items: &mut Vec<Row>) -> Result<()> {
         self.readonly.enrich(items).await
     }
 }
@@ -336,7 +331,10 @@ impl ICRUDRepository for CRUDRepository {
         if !self.enriched() {
             return self.inserted(item).await;
         }
-        let mut stored = strip_enriched(item, &self.readonly.tree.parent);
+        let mut stored = {
+            let entries = self.readonly.enrichments.lock().expect("enrichments");
+            strip_enriched(item, &entries)
+        };
         let created = self.inserted(&mut stored).await?;
         copy_ids(item, &created, &self.ids);
         self.write
@@ -363,7 +361,8 @@ impl ICRUDRepository for CRUDRepository {
 
     async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         let stored = if self.enriched() {
-            strip_enriched(item, &self.readonly.tree.parent)
+            let entries = self.readonly.enrichments.lock().expect("enrichments");
+            strip_enriched(item, &entries)
         } else {
             item.clone()
         };
@@ -402,9 +401,11 @@ impl ICRUDRepository for CRUDRepository {
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
         if let Some(memory) = self.readonly.memory_items() {
             let mut row = memory.by_id(id)?;
-            if let Some(item) = row.as_mut() {
-                if self.enriched() {
-                    self.enrich(std::slice::from_mut(item)).await?;
+            if self.enriched() {
+                if let Some(item) = row.take() {
+                    let mut rows = vec![item];
+                    self.enrich(&mut rows).await?;
+                    return Ok(rows.into_iter().next());
                 }
             }
             return Ok(row);

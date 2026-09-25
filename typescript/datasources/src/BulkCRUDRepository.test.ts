@@ -19,7 +19,7 @@ const repoOf = (
   parents: ListCRUDRepository<Parent>,
   children: ListCRUDRepository<Child>,
 ): ListCRUDRepository<Parent> => {
-  parents.addEnriched("children", "id", children, "parent_id", undefined, true);
+  parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
   return parents;
 };
 

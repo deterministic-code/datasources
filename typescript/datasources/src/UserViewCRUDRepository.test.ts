@@ -69,25 +69,9 @@ const graph = async (write?: IWriteEnrichmentStrategy<UserView>) => {
 };
 
 const repoOf = (seeded: Awaited<ReturnType<typeof graph>>) => {
-  seeded.users.addEnriched("user_type", "user_type_id", seeded.userTypes, "id");
-  seeded.users.addLinked(
-    "roles",
-    "id",
-    seeded.roles,
-    "id",
-    seeded.userRoles,
-    "user_id",
-    "role_id",
-  );
-  seeded.users.addLinked(
-    "groups",
-    "id",
-    seeded.groups,
-    "id",
-    seeded.userGroups,
-    "user_id",
-    "group_id",
-  );
+  seeded.users.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypes);
+  seeded.users.addLinked({ into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } }, seeded.roles, seeded.userRoles);
+  seeded.users.addLinked({ into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } }, seeded.groups, seeded.userGroups);
   return seeded.users;
 };
 

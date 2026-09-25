@@ -2,9 +2,9 @@ use crate::datasource_error::DatasourceError;
 use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
-use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
+use crate::stored_enrichment::StoredEnrichment;
 use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
@@ -15,19 +15,19 @@ pub struct CascadeDeleteEnrichmentStrategy;
 impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
     async fn delete_owned(
         &self,
-        node: &RepositoryTreeNode,
+        entry: &StoredEnrichment,
         enrichment: &Enrichment,
         parent: &Row,
         delete_nested: &dyn DeleteNested,
     ) -> Result<()> {
-        let writer = node.write.as_ref().ok_or_else(|| {
+        let writer = entry.persist.as_ref().ok_or_else(|| {
             DatasourceError::message(format!(
                 "Deep write requires a CRUD repository for \"{}\"",
                 enrichment.into
             ))
         })?;
         let mut existing = load(writer.as_ref(), enrichment, parent).await?;
-        delete_nested.delete_nested(node, &mut existing).await?;
+        delete_nested.delete_nested(&mut existing).await?;
         for row in existing {
             writer.delete(&row, None).await?;
         }
@@ -36,7 +36,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
 
     async fn delete_linked(
         &self,
-        node: &RepositoryTreeNode,
+        entry: &StoredEnrichment,
         enrichment: &Enrichment,
         parent: &Row,
     ) -> Result<()> {
@@ -44,7 +44,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
             .association
             .clone()
             .ok_or_else(|| DatasourceError::message("Missing association"))?;
-        let writer = node.link.as_ref().ok_or_else(|| {
+        let writer = entry.link.as_ref().ok_or_else(|| {
             DatasourceError::message(format!(
                 "Deep write requires a CRUD repository for \"{}\"",
                 enrichment.into

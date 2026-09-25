@@ -5,14 +5,13 @@ public interface IReadonlyEnrichmentBinder
     Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IReadOnlyList<object> parents);
-}
+        IList<object> parents,
+        IReadOnlyList<Row?>? sources = null);
 
-internal interface ITrackedApply
-{
-    Task ApplyTracked<TRelated>(
+    Task ApplyLinked<TRelated, TLink>(
         IReadonlyRepository<TRelated> via,
+        ICRUDRepository<TLink> link,
         Enrichment enrichment,
-        IReadOnlyList<object> parents,
-        IReadOnlyList<Row?>? sources);
+        IList<object> parents,
+        IReadOnlyList<Row?>? sources = null);
 }

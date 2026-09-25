@@ -176,7 +176,7 @@ public class UserViewEnrichmentTests
             EntityMapper = casing,
             ColumnMappings = casing,
         });
-        usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name");
+        usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo);
         var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 
         Assert.Equal("admin", usersView!.UserType);
@@ -268,8 +268,8 @@ public class UsersViewRoleTests
                 }),
                 query => query),
         });
-        usersRepo.AddEnriched("UserType", "UserType", typesRepo, "Id", "Name", strategy: strategy);
-        usersRepo.AddEnriched("Roles", "Key", rolesRepo, "UserId", many: true, strategy: strategy);
+        usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo, strategy);
+        usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), rolesRepo, strategy);
         var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 
         Assert.Equal("admin", usersView!.UserType);
@@ -294,34 +294,38 @@ public class UsersViewRoleTests
             ["Name"] = "roles.name",
         });
         var hydrate = new MappedValueMapper<UsersView>();
+        var joined = new TransformMapper<IEnumerable<Row>, IReadOnlyList<UsersView>>(
+            rows => new FlatToNestedMapper(new TypeMap
+            {
+                Key = "Key",
+                Fields = new Dictionary<string, TypeMapField>
+                {
+                    ["Key"] = "Key",
+                    ["Login"] = "Login",
+                    ["Active"] = "Active",
+                    ["Opened"] = "Opened",
+                    ["UserType"] = "UserType",
+                    ["Roles"] = new TypeMapGroup
+                    {
+                        Key = "RoleId",
+                        Fields = new Dictionary<string, TypeMapField>
+                        {
+                            ["RoleId"] = "RoleId",
+                            ["UserId"] = "UserId",
+                            ["Name"] = "Name",
+                        }
+                    }
+                }
+            }).Map(rows).Select(hydrate.Map).ToList(),
+            _ => throw new InvalidOperationException());
         var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
             ColumnMappings = mappings,
-            Result = new TransformMapper<IEnumerable<Row>, IReadOnlyList<UsersView>>(
-                rows => new FlatToNestedMapper(new TypeMap
-                {
-                    Key = "Key",
-                    Fields = new Dictionary<string, TypeMapField>
-                    {
-                        ["Key"] = "Key",
-                        ["Login"] = "Login",
-                        ["Active"] = "Active",
-                        ["Opened"] = "Opened",
-                        ["UserType"] = "UserType",
-                        ["Roles"] = new TypeMapGroup
-                        {
-                            Key = "RoleId",
-                            Fields = new Dictionary<string, TypeMapField>
-                            {
-                                ["RoleId"] = "RoleId",
-                                ["UserId"] = "UserId",
-                                ["Name"] = "Name",
-                            }
-                        }
-                    }
-                }).Map(rows).Select(hydrate.Map).ToList(),
-                _ => throw new InvalidOperationException()),
         });
+        usersRepo.AddEnriched(
+            new("Roles", "Key", "UserId", Many: true),
+            usersRepo,
+            new NestedToObjectEnrichmentStrategy<UsersView>(joined));
         var items = new List<UsersView>();
         await foreach (var item in usersRepo.Read(new SelectStatement(new()
         {
@@ -534,8 +538,8 @@ public class UsersViewCrudTests
             EntityMapper = casing,
             ColumnMappings = casing,
         });
-        usersRepo.AddEnriched("UserType", "UserTypeId", userTypesRepo, "Id", "Name");
-        usersRepo.AddEnriched("Roles", "Key", userRolesRepo, "UserId", many: true);
+        usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
+        usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
         var admin = new UserType { Name = "admin" };
         await userTypesRepo.Create(admin);
         var user = new UsersView

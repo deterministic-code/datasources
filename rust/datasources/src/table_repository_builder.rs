@@ -56,7 +56,6 @@ fn assemble(
         column_mappings,
         query,
         rows_mapper,
-        result,
         row_converter,
         row_type_converters,
     } = options;
@@ -75,7 +74,6 @@ fn assemble(
         connection,
         row_converter,
         rows_mapper,
-        result,
         column_mappings,
         statements: RepositoryStatements::with_mappers(
             Mapper::map(&entity_mapper, entity),
