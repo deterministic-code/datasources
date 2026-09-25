@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
+import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
@@ -35,6 +36,16 @@ class Note {
   id = 0;
   child_id = 0;
   text = "";
+}
+
+class SkipDelete<T> extends DeleteEnrichmentStrategy<T> {
+  deleteOwned(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  deleteLinked(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 const assign = <T extends object>(type: new () => T, values: Partial<T>): T =>
@@ -108,6 +119,22 @@ describe("CRUDRepository", () => {
     expect(parents.items).toHaveLength(0);
     expect(children.items).toHaveLength(0);
     expect(notes.items.map((note) => note.text)).toEqual(["other"]);
+  });
+
+  it("delete strategy can skip children", async () => {
+    const parents = new ListCRUDRepository([assign(Parent, { id: 1 })]);
+    const children = new ListCRUDRepository([
+      assign(Child, { id: 3, parent_id: 1, label: "a" }),
+    ]);
+    const repo = new CRUDRepository(
+      parents,
+      undefined,
+      new DefaultWriteEnrichmentStrategy(new SkipDelete()),
+    );
+    repo.addEnriched("children", "id", children, "parent_id", undefined, true);
+    await repo.delete(assign(Parent, { id: 1 }));
+    expect(parents.items).toHaveLength(0);
+    expect(children.items.map((child) => child.label)).toEqual(["a"]);
   });
 
   it("writes nested many and skips nested select", async () => {

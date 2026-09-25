@@ -1,4 +1,6 @@
+import { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrategy.ts";
 import { DatasourceError } from "./DatasourceError.ts";
+import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
@@ -91,17 +93,6 @@ const requiredKey = (parent: object, enrichment: Enrichment): Scalar => {
   return key;
 };
 
-const loadColumn = async (
-  writer: ICRUDRepository<object>,
-  column: string,
-  key: Scalar,
-): Promise<object[]> => {
-  const items: object[] = [];
-  for await (const item of writer.read(new WhereClause(new Operator.Equals(column, key))))
-    items.push(item);
-  return items;
-};
-
 const createLinks = async (
   writer: ICRUDRepository<object>,
   enrichment: Enrichment,
@@ -120,7 +111,7 @@ const syncLinks = async (
 ): Promise<void> => {
   const association = enrichment.association!;
   const parentKey = requiredKey(parent, enrichment);
-  const existing = await loadColumn(writer, association.parent, parentKey);
+  const existing = await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, parentKey);
   const wanted = relatedIds(parent, enrichment);
   const keep = new Set(wanted.map((id) => String(id)));
   for (const row of existing) {
@@ -133,34 +124,6 @@ const syncLinks = async (
     if (existing.some((row) => String(get(row, association.related) ?? "") === String(id))) continue;
     await writer.create({ [association.parent]: parentKey, [association.related]: id });
   }
-};
-
-const deleteLinks = async (
-  writer: ICRUDRepository<object>,
-  enrichment: Enrichment,
-  parent: object,
-): Promise<void> => {
-  const association = enrichment.association;
-  const key = get(parent, enrichment.from);
-  if (!association || !present(key)) return;
-  for (const row of await loadColumn(writer, association.parent, key)) {
-    const id = get(row, association.related);
-    if (!present(id)) continue;
-    await writer.delete(row, linkWhere(association, key, id));
-  }
-};
-
-const load = async (
-  writer: ICRUDRepository<object>,
-  enrichment: Enrichment,
-  parent: object,
-): Promise<object[]> => {
-  const key = get(parent, enrichment.from);
-  if (key === undefined || key === null || typeof key === "object") return [];
-  const items: object[] = [];
-  for await (const item of writer.read(new WhereClause(new Operator.Equals(enrichment.by, key))))
-    items.push(item);
-  return items;
 };
 
 const isWriter = (via: object): via is ICRUDRepository<object> =>
@@ -195,6 +158,8 @@ const dispatch = (mode: string, runs: Record<WriteMode, () => Promise<void>>): P
 export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrategy<T> {
   protected skipUnloaded = false;
 
+  constructor(private readonly deleteStrategy = new CascadeDeleteEnrichmentStrategy<T>()) {}
+
   persist = async (tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void> => {
     await this.walk(tree.parent, items as object[], mode);
   };
@@ -216,7 +181,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
         await dispatch(mode, {
           create: () => createLinks(writer, enrichment, parent),
           update: () => syncLinks(writer, enrichment, parent),
-          delete: () => deleteLinks(writer, enrichment, parent),
+          delete: () => this.deleteStrategy.deleteLinked(child, enrichment, parent),
         });
       }
       return;
@@ -228,7 +193,8 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       await dispatch(mode, {
         create: () => this.createChildren(child, writer, enrichment, parent),
         update: () => this.syncChildren(child, writer, enrichment, parent),
-        delete: () => this.deleteChildren(child, writer, enrichment, parent),
+        delete: () =>
+          this.deleteStrategy.deleteOwned(child, enrichment, parent, (rows) => this.walk(child, rows, "delete")),
       });
     }
   };
@@ -255,7 +221,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     enrichment: Enrichment,
     parent: object,
   ): Promise<void> => {
-    const existing = await load(writer, enrichment, parent);
+    const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     const rows = payload(parent, enrichment.into);
     for (const related of rows) stamp(related, enrichment.by, get(parent, enrichment.from));
     const keys = namesOf(writer, rows[0] ?? existing[0] ?? {});
@@ -270,16 +236,5 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
         : assignIdentity(related, keys, await writer.create(stripNode(node, related)));
       await this.walk(node, [related], "update");
     }
-  };
-
-  private deleteChildren = async (
-    node: IRepositoryTreeNode,
-    writer: ICRUDRepository<object>,
-    enrichment: Enrichment,
-    parent: object,
-  ): Promise<void> => {
-    const existing = await load(writer, enrichment, parent);
-    await this.walk(node, existing, "delete");
-    for (const row of existing) await writer.delete(row);
   };
 }

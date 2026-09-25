@@ -2438,6 +2438,59 @@ async fn deep_delete_cascades_children_then_parent() {
     assert_eq!(notes.snapshot()[0]["text"], Value::from("other"));
 }
 
+struct SkipDelete;
+
+#[async_trait]
+impl DeleteEnrichmentStrategy for SkipDelete {
+    async fn delete_owned(
+        &self,
+        _node: &RepositoryTreeNode,
+        _enrichment: &Enrichment,
+        _parent: &Row,
+        _delete_nested: &dyn DeleteNested,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn delete_linked(
+        &self,
+        _node: &RepositoryTreeNode,
+        _enrichment: &Enrichment,
+        _parent: &Row,
+    ) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn delete_strategy_can_skip_children() {
+    let parents = Arc::new(list_repository::ListRepository::new(vec![record(&[(
+        "id",
+        Value::Int(1),
+    )])]));
+    let children = Arc::new(list_repository::ListRepository::new(vec![record(&[
+        ("id", Value::Int(3)),
+        ("parent_id", Value::Int(1)),
+        ("label", Value::from("a")),
+    ])]));
+    let mut repo = CRUDRepository::from_repository(parents.clone());
+    repo.with_delete_strategy(Arc::new(SkipDelete));
+    repo.add_enriched(
+        "children",
+        "id",
+        children.clone(),
+        "parent_id",
+        None,
+        true,
+        (),
+    );
+    repo.delete(&record(&[("id", Value::Int(1))]), None)
+        .await
+        .unwrap();
+    assert!(parents.snapshot().is_empty());
+    assert_eq!(children.snapshot()[0]["label"], Value::from("a"));
+}
+
 #[tokio::test]
 async fn deep_nested_many_writes_and_nested_select_is_skipped() {
     let parents = Arc::new(list_repository::ListRepository::new(vec![]));

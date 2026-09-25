@@ -109,6 +109,21 @@ public class CRUDRepositoryTests
     }
 
     [Fact]
+    public async Task DeleteStrategyCanSkipChildren()
+    {
+        var parents = new ListCRUDRepository<Parent>(new Parent { id = 1 });
+        var children = new ListCRUDRepository<Child>(
+            new Child { id = 3, parent_id = 1, label = "a" });
+        var repo = new CRUDRepository<Parent>(
+            parents,
+            write: new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()));
+        repo.AddEnriched("children", "id", children, "parent_id", many: true);
+        await repo.Delete(new Parent { id = 1 });
+        Assert.Empty(parents.Items);
+        Assert.Equal("a", Assert.Single(children.Items).label);
+    }
+
+    [Fact]
     public async Task NestedManyWritesAndNestedSelectIsSkipped()
     {
         var parents = new ListCRUDRepository<Parent>();
@@ -159,6 +174,19 @@ public class CRUDRepositoryTests
         var item = await repo.ReadSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal("a", Assert.Single(item.children).label);
+    }
+
+    sealed class SkipDelete<T> : DeleteEnrichmentStrategy<T>
+    {
+        public override Task DeleteOwned(
+            IRepositoryTreeNode _node,
+            Enrichment _enrichment,
+            object _parent,
+            Func<IReadOnlyList<object>, Task> _deleteNested) =>
+            Task.CompletedTask;
+
+        public override Task DeleteLinked(IRepositoryTreeNode _node, Enrichment _enrichment, object _parent) =>
+            Task.CompletedTask;
     }
 
     static CRUDRepository<Parent> Repo(
