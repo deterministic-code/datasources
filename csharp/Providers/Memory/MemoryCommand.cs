@@ -19,23 +19,32 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        statement is ISelectStatement { Where: Where clause }
-            ? Run(statement.GetText(), parameters, (_, _) =>
+        statement switch
+        {
+            ISelectStatement { Where: Where clause } => Run(statement.GetText(), parameters, (_, _) =>
             {
                 Typed.EnsureOpen();
                 var evaluator = new StatementEvaluator();
-                IReadOnlyList<Row> rows = [.. Typed.GetCollection().Where(row =>
+                IReadOnlyList<Row> rows = [.. Rows(TableOf(statement), create: false).Where(row =>
                     evaluator.Evaluate(clause, row) is Value.Bool(true))];
                 return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
-            })
-            : ExecuteReader(FilterText(statement), parameters);
+            }),
+            ISelectStatement query when !LooksJson(query.Where?.GetText()) && !LooksJson(statement.GetText()) =>
+                Run(statement.GetText(), parameters, (_, _) =>
+                {
+                    Typed.EnsureOpen();
+                    IReadOnlyList<Row> rows = [.. Rows(TableOf(statement), create: false)];
+                    return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
+                }),
+            _ => ExecuteReader(FilterText(statement), parameters)
+        };
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch
         {
-            IInsertStatement => Execute("insert", parameters),
-            IUpdateStatement update => Execute("update", WithWhere(parameters, update.Where)),
-            IDeleteStatement delete => Execute("delete", WithWhere(parameters, delete.Where)),
+            IInsertStatement => Write("insert", parameters, TableOf(statement), create: true),
+            IUpdateStatement update => Write("update", parameters, TableOf(update), create: false, update.Where),
+            IDeleteStatement delete => Write("delete", parameters, TableOf(delete), create: false, delete.Where),
             _ => Execute(statement.GetText(), parameters)
         };
 
@@ -58,18 +67,17 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
                 var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
                 var filter = whereText is not null ? ParseFilter(whereText) : new Row(Helpers.IdentityFilter(obj));
-                return Task.FromResult((ApplyUpdate(new Row(obj), filter) with { Parameters = paramsList }, EmptyRows()));
+                return Task.FromResult((ApplyUpdate(Typed.GetCollection(), new Row(obj), filter) with { Parameters = paramsList }, EmptyRows()));
             }
 
             if (op == "delete")
-                return Task.FromResult((ApplyDelete(obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj))) with { Parameters = paramsList }, EmptyRows()));
+                return Task.FromResult((ApplyDelete(Typed.GetCollection(), obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj))) with { Parameters = paramsList }, EmptyRows()));
 
             throw new DatasourceException($"Unsupported Memory command: {query}");
         });
 
-    private Response ApplyUpdate(Row obj, Row filter)
+    private Response ApplyUpdate(List<Row> collection, Row obj, Row filter)
     {
-        var collection = Typed.GetCollection();
         var affected = 0;
         foreach (var row in collection.Where(row => Matches(row, filter)))
         {
@@ -80,11 +88,96 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         return new Response(Value.Null.Instance, affected);
     }
 
-    private Response ApplyDelete(Row filter)
+    private Response ApplyDelete(List<Row> collection, Row filter)
     {
-        var collection = Typed.GetCollection();
         var affected = collection.RemoveAll(row => Matches(row, filter));
         return new Response(Value.Null.Instance, affected);
+    }
+
+    Task<Response> Write(string op, IReadOnlyList<Parameter>? parameters, string? table, bool create, IWhere? where = null) =>
+        Run(op, parameters, (_, paramsList) =>
+        {
+            Typed.EnsureOpen();
+            var rows = Rows(table, create);
+            var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
+            if (op == "insert")
+            {
+                var id = InsertedId(obj, rows);
+                obj["id"] = id;
+                rows.Add(new Row(obj));
+                return Task.FromResult((Response.Of(id, 1, paramsList), EmptyRows()));
+            }
+
+            if (op == "update")
+                return Task.FromResult((ApplyChanged(rows, obj, where, paramsList), EmptyRows()));
+
+            return Task.FromResult((RemoveMatched(rows, obj, where, paramsList), EmptyRows()));
+        });
+
+    Response ApplyChanged(List<Row> rows, Dictionary<string, Value> obj, IWhere? where, IReadOnlyList<Parameter>? parameters)
+    {
+        if (where is Where clause)
+        {
+            var evaluator = new StatementEvaluator();
+            var names = SetNames(parameters, where);
+            var affected = 0;
+            foreach (var row in rows.Where(row => evaluator.Evaluate(clause, row) is Value.Bool(true)))
+            {
+                foreach (var name in names)
+                    if (obj.TryGetValue(name, out var value)) row[name] = value;
+                affected++;
+            }
+
+            return new Response(Value.Null.Instance, affected, parameters);
+        }
+
+        obj.Remove("$where");
+        var filter = LooksJson(where?.GetText()) ? ParseFilter(where!.GetText()) : new Row(Helpers.IdentityFilter(obj));
+        return ApplyUpdate(rows, new Row(obj), filter) with { Parameters = parameters };
+    }
+
+    Response RemoveMatched(List<Row> rows, Dictionary<string, Value> obj, IWhere? where, IReadOnlyList<Parameter>? parameters)
+    {
+        if (where is Where clause)
+        {
+            var evaluator = new StatementEvaluator();
+            var affected = rows.RemoveAll(row => evaluator.Evaluate(clause, row) is Value.Bool(true));
+            return new Response(Value.Null.Instance, affected, parameters);
+        }
+
+        var filter = LooksJson(where?.GetText())
+            ? ParseFilter(where!.GetText())
+            : obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj));
+        return ApplyDelete(rows, filter) with { Parameters = parameters };
+    }
+
+    List<Row> Rows(string? table, bool create) =>
+        table is { Length: > 0 } name && (create || Typed.Store.HasCollection(name))
+            ? Typed.Store.GetCollection(name)
+            : Typed.GetCollection();
+
+    static string? TableOf(IStatement statement) =>
+        statement is SelectStatement { Table: { Length: > 0 } table } ? table : TableIn(statement.GetText());
+
+    static string? TableIn(string text)
+    {
+        var sql = text.TrimStart();
+        var skip = sql.StartsWith("INSERT INTO ", StringComparison.OrdinalIgnoreCase) ? "INSERT INTO ".Length
+            : sql.StartsWith("DELETE FROM ", StringComparison.OrdinalIgnoreCase) ? "DELETE FROM ".Length
+            : sql.StartsWith("UPDATE ", StringComparison.OrdinalIgnoreCase) ? "UPDATE ".Length
+            : sql.IndexOf(" FROM ", StringComparison.OrdinalIgnoreCase) is var from and >= 0 ? from + " FROM ".Length
+            : -1;
+        if (skip < 0 || skip >= sql.Length) return null;
+        var end = skip;
+        while (end < sql.Length && !char.IsWhiteSpace(sql[end]) && sql[end] != '(') end++;
+        var name = sql[skip..end];
+        return name.Length == 0 ? null : name;
+    }
+
+    static IReadOnlyList<string> SetNames(IReadOnlyList<Parameter>? parameters, IWhere where)
+    {
+        var bound = where.Parameters.Select(parameter => parameter.Name).ToHashSet();
+        return [.. (parameters ?? []).Select(parameter => parameter.Name).Where(name => !bound.Contains(name) && !name.EndsWith("__where", StringComparison.Ordinal))];
     }
 
     public static Row ParseFilter(string? text) =>
@@ -121,11 +214,6 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         var text = statement.GetText();
         return LooksJson(text) || string.IsNullOrWhiteSpace(text) ? text : "";
     }
-
-    static IReadOnlyList<Parameter>? WithWhere(IReadOnlyList<Parameter>? parameters, IWhere? where) =>
-        LooksJson(where?.GetText())
-            ? [.. parameters ?? [], new Parameter("$where", where!.GetText())]
-            : parameters;
 
     static bool LooksJson(string? text) => text?.TrimStart().StartsWith('{') == true;
 

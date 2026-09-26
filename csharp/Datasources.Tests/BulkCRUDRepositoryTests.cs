@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.Memory;
 
 namespace Datasources.Tests;
 
@@ -7,6 +8,7 @@ public class BulkCRUDRepositoryTests
     sealed class Parent
     {
         public int id { get; set; }
+        public string label { get; set; } = "";
         public List<Child> children { get; set; } = [];
     }
 
@@ -20,71 +22,89 @@ public class BulkCRUDRepositoryTests
     [Fact]
     public async Task CreateWritesParentsAndChildren()
     {
-        var parents = new ListCRUDRepository<Parent>();
-        var children = new ListCRUDRepository<Child>();
-        var repo = Repo(parents, children);
-        var response = await repo.Create(
+        var connection = await Setup();
+        var parentsRepo = new BulkCRUDRepository<Parent>(connection);
+        var childrenRepo = new BulkCRUDRepository<Child>(connection);
+        var response = await Repo(parentsRepo, childrenRepo).Create(
         [
             new Parent { children = [new Child { label = "a" }] },
             new Parent { children = [new Child { label = "b" }, new Child { label = "c" }] }
         ]);
-        Assert.Equal(2, parents.Items.Count);
-        Assert.Equal([1, 2], parents.Items.Select(parent => parent.id));
-        Assert.Equal(3, children.Items.Count);
-        Assert.Equal([1, 2, 2], children.Items.Select(child => child.parent_id));
+        var parents = await parentsRepo.Read().ToListAsync();
+        var children = await childrenRepo.Read().ToListAsync();
+        Assert.Equal(2, parents.Count);
+        Assert.All(parents, parent => Assert.True(parent.id > 0));
+        Assert.Equal(3, children.Count);
+        Assert.Equal(parents.Select(parent => parent.id), children.Select(child => child.parent_id).Distinct());
         Assert.Equal(2, response.RowsAffected);
     }
 
     [Fact]
     public async Task BulkCreateMatchesListCreate()
     {
-        var parents = new ListCRUDRepository<Parent>();
-        await parents.BulkCreate([new Parent(), new Parent()]);
-        Assert.Equal(2, parents.Items.Count);
+        var connection = await Setup();
+        var parentsRepo = new BulkCRUDRepository<Parent>(connection);
+        await parentsRepo.BulkCreate([new Parent { label = "a" }, new Parent { label = "b" }]);
+        Assert.Equal(2, (await parentsRepo.Read().ToListAsync()).Count);
     }
 
     [Fact]
     public async Task UpdateReplaceSyncsEachParent()
     {
-        var parents = new ListCRUDRepository<Parent>(
-            new Parent { id = 1 },
-            new Parent { id = 2 });
-        var children = new ListCRUDRepository<Child>(
-            new Child { id = 1, parent_id = 1, label = "a" },
-            new Child { id = 2, parent_id = 2, label = "b" });
-        var repo = Repo(parents, children);
-        await repo.BulkUpdate(
+        var connection = await Setup();
+        var parentsRepo = new BulkCRUDRepository<Parent>(connection);
+        var childrenRepo = new BulkCRUDRepository<Child>(connection);
+        await parentsRepo.Create(new Parent { label = "one" });
+        await parentsRepo.Create(new Parent { label = "two" });
+        var parents = await parentsRepo.Read().ToListAsync();
+        var first = parents.Single(parent => parent.label == "one");
+        var second = parents.Single(parent => parent.label == "two");
+        await childrenRepo.Create(new Child { parent_id = first.id, label = "a" });
+        await childrenRepo.Create(new Child { parent_id = second.id, label = "b" });
+        var kept = (await childrenRepo.Read().ToListAsync()).Single(child => child.parent_id == first.id);
+        await Repo(parentsRepo, childrenRepo).BulkUpdate(
         [
-            new Parent { id = 1, children = [new Child { id = 1, label = "aa" }] },
-            new Parent { id = 2, children = [new Child { label = "c" }] }
+            new Parent { id = first.id, label = "one", children = [new Child { id = kept.id, label = "aa" }] },
+            new Parent { id = second.id, label = "two", children = [new Child { label = "c" }] }
         ]);
-        Assert.Equal(2, children.Items.Count);
-        Assert.Equal("aa", children.Items.Single(child => child.parent_id == 1).label);
-        Assert.Equal("c", children.Items.Single(child => child.parent_id == 2).label);
-        Assert.DoesNotContain(children.Items, child => child.id == 2);
+        var children = await childrenRepo.Read().ToListAsync();
+        Assert.Equal(2, children.Count);
+        Assert.Equal("aa", children.Single(child => child.parent_id == first.id).label);
+        Assert.Equal("c", children.Single(child => child.parent_id == second.id).label);
+        Assert.DoesNotContain(children, child => child.label == "b");
     }
 
     [Fact]
     public async Task DeleteCascadesEachParent()
     {
-        var parents = new ListCRUDRepository<Parent>(
-            new Parent { id = 1 },
-            new Parent { id = 2 });
-        var children = new ListCRUDRepository<Child>(
-            new Child { id = 1, parent_id = 1, label = "a" },
-            new Child { id = 2, parent_id = 2, label = "b" },
-            new Child { id = 3, parent_id = 9, label = "keep" });
-        var repo = Repo(parents, children);
-        await repo.BulkDelete([new Parent { id = 1 }, new Parent { id = 2 }]);
-        Assert.Empty(parents.Items);
-        Assert.Equal("keep", Assert.Single(children.Items).label);
+        var connection = await Setup();
+        var parentsRepo = new BulkCRUDRepository<Parent>(connection);
+        var childrenRepo = new BulkCRUDRepository<Child>(connection);
+        await parentsRepo.Create(new Parent { label = "one" });
+        await parentsRepo.Create(new Parent { label = "two" });
+        var parents = await parentsRepo.Read().ToListAsync();
+        var first = parents.Single(parent => parent.label == "one");
+        var second = parents.Single(parent => parent.label == "two");
+        await childrenRepo.Create(new Child { parent_id = first.id, label = "a" });
+        await childrenRepo.Create(new Child { parent_id = second.id, label = "b" });
+        await childrenRepo.Create(new Child { label = "keep" });
+        await Repo(parentsRepo, childrenRepo).BulkDelete([new Parent { id = first.id }, new Parent { id = second.id }]);
+        Assert.Empty(await parentsRepo.Read().ToListAsync());
+        Assert.Equal("keep", Assert.Single(await childrenRepo.Read().ToListAsync()).label);
     }
 
-    static ListCRUDRepository<Parent> Repo(
-        ListCRUDRepository<Parent> parents,
-        ListCRUDRepository<Child> children)
+    static BulkCRUDRepository<Parent> Repo(
+        BulkCRUDRepository<Parent> parentsRepo,
+        BulkCRUDRepository<Child> childrenRepo)
     {
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
-        return parents;
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        return parentsRepo;
+    }
+
+    static async Task<IConnection> Setup()
+    {
+        var connection = new MemoryProvider().Connection(null);
+        await connection.Open();
+        return connection;
     }
 }

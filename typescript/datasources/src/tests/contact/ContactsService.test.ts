@@ -28,12 +28,10 @@ describe("ContactsService", () => {
     const work: Record<string, Scalar> = { name: "Work" };
     const phoneTypes = await setup([work]);
     const phoneTypesRepo = new ReadonlyRepository(PhoneType, phoneTypes);
-    const contacts = await setup();
-    const contactsRepo = new CRUDRepository(Contact, contacts);
-    const addresses = await setup();
-    const addressesRepo = new CRUDRepository(Address, addresses);
-    const phones = await setup();
-    const phonesRepo = new CRUDRepository(Phone, phones);
+    const connection = await setup();
+    const contactsRepo = new CRUDRepository(Contact, connection);
+    const addressesRepo = new CRUDRepository(Address, connection);
+    const phonesRepo = new CRUDRepository(Phone, connection);
     const service = ContactsService.open(
       contactsRepo,
       typesRepo,
@@ -50,12 +48,12 @@ describe("ContactsService", () => {
     }));
     const other = (await collectAsync(service.read()))[0];
     expect(other?.id).toBeGreaterThan(0);
-    await addresses.createCommand().execute("insert", [
-      { name: "contact_id", value: other!.id },
-      { name: "line1", value: "other" },
-      { name: "city", value: "x" },
-      { name: "address_type_id", value: home.id! },
-    ]);
+    await addressesRepo.create(Object.assign(new Address(), {
+      contact_id: other!.id,
+      line1: "other",
+      city: "x",
+      address_type_id: home.id,
+    }));
     await service.create(Object.assign(new Contact(), {
       contact_type_id: person.id,
       contact_source_id: source.id,

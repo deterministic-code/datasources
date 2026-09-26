@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deny agent edits that grow the public surface of types listed in locked-classes.txt."""
+"""Deny agent edits that grow the visible surface of types listed in locked-classes.txt."""
 
 from __future__ import annotations
 
@@ -341,6 +341,10 @@ def walk_members(
             boundary = True
             i += 1
             continue
+        if char == "," and lang == "rs" and depth == 1:
+            boundary = True
+            i += 1
+            continue
         if char == "#" and lang == "cs" and depth == 1:
             newline = text.find("\n", i)
             i = end if newline < 0 else newline + 1
@@ -357,37 +361,59 @@ def walk_members(
         i += 1
 
 
+CS_LOCKED = {"public", "protected", "internal"}
+CS_MODIFIERS = {
+    "abstract", "async", "const", "event", "explicit", "extern", "fixed",
+    "implicit", "new", "override", "partial", "readonly", "ref", "required",
+    "scoped", "sealed", "static", "unsafe", "virtual", "volatile",
+}
+
+
 def member_start(text: str, index: int, limit: int, lang: str, implicit_public: bool) -> int | None:
     if lang == "ts":
         return None if hidden_ts(text, index) else index
     if lang == "rs":
-        visibility = rust_visibility(text, index)
-        if visibility == "restricted":
-            return None
-        if visibility == "pub" or implicit_public:
-            return index
-        return None
+        return index if match_word(text, index, "pub") or implicit_public else None
     cursor = skip_attributes(text, index, limit, lang)
-    if match_word(text, cursor, "public"):
-        return cursor
-    if implicit_public and not any(match_word(text, cursor, word) for word in ("private", "protected", "internal")):
+    locked, private = leading_access(text, cursor, limit)
+    if locked or (implicit_public and not private):
         return cursor
     return None
+
+
+def leading_access(text: str, index: int, limit: int) -> tuple[bool, bool]:
+    locked = False
+    private = False
+    while index < limit:
+        noise = consume_noise(text, index, "cs")
+        if noise is not None:
+            index = noise
+            continue
+        if text[index].isspace():
+            index += 1
+            continue
+        word = word_at(text, index)
+        if word in CS_LOCKED:
+            locked = True
+        elif word == "private":
+            private = True
+        elif word not in CS_MODIFIERS:
+            break
+        index += len(word)
+    return locked, private
+
+
+def word_at(text: str, index: int) -> str:
+    end = index
+    while end < len(text) and (text[end].isalnum() or text[end] == "_"):
+        end += 1
+    return text[index:end]
 
 
 def hidden_ts(text: str, index: int) -> bool:
     if text[index] == "#":
         return True
-    return any(match_word(text, index, word) for word in ("private", "protected"))
-
-
-def rust_visibility(text: str, index: int) -> str:
-    if not match_word(text, index, "pub"):
-        return "private"
-    cursor = index + 3
-    while cursor < len(text) and text[cursor].isspace():
-        cursor += 1
-    return "restricted" if cursor < len(text) and text[cursor] == "(" else "pub"
+    return match_word(text, index, "private")
 
 
 def skip_attributes(text: str, index: int, limit: int, lang: str) -> int:
@@ -434,6 +460,10 @@ def read_signature(text: str, start: int, limit: int, lang: str) -> tuple[str, i
             continue
         if text.startswith("=>", index) and paren == 0 and angle == 0 and not seen_paren:
             return text[start:index], index
+        skipped = skip_pub_restriction(text, index, limit, lang)
+        if skipped is not None:
+            index = skipped
+            continue
         char = text[index]
         if char == "<":
             angle += 1
@@ -447,10 +477,34 @@ def read_signature(text: str, start: int, limit: int, lang: str) -> tuple[str, i
                 paren -= 1
             if seen_paren and paren == 0 and angle == 0:
                 return text[start : index + 1], index + 1
-        elif paren == 0 and angle == 0 and char in "{;":
+        elif paren == 0 and angle == 0 and (char in "{;" or (lang == "rs" and char == ",")):
             return text[start:index], index
         index += 1
     return text[start:index], index
+
+
+def skip_pub_restriction(text: str, index: int, limit: int, lang: str) -> int | None:
+    if lang != "rs" or not match_word(text, index, "pub"):
+        return None
+    cursor = index + 3
+    while cursor < limit and text[cursor].isspace():
+        cursor += 1
+    if cursor >= limit or text[cursor] != "(":
+        return None
+    depth = 0
+    while cursor < limit:
+        noise = consume_noise(text, cursor, lang)
+        if noise is not None:
+            cursor = noise
+            continue
+        if text[cursor] == "(":
+            depth += 1
+        elif text[cursor] == ")":
+            depth -= 1
+            if depth == 0:
+                return cursor + 1
+        cursor += 1
+    return limit
 
 
 def find_decls(text: str, lang: str, name: str, kinds: tuple[str, ...]) -> list[tuple[str, str, int, int]]:
@@ -729,9 +783,11 @@ def allow() -> dict:
 def deny(name: str, extra: str = "") -> dict:
     message = (
         f"{name} is listed in .cursor/hooks/locked-classes.txt. "
-        "Do not add public members or parameters. "
+        "Do not add a public, internal, or protected member, a pub(crate) or pub(super) member, or a parameter. "
+        "Do not subclass this type to reach a new member. "
+        "Stop and ask the user how to proceed. Dependency injection is one design they may want. "
         "Body and private edits are allowed. "
-        "The user removes the name from that file to change the public API."
+        "The user removes the name from that file to change this API."
     )
     if extra:
         message = f"{message} {extra}"

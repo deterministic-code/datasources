@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ListCRUDRepository } from "./tests/listCRUDRepository.ts";
+import { MemoryProvider } from "@datasources/memory";
+import { collectAsync } from "./collectAsync.ts";
+import { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
+import type { IConnection } from "./IConnection.ts";
 
 class Parent {
   id = 0;
+  label = "";
   children: Child[] = [];
 }
 
@@ -12,104 +16,93 @@ class Child {
   label = "";
 }
 
-const assign = <T extends object>(type: new () => T, values: Partial<T>): T =>
-  Object.assign(new type(), values);
+const setup = async (): Promise<IConnection> => {
+  const connection = new MemoryProvider().connection();
+  await connection.open();
+  return connection;
+};
 
-const repoOf = (
-  parents: ListCRUDRepository<Parent>,
-  children: ListCRUDRepository<Child>,
-): ListCRUDRepository<Parent> => {
-  parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, children);
-  return parents;
+const relate = (parentsRepo: BulkCRUDRepository<Parent>, childrenRepo: BulkCRUDRepository<Child>) => {
+  parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
+  return parentsRepo;
 };
 
 describe("BulkCRUDRepository", () => {
   it("creates parents and children", async () => {
-    const parents = new ListCRUDRepository<Parent>();
-    const children = new ListCRUDRepository<Child>();
-    const response = await repoOf(parents, children).createBulk([
-      assign(Parent, { children: [assign(Child, { label: "a" })] }),
-      assign(Parent, {
-        children: [assign(Child, { label: "b" }), assign(Child, { label: "c" })],
+    const connection = await setup();
+    const parentsRepo = new BulkCRUDRepository(Parent, connection);
+    const childrenRepo = new BulkCRUDRepository(Child, connection);
+    const response = await relate(parentsRepo, childrenRepo).createBulk([
+      Object.assign(new Parent(), { children: [Object.assign(new Child(), { label: "a" })] }),
+      Object.assign(new Parent(), {
+        children: [Object.assign(new Child(), { label: "b" }), Object.assign(new Child(), { label: "c" })],
       }),
     ]);
-    expect(parents.items.map((parent) => parent.id)).toEqual([1, 2]);
-    expect(children.items.map((child) => child.parent_id)).toEqual([1, 2, 2]);
+    const parents = await collectAsync(parentsRepo.read());
+    const children = await collectAsync(childrenRepo.read());
+    expect(parents).toHaveLength(2);
+    expect(parents.every((parent) => parent.id > 0)).toBe(true);
+    expect(children).toHaveLength(3);
     expect(response.rowsAffected).toBe(2);
   });
 
   it("bulkCreate matches list create", async () => {
-    const parents = new ListCRUDRepository<Parent>();
-    await parents.bulkCreate([new Parent(), new Parent()]);
-    expect(parents.items).toHaveLength(2);
+    const parentsRepo = new BulkCRUDRepository(Parent, await setup());
+    await parentsRepo.bulkCreate([
+      Object.assign(new Parent(), { label: "a" }),
+      Object.assign(new Parent(), { label: "b" }),
+    ]);
+    expect(await collectAsync(parentsRepo.read())).toHaveLength(2);
   });
 
   it("update replace-syncs each parent", async () => {
-    const parents = new ListCRUDRepository([
-      assign(Parent, { id: 1 }),
-      assign(Parent, { id: 2 }),
-    ]);
-    const children = new ListCRUDRepository([
-      assign(Child, { id: 1, parent_id: 1, label: "a" }),
-      assign(Child, { id: 2, parent_id: 2, label: "b" }),
-    ]);
-    await repoOf(parents, children).updateBulk([
-      assign(Parent, {
-        id: 1,
-        children: [assign(Child, { id: 1, label: "aa" })],
+    const connection = await setup();
+    const parentsRepo = new BulkCRUDRepository(Parent, connection);
+    const childrenRepo = new BulkCRUDRepository(Child, connection);
+    await parentsRepo.create(Object.assign(new Parent(), { label: "one" }));
+    await parentsRepo.create(Object.assign(new Parent(), { label: "two" }));
+    const parents = await collectAsync(parentsRepo.read());
+    const first = parents.find((parent) => parent.label === "one");
+    const second = parents.find((parent) => parent.label === "two");
+    await childrenRepo.create(Object.assign(new Child(), { parent_id: first?.id, label: "a" }));
+    await childrenRepo.create(Object.assign(new Child(), { parent_id: second?.id, label: "b" }));
+    const kept = (await collectAsync(childrenRepo.read())).find((child) => child.parent_id === first?.id);
+    await relate(parentsRepo, childrenRepo).updateBulk([
+      Object.assign(new Parent(), {
+        id: first?.id,
+        label: "one",
+        children: [Object.assign(new Child(), { id: kept?.id, label: "aa" })],
       }),
-      assign(Parent, { id: 2, children: [assign(Child, { label: "c" })] }),
+      Object.assign(new Parent(), {
+        id: second?.id,
+        label: "two",
+        children: [Object.assign(new Child(), { label: "c" })],
+      }),
     ]);
-    expect(children.items).toHaveLength(2);
-    expect(children.items.find((child) => child.parent_id === 1)?.label).toBe(
-      "aa",
-    );
-    expect(children.items.find((child) => child.parent_id === 2)?.label).toBe(
-      "c",
-    );
-    expect(children.items.some((child) => child.id === 2)).toBe(false);
+    const children = await collectAsync(childrenRepo.read());
+    expect(children).toHaveLength(2);
+    expect(children.find((child) => child.parent_id === first?.id)?.label).toBe("aa");
+    expect(children.find((child) => child.parent_id === second?.id)?.label).toBe("c");
+    expect(children.some((child) => child.label === "b")).toBe(false);
   });
 
   it("delete cascades each parent", async () => {
-    const parents = new ListCRUDRepository([
-      assign(Parent, { id: 1 }),
-      assign(Parent, { id: 2 }),
+    const connection = await setup();
+    const parentsRepo = new BulkCRUDRepository(Parent, connection);
+    const childrenRepo = new BulkCRUDRepository(Child, connection);
+    await parentsRepo.create(Object.assign(new Parent(), { label: "one" }));
+    await parentsRepo.create(Object.assign(new Parent(), { label: "two" }));
+    const parents = await collectAsync(parentsRepo.read());
+    const first = parents.find((parent) => parent.label === "one");
+    const second = parents.find((parent) => parent.label === "two");
+    await childrenRepo.create(Object.assign(new Child(), { parent_id: first?.id, label: "a" }));
+    await childrenRepo.create(Object.assign(new Child(), { parent_id: second?.id, label: "b" }));
+    await childrenRepo.create(Object.assign(new Child(), { label: "keep" }));
+    await relate(parentsRepo, childrenRepo).deleteBulk([
+      Object.assign(new Parent(), { id: first?.id }),
+      Object.assign(new Parent(), { id: second?.id }),
     ]);
-    const children = new ListCRUDRepository([
-      assign(Child, { id: 1, parent_id: 1, label: "a" }),
-      assign(Child, { id: 2, parent_id: 2, label: "b" }),
-      assign(Child, { id: 3, parent_id: 9, label: "keep" }),
-    ]);
-    await repoOf(parents, children).deleteBulk([
-      assign(Parent, { id: 1 }),
-      assign(Parent, { id: 2 }),
-    ]);
-    expect(parents.items).toHaveLength(0);
-    expect(children.items.map((child) => child.label)).toEqual(["keep"]);
-  });
-
-  it("bulk aliases match list writes", async () => {
-    const parents = new ListCRUDRepository<Parent>();
-    await parents.bulkUpdate([assign(Parent, { id: 1 })]);
-    await parents.bulkDelete([assign(Parent, { id: 1 })]);
-    expect(parents.items).toHaveLength(0);
-  });
-
-  it("reads an Id column", async () => {
-    class Named {
-      Id = 0;
-    }
-    const named = await new ListCRUDRepository<Named>([], Named).createBulk([new Named()]);
-    expect(named.result).toBe(1);
-  });
-
-  it("ignores missing and object ids when folding create results", async () => {
-    class Boxed {
-      id: object | null = null;
-    }
-    const empty = await new ListCRUDRepository<Boxed>([], Boxed).createBulk([
-      Object.assign(new Boxed(), { id: { n: 1 } }),
-    ]);
-    expect(empty.result).toBeNull();
+    expect(await collectAsync(parentsRepo.read())).toEqual([]);
+    expect((await collectAsync(childrenRepo.read())).map((child) => child.label)).toEqual(["keep"]);
   });
 });

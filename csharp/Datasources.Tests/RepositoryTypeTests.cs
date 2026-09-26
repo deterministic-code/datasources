@@ -1,3 +1,6 @@
+using Datasources;
+using Datasources.Memory;
+
 namespace Datasources.Tests;
 
 public class RepositoryTypeTests
@@ -18,7 +21,7 @@ public class RepositoryTypeTests
     [Fact]
     public void CRUDRepositoryReportsSameTypeAsInner()
     {
-        var repo = new ListCRUDRepository<Item>();
+        var repo = new CRUDRepository<Item>(new MemoryProvider().Connection(null));
         Assert.Equal(typeof(Item), repo.Type);
     }
 

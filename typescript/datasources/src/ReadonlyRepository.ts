@@ -100,12 +100,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     this.statements = built.statements;
   }
 
-  protected get enriched(): boolean {
-    return this.entries().length > 0;
-  }
-
-  private entries = (): StoredEnrichment[] => storedEnrichments.get(this) ?? [];
-
   addMiddleware = (middleware: ICommandMiddleware): this => {
     this.middlewares.push(middleware);
     return this;
@@ -149,16 +143,46 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     for await (const sourced of this.readTracked(query, parameters)) yield sourced.item;
   }
 
+  async readSingle(query?: ReadQuery, parameters?: Parameter[]): Promise<T | undefined> {
+    for await (const item of this.read(query, parameters)) return item;
+    return undefined;
+  }
+
+  protected get enriched(): boolean {
+    return this.entries().length > 0;
+  }
+
+  protected async *readItems(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
+    yield* this.readRows(query, parameters);
+  }
+
+  protected command = (): ICommand =>
+    this.middlewares.reduce(
+      (command, middleware) => command.addMiddleware(middleware),
+      this.connection!.createCommand(),
+    );
+
+  protected column = (property: string): string => this.columnMappings.map(property);
+
+  protected cell = (property: string, value: Cell, fieldsApplied: boolean): Cell => {
+    const field =
+      this.rowConverter instanceof RowTypeConverter ? this.rowConverter.fields[property] : undefined;
+    return field && !fieldsApplied ? field.reverseConvert(value) : value;
+  };
+
+  private stored = (where: IWhere, fieldsApplied = false): IWhere =>
+    where instanceof Where
+      ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied))
+      : where;
+
+  private entries = (): StoredEnrichment[] => storedEnrichments.get(this) ?? [];
+
   private async *readTracked(query?: ReadQuery, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
     const statement = query instanceof ExecuteStoredProcedureStatement ? query : this.readQuery(query);
     const listed =
       parameters ??
       (statement instanceof ExecuteStoredProcedureStatement ? undefined : statement?.where?.parameters);
     yield* this.apply(this.readItems(statement, listed));
-  }
-
-  protected async *readItems(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
-    yield* this.readRows(query, parameters);
   }
 
   private async *apply(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {
@@ -210,17 +234,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     for (const entry of this.entries()) await entry.apply(parents, sources);
   };
 
-  async readSingle(query?: ReadQuery, parameters?: Parameter[]): Promise<T | undefined> {
-    for await (const item of this.read(query, parameters)) return item;
-    return undefined;
-  }
-
-  protected command = (): ICommand =>
-    this.middlewares.reduce(
-      (command, middleware) => command.addMiddleware(middleware),
-      this.connection!.createCommand(),
-    );
-
   private renamed = (row: Cells): Cells =>
     Object.fromEntries(
       Object.entries(row).map(([key, value]) => [this.columnMappings.reverseMap(key), value]),
@@ -234,17 +247,4 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
         : this.statements
           ? this.statements.query(this.stored(query))
           : new SelectStatement(query.getText(), query);
-
-  protected stored = (where: IWhere, fieldsApplied = false): IWhere =>
-    where instanceof Where
-      ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied))
-      : where;
-
-  protected column = (property: string): string => this.columnMappings.map(property);
-
-  protected cell = (property: string, value: Cell, fieldsApplied: boolean): Cell => {
-    const field =
-      this.rowConverter instanceof RowTypeConverter ? this.rowConverter.fields[property] : undefined;
-    return field && !fieldsApplied ? field.reverseConvert(value) : value;
-  };
 }

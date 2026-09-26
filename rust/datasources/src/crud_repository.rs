@@ -240,15 +240,22 @@ impl CRUDRepository {
         by_where: Option<&'a dyn IWhere>,
     ) -> Result<(Option<Where>, Option<&'a dyn IWhere>)> {
         match by_where {
-            Some(clause) => match self.readonly.store_where(clause, false)? {
-                Some(stored) => Ok((Some(stored), None)),
+            Some(clause) => match clause.as_any().downcast_ref::<Where>() {
+                Some(typed) => Ok((Some(self.store_clause(typed, false)?), None)),
                 None => Ok((None, Some(clause))),
             },
             None => Ok((
-                Some(self.readonly.store_clause(&self.id_where(record)?, true)?),
+                Some(self.store_clause(&self.id_where(record)?, true)?),
                 None,
             )),
         }
+    }
+
+    fn store_clause(&self, clause: &Where, fields_applied: bool) -> Result<Where> {
+        clause.map(
+            |name| self.readonly.column(name),
+            |name, cell| self.readonly.cell(name, cell, fields_applied),
+        )
     }
 
     fn id_record(&self, id: &dyn IdKey) -> Result<Row> {

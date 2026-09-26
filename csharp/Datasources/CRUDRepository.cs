@@ -94,7 +94,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     protected virtual async Task<Response> Save(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
-        var where = byWhere is null ? Stored(IdWhere(record), fieldsApplied: true) : Stored(byWhere);
+        var where = byWhere is null ? Mapped(IdWhere(record), fieldsApplied: true) : Mapped(byWhere, fieldsApplied: false);
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
@@ -105,7 +105,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     protected virtual async Task<Response> Remove(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
-        var where = byWhere is null ? Stored(IdWhere(record), fieldsApplied: true) : Stored(byWhere);
+        var where = byWhere is null ? Mapped(IdWhere(record), fieldsApplied: true) : Mapped(byWhere, fieldsApplied: false);
         var statement = Statements.Delete(where);
         var parameters = where.Parameters is { Count: > 0 } listed
             ? listed
@@ -120,6 +120,11 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             0 => throw new DatasourceException("ReadSingleById requires an Id column"),
             _ => throw new DatasourceException("Composite id requires a row keyed by each Id column")
         };
+
+    IWhere Mapped(IWhere where, bool fieldsApplied) =>
+        where is Where clause
+            ? clause.Map(Column, (name, cell) => Cell(name, cell, fieldsApplied))
+            : where;
 
     IWhere IdWhere(Row record) =>
         new Where(ids.Select(col =>
