@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.Memory;
 
 namespace Datasources.Tests;
 
@@ -150,7 +151,7 @@ public class CRUDRepositoryTests
     public async Task ManyReadonlyViaThrows()
     {
         var parents = new ListCRUDRepository<Parent>();
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), new ListReadonlyRepository<Child>());
+        parents.AddEnriched(new("children", "id", "parent_id", Many: true), new ReadonlyRepository<Child>(new MemoryProvider().Connection(null)));
         var error = await Assert.ThrowsAsync<DatasourceException>(() =>
             parents.Create(new Parent { children = [new Child { label = "a" }] }));
         Assert.Contains("children", error.Message);

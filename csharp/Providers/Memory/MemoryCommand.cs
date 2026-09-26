@@ -19,7 +19,16 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        ExecuteReader(FilterText(statement), parameters);
+        statement is ISelectStatement { Where: Where clause }
+            ? Run(statement.GetText(), parameters, (_, _) =>
+            {
+                Typed.EnsureOpen();
+                var evaluator = new StatementEvaluator();
+                IReadOnlyList<Row> rows = [.. Typed.GetCollection().Where(row =>
+                    evaluator.Evaluate(clause, row) is Value.Bool(true))];
+                return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
+            })
+            : ExecuteReader(FilterText(statement), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch

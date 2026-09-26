@@ -5,6 +5,7 @@ import {
   responseOf,
   splitStatements,
   StreamingReader,
+  type Cell,
   type Cells,
   type Scalar,
   type ICommand,
@@ -13,6 +14,7 @@ import {
   type Response,
 } from "@datasources/core";
 import type { SqliteConnection } from "./connection.ts";
+import type { SqliteStatement } from "./i-sqlite-driver.ts";
 import { reverse } from "./converters/SqliteRowTypeConverters.ts";
 
 const isSelect = (sql: string) =>
@@ -88,11 +90,76 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
   private iterate(sql: string, params: Record<string, Scalar>): IterableIterator<Cells> & {
     return(): IteratorResult<Cells>;
   } {
-    const iter = this.connection.require().prepare(sql).iterate(params);
-    const stop = iter.return;
-    return {
-      next: () => iter.next(),
-      return: () => (stop ? stop.call(iter) : { done: true, value: undefined }),
-    };
+    const statement = this.connection.require().prepare(sql) as ColumnStatement;
+    const columns = statement.columns?.() ?? [];
+    const names = qualified(columns);
+    const raw = names.some((name, index) => name !== columns[index]?.name)
+      ? statement.raw?.(true).iterate(params)
+      : undefined;
+    return raw ? namedRows(raw, names) : closable(statement.iterate(params));
   }
 }
+
+type SqliteColumn = { name: string; column: string | null; table: string | null };
+
+type ColumnStatement = SqliteStatement & {
+  columns?: () => SqliteColumn[];
+  raw?: (enabled: boolean) => {
+    iterate(params?: Record<string, Scalar>): IterableIterator<Cell[]>;
+  };
+};
+
+const closable = (
+  iter: IterableIterator<Cells>,
+): IterableIterator<Cells> & { return(): IteratorResult<Cells> } => {
+  const stop = iter.return?.bind(iter);
+  const rows: IterableIterator<Cells> & { return(): IteratorResult<Cells> } = {
+    next: () => iter.next(),
+    return: () => {
+      stop?.();
+      return { done: true, value: undefined };
+    },
+    [Symbol.iterator]() {
+      return rows;
+    },
+  };
+  return rows;
+};
+
+const namedRows = (
+  iter: IterableIterator<Cell[]>,
+  names: string[],
+): IterableIterator<Cells> & { return(): IteratorResult<Cells> } => {
+  const stop = iter.return?.bind(iter);
+  const rows: IterableIterator<Cells> & { return(): IteratorResult<Cells> } = {
+    next: () => {
+      const step = iter.next();
+      return step.done
+        ? { done: true, value: undefined }
+        : {
+            done: false,
+            value: Object.fromEntries(names.map((name, index) => [name, step.value[index] ?? null])),
+          };
+    },
+    return: () => {
+      stop?.();
+      return { done: true, value: undefined };
+    },
+    [Symbol.iterator]() {
+      return rows;
+    },
+  };
+  return rows;
+};
+
+const qualified = (columns: SqliteColumn[]): string[] => {
+  const names = columns.map((column) => column.name);
+  const duplicated = new Set(names.filter((name, index) => names.indexOf(name) !== index));
+  return duplicated.size === 0
+    ? names
+    : columns.map((column, index) =>
+        duplicated.has(names[index] ?? "") && column.table && column.column
+          ? `${column.table}.${column.column}`
+          : (names[index] ?? ""),
+      );
+};

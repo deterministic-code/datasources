@@ -2206,31 +2206,6 @@ async fn hashset_uses_one_read_per_edge() {
 
 #[tokio::test]
 async fn flat_to_nested_collapses_join_rows() {
-    let mapper = FlatToNestedMapper::new(TypeMap::new(
-        "id",
-        vec![
-            ("id".into(), TypeMapField::column("id")),
-            ("type_name".into(), TypeMapField::column("type_name")),
-        ],
-    ));
-    let result = TransformMapper::new(
-        move |rows: Vec<Row>| {
-            mapper
-                .map(rows)
-                .into_iter()
-                .map(|mapped| {
-                    mapped
-                        .into_iter()
-                        .filter_map(|(key, value)| match value {
-                            crate::mappers::MappedValue::Cell(cell) => Some((key, cell)),
-                            _ => None,
-                        })
-                        .collect()
-                })
-                .collect()
-        },
-        |_| Vec::new(),
-    );
     let mut parents = items_repository::ItemsRepository::new(vec![
         record(&[("id", Value::Int(1)), ("type_name", Value::from("person"))]),
         record(&[("id", Value::Int(2)), ("type_name", Value::from("org"))]),
@@ -2238,7 +2213,15 @@ async fn flat_to_nested_collapses_join_rows() {
     parents.add_enriched(
         crate::enrichment::Enrichment::new("type_name", "id", "id", None, false),
         Arc::new(items_repository::ItemsRepository::new(vec![])),
-        Some(Arc::new(crate::nested_to_object_enrichment_strategy::NestedToObjectEnrichmentStrategy::new(Box::new(result)))),
+        Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
+            TypeMap::new(
+                "id",
+                vec![
+                    ("id".into(), TypeMapField::column("id")),
+                    ("type_name".into(), TypeMapField::column("type_name")),
+                ],
+            ),
+        ))),
     );
     let items = parents.read(None, None).await.unwrap();
     assert_eq!(items[0]["id"], Value::Int(1));

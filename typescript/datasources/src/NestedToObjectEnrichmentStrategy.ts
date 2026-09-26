@@ -1,15 +1,19 @@
 import type { Cells } from "./converters/Cell.ts";
 import type { Enrichment } from "./Enrichment.ts";
-import type { IMapper } from "./mappers/IMapper.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
+import { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";
+import type { TypeMap } from "./mappers/TypeMap.ts";
 import type { Row } from "./Row.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 
 export class NestedToObjectEnrichmentStrategy<T extends object>
   extends DefaultReadonlyEnrichmentStrategy<T>
 {
-  constructor(private readonly mapper: IMapper<Iterable<Cells>, T[]>) {
+  private readonly nested: FlatToNestedMapper<T>;
+
+  constructor(typeMap: TypeMap<T>) {
     super();
+    this.nested = new FlatToNestedMapper(typeMap);
   }
 
   override apply<TRelated extends object>(
@@ -18,10 +22,12 @@ export class NestedToObjectEnrichmentStrategy<T extends object>
     parents: object[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const rows: Cells[] = [];
-    for (const source of sources ?? []) if (source) rows.push(source);
     parents.length = 0;
-    for (const item of this.mapper.map(rows)) parents.push(item);
+    for (const item of this.nested.map(rows(sources))) parents.push(item);
     return Promise.resolve();
   }
+}
+
+function* rows(sources?: (Row | undefined)[]): Iterable<Cells> {
+  for (const source of sources ?? []) if (source) yield source;
 }

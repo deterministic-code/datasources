@@ -8,6 +8,9 @@
     ".": "./src/index.ts",
     "./mocks": "./src/mocks/index.ts"
   },
+  "devDependencies": {
+    "@datasources/memory": "*"
+  },
   "scripts": {
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
