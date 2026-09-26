@@ -8,7 +8,9 @@ use crate::datasource_error::DatasourceError;
 use crate::default_write_enrichment_strategy::{
     copy_ids, strip_enriched, DefaultWriteEnrichmentStrategy,
 };
+use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
+use crate::stored_enrichment::StoredEnrichment;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
@@ -103,7 +105,26 @@ impl CRUDRepository {
         via: impl EnrichmentVia,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
-        self.readonly.add_enriched(enrichment, via, strategy);
+        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        let (via, persist) = via.into_repos();
+        self.readonly.enrichments.lock().expect("enrichments").push(
+            StoredEnrichment::direct(enrichment, via, persist, strategy),
+        );
+        self
+    }
+
+    pub fn add_linked(
+        &mut self,
+        enrichment: crate::enrichment::Enrichment,
+        via: impl EnrichmentVia,
+        link: Arc<dyn ICRUDRepository>,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
+    ) -> &mut Self {
+        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        let (via, _) = via.into_repos();
+        self.readonly.enrichments.lock().expect("enrichments").push(
+            StoredEnrichment::linked(enrichment, via, link, strategy),
+        );
         self
     }
 

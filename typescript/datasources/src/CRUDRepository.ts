@@ -14,7 +14,12 @@ import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
 import { identityCreate, parts } from "./RepositoryBuilder.ts";
-import { isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
+import { enrichmentsOf, isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
+import type { Enrichment } from "./Enrichment.ts";
+import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
+import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
+import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import { StoredEnrichment } from "./StoredEnrichment.ts";
 import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DefaultWriteEnrichmentStrategy, strip } from "./DefaultWriteEnrichmentStrategy.ts";
@@ -121,7 +126,33 @@ export class CRUDRepository<T = Cells>
     this.write =
       (typeof options === "object" && options !== null && "write" in options
         ? (options as CRUDRepositoryOptions<T>).write
-        : undefined) ?? new DefaultWriteEnrichmentStrategy<T>();
+        : undefined)       ?? new DefaultWriteEnrichmentStrategy<T>();
+  }
+
+  override addEnriched<TRelated extends object>(
+    enrichment: Enrichment,
+    via: IReadonlyRepository<TRelated>,
+    strategy?: IReadonlyEnrichmentStrategy<T & object>,
+  ): this {
+    super.addEnriched(enrichment, via, strategy);
+    const writer = writerOf(via);
+    if (writer) lastEnrichment(this).persist = writer;
+    return this;
+  }
+
+  addLinked<TRelated extends object, TLink extends object>(
+    enrichment: Enrichment,
+    via: IReadonlyRepository<TRelated>,
+    link: ICRUDRepository<TLink>,
+    strategy?: IReadonlyEnrichmentStrategy<T & object>,
+  ): this {
+    const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
+    super.addEnriched(enrichment, via, strategy);
+    const stored = lastEnrichment(this);
+    stored.apply = (parents, sources) =>
+      chosen.applyLinked(via, link, enrichment, parents, sources);
+    stored.link = link as ICRUDRepository<object>;
+    return this;
   }
 
   create = async (item: T): Promise<T> => {
@@ -217,6 +248,18 @@ export class CRUDRepository<T = Cells>
 
   private stripEnriched = (item: T): T => strip(this, item) as T;
 }
+
+const writerOf = <TRelated extends object>(
+  via: IReadonlyRepository<TRelated>,
+): ICRUDRepository<object> | undefined =>
+  "create" in via && typeof via.create === "function" ? (via as ICRUDRepository<object>) : undefined;
+
+const lastEnrichment = (host: object): StoredEnrichment => {
+  const entries = enrichmentsOf(host);
+  const stored = entries?.[entries.length - 1];
+  if (!stored) throw new DatasourceError("Missing enrichment");
+  return stored;
+};
 
 const isWrite = <T>(
   value: Constructable<T> | IConnection | BuiltRepository<T> | IWriteEnrichmentStrategy<T>,

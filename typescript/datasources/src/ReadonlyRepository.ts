@@ -25,7 +25,6 @@ import { IdentityMapper } from "./mappers/IdentityMapper.ts";
 import type { RepositoryStatements } from "./RepositoryStatements.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
-import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IEnriched } from "./IEnriched.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
@@ -41,9 +40,6 @@ const storedEnrichments = new WeakMap<object, StoredEnrichment[]>();
 
 export const enrichmentsOf = (host: object): readonly StoredEnrichment[] | undefined =>
   storedEnrichments.get(host);
-
-const writerOf = (via: object): ICRUDRepository<object> | undefined =>
-  "create" in via && typeof via.create === "function" ? (via as ICRUDRepository<object>) : undefined;
 
 export const isBuilt = <T>(
   value: IConnection | BuiltRepository<T>,
@@ -115,25 +111,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
       new StoredEnrichment(
         enrichment,
         (parents, sources) => chosen.apply(via, enrichment, parents, sources),
-        writerOf(via),
-      ),
-    );
-    return this;
-  }
-
-  addLinked<TRelated extends object, TLink extends object>(
-    enrichment: Enrichment,
-    via: IReadonlyRepository<TRelated>,
-    link: ICRUDRepository<TLink>,
-    strategy?: IReadonlyEnrichmentStrategy<T & object>,
-  ): this {
-    const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
-    this.entries().push(
-      new StoredEnrichment(
-        enrichment,
-        (parents, sources) => chosen.applyLinked(via, link, enrichment, parents, sources),
-        undefined,
-        link as ICRUDRepository<object>,
       ),
     );
     return this;

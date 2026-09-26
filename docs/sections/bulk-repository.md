@@ -184,9 +184,19 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 **Methods**
 
-##### add_enriched(into, from, via, by, select, many)
+##### add_enriched(enrichment, via, strategy)
 
-Forwards to the inner [CRUDRepository](./crud-repository.md). A CRUD `via` is kept so `many` children can be written.
+Forwards to [CRUDRepository.add_enriched](./crud-repository.md#add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `many` children can be written.
+
+```rust
+pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
+```
+
+- `enrichment` — [Enrichment](./readonly-repository.md#enrichment)
+- `via` — related repository. A CRUD repository is kept so `many` children can be written
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
+
+**Returns** `&mut Self`
 
 ##### create_bulk(items)
 

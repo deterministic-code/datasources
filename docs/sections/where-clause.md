@@ -420,7 +420,7 @@ id IN ($id_0, $id_1)
 ::: example
 ```csharp csharp/Datasources.Tests/ComparisonAliasTests.cs#L11-L17
 ```
-```rust rust/datasources/src/tests/mod.rs#L2490-L2496
+```rust rust/datasources/src/tests/mod.rs#L2060-L2066
 ```
 ```typescript typescript/datasources/src/builders/builders.test.ts#L350-L356
 ```

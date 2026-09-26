@@ -101,30 +101,30 @@ See [Command](./sections/command.md) for middleware and `execute`.
 
 ## Enriched CRUD repository
 
-A `CRUDRepository` fills related fields after `read` once enrichments are registered, and writes nested `many` children on create / update / delete.
+A `CRUDRepository` fills related fields after `read` once enrichments are registered. When the related repository is also a CRUD repository, nested `many` children are written on create / update / delete. A readonly repository only fills.
 
 ::: dialects
 ```csharp
-var contacts = new CRUDRepository<Contact>(contactRepo);
-contacts.AddEnriched("contact_type_name", "contact_type_id", types, "id", "name");
-contacts.AddEnriched("addresses", "id", addresses, "contact_id", many: true);
+var contacts = new CRUDRepository<Contact>(connection);
+contacts.AddEnriched(new("contact_type_name", "contact_type_id", "id", "name"), types);
+contacts.AddEnriched(new("addresses", "id", "contact_id", Many: true), addresses);
 
 var loaded = await contacts.ReadSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
 ```
 ```rust
-let mut contacts = CRUDRepository::from_repository(contact_repo);
+let mut contacts = CRUDRepository::from_type::<Contact>(connection)?;
 contacts
-    .add_enriched("contact_type_name", "contact_type_id", types, "id", Some("name".into()), false)
-    .add_enriched("addresses", "id", addresses, "contact_id", None, true);
+    .add_enriched(Enrichment::new("contact_type_name", "contact_type_id", "id", Some("name".into()), false), types, None)
+    .add_enriched(Enrichment::new("addresses", "id", "contact_id", None, true), addresses, None);
 
-let loaded = contacts.read_single(Some(&Where::new(Operator::equals("id", 10)))).await?;
+let loaded = contacts.read_single(Some(&Where::new(Operator::equals("id", 10))), None).await?;
 contacts.create(contact).await?;
 ```
 ```typescript
-const contacts = new CRUDRepository(contactRepo);
-contacts.addEnriched("contact_type_name", "contact_type_id", types, "id", "name");
-contacts.addEnriched("addresses", "id", addresses, "contact_id", undefined, true);
+const contacts = new CRUDRepository(Contact, connection);
+contacts.addEnriched({ into: "contact_type_name", from: "contact_type_id", by: "id", select: "name" }, types);
+contacts.addEnriched({ into: "addresses", from: "id", by: "contact_id", many: true }, addresses);
 
 const loaded = await contacts.readSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });

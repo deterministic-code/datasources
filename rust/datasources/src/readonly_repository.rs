@@ -110,26 +110,10 @@ impl ReadonlyRepository {
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
-        let (via, persist) = via.into_repos();
+        let via = via.read_via();
         self.enrichments.lock().expect("enrichments").push(
-            StoredEnrichment::direct(enrichment, via, persist, strategy),
+            StoredEnrichment::direct(enrichment, via, None, strategy),
         );
-        self
-    }
-
-    pub fn add_linked(
-        &mut self,
-        enrichment: crate::enrichment::Enrichment,
-        via: impl EnrichmentVia,
-        link: Arc<dyn crate::repository::ICRUDRepository>,
-        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
-    ) -> &mut Self {
-        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
-        let (via, _) = via.into_repos();
-        self.enrichments
-            .lock()
-            .expect("enrichments")
-            .push(StoredEnrichment::linked(enrichment, via, link, strategy));
         self
     }
 

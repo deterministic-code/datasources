@@ -2,7 +2,7 @@
 
 Read-only typed read over a connection. `ReadSingle` / `readSingle` / `read_single` returns the first row or none. `Read` / `read` yields every row.
 
-Construct it with an inner repository to fill properties already on `T` from related repositories. That fill runs after convert-then-map. Lookups use `ReadSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read`. Missing lookups leave the destination default.
+Construct it with a connection, then register each fill with `AddEnriched` / `addEnriched` / `add_enriched`. That fill runs after convert-then-map. Lookups use `ReadSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read`. Missing lookups leave the destination default. This type does not write. Writes are [CRUDRepository](./crud-repository.md).
 
 ## Classes
 
@@ -195,20 +195,17 @@ interface IEnriched<T>
 
 **Methods**
 
-##### addEnriched(into, from, via, by, select?, many?)
+##### addEnriched(enrichment, via, strategy?)
 
-Adds a related fill. Fluent for siblings. A related repository fills its own fields.
+Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
 
 ```typescript
-addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean): this
+addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
 ```
 
-- `into` — destination property on `T`
-- `from` — key on the parent
+- `enrichment` — [Enrichment](#enrichment)
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `by` — key on the related item
-- `select` — optional related property to copy; omitted copies the whole row
-- `many` — collect a list; default `false`
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** `this`
 
@@ -558,20 +555,16 @@ public interface IEnriched<T>
 
 **Methods**
 
-##### AddEnriched(into, from, via, by, select, many, strategy)
+##### AddEnriched(enrichment, via, strategy)
 
-Adds a related fill. Fluent for siblings. A related repository fills its own fields.
+Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
 
 ```csharp
-IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, IReadonlyEnrichmentStrategy<T>? strategy = null)
+IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
-- `into` — destination property on `T`
-- `from` — key on the parent
+- `enrichment` — [Enrichment](#enrichment)
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `by` — key on the related item
-- `select` — optional related property to copy; omitted copies the whole row
-- `many` — collect a list
 - `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** [IEnriched](#ienriched)`<T>`
@@ -821,20 +814,17 @@ pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn Read
 
 **Methods**
 
-##### add_enriched(into, from, via, by, select, many)
+##### add_enriched(enrichment, via, strategy)
 
-Adds a related fill. A related repository fills its own fields.
+Adds a related fill. A related repository fills its own fields. Does not write.
 
 ```rust
-pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
+pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
 ```
 
-- `into` — destination field
-- `from` — key on the parent
-- `via` — related readonly or [CRUDRepository](./crud-repository.md). A CRUD repository is kept for deep writes
-- `by` — key on the related row
-- `select` — optional related field to copy
-- `many` — collect a list
+- `enrichment` — [Enrichment](#enrichment)
+- `via` — related [IReadonlyRepository](#ireadonlyrepository). The readonly path keeps the read repository only
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** `&mut Self`
 
@@ -970,7 +960,7 @@ Adds a child node.
 pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
 ```
 
-- `via` — related readonly or [CRUDRepository](./crud-repository.md). A CRUD repository is kept for deep writes
+- `via` — related [IReadonlyRepository](#ireadonlyrepository)
 - `into` — destination field
 - `from` — parent key
 - `by` — related key
@@ -1087,19 +1077,13 @@ async fn enrich(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()>
 
 ## Remarks
 
-Writes use [CRUDRepository](./crud-repository.md). Register the same tree with `AddEnriched`. With no enrichments, create / update / delete / read stay the table SQL, and `Read` stays streaming. With enrichments, `Read` still fills related fields. `select` lookups and 1:1 embeds are not written. Each `many` node must be a CRUD repository.
-
-- **Create** — write the parent, apply the generated identity through the create mapper, stamp each child's `by` from the parent `from`, then create children (and nested many).
-- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
-- **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
-
-A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. See [Bulk repository](./bulk-repository.md) for list writes.
+`AddEnriched` / `addEnriched` / `add_enriched` registers a read fill. With no enrichments, `Read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](./crud-repository.md).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 
 ```
-children.AddEnriched("type_name", "type_id", childTypes, "id", "name");
-parents.AddEnriched("children", "id", children, "parent_id", many: true);
+childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
+parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
 ```
 
 Repository read is convert, then map. See [TypeConverter](./type-converters.md) and [Mapper](./mappers.md).
@@ -1318,11 +1302,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Fill a lookup
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L43-L47
+```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47
 ```
-```rust rust/datasources/src/tests/mod.rs#L2075-L2085
+```rust rust/datasources/tests/enriched.rs#L112-L118
 ```
-```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L49-L64
+```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92
 ```
 :::
 
@@ -1378,7 +1362,7 @@ The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`.
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#L466-L567
 ```
-```typescript typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L133-L213
+```typescript typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L131-L183
 ```
 
 ```output [Users with roles]
