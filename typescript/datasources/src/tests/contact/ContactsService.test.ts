@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { MemoryProvider } from "@datasources/memory";
 import { collectAsync } from "../../collectAsync.ts";
-import { ListCRUDRepository } from "../listCRUDRepository.ts";
-import { ListReadonlyRepository } from "../listReadonlyRepository.ts";
+import { CRUDRepository } from "../../CRUDRepository.ts";
+import { ReadonlyRepository } from "../../ReadonlyRepository.ts";
+import type { IConnection } from "../../IConnection.ts";
+import type { Scalar } from "../../builders/Scalar.ts";
 import { Address } from "./Address.ts";
 import { AddressType } from "./AddressType.ts";
 import { Contact } from "./Contact.ts";
@@ -13,53 +16,81 @@ import { PhoneType } from "./PhoneType.ts";
 
 describe("ContactsService", () => {
   it("fills names and child lists", async () => {
-    const addresses = new ListCRUDRepository<Address>([
-      Object.assign(new Address(), {
-        id: 11,
-        contact_id: 9,
-        line1: "other",
-        city: "x",
-      }),
-    ]);
+    const person: Record<string, Scalar> = { name: "person" };
+    const types = await setup([person]);
+    const typesRepo = new ReadonlyRepository(ContactType, types);
+    const source: Record<string, Scalar> = { name: "import" };
+    const sources = await setup([source]);
+    const sourcesRepo = new ReadonlyRepository(ContactSource, sources);
+    const home: Record<string, Scalar> = { name: "Home" };
+    const addressTypes = await setup([home]);
+    const addressTypesRepo = new ReadonlyRepository(AddressType, addressTypes);
+    const work: Record<string, Scalar> = { name: "Work" };
+    const phoneTypes = await setup([work]);
+    const phoneTypesRepo = new ReadonlyRepository(PhoneType, phoneTypes);
+    const contacts = await setup();
+    const contactsRepo = new CRUDRepository(Contact, contacts);
+    const addresses = await setup();
+    const addressesRepo = new CRUDRepository(Address, addresses);
+    const phones = await setup();
+    const phonesRepo = new CRUDRepository(Phone, phones);
     const service = ContactsService.open(
-      new ListCRUDRepository<Contact>(),
-      new ListReadonlyRepository([
-        Object.assign(new ContactType(), { id: 2, name: "person" }),
-      ]),
-      new ListReadonlyRepository([
-        Object.assign(new ContactSource(), { id: 3, name: "import" }),
-      ]),
-      new ListReadonlyRepository([
-        Object.assign(new AddressType(), { id: 1, name: "Home" }),
-      ]),
-      new ListReadonlyRepository([
-        Object.assign(new PhoneType(), { id: 2, name: "Work" }),
-      ]),
-      addresses,
-      new ListCRUDRepository<Phone>(),
+      contactsRepo,
+      typesRepo,
+      sourcesRepo,
+      addressTypesRepo,
+      phoneTypesRepo,
+      addressesRepo,
+      phonesRepo,
     );
-    await service.create(
-      Object.assign(new Contact(), {
-        contact_type_id: 2,
-        contact_source_id: 3,
-        first_name: "Ada",
-        addresses: [
-          Object.assign(new Address(), {
-            line1: "1 Main",
-            city: "Paris",
-            address_type_id: 1,
-          }),
-        ],
-        phones: [Object.assign(new Phone(), { number: "555", phone_type_id: 2 })],
-      }),
-    );
-    const contact = (await collectAsync(service.read()))[0];
+    await service.create(Object.assign(new Contact(), {
+      first_name: "Other",
+      contact_type_id: person.id,
+      contact_source_id: source.id,
+    }));
+    const other = (await collectAsync(service.read()))[0];
+    expect(other?.id).toBeGreaterThan(0);
+    await addresses.createCommand().execute("insert", [
+      { name: "contact_id", value: other!.id },
+      { name: "line1", value: "other" },
+      { name: "city", value: "x" },
+      { name: "address_type_id", value: home.id! },
+    ]);
+    await service.create(Object.assign(new Contact(), {
+      contact_type_id: person.id,
+      contact_source_id: source.id,
+      first_name: "Ada",
+      addresses: [Object.assign(new Address(), {
+        line1: "1 Main",
+        city: "Paris",
+        address_type_id: home.id,
+      })],
+      phones: [Object.assign(new Phone(), { number: "555", phone_type_id: work.id })],
+    }));
+    const contact = (await collectAsync(service.read())).find((item) => item.first_name === "Ada");
+    expect(contact?.id).toBeGreaterThan(0);
+    expect(contact?.id).not.toBe(other?.id);
     expect(contact?.contact_type_name).toBe("person");
     expect(contact?.contact_source_name).toBe("import");
     expect(contact?.addresses).toHaveLength(1);
+    expect(contact?.addresses[0]?.id).toBeGreaterThan(0);
     expect(contact?.addresses[0]?.line1).toBe("1 Main");
     expect(contact?.addresses[0]?.address_type_name).toBe("Home");
+    expect(contact?.phones[0]?.id).toBeGreaterThan(0);
     expect(contact?.phones[0]?.number).toBe("555");
     expect(contact?.phones[0]?.phone_type_name).toBe("Work");
   });
 });
+
+const setup = async (rows: Record<string, Scalar>[] = []): Promise<IConnection> => {
+  const connection = new MemoryProvider().connection();
+  await connection.open();
+  for (const row of rows) {
+    const response = await connection.createCommand().execute(
+      "insert",
+      Object.entries(row).map(([name, value]) => ({ name, value })),
+    );
+    row.id = response.result as number;
+  }
+  return connection;
+};

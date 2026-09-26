@@ -79,8 +79,11 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         const op = query.trim().toLowerCase();
         const obj = parametersToObject(params);
         if (op === "insert") {
-          this.connection.getCollection().push({ ...obj });
-          return { value: { result: obj, rowsAffected: 1, parameters: params }, rows: [] };
+          const row = { ...obj };
+          const id = insertedId(row, this.connection.getCollection());
+          row.id = id;
+          this.connection.getCollection().push(row);
+          return { value: { result: id, rowsAffected: 1, parameters: params }, rows: [] };
         }
         if (op === "update") {
           const whereText =
@@ -123,6 +126,11 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     return { result: undefined, rowsAffected };
   }
 }
+
+const insertedId = (row: MemoryRecord, rows: MemoryRecord[]): number =>
+  typeof row.id === "number"
+    ? row.id
+    : rows.reduce((max, item) => (typeof item.id === "number" && item.id > max ? item.id : max), 0) + 1;
 
 const looksJson = (text?: string): boolean => !!text?.trimStart().startsWith("{");
 

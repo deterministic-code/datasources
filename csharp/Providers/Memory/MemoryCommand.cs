@@ -47,8 +47,10 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
+                var id = InsertedId(obj, Typed.GetCollection());
+                obj["id"] = id;
                 Typed.GetCollection().Add(new Row(obj));
-                return Task.FromResult((Response.Of(Value.Null.Instance, 1, paramsList), EmptyRows()));
+                return Task.FromResult((Response.Of(id, 1, paramsList), EmptyRows()));
             }
 
             if (op == "update")
@@ -126,6 +128,11 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             : parameters;
 
     static bool LooksJson(string? text) => text?.TrimStart().StartsWith('{') == true;
+
+    static Value InsertedId(Dictionary<string, Value> row, List<Row> rows) =>
+        row.TryGetValue("id", out var existing) && existing is Value.Int
+            ? existing
+            : rows.Select(item => item.TryGetValue("id", out var cell) && cell is Value.Int id ? id.Item : 0L).DefaultIfEmpty(0).Max() + 1;
 
     private static IReadOnlyList<Row> EmptyRows() => [];
 }

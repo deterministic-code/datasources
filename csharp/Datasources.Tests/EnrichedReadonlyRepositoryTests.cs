@@ -33,43 +33,70 @@ public class ReadonlyRepositoryTests
     }
 
     [Fact]
-    public Task ReadFillsLookupSelectAndLeavesMissingDefault() =>
-        FillLookup(new DefaultReadonlyEnrichmentStrategy<Parent>());
-
-    [Fact]
-    public Task HashsetFillsLookupSelectAndLeavesMissingDefault() =>
-        FillLookup(new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
-
-    async Task FillLookup(IReadonlyEnrichmentStrategy<Parent> strategy)
+    public async Task ReadFillsLookupSelectAndLeavesMissingDefault()
     {
-        var parentsRepo = new ReadonlyRepository<Parent>(await Open(
+        var connection = await Setup(
             new Row { ["id"] = 1, ["type_id"] = 10 },
-            new Row { ["id"] = 2, ["type_id"] = 99 }));
-        var typesRepo = new ReadonlyRepository<TypeRow>(await Open(new Row { ["id"] = 10, ["name"] = "person" }));
-        parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo, strategy);
-        var items = new List<Parent>();
-        await foreach (var item in parentsRepo.Read())
-            items.Add(item);
+            new Row { ["id"] = 2, ["type_id"] = 99 });
+        var parentsRepo = new ReadonlyRepository<Parent>(connection);
+        var typesConnection = await Setup(new Row { ["id"] = 10, ["name"] = "person" });
+        var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+        parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+        var items = await parentsRepo.Read().ToListAsync();
         Assert.Equal("person", items[0].type_name);
         Assert.Equal("", items[1].type_name);
     }
 
     [Fact]
-    public Task ReadFillsListsAndReadSingleIsEnriched() =>
-        FillLists(new DefaultReadonlyEnrichmentStrategy<Parent>());
+    public async Task HashsetFillsLookupSelectAndLeavesMissingDefault()
+    {
+        var connection = await Setup(
+            new Row { ["id"] = 1, ["type_id"] = 10 },
+            new Row { ["id"] = 2, ["type_id"] = 99 });
+        var parentsRepo = new ReadonlyRepository<Parent>(connection);
+        var typesConnection = await Setup(new Row { ["id"] = 10, ["name"] = "person" });
+        var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+        parentsRepo.AddEnriched(
+            new("type_name", "type_id", "id", "name"),
+            typesRepo,
+            new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
+        var items = await parentsRepo.Read().ToListAsync();
+        Assert.Equal("person", items[0].type_name);
+        Assert.Equal("", items[1].type_name);
+    }
 
     [Fact]
-    public Task HashsetFillsListsAndReadSingleIsEnriched() =>
-        FillLists(new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
-
-    async Task FillLists(IReadonlyEnrichmentStrategy<Parent> strategy)
+    public async Task ReadFillsListsAndReadSingleIsEnriched()
     {
-        var parentsRepo = new ReadonlyRepository<Parent>(await Open(new Row { ["id"] = 1, ["type_id"] = 10 }));
-        var typesRepo = new ReadonlyRepository<TypeRow>(await Open(new Row { ["id"] = 10, ["name"] = "org" }));
-        var childrenRepo = new ReadonlyRepository<Child>(await Open(
+        var connection = await Setup(new Row { ["id"] = 1, ["type_id"] = 10 });
+        var parentsRepo = new ReadonlyRepository<Parent>(connection);
+        var typesConnection = await Setup(new Row { ["id"] = 10, ["name"] = "org" });
+        var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+        var childrenConnection = await Setup(
             new Row { ["parent_id"] = 1, ["label"] = "a" },
             new Row { ["parent_id"] = 1, ["label"] = "b" },
-            new Row { ["parent_id"] = 2, ["label"] = "x" }));
+            new Row { ["parent_id"] = 2, ["label"] = "x" });
+        var childrenRepo = new ReadonlyRepository<Child>(childrenConnection);
+        parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        var item = await parentsRepo.ReadSingle();
+        Assert.Equal("org", item!.type_name);
+        Assert.Equal(["a", "b"], item.children.Select(child => child.label));
+    }
+
+    [Fact]
+    public async Task HashsetFillsListsAndReadSingleIsEnriched()
+    {
+        var connection = await Setup(new Row { ["id"] = 1, ["type_id"] = 10 });
+        var parentsRepo = new ReadonlyRepository<Parent>(connection);
+        var typesConnection = await Setup(new Row { ["id"] = 10, ["name"] = "org" });
+        var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+        var childrenConnection = await Setup(
+            new Row { ["parent_id"] = 1, ["label"] = "a" },
+            new Row { ["parent_id"] = 1, ["label"] = "b" },
+            new Row { ["parent_id"] = 2, ["label"] = "x" });
+        var childrenRepo = new ReadonlyRepository<Child>(childrenConnection);
+        var strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
         parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo, strategy);
         parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo, strategy);
         var item = await parentsRepo.ReadSingle();
@@ -78,21 +105,41 @@ public class ReadonlyRepositoryTests
     }
 
     [Fact]
-    public Task ReadNestsListLookupAndKeepsRootSibling() =>
-        NestListLookup(new DefaultReadonlyEnrichmentStrategy<Parent>());
+    public async Task ReadNestsListLookupAndKeepsRootSibling()
+    {
+        var connection = await Setup(new Row { ["id"] = 1, ["type_id"] = 10 });
+        var parentsRepo = new ReadonlyRepository<Parent>(connection);
+        var typesConnection = await Setup(new Row { ["id"] = 10, ["name"] = "org" });
+        var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+        var childTypesConnection = await Setup(new Row { ["id"] = 3, ["name"] = "home" });
+        var childTypesRepo = new ReadonlyRepository<TypeRow>(childTypesConnection);
+        var childrenConnection = await Setup(
+            new Row { ["parent_id"] = 1, ["type_id"] = 3, ["label"] = "a" },
+            new Row { ["parent_id"] = 1, ["type_id"] = 9, ["label"] = "b" });
+        var childrenRepo = new ReadonlyRepository<Child>(childrenConnection);
+        childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
+        parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        var item = await parentsRepo.ReadSingle();
+        Assert.Equal("org", item!.type_name);
+        Assert.Equal("home", item.children[0].type_name);
+        Assert.Equal("", item.children[1].type_name);
+    }
 
     [Fact]
-    public Task HashsetNestsListLookupAndKeepsRootSibling() =>
-        NestListLookup(new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
-
-    async Task NestListLookup(IReadonlyEnrichmentStrategy<Parent> strategy)
+    public async Task HashsetNestsListLookupAndKeepsRootSibling()
     {
-        var parentsRepo = new ReadonlyRepository<Parent>(await Open(new Row { ["id"] = 1, ["type_id"] = 10 }));
-        var typesRepo = new ReadonlyRepository<TypeRow>(await Open(new Row { ["id"] = 10, ["name"] = "org" }));
-        var childTypesRepo = new ReadonlyRepository<TypeRow>(await Open(new Row { ["id"] = 3, ["name"] = "home" }));
-        var childrenRepo = new ReadonlyRepository<Child>(await Open(
+        var connection = await Setup(new Row { ["id"] = 1, ["type_id"] = 10 });
+        var parentsRepo = new ReadonlyRepository<Parent>(connection);
+        var typesConnection = await Setup(new Row { ["id"] = 10, ["name"] = "org" });
+        var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+        var childTypesConnection = await Setup(new Row { ["id"] = 3, ["name"] = "home" });
+        var childTypesRepo = new ReadonlyRepository<TypeRow>(childTypesConnection);
+        var childrenConnection = await Setup(
             new Row { ["parent_id"] = 1, ["type_id"] = 3, ["label"] = "a" },
-            new Row { ["parent_id"] = 1, ["type_id"] = 9, ["label"] = "b" }));
+            new Row { ["parent_id"] = 1, ["type_id"] = 9, ["label"] = "b" });
+        var childrenRepo = new ReadonlyRepository<Child>(childrenConnection);
+        var strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
         childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
         parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo, strategy);
         parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo, strategy);
@@ -125,22 +172,22 @@ public class ReadonlyRepositoryTests
     [Fact]
     public async Task LookupKeyComesFromRenamedRow()
     {
-        var typesRepo = new ReadonlyRepository<TypeRow>(await Open(new Row { ["id"] = 1, ["name"] = "admin" }));
-        var usersRepo = new ReadonlyRepository<View>(
-            await Open(new Row { ["user_type_id"] = 1 }),
-            new ReadonlyRepositoryOptions<View>
+        var typesConnection = await Setup(new Row { ["id"] = 1, ["name"] = "admin" });
+        var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+        var usersConnection = await Setup(new Row { ["user_type_id"] = 1 });
+        var usersRepo = new ReadonlyRepository<View>(usersConnection, new ReadonlyRepositoryOptions<View>
+        {
+            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
-                ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-                {
-                    ["UserType"] = "user_type_id",
-                }),
-            });
+                ["UserType"] = "user_type_id",
+            }),
+        });
         usersRepo.AddEnriched(new("UserType", "UserType", "id", "name"), typesRepo);
         var item = await usersRepo.ReadSingle();
         Assert.Equal("admin", item!.UserType);
     }
 
-    static async Task<IConnection> Open(params Row[] rows)
+    static async Task<IConnection> Setup(params Row[] rows)
     {
         var connection = new MemoryProvider().Connection(null);
         await connection.Open();

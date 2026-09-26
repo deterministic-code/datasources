@@ -5,8 +5,11 @@ import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy
 import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 import { enrichmentsOf } from "./ReadonlyRepository.ts";
+import { MemoryProvider } from "@datasources/memory";
+import { ReadonlyRepository } from "./ReadonlyRepository.ts";
+import type { IConnection } from "./IConnection.ts";
+import type { Scalar } from "./builders/Scalar.ts";
 import { ListCRUDRepository } from "./tests/listCRUDRepository.ts";
-import { ListReadonlyRepository } from "./tests/listReadonlyRepository.ts";
 
 class Parent {
   id = 0;
@@ -156,7 +159,7 @@ describe("CRUDRepository", () => {
 
   it("throws when many via is readonly", async () => {
     const parents = new ListCRUDRepository<Parent>();
-    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, new ListReadonlyRepository<Child>([]));
+    parents.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, new ReadonlyRepository(Child, await open()));
     await expect(
       parents.create(assign(Parent, { children: [assign(Child, { label: "a" })] })),
     ).rejects.toThrow(/children/);
@@ -360,7 +363,7 @@ describe("CRUDRepository", () => {
         return item;
       },
     });
-    parents.addEnriched({ into: "name", from: "id", by: "id", select: "name" }, new ListReadonlyRepository([{ id: 1, name: "x" } as never]));
+    parents.addEnriched({ into: "name", from: "id", by: "id", select: "name" }, new ReadonlyRepository(Named, await open([{ id: 1, name: "x" }])));
     const item = Object.assign(new Soft(), { name: "ada" });
     await expect(parents.create(item)).resolves.toBe(item);
   });
@@ -413,7 +416,7 @@ describe("CRUDRepository", () => {
     const parents = new ListCRUDRepository<Parent>();
     parents.addEnriched(
       { into: "children", from: "id", by: "parent_id", many: true },
-      new ListReadonlyRepository<Child>([]),
+      new ReadonlyRepository(Child, await open()),
     );
     await expect(
       new DefaultWriteEnrichmentStrategy<Parent>().persist(
@@ -476,7 +479,7 @@ describe("CRUDRepository", () => {
     const ownedParents = new ListCRUDRepository<Parent>();
     ownedParents.addEnriched(
       { into: "children", from: "id", by: "parent_id", many: true },
-      new ListReadonlyRepository<Child>([]),
+      new ReadonlyRepository(Child, await open()),
     );
     const linkedParents = new ListCRUDRepository<Parent>();
     linkedParents.addEnriched(
@@ -487,7 +490,7 @@ describe("CRUDRepository", () => {
         many: true,
         association: { parent: "parent_id", related: "child_id" },
       },
-      new ListReadonlyRepository<Child>([]),
+      new ReadonlyRepository(Child, await open()),
     );
     const owned = enrichmentsOf(ownedParents)![0]!;
     const linked = enrichmentsOf(linkedParents)![0]!;

@@ -199,7 +199,7 @@ describe("MemoryCommand and CRUDRepository", () => {
         { name: "name", value: "b" },
       ]),
     ).toEqual({
-      result: { id: 2, name: "b" },
+      result: 2,
       rowsAffected: 1,
       parameters: [
         { name: "id", value: 2 },
