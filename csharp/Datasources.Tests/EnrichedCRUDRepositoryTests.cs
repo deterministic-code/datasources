@@ -39,132 +39,164 @@ public class CRUDRepositoryTests
     [Fact]
     public async Task CreateWritesChildrenStampsFkAndSkipsSelect()
     {
-        var parents = new ListCRUDRepository<Parent>();
-        var types = new ListCRUDRepository<TypeRow>(new TypeRow { id = 10, name = "person" });
-        var children = new ListCRUDRepository<Child>();
-        Repo(parents, types, children);
-        await parents.Create(new Parent
+        var connection = await Setup();
+        var parentsRepo = new CRUDRepository<Parent>(connection);
+        var typesRepo = new CRUDRepository<TypeRow>(connection);
+        var childrenRepo = new CRUDRepository<Child>(connection);
+        await typesRepo.Create(new TypeRow { name = "person" });
+        var type = await typesRepo.ReadSingle();
+        Repo(parentsRepo, typesRepo, childrenRepo);
+        await parentsRepo.Create(new Parent
         {
-            type_id = 10,
+            type_id = type!.id,
             children = [new Child { label = "a" }, new Child { label = "b" }]
         });
-        Assert.Equal(1, parents.Items[0].id);
-        Assert.Equal(2, children.Items.Count);
-        Assert.Equal([1, 1], children.Items.Select(child => child.parent_id));
-        Assert.Equal(["a", "b"], children.Items.Select(child => child.label));
-        Assert.Single(types.Items);
-        Assert.Equal("person", types.Items[0].name);
+        var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
+        Assert.True(parent.id > 0);
+        var children = await childrenRepo.Read().ToListAsync();
+        Assert.Equal(2, children.Count);
+        Assert.All(children, child => Assert.Equal(parent.id, child.parent_id));
+        Assert.Equal(["a", "b"], children.Select(child => child.label));
+        Assert.Equal("person", Assert.Single(await typesRepo.Read().ToListAsync()).name);
     }
 
     [Fact]
     public async Task CreateAppliesGeneratedParentIdBeforeChildFks()
     {
-        var parents = new ListCRUDRepository<Parent>(new Parent { id = 4 });
-        var children = new ListCRUDRepository<Child>();
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
-        await parents.Create(new Parent { children = [new Child { label = "n" }] });
-        Assert.Equal(5, Assert.Single(children.Items).parent_id);
+        var connection = await Setup();
+        var parentsRepo = new CRUDRepository<Parent>(connection);
+        var childrenRepo = new CRUDRepository<Child>(connection);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        await parentsRepo.Create(new Parent { type_id = 0, children = [new Child { label = "n" }] });
+        var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
+        var child = Assert.Single(await childrenRepo.Read().ToListAsync());
+        Assert.True(parent.id > 0);
+        Assert.Equal(parent.id, child.parent_id);
     }
 
     [Fact]
     public async Task UpdateReplaceSyncsChildren()
     {
-        var parents = new ListCRUDRepository<Parent>(new Parent { id = 1, type_id = 10 });
-        var children = new ListCRUDRepository<Child>(
-            new Child { id = 1, parent_id = 1, label = "a" },
-            new Child { id = 2, parent_id = 1, label = "b" });
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
-        await parents.Update(new Parent
+        var connection = await Setup();
+        var parentsRepo = new CRUDRepository<Parent>(connection);
+        var childrenRepo = new CRUDRepository<Child>(connection);
+        await parentsRepo.Create(new Parent { type_id = 0 });
+        var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
+        await childrenRepo.Create(new Child { parent_id = parent.id, label = "a" });
+        await childrenRepo.Create(new Child { parent_id = parent.id, label = "b" });
+        var kept = (await childrenRepo.Read().ToListAsync()).Single(child => child.label == "a");
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        await parentsRepo.Update(new Parent
         {
-            id = 1,
+            id = parent.id,
             children =
             [
-                new Child { id = 1, label = "aa" },
+                new Child { id = kept.id, label = "aa" },
                 new Child { label = "c" }
             ]
         });
-        Assert.Equal(2, children.Items.Count);
-        Assert.Equal("aa", children.Items.Single(child => child.id == 1).label);
-        Assert.Equal("c", children.Items.Single(child => child.id != 1).label);
-        Assert.All(children.Items, child => Assert.Equal(1, child.parent_id));
+        var children = await childrenRepo.Read().ToListAsync();
+        Assert.Equal(2, children.Count);
+        Assert.Equal("aa", children.Single(child => child.id == kept.id).label);
+        Assert.Equal("c", children.Single(child => child.id != kept.id).label);
+        Assert.All(children, child => Assert.Equal(parent.id, child.parent_id));
     }
 
     [Fact]
     public async Task DeleteCascadesChildrenThenParent()
     {
-        var parents = new ListCRUDRepository<Parent>(new Parent { id = 1 });
-        var children = new ListCRUDRepository<Child>(
-            new Child { id = 3, parent_id = 1, label = "a" });
-        var notes = new ListCRUDRepository<Note>(
-            new Note { id = 8, child_id = 3, text = "n" },
-            new Note { id = 9, child_id = 9, text = "other" });
-        children.AddEnriched(new("notes", "id", "child_id", Many: true), notes);
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
-        await parents.Delete(new Parent { id = 1 });
-        Assert.Empty(parents.Items);
-        Assert.Empty(children.Items);
-        Assert.Equal("other", Assert.Single(notes.Items).text);
+        var connection = await Setup();
+        var parentsRepo = new CRUDRepository<Parent>(connection);
+        var childrenRepo = new CRUDRepository<Child>(connection);
+        var notesRepo = new CRUDRepository<Note>(connection);
+        await parentsRepo.Create(new Parent());
+        var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
+        await childrenRepo.Create(new Child { parent_id = parent.id, label = "a" });
+        var child = Assert.Single(await childrenRepo.Read().ToListAsync());
+        await notesRepo.Create(new Note { child_id = child.id, text = "n" });
+        await notesRepo.Create(new Note { text = "other" });
+        childrenRepo.AddEnriched(new("notes", "id", "child_id", Many: true), notesRepo);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        await parentsRepo.Delete(new Parent { id = parent.id });
+        Assert.Empty(await parentsRepo.Read().ToListAsync());
+        Assert.Empty(await childrenRepo.Read().ToListAsync());
+        Assert.Equal("other", Assert.Single(await notesRepo.Read().ToListAsync()).text);
     }
 
     [Fact]
     public async Task DeleteStrategyCanSkipChildren()
     {
-        var children = new ListCRUDRepository<Child>(
-            new Child { id = 3, parent_id = 1, label = "a" });
-        var parents = new ListCRUDRepository<Parent>(
-            new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()),
-            new Parent { id = 1 });
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
-        await parents.Delete(new Parent { id = 1 });
-        Assert.Empty(parents.Items);
-        Assert.Equal("a", Assert.Single(children.Items).label);
+        var connection = await Setup();
+        var childrenRepo = new CRUDRepository<Child>(connection);
+        var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+        {
+            Write = new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()),
+        });
+        await parentsRepo.Create(new Parent());
+        var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
+        await childrenRepo.Create(new Child { parent_id = parent.id, label = "a" });
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        await parentsRepo.Delete(new Parent { id = parent.id });
+        Assert.Empty(await parentsRepo.Read().ToListAsync());
+        Assert.Equal("a", Assert.Single(await childrenRepo.Read().ToListAsync()).label);
     }
 
     [Fact]
     public async Task NestedManyWritesAndNestedSelectIsSkipped()
     {
-        var parents = new ListCRUDRepository<Parent>();
-        var children = new ListCRUDRepository<Child>();
-        var notes = new ListCRUDRepository<Note>();
-        var childTypes = new ListCRUDRepository<TypeRow>(new TypeRow { id = 3, name = "home" });
-        children.AddEnriched(new("type_name", "type_id", "id", "name"), childTypes);
-        children.AddEnriched(new("notes", "id", "child_id", Many: true), notes);
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
-        await parents.Create(new Parent
+        var connection = await Setup();
+        var parentsRepo = new CRUDRepository<Parent>(connection);
+        var childrenRepo = new CRUDRepository<Child>(connection);
+        var notesRepo = new CRUDRepository<Note>(connection);
+        var childTypesRepo = new CRUDRepository<TypeRow>(connection);
+        await childTypesRepo.Create(new TypeRow { name = "home" });
+        var home = Assert.Single(await childTypesRepo.Read().ToListAsync());
+        childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
+        childrenRepo.AddEnriched(new("notes", "id", "child_id", Many: true), notesRepo);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        await parentsRepo.Create(new Parent
         {
             children =
             [
                 new Child
                 {
-                    type_id = 3,
+                    type_id = home.id,
                     label = "a",
                     notes = [new Note { text = "hi" }]
                 }
             ]
         });
-        Assert.Equal("hi", Assert.Single(notes.Items).text);
-        Assert.Equal(children.Items[0].id, notes.Items[0].child_id);
-        Assert.Equal("home", Assert.Single(childTypes.Items).name);
+        var note = Assert.Single(await notesRepo.Read().ToListAsync());
+        var child = Assert.Single(await childrenRepo.Read().ToListAsync());
+        Assert.Equal("hi", note.text);
+        Assert.Equal(child.id, note.child_id);
+        Assert.Equal("home", Assert.Single(await childTypesRepo.Read().ToListAsync()).name);
     }
 
     [Fact]
     public async Task ManyReadonlyViaThrows()
     {
-        var parents = new ListCRUDRepository<Parent>();
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), new ReadonlyRepository<Child>(new MemoryProvider().Connection(null)));
+        var connection = await Setup();
+        var parentsRepo = new CRUDRepository<Parent>(connection);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), new ReadonlyRepository<Child>(connection));
         var error = await Assert.ThrowsAsync<DatasourceException>(() =>
-            parents.Create(new Parent { children = [new Child { label = "a" }] }));
+            parentsRepo.Create(new Parent { children = [new Child { label = "a" }] }));
         Assert.Contains("children", error.Message);
     }
 
     [Fact]
     public async Task GetStillEnriches()
     {
-        var parents = new ListCRUDRepository<Parent>(new Parent { id = 1, type_id = 10 });
-        var types = new ListCRUDRepository<TypeRow>(new TypeRow { id = 10, name = "org" });
-        var children = new ListCRUDRepository<Child>(new Child { parent_id = 1, label = "a" });
-        Repo(parents, types, children);
-        var item = await parents.ReadSingle();
+        var org = new Row { ["name"] = "org" };
+        var typesConnection = await Setup(org);
+        var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+        var parent = new Row { ["type_id"] = org["id"] };
+        var connection = await Setup(parent);
+        var parentsRepo = new CRUDRepository<Parent>(connection);
+        var childrenConnection = await Setup(new Row { ["parent_id"] = parent["id"], ["label"] = "a" });
+        var childrenRepo = new ReadonlyRepository<Child>(childrenConnection);
+        Repo(parentsRepo, typesRepo, childrenRepo);
+        var item = await parentsRepo.ReadSingle();
         Assert.Equal("org", item!.type_name);
         Assert.Equal("a", Assert.Single(item.children).label);
     }
@@ -182,13 +214,26 @@ public class CRUDRepositoryTests
             Task.CompletedTask;
     }
 
-    static ListCRUDRepository<Parent> Repo(
-        ListCRUDRepository<Parent> parents,
-        ListCRUDRepository<TypeRow> types,
-        ListCRUDRepository<Child> children)
+    static void Repo(
+        CRUDRepository<Parent> parentsRepo,
+        IReadonlyRepository<TypeRow> typesRepo,
+        IReadonlyRepository<Child> childrenRepo)
     {
-        parents.AddEnriched(new("type_name", "type_id", "id", "name"), types);
-        parents.AddEnriched(new("children", "id", "parent_id", Many: true), children);
-        return parents;
+        parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+    }
+
+    static async Task<IConnection> Setup(params Row[] rows)
+    {
+        var connection = new MemoryProvider().Connection(null);
+        await connection.Open();
+        foreach (var row in rows)
+        {
+            var response = await connection.CreateCommand().Execute(
+                "insert",
+                [.. row.Select(pair => new Parameter(pair.Key, pair.Value))]);
+            row["id"] = response.Result;
+        }
+        return connection;
     }
 }

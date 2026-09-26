@@ -6,24 +6,24 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::tests::list_repository::ListRepository;
+use crate::crud_repository::CRUDRepository;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct ContactsService {
-    contacts: ListRepository,
+    contacts: CRUDRepository,
 }
 
 impl ContactsService {
     pub fn new(
-        mut contacts: ListRepository,
+        mut contacts: CRUDRepository,
         types: Arc<dyn IReadonlyRepository>,
         sources: Arc<dyn IReadonlyRepository>,
         address_types: Arc<dyn IReadonlyRepository>,
         phone_types: Arc<dyn IReadonlyRepository>,
-        mut addresses: ListRepository,
-        mut phones: ListRepository,
+        mut addresses: CRUDRepository,
+        mut phones: CRUDRepository,
     ) -> Self {
         addresses.add_enriched(crate::enrichment::Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), false), address_types, None);
         phones.add_enriched(crate::enrichment::Enrichment::new("phone_type_name", "phone_type_id", "id", Some("name".into()), false), phone_types, None);

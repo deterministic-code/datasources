@@ -22,10 +22,8 @@ public class ContactsServiceTests
         var phoneTypesRepo = new ReadonlyRepository<PhoneType>(phoneTypesConnection);
         var connection = await Setup();
         var contactsRepo = new CRUDRepository<Contact>(connection);
-        var addressesConnection = await Setup();
-        var addressesRepo = new CRUDRepository<Address>(addressesConnection);
-        var phonesConnection = await Setup();
-        var phonesRepo = new CRUDRepository<Phone>(phonesConnection);
+        var addressesRepo = new CRUDRepository<Address>(connection);
+        var phonesRepo = new CRUDRepository<Phone>(connection);
         var service = ContactsService.Open(
             contactsRepo, typesRepo, sourcesRepo, addressTypesRepo, phoneTypesRepo, addressesRepo, phonesRepo);
         await service.Create(new Contact
@@ -36,12 +34,13 @@ public class ContactsServiceTests
         });
         var other = Assert.Single(await Read(service));
         Assert.True(other.id > 0);
-        await addressesConnection.CreateCommand().Execute("insert", [
-            new Parameter("contact_id", other.id),
-            new Parameter("line1", "other"),
-            new Parameter("city", "x"),
-            new Parameter("address_type_id", home["id"])
-        ]);
+        await addressesRepo.Create(new Address
+        {
+            contact_id = other.id,
+            line1 = "other",
+            city = "x",
+            address_type_id = Id(home)
+        });
         await service.Create(new Contact
         {
             contact_type_id = Id(person),

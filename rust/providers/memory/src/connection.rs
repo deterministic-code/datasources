@@ -60,6 +60,20 @@ impl MemoryConnection {
         self.state.store.collection(&self.collection_name(), f)
     }
 
+    pub fn with_rows<R>(
+        &self,
+        table: Option<&str>,
+        create: bool,
+        f: impl FnOnce(&mut Vec<Row>) -> R,
+    ) -> R {
+        let named = table.filter(|name| !name.is_empty());
+        let key = match named {
+            Some(name) if create || self.state.store.has_collection(name) => name.to_string(),
+            _ => self.collection_name(),
+        };
+        self.state.store.collection(&key, f)
+    }
+
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn finish_commit(&self) {
         *self.state.in_transaction.lock().unwrap() = false;

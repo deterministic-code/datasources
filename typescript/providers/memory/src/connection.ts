@@ -62,6 +62,12 @@ export class MemoryConnection implements IConnection {
     return this.store.getCollection(this.collection);
   }
 
+  rows(table: string | undefined, create: boolean): MemoryRecord[] {
+    return table && (create || this.store.hasCollection(table))
+      ? this.store.getCollection(table)
+      : this.getCollection();
+  }
+
   finishCommit(): void {
     this.inTransaction = false;
     this.snapshot = undefined;

@@ -46,11 +46,16 @@ impl RepositoryStatements {
             ..SelectStatementOptions::new(&self.table, &refs)
         });
         let text = map_sql(&self.query, built.get_text());
-        match where_clause {
-            Some(predicate) => {
-                SelectStatement::with_where(text, WhereText::new(predicate.get_text()))
+        match where_clause.and_then(|clause| clause.as_any().downcast_ref::<crate::Where>()) {
+            Some(clause) => {
+                let mut statement = SelectStatement::with_where(text, clause.clone());
+                statement.table = self.table.clone();
+                statement
             }
-            None => SelectStatement::text(text),
+            None => match where_clause {
+                Some(predicate) => SelectStatement::with_where(text, WhereText::new(predicate.get_text())),
+                None => SelectStatement::text(text),
+            },
         }
     }
 

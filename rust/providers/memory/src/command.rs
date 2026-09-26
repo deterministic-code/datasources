@@ -124,37 +124,61 @@ impl Command for MemoryCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        let Some(condition) = statement
+        let text = statement.get_text();
+        let connection = self.connection.clone();
+        let table = table_of(statement);
+        if let Some(condition) = statement
             .predicate()
             .and_then(|predicate| predicate.as_any().downcast_ref::<Where>())
             .map(|clause| clause.condition.clone())
-        else {
+        {
             return self
-                .execute_reader(&filter_text(statement), parameters)
+                .host
+                .run(&text, parameters, move |_query, _params| {
+                    let connection = connection.clone();
+                    let condition = condition.clone();
+                    let table = table.clone();
+                    async move {
+                        connection.ensure_open()?;
+                        let evaluator = StatementEvaluator;
+                        let rows = connection.with_rows(table.as_deref(), false, |items| {
+                            items
+                                .iter()
+                                .filter(|row| evaluator.evaluate(&condition, row) == Value::Bool(true))
+                                .cloned()
+                                .collect::<Vec<_>>()
+                        });
+                        Ok((
+                            Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
+                            rows,
+                        ))
+                    }
+                })
                 .await;
-        };
-        let connection = self.connection.clone();
-        self.host
-            .run(statement.get_text(), parameters, move |_query, _params| {
-                let connection = connection.clone();
-                let condition = condition.clone();
-                async move {
-                    connection.ensure_open()?;
-                    let evaluator = StatementEvaluator;
-                    let rows = connection.collection(|items| {
-                        items
-                            .iter()
-                            .filter(|row| evaluator.evaluate(&condition, row) == Value::Bool(true))
-                            .cloned()
-                            .collect::<Vec<_>>()
-                    });
-                    Ok((
-                        Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
-                        rows,
-                    ))
-                }
-            })
-            .await
+        }
+        let where_text = statement
+            .predicate()
+            .map(|predicate| predicate.get_text())
+            .unwrap_or_default();
+        if !where_text.trim_start().starts_with('{') && !text.trim_start().starts_with('{') && !text.trim().is_empty()
+        {
+            return self
+                .host
+                .run(&text, parameters, move |_query, _params| {
+                    let connection = connection.clone();
+                    let table = table.clone();
+                    async move {
+                        connection.ensure_open()?;
+                        let rows = connection.with_rows(table.as_deref(), false, |items| items.clone());
+                        Ok((
+                            Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
+                            rows,
+                        ))
+                    }
+                })
+                .await;
+        }
+        self.execute_reader(&filter_text(statement), parameters).await
     }
 
     async fn execute_statement(
@@ -162,19 +186,188 @@ impl Command for MemoryCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
+        let table = table_of(statement);
         match statement.kind() {
-            StatementKind::Insert => self.execute("insert", parameters).await,
+            StatementKind::Insert => self.write_row("insert", table.as_deref(), true, None, parameters).await,
             StatementKind::Update => {
-                let params = with_where(parameters, statement.predicate());
-                self.execute("update", Some(&params)).await
+                self.write_row("update", table.as_deref(), false, statement.predicate(), parameters)
+                    .await
             }
             StatementKind::Delete => {
-                let params = with_where(parameters, statement.predicate());
-                self.execute("delete", Some(&params)).await
+                self.write_row("delete", table.as_deref(), false, statement.predicate(), parameters)
+                    .await
             }
             _ => self.execute(&statement.get_text(), parameters).await,
         }
     }
+}
+
+fn next_id(row: &Row, rows: &[Row]) -> Value {
+    if let Some(id @ Value::Int(_)) = row.get("id") {
+        return id.clone();
+    }
+    Value::Int(
+        rows.iter()
+            .filter_map(|item| match item.get("id") {
+                Some(Value::Int(id)) => Some(*id),
+                _ => None,
+            })
+            .max()
+            .unwrap_or(0)
+            + 1,
+    )
+}
+
+impl MemoryCommand {
+    async fn write_row(
+        &self,
+        op: &str,
+        table: Option<&str>,
+        create: bool,
+        predicate: Option<&dyn IWhere>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let connection = self.connection.clone();
+        let table = table.map(str::to_string);
+        let op_text = op.to_string();
+        let predicate_text = predicate.map(|item| item.get_text());
+        let condition = predicate
+            .and_then(|item| item.as_any().downcast_ref::<Where>())
+            .map(|clause| clause.condition.clone());
+        let label = op_text.clone();
+        let where_names = predicate
+            .map(|item| {
+                item.parameters()
+                    .into_iter()
+                    .map(|parameter| parameter.name)
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        self.host
+            .run(&label, parameters, move |_query, params| {
+                let connection = connection.clone();
+                let table = table.clone();
+                let op = op_text.clone();
+                let predicate_text = predicate_text.clone();
+                let condition = condition.clone();
+                let where_names = where_names.clone();
+                async move {
+                    connection.ensure_open()?;
+                    let params = parameters_to_map(params.as_deref());
+                    if op == "insert" {
+                        let id = connection.with_rows(table.as_deref(), create, |items| next_id(&params, items));
+                        connection.with_rows(table.as_deref(), create, |items| {
+                            let mut row = params.clone();
+                            row.insert("id".into(), id.clone());
+                            items.push(row);
+                        });
+                        return Ok((Response::new(id, 1), vec![]));
+                    }
+                    if op == "update" {
+                        let affected = connection.with_rows(table.as_deref(), false, |items| {
+                            apply_update(items, &params, predicate_text.as_deref(), condition.as_ref(), &where_names)
+                        });
+                        return Ok((Response::new(Value::Null, affected), vec![]));
+                    }
+                    let affected = connection.with_rows(table.as_deref(), false, |items| {
+                        apply_delete(items, &params, predicate_text.as_deref(), condition.as_ref())
+                    });
+                    Ok((Response::new(Value::Null, affected), vec![]))
+                }
+            })
+            .await
+    }
+}
+
+fn apply_update(
+    items: &mut [Row],
+    params: &Row,
+    predicate_text: Option<&str>,
+    condition: Option<&datasources::Expression>,
+    where_names: &[String],
+) -> i64 {
+    let mut count = 0i64;
+    for item in items.iter_mut() {
+        if !row_matches(item, params, predicate_text, condition) {
+            continue;
+        }
+        if condition.is_some() {
+            for (key, value) in params {
+                if !where_names.contains(key) && !key.ends_with("__where") {
+                    item.insert(key.clone(), value.clone());
+                }
+            }
+        } else {
+            let mut obj = params.clone();
+            obj.remove("$where");
+            item.extend(obj);
+        }
+        count += 1;
+    }
+    count
+}
+
+fn apply_delete(
+    items: &mut Vec<Row>,
+    params: &Row,
+    predicate_text: Option<&str>,
+    condition: Option<&datasources::Expression>,
+) -> i64 {
+    let before = items.len();
+    items.retain(|row| !row_matches(row, params, predicate_text, condition));
+    (before - items.len()) as i64
+}
+
+fn row_matches(
+    row: &Row,
+    params: &Row,
+    predicate_text: Option<&str>,
+    condition: Option<&datasources::Expression>,
+) -> bool {
+    if let Some(condition) = condition {
+        return StatementEvaluator.evaluate(condition, row) == Value::Bool(true);
+    }
+    let filter = match predicate_text {
+        Some(text) if text.trim_start().starts_with('{') => parse_filter(Some(text)).unwrap_or_else(|_| Row::new()),
+        Some(_) => identity_filter(params),
+        None => {
+            if params.is_empty() {
+                Row::new()
+            } else {
+                identity_filter(params)
+            }
+        }
+    };
+    matches(row, &filter)
+}
+
+fn table_of(statement: &dyn Statement) -> Option<String> {
+    if let Some(select) = statement.as_any().downcast_ref::<datasources::SelectStatement>() {
+        if !select.table.is_empty() {
+            return Some(select.table.clone());
+        }
+    }
+    table_in(&statement.get_text())
+}
+
+fn table_in(text: &str) -> Option<String> {
+    let sql = text.trim_start();
+    let lower = sql.to_ascii_lowercase();
+    let skip = if lower.starts_with("insert into ") {
+        "insert into ".len()
+    } else if lower.starts_with("delete from ") {
+        "delete from ".len()
+    } else if lower.starts_with("update ") {
+        "update ".len()
+    } else if let Some(at) = lower.find(" from ") {
+        at + " from ".len()
+    } else {
+        return None;
+    };
+    let rest = sql.get(skip..)?;
+    let end = rest.find([' ', '(']).unwrap_or(rest.len());
+    let name = rest[..end].trim();
+    if name.is_empty() { None } else { Some(name.to_string()) }
 }
 
 fn inserted_id(row: &Row, connection: &MemoryConnection) -> Value {
@@ -209,17 +402,4 @@ fn filter_text(statement: &dyn Statement) -> String {
     } else {
         String::new()
     }
-}
-
-fn with_where(
-    parameters: Option<&[Parameter]>,
-    where_clause: Option<&dyn IWhere>,
-) -> Vec<Parameter> {
-    let mut params = parameters.unwrap_or(&[]).to_vec();
-    if let Some(text) = where_clause.map(|predicate| predicate.get_text()) {
-        if text.trim_start().starts_with('{') {
-            params.push(Parameter::new("$where", Value::Text(text)));
-        }
-    }
-    params
 }

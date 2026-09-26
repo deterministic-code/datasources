@@ -10,10 +10,10 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     readonly RepositoryStatements? statements;
 
     public Type Type => typeof(T);
-    internal IMapper<T, T>? Mapper { get; }
-    internal IRepositoryTree Tree { get; }
+    protected IMapper<T, T>? Mapper { get; }
+    protected IRepositoryTree Tree { get; }
     IReadOnlyList<StoredEnrichment> IEnrichmentHost.Enrichments => enrichments;
-    internal bool Enriched => enrichments.Count > 0;
+    protected bool Enriched => enrichments.Count > 0;
 
     public ReadonlyRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
@@ -78,27 +78,55 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     public virtual IAsyncEnumerable<T> Read(IWhere where) =>
         Read(Compiled(Stored(where)));
 
-    IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
-        ReadTracked(Compiled(Stored(where)));
-
     public virtual Task<T?> ReadSingle(IWhere where) =>
         ReadSingle(Compiled(Stored(where)));
 
     public virtual IAsyncEnumerable<T> Read(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
         Items(ReadTracked(query, parameters));
 
-    IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
-        IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
-        Apply(ReadItems(query, parameters ?? (query as ISelectStatement)?.Where?.Parameters));
+    public virtual async Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+        await Read(query, parameters).FirstOrDefaultAsync() ?? default;
 
     protected virtual IAsyncEnumerable<(T Item, Row? Source)> ReadItems(
         IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
         ReadRows(query, parameters);
 
-    IAsyncEnumerable<(T Item, Row? Source)> Apply(IAsyncEnumerable<(T Item, Row? Source)> pairs) =>
+    protected ICommand Command() =>
+        middlewares.Aggregate(
+            (connection ?? throw new DatasourceException("Connection required")).CreateCommand(),
+            (command, middleware) => command.AddMiddleware(middleware));
+
+    protected RepositoryStatements Statements =>
+        statements ?? throw new DatasourceException("Statements required");
+
+    protected TypeConverter<T, Row> RowConverter =>
+        rowConverter ?? throw new DatasourceException("Row converter required");
+
+    protected string Column(string property) => columns.Map(property);
+
+    protected Value Cell(string property, Value value, bool fieldsApplied) =>
+        rowConverter is RowTypeConverter<T> typed
+        && !fieldsApplied
+        && typed.Fields.TryGetValue(property, out var field)
+            ? field.ReverseConvert(value)
+            : value;
+
+    private IWhere Stored(IWhere where, bool fieldsApplied = false) =>
+        where is Where clause
+            ? clause.Map(Column, (name, cell) => Cell(name, cell, fieldsApplied))
+            : where;
+
+    private IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
+        ReadTracked(Compiled(Stored(where)));
+
+    private IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
+        IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+        Apply(ReadItems(query, parameters ?? (query as ISelectStatement)?.Where?.Parameters));
+
+    private IAsyncEnumerable<(T Item, Row? Source)> Apply(IAsyncEnumerable<(T Item, Row? Source)> pairs) =>
         Enriched ? Sourced(pairs) : pairs;
 
-    async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
+    private async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
         var reader = await Command().ExecuteReader(query ?? Statements.Query(), parameters);
         try
@@ -113,13 +141,13 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         }
     }
 
-    async IAsyncEnumerable<(T Item, Row? Source)> ReadRows(IStatement? query, IReadOnlyList<Parameter>? parameters)
+    private async IAsyncEnumerable<(T Item, Row? Source)> ReadRows(IStatement? query, IReadOnlyList<Parameter>? parameters)
     {
         await foreach (var renamed in ReadSources(query, parameters))
             yield return (Mapper!.Map(RowConverter.Convert(renamed)), renamed);
     }
 
-    async IAsyncEnumerable<(T Item, Row? Source)> Sourced(IAsyncEnumerable<(T Item, Row? Source)> pairs)
+    private async IAsyncEnumerable<(T Item, Row? Source)> Sourced(IAsyncEnumerable<(T Item, Row? Source)> pairs)
     {
         var items = new List<T>();
         var sources = new List<Row?>();
@@ -138,49 +166,21 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
             yield return (items[i], paired ? sources[i] : null);
     }
 
-    async Task Enrich(IList<object> parents, IReadOnlyList<Row?>? sources)
+    private async Task Enrich(IList<object> parents, IReadOnlyList<Row?>? sources)
     {
         foreach (var entry in enrichments)
             await entry.Apply(parents, sources);
     }
 
-    static async IAsyncEnumerable<T> Items(IAsyncEnumerable<(T Item, Row? Source)> pairs)
+    private static async IAsyncEnumerable<T> Items(IAsyncEnumerable<(T Item, Row? Source)> pairs)
     {
         await foreach (var (item, _) in pairs)
             yield return item;
     }
 
-    public virtual async Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
-        await Read(query, parameters).FirstOrDefaultAsync() ?? default;
-
-    internal ICommand Command() =>
-        middlewares.Aggregate(
-            (connection ?? throw new DatasourceException("Connection required")).CreateCommand(),
-            (command, middleware) => command.AddMiddleware(middleware));
-
-    internal RepositoryStatements Statements =>
-        statements ?? throw new DatasourceException("Statements required");
-
-    internal TypeConverter<T, Row> RowConverter =>
-        rowConverter ?? throw new DatasourceException("Row converter required");
-
-    internal IWhere Stored(IWhere where, bool fieldsApplied = false) =>
-        where is Where clause
-            ? clause.Map(Column, (name, cell) => Cell(name, cell, fieldsApplied))
-            : where;
-
-    internal string Column(string property) => columns.Map(property);
-
-    internal Value Cell(string property, Value value, bool fieldsApplied) =>
-        rowConverter is RowTypeConverter<T> typed
-        && !fieldsApplied
-        && typed.Fields.TryGetValue(property, out var field)
-            ? field.ReverseConvert(value)
-            : value;
-
-    ISelectStatement Compiled(IWhere where) =>
+    private ISelectStatement Compiled(IWhere where) =>
         statements is { } sql ? sql.Query(where) : new SelectStatement(where.GetText(), where);
 
-    Row Renamed(Row row) =>
+    private Row Renamed(Row row) =>
         new(row.Select(pair => KeyValuePair.Create(columns.ReverseMap(pair.Key), pair.Value)));
 }

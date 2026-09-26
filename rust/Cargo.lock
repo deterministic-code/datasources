@@ -486,6 +486,7 @@ dependencies = [
  "async-trait",
  "base64 0.22.1",
  "chrono",
+ "datasources-memory",
  "regex",
  "rust_decimal",
  "tokio",

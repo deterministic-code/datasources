@@ -133,12 +133,12 @@ impl ReadonlyRepository {
         self
     }
 
-    pub(crate) fn enriched(&self) -> bool {
-        !self.enrichments.lock().expect("enrichments").is_empty()
-    }
-
     pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
         self.middlewares.push(middleware);
+    }
+
+    pub(crate) fn enriched(&self) -> bool {
+        !self.enrichments.lock().expect("enrichments").is_empty()
     }
 
     pub(crate) fn memory_items(&self) -> Option<&Arc<SharedItems>> {
@@ -153,7 +153,7 @@ impl ReadonlyRepository {
         command
     }
 
-    pub(crate) fn query_of(
+    fn query_of(
         &self,
         query: Option<&dyn Statement>,
     ) -> (SelectStatement, Vec<Parameter>) {
@@ -173,6 +173,65 @@ impl ReadonlyRepository {
         } else {
             (self.statements.query(None), Vec::new())
         }
+    }
+
+    pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
+        self.row_converter
+            .reverse_convert(&Mapper::reverse_map(&self.rows_mapper, item.clone()))
+    }
+
+    fn store_where(
+        &self,
+        where_clause: &dyn IWhere,
+        fields_applied: bool,
+    ) -> Result<Option<Where>> {
+        match where_clause.as_any().downcast_ref::<Where>() {
+            Some(clause) => Ok(Some(self.store_clause(clause, fields_applied)?)),
+            None => Ok(None),
+        }
+    }
+
+    fn store_clause(&self, clause: &Where, fields_applied: bool) -> Result<Where> {
+        clause.map(
+            |name| self.column(name),
+            |name, cell| self.cell(name, cell, fields_applied),
+        )
+    }
+
+    pub(crate) fn column(&self, property: &str) -> String {
+        Mapper::map(&self.column_mappings, property.to_string())
+    }
+
+    pub(crate) async fn fill(
+        &self,
+        parents: &mut Vec<Row>,
+        sources: Option<&[Option<Row>]>,
+    ) -> Result<()> {
+        let entries = self.enrichments.lock().expect("enrichments").clone();
+        for entry in entries {
+            entry.apply(parents, sources).await?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn cell(
+        &self,
+        property: &str,
+        value: &Value,
+        fields_applied: bool,
+    ) -> Result<Value> {
+        match self.row_converter.fields.get(property) {
+            Some(field) if !fields_applied => field.reverse_convert(value),
+            _ => Ok(value.clone()),
+        }
+    }
+
+    async fn read_tracked(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Vec<(Row, Option<Row>)>> {
+        self.apply(self.read_items(query, parameters).await?).await
     }
 
     async fn read_sources(
@@ -266,23 +325,10 @@ impl ReadonlyRepository {
             .collect())
     }
 
-    pub(crate) async fn read_tracked(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Vec<(Row, Option<Row>)>> {
-        self.apply(self.read_items(query, parameters).await?).await
-    }
-
     fn renamed(&self, row: Row) -> Row {
         row.into_iter()
             .map(|(key, value)| (Mapper::reverse_map(&self.column_mappings, key), value))
             .collect()
-    }
-
-    pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        self.row_converter
-            .reverse_convert(&Mapper::reverse_map(&self.rows_mapper, item.clone()))
     }
 
     fn stored_query(&self, where_clause: &dyn IWhere) -> Result<(SelectStatement, Vec<Parameter>)> {
@@ -292,52 +338,6 @@ impl ReadonlyRepository {
                 self.statements.query(Some(where_clause)),
                 where_clause.parameters(),
             )),
-        }
-    }
-
-    pub(crate) fn store_where(
-        &self,
-        where_clause: &dyn IWhere,
-        fields_applied: bool,
-    ) -> Result<Option<Where>> {
-        match where_clause.as_any().downcast_ref::<Where>() {
-            Some(clause) => Ok(Some(self.store_clause(clause, fields_applied)?)),
-            None => Ok(None),
-        }
-    }
-
-    pub(crate) fn store_clause(&self, clause: &Where, fields_applied: bool) -> Result<Where> {
-        clause.map(
-            |name| self.column(name),
-            |name, cell| self.cell(name, cell, fields_applied),
-        )
-    }
-
-    pub(crate) fn column(&self, property: &str) -> String {
-        Mapper::map(&self.column_mappings, property.to_string())
-    }
-
-    pub(crate) async fn fill(
-        &self,
-        parents: &mut Vec<Row>,
-        sources: Option<&[Option<Row>]>,
-    ) -> Result<()> {
-        let entries = self.enrichments.lock().expect("enrichments").clone();
-        for entry in entries {
-            entry.apply(parents, sources).await?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn cell(
-        &self,
-        property: &str,
-        value: &Value,
-        fields_applied: bool,
-    ) -> Result<Value> {
-        match self.row_converter.fields.get(property) {
-            Some(field) if !fields_applied => field.reverse_convert(value),
-            _ => Ok(value.clone()),
         }
     }
 

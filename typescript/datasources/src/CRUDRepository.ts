@@ -165,7 +165,7 @@ export class CRUDRepository<T = Cells>
 
   protected save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
-    const where = byWhere ? this.stored(byWhere) : this.stored(this.idWhere(record), true);
+    const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.statements!.update(fields, where);
@@ -174,7 +174,7 @@ export class CRUDRepository<T = Cells>
 
   protected remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
-    const where = byWhere ? this.stored(byWhere) : this.stored(this.idWhere(record), true);
+    const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
     const statement = this.statements!.delete(where);
     const listed = where.parameters ?? [];
     return execute(
@@ -185,6 +185,11 @@ export class CRUDRepository<T = Cells>
         : [],
     );
   };
+
+  private mapped = (where: IWhere, fieldsApplied: boolean): IWhere =>
+    where instanceof Where
+      ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied))
+      : where;
 
   private byId = (id: Scalar | Cells): IWhere => {
     if (this.ids.length === 0) throw new DatasourceError("ReadSingleById requires an Id column");

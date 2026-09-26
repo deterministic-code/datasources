@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { MemoryProvider } from "@datasources/memory";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
-import { ListCRUDRepository } from "./tests/listCRUDRepository.ts";
 
 class Item {
   id = 0;
@@ -15,8 +15,8 @@ describe("repository type", () => {
     expect(new ReadonlyRepository(Item, new MockConnection()).type).toBe(Item);
   });
 
-  it("list repository reports item type", () => {
-    const repo = new ListCRUDRepository<Item>([], Item);
+  it("crud repository reports item type", () => {
+    const repo = new CRUDRepository(Item, new MemoryProvider().connection());
     expect(repo.type).toBe(Item);
   });
 
