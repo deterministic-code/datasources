@@ -3,7 +3,6 @@ import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
-import type { Scalar } from "./builders/Scalar.ts";
 import type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 export type BuiltRepository<T = Cells> = {
@@ -15,5 +14,4 @@ export type BuiltRepository<T = Cells> = {
   readColumns: string[];
   ids: string[];
   type: Constructable<T>;
-  create?: IMapper<Scalar, T>;
 };

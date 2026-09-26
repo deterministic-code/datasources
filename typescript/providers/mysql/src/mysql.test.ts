@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, generatedId, type IDriver } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlConnection } from "./connection.ts";
@@ -221,6 +221,7 @@ describe("Mysql datasource", () => {
       transaction: (c, isolation = "serializable") =>
         new MysqlTransaction(c as MysqlConnection, isolation),
       rowTypeConverters: MysqlRowTypeConverters,
+      generatedId,
     });
     const ds = new Datasource("mysql", of());
     expect(ds.provider).toBe("mysql");

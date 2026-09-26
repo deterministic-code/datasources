@@ -63,6 +63,18 @@ rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
 
 **Returns** `Record<string, TypeConverter<Cell, Cell>>`
 
+##### generatedId(id)
+
+Canonicalizes an engine insert id before it is stored on `Response.result`. The default, exported as `generatedId`, returns `id`.
+
+```typescript
+generatedId(id: Cell): Cell
+```
+
+- `id` — insert identity from the engine
+
+**Returns** `Cell`
+
 ### csharp
 #### IDriver
 
@@ -119,6 +131,18 @@ IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get
 
 **Returns** `IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
 
+##### GeneratedId(id)
+
+Canonicalizes an engine insert id before it is stored on `Response.Result`. The default returns `id`. MySQL parses a text insert id into `Value.Int`.
+
+```csharp
+Value GeneratedId(Value id)
+```
+
+- `id` — insert identity from the engine
+
+**Returns** [Value](./sections/value.md)
+
 ### rust
 #### Driver
 
@@ -174,6 +198,18 @@ fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Va
 ```
 
 **Returns** `HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`
+
+##### generated_id(id)
+
+Canonicalizes an engine insert id before it is stored on `Response.result`. The default returns `id`.
+
+```rust
+fn generated_id(&self, id: Value) -> Value
+```
+
+- `id` — insert identity from the engine
+
+**Returns** [Value](./sections/value.md)
 :::
 
 ## Remarks
@@ -181,6 +217,8 @@ fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Va
 `connection` receives the options bag (`url`, `filename`, `host`, `database`, `schema`, …). `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
 
 `rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](./sections/type-converters.md). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
+
+`generatedId` / `GeneratedId` / `generated_id` runs only on an insert identity (`last_insert_rowid`, `LastInsertedId`, `RETURNING` on `INSERT`, the memory inserted id) before that value is stored on `Response.result`. SELECT scalars stay `Value.From`. The default returns the value unchanged. TypeScript drivers assign the exported `generatedId` function; C# and Rust inherit the default method.
 
 The package exports only the driver type.
 

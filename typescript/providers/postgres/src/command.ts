@@ -12,12 +12,15 @@ import {
   type Response,
 } from "@datasources/core";
 import { bindParameters, toPostgres, withReturning } from "./bind.ts";
+import { PostgresDriver } from "./PostgresDriver.ts";
 import type { PostgresConnection } from "./connection.ts";
 import type { PostgresExecuteResult } from "./i-postgres-driver.ts";
 import type { Scalar } from "./scalar.ts";
 
 const isSelect = (sql: string) =>
   sql.trimStart().toUpperCase().startsWith("SELECT");
+const isInsert = (sql: string) =>
+  sql.trimStart().toUpperCase().startsWith("INSERT");
 const isCall = (sql: string) =>
   sql.trimStart().toUpperCase().startsWith("CALL");
 const hasOutput = (parameters?: Parameter[]) =>
@@ -93,9 +96,10 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     }
     const { text, values } = toPostgres(rewritten, params);
     const queried = await this.connection.require().query(text, values);
+    const id = queried.rows[0]?.id ?? null;
     return {
       rowsAffected: queried.rowCount ?? queried.rows.length,
-      result: queried.rows[0]?.id ?? null,
+      result: isInsert(sql) ? (new PostgresDriver().generatedId(id) as Scalar) : id,
       parameters,
     };
   }

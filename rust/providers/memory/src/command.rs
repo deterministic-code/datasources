@@ -1,10 +1,11 @@
 use crate::connection::MemoryConnection;
 use crate::filter::{matches, parse_filter};
+use crate::provider::MemoryProvider;
 use async_trait::async_trait;
 use datasources::{
     identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, IWhere, Parameter, Reader, Response, Result, Row,
-    Statement, StatementEvaluator, StatementKind, Value, Where,
+    CommandMiddlewareHost, DatasourceError, Driver, IWhere, Parameter, Reader, Response, Result,
+    Row, Statement, StatementEvaluator, StatementKind, Value, Where,
 };
 use std::sync::Arc;
 
@@ -69,7 +70,7 @@ impl Command for MemoryCommand {
                     match op.as_str() {
                         "insert" => {
                             let mut row = params.clone();
-                            let id = inserted_id(&row, &connection);
+                            let id = MemoryProvider.generated_id(inserted_id(&row, &connection));
                             row.insert("id".into(), id.clone());
                             connection.collection(|items| items.push(row));
                             Ok((Response::new(id, 1), vec![]))
@@ -255,7 +256,11 @@ impl MemoryCommand {
                     connection.ensure_open()?;
                     let params = parameters_to_map(params.as_deref());
                     if op == "insert" {
-                        let id = connection.with_rows(table.as_deref(), create, |items| next_id(&params, items));
+                        let id = MemoryProvider.generated_id(connection.with_rows(
+                            table.as_deref(),
+                            create,
+                            |items| next_id(&params, items),
+                        ));
                         connection.with_rows(table.as_deref(), create, |items| {
                             let mut row = params.clone();
                             row.insert("id".into(), id.clone());

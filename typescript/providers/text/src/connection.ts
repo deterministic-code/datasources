@@ -1,16 +1,16 @@
 import {
+  StubCommand,
   StubConnection,
   type DatasourceOptions,
   type ICommand,
 } from "@datasources/core";
-import { TextCommand } from "./command.ts";
 
 export class TextConnection extends StubConnection {
   constructor(_options?: DatasourceOptions) {
     super("text");
   }
 
-  createCommand = (): ICommand => new TextCommand(this);
+  createCommand = (): ICommand => new StubCommand(this.provider, this);
 
   static from = (options?: DatasourceOptions): TextConnection =>
     new TextConnection(options);

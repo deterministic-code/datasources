@@ -18,4 +18,8 @@ pub trait Driver: Send + Sync {
     fn row_type_converters(
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>;
+
+    fn generated_id(&self, id: Value) -> Value {
+        id
+    }
 }

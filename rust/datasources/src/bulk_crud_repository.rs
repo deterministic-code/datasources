@@ -61,11 +61,7 @@ impl BulkCRUDRepository {
         let mut rows_affected = 0;
         for item in items {
             let created = self.crud.create(item).await?;
-            result = created
-                .get("id")
-                .or_else(|| created.get("Id"))
-                .cloned()
-                .unwrap_or(Value::Null);
+            result = self.crud.id_value(&created);
             rows_affected += 1;
         }
         Ok(Response::new(result, rows_affected))

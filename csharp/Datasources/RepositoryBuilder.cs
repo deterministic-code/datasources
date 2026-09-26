@@ -17,15 +17,14 @@ public static class RepositoryBuilder<T> where T : new()
             .Select(options.ColumnMappings.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
-        var (ids, insert, update, delete, create) = options switch
+        var (ids, insert, update, delete) = options switch
         {
             CRUDRepositoryOptions<T> crud => (
                 crud.Ids,
                 crud.Insert,
                 crud.Update,
-                crud.Delete,
-                crud.Create ?? CRUDRepositoryOptions<T>.Identity(crud.Ids)),
-            _ => (Array.Empty<string>(), null, null, null, null)
+                crud.Delete),
+            _ => (Array.Empty<string>(), null, null, null)
         };
         return new(
             connection,
@@ -33,8 +32,7 @@ public static class RepositoryBuilder<T> where T : new()
             options.RowsMapper,
             options.ColumnMappings,
             new RepositoryStatements(entity, columns, options.Query, insert, update, delete),
-            ids,
-            create);
+            ids);
     }
 
     public static CRUDRepository<T> Build(IConnection connection, CRUDRepositoryOptions<T> options) =>

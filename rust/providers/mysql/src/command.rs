@@ -2,13 +2,14 @@ use crate::connection::{map_err, MysqlConnection};
 use crate::converters::{
     BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
 };
+use crate::driver::MysqlDriver;
 use crate::engine::to_mysql;
 use crate::reader::MysqlReader;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, TypeConverter,
-    Value,
+    CommandMiddlewareHost, DatasourceError, Driver, Parameter, Reader, Response, Result,
+    TypeConverter, Value,
 };
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Row, Value as MysqlValue};
@@ -71,7 +72,7 @@ impl MysqlCommand {
         }
         Ok(MysqlExecuteResult {
             rows_affected: conn.affected_rows() as i64,
-            result: Value::Int(conn.last_insert_id().unwrap_or(0) as i64),
+            result: MysqlDriver.generated_id(Value::Int(conn.last_insert_id().unwrap_or(0) as i64)),
         })
     }
 }

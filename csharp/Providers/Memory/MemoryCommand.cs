@@ -56,7 +56,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
-                var id = InsertedId(obj, Typed.GetCollection());
+                var id = ((IDriver)new MemoryProvider()).GeneratedId(InsertedId(obj, Typed.GetCollection()));
                 obj["id"] = id;
                 Typed.GetCollection().Add(new Row(obj));
                 return Task.FromResult((Response.Of(id, 1, paramsList), EmptyRows()));
@@ -102,7 +102,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
-                var id = InsertedId(obj, rows);
+                var id = ((IDriver)new MemoryProvider()).GeneratedId(InsertedId(obj, rows));
                 obj["id"] = id;
                 rows.Add(new Row(obj));
                 return Task.FromResult((Response.Of(id, 1, paramsList), EmptyRows()));

@@ -1,4 +1,5 @@
 import {
+  generatedId as identityGeneratedId,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -13,6 +14,7 @@ import { TextConnection } from "./connection.ts";
 
 export class TextProvider implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
+  generatedId = identityGeneratedId;
   connection = (options?: DatasourceOptions): IConnection =>
     TextConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

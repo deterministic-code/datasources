@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, generatedId, type IDriver } from "@datasources/core";
 import { bindParameters, toPostgres, withReturning } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
@@ -249,6 +249,7 @@ describe("Postgres datasource", () => {
       transaction: (c, isolation = "serializable") =>
         new PostgresTransaction(c as PostgresConnection, isolation),
       rowTypeConverters: PostgresRowTypeConverters,
+      generatedId,
     });
     const ds = new Datasource("postgres", of());
     expect(ds.provider).toBe("postgres");

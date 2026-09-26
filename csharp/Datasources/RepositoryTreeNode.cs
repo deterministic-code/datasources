@@ -14,8 +14,9 @@ public sealed class RepositoryTreeNode(
     public Enrichment? Enrichment { get; } = enrichment;
 
     internal static object? SourceKey(object parent, string name, Row? source) =>
-        source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
+        source is not null && source.TryGetValue(name, out var cell) && cell is not global::Datasources.Value.Null
             ? cell.ToObject()
+
             : parent.GetType().GetProperty(name)?.GetValue(parent);
 
     internal static string KeyOf(object? key) => key?.ToString() ?? "";

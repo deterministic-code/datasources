@@ -1,4 +1,5 @@
 import {
+  generatedId as identityGeneratedId,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -13,6 +14,7 @@ import { OracleConnection } from "./connection.ts";
 
 export class OracleProvider implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
+  generatedId = identityGeneratedId;
   connection = (options?: DatasourceOptions): IConnection =>
     OracleConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

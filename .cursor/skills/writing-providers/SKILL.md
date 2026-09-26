@@ -10,12 +10,13 @@ description: >-
 
 C# is the reference. Rust and TypeScript match it.
 
-Read `docs/writing-providers.md` for the interface. Implement these four members:
+Read `docs/writing-providers.md` for the interface. Implement these members:
 
 - `connection` — build the connection from the options bag
 - `command` — build a command for that connection; delegate to the connection's `createCommand`
 - `transaction` — build a transaction; isolation defaults to serializable
 - `rowTypeConverters` — canonical cell converters (`bool`, `datetime`, `uuid`, `decimal`, `binary`). Empty when cells are already canonical
+- `generatedId` — canonicalize an engine insert id before it is stored on the response. Default returns the value unchanged. C# and Rust inherit that default. TypeScript assigns the exported `generatedId`. MySQL C# parses a text insert id into an integer. Call it only for insert identities, not SELECT scalars.
 
 ## Public surface
 

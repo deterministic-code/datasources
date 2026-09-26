@@ -12,6 +12,7 @@ import {
   type Response,
 } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
+import { MysqlDriver } from "./MysqlDriver.ts";
 import type { MysqlConnection } from "./connection.ts";
 import type { MysqlExecuteResult } from "./i-mysql-engine.ts";
 import type { Scalar } from "./scalar.ts";
@@ -113,7 +114,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       ? { rowsAffected: result.length, parameters }
       : {
           rowsAffected: result.affectedRows ?? 0,
-          result: result.insertId,
+          result: new MysqlDriver().generatedId(result.insertId ?? null) as Scalar,
           parameters,
         };
   }

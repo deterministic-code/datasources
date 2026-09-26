@@ -1,13 +1,11 @@
 use crate::built_repository::BuiltRepository;
 use crate::connection::Connection;
 use crate::converters::{Cells, RowTypeConverter};
-use crate::crud_repository_options::{identity_mapper, CRUDRepositoryOptions};
+use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::mappers::{Mapper, TransformMapper};
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::result::Result;
-use crate::row::Row;
 use crate::table_repository_statements::RepositoryStatements;
-use crate::value::Value;
 use std::sync::Arc;
 
 pub struct RepositoryBuilder;
@@ -17,7 +15,7 @@ impl RepositoryBuilder {
         connection: Arc<dyn Connection>,
         options: ReadonlyRepositoryOptions,
     ) -> Result<BuiltRepository> {
-        assemble(connection, options, Vec::new(), None, None, None, None)
+        assemble(connection, options, Vec::new(), None, None, None)
     }
 
     pub(crate) fn parts_crud(
@@ -30,12 +28,10 @@ impl RepositoryBuilder {
             update,
             delete,
             return_: _,
-            create,
             write,
             read,
         } = options;
-        let create = create.unwrap_or_else(|| identity_mapper(&ids));
-        let mut built = assemble(connection, read, ids, insert, update, delete, Some(create))?;
+        let mut built = assemble(connection, read, ids, insert, update, delete)?;
         built.write = write;
         Ok(built)
     }
@@ -48,7 +44,6 @@ fn assemble(
     insert: Option<Arc<TransformMapper<String, String>>>,
     update: Option<Arc<TransformMapper<String, String>>>,
     delete: Option<Arc<TransformMapper<String, String>>>,
-    create: Option<TransformMapper<Value, Row>>,
 ) -> Result<BuiltRepository> {
     let ReadonlyRepositoryOptions {
         entity,
@@ -84,7 +79,6 @@ fn assemble(
             delete,
         ),
         ids,
-        create,
         write: None,
     })
 }

@@ -39,15 +39,6 @@ const keyOf = (item: object, keys: readonly string[]): string =>
 const namesOf = (writer: ICRUDRepository<object>, item: object): readonly string[] =>
   writer.ids.length > 0 ? writer.ids : defaultId(Object.keys(item));
 
-const assignIdentity = (item: object, keys: readonly string[], created: object): void => {
-  if (item === created) return;
-  const source = props(created);
-  for (const key of keys) {
-    const value = source[key];
-    if (value !== undefined && value !== null && typeof value !== "object") props(item)[key] = value;
-  }
-};
-
 const payload = (parent: object, into: string): object[] => {
   const value = get(parent, into);
   return value === undefined || value === null || typeof value === "string"
@@ -205,7 +196,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
   ): Promise<void> => {
     for (const related of payload(parent, enrichment.into)) {
       stamp(related, enrichment.by, get(parent, enrichment.from));
-      assignIdentity(related, namesOf(writer, related), await writer.create(related));
+      await writer.create(related);
     }
   };
 
@@ -223,6 +214,6 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     for (const related of rows)
       hasKey(related, keys) && existing.some((row) => keyOf(row, keys) === keyOf(related, keys))
         ? await writer.update(related)
-        : assignIdentity(related, keys, await writer.create(related));
+        : await writer.create(related);
   };
 }
