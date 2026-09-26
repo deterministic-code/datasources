@@ -16,7 +16,7 @@ public abstract class DeleteEnrichmentStrategy<T>
         object parent);
 
     internal static async Task<List<object>> Load(
-        RepositoryTreeNode.IChildPersist writer,
+        IChildPersist writer,
         Enrichment enrichment,
         object parent)
     {
@@ -29,7 +29,7 @@ public abstract class DeleteEnrichmentStrategy<T>
     }
 
     internal static async Task<List<object>> LoadLinks(
-        RepositoryTreeNode.IChildPersist writer,
+        IChildPersist writer,
         string column,
         object key)
     {

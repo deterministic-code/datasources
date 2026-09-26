@@ -45,7 +45,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         base.AddEnriched(enrichment, via, strategy);
         if (via is ICRUDRepository<TRelated> crud)
-            ((IEnrichmentHost)this).Enrichments[^1].AttachPersist(RepositoryTreeNode.Writer(crud));
+            ((IEnrichmentHost)this).Enrichments[^1].AttachPersist(ChildPersist.For(crud));
         return this;
     }
 
@@ -59,7 +59,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         base.AddEnriched(enrichment, via, strategy);
         ((IEnrichmentHost)this).Enrichments[^1].AttachLink(
             (parents, sources) => chosen.ApplyLinked(via, link, enrichment, parents, sources),
-            RepositoryTreeNode.Writer(link));
+            ChildPersist.For(link));
         return this;
     }
 

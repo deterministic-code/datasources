@@ -62,7 +62,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         SkipUnloaded && mode is not WriteMode.Delete && Get(parent, into) is null;
 
     static async Task CreateChildren(
-        RepositoryTreeNode.IChildPersist writer,
+        IChildPersist writer,
         Enrichment enrichment,
         object parent)
     {
@@ -74,7 +74,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     }
 
     static async Task SyncChildren(
-        RepositoryTreeNode.IChildPersist writer,
+        IChildPersist writer,
         Enrichment enrichment,
         object parent)
     {
@@ -96,7 +96,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     }
 
     static async Task CreateLinks(
-        RepositoryTreeNode.IChildPersist writer,
+        IChildPersist writer,
         Enrichment enrichment,
         Association association,
         object parent)
@@ -112,7 +112,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     }
 
     static async Task SyncLinks(
-        RepositoryTreeNode.IChildPersist writer,
+        IChildPersist writer,
         Enrichment enrichment,
         Association association,
         object parent)
