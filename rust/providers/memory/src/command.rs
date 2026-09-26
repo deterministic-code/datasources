@@ -68,8 +68,11 @@ impl Command for MemoryCommand {
                     let params = parameters_to_map(params.as_deref());
                     match op.as_str() {
                         "insert" => {
-                            connection.collection(|items| items.push(params.clone()));
-                            Ok((Response::new(Value::Null, 1), vec![]))
+                            let mut row = params.clone();
+                            let id = inserted_id(&row, &connection);
+                            row.insert("id".into(), id.clone());
+                            connection.collection(|items| items.push(row));
+                            Ok((Response::new(id, 1), vec![]))
                         }
                         "update" => {
                             let mut obj = params.clone();
@@ -172,6 +175,25 @@ impl Command for MemoryCommand {
             _ => self.execute(&statement.get_text(), parameters).await,
         }
     }
+}
+
+fn inserted_id(row: &Row, connection: &MemoryConnection) -> Value {
+    if let Some(id @ Value::Int(_)) = row.get("id") {
+        return id.clone();
+    }
+    Value::Int(
+        connection.collection(|items| {
+            items
+                .iter()
+                .filter_map(|item| match item.get("id") {
+                    Some(Value::Int(id)) => Some(*id),
+                    _ => None,
+                })
+                .max()
+                .unwrap_or(0)
+                + 1
+        }),
+    )
 }
 
 fn filter_text(statement: &dyn Statement) -> String {
