@@ -3109,13 +3109,7 @@ while sets.next().await.unwrap() {
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/src/sqlite.test.ts#L159-L165)
 
 ```typescript
-db.bySql = { "SELECT 1 AS id": [{ id: 1 }], "SELECT 2 AS id": [{ id: 2 }] };
-const sets = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
-const first: Cells[] = [];
-while (await sets.next()) first.push(sets.current!);
-const moved = await sets.nextResult();
-const second: Cells[] = [];
-while (await sets.next()) second.push(sets.current!);
+
 ```
 
 #### Execute insert, update, and delete
@@ -12179,7 +12173,6 @@ type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & { ... }
 | update | Rewrites the finished update. Omitted leaves the statement unchanged. |
 | delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
 | return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
-| create | Maps `Response.result` onto the created item. Default writes the value to `id`. |
 
 ##### BuiltRepository {#typescript-builtrepository}
 
@@ -12621,7 +12614,6 @@ public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> wher
 | Update | Rewrites the finished update. Omitted leaves the statement unchanged. |
 | Delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
 | Return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
-| Create | Maps `Response.Result` onto the created item. Default writes the value to `id` or `Id`. |
 
 ##### BuiltRepository {#csharp-builtrepository}
 
@@ -12939,7 +12931,6 @@ pub struct CRUDRepositoryOptions
 | update | Rewrites finished update SQL. `None` leaves the statement unchanged. |
 | delete | Rewrites finished delete SQL. `None` leaves the statement unchanged. |
 | return_ | Rewrites finished return SQL. `None` leaves it unchanged. |
-| create | Maps `Response.result` onto the created row. Default writes the value to `id`. |
 | read | The embedded [ReadonlyRepositoryOptions](#rust-readonlyrepositoryoptions). Field access goes through `Deref`. |
 
 ##### BuiltRepository {#rust-builtrepository}
@@ -12960,13 +12951,13 @@ pub struct BuiltRepository
 
 ### Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the configured id through the create mapper.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, insert writes `Response.Result` onto the single id column through the driver's generated-id method and the row converter.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
-`AddEnriched` registers the same read fill as [ReadonlyRepository](#readonly-repository). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+`AddEnriched` registers the same read fill as [ReadonlyRepository](#readonly-repository). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. `LazyWriteEnrichmentStrategy` skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 
-- **Create** — write the parent, apply the generated identity through the create mapper, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
 - **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
@@ -13475,6 +13466,202 @@ it("updates a user view when the version matches", async () => {
 
 ```
 no row
+```
+
+#### Users with linked roles and groups
+
+`AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L148-L196)
+
+```csharp
+var graph = await GraphAsync();
+var usersRepo = graph.UsersRepo;
+usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id"), graph.UserTypesRepo);
+usersRepo.AddLinked(new("Roles", "Id", "Id", Association: new("UserId", "RoleId")), graph.RolesRepo, graph.UserRolesRepo);
+usersRepo.AddLinked(new("Groups", "Id", "Id", Association: new("UserId", "GroupId")), graph.GroupsRepo, graph.UserGroupsRepo);
+var created = await usersRepo.Create(new UserView
+{
+    Username = "ada",
+    IsEnabled = true,
+    UserTypeId = graph.AdminType.Id,
+    Roles = [graph.AdminRole, graph.EditorRole],
+    Groups = [graph.Engineering],
+});
+await usersRepo.Update(new UserView
+{
+    Id = created.Id,
+    Username = "ada",
+    IsEnabled = true,
+    UserTypeId = graph.AdminType.Id,
+    Roles = [graph.EditorRole],
+    Groups = [graph.Engineering, graph.Ops],
+});
+var updated = await usersRepo.ReadSingleById(created.Id);
+await usersRepo.Delete(new UserView { Id = created.Id });
+```
+
+**Created**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor'],
+  Groups: ['engineering']
+}
+```
+
+**Updated**
+
+```
+{
+  Roles: ['editor'],
+  Groups: ['engineering', 'ops']
+}
+```
+
+**After delete**
+
+```
+no user
+roles and groups remain
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L139-L205)
+
+```rust
+let (mut users, seeded) = open(None).await;
+users
+    .add_enriched(
+        Enrichment::new("user_type", "user_type_id", "id", None, false),
+        seeded.user_types.clone(),
+        None,
+    )
+    .add_linked(
+        Enrichment::new("roles", "id", "id", None, false)
+            .linked(Association::new("user_id", "role_id")),
+        seeded.roles.clone(),
+        seeded.user_roles.clone(),
+        None,
+    )
+    .add_linked(
+        Enrichment::new("groups", "id", "id", None, false)
+            .linked(Association::new("user_id", "group_id")),
+        seeded.groups.clone(),
+        seeded.user_groups.clone(),
+        None,
+    );
+let created = users
+    .create(&mut ada(
+        &seeded,
+        encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]),
+        encode_rows(&[seeded.engineering.clone()]),
+    ))
+    .await
+    .unwrap();
+let mut next = ada(
+    &seeded,
+    encode_rows(&[seeded.editor_role.clone()]),
+    encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
+);
+next.insert("id".into(), created.get("id").unwrap().clone());
+users.update(&next, None).await.unwrap();
+let updated = users
+    .read_single_by_id(created.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+users
+    .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
+    .await
+    .unwrap();
+```
+
+**Created**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor'],
+  Groups: ['engineering']
+}
+```
+
+**Updated**
+
+```
+{
+  Roles: ['editor'],
+  Groups: ['engineering', 'ops']
+}
+```
+
+**After delete**
+
+```
+no user
+roles and groups remain
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/UserViewCRUDRepository.test.ts#L109-L153)
+
+```typescript
+const seeded = await graph();
+const usersRepo = seeded.usersRepo;
+usersRepo.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypesRepo);
+usersRepo.addLinked(
+  { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
+  seeded.rolesRepo,
+  seeded.userRolesRepo,
+);
+usersRepo.addLinked(
+  { into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } },
+  seeded.groupsRepo,
+  seeded.userGroupsRepo,
+);
+const created = await usersRepo.create(Object.assign(new UserView(), {
+  username: "ada",
+  is_enabled: true,
+  user_type_id: seeded.adminType.id,
+  roles: [seeded.adminRole, seeded.editorRole],
+  groups: [seeded.engineering],
+}));
+await usersRepo.update(Object.assign(new UserView(), {
+  id: created.id,
+  username: "ada",
+  is_enabled: true,
+  user_type_id: seeded.adminType.id,
+  roles: [seeded.editorRole],
+  groups: [seeded.engineering, seeded.ops],
+}));
+const updated = await usersRepo.readSingleById(created.id);
+await usersRepo.delete(Object.assign(new UserView(), { id: created.id }));
+```
+
+**Created**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor'],
+  Groups: ['engineering']
+}
+```
+
+**Updated**
+
+```
+{
+  Roles: ['editor'],
+  Groups: ['engineering', 'ops']
+}
+```
+
+**After delete**
+
+```
+no user
+roles and groups remain
 ```
 
 ## Bulk repository
@@ -17083,6 +17270,7 @@ interface IDriver
 | [command(connection)](#typescript-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
 | [transaction(connection, isolation?)](#typescript-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
 | [rowTypeConverters](#typescript-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+| [generatedId(id)](#typescript-idriver-generatedid-id) | Canonicalizes an engine insert id before it is stored on `Response.result`. The default, exported as `generatedId`, returns `id`. |
 
 ###### connection(options?) {#typescript-idriver-connection-options}
 
@@ -17159,6 +17347,26 @@ rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
 
 `Record<string, TypeConverter<Cell, Cell>>`
 
+###### generatedId(id) {#typescript-idriver-generatedid-id}
+
+Canonicalizes an engine insert id before it is stored on `Response.result`. The default, exported as `generatedId`, returns `id`.
+
+**Definition**
+
+```typescript
+generatedId(id: Cell): Cell
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | insert identity from the engine |
+
+**Returns**
+
+`Cell`
+
 ##### C#
 
 ##### IDriver {#csharp-idriver}
@@ -17175,6 +17383,7 @@ public interface IDriver
 | [Command(connection)](#csharp-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
 | [Transaction(connection, isolation)](#csharp-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
 | [RowTypeConverters](#csharp-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+| [GeneratedId(id)](#csharp-idriver-generatedid-id) | Canonicalizes an engine insert id before it is stored on `Response.Result`. The default returns `id`. MySQL parses a text insert id into `Value.Int`. |
 
 ###### Connection(options) {#csharp-idriver-connection-options}
 
@@ -17251,6 +17460,26 @@ IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get
 
 `IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
 
+###### GeneratedId(id) {#csharp-idriver-generatedid-id}
+
+Canonicalizes an engine insert id before it is stored on `Response.Result`. The default returns `id`. MySQL parses a text insert id into `Value.Int`.
+
+**Definition**
+
+```csharp
+Value GeneratedId(Value id)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | insert identity from the engine |
+
+**Returns**
+
+[Value](./sections/value.md)
+
 ##### Rust
 
 ##### Driver {#rust-driver}
@@ -17267,6 +17496,7 @@ pub trait Driver
 | [command(connection)](#rust-driver-command-connection) | Builds a [Command](#command) for the connection. |
 | [transaction(connection, isolation)](#rust-driver-transaction-connection-isolation) | Builds a [Transaction](#transaction) for the connection. |
 | [row_type_converters()](#rust-driver-row_type_converters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
+| [generated_id(id)](#rust-driver-generated_id-id) | Canonicalizes an engine insert id before it is stored on `Response.result`. The default returns `id`. |
 
 ###### connection(options) {#rust-driver-connection-options}
 
@@ -17343,11 +17573,33 @@ fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Va
 
 `HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`
 
+###### generated_id(id) {#rust-driver-generated_id-id}
+
+Canonicalizes an engine insert id before it is stored on `Response.result`. The default returns `id`.
+
+**Definition**
+
+```rust
+fn generated_id(&self, id: Value) -> Value
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | insert identity from the engine |
+
+**Returns**
+
+[Value](./sections/value.md)
+
 ### Remarks
 
 `connection` receives the options bag (`url`, `filename`, `host`, `database`, `schema`, …). `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
 
 `rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
+
+`generatedId` / `GeneratedId` / `generated_id` runs only on an insert identity (`last_insert_rowid`, `LastInsertedId`, `RETURNING` on `INSERT`, the memory inserted id) before that value is stored on `Response.result`. SELECT scalars stay `Value.From`. The default returns the value unchanged. TypeScript drivers assign the exported `generatedId` function; C# and Rust inherit the default method.
 
 The package exports only the driver type.
 
@@ -17434,6 +17686,7 @@ impl Driver for MockDriver {
 ```typescript
 export class MockDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
+  generatedId = identityGeneratedId;
   connection = (_options?: DatasourceOptions): IConnection => new MockConnection();
   command = (connection: IConnection): ICommand => new MockCommand(connection);
   transaction = (
@@ -17443,6 +17696,4 @@ export class MockDriver implements IDriver {
     const txn = new MockTransaction(connection);
     txn.isolation = isolation;
     return txn;
-  };
-}
 ```
