@@ -4,7 +4,9 @@ import {
   DeleteStatement,
   identityFilter,
   InsertStatement,
+  StatementEvaluator,
   UpdateStatement,
+  Where,
   type Cells,
   type ICommand,
   type IReader,
@@ -12,6 +14,7 @@ import {
   type IWhere,
   type Response,
   type Parameter,
+  type Scalar,
 } from "@datasources/core";
 import type { MemoryConnection } from "./connection.ts";
 import type { MemoryRecord } from "./store.ts";
@@ -42,7 +45,18 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
   executeReaderStatement = (
     statement: IStatement,
     parameters?: Parameter[],
-  ): Promise<IReader<Cells>> => this.executeReader(filterText(statement), parameters);
+  ): Promise<IReader<Cells>> => {
+    const clause = "where" in statement && statement.where instanceof Where ? statement.where : undefined;
+    if (!clause) return this.executeReader(filterText(statement), parameters);
+    return this.run(statement.getText(), parameters, async () => {
+      this.connection.ensureOpen();
+      const evaluator = new StatementEvaluator();
+      const rows = this.connection
+        .getCollection()
+        .filter((row) => evaluator.evaluate(clause, row as Record<string, Scalar>) === true);
+      return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
+    });
+  };
 
   executeStatement = (
     statement: IStatement,

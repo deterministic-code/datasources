@@ -293,9 +293,14 @@ public class UsersViewRoleTests
             ["RoleId"] = "role_id",
             ["Name"] = "roles.name",
         });
-        var hydrate = new MappedValueMapper<UsersView>();
-        var joined = new TransformMapper<IEnumerable<Row>, IReadOnlyList<UsersView>>(
-            rows => new FlatToNestedMapper(new TypeMap
+        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+        {
+            ColumnMappings = mappings,
+        });
+        usersRepo.AddEnriched(
+            new("Roles", "Key", "UserId", Many: true),
+            usersRepo,
+            new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
             {
                 Key = "Key",
                 Fields = new Dictionary<string, TypeMapField>
@@ -316,16 +321,7 @@ public class UsersViewRoleTests
                         }
                     }
                 }
-            }).Map(rows).Select(hydrate.Map).ToList(),
-            _ => throw new InvalidOperationException());
-        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
-        {
-            ColumnMappings = mappings,
-        });
-        usersRepo.AddEnriched(
-            new("Roles", "Key", "UserId", Many: true),
-            usersRepo,
-            new NestedToObjectEnrichmentStrategy<UsersView>(joined));
+            }));
         var items = new List<UsersView>();
         await foreach (var item in usersRepo.Read(new SelectStatement(new()
         {

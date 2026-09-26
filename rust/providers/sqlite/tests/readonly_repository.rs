@@ -287,11 +287,11 @@ mod user_view {
 mod users_view_roles {
     use super::{datasource, open, ADA, GRACE, LIN};
     use datasources::{
-        create_repository_options, encode_rows, eq, Casing, ChangeCasingMapper, ConvertSchema,
-        Datasource, DictionaryMapper, FlatToNestedMapper,
-        HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join, MappedValue, Mapper,
-        ReadonlyRepository, ReadonlyRepositoryOptions, SelectStatement, SelectStatementOptions,
-        TransformMapper, TypeMap, TypeMapField, TypeMapGroup, Value, Where,
+        create_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
+        NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryOptions,
+        SelectStatement, SelectStatementOptions, TransformMapper, TypeMap, TypeMapField,
+        TypeMapGroup, Value, Where,
     };
     use std::sync::Arc;
 
@@ -472,66 +472,34 @@ mod users_view_roles {
                 ],
             )
         }));
-        let mapper = FlatToNestedMapper::new(TypeMap::new(
-            "Key",
-            vec![
-                ("Key".into(), TypeMapField::column("Key")),
-                ("Login".into(), TypeMapField::column("Login")),
-                ("Active".into(), TypeMapField::column("Active")),
-                ("Opened".into(), TypeMapField::column("Opened")),
-                ("UserType".into(), TypeMapField::column("UserType")),
-                (
-                    "Roles".into(),
-                    TypeMapField::Group(TypeMapGroup::new(
-                        "RoleId",
-                        vec![
-                            ("RoleId".into(), TypeMapField::column("RoleId")),
-                            ("UserId".into(), TypeMapField::column("UserId")),
-                            ("Name".into(), TypeMapField::column("RoleName")),
-                        ],
-                    )),
-                ),
-            ],
-        ));
-        let result = TransformMapper::new(
-            move |rows: Vec<datasources::Row>| {
-                Mapper::map(&mapper, rows)
-                    .into_iter()
-                    .map(|row| {
-                        let mut view = datasources::Row::new();
-                        for key in ["Key", "Login", "Active", "Opened", "UserType"] {
-                            if let Some(MappedValue::Cell(value)) = row.get(key) {
-                                view.insert(key.into(), value.clone());
-                            }
-                        }
-                        let roles = match row.get("Roles") {
-                            Some(MappedValue::Many(items)) => items
-                                .iter()
-                                .map(|item| {
-                                    let mut role = datasources::Row::new();
-                                    for key in ["UserId", "Name"] {
-                                        if let Some(MappedValue::Cell(value)) = item.get(key) {
-                                            role.insert(key.into(), value.clone());
-                                        }
-                                    }
-                                    role
-                                })
-                                .collect(),
-                            _ => Vec::new(),
-                        };
-                        view.insert("Roles".into(), encode_rows(&roles));
-                        view
-                    })
-                    .collect()
-            },
-            |_| Vec::new(),
-        );
         let options = ReadonlyRepositoryOptions::default();
         let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
         users_repo.add_enriched(
             datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
             Arc::new(ReadonlyRepository::memory(vec![])),
-            Some(Arc::new(datasources::NestedToObjectEnrichmentStrategy::new(Box::new(result)))),
+            Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
+                TypeMap::new(
+                    "Key",
+                    vec![
+                        ("Key".into(), TypeMapField::column("Key")),
+                        ("Login".into(), TypeMapField::column("Login")),
+                        ("Active".into(), TypeMapField::column("Active")),
+                        ("Opened".into(), TypeMapField::column("Opened")),
+                        ("UserType".into(), TypeMapField::column("UserType")),
+                        (
+                            "Roles".into(),
+                            TypeMapField::Group(TypeMapGroup::new(
+                                "RoleId",
+                                vec![
+                                    ("RoleId".into(), TypeMapField::column("RoleId")),
+                                    ("UserId".into(), TypeMapField::column("UserId")),
+                                    ("Name".into(), TypeMapField::column("RoleName")),
+                                ],
+                            )),
+                        ),
+                    ],
+                ),
+            ))),
         );
         let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
         let view = |login: &str| {

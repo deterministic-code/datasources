@@ -1,19 +1,23 @@
 use crate::enrichment::Enrichment;
-use crate::mappers::Mapper;
+use crate::mappers::{FlatToNestedMapper, MappedRow, MappedValue, Mapper, TypeMap};
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
+use crate::repository_tree_node::encode_rows;
 use crate::result::Result;
 use crate::row::Row;
+use crate::value::Value;
 use async_trait::async_trait;
 use std::sync::Arc;
 
 pub struct NestedToObjectEnrichmentStrategy {
-    mapper: Box<dyn Mapper<Vec<Row>, Vec<Row>> + Send + Sync>,
+    nested: FlatToNestedMapper,
 }
 
 impl NestedToObjectEnrichmentStrategy {
-    pub fn new(mapper: Box<dyn Mapper<Vec<Row>, Vec<Row>> + Send + Sync>) -> Self {
-        Self { mapper }
+    pub fn new(type_map: TypeMap) -> Self {
+        Self {
+            nested: FlatToNestedMapper::new(type_map),
+        }
     }
 }
 
@@ -32,7 +36,24 @@ impl ReadonlyEnrichmentStrategy for NestedToObjectEnrichmentStrategy {
             .flatten()
             .cloned()
             .collect::<Vec<_>>();
-        *parents = Mapper::map(&self.mapper, rows);
+        *parents = Mapper::map(&self.nested, rows)
+            .into_iter()
+            .map(row_of)
+            .collect();
         Ok(())
+    }
+}
+
+fn row_of(mapped: MappedRow) -> Row {
+    mapped
+        .into_iter()
+        .map(|(key, value)| (key, value_of(value)))
+        .collect()
+}
+
+fn value_of(value: MappedValue) -> Value {
+    match value {
+        MappedValue::Cell(cell) => cell,
+        MappedValue::Many(items) => encode_rows(&items.into_iter().map(row_of).collect::<Vec<_>>()),
     }
 }

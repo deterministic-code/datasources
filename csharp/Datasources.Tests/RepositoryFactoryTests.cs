@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.Memory;
 
 namespace Datasources.Tests;
 
@@ -24,7 +25,7 @@ public class RepositoryFactoryTests
     {
         var factory = new RepositoryFactory();
         IRepositoryFactory readonlyFactory = factory;
-        var repo = new ListReadonlyRepository<Item>();
+        var repo = new ReadonlyRepository<Item>(new MemoryProvider().Connection(null));
         readonlyFactory.Register(repo);
 
         Assert.Same(repo, readonlyFactory.Create<Item>());

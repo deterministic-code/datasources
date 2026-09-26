@@ -1,11 +1,10 @@
 namespace Datasources;
 
-public sealed class NestedToObjectEnrichmentStrategy<T> : DefaultReadonlyEnrichmentStrategy<T> where T : new()
+public sealed class NestedToObjectEnrichmentStrategy<T>(TypeMap typeMap) : DefaultReadonlyEnrichmentStrategy<T>
+    where T : new()
 {
-    readonly IMapper<IEnumerable<Row>, IReadOnlyList<T>> mapper;
-
-    public NestedToObjectEnrichmentStrategy(IMapper<IEnumerable<Row>, IReadOnlyList<T>> mapper) =>
-        this.mapper = mapper;
+    readonly FlatToNestedMapper nested = new(typeMap);
+    readonly MappedValueMapper<T> values = new();
 
     public override Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,
@@ -13,14 +12,12 @@ public sealed class NestedToObjectEnrichmentStrategy<T> : DefaultReadonlyEnrichm
         IList<object> parents,
         IReadOnlyList<Row?>? sources = null)
     {
-        var rows = new List<Row>();
-        if (sources is not null)
-            foreach (var source in sources)
-                if (source is { } row)
-                    rows.Add(row);
         parents.Clear();
-        foreach (var item in mapper.Map(rows))
-            parents.Add(item!);
+        foreach (var item in nested.Map(Rows(sources)))
+            parents.Add(values.Map(item)!);
         return Task.CompletedTask;
     }
+
+    static IEnumerable<Row> Rows(IReadOnlyList<Row?>? sources) =>
+        sources?.OfType<Row>() ?? [];
 }

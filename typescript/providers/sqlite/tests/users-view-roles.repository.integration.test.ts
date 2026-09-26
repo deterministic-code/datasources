@@ -3,7 +3,6 @@ import {
   ChangeCasingMapper,
   Datasource,
   DictionaryMapper,
-  FlatToNestedMapper,
   HashsetOptimizedReadonlyEnrichmentStrategy,
   NestedToObjectEnrichmentStrategy,
   Join,
@@ -12,7 +11,6 @@ import {
   TransformMapper,
   Where,
   eq,
-  type Cells,
   type IConnection,
   type IDatasource,
 } from "@datasources/core";
@@ -130,35 +128,6 @@ describe("users view roles", () => {
   it("fills roles from a join", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
     const connection = await open(ds, seed());
-    const hydrate = new TransformMapper(
-      (row: UsersView) =>
-        Object.assign(new UsersView(), row, {
-          Roles: (row.Roles ?? []).map((role) => Object.assign(new UserRole(), role)),
-        }),
-      () => {
-        throw new Error("UsersView hydrate does not reverse");
-      },
-    );
-    const flat = new FlatToNestedMapper<UsersView>({
-      key: "Key",
-      fields: {
-        Key: "Key",
-        Login: "Login",
-        Active: "Active",
-        Opened: "Opened",
-        UserType: "UserType",
-        Roles: {
-          key: "RoleId",
-          fields: { RoleId: "RoleId", UserId: "UserId", Name: "Name" },
-        },
-      },
-    });
-    const joined = new TransformMapper(
-      (rows: Iterable<Cells>) => flat.map(rows).map((row) => hydrate.map(row)),
-      () => {
-        throw new Error("result does not reverse");
-      },
-    );
     const usersRepo = new ReadonlyRepository(connection, {
       type: UsersView,
       columnMappings: new DictionaryMapper([
@@ -175,7 +144,20 @@ describe("users view roles", () => {
     usersRepo.addEnriched(
       { into: "Roles", from: "Key", by: "UserId", many: true },
       usersRepo,
-      new NestedToObjectEnrichmentStrategy(joined),
+      new NestedToObjectEnrichmentStrategy<UsersView>({
+        key: "Key",
+        fields: {
+          Key: "Key",
+          Login: "Login",
+          Active: "Active",
+          Opened: "Opened",
+          UserType: "UserType",
+          Roles: {
+            key: "RoleId",
+            fields: { RoleId: "RoleId", UserId: "UserId", Name: "Name" },
+          },
+        },
+      }),
     );
     const items: UsersView[] = [];
     for await (const item of usersRepo.read(

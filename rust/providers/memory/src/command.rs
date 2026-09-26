@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use datasources::{
     identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
     CommandMiddlewareHost, DatasourceError, IWhere, Parameter, Reader, Response, Result, Row,
-    Statement, StatementKind, Value,
+    Statement, StatementEvaluator, StatementKind, Value, Where,
 };
 use std::sync::Arc;
 
@@ -121,7 +121,36 @@ impl Command for MemoryCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        self.execute_reader(&filter_text(statement), parameters)
+        let Some(condition) = statement
+            .predicate()
+            .and_then(|predicate| predicate.as_any().downcast_ref::<Where>())
+            .map(|clause| clause.condition.clone())
+        else {
+            return self
+                .execute_reader(&filter_text(statement), parameters)
+                .await;
+        };
+        let connection = self.connection.clone();
+        self.host
+            .run(statement.get_text(), parameters, move |_query, _params| {
+                let connection = connection.clone();
+                let condition = condition.clone();
+                async move {
+                    connection.ensure_open()?;
+                    let evaluator = StatementEvaluator;
+                    let rows = connection.collection(|items| {
+                        items
+                            .iter()
+                            .filter(|row| evaluator.evaluate(&condition, row) == Value::Bool(true))
+                            .cloned()
+                            .collect::<Vec<_>>()
+                    });
+                    Ok((
+                        Box::new(ArrayReader::new(rows.clone())) as Box<dyn Reader>,
+                        rows,
+                    ))
+                }
+            })
             .await
     }
 
