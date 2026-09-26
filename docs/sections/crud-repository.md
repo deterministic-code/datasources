@@ -203,20 +203,32 @@ readSingleById(id: Scalar | Cells): Promise<T | undefined>
 
 **Returns** `Promise<T | undefined>`
 
-##### addEnriched(into, from, via, by, select?, many?)
+##### addEnriched(enrichment, via, strategy?)
 
-Registers a lookup or a `many` list. Returns this repository.
+Registers the same read fill as [ReadonlyRepository](./readonly-repository.md#addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
 
 ```typescript
-addEnriched<TRelated extends object>(into: keyof T & string, from: keyof T & string, via: IReadonlyRepository<TRelated>, by: keyof TRelated & string, select?: keyof TRelated & string, many?: boolean): this
+addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
 ```
 
-- `into` — destination field
-- `from` — key on the parent
+- `enrichment` — [Enrichment](./readonly-repository.md#enrichment)
 - `via` — related repository. A CRUD repository is kept so `many` children can be written
-- `by` — key on the related row
-- `select` — optional related field to copy
-- `many` — collect a list
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
+
+**Returns** `this`
+
+##### addLinked(enrichment, via, link, strategy?)
+
+Registers an association. `via` is read. `link` is the CRUD writer.
+
+```typescript
+addLinked<TRelated extends object, TLink extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
+```
+
+- `enrichment` — [Enrichment](./readonly-repository.md#enrichment) with `association`
+- `via` — related [IReadonlyRepository](./readonly-repository.md)
+- `link` — [ICRUDRepository](#icrudrepository) that stores the association rows
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** `this`
 
@@ -555,21 +567,32 @@ public Task<T?> ReadSingleById(Row ids)
 
 **Returns** `Task<T?>`
 
-##### AddEnriched(into, from, via, by, select, many, strategy)
+##### AddEnriched(enrichment, via, strategy)
 
-Registers a lookup or a `many` list. Returns this repository.
+Registers the same read fill as [ReadonlyRepository](./readonly-repository.md#addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
 
 ```csharp
-public IEnriched<T> AddEnriched<TRelated>(string into, string from, IReadonlyRepository<TRelated> via, string by, string? select = null, bool many = false, IReadonlyEnrichmentStrategy<T>? strategy = null)
+public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
 ```
 
-- `into` — destination field
-- `from` — key on the parent
+- `enrichment` — [Enrichment](./readonly-repository.md#enrichment)
 - `via` — related repository. A CRUD repository is kept so `many` children can be written
-- `by` — key on the related row
-- `select` — optional related field to copy
-- `many` — collect a list
-- `strategy` — optional read strategy for this edge
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
+
+**Returns** [IEnriched](./readonly-repository.md#ienriched)`<T>`
+
+##### AddLinked(enrichment, via, link, strategy)
+
+Registers an association. `via` is read. `link` is the CRUD writer.
+
+```csharp
+public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+- `enrichment` — [Enrichment](./readonly-repository.md#enrichment) with `Association`
+- `via` — related [IReadonlyRepository](./readonly-repository.md)
+- `link` — [ICRUDRepository](#icrudrepository) that stores the association rows
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** [IEnriched](./readonly-repository.md#ienriched)`<T>`
 
@@ -799,20 +822,32 @@ pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
 
 **Methods**
 
-##### add_enriched(into, from, via, by, select, many)
+##### add_enriched(enrichment, via, strategy)
 
-Registers a lookup or a `many` list.
+Registers the same read fill as [ReadonlyRepository](./readonly-repository.md#add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
 
 ```rust
-pub fn add_enriched(&mut self, into: impl Into<String>, from: impl Into<String>, via: impl EnrichmentVia, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
+pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
 ```
 
-- `into` — destination field
-- `from` — key on the parent
+- `enrichment` — [Enrichment](./readonly-repository.md#enrichment)
 - `via` — related repository. A CRUD repository is kept so `many` children can be written
-- `by` — key on the related row
-- `select` — optional related field to copy
-- `many` — collect a list
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
+
+**Returns** `&mut Self`
+
+##### add_linked(enrichment, via, link, strategy)
+
+Registers an association. `via` is read. `link` is the CRUD writer.
+
+```rust
+pub fn add_linked(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, link: Arc<dyn ICRUDRepository>, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
+```
+
+- `enrichment` — [Enrichment](./readonly-repository.md#enrichment) with `association`
+- `via` — related readonly repository
+- `link` — [ICRUDRepository](#icrudrepository) that stores the association rows
+- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** `&mut Self`
 
@@ -961,7 +996,13 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
-`AddEnriched` registers a lookup or a `many` list on this repository. Lookups are filled on read and are not written. `many` children are created, replace-synced, and deleted with the parent. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+`AddEnriched` registers the same read fill as [ReadonlyRepository](./readonly-repository.md). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+
+- **Create** — write the parent, apply the generated identity through the create mapper, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
+- **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+
+See [Bulk repository](./bulk-repository.md) for list writes.
 
 ## Examples
 
@@ -1025,7 +1066,7 @@ no row
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L491-L578
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L678-L814
+```rust rust/providers/sqlite/tests/readonly_repository.rs#L698-L743
 ```
 ```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L226-L306
 ```

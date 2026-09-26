@@ -38,6 +38,31 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return this;
     }
 
+    public new IEnriched<T> AddEnriched<TRelated>(
+        Enrichment enrichment,
+        IReadonlyRepository<TRelated> via,
+        IReadonlyEnrichmentStrategy<T>? strategy = null)
+    {
+        base.AddEnriched(enrichment, via, strategy);
+        if (via is ICRUDRepository<TRelated> crud)
+            ((IEnrichmentHost)this).Enrichments[^1].AttachPersist(RepositoryTreeNode.Writer(crud));
+        return this;
+    }
+
+    public IEnriched<T> AddLinked<TRelated, TLink>(
+        Enrichment enrichment,
+        IReadonlyRepository<TRelated> via,
+        ICRUDRepository<TLink> link,
+        IReadonlyEnrichmentStrategy<T>? strategy = null)
+    {
+        var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
+        base.AddEnriched(enrichment, via, strategy);
+        ((IEnrichmentHost)this).Enrichments[^1].AttachLink(
+            (parents, sources) => chosen.ApplyLinked(via, link, enrichment, parents, sources),
+            RepositoryTreeNode.Writer(link));
+        return this;
+    }
+
     public async Task<T> Create(T item)
     {
         var stored = Enriched ? StripEnriched(item) : item;

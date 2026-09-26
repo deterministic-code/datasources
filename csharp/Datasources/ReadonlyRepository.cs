@@ -56,22 +56,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
         enrichments.Add(new StoredEnrichment(
             enrichment,
-            (parents, sources) => chosen.Apply(via, enrichment, parents, sources),
-            via is ICRUDRepository<TRelated> crud ? RepositoryTreeNode.Writer(crud) : null));
-        return this;
-    }
-
-    public IEnriched<T> AddLinked<TRelated, TLink>(
-        Enrichment enrichment,
-        IReadonlyRepository<TRelated> via,
-        ICRUDRepository<TLink> link,
-        IReadonlyEnrichmentStrategy<T>? strategy = null)
-    {
-        var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
-        enrichments.Add(new StoredEnrichment(
-            enrichment,
-            (parents, sources) => chosen.ApplyLinked(via, link, enrichment, parents, sources),
-            link: RepositoryTreeNode.Writer(link)));
+            (parents, sources) => chosen.Apply(via, enrichment, parents, sources)));
         return this;
     }
 

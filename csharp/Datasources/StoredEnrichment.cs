@@ -15,7 +15,17 @@ public sealed class StoredEnrichment
     }
 
     public Enrichment Enrichment { get; }
-    internal Func<IList<object>, IReadOnlyList<Row?>?, Task> Apply { get; }
-    internal RepositoryTreeNode.IChildPersist? Persist { get; }
-    internal RepositoryTreeNode.IChildPersist? Link { get; }
+    internal Func<IList<object>, IReadOnlyList<Row?>?, Task> Apply { get; private set; }
+    internal RepositoryTreeNode.IChildPersist? Persist { get; private set; }
+    internal RepositoryTreeNode.IChildPersist? Link { get; private set; }
+
+    internal void AttachPersist(RepositoryTreeNode.IChildPersist persist) => Persist = persist;
+
+    internal void AttachLink(
+        Func<IList<object>, IReadOnlyList<Row?>?, Task> apply,
+        RepositoryTreeNode.IChildPersist link)
+    {
+        Apply = apply;
+        Link = link;
+    }
 }

@@ -8,10 +8,18 @@ export type ApplyEnrichment = (
 ) => Promise<void>;
 
 export class StoredEnrichment {
+  apply: ApplyEnrichment;
+  persist?: ICRUDRepository<object>;
+  link?: ICRUDRepository<object>;
+
   constructor(
     readonly enrichment: Enrichment,
-    readonly apply: ApplyEnrichment,
-    readonly persist?: ICRUDRepository<object>,
-    readonly link?: ICRUDRepository<object>,
-  ) {}
+    apply: ApplyEnrichment,
+    persist?: ICRUDRepository<object>,
+    link?: ICRUDRepository<object>,
+  ) {
+    this.apply = apply;
+    this.persist = persist;
+    this.link = link;
+  }
 }

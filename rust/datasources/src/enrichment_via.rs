@@ -2,6 +2,13 @@ use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use std::sync::Arc;
 
 pub trait EnrichmentVia {
+    fn read_via(self) -> Arc<dyn IReadonlyRepository>
+    where
+        Self: Sized,
+    {
+        self.into_repos().0
+    }
+
     fn into_repos(
         self,
     ) -> (
