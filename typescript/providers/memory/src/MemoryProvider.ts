@@ -1,17 +1,20 @@
-import type {
-  DatasourceOptions,
-  ICommand,
-  IConnection,
-  IDriver,
-  ITransaction,
-  IsolationLevel,
+import {
+  generatedId as identityGeneratedId,
+  type Cell,
+  type DatasourceOptions,
+  type ICommand,
+  type IConnection,
+  type IDriver,
+  type ITransaction,
+  type IsolationLevel,
+  type TypeConverter,
 } from "@datasources/core";
-import type { Cell, TypeConverter } from "@datasources/core";
 import { MemoryConnection } from "./connection.ts";
 import { MemoryTransaction } from "./transaction.ts";
 
 export class MemoryProvider implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
+  generatedId = identityGeneratedId;
   connection = (options?: DatasourceOptions): IConnection =>
     MemoryConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

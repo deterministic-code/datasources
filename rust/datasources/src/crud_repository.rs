@@ -3,18 +3,14 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_repository_options::create_repository_options;
-use crate::crud_repository_options::{identity_mapper, CRUDRepositoryOptions};
+use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
-use crate::default_write_enrichment_strategy::{
-    copy_ids, strip_enriched, DefaultWriteEnrichmentStrategy,
-};
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
+use crate::default_write_enrichment_strategy::{strip_enriched, DefaultWriteEnrichmentStrategy};
 use crate::enrichment_via::EnrichmentVia;
-use crate::stored_enrichment::StoredEnrichment;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
-use crate::mappers::{Mapper, TransformMapper};
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -24,6 +20,7 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::shared_items::SharedItems;
+use crate::stored_enrichment::StoredEnrichment;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
@@ -36,7 +33,6 @@ use std::sync::Arc;
 
 pub struct CRUDRepository {
     pub(crate) readonly: ReadonlyRepository,
-    create: TransformMapper<Value, Row>,
     ids: Vec<String>,
     write: Arc<dyn WriteEnrichmentStrategy>,
 }
@@ -67,14 +63,12 @@ impl CRUDRepository {
 
     pub fn from_built(mut built: BuiltRepository) -> Self {
         let id = built.ids.clone();
-        let create = built.create.take().unwrap_or_else(|| identity_mapper(&id));
         let write = built
             .write
             .take()
             .unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default()));
         Self {
             readonly: ReadonlyRepository::from_built(built),
-            create,
             ids: id,
             write,
         }
@@ -88,7 +82,6 @@ impl CRUDRepository {
         let ids = vec!["id".into()];
         Self {
             readonly: ReadonlyRepository::memory(items),
-            create: identity_mapper(&ids),
             ids,
             write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
         }
@@ -179,23 +172,42 @@ impl CRUDRepository {
         if let Some(memory) = self.readonly.memory_items() {
             return Ok(memory.insert(item));
         }
-        self.insert(item).await?;
+        let response = self.execute_insert(item).await?;
+        self.write_id(item, &response.result)?;
         Ok(item.clone())
     }
 
-    async fn insert(&self, item: &mut Row) -> Result<Response> {
+    async fn execute_insert(&self, item: &Row) -> Result<Response> {
         let record = self.readonly.reverse_convert(item)?;
         let fields = self.params(&record, false)?;
         let statement = self.readonly.statements.insert(&fields);
-        let response = self
-            .readonly
+        self.readonly
             .command()
             .execute_statement(&statement, Some(&fields))
-            .await?;
-        if response.result != Value::Null {
-            apply(item, Mapper::map(&self.create, response.result.clone()));
+            .await
+    }
+
+    pub(crate) fn id_value(&self, item: &Row) -> Value {
+        if self.ids.len() != 1 {
+            return Value::Null;
         }
-        Ok(response)
+        item.get(&self.ids[0]).cloned().unwrap_or(Value::Null)
+    }
+
+    fn write_id(&self, item: &mut Row, id: &Value) -> Result<()> {
+        if self.ids.len() != 1 || *id == Value::Null {
+            return Ok(());
+        }
+        let name = self.ids[0].clone();
+        let mut patch = Row::new();
+        patch.insert(name.clone(), id.clone());
+        let converted = self.readonly.row_converter.convert(&patch)?;
+        if let Some(value) = converted.get(&name) {
+            if *value != Value::Null {
+                item.insert(name, value.clone());
+            }
+        }
+        Ok(())
     }
 
     pub(crate) async fn save(
@@ -355,8 +367,17 @@ impl ICRUDRepository for CRUDRepository {
             let entries = self.readonly.enrichments.lock().expect("enrichments");
             strip_enriched(item, &entries)
         };
-        let created = self.inserted(&mut stored).await?;
-        copy_ids(item, &created, &self.ids);
+        if self.readonly.memory_items().is_some() {
+            let created = {
+                let memory = self.readonly.memory_items().expect("memory");
+                memory.insert(&mut stored)
+            };
+            let id = self.id_value(&created);
+            self.write_id(item, &id)?;
+        } else {
+            let response = self.execute_insert(&stored).await?;
+            self.write_id(item, &response.result)?;
+        }
         self.write
             .persist(
                 &self.readonly.tree,
@@ -364,13 +385,8 @@ impl ICRUDRepository for CRUDRepository {
                 WriteMode::Create,
             )
             .await?;
-        if self.ids.len() != 1 {
-            return Ok(item.clone());
-        }
-        let Some(id) = item.get(&self.ids[0]).cloned() else {
-            return Ok(item.clone());
-        };
-        if matches!(id, Value::Null) {
+        let id = self.id_value(item);
+        if self.ids.len() != 1 || matches!(id, Value::Null) {
             return Ok(item.clone());
         }
         Ok(self
@@ -433,14 +449,6 @@ impl ICRUDRepository for CRUDRepository {
         let record = self.id_record(id)?;
         let clause = self.id_where(&record)?;
         self.read_single(Some(&clause), None).await
-    }
-}
-
-fn apply(item: &mut Row, identity: Row) {
-    for (key, value) in identity {
-        if value != Value::Null {
-            item.insert(key, value);
-        }
     }
 }
 

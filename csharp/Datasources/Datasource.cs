@@ -43,7 +43,6 @@ public sealed class Datasource(
                 Update = crud.Update,
                 Delete = crud.Delete,
                 Return = crud.Return,
-                Create = crud.Create,
                 Write = crud.Write,
             },
             { } read => new()
@@ -57,7 +56,6 @@ public sealed class Datasource(
                 ReadProperties = read.ReadProperties,
                 RowTypeConverters = types,
                 Ids = built.Ids,
-                Create = built.Create,
             }
         };
     }

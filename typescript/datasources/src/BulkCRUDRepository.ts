@@ -1,5 +1,4 @@
 import type { IConnection } from "./IConnection.ts";
-import type { Scalar } from "./builders/Scalar.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { Cells } from "./converters/Cell.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
@@ -8,12 +7,6 @@ import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./statements/IWhere.ts";
-
-const createdId = (item: object): Scalar | undefined => {
-  const record = item as Record<string, Scalar | object>;
-  const value = record.id ?? record.Id;
-  return value === undefined || value === null || typeof value === "object" ? undefined : value;
-};
 
 const fold = async <T>(
   items: T[],
@@ -52,7 +45,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     let result: Response["result"] = null;
     for (const item of items) {
       const created = await this.create(item);
-      const id = createdId(created as object);
+      const id = this.idValue(created);
       if (id !== undefined) result = id;
     }
     return { result, rowsAffected: items.length };

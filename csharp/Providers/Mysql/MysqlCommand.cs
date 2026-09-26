@@ -39,7 +39,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             return new MysqlExecuteResult(scalar is null ? 0 : 1, Value.From(scalar), ReadBack(command, parameters));
         }
         var rows = await command.ExecuteNonQueryAsync();
-        return new MysqlExecuteResult(rows, Value.From(command.LastInsertedId), ReadBack(command, parameters));
+        return new MysqlExecuteResult(rows, new MysqlDriver().GeneratedId(Value.From(command.LastInsertedId)), ReadBack(command, parameters));
     }
 
     async Task<StreamingReader> Open(string sql, Row parameters)
@@ -68,19 +68,6 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         {
             await command.DisposeAsync();
             throw;
-        }
-    }
-
-    async IAsyncEnumerable<Row> Read(string sql, Row parameters)
-    {
-        using var command = Bind(sql, parameters);
-        using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            var row = new Row();
-            for (var i = 0; i < reader.FieldCount; i++)
-                row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
-            yield return row;
         }
     }
 

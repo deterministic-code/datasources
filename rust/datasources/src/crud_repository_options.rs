@@ -1,7 +1,5 @@
 use crate::mappers::TransformMapper;
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
-use crate::row::Row;
-use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -12,29 +10,8 @@ pub struct CRUDRepositoryOptions {
     pub update: Option<Arc<TransformMapper<String, String>>>,
     pub delete: Option<Arc<TransformMapper<String, String>>>,
     pub return_: Option<Arc<TransformMapper<String, String>>>,
-    pub create: Option<TransformMapper<Value, Row>>,
     pub write: Option<Arc<dyn WriteEnrichmentStrategy>>,
     pub read: ReadonlyRepositoryOptions,
-}
-
-pub fn identity_mapper(ids: &[String]) -> TransformMapper<Value, Row> {
-    let key = if ids.len() == 1 {
-        Some(ids[0].clone())
-    } else {
-        None
-    };
-    TransformMapper::new(
-        move |value| {
-            let mut row = Row::new();
-            if value != Value::Null {
-                if let Some(key) = key.clone() {
-                    row.insert(key, value);
-                }
-            }
-            row
-        },
-        |_| Value::Null,
-    )
 }
 
 impl Default for CRUDRepositoryOptions {
@@ -45,7 +22,6 @@ impl Default for CRUDRepositoryOptions {
             update: None,
             delete: None,
             return_: None,
-            create: None,
             write: None,
             read: ReadonlyRepositoryOptions::default(),
         }

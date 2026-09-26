@@ -6,6 +6,8 @@ import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import type { Cell } from "./converters/Cell.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 
+export const generatedId = (id: Cell): Cell => id;
+
 export interface IDriver {
   connection(options?: DatasourceOptions): IConnection;
   command(connection: IConnection): ICommand;
@@ -14,4 +16,5 @@ export interface IDriver {
     isolation?: IsolationLevel,
   ): ITransaction;
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>;
+  generatedId(id: Cell): Cell;
 }

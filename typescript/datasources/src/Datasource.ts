@@ -43,7 +43,6 @@ export class Datasource implements IDatasource {
           "update" in options ||
           "delete" in options ||
           "return" in options ||
-          "create" in options ||
           "write" in options
         ? {
             entity: options.entity ?? built.entity,
@@ -60,7 +59,6 @@ export class Datasource implements IDatasource {
             update: (options as CRUDRepositoryOptions<T>).update,
             delete: (options as CRUDRepositoryOptions<T>).delete,
             return: (options as CRUDRepositoryOptions<T>).return,
-            create: (options as CRUDRepositoryOptions<T>).create,
             write: (options as CRUDRepositoryOptions<T>).write,
           }
         : {
@@ -74,7 +72,6 @@ export class Datasource implements IDatasource {
             rowTypeConverters: types,
             type,
             ids: built.ids,
-            create: built.create,
           };
   };
 

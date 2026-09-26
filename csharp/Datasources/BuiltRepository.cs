@@ -6,5 +6,4 @@ public sealed record BuiltRepository<T>(
     IMapper<T, T> RowsMapper,
     IMapper<string, string> ColumnMappings,
     RepositoryStatements Statements,
-    IReadOnlyList<string> Ids,
-    IMapper<Value, T>? Create) where T : new();
+    IReadOnlyList<string> Ids) where T : new();

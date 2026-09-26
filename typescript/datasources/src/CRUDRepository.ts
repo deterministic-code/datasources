@@ -11,9 +11,9 @@ import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
-import type { IMapper } from "./mappers/IMapper.ts";
 import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
-import { identityCreate, parts } from "./RepositoryBuilder.ts";
+import { parts } from "./RepositoryBuilder.ts";
+import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { enrichmentsOf, isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
@@ -38,29 +38,10 @@ const fieldsOf = (
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name: column(name), value: cell(name, value, true) as Scalar }));
 
-const apply = <T>(item: T, identity: T): void => {
-  if (!item || !identity || typeof item !== "object" || typeof identity !== "object") return;
-  for (const [key, value] of Object.entries(identity))
-    if (value != null) (item as Record<string, Scalar>)[key] = value as Scalar;
-};
-
-const asScalar = (value: Scalar | undefined): Scalar | undefined =>
-  value == null ? undefined : value;
-
 const isCells = (id: Scalar | Cells): id is Cells => typeof id === "object" && id !== null;
 
 const scalarOf = (value: Scalar | object | undefined): Scalar | undefined =>
   value === undefined || value === null || typeof value === "object" ? undefined : value;
-
-const copyIds = (item: object, created: object, names: readonly string[]): void => {
-  if (item === created) return;
-  const source = created as Props;
-  const dest = item as Props;
-  for (const name of names) {
-    const value = scalarOf(source[name]);
-    if (value !== undefined) dest[name] = value;
-  }
-};
 
 const crudBuilt = <T>(
   typeOrConnection: Constructable<T> | IConnection,
@@ -83,7 +64,6 @@ export class CRUDRepository<T = Cells>
   implements ICRUDRepository<T>
 {
   readonly ids: readonly string[];
-  private readonly createMapper?: IMapper<Scalar, T>;
   private readonly write: IWriteEnrichmentStrategy<T>;
 
   constructor(type: Constructable<T>, connection: IConnection);
@@ -104,14 +84,12 @@ export class CRUDRepository<T = Cells>
     ) {
       super();
       this.ids = createRepositoryOptions(Object as never as Constructable<T>).ids!;
-      this.createMapper = identityCreate<T>(this.ids);
       this.write = (typeOrConnectionOrBuiltOrWrite as IWriteEnrichmentStrategy<T> | undefined)
         ?? new DefaultWriteEnrichmentStrategy<T>();
       return;
     }
     if (isBuilt(typeOrConnectionOrBuiltOrWrite)) {
       super(typeOrConnectionOrBuiltOrWrite);
-      this.createMapper = typeOrConnectionOrBuiltOrWrite.create;
       this.ids = typeOrConnectionOrBuiltOrWrite.ids;
       this.write =
         (connectionOrOptionsOrWrite as IWriteEnrichmentStrategy<T> | undefined) ??
@@ -121,7 +99,6 @@ export class CRUDRepository<T = Cells>
     const options = connectionOrOptionsOrWrite as IConnection | CRUDRepositoryOptions<T>;
     const built = crudBuilt(typeOrConnectionOrBuiltOrWrite, options);
     super(built);
-    this.createMapper = built.create;
     this.ids = built.ids;
     this.write =
       (typeof options === "object" && options !== null && "write" in options
@@ -157,12 +134,11 @@ export class CRUDRepository<T = Cells>
 
   create = async (item: T): Promise<T> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
-    const created = await this.inserted(stored);
-    if (!this.enriched) return created;
-    copyIds(item as object, created as object, this.ids);
+    await this.insert(stored, item);
+    if (!this.enriched) return item;
     await this.write.persist(this.tree, [item], "create");
     if (this.ids.length !== 1) return item;
-    const id = scalarOf((item as Props)[this.ids[0]!]);
+    const id = this.idValue(item);
     return id === undefined ? item : (await this.readSingleById(id)) ?? item;
   };
 
@@ -182,17 +158,33 @@ export class CRUDRepository<T = Cells>
     this.readSingle(this.byId(id));
 
   protected inserted = async (item: T): Promise<T> => {
-    await this.insert(item);
+    await this.insert(item, item);
     return item;
   };
 
-  private insert = async (item: T): Promise<Response> => {
-    const fields = fieldsOf(this.reverseConvert(item), (col) => !this.ids.includes(col), this.column, this.cell);
+  private insert = async (stored: T, target: T): Promise<Response> => {
+    const fields = fieldsOf(this.reverseConvert(stored), (col) => !this.ids.includes(col), this.column, this.cell);
     const response = await execute(this.command(), this.statements!.insert(fields), fields);
-    const scalar = asScalar(response.result as string | number | boolean | bigint | null | undefined);
-    if (scalar !== undefined && this.createMapper) apply(item, this.createMapper.map(scalar));
+    this.writeId(target, response.result);
     return response;
   };
+
+  private writeId = (item: T, id: Response["result"]): void => {
+    const scalar = scalarOf(id as Scalar | object | undefined);
+    if (this.ids.length !== 1 || scalar === undefined || !this.rowConverter) return;
+    const name = this.ids[0]!;
+    const patch = (
+      this.rowConverter instanceof RowTypeConverter
+        ? this.rowConverter.convert({ [name]: scalar }, this.type)
+        : this.rowConverter.convert({ [name]: scalar })
+    ) as Props;
+    const value = patch[name];
+    if (value !== undefined && value !== null && typeof value !== "object")
+      (item as Props)[name] = value;
+  };
+
+  protected idValue = (item: T): Scalar | undefined =>
+    this.ids.length === 1 ? scalarOf((item as Props)[this.ids[0]!]) : undefined;
 
   protected save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);

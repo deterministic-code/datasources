@@ -136,16 +136,6 @@ describe("CRUDRepository", () => {
     expect(item.Id).toBe(9);
   });
 
-  it("skips apply when create identity is missing", async () => {
-    const { repo, command } = create({
-      create: new TransformMapper(() => undefined as never, () => null),
-    });
-    command.response = { result: 9, rowsAffected: 1 };
-    const obj = { id: 1, name: "a" };
-    await repo.create(obj);
-    expect(obj.id).toBe(1);
-  });
-
   it("updates without id columns using a tautology", async () => {
     const { repo, command } = create({ ids: [] });
     await repo.update({ id: 1, name: "a" });

@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, ProviderNotImplementedError, untyped } from "@datasources/core";
-import { TextCommand } from "./command.ts";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
 import { TextConnection } from "./connection.ts";
 import { TextProvider } from "./TextProvider.ts";
 
@@ -19,12 +18,12 @@ describe("text", () => {
     expect(connection).toBeInstanceOf(TextConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
     const command = ds.createCommand(connection);
-    expect(command).toBeInstanceOf(TextCommand);
+    expect(command).toBeInstanceOf(StubCommand);
     expect(command.connection).toBe(connection);
     await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(command.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
     const implicit = ds.createCommand();
-    expect(implicit).toBeInstanceOf(TextCommand);
+    expect(implicit).toBeInstanceOf(StubCommand);
     await expect(implicit.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(implicit.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
     ds.createRepository(untyped());

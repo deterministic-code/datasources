@@ -282,14 +282,6 @@ Rewrites a finished [ReturnStatement](./return-statement.md). Omitted leaves it 
 return?: IMapper<IReturnStatement, IReturnStatement>
 ```
 
-##### create
-
-Maps `Response.result` onto the created item. Default writes the value to `id`.
-
-```typescript
-create?: IMapper<Scalar, T>
-```
-
 #### BuiltRepository
 
 ```typescript
@@ -646,14 +638,6 @@ Rewrites a finished [ReturnStatement](./return-statement.md). Omitted leaves it 
 IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }
 ```
 
-##### Create
-
-Maps `Response.Result` onto the created item. Default writes the value to `id` or `Id`.
-
-```csharp
-IMapper<Value, T> Create { get; init; }
-```
-
 #### BuiltRepository
 
 ```csharp
@@ -923,14 +907,6 @@ Rewrites finished return SQL. `None` leaves it unchanged.
 pub return_: Option<Arc<TransformMapper<String, String>>>
 ```
 
-##### create
-
-Maps `Response.result` onto the created row. Default writes the value to `id`.
-
-```rust
-pub create: TransformMapper<Value, Row>
-```
-
 ##### read
 
 The embedded [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Field access goes through `Deref`.
@@ -992,13 +968,13 @@ pub ids: Vec<String>
 
 ## Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, `Create` / `create` maps `Response.Result` onto the configured id through the create mapper.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, insert writes `Response.Result` onto the single id column through the driver's generated-id method and the row converter.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
 `AddEnriched` registers the same read fill as [ReadonlyRepository](./readonly-repository.md). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 
-- **Create** — write the parent, apply the generated identity through the create mapper, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
 - **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 

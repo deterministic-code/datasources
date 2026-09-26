@@ -50,7 +50,10 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
             || rewritten.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
         {
             var result = await command.ExecuteScalarAsync();
-            return new PostgresExecuteResult(result is null ? 0 : 1, Value.From(result), ReadBack(command, parameters, bound));
+            var value = Value.From(result);
+            if (sql.TrimStart().StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
+                value = ((IDriver)new PostgresDriver()).GeneratedId(value);
+            return new PostgresExecuteResult(result is null ? 0 : 1, value, ReadBack(command, parameters, bound));
         }
         var rows = await command.ExecuteNonQueryAsync();
         return new PostgresExecuteResult(Math.Max(rows, 0), Value.Null.Instance, ReadBack(command, parameters, bound));
@@ -85,22 +88,6 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         {
             await command.DisposeAsync();
             throw;
-        }
-    }
-
-    async IAsyncEnumerable<Row> Read(string sql, Row parameters)
-    {
-        var (text, values) = PostgresBind.ToPostgres(sql, parameters);
-        using var command = Typed.Require().CreateCommand();
-        command.CommandText = text;
-        Bind(command, values);
-        using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            var row = new Row();
-            for (var i = 0; i < reader.FieldCount; i++)
-                row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
-            yield return row;
         }
     }
 

@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, ProviderNotImplementedError, untyped } from "@datasources/core";
-import { DynamoDbCommand } from "./command.ts";
+import { Datasource, DatasourceFactory, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
 import { DynamoDbConnection } from "./connection.ts";
 import { DynamoDbProvider } from "./DynamoDbProvider.ts";
 
@@ -19,12 +18,12 @@ describe("dynamodb", () => {
     expect(connection).toBeInstanceOf(DynamoDbConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
     const command = ds.createCommand(connection);
-    expect(command).toBeInstanceOf(DynamoDbCommand);
+    expect(command).toBeInstanceOf(StubCommand);
     expect(command.connection).toBe(connection);
     await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(command.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
     const implicit = ds.createCommand();
-    expect(implicit).toBeInstanceOf(DynamoDbCommand);
+    expect(implicit).toBeInstanceOf(StubCommand);
     await expect(implicit.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(implicit.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
     ds.createRepository(untyped());

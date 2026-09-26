@@ -1,12 +1,13 @@
 use crate::bind::{to_postgres, with_returning};
 use crate::connection::{map_err, PostgresConnection};
+use crate::driver::PostgresDriver;
 use crate::pg_value::PgValue;
 use crate::reader::PostgresReader;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, Value,
+    CommandMiddlewareHost, DatasourceError, Driver, Parameter, Reader, Response, Result, Value,
 };
 use rust_decimal::Decimal;
 use std::collections::HashMap;
@@ -57,6 +58,13 @@ impl PostgresCommand {
                 .first()
                 .map(|row| from_cell(row, 0))
                 .unwrap_or(Value::Null);
+            let result = if sql.trim_start().len() >= 6
+                && sql.trim_start()[..6].eq_ignore_ascii_case("insert")
+            {
+                PostgresDriver.generated_id(result)
+            } else {
+                result
+            };
             return Ok(PostgresExecuteResult {
                 rows_affected: rows.len() as i64,
                 result,

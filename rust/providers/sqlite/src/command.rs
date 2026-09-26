@@ -2,10 +2,11 @@ use crate::connection::{map_err, SqliteConnection};
 use crate::converters::{
     BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
 };
+use crate::driver::SqliteDriver;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, Parameter, Reader, Response, Result, TypeConverter, Value,
+    DatasourceError, Driver, Parameter, Reader, Response, Result, TypeConverter, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
 use std::collections::HashMap;
@@ -66,7 +67,7 @@ impl SqliteCommand {
         };
         Ok(SqliteExecuteResult {
             rows_affected,
-            result: Value::Int(conn.last_insert_rowid()),
+            result: SqliteDriver.generated_id(Value::Int(conn.last_insert_rowid())),
         })
     }
 }

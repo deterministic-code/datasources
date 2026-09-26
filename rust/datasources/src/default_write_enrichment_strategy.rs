@@ -157,8 +157,7 @@ impl DefaultWriteEnrichmentStrategy {
             if let Some(key) = &key {
                 row.insert(enrichment.by.clone(), key.clone());
             }
-            let created = writer.create(row).await?;
-            copy_ids(row, &created, &writer.id_names());
+            writer.create(row).await?;
         }
         parent.insert(enrichment.into.clone(), encode_rows(&related));
         Ok(())
@@ -199,8 +198,7 @@ impl DefaultWriteEnrichmentStrategy {
                     writer.update(row, None).await?;
                 }
                 _ => {
-                    let created = writer.create(row).await?;
-                    copy_ids(row, &created, &ids);
+                    writer.create(row).await?;
                 }
             }
         }
@@ -327,16 +325,6 @@ pub(crate) fn strip_enriched(item: &Row, entries: &[StoredEnrichment]) -> Row {
         row.remove(&entry.enrichment.into);
     }
     row
-}
-
-pub(crate) fn copy_ids(item: &mut Row, created: &Row, ids: &[String]) {
-    for name in ids {
-        if let Some(value) = created.get(name) {
-            if *value != Value::Null && *value != Value::Int(0) {
-                item.insert(name.clone(), value.clone());
-            }
-        }
-    }
 }
 
 fn assigned(value: &Value) -> bool {

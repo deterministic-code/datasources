@@ -8,19 +8,6 @@ import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import { statementsOf } from "./RepositoryStatements.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
-import { TransformMapper } from "./mappers/TransformMapper.ts";
-import type { IMapper } from "./mappers/IMapper.ts";
-import type { Scalar } from "./builders/Scalar.ts";
-
-export type { BuiltRepository } from "./BuiltRepository.ts";
-export type { RepositoryStatements } from "./RepositoryStatements.ts";
-
-export const identityCreate = <T>(ids: readonly string[]): IMapper<Scalar, T> =>
-  new TransformMapper(
-    (value) =>
-      value == null || ids.length !== 1 ? ({} as T) : ({ [ids[0]!]: value } as T),
-    () => null,
-  );
 
 const isCrud = <T>(options: ReadonlyRepositoryOptions<T>): options is CRUDRepositoryOptions<T> =>
   "ids" in options ||
@@ -28,7 +15,6 @@ const isCrud = <T>(options: ReadonlyRepositoryOptions<T>): options is CRUDReposi
   "update" in options ||
   "delete" in options ||
   "return" in options ||
-  "create" in options ||
   "write" in options;
 
 export const parts = <T>(
@@ -59,7 +45,6 @@ export const parts = <T>(
     readColumns: columns,
     ids,
     type: options.type ?? (Object as never as Constructable<T>),
-    create: crud ? (crud.create ?? identityCreate<T>(ids)) : undefined,
   };
 };
 

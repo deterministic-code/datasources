@@ -16,8 +16,6 @@ describe("CRUDRepositoryOptions", () => {
     expect(built.statements.query().getText()).toBe("SELECT id FROM users");
     expect(built.rowsMapper.map("x")).toBe("x");
     expect(built.rowsMapper.reverseMap("x")).toBe("x");
-    expect(built.create?.map(null)).toEqual({});
-    expect(built.create?.map(9)).toEqual({ id: 9 });
     expect(parts(new MockConnection(), { insert: undefined }).ids).toEqual(["id"]);
     expect(
       parts(new MockConnection(), {

@@ -17,6 +17,7 @@ import {
   type Scalar,
 } from "@datasources/core";
 import type { MemoryConnection } from "./connection.ts";
+import { MemoryProvider } from "./MemoryProvider.ts";
 import type { MemoryRecord } from "./store.ts";
 import { matches, parametersToObject, parseFilter } from "./filter.ts";
 
@@ -89,7 +90,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         const obj = parametersToObject(params);
         if (op === "insert") {
           const row = { ...obj };
-          const id = insertedId(row, this.connection.getCollection());
+          const id = new MemoryProvider().generatedId(insertedId(row, this.connection.getCollection()));
           row.id = id;
           this.connection.getCollection().push(row);
           return { value: { result: id, rowsAffected: 1, parameters: params }, rows: [] };
@@ -124,7 +125,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
       const obj = parametersToObject(params);
       if (op === "insert") {
         const row = { ...obj };
-        const id = insertedId(row, rows);
+        const id = new MemoryProvider().generatedId(insertedId(row, rows));
         row.id = id;
         rows.push(row);
         return { value: { result: id, rowsAffected: 1, parameters: params }, rows: [] };

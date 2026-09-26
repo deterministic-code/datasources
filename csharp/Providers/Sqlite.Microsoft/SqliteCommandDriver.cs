@@ -5,16 +5,10 @@ namespace Datasources.Sqlite;
 
 internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : ISqliteCommands
 {
-    public Task<SqliteExecuteResult> Execute(string sql, Row parameters) =>
-        Execute(sql, parameters.Select(p => new Parameter(p.Key, p.Value)).ToArray());
-
     public Task<SqliteExecuteResult> Execute(string sql, IReadOnlyList<Parameter>? parameters = null) =>
         string.IsNullOrWhiteSpace(sql)
             ? Task.FromResult(new SqliteExecuteResult(0, Value.Null.Instance, parameters))
             : Run(sql, parameters);
-
-    public IAsyncEnumerable<Row> Query(string sql, Row parameters) =>
-        string.IsNullOrWhiteSpace(sql) ? EmptyRows() : Read(sql, parameters);
 
     public async Task<IReader<Row>> Open(string sql, Row parameters)
     {
@@ -69,26 +63,7 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
         var rows = await command.ExecuteNonQueryAsync();
         using var id = connection.Require().CreateCommand();
         id.CommandText = "SELECT last_insert_rowid()";
-        return new SqliteExecuteResult(rows, Value.From(await id.ExecuteScalarAsync()), parameters);
-    }
-
-    static async IAsyncEnumerable<Row> EmptyRows()
-    {
-        yield break;
-    }
-
-    async IAsyncEnumerable<Row> Read(string sql, Row parameters)
-    {
-        using var command = Bind(sql, parameters);
-        using var reader = await command.ExecuteReaderAsync();
-        var names = ColumnNames(reader);
-        while (await reader.ReadAsync())
-        {
-            var row = new Row();
-            for (var i = 0; i < reader.FieldCount; i++)
-                row[names[i]] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
-            yield return row;
-        }
+        return new SqliteExecuteResult(rows, ((IDriver)new SqliteDriver()).GeneratedId(Value.From(await id.ExecuteScalarAsync())), parameters);
     }
 
     static string[] ColumnNames(Microsoft.Data.Sqlite.SqliteDataReader reader)

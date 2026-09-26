@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Reflection;
 
 namespace Datasources;
 
@@ -7,7 +6,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 {
     readonly IWriteEnrichmentStrategy<T> write;
     readonly IReadOnlyList<string> ids;
-    readonly IMapper<Value, T>? create;
 
     public CRUDRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
@@ -18,7 +16,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public CRUDRepository(BuiltRepository<T> built, IWriteEnrichmentStrategy<T>? write = null) : base(
         built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
     {
-        create = built.Create;
         ids = built.Ids;
         this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
     }
@@ -26,7 +23,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     protected CRUDRepository(IWriteEnrichmentStrategy<T>? write = null)
     {
         ids = CreateRepositoryOptions.FromType<T>().Ids;
-        create = CRUDRepositoryOptions<T>.Identity(ids);
         this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
     }
 
@@ -66,9 +62,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public async Task<T> Create(T item)
     {
         var stored = Enriched ? StripEnriched(item) : item;
-        var created = await Inserted(stored);
-        if (!Enriched) return created;
-        CopyIds(item, created);
+        await Insert(stored, item);
+        if (!Enriched) return item;
         await write.Persist(Tree, [item!], WriteMode.Create);
         if (ids.Count != 1) return item;
         var id = IdValue(item);
@@ -103,16 +98,15 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     protected virtual async Task<T> Inserted(T item)
     {
-        await Insert(item);
+        await Insert(item, item);
         return item;
     }
 
-    async Task<Response> Insert(T item)
+    async Task<Response> Insert(T stored, T target)
     {
-        var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
+        var fields = Params(ReverseConvert(stored), col => !ids.Contains(col));
         var response = await Command().Execute(Statements.Insert(fields), fields);
-        if (response.Result is not Value.Null && create is { } map)
-            Apply(item, map.Map(response.Result));
+        WriteId(target, response.Result);
         return response;
     }
 
@@ -165,53 +159,30 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     Row ReverseConvert(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));
 
-    void CopyIds(T item, T created)
+    void WriteId(T target, Value id)
     {
-        if (ReferenceEquals(item, created)) return;
-        if (item is IDictionary dest && created is IDictionary src)
+        if (ids.Count != 1 || id is Value.Null) return;
+        var name = ids[0];
+        var patch = RowConverter.Convert(new Row { [name] = id });
+        if (target is IDictionary dest && patch is IDictionary src && src.Contains(name))
         {
-            foreach (var name in ids)
-                if (src.Contains(name))
-                    dest[name] = src[name];
+            dest[name] = src[name];
             return;
         }
-        var unset = new T();
-        foreach (var name in ids)
-        {
-            var prop = typeof(T).GetProperty(name);
-            if (prop is not { CanRead: true, CanWrite: true }) continue;
-            var value = prop.GetValue(created);
-            if (!Equals(value, prop.GetValue(unset)))
-                prop.SetValue(item, value);
-        }
+        var prop = typeof(T).GetProperty(name);
+        if (prop is { CanWrite: true })
+            prop.SetValue(target, prop.GetValue(patch));
     }
 
-    Value IdValue(T item)
+    protected Value IdValue(T item)
     {
+        if (ids.Count != 1) return Value.Null.Instance;
         var name = ids[0];
         if (item is IDictionary dict)
             return dict.Contains(name) ? Value.From(dict[name]) : Value.Null.Instance;
         return typeof(T).GetProperty(name)?.GetValue(item) is { } value
             ? Value.From(value)
             : Value.Null.Instance;
-    }
-
-    static void Apply(T item, T identity)
-    {
-        if (item is IDictionary dest && identity is IDictionary src)
-        {
-            foreach (DictionaryEntry entry in src)
-                dest[entry.Key] = entry.Value;
-            return;
-        }
-        var unset = new T();
-        foreach (var prop in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(prop => prop is { CanRead: true, CanWrite: true } && prop.GetIndexParameters().Length == 0))
-        {
-            var value = prop.GetValue(identity);
-            if (!Equals(value, prop.GetValue(unset)))
-                prop.SetValue(item, value);
-        }
     }
 
     T StripEnriched(T item) => (T)DefaultWriteEnrichmentStrategy<T>.Strip(this, item!);

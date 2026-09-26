@@ -13,6 +13,7 @@ import {
   type Parameter,
   type Response,
 } from "@datasources/core";
+import { SqliteDriver } from "./SqliteDriver.ts";
 import type { SqliteConnection } from "./connection.ts";
 import type { SqliteStatement } from "./i-sqlite-driver.ts";
 import { reverse } from "./converters/SqliteRowTypeConverters.ts";
@@ -80,8 +81,13 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
         };
       }
       const info = this.connection.require().prepare(query).run(bound(params));
+      const rowid = info.lastInsertRowid;
       return {
-        value: responseOf(info.lastInsertRowid, info.changes, params),
+        value: responseOf(
+          rowid == null ? rowid : new SqliteDriver().generatedId(rowid),
+          info.changes,
+          params,
+        ),
         rows: [],
       };
     });

@@ -69,7 +69,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         foreach (var related in Payload(parent, enrichment.Into))
         {
             Stamp(related, enrichment.By, Get(parent, enrichment.From));
-            writer.AssignIdentity(related, await writer.Create(related));
+            await writer.Create(related);
         }
     }
 
@@ -91,7 +91,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             if (HasKey(related, keys) && existing.Any(row => KeyOf(row, keys) == KeyOf(related, keys)))
                 await writer.Update(related);
             else
-                writer.AssignIdentity(related, await writer.Create(related));
+                await writer.Create(related);
         }
     }
 

@@ -8,6 +8,7 @@ import {
   DatasourceFactory,
   IsolationLevel,
   type Cells,
+  generatedId,
   type IDriver,
   type Scalar,
 } from "@datasources/core";
@@ -184,6 +185,7 @@ describe("Sqlite datasource", () => {
       transaction: (c, isolation = "serializable") =>
         new SqliteTransaction(c as SqliteConnection, isolation),
       rowTypeConverters: SqliteRowTypeConverters,
+      generatedId,
     });
     const ds = new Datasource("sqlite", of());
     expect(ds.provider).toBe("sqlite");
