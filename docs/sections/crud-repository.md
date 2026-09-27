@@ -1085,11 +1085,11 @@ no row
 `AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L148-L196
+```csharp csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L148-L220
 ```
-```rust rust/datasources/tests/user_view.rs#L139-L205
+```rust rust/datasources/tests/user_view.rs#L151-L250
 ```
-```typescript typescript/datasources/src/UserViewCRUDRepository.test.ts#L109-L153
+```typescript typescript/datasources/src/UserViewCRUDRepository.test.ts#L109-L174
 ```
 
 ```output [Created]

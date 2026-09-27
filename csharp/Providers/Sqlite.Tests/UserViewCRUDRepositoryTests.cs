@@ -161,7 +161,9 @@ public class UserViewCRUDRepositoryTests
             Roles = [graph.AdminRole, graph.EditorRole],
             Groups = [graph.Engineering],
         });
-        await usersRepo.Update(new UserView
+        var createdRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+        var createdGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+        var saved = await usersRepo.Update(new UserView
         {
             Id = created.Id,
             Username = "ada",
@@ -171,9 +173,14 @@ public class UserViewCRUDRepositoryTests
             Groups = [graph.Engineering, graph.Ops],
         });
         var updated = await usersRepo.ReadSingleById(created.Id);
-        await usersRepo.Delete(new UserView { Id = created.Id });
+        var updatedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+        var updatedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+        var removed = await usersRepo.Delete(new UserView { Id = created.Id });
 
         Assert.True(created.Id > 0);
+        Assert.Equal("ada", created.Username);
+        Assert.True(created.IsEnabled);
+        Assert.Equal(graph.AdminType.Id, created.UserTypeId);
         Assert.Equal("admin", created.UserType!.Name);
         Assert.Equal(["admin", "editor"], created.Roles!.Select(role => role.Name).OrderBy(name => name));
         Assert.Equal(
@@ -181,12 +188,29 @@ public class UserViewCRUDRepositoryTests
             created.Roles!.Select(role => role.Id).OrderBy(id => id));
         Assert.Equal(["engineering"], created.Groups!.Select(group => group.Name));
         Assert.Equal([graph.Engineering.Id], created.Groups!.Select(group => group.Id));
-        Assert.Equal(["editor"], updated!.Roles!.Select(role => role.Name));
+        Assert.Equal([created.Id, created.Id], createdRoleLinks.Select(link => link.UserId));
+        Assert.Equal(
+            new[] { graph.AdminRole.Id, graph.EditorRole.Id }.OrderBy(id => id),
+            createdRoleLinks.Select(link => link.RoleId).OrderBy(id => id));
+        Assert.Equal((created.Id, graph.Engineering.Id), (createdGroupLinks[0].UserId, createdGroupLinks[0].GroupId));
+        Assert.Equal(1, saved.RowsAffected);
+        Assert.Equal(created.Id, updated!.Id);
+        Assert.Equal("ada", updated.Username);
+        Assert.True(updated.IsEnabled);
+        Assert.Equal(graph.AdminType.Id, updated.UserTypeId);
+        Assert.Equal(["editor"], updated.Roles!.Select(role => role.Name));
         Assert.Equal([graph.EditorRole.Id], updated.Roles!.Select(role => role.Id));
         Assert.Equal(["engineering", "ops"], updated.Groups!.Select(group => group.Name).OrderBy(name => name));
         Assert.Equal(
             new[] { graph.Engineering.Id, graph.Ops.Id }.OrderBy(id => id),
             updated.Groups!.Select(group => group.Id).OrderBy(id => id));
+        Assert.Equal([created.Id], updatedRoleLinks.Select(link => link.UserId));
+        Assert.Equal([graph.EditorRole.Id], updatedRoleLinks.Select(link => link.RoleId));
+        Assert.Equal([created.Id, created.Id], updatedGroupLinks.Select(link => link.UserId));
+        Assert.Equal(
+            new[] { graph.Engineering.Id, graph.Ops.Id }.OrderBy(id => id),
+            updatedGroupLinks.Select(link => link.GroupId).OrderBy(id => id));
+        Assert.Equal(1, removed.RowsAffected);
         Assert.Empty(await usersRepo.Read().ToListAsync());
         Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
         Assert.Empty(await graph.UserGroupsRepo.Read().ToListAsync());
@@ -200,7 +224,7 @@ public class UserViewCRUDRepositoryTests
     {
         var graph = await GraphAsync();
         var created = await CreateAda(graph, [graph.AdminRole, graph.EditorRole], [graph.Engineering]);
-        await graph.UsersRepo.Update(new UserView
+        var saved = await graph.UsersRepo.Update(new UserView
         {
             Id = created.Id,
             Username = "ada",
@@ -209,9 +233,25 @@ public class UserViewCRUDRepositoryTests
             Roles = null,
             Groups = [graph.Engineering],
         });
-        Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
+        var loaded = await graph.UsersRepo.ReadSingleById(created.Id);
+        var userRoles = await graph.UserRolesRepo.Read().ToListAsync();
         var userGroups = await graph.UserGroupsRepo.Read().ToListAsync();
-        Assert.Equal((created.Id, graph.Engineering.Id), (userGroups[0].UserId, userGroups[0].GroupId));
+        var roles = await graph.RolesRepo.Read().ToListAsync();
+        var groups = await graph.GroupsRepo.Read().ToListAsync();
+
+        Assert.True(created.Id > 0);
+        Assert.Equal(1, saved.RowsAffected);
+        Assert.Equal(created.Id, loaded!.Id);
+        Assert.Equal("ada", loaded.Username);
+        Assert.Equal(graph.AdminType.Id, loaded.UserTypeId);
+        Assert.Equal("admin", loaded.UserType!.Name);
+        Assert.Empty(loaded.Roles!);
+        Assert.Equal([graph.Engineering.Id], loaded.Groups!.Select(group => group.Id));
+        Assert.Empty(userRoles);
+        Assert.Equal([created.Id], userGroups.Select(link => link.UserId));
+        Assert.Equal([graph.Engineering.Id], userGroups.Select(link => link.GroupId));
+        Assert.Equal(["admin", "editor"], roles.Select(role => role.Name).OrderBy(name => name));
+        Assert.Equal(["engineering", "ops"], groups.Select(group => group.Name).OrderBy(name => name));
     }
 
     [Fact]
@@ -219,7 +259,7 @@ public class UserViewCRUDRepositoryTests
     {
         var graph = await GraphAsync();
         var created = await CreateAda(graph, [graph.AdminRole, graph.EditorRole], [graph.Engineering]);
-        await graph.UsersRepo.Update(new UserView
+        var saved = await graph.UsersRepo.Update(new UserView
         {
             Id = created.Id,
             Username = "ada",
@@ -228,9 +268,25 @@ public class UserViewCRUDRepositoryTests
             Roles = [],
             Groups = [graph.Engineering],
         });
-        Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
+        var loaded = await graph.UsersRepo.ReadSingleById(created.Id);
+        var userRoles = await graph.UserRolesRepo.Read().ToListAsync();
         var userGroups = await graph.UserGroupsRepo.Read().ToListAsync();
-        Assert.Equal((created.Id, graph.Engineering.Id), (userGroups[0].UserId, userGroups[0].GroupId));
+        var roles = await graph.RolesRepo.Read().ToListAsync();
+        var groups = await graph.GroupsRepo.Read().ToListAsync();
+
+        Assert.True(created.Id > 0);
+        Assert.Equal(1, saved.RowsAffected);
+        Assert.Equal(created.Id, loaded!.Id);
+        Assert.Equal("ada", loaded.Username);
+        Assert.Equal(graph.AdminType.Id, loaded.UserTypeId);
+        Assert.Equal("admin", loaded.UserType!.Name);
+        Assert.Empty(loaded.Roles!);
+        Assert.Equal([graph.Engineering.Id], loaded.Groups!.Select(group => group.Id));
+        Assert.Empty(userRoles);
+        Assert.Equal([created.Id], userGroups.Select(link => link.UserId));
+        Assert.Equal([graph.Engineering.Id], userGroups.Select(link => link.GroupId));
+        Assert.Equal(["admin", "editor"], roles.Select(role => role.Name).OrderBy(name => name));
+        Assert.Equal(["engineering", "ops"], groups.Select(group => group.Name).OrderBy(name => name));
     }
 
     [Fact]
@@ -238,9 +294,15 @@ public class UserViewCRUDRepositoryTests
     {
         var graph = await GraphAsync();
         var created = await CreateAda(graph, [graph.AdminRole, graph.AdminRole], [graph.Engineering]);
-        var links = await graph.UserRolesRepo.Read().ToListAsync();
-        Assert.Equal([created.Id], links.Select(link => link.UserId));
-        Assert.Equal([graph.AdminRole.Id], links.Select(link => link.RoleId));
+        var roleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+        var groupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+        var roles = await graph.RolesRepo.Read().ToListAsync();
+
+        Assert.True(created.Id > 0);
+        Assert.Equal([created.Id], roleLinks.Select(link => link.UserId));
+        Assert.Equal([graph.AdminRole.Id], roleLinks.Select(link => link.RoleId));
+        Assert.Equal((created.Id, graph.Engineering.Id), (groupLinks[0].UserId, groupLinks[0].GroupId));
+        Assert.Equal(["admin", "editor"], roles.Select(role => role.Name).OrderBy(name => name));
     }
 
     [Fact]
@@ -248,13 +310,20 @@ public class UserViewCRUDRepositoryTests
     {
         var graph = await GraphAsync();
         var usersRepo = Enrich(graph.UsersRepo, graph);
-        await Assert.ThrowsAsync<DatasourceException>(() => usersRepo.Create(new UserView
+        var error = await Assert.ThrowsAsync<DatasourceException>(() => usersRepo.Create(new UserView
         {
             Username = "ada",
             IsEnabled = true,
             UserTypeId = graph.AdminType.Id,
             Roles = [new Role()],
         }));
+        var users = await usersRepo.Read().ToListAsync();
+        var roleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+
+        Assert.Contains("Id", error.Message);
+        Assert.True(Assert.Single(users).Id > 0);
+        Assert.Equal("ada", users[0].Username);
+        Assert.Empty(roleLinks);
     }
 
     [Fact]
@@ -271,39 +340,51 @@ public class UserViewCRUDRepositoryTests
             Roles = null,
             Groups = [graph.Engineering]
         });
-        Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
-        var userGroups = await graph.UserGroupsRepo.Read().ToListAsync();
-        Assert.Equal((created!.Id, graph.Engineering.Id), (userGroups[0].UserId, userGroups[0].GroupId));
-
-        await userViewRepo.Update(new UserView
+        var createdRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+        var createdGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+        var skipped = await userViewRepo.Update(new UserView
         {
             Id = created.Id,
             Username = "ada",
-            IsEnabled = true,
+            IsEnabled = false,
             UserTypeId = graph.AdminType.Id,
             Roles = null,
             Groups = null
         });
-        Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
-        userGroups = await graph.UserGroupsRepo.Read().ToListAsync();
-        Assert.Equal((created.Id, graph.Engineering.Id), (userGroups[0].UserId, userGroups[0].GroupId));
-
-        await userViewRepo.Update(new UserView
+        var afterSkip = await userViewRepo.ReadSingleById(created.Id);
+        var skippedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+        var skippedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+        var linked = await userViewRepo.Update(new UserView
         {
             Id = created.Id,
             Username = "ada",
-            IsEnabled = true,
+            IsEnabled = false,
             UserTypeId = graph.AdminType.Id,
             Roles = [graph.EditorRole],
             Groups = null
         });
-        Assert.Equal([graph.EditorRole.Id], (await graph.UserRolesRepo.Read().ToListAsync()).Select(link => link.RoleId));
-        userGroups = await graph.UserGroupsRepo.Read().ToListAsync();
-        Assert.Equal((created.Id, graph.Engineering.Id), (userGroups[0].UserId, userGroups[0].GroupId));
-        Assert.Equal(["admin", "editor"], (await graph.RolesRepo.Read().ToListAsync()).Select(role => role.Name).OrderBy(name => name));
-        Assert.Equal(["engineering", "ops"], (await graph.GroupsRepo.Read().ToListAsync()).Select(group => group.Name).OrderBy(name => name));
+        var linkedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+        var linkedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+        var roles = await graph.RolesRepo.Read().ToListAsync();
+        var groups = await graph.GroupsRepo.Read().ToListAsync();
+        var removed = await userViewRepo.Delete(new UserView { Id = created.Id, Roles = null, Groups = null });
 
-        await userViewRepo.Delete(new UserView { Id = created.Id, Roles = null, Groups = null });
+        Assert.True(created.Id > 0);
+        Assert.Empty(createdRoleLinks);
+        Assert.Equal((created.Id, graph.Engineering.Id), (createdGroupLinks[0].UserId, createdGroupLinks[0].GroupId));
+        Assert.Equal(1, skipped.RowsAffected);
+        Assert.Equal(created.Id, afterSkip!.Id);
+        Assert.Equal("ada", afterSkip.Username);
+        Assert.False(afterSkip.IsEnabled);
+        Assert.Empty(skippedRoleLinks);
+        Assert.Equal((created.Id, graph.Engineering.Id), (skippedGroupLinks[0].UserId, skippedGroupLinks[0].GroupId));
+        Assert.Equal(1, linked.RowsAffected);
+        Assert.Equal([created.Id], linkedRoleLinks.Select(link => link.UserId));
+        Assert.Equal([graph.EditorRole.Id], linkedRoleLinks.Select(link => link.RoleId));
+        Assert.Equal((created.Id, graph.Engineering.Id), (linkedGroupLinks[0].UserId, linkedGroupLinks[0].GroupId));
+        Assert.Equal(["admin", "editor"], roles.Select(role => role.Name).OrderBy(name => name));
+        Assert.Equal(["engineering", "ops"], groups.Select(group => group.Name).OrderBy(name => name));
+        Assert.Equal(1, removed.RowsAffected);
         Assert.Empty(await graph.UsersRepo.Read().ToListAsync());
         Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
         Assert.Empty(await graph.UserGroupsRepo.Read().ToListAsync());

@@ -13472,7 +13472,7 @@ no row
 
 `AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L148-L196)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L148-L220)
 
 ```csharp
 var graph = await GraphAsync();
@@ -13488,7 +13488,9 @@ var created = await usersRepo.Create(new UserView
     Roles = [graph.AdminRole, graph.EditorRole],
     Groups = [graph.Engineering],
 });
-await usersRepo.Update(new UserView
+var createdRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var createdGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var saved = await usersRepo.Update(new UserView
 {
     Id = created.Id,
     Username = "ada",
@@ -13498,7 +13500,9 @@ await usersRepo.Update(new UserView
     Groups = [graph.Engineering, graph.Ops],
 });
 var updated = await usersRepo.ReadSingleById(created.Id);
-await usersRepo.Delete(new UserView { Id = created.Id });
+var updatedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var updatedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var removed = await usersRepo.Delete(new UserView { Id = created.Id });
 ```
 
 **Created**
@@ -13527,7 +13531,7 @@ no user
 roles and groups remain
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L139-L205)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L151-L250)
 
 ```rust
 let (mut users, seeded) = open(None).await;
@@ -13559,19 +13563,23 @@ let created = users
     ))
     .await
     .unwrap();
+let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
 let mut next = ada(
     &seeded,
     encode_rows(&[seeded.editor_role.clone()]),
     encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
 );
 next.insert("id".into(), created.get("id").unwrap().clone());
-users.update(&next, None).await.unwrap();
+let saved = users.update(&next, None).await.unwrap();
 let updated = users
     .read_single_by_id(created.get("id").unwrap())
     .await
     .unwrap()
     .unwrap();
-users
+let updated_role_links = seeded.user_roles.read(None, None).await.unwrap();
+let updated_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let removed = users
     .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
     .unwrap();
@@ -13603,7 +13611,7 @@ no user
 roles and groups remain
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/UserViewCRUDRepository.test.ts#L109-L153)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/UserViewCRUDRepository.test.ts#L109-L174)
 
 ```typescript
 const seeded = await graph();
@@ -13626,7 +13634,9 @@ const created = await usersRepo.create(Object.assign(new UserView(), {
   roles: [seeded.adminRole, seeded.editorRole],
   groups: [seeded.engineering],
 }));
-await usersRepo.update(Object.assign(new UserView(), {
+const createdRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const createdGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const saved = await usersRepo.update(Object.assign(new UserView(), {
   id: created.id,
   username: "ada",
   is_enabled: true,
@@ -13635,7 +13645,9 @@ await usersRepo.update(Object.assign(new UserView(), {
   groups: [seeded.engineering, seeded.ops],
 }));
 const updated = await usersRepo.readSingleById(created.id);
-await usersRepo.delete(Object.assign(new UserView(), { id: created.id }));
+const updatedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const updatedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const removed = await usersRepo.delete(Object.assign(new UserView(), { id: created.id }));
 ```
 
 **Created**
