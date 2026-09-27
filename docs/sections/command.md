@@ -870,7 +870,7 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L20-L42
 ```
-```rust rust/providers/sqlite/src/lib.rs#L87-L99
+```rust rust/providers/sqlite/src/lib.rs#L90-L102
 ```
 ```typescript typescript/providers/sqlite/src/sqlite.test.ts#L159-L165
 ```
