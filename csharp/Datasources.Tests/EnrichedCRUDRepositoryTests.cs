@@ -39,6 +39,7 @@ public class CRUDRepositoryTests
     sealed class Tagged
     {
         public int id { get; set; }
+        public string label { get; set; } = "";
         public List<Tag> tags { get; set; } = [];
     }
 
@@ -134,16 +135,17 @@ public class CRUDRepositoryTests
         await parentsRepo.Create(new Parent());
         var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
         await childrenRepo.Create(new Child { parent_id = parent.id, label = "a" });
-        var child = Assert.Single(await childrenRepo.Read().ToListAsync());
+        await childrenRepo.Create(new Child { label = "other" });
+        var child = (await childrenRepo.Read().ToListAsync()).Single(row => row.label == "a");
         await notesRepo.Create(new Note { child_id = child.id, text = "n" });
         childrenRepo.AddEnriched(new("notes", "id", "child_id", Many: true), notesRepo);
         parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
         await parentsRepo.Update(new Parent
         {
             id = parent.id,
-            children = [new Child { label = "fresh" }]
+            children = [new Child { id = child.id, label = "fresh" }]
         });
-        var created = Assert.Single(await childrenRepo.Read().ToListAsync());
+        var created = (await childrenRepo.Read().ToListAsync()).Single(row => row.label == "fresh");
         Assert.NotEqual(child.id, created.id);
         Assert.Equal("fresh", created.label);
         Assert.Equal(parent.id, created.parent_id);
@@ -169,10 +171,11 @@ public class CRUDRepositoryTests
         var drop = tags.Single(tag => tag.name == "drop");
         await linksRepo.Create(new ParentTag { parent_id = parent.id, tag_id = keep.id });
         await linksRepo.Create(new ParentTag { parent_id = parent.id, tag_id = drop.id });
-        var oldLink = (await linksRepo.Read().ToListAsync()).Single(link => link.tag_id == keep.id);
+        await linksRepo.Create(new ParentTag { tag_id = keep.id });
+        var oldLink = (await linksRepo.Read().ToListAsync()).Single(link => link.parent_id == parent.id && link.tag_id == keep.id);
         parentsRepo.AddLinked(new("tags", "id", "id", Association: new("parent_id", "tag_id")), tagsRepo, linksRepo);
-        await parentsRepo.Update(new Tagged { id = parent.id, tags = [new Tag { id = keep.id }] });
-        var link = Assert.Single(await linksRepo.Read().ToListAsync());
+        await parentsRepo.Update(new Tagged { id = parent.id, label = "p", tags = [new Tag { id = keep.id }] });
+        var link = Assert.Single(await linksRepo.Read().ToListAsync(), row => row.parent_id == parent.id);
         Assert.Equal(keep.id, link.tag_id);
         Assert.Equal(parent.id, link.parent_id);
         Assert.NotEqual(oldLink.id, link.id);

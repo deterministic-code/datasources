@@ -43,5 +43,5 @@ internal sealed class MemoryStore
     public static List<Row> CloneRows(IEnumerable<Row> rows) =>
         rows.Select(AsRow).ToList();
 
-    static Row AsRow(IReadOnlyDictionary<string, Value> row) => row as Row ?? new Row(row);
+    static Row AsRow(IReadOnlyDictionary<string, Value> row) => new(row);
 }

@@ -39,6 +39,7 @@ class Note {
 
 class Tagged {
   id = 0;
+  label = "";
   tags: Tag[] = [];
 }
 
@@ -161,15 +162,16 @@ describe("CRUDRepository", () => {
     await parentsRepo.create(new Parent());
     const parent = await parentsRepo.readSingle();
     await childrenRepo.create(Object.assign(new Child(), { parent_id: parent?.id, label: "a" }));
-    const child = await childrenRepo.readSingle();
+    await childrenRepo.create(Object.assign(new Child(), { label: "other" }));
+    const child = (await collectAsync(childrenRepo.read())).find((row) => row.label === "a");
     await notesRepo.create(Object.assign(new Note(), { child_id: child?.id, text: "n" }));
     childrenRepo.addEnriched({ into: "notes", from: "id", by: "child_id", many: true }, notesRepo);
     parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
     await parentsRepo.update(Object.assign(new Parent(), {
       id: parent?.id,
-      children: [Object.assign(new Child(), { label: "fresh" })],
+      children: [Object.assign(new Child(), { id: child?.id, label: "fresh" })],
     }));
-    const created = await childrenRepo.readSingle();
+    const created = (await collectAsync(childrenRepo.read())).find((row) => row.label === "fresh");
     expect(created?.id).not.toBe(child?.id);
     expect(created?.label).toBe("fresh");
     expect(created?.parent_id).toBe(parent?.id);
@@ -193,14 +195,19 @@ describe("CRUDRepository", () => {
     const drop = tags.find((tag) => tag.name === "drop");
     await linksRepo.create(Object.assign(new ParentTag(), { parent_id: parent?.id, tag_id: keep?.id }));
     await linksRepo.create(Object.assign(new ParentTag(), { parent_id: parent?.id, tag_id: drop?.id }));
-    const oldLink = (await collectAsync(linksRepo.read())).find((link) => link.tag_id === keep?.id);
+    await linksRepo.create(Object.assign(new ParentTag(), { tag_id: keep?.id }));
+    const oldLink = (await collectAsync(linksRepo.read())).find((link) => link.parent_id === parent?.id && link.tag_id === keep?.id);
     parentsRepo.addLinked(
       { into: "tags", from: "id", by: "id", association: { parent: "parent_id", related: "tag_id" } },
       tagsRepo,
       linksRepo,
     );
-    await parentsRepo.update(Object.assign(new Tagged(), { id: parent?.id, tags: [Object.assign(new Tag(), { id: keep?.id })] }));
-    const links = await collectAsync(linksRepo.read());
+    await parentsRepo.update(Object.assign(new Tagged(), {
+      id: parent?.id,
+      label: "p",
+      tags: [Object.assign(new Tag(), { id: keep?.id })],
+    }));
+    const links = (await collectAsync(linksRepo.read())).filter((link) => link.parent_id === parent?.id);
     expect(links).toHaveLength(1);
     expect(links[0]?.tag_id).toBe(keep?.id);
     expect(links[0]?.parent_id).toBe(parent?.id);
