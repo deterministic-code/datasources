@@ -3088,7 +3088,7 @@ if (reader is IAsyncDisposable disposable)
 await conn.Close();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/src/lib.rs#L87-L99)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/src/lib.rs#L90-L102)
 
 ```rust
 let sets = command
@@ -11171,7 +11171,7 @@ it("reads user by guid username and created", async () => {
 
 #### Call a stored procedure
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L99-L108)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L107-L116)
 
 ```csharp
 Parameter[] parameters = [new("id", 9)];
@@ -11226,7 +11226,7 @@ for await (const row of repo.read(call, parameters)) rows.push(row);
 
 #### Read and read single
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L61-L71)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L69-L79)
 
 ```csharp
 ["id"] = 1, ["name"] = "a" 
@@ -12951,7 +12951,7 @@ pub struct BuiltRepository
 
 ### Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, insert writes `Response.Result` onto the single id column through the driver's generated-id method and the row converter.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, insert writes `Response.Result` onto the single id column through the driver's generated-id method and the row converter. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
@@ -13674,6 +13674,161 @@ const removed = await usersRepo.delete(Object.assign(new UserView(), { id: creat
 ```
 no user
 roles and groups remain
+```
+
+#### Null datetime and version
+
+Create and update leave a null `created` and `version` out of the statement. SQLite fills `2020-01-01T00:00:00.000Z` and `X'0102'`. An update of `name` leaves those defaults in place. A later create that sets both stores those values.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/NullWriteTests.cs#L16-L50)
+
+```csharp
+var connection = await Open("""
+    CREATE TABLE item (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
+        version BLOB NOT NULL DEFAULT X'0102'
+    );
+    """);
+var repo = new CRUDRepository<Item>(connection, new CRUDRepositoryOptions<Item> { Entity = "item" });
+var omitted = new Item { name = "ada" };
+await repo.Create(omitted);
+var stored = await repo.ReadSingleById(omitted.id);
+omitted.name = "ada-v2";
+await repo.Update(omitted);
+var kept = await repo.ReadSingleById(omitted.id);
+var explicitItem = new Item
+{
+    name = "grace",
+    created = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+    version = [9, 9]
+};
+await repo.Create(explicitItem);
+var written = await repo.ReadSingleById(explicitItem.id);
+```
+
+**Stored default**
+
+```
+{
+  name: 'ada-v2',
+  created: '2020-01-01T00:00:00.000Z',
+  version: '0102'
+}
+```
+
+**Explicit values**
+
+```
+{
+  name: 'grace',
+  created: '2024-06-01T00:00:00.000Z',
+  version: '0909'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/null_write.rs#L28-L82)
+
+```rust
+let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+conn.open().await.unwrap();
+SqliteCommand::new(conn.clone())
+    .execute(SQL, None)
+    .await
+    .unwrap();
+let mut options = CRUDRepositoryOptions::default();
+options.entity = "item".into();
+options.row_converter = Some(item_converter());
+let repo = CRUDRepository::new(conn, options).unwrap();
+let mut omitted = Row::new();
+omitted.insert("name".into(), Value::from("ada"));
+omitted.insert("created".into(), Value::Null);
+omitted.insert("version".into(), Value::Null);
+repo.create(&mut omitted).await.unwrap();
+let stored = repo
+    .read_single_by_id(omitted.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+omitted.insert("name".into(), Value::from("ada-v2"));
+repo.update(&omitted, None).await.unwrap();
+let kept = repo
+    .read_single_by_id(omitted.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
+let mut explicit = Row::new();
+explicit.insert("name".into(), Value::from("grace"));
+explicit.insert("created".into(), Value::DateTime(created));
+explicit.insert("version".into(), Value::Binary(vec![9, 9]));
+repo.create(&mut explicit).await.unwrap();
+let written = repo
+    .read_single_by_id(explicit.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+```
+
+**Stored default**
+
+```
+{
+  name: 'ada-v2',
+  created: '2020-01-01T00:00:00.000Z',
+  version: '0102'
+}
+```
+
+**Explicit values**
+
+```
+{
+  name: 'grace',
+  created: '2024-06-01T00:00:00.000Z',
+  version: '0909'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/null-write.repository.integration.test.ts#L34-L58)
+
+```typescript
+const connection = await open();
+const repo = new CRUDRepository(connection, { ...createRepositoryOptions(Item), entity: "item" });
+const omitted = Object.assign(new Item(), { name: "ada" });
+await repo.create(omitted);
+const stored = await repo.readSingleById(omitted.id);
+omitted.name = "ada-v2";
+await repo.update(omitted);
+const kept = await repo.readSingleById(omitted.id);
+const explicit = Object.assign(new Item(), {
+  name: "grace",
+  created: new Date("2024-06-01T00:00:00.000Z"),
+  version: new Uint8Array([9, 9]),
+});
+await repo.create(explicit);
+const written = await repo.readSingleById(explicit.id);
+```
+
+**Stored default**
+
+```
+{
+  name: 'ada-v2',
+  created: '2020-01-01T00:00:00.000Z',
+  version: '0102'
+}
+```
+
+**Explicit values**
+
+```
+{
+  name: 'grace',
+  created: '2024-06-01T00:00:00.000Z',
+  version: '0909'
+}
 ```
 
 ## Bulk repository

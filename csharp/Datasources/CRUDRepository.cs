@@ -154,7 +154,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
          .Aggregate((left, right) => new Operator.And(left, right)));
 
     IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include) =>
-        [.. record.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
+        [.. record.Where(pair => include(pair.Key) && pair.Value is not Value.Null).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(Column(pair.Key), Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
     Row ReverseConvert(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));

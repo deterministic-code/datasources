@@ -13,6 +13,9 @@ pub use driver::SqliteDriver;
 #[path = "../tests/contacts.rs"]
 mod contacts;
 #[cfg(test)]
+#[path = "../tests/null_write.rs"]
+mod null_write;
+#[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]

@@ -576,3 +576,82 @@ async fn console_transcript_matches_sqlite() {
     middleware.complete().unwrap();
 }
 
+#[tokio::test]
+async fn omits_null_created_and_updated() {
+    use chrono::{TimeZone, Utc};
+    use datasources::{
+        CRUDRepository, CRUDRepositoryOptions, Driver, ICRUDRepository, Row, RowTypeConverter,
+        Value,
+    };
+    use std::collections::HashMap;
+
+    let mut options = HashMap::new();
+    options.insert("filename".into(), ":memory:".into());
+    let connection = datasources_sqlite::SqliteDriver.connection(Some(&options));
+    connection.open().await.unwrap();
+    connection
+        .create_command()
+        .execute(
+            "CREATE TABLE users (
+                id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL,
+                created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
+                updated BLOB NOT NULL DEFAULT X'0102'
+            )",
+            None,
+        )
+        .await
+        .unwrap();
+    let mut repo_options = CRUDRepositoryOptions::default();
+    repo_options.entity = "users".into();
+    repo_options.row_converter = Some(RowTypeConverter::new(vec![
+        "id".into(),
+        "username".into(),
+        "created".into(),
+        "updated".into(),
+    ]));
+    let repo = CRUDRepository::new(connection, repo_options).unwrap();
+    let mut omitted = Row::new();
+    omitted.insert("username".into(), Value::from("ada"));
+    omitted.insert("created".into(), Value::Null);
+    omitted.insert("updated".into(), Value::Null);
+    repo.create(&mut omitted).await.unwrap();
+    let stored = repo
+        .read_single_by_id(omitted.get("id").unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    omitted.insert("username".into(), Value::from("ada-v2"));
+    repo.update(&omitted, None).await.unwrap();
+    let kept = repo
+        .read_single_by_id(omitted.get("id").unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
+    let mut explicit = Row::new();
+    explicit.insert("username".into(), Value::from("grace"));
+    explicit.insert("created".into(), Value::DateTime(created));
+    explicit.insert("updated".into(), Value::Binary(vec![9, 9]));
+    repo.create(&mut explicit).await.unwrap();
+    let written = repo
+        .read_single_by_id(explicit.get("id").unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(
+        stored.get("created"),
+        Some(&Value::from("2020-01-01T00:00:00.000Z"))
+    );
+    assert_eq!(stored.get("updated"), Some(&Value::Binary(vec![1, 2])));
+    assert_eq!(kept.get("username"), Some(&Value::from("ada-v2")));
+    assert_eq!(kept.get("created"), stored.get("created"));
+    assert_eq!(kept.get("updated"), stored.get("updated"));
+    assert_eq!(
+        written.get("created"),
+        Some(&Value::Text(Value::iso_datetime(created)))
+    );
+    assert_eq!(written.get("updated"), Some(&Value::Binary(vec![9, 9])));
+}
+

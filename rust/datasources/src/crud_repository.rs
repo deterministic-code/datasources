@@ -136,7 +136,9 @@ impl CRUDRepository {
     fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
         let mut pairs: Vec<_> = record
             .iter()
-            .filter(|(key, _)| include_ids || !self.ids.contains(*key))
+            .filter(|(key, value)| {
+                (include_ids || !self.ids.contains(*key)) && !matches!(value, Value::Null)
+            })
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
         pairs.sort_by(|left, right| left.0.cmp(&right.0));

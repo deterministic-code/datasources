@@ -33,6 +33,14 @@ public class RepositoryTests
         public int name { get; set; }
     }
 
+    sealed class Stamp
+    {
+        public int id { get; set; }
+        public string name { get; set; } = "";
+        public DateTime? created { get; set; }
+        public byte[]? version { get; set; }
+    }
+
     static (CRUDRepository<T> Repo, MockCommand Command) Create<T>(
         IReadOnlyList<string>? id = null)
         where T : new()
@@ -146,6 +154,43 @@ public class RepositoryTests
         Assert.Equal(new Value.Int(3), command.ExecuteCalls[0].Parameters![0].Value);
         await repo.Update(new Composite { org_id = 1, user_id = 2, name = 4 });
         Assert.Contains("org_id = $org_id AND user_id = $user_id", command.ExecuteCalls[1].Text);
+    }
+
+    [Fact]
+    public async Task CreateAndUpdateOmitNullDatetimeAndVersion()
+    {
+        var (repo, command) = Create<Stamp>();
+        await repo.Create(new Stamp { name = "ada" });
+        Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
+        await repo.Update(new Stamp { id = 1, name = "ada" });
+        Assert.Equal("UPDATE users SET name = $name WHERE id = $id", command.ExecuteCalls[1].Text);
+        await repo.Create(new Stamp
+        {
+            name = "grace",
+            created = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+            version = [9, 9]
+        });
+        Assert.Equal(
+            "INSERT INTO users (created, name, version) VALUES ($created, $name, $version)",
+            command.ExecuteCalls[2].Text);
+
+        var (rows, rowCommand) = Create<Row>();
+        await rows.Create(new Row
+        {
+            ["id"] = 1,
+            ["name"] = "ada",
+            ["created"] = Value.Null.Instance,
+            ["version"] = Value.Null.Instance
+        });
+        Assert.Equal("INSERT INTO users (name) VALUES ($name)", rowCommand.ExecuteCalls[0].Text);
+        await rows.Update(new Row
+        {
+            ["id"] = 1,
+            ["name"] = "ada-v2",
+            ["created"] = Value.Null.Instance,
+            ["version"] = Value.Null.Instance
+        });
+        Assert.Equal("UPDATE users SET name = $name WHERE id = $id", rowCommand.ExecuteCalls[1].Text);
     }
 
     [Fact]

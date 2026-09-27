@@ -1264,7 +1264,7 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Call a stored procedure
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L99-L108
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#L107-L116
 ```
 ```rust rust/datasources/src/tests/mod.rs#L1428-L1444
 ```
@@ -1281,7 +1281,7 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Read and read single
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L61-L71
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#L69-L79
 ```
 ```rust rust/datasources/src/tests/mod.rs#L1465-L1471
 ```

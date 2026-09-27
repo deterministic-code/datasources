@@ -179,6 +179,21 @@ describe("CRUDRepository", () => {
     );
   });
 
+  it("omits null datetime and version on create and update", async () => {
+    const { repo, command } = create();
+    await repo.create({ id: 1, name: "ada", created: null, version: undefined });
+    expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (name) VALUES ($name)");
+    await repo.update({ id: 1, name: "ada", created: null, version: null });
+    expect(command.executeCalls[1]?.text).toBe(
+      "UPDATE users SET name = $name WHERE id = $id",
+    );
+    const when = new Date("2024-06-01T00:00:00.000Z");
+    await repo.create({ id: 1, name: "grace", created: when, version: new Uint8Array([9, 9]) });
+    expect(command.executeCalls[2]?.text).toBe(
+      "INSERT INTO users (created, name, version) VALUES ($created, $name, $version)",
+    );
+  });
+
   it("reads a single row by id columns", async () => {
     const { repo, command } = create();
     command.reader = new MockReader([]);

@@ -968,7 +968,7 @@ pub ids: Vec<String>
 
 ## Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, insert writes `Response.Result` onto the single id column through the driver's generated-id method and the row converter.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, insert writes `Response.Result` onto the single id column through the driver's generated-id method and the row converter. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
@@ -1110,5 +1110,34 @@ no row
 ```output [After delete]
 no user
 roles and groups remain
+```
+:::
+
+### Null datetime and version
+
+Create and update leave a null `created` and `version` out of the statement. SQLite fills `2020-01-01T00:00:00.000Z` and `X'0102'`. An update of `name` leaves those defaults in place. A later create that sets both stores those values.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/NullWriteTests.cs#L16-L50
+```
+```rust rust/providers/sqlite/tests/null_write.rs#L28-L82
+```
+```typescript typescript/providers/sqlite/tests/null-write.repository.integration.test.ts#L34-L58
+```
+
+```output [Stored default]
+{
+  name: 'ada-v2',
+  created: '2020-01-01T00:00:00.000Z',
+  version: '0102'
+}
+```
+
+```output [Explicit values]
+{
+  name: 'grace',
+  created: '2024-06-01T00:00:00.000Z',
+  version: '0909'
+}
 ```
 :::

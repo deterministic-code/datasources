@@ -9,7 +9,7 @@ mod transaction;
 use crate::converters::{Cells, RowTypeConverter};
 use crate::*;
 use async_trait::async_trait;
-use chrono::TimeZone;
+use chrono::{TimeZone, Utc};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -2078,5 +2078,55 @@ fn comparison_aliases() {
     assert_eq!(
         either.get_text(),
         "username = $username OR is_enabled = $is_enabled"
+    );
+}
+
+#[tokio::test]
+async fn create_and_update_omit_null_datetime_and_version() {
+    let command = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "users".into();
+    options.row_converter = Some(users_mapping());
+    let repo = CRUDRepository::new(connection, options).unwrap();
+    let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
+    repo.create(&mut record(&[
+        ("id", Value::Int(1)),
+        ("name", Value::from("ada")),
+        ("created", Value::Null),
+        ("version", Value::Null),
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO users (name) VALUES ($name)"
+    );
+    repo.update(
+        &record(&[
+            ("id", Value::Int(1)),
+            ("name", Value::from("ada")),
+            ("created", Value::Null),
+            ("version", Value::Null),
+        ]),
+        None,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[1].0,
+        "UPDATE users SET name = $name WHERE id = $id"
+    );
+    repo.create(&mut record(&[
+        ("id", Value::Int(1)),
+        ("name", Value::from("grace")),
+        ("created", Value::DateTime(created)),
+        ("version", Value::Binary(vec![9, 9])),
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[2].0,
+        "INSERT INTO users (created, name, version) VALUES ($created, $name, $version)"
     );
 }

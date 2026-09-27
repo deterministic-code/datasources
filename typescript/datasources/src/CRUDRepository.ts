@@ -34,7 +34,7 @@ const fieldsOf = (
   cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
 ): Field[] =>
   Object.entries(record)
-    .filter(([key]) => include(key))
+    .filter(([key, value]) => include(key) && value !== null && value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name: column(name), value: cell(name, value, true) as Scalar }));
 
