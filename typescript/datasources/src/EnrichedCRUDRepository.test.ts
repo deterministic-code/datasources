@@ -153,7 +153,7 @@ describe("CRUDRepository", () => {
 
   it("cascade update deletes children and recreates", async () => {
     const connection = await setup();
-    const parentsRepo = new CRUDRepository(connection, {
+    const parentsRepo = new CRUDRepository<Parent>(connection, {
       type: Parent,
       write: new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
     });
@@ -180,7 +180,7 @@ describe("CRUDRepository", () => {
 
   it("cascade update replaces links and keeps related rows", async () => {
     const connection = await setup();
-    const parentsRepo = new CRUDRepository(connection, {
+    const parentsRepo = new CRUDRepository<Tagged>(connection, {
       type: Tagged,
       write: new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
     });

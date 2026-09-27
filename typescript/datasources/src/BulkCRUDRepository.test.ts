@@ -79,7 +79,7 @@ describe("BulkCRUDRepository", () => {
   });
 
   it("rolls back a bulk update when useTransaction is on", async () => {
-    const parentsRepo = new BulkCRUDRepository(await setup(), {
+    const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
       type: Parent,
       write: new DefaultWriteEnrichmentStrategy(undefined, undefined, true),
     });

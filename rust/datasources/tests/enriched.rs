@@ -333,7 +333,20 @@ async fn cascade_update_deletes_children_and_recreates() {
         .create(&mut record(&[("parent_id", parent_id.clone()), ("label", Value::from("a"))]))
         .await
         .unwrap();
-    let child_id = children_repo.read(None, None).await.unwrap()[0].get("id").unwrap().clone();
+    children_repo
+        .create(&mut record(&[("label", Value::from("other"))]))
+        .await
+        .unwrap();
+    let child_id = children_repo
+        .read(None, None)
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|row| row.get("label") == Some(&Value::from("a")))
+        .unwrap()
+        .get("id")
+        .unwrap()
+        .clone();
     notes
         .create(&mut record(&[("child_id", child_id.clone()), ("text", Value::from("n"))]))
         .await
@@ -346,17 +359,24 @@ async fn cascade_update_deletes_children_and_recreates() {
             &record(&[
                 ("id", parent_id.clone()),
                 ("label", Value::from("p")),
-                ("children", encode_rows(&[record(&[("label", Value::from("fresh"))])])),
+                (
+                    "children",
+                    encode_rows(&[record(&[("id", child_id.clone()), ("label", Value::from("fresh"))])]),
+                ),
             ]),
             None,
         )
         .await
         .unwrap();
     let stored = children.read(None, None).await.unwrap();
-    assert_eq!(stored.len(), 1);
-    assert_ne!(stored[0].get("id"), Some(&child_id));
-    assert_eq!(stored[0].get("label"), Some(&Value::from("fresh")));
-    assert_eq!(stored[0].get("parent_id"), Some(&parent_id));
+    let created = stored
+        .iter()
+        .find(|row| row.get("label") == Some(&Value::from("fresh")))
+        .unwrap();
+    assert_eq!(stored.len(), 2);
+    assert_ne!(created.get("id"), Some(&child_id));
+    assert_eq!(created.get("label"), Some(&Value::from("fresh")));
+    assert_eq!(created.get("parent_id"), Some(&parent_id));
     assert!(notes.read(None, None).await.unwrap().is_empty());
 }
 
@@ -399,6 +419,10 @@ async fn cascade_update_replaces_links_and_keeps_related() {
         .create(&mut record(&[("parent_id", parent_id.clone()), ("tag_id", drop_id)]))
         .await
         .unwrap();
+    links
+        .create(&mut record(&[("tag_id", keep_id.clone())]))
+        .await
+        .unwrap();
     let old_link_id = links
         .read(None, None)
         .await
@@ -419,13 +443,20 @@ async fn cascade_update_replaces_links_and_keeps_related() {
         .update(
             &record(&[
                 ("id", parent_id.clone()),
+                ("label", Value::from("p")),
                 ("tags", encode_rows(&[record(&[("id", keep_id.clone())])])),
             ]),
             None,
         )
         .await
         .unwrap();
-    let stored_links = links.read(None, None).await.unwrap();
+    let stored_links: Vec<_> = links
+        .read(None, None)
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|row| row.get("parent_id") == Some(&parent_id))
+        .collect();
     assert_eq!(stored_links.len(), 1);
     assert_eq!(stored_links[0].get("tag_id"), Some(&keep_id));
     assert_eq!(stored_links[0].get("parent_id"), Some(&parent_id));
