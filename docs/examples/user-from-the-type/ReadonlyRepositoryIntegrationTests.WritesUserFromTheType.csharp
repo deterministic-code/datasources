@@ -1,0 +1,31 @@
+test: csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#WritesUserFromTheType
+lines: 421-448
+
+        var connection = await Open(ds, """
+            CREATE TABLE User (
+                id INTEGER PRIMARY KEY,
+                is_enabled INTEGER NOT NULL,
+                username TEXT NOT NULL
+            );
+            """);
+        var usersRepo = new CRUDRepository<User>(connection);
+        var created = new User { username = "ada", is_enabled = true };
+        await usersRepo.Create(created);
+        var byId = await usersRepo.ReadSingleById(created.id);
+        var matches = new List<User>();
+        await foreach (var row in usersRepo.Read(new Where("username", eq, "ada").And("is_enabled", eq, true)))
+            matches.Add(row);
+        created.username = "ada-v2";
+        await usersRepo.Update(created);
+        var renamed = await usersRepo.ReadSingleById(created.id);
+        await usersRepo.Delete(created);
+        var gone = await usersRepo.ReadSingleById(created.id);
+
+        Assert.Equal(1, created.id);
+        Assert.Equal(1, byId!.id);
+        Assert.Equal("ada", byId.username);
+        Assert.True(byId.is_enabled);
+        Assert.Equal("ada", Assert.Single(matches).username);
+        Assert.Equal("ada-v2", renamed!.username);
+        Assert.Null(gone);
+    }

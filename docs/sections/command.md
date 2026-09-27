@@ -857,54 +857,54 @@ The Rust `Command` trait has no connection getter. Stub `create_command` stores 
 ### ExecuteReader to NameValue
 
 ::: example
-```csharp csharp/Datasources.Tests/CommandTests.cs#L46-L60
+```csharp csharp/Datasources.Tests/CommandTests.cs#ExecuteReaderReturnsNameValueObjects
 ```
-```rust rust/datasources/src/tests/command.rs#L60-L82
+```rust rust/datasources/src/tests/command.rs#execute_reader_returns_name_value_objects
 ```
-```typescript typescript/datasources/src/Command.test.ts#L45-L56
+```typescript typescript/datasources/src/Command.test.ts#executereader-returns-namevalue-objects
 ```
 :::
 
 ### Read the next result set
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L20-L42
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#NextResultReadsTheNextStatement
 ```
-```rust rust/providers/sqlite/src/lib.rs#L90-L102
+```rust rust/providers/sqlite/src/lib.rs#sqlite_command_and_repository
 ```
-```typescript typescript/providers/sqlite/src/sqlite.test.ts#L159-L165
+```typescript typescript/providers/sqlite/src/sqlite.test.ts#executes-sql-on-the-open-database
 ```
 :::
 
 ### Execute insert, update, and delete
 
 ::: example
-```csharp csharp/Datasources.Tests/CommandTests.cs#L62-L71
+```csharp csharp/Datasources.Tests/CommandTests.cs#ExecuteInsertUpdateDelete
 ```
-```rust rust/datasources/src/tests/command.rs#L84-L116
+```rust rust/datasources/src/tests/command.rs#execute_insert_update_delete
 ```
-```typescript typescript/datasources/src/Command.test.ts#L58-L78
+```typescript typescript/datasources/src/Command.test.ts#execute-insert-update-and-delete
 ```
 :::
 
 ### Map flat contacts
 
 ::: example
-```csharp csharp/Datasources.Tests/CommandTests.cs#L73-L97
+```csharp csharp/Datasources.Tests/CommandTests.cs#ExecuteReaderMapsFlatContacts
 ```
-```rust rust/datasources/src/tests/command.rs#L115-L146
+```rust rust/datasources/src/tests/command.rs#execute_reader_maps_flat_contacts
 ```
-```typescript typescript/datasources/src/Command.test.ts#L80-L103
+```typescript typescript/datasources/src/Command.test.ts#executereader-maps-flat-contacts
 ```
 :::
 
 ### Parameter direction and Response.Parameters
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L226-L229
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1114-L1124
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L325-L328
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 :::

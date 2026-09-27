@@ -1,0 +1,4 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 172-172
+
+        var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });

@@ -1,0 +1,22 @@
+test: rust/datasources/src/tests/command.rs#execute_reader_returns_name_value_objects
+lines: 60-78
+
+#[tokio::test]
+async fn execute_reader_returns_name_value_objects() {
+    let command = MockCommand::new();
+    command.reader_rows.lock().unwrap().push(row(&[
+        ("name", Value::from("theme")),
+        ("value", Value::from("dark")),
+    ]));
+    let reader = command
+        .execute_reader("SELECT name, value FROM settings", None)
+        .await
+        .unwrap();
+    let converter = RowTypeConverter::of::<NameValue>();
+    let mut items = Vec::new();
+    while reader.next().await.unwrap() {
+        items.push(converter.convert(&reader.current().unwrap()).unwrap());
+    }
+    assert_eq!(items[0]["name"], Value::from("theme"));
+    assert_eq!(items[0]["value"], Value::from("dark"));
+}

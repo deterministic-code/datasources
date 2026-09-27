@@ -1,0 +1,13 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 157-166
+
+        var grouped = new SelectStatement(new()
+        {
+            Table = "orders",
+            Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
+            Where = new Where(new Operator.Equals("status", "open")),
+            Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
+            GroupBy = ["status"],
+            OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
+            Limit = 10,
+        });

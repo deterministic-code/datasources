@@ -22,6 +22,7 @@ use crate::row::Row;
 use crate::shared_items::SharedItems;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::table_repository_builder::RepositoryBuilder;
+use crate::transaction::Transaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
@@ -131,6 +132,102 @@ impl CRUDRepository {
 
     fn enriched(&self) -> bool {
         self.readonly.enriched()
+    }
+
+    pub(crate) async fn begin_transaction(&self) -> Result<Option<Arc<dyn Transaction>>> {
+        if !self.write.use_transaction() {
+            return Ok(None);
+        }
+        Ok(Some(self.readonly.connection.start_transaction(None).await?))
+    }
+
+    pub(crate) async fn finish_transaction<T>(
+        &self,
+        txn: Option<Arc<dyn Transaction>>,
+        result: Result<T>,
+    ) -> Result<T> {
+        match (txn, result) {
+            (None, result) => result,
+            (Some(txn), Ok(value)) => {
+                txn.commit().await?;
+                Ok(value)
+            }
+            (Some(txn), Err(error)) => {
+                txn.abort().await?;
+                Err(error)
+            }
+        }
+    }
+
+    pub(crate) async fn create_core(&self, item: &mut Row) -> Result<Row> {
+        if !self.enriched() {
+            return self.inserted(item).await;
+        }
+        let mut stored = {
+            let entries = self.readonly.enrichments.lock().expect("enrichments");
+            strip_enriched(item, &entries)
+        };
+        if self.readonly.memory_items().is_some() {
+            let created = {
+                let memory = self.readonly.memory_items().expect("memory");
+                memory.insert(&mut stored)
+            };
+            let id = self.id_value(&created);
+            self.write_id(item, &id)?;
+        } else {
+            let response = self.execute_insert(&stored).await?;
+            self.write_id(item, &response.result)?;
+        }
+        self.write
+            .persist(
+                &self.readonly.tree,
+                std::slice::from_mut(item),
+                WriteMode::Create,
+            )
+            .await?;
+        let id = self.id_value(item);
+        if self.ids.len() != 1 || matches!(id, Value::Null) {
+            return Ok(item.clone());
+        }
+        Ok(self
+            .read_single_by_id(&id)
+            .await?
+            .unwrap_or_else(|| item.clone()))
+    }
+
+    pub(crate) async fn update_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        let stored = if self.enriched() {
+            let entries = self.readonly.enrichments.lock().expect("enrichments");
+            strip_enriched(item, &entries)
+        } else {
+            item.clone()
+        };
+        let response = self.save(&stored, by_where).await?;
+        if self.enriched() {
+            let mut parent = item.clone();
+            self.write
+                .persist(
+                    &self.readonly.tree,
+                    std::slice::from_mut(&mut parent),
+                    WriteMode::Update,
+                )
+                .await?;
+        }
+        Ok(response)
+    }
+
+    pub(crate) async fn delete_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        if self.enriched() {
+            let mut parent = item.clone();
+            self.write
+                .persist(
+                    &self.readonly.tree,
+                    std::slice::from_mut(&mut parent),
+                    WriteMode::Delete,
+                )
+                .await?;
+        }
+        self.remove(item, by_where).await
     }
 
     fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
@@ -362,74 +459,21 @@ impl IReadonlyRepository for CRUDRepository {
 #[async_trait]
 impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        if !self.enriched() {
-            return self.inserted(item).await;
-        }
-        let mut stored = {
-            let entries = self.readonly.enrichments.lock().expect("enrichments");
-            strip_enriched(item, &entries)
-        };
-        if self.readonly.memory_items().is_some() {
-            let created = {
-                let memory = self.readonly.memory_items().expect("memory");
-                memory.insert(&mut stored)
-            };
-            let id = self.id_value(&created);
-            self.write_id(item, &id)?;
-        } else {
-            let response = self.execute_insert(&stored).await?;
-            self.write_id(item, &response.result)?;
-        }
-        self.write
-            .persist(
-                &self.readonly.tree,
-                std::slice::from_mut(item),
-                WriteMode::Create,
-            )
-            .await?;
-        let id = self.id_value(item);
-        if self.ids.len() != 1 || matches!(id, Value::Null) {
-            return Ok(item.clone());
-        }
-        Ok(self
-            .read_single_by_id(&id)
-            .await?
-            .unwrap_or_else(|| item.clone()))
+        let txn = self.begin_transaction().await?;
+        let result = self.create_core(item).await;
+        self.finish_transaction(txn, result).await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let stored = if self.enriched() {
-            let entries = self.readonly.enrichments.lock().expect("enrichments");
-            strip_enriched(item, &entries)
-        } else {
-            item.clone()
-        };
-        let response = self.save(&stored, by_where).await?;
-        if self.enriched() {
-            let mut parent = item.clone();
-            self.write
-                .persist(
-                    &self.readonly.tree,
-                    std::slice::from_mut(&mut parent),
-                    WriteMode::Update,
-                )
-                .await?;
-        }
-        Ok(response)
+        let txn = self.begin_transaction().await?;
+        let result = self.update_core(item, by_where).await;
+        self.finish_transaction(txn, result).await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        if self.enriched() {
-            let mut parent = item.clone();
-            self.write
-                .persist(
-                    &self.readonly.tree,
-                    std::slice::from_mut(&mut parent),
-                    WriteMode::Delete,
-                )
-                .await?;
-        }
-        self.remove(item, by_where).await
+        let txn = self.begin_transaction().await?;
+        let result = self.delete_core(item, by_where).await;
+        self.finish_transaction(txn, result).await
     }
 
     fn id_names(&self) -> Vec<String> {

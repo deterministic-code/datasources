@@ -974,8 +974,10 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 
 `AddEnriched` registers the same read fill as [ReadonlyRepository](./readonly-repository.md). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. `LazyWriteEnrichmentStrategy` skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 
+`DefaultWriteEnrichmentStrategy` takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
+
 - **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `by` from the parent `from`, then create children (and nested many).
-- **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
+- **Update** — `DefaultUpdateEnrichmentStrategy` is the default. Write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest). `CascadeDeleteUpdateEnrichmentStrategy` deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
 - **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
 See [Bulk repository](./bulk-repository.md) for list writes.
@@ -987,11 +989,11 @@ See [Bulk repository](./bulk-repository.md) for list writes.
 The table, columns, and id come from `User`. Create omits `id`. SQLite writes `last_insert_rowid` back onto `user.id`.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L421-L452
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#WritesUserFromTheType
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L623-L676
+```rust rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L175-L201
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#writes-a-user-from-the-type
 ```
 
 ```output [Created]
@@ -1040,11 +1042,11 @@ no row
 `UsersView` maps onto `user`. `UserTypeId` is written to `user_type_id`. `UserType` is the enriched name from `user_type` and is not a column. `Roles` is a `many` list from `user_role`. Create writes the generated id back onto `Key`. `Update` passes a where on `Key` and `Version`, so a stale version changes no row. Delete removes the user and its roles.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L491-L578
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#UpdatesUsersViewWhenTheVersionMatches
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L698-L743
+```rust rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L226-L306
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#updates-a-user-view-when-the-version-matches
 ```
 
 ```output [Created]
@@ -1085,11 +1087,11 @@ no row
 `AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L148-L220
+```csharp csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#CreateUpdateAndDeleteSyncsLinkRows
 ```
-```rust rust/datasources/tests/user_view.rs#L151-L250
+```rust rust/datasources/tests/user_view.rs#create_update_and_delete_syncs_link_rows
 ```
-```typescript typescript/datasources/src/UserViewCRUDRepository.test.ts#L109-L174
+```typescript typescript/datasources/src/UserViewCRUDRepository.test.ts#creates-updates-and-deletes-through-link-rows
 ```
 
 ```output [Created]
@@ -1118,11 +1120,11 @@ roles and groups remain
 Create and update leave a null `created` and `version` out of the statement. SQLite fills `2020-01-01T00:00:00.000Z` and `X'0102'`. An update of `name` leaves those defaults in place. A later create that sets both stores those values.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/NullWriteTests.cs#L16-L50
+```csharp csharp/Providers/Sqlite.Tests/NullWriteTests.cs#OmitsNullDatetimeAndVersion
 ```
-```rust rust/providers/sqlite/tests/null_write.rs#L28-L82
+```rust rust/providers/sqlite/tests/null_write.rs#omits_null_datetime_and_version
 ```
-```typescript typescript/providers/sqlite/tests/null-write.repository.integration.test.ts#L34-L58
+```typescript typescript/providers/sqlite/tests/null-write.repository.integration.test.ts#omits-null-datetime-and-version
 ```
 
 ```output [Stored default]

@@ -1,0 +1,26 @@
+test: rust/datasources/src/mocks/mock_driver.rs#DriverForMockDriver
+lines: 22-44
+
+impl Driver for MockDriver {
+    fn connection(&self, _: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
+        MockConnection::new()
+    }
+
+    fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
+        connection.create_command()
+    }
+
+    fn transaction(
+        &self,
+        _: Arc<dyn Connection>,
+        isolation: IsolationLevel,
+    ) -> Arc<dyn Transaction> {
+        let txn = MockTransaction::new_unbound();
+        txn.set_isolation(isolation);
+        Arc::new(txn)
+    }
+
+    fn row_type_converters(
+        &self,
+    ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+        HashMap::new()

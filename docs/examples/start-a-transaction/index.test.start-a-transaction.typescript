@@ -1,0 +1,9 @@
+test: typescript/providers/memory/src/index.test.ts#start-a-transaction
+lines: 43-48
+
+  it("start a transaction", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    const txn = await connection.startTransaction();
+    expect(txn.isolation).toBe("serializable");
+  });

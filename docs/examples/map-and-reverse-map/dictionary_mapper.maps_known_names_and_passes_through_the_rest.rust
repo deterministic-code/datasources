@@ -1,0 +1,14 @@
+test: rust/datasources/src/mappers/dictionary_mapper.rs#maps_known_names_and_passes_through_the_rest
+lines: 51-61
+
+    #[test]
+    fn maps_known_names_and_passes_through_the_rest() {
+        let mapper = DictionaryMapper::new([
+            ("Key".to_string(), "id".to_string()),
+            ("Login".to_string(), "username".to_string()),
+        ]);
+        assert_eq!(mapper.map("Key".into()), "id");
+        assert_eq!(mapper.reverse_map("id".into()), "Key");
+        assert_eq!(mapper.map("other".into()), "other");
+        assert_eq!(mapper.reverse_map("other".into()), "other");
+    }

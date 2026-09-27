@@ -1,0 +1,4 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 196-196
+
+  it("creates write and ddl statements", () => {

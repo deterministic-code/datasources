@@ -1,0 +1,9 @@
+test: rust/datasources/src/tests/connection.rs#create_from_default
+lines: 21-26
+
+async fn create_from_default() {
+    clear_env();
+    let ds = default().expect("default");
+    let connection = ds.create_connection().await.expect("connection");
+    assert_eq!(connection.is_open(), false);
+}

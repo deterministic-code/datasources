@@ -1,0 +1,47 @@
+test: csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#ReadsUserByGuidUsernameAndCreated
+lines: 59-102
+
+    [Fact]
+    public async Task ReadsUserByGuidUsernameAndCreated()
+    {
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var connection = await Open(ds, $"""
+            CREATE TABLE user (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL,
+                is_enabled INTEGER NOT NULL,
+                created TEXT NOT NULL
+            );
+            INSERT INTO user (id, username, is_enabled, created) VALUES
+                ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+                ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+                ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+            """);
+        var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+        {
+            Entity = "user",
+            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["Key"] = "id",
+                ["Login"] = "username",
+                ["Active"] = "is_enabled",
+                ["Opened"] = "created",
+            }),
+        });
+
+        var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var byId = await repo.ReadSingle(new Where("Key", eq, Ada));
+        var byLogin = new List<UserAccount>();
+        await foreach (var row in repo.Read(new Where("Login", eq, "ada").And("Active", eq, true)))
+            byLogin.Add(row);
+        var later = new List<UserAccount>();
+        await foreach (var row in repo.Read(new Where("Active", eq, true).And("Opened", gt, opened)))
+            later.Add(row);
+
+        Assert.Equal("ada", byId!.Login);
+        Assert.Equal(Ada, byId.Key);
+        Assert.True(byId.Active);
+        Assert.Equal(2020, byId.Opened.Year);
+        Assert.Equal("ada", Assert.Single(byLogin).Login);
+        Assert.Equal("grace", Assert.Single(later).Login);
+    }

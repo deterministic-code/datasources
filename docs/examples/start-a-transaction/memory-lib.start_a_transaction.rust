@@ -1,0 +1,9 @@
+test: rust/providers/memory/src/lib.rs#start_a_transaction
+lines: 55-60
+
+    #[tokio::test]
+    async fn start_a_transaction() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        let txn = connection.start_transaction(None).await.unwrap();
+        assert_eq!(txn.isolation(), IsolationLevel::Serializable);

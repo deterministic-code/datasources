@@ -1,0 +1,11 @@
+test: csharp/Datasources.Tests/RepositoryFactoryTests.cs#RegistersAndCreates
+lines: 12-19
+
+    {
+        var factory = new RepositoryFactory();
+        var repo = new StubRepository<Item>("memory", new StubConnection("memory"));
+        factory.Register(repo);
+        var created = factory.Create<Item>();
+
+        Assert.Same(repo, created);
+        Assert.Same(repo, ((IRepositoryFactory)factory).Create<Item>());

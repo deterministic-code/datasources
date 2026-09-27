@@ -213,11 +213,11 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](./w
 ### Compile an UPDATE
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L153-L155
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L980-L985
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L225-L229
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: update]

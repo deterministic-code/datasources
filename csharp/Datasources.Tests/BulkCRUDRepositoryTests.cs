@@ -75,6 +75,43 @@ public class BulkCRUDRepositoryTests
     }
 
     [Fact]
+    public async Task BatchUpdateKeepsEarlierWritesWhenTransactionIsOff()
+    {
+        var connection = await Setup();
+        var parentsRepo = new BulkCRUDRepository<Parent>(connection);
+        await parentsRepo.Create(new Parent { label = "a" });
+        await parentsRepo.Create(new Parent { label = "b" });
+        var first = (await parentsRepo.Read().ToListAsync()).Single(parent => parent.label == "a");
+        parentsRepo.AddMiddleware(new FailAfter());
+        await Assert.ThrowsAsync<DatasourceException>(() => parentsRepo.Update(
+        [
+            new Parent { id = first.id, label = "changed" },
+            new Parent { id = first.id, label = "later" }
+        ]));
+        Assert.Equal("changed", (await parentsRepo.Read().ToListAsync()).Single(parent => parent.id == first.id).label);
+    }
+
+    [Fact]
+    public async Task BatchUpdateRollsBackWhenTransactionIsOn()
+    {
+        var connection = await Setup();
+        var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+        {
+            Write = new DefaultWriteEnrichmentStrategy<Parent>(useTransaction: true),
+        });
+        await parentsRepo.Create(new Parent { label = "a" });
+        await parentsRepo.Create(new Parent { label = "b" });
+        var first = (await parentsRepo.Read().ToListAsync()).Single(parent => parent.label == "a");
+        parentsRepo.AddMiddleware(new FailAfter());
+        await Assert.ThrowsAsync<DatasourceException>(() => parentsRepo.Update(
+        [
+            new Parent { id = first.id, label = "changed" },
+            new Parent { id = first.id, label = "later" }
+        ]));
+        Assert.Equal("a", (await parentsRepo.Read().ToListAsync()).Single(parent => parent.id == first.id).label);
+    }
+
+    [Fact]
     public async Task DeleteCascadesEachParent()
     {
         var connection = await Setup();
@@ -91,6 +128,28 @@ public class BulkCRUDRepositoryTests
         await Repo(parentsRepo, childrenRepo).BulkDelete([new Parent { id = first.id }, new Parent { id = second.id }]);
         Assert.Empty(await parentsRepo.Read().ToListAsync());
         Assert.Equal("keep", Assert.Single(await childrenRepo.Read().ToListAsync()).label);
+    }
+
+    sealed class FailAfter : ICommandMiddleware
+    {
+        int seen;
+
+        public Task<(string Text, IReadOnlyList<Parameter>? Parameters)?> BeforeCommand(
+            string text,
+            IReadOnlyList<Parameter>? parameters)
+        {
+            if (++seen == 2)
+                throw new DatasourceException("stop");
+            return Task.FromResult<(string, IReadOnlyList<Parameter>?)?>(null);
+        }
+
+        public Task AfterCommand(
+            string text,
+            IReadOnlyList<Parameter>? parameters,
+            IReadOnlyList<Row> results,
+            double elapsedMs,
+            Exception? error = null) =>
+            Task.CompletedTask;
     }
 
     static BulkCRUDRepository<Parent> Repo(

@@ -1,0 +1,11 @@
+test: csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#StartTransaction
+lines: 16-23
+
+    [Fact]
+    public async Task StartTransaction()
+    {
+        var connection = new MemoryConnection();
+        await connection.Open();
+        var txn = await connection.StartTransaction();
+        Assert.NotNull(txn);
+    }

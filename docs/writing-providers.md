@@ -233,21 +233,21 @@ The package exports only the driver type.
 ### Register and Create
 
 ::: example
-```csharp csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16
+```csharp csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#RegisterAndCreate
 ```
-```rust rust/providers/memory/src/lib.rs#L38-L44
+```rust rust/providers/memory/src/lib.rs#register_and_create
 ```
-```typescript typescript/providers/memory/src/index.test.ts#L27-L32
+```typescript typescript/providers/memory/src/index.test.ts#register-and-create
 ```
 :::
 
 ### Mock driver
 
 ::: example
-```csharp csharp/Datasources/Mocks/MockDriver.cs#L3-L11
+```csharp csharp/Datasources/Mocks/MockDriver.cs#MockDriver
 ```
-```rust rust/datasources/src/mocks/mock_driver.rs#L22-L44
+```rust rust/datasources/src/mocks/mock_driver.rs#DriverForMockDriver
 ```
-```typescript typescript/datasources/src/mocks/mock-driver.ts#L13-L25
+```typescript typescript/datasources/src/mocks/mock-driver.ts#MockDriver
 ```
 :::

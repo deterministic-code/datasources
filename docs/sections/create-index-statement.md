@@ -163,11 +163,11 @@ Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX nam
 ### Compile a CREATE INDEX
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L209-L210
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1076-L1083
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L300-L301
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: create index]
@@ -178,11 +178,11 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ### Compile a CREATE UNIQUE INDEX
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L211-L213
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1085-L1087
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L302-L304
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: create unique index]

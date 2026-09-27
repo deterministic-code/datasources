@@ -1,0 +1,42 @@
+test: typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#reads-user-by-guid-username-and-created
+lines: 61-99
+
+  it("reads user by guid username and created", async () => {
+    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const connection = await open(ds, `
+      CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL
+      );
+      INSERT INTO user (id, username, is_enabled, created) VALUES
+        ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+        ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+        ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+    `);
+    const repo = ds.createReadonlyRepository(UserAccount, connection, {
+      entity: "user",
+      columnMappings: new DictionaryMapper([
+        ["Key", "id"],
+        ["Login", "username"],
+        ["Active", "is_enabled"],
+        ["Opened", "created"],
+      ]),
+    });
+    const opened = new Date("2024-01-01T00:00:00.000Z");
+    const byId = await repo.readSingle(new Where("Key", eq, ada));
+    const byLogin: UserAccount[] = [];
+    for await (const row of repo.read(new Where("Login", eq, "ada").and("Active", eq, true)))
+      byLogin.push(row);
+    const later: UserAccount[] = [];
+    for await (const row of repo.read(new Where("Active", eq, true).and("Opened", gt, opened)))
+      later.push(row);
+    expect(byId?.Login).toBe("ada");
+    expect(byId?.Key).toBe(ada);
+    expect(byId?.Active).toBe(1);
+    expect(byId?.Opened).toBe("2020-01-01T00:00:00.000Z");
+    expect(byLogin.length).toBe(1);
+    expect(byLogin[0]?.Login).toBe("ada");
+    expect(later.length).toBe(1);
+    expect(later[0]?.Login).toBe("grace");

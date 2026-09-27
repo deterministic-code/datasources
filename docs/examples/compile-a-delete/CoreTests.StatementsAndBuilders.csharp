@@ -1,0 +1,6 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 158-160
+
+        {
+            Table = "orders",
+            Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],

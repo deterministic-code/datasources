@@ -919,22 +919,22 @@ pub enum JoinKind
 ### Wrap query text and an optional where
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L33-L38
+```csharp csharp/Datasources.Tests/CoreTests.cs#HelpersAndQuery
 ```
-```rust rust/datasources/src/tests/mod.rs#L1177-L1180
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L41-L43
+```typescript typescript/datasources/src/builders/builders.test.ts#keeps-optional-where-on-the-query
 ```
 :::
 
 ### Compile a SELECT
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L128-L130
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L926-L933
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L193-L196
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: select]
@@ -949,11 +949,11 @@ SELECT id, name FROM users WHERE id = $id
 ### Group, aggregate, order, and limit
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L157-L166
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L977-L991
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L231-L239
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: grouped select]
@@ -964,11 +964,11 @@ SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN custom
 ### Group rows
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L168-L168
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L996-L999
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L243-L243
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: group by]
@@ -979,11 +979,11 @@ SELECT id FROM users GROUP BY id
 ### Aggregate without grouping
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L170-L170
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1001-L1004
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L245-L245
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: min and max]
@@ -994,11 +994,11 @@ SELECT MIN(n), MAX(n) FROM users
 ### Order rows
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L172-L172
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1006-L1009
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L247-L251
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: order by]
@@ -1009,11 +1009,11 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 ### Limit rows
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L174-L174
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1014-L1017
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L253-L253
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: limit]

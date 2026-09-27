@@ -1,0 +1,13 @@
+test: typescript/datasources/src/mappers/DictionaryMapper.test.ts#maps-known-names-and-passes-through-the-rest
+lines: 14-23
+
+  it("maps known names and passes through the rest", () => {
+    const mapper = new DictionaryMapper([
+      ["Key", "id"],
+      ["Login", "username"],
+    ]);
+    expect(mapper.map("Key")).toBe("id");
+    expect(mapper.reverseMap("id")).toBe("Key");
+    expect(mapper.map("other")).toBe("other");
+    expect(mapper.reverseMap("other")).toBe("other");
+  });

@@ -1,0 +1,5 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 300-301
+
+        new UniqueConstraint("uq_orders_user", ["user_id"]),
+        new CheckConstraint("chk_orders_qty", "qty > 0"),

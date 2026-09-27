@@ -6,6 +6,10 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait WriteEnrichmentStrategy: Send + Sync {
+    fn use_transaction(&self) -> bool {
+        false
+    }
+
     async fn persist(
         &self,
         tree: &RepositoryTree,

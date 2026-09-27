@@ -1,0 +1,9 @@
+test: rust/providers/memory/src/lib.rs#open_and_close
+lines: 47-52
+
+    #[tokio::test]
+    async fn open_and_close() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        connection.close().await.unwrap();
+        assert_eq!(connection.is_open(), false);

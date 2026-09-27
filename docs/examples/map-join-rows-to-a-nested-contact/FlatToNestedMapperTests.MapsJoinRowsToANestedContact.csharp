@@ -1,0 +1,67 @@
+test: csharp/Datasources.Tests/FlatToNestedMapperTests.cs#MapsJoinRowsToANestedContact
+lines: 101-164
+
+    [Fact]
+    public void MapsJoinRowsToANestedContact()
+    {
+        var mapper = new FlatToNestedMapper(new TypeMap
+        {
+            Key = "id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "id",
+                ["first_name"] = "first_name",
+                ["last_name"] = "last_name",
+                ["email"] = "email",
+                ["contact_source_name"] = "contact_source_name",
+                ["contact_type_name"] = "contact_type_name",
+                ["addresses"] = new TypeMapGroup
+                {
+                    Key = "address_id",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["id"] = "address_id",
+                        ["line1"] = "address_line1",
+                        ["city"] = "address_city",
+                        ["address_type_name"] = "address_type_name",
+                    },
+                },
+                ["phones"] = new TypeMapGroup
+                {
+                    Key = "phone_id",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["id"] = "phone_id",
+                        ["number"] = "phone_number",
+                        ["phone_type_name"] = "phone_type_name",
+                    },
+                },
+            },
+        });
+        var adaHome = new Row(
+        [
+            new("id", 7),
+            new("first_name", "Ada"),
+            new("last_name", "Lovelace"),
+            new("email", "ada@ex.com"),
+            new("contact_source_name", "Web"),
+            new("contact_type_name", "Person"),
+            new("address_id", 101),
+            new("address_line1", "10 Downing St"),
+            new("address_city", "London"),
+            new("address_type_name", "Home"),
+            new("phone_id", 201),
+            new("phone_number", "+44"),
+            new("phone_type_name", "Mobile"),
+        ]);
+        var adaWork = new Row(adaHome)
+        {
+            ["address_id"] = 102,
+            ["address_line1"] = "1 Parliament Sq"
+        };
+        var nested = mapper.Map([adaHome, adaWork]);
+        var flat = mapper.ReverseMap(nested);
+        Assert.Equal(2, Many(nested[0], "addresses").Count);
+        Assert.Single(Many(nested[0], "phones"));
+        Assert.Equal(2, flat.Count);
+    }

@@ -65,6 +65,21 @@ export class CRUDRepository<T = Cells>
 {
   readonly ids: readonly string[];
   private readonly write: IWriteEnrichmentStrategy<T>;
+  protected get useTransaction(): boolean {
+    return this.write.useTransaction;
+  }
+
+  protected inTransaction = async <TResult>(work: () => Promise<TResult>): Promise<TResult> => {
+    const txn = await this.command().connection.startTransaction();
+    try {
+      const result = await work();
+      await txn.commit();
+      return result;
+    } catch (error) {
+      await txn.abort();
+      throw error;
+    }
+  };
 
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>);
@@ -132,7 +147,16 @@ export class CRUDRepository<T = Cells>
     return this;
   }
 
-  create = async (item: T): Promise<T> => {
+  create = (item: T): Promise<T> =>
+    this.useTransaction ? this.inTransaction(() => this.createCore(item)) : this.createCore(item);
+
+  update = (item: T, byWhere?: IWhere): Promise<Response> =>
+    this.useTransaction ? this.inTransaction(() => this.updateCore(item, byWhere)) : this.updateCore(item, byWhere);
+
+  delete = (item: T, byWhere?: IWhere): Promise<Response> =>
+    this.useTransaction ? this.inTransaction(() => this.deleteCore(item, byWhere)) : this.deleteCore(item, byWhere);
+
+  protected createCore = async (item: T): Promise<T> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
     await this.insert(stored, item);
     if (!this.enriched) return item;
@@ -142,14 +166,14 @@ export class CRUDRepository<T = Cells>
     return id === undefined ? item : (await this.readSingleById(id)) ?? item;
   };
 
-  update = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  protected updateCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
     const response = await this.save(stored, byWhere);
     if (this.enriched) await this.write.persist(this.tree, [item], "update");
     return response;
   };
 
-  delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  protected deleteCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
     if (this.enriched) await this.write.persist(this.tree, [item], "delete");
     return this.remove(item, byWhere);
   };

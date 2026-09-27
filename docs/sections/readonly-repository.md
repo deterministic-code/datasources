@@ -1095,11 +1095,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Read users by id and by username
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L28-L58
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#ReadsUsersByIdAndByUsernameAndEnabled
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L47-L86
+```rust rust/providers/sqlite/tests/readonly_repository.rs#reads_users_by_id_and_by_username_and_enabled
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L34-L58
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#reads-users-by-id-and-by-username-and-enabled
 ```
 
 ```output [After: by id]
@@ -1160,11 +1160,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Read a user by guid, username, and created
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L59-L102
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#ReadsUserByGuidUsernameAndCreated
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L88-L152
+```rust rust/providers/sqlite/tests/readonly_repository.rs#reads_user_by_guid_username_and_created
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L60-L99
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#reads-user-by-guid-username-and-created
 ```
 
 ```output [After: by id]
@@ -1264,11 +1264,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Call a stored procedure
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L107-L116
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#ReadCallsStoredProcedure
 ```
-```rust rust/datasources/src/tests/mod.rs#L1428-L1444
+```rust rust/datasources/src/tests/mod.rs#evaluates_where_statement
 ```
-```typescript typescript/datasources/src/repository.test.ts#L102-L109
+```typescript typescript/datasources/src/repository.test.ts#calls-a-stored-procedure-and-maps-rows
 ```
 
 ```output [After: rows]
@@ -1281,11 +1281,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Read and read single
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryTests.cs#L69-L79
+```csharp csharp/Datasources.Tests/RepositoryTests.cs#GetBuildsSelectAndMapsRows
 ```
-```rust rust/datasources/src/tests/mod.rs#L1465-L1471
+```rust rust/datasources/src/tests/mod.rs#evaluates_where_statement
 ```
-```typescript typescript/datasources/src/repository.test.ts#L63-L73
+```typescript typescript/datasources/src/repository.test.ts#builds-select-and-maps-rows
 ```
 
 ```output [After: read]
@@ -1302,11 +1302,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 ### Fill a lookup
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47
+```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#ReadFillsLookupSelectAndLeavesMissingDefault
 ```
-```rust rust/datasources/tests/enriched.rs#L112-L118
+```rust rust/datasources/tests/enriched.rs#enriched_fills_lookup_select_and_leaves_missing_default
 ```
-```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92
+```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#fills-lookup-select-and-leaves-missing-default
 ```
 :::
 
@@ -1315,11 +1315,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 `UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](./change-casing-mapper.md) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L137-L188
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#FillsUserTypeOnUsersView
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L199-L281
+```rust rust/providers/sqlite/tests/readonly_repository.rs#fills_user_type_on_user_view
 ```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L117-L163
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#fills-user-type-on-a-user-view
 ```
 
 ```output [User view]
@@ -1358,11 +1358,11 @@ Repository read is convert, then map. See [TypeConverter](./type-converters.md) 
 The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](./flat-to-nested-mapper.md) groups each user's `Roles`.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L283-L394
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#FillsRolesFromAJoin
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#L466-L567
+```rust rust/providers/sqlite/tests/readonly_repository.rs#fills_roles_from_a_join
 ```
-```typescript typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L131-L183
+```typescript typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#fills-roles-from-a-join
 ```
 
 ```output [Users with roles]

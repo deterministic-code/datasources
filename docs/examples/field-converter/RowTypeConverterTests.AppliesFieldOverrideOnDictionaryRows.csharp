@@ -1,0 +1,15 @@
+test: csharp/Datasources.Tests/RowTypeConverterTests.cs#AppliesFieldOverrideOnDictionaryRows
+lines: 91-102
+
+    [Fact]
+    public void AppliesFieldOverrideOnDictionaryRows()
+    {
+        var converter = new RowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
+        {
+            ["flag"] = new OnlyOne()
+        });
+        var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
+        Assert.Equal(new Value.Bool(true), dest["flag"]);
+        Assert.Equal(new Value.Text("a"), dest["name"]);
+        Assert.Equal(new Value.Bool(true), converter.ReverseConvert(dest)["flag"]);
+    }

@@ -1,0 +1,9 @@
+test: csharp/Datasources.Tests/CoreTests.cs#HelpersAndQuery
+lines: 33-38
+
+        var select = new SelectStatement("SELECT 1");
+        var byId = new WhereText("id = 1");
+        var withWhere = new SelectStatement("SELECT 1", byId);
+        Assert.Equal("SELECT 1", select.GetText());
+        Assert.Null(select.Where);
+        Assert.Same(byId, withWhere.Where);

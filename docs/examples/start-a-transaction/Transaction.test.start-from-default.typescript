@@ -1,0 +1,10 @@
+test: typescript/datasources/src/Transaction.test.ts#start-from-default
+lines: 31-37
+
+  it("start from default", async () => {
+    const ds = DatasourceFactory.default;
+    const connection = await ds.createConnection();
+    await connection.open();
+    const txn = await connection.startTransaction();
+    expect(txn.isolation).toBe("serializable");
+  });

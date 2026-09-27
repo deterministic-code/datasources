@@ -1,0 +1,9 @@
+test: typescript/providers/memory/src/index.test.ts#register-and-create
+lines: 27-32
+
+  it("register and create", () => {
+    DatasourceFactory.reset();
+    DatasourceFactory.register("memory", new MemoryProvider());
+    const ds = DatasourceFactory.create({ provider: "memory" });
+    expect(ds.provider).toBe("memory");
+  });

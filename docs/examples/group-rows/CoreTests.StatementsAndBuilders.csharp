@@ -1,0 +1,4 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 168-168
+
+        var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });

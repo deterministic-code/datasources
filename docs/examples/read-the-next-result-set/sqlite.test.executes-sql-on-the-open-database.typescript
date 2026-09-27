@@ -1,0 +1,10 @@
+test: typescript/providers/sqlite/src/sqlite.test.ts#executes-sql-on-the-open-database
+lines: 159-165
+
+    expect(await (await command.executeReader(";")).next()).toBe(false);
+    db.bySql = { "SELECT 1 AS id": [{ id: 1 }], "SELECT 2 AS id": [{ id: 2 }] };
+    const sets = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
+    const first: Cells[] = [];
+    while (await sets.next()) first.push(sets.current!);
+    const moved = await sets.nextResult();
+    const second: Cells[] = [];

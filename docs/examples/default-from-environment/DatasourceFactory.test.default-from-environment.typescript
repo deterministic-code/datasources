@@ -1,0 +1,10 @@
+test: typescript/datasources/src/DatasourceFactory.test.ts#default-from-environment
+lines: 48-54
+
+  it("default from environment", () => {
+    DatasourceFactory.register("sqlite", new MockDriver());
+    process.env.PROVIDER = "sqlite";
+    process.env.DATASOURCE_URL = "sqlite:///:memory:";
+    const ds = DatasourceFactory.default;
+    expect(ds.provider).toBe("sqlite");
+  });

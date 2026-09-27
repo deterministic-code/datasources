@@ -1,0 +1,12 @@
+test: csharp/Datasources.Tests/DatasourceFactoryTests.cs#DefaultFromEnvironment
+lines: 24-32
+
+    [Fact]
+    public void DefaultFromEnvironment()
+    {
+        DatasourceFactory.Register("sqlite", new MockDriver());
+        Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
+        Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
+        var ds = DatasourceFactory.Default;
+        Assert.Equal("sqlite", ds.Provider);
+    }

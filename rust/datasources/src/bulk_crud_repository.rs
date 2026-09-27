@@ -57,14 +57,9 @@ impl BulkCRUDRepository {
     }
 
     pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response> {
-        let mut result = Value::Null;
-        let mut rows_affected = 0;
-        for item in items {
-            let created = self.crud.create(item).await?;
-            result = self.crud.id_value(&created);
-            rows_affected += 1;
-        }
-        Ok(Response::new(result, rows_affected))
+        let txn = self.crud.begin_transaction().await?;
+        let result = self.create_each(items).await;
+        self.crud.finish_transaction(txn, result).await
     }
 
     pub async fn update_bulk(
@@ -72,7 +67,9 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        fold(items, |item| self.crud.update(item, by_where)).await
+        let txn = self.crud.begin_transaction().await?;
+        let result = fold(items, |item| self.crud.update_core(item, by_where)).await;
+        self.crud.finish_transaction(txn, result).await
     }
 
     pub async fn delete_bulk(
@@ -80,7 +77,20 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        fold(items, |item| self.crud.delete(item, by_where)).await
+        let txn = self.crud.begin_transaction().await?;
+        let result = fold(items, |item| self.crud.delete_core(item, by_where)).await;
+        self.crud.finish_transaction(txn, result).await
+    }
+
+    async fn create_each(&self, items: &mut [Row]) -> Result<Response> {
+        let mut result = Value::Null;
+        let mut rows_affected = 0;
+        for item in items {
+            let created = self.crud.create_core(item).await?;
+            result = self.crud.id_value(&created);
+            rows_affected += 1;
+        }
+        Ok(Response::new(result, rows_affected))
     }
 }
 

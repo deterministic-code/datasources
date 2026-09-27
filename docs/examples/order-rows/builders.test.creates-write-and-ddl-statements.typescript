@@ -1,0 +1,8 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 247-251
+
+    );
+    const byStatus = new SelectStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
+    expect(byStatus.getText()).toBe("SELECT id FROM users GROUP BY id");
+    const bounds = new SelectStatement({ table: "users", fields: [Aggregate.min("n"), Aggregate.max("n")] });
+    expect(bounds.getText()).toBe("SELECT MIN(n), MAX(n) FROM users");

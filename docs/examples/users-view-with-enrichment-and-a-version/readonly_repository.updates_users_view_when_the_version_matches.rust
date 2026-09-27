@@ -1,0 +1,49 @@
+test: rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
+lines: 698-743
+
+        users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
+        users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
+        let mut admin = datasources::Row::new();
+        admin.insert("Name".into(), Value::from("admin"));
+        user_types_repo.create(&mut admin).await.unwrap();
+        let mut admin_role = datasources::Row::new();
+        admin_role.insert("Name".into(), Value::from("admin"));
+        let mut editor_role = datasources::Row::new();
+        editor_role.insert("Name".into(), Value::from("editor"));
+        let mut user = datasources::Row::new();
+        user.insert("Login".into(), Value::from("ada"));
+        user.insert("Active".into(), Value::Bool(true));
+        user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
+        user.insert("UserTypeId".into(), admin.get("Id").cloned().unwrap());
+        user.insert("Version".into(), Value::Int(1));
+        user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
+        users_repo.create(&mut user).await.unwrap();
+        let key = user.get("Key").cloned().unwrap();
+        let mut loaded = users_repo
+            .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+            .await
+            .unwrap()
+            .unwrap();
+        let version = loaded.get("Version").cloned().unwrap();
+        loaded.insert("Login".into(), Value::from("ada-v2"));
+        loaded.insert("Version".into(), Value::Int(2));
+        let updated = users_repo
+            .update(
+                &loaded,
+                Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+            )
+            .await
+            .unwrap();
+        let current = users_repo
+            .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+            .await
+            .unwrap()
+            .unwrap();
+        let stale = users_repo
+            .update(
+                &loaded,
+                Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
+            )
+            .await
+            .unwrap();
+        users_repo.delete(&loaded, None).await.unwrap();

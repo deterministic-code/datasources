@@ -1,0 +1,6 @@
+test: rust/datasources/src/tests/mod.rs#statements_and_builders
+lines: 1085-1087
+
+        })
+        .get_text(),
+        "SELECT id FROM users"

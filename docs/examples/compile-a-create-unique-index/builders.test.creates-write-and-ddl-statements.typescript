@@ -1,0 +1,6 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 302-304
+
+      ],
+    );
+    expect(namedTable.getText()).toBe(

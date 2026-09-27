@@ -1,0 +1,10 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 350-356
+
+    const call = new ExecuteStoredProcedureStatement("save", [...fields]);
+    expect(call.getText()).toBe("CALL save($id, $name)");
+    expect(new ExecuteStoredProcedureStatement("save", []).getText()).toBe(
+      "CALL save()",
+    );
+    const ret = new ReturnStatement("add", [...fields]);
+    expect(ret.getText()).toBe("SELECT add($id, $name)");

@@ -1,0 +1,11 @@
+test: typescript/datasources/src/repository.test.ts#calls-a-stored-procedure-and-maps-rows
+lines: 102-109
+
+    command.reader = new MockReader([{ id: 1, name: "a" }]);
+    const parameters = [{ name: "id", value: 9 }];
+    const call = new ExecuteStoredProcedureStatement("get_user", parameters);
+    const rows: Cells[] = [];
+    for await (const row of repo.read(call, parameters)) rows.push(row);
+    expect(rows).toEqual([{ id: 1, name: "a" }]);
+    expect(command.executeReaderCalls[0]?.text).toBe("CALL get_user($id)");
+    expect(command.executeReaderCalls[0]?.parameters).toEqual([{ name: "id", value: 9 }]);

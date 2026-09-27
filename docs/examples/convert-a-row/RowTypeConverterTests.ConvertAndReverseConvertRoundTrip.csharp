@@ -1,0 +1,22 @@
+test: csharp/Datasources.Tests/RowTypeConverterTests.cs#ConvertAndReverseConvertRoundTrip
+lines: 28-46
+
+    [Fact]
+    public void ConvertAndReverseConvertRoundTrip()
+    {
+        var converter = new RowTypeConverter<User>();
+        var user = converter.Convert(new Row
+        {
+            ["Id"] = 7,
+            ["Username"] = "ada",
+            ["IsEnabled"] = 1,
+            ["Created"] = "2020-01-02T03:04:05.000Z"
+        });
+        Assert.Equal(7, user.Id);
+        Assert.Equal("ada", user.Username);
+        Assert.True(user.IsEnabled);
+        Assert.Equal(2020, user.Created.Year);
+        var row = converter.ReverseConvert(user);
+        Assert.Equal(new Value.Int(7), row["Id"]);
+        Assert.Equal(new Value.Text("ada"), row["Username"]);
+    }

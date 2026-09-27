@@ -1,0 +1,5 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 162-163
+
+            Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
+            GroupBy = ["status"],

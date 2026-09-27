@@ -155,11 +155,11 @@ Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. 
 ### Flatten with TransformMapper
 
 ::: example
-```csharp csharp/Datasources.Tests/TransformMapperTests.cs#L13-L24
+```csharp csharp/Datasources.Tests/TransformMapperTests.cs#FlattensAndUnflattensUserAndContacts
 ```
-```rust rust/datasources/src/mappers/mod.rs#L59-L94
+```rust rust/datasources/src/mappers/mod.rs#flattens_and_unflattens_user_and_contacts
 ```
-```typescript typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40
+```typescript typescript/datasources/src/mappers/transformMapper.test.ts#flattens-and-unflattens-user-and-contacts
 ```
 
 ```output [Before: nested value]

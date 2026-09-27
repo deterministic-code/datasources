@@ -1,0 +1,39 @@
+test: rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
+lines: 641-676
+
+    #[tokio::test]
+    async fn updates_users_view_when_the_version_matches() {
+        let built = datasource();
+        let ds: &dyn Datasource = &*built;
+        let connection = open(
+            ds,
+            "
+            CREATE TABLE user_type (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+            CREATE TABLE user (
+                id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL,
+                is_enabled INTEGER NOT NULL,
+                created TEXT NOT NULL,
+                user_type_id INTEGER NOT NULL,
+                version INTEGER NOT NULL
+            );
+            CREATE TABLE user_role (
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL
+            );
+            ",
+        )
+        .await;
+        let mut users_options = create_repository_options::<UsersView>();
+        users_options.ids = vec!["Key".into()];
+        users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+            "UsersView".to_string(),
+            "user".to_string(),
+        )]));
+        users_options.column_mappings = Box::new(DictionaryMapper::new([
+            ("Key".to_string(), "id".to_string()),
+            ("Login".to_string(), "username".to_string()),
+            ("Active".to_string(), "is_enabled".to_string()),

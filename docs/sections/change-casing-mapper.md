@@ -159,10 +159,10 @@ Use this as [EntityMapper](./readonly-repository.md#entitymapper) and [ColumnMap
 ### Map Pascal to snake case
 
 ::: example
-```csharp csharp/Datasources.Tests/ChangeCasingMapperTests.cs#L7-L15
+```csharp csharp/Datasources.Tests/ChangeCasingMapperTests.cs#MapsPascalToSnakeAndBack
 ```
-```rust rust/datasources/src/mappers/change_casing_mapper.rs#L34-L42
+```rust rust/datasources/src/mappers/change_casing_mapper.rs#maps_pascal_to_snake_and_back
 ```
-```typescript typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#L4-L11
+```typescript typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#maps-pascal-to-snake-and-back
 ```
 :::

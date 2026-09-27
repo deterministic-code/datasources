@@ -154,10 +154,10 @@ Use this for [ColumnMappings](./readonly-repository.md#columnmappings) when prop
 ### Map and reverse map
 
 ::: example
-```csharp csharp/Datasources.Tests/DictionaryMapperTests.cs#L14-L25
+```csharp csharp/Datasources.Tests/DictionaryMapperTests.cs#MapsKnownNamesAndPassesThroughTheRest
 ```
-```rust rust/datasources/src/mappers/dictionary_mapper.rs#L51-L61
+```rust rust/datasources/src/mappers/dictionary_mapper.rs#maps_known_names_and_passes_through_the_rest
 ```
-```typescript typescript/datasources/src/mappers/DictionaryMapper.test.ts#L14-L23
+```typescript typescript/datasources/src/mappers/DictionaryMapper.test.ts#maps-known-names-and-passes-through-the-rest
 ```
 :::

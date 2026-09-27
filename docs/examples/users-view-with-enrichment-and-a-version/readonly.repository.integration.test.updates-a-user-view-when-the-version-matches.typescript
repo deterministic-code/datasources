@@ -1,0 +1,83 @@
+test: typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#updates-a-user-view-when-the-version-matches
+lines: 227-306
+
+  it("updates a user view when the version matches", async () => {
+    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const connection = await open(ds, `
+      CREATE TABLE user_type (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+      );
+      CREATE TABLE user (
+        id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL,
+        user_type_id INTEGER NOT NULL,
+        version INTEGER NOT NULL
+      );
+      CREATE TABLE user_role (
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL
+      );
+    `);
+    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+    const usersRepo = new CRUDRepository(connection, {
+      ...createRepositoryOptions(UsersView),
+      ids: ["Key"],
+      readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
+      entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+      columnMappings: new DictionaryMapper([
+        ["Key", "id"],
+        ["Login", "username"],
+        ["Active", "is_enabled"],
+        ["Opened", "created"],
+        ["UserTypeId", "user_type_id"],
+        ["Version", "version"],
+      ]),
+    });
+    const userTypesRepo = new CRUDRepository(connection, {
+      ...createRepositoryOptions(UserType),
+      entityMapper: casing,
+      columnMappings: casing,
+    });
+    const userRolesRepo = new CRUDRepository(connection, {
+      ...createRepositoryOptions(UserRole),
+      entityMapper: casing,
+      columnMappings: casing,
+    });
+    usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
+    usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
+    const admin = Object.assign(new UserType(), { Name: "admin" });
+    await userTypesRepo.create(admin);
+    const user = Object.assign(new UsersView(), {
+      Login: "ada",
+      Active: true,
+      Opened: "2020-01-01T00:00:00.000Z",
+      UserTypeId: admin.Id,
+      Version: 1,
+      Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
+    });
+    await usersRepo.create(user);
+    const loaded = await usersRepo.readSingle(new Where("Key", eq, user.Key));
+    const version = loaded!.Version;
+    loaded!.Login = "ada-v2";
+    loaded!.Version = version + 1;
+    const updated = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+    const current = await usersRepo.readSingle(new Where("Key", eq, loaded!.Key));
+    const stale = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+    await usersRepo.delete(loaded!);
+    const gone = await usersRepo.readSingleById(loaded!.Key);
+    const roles: UserRole[] = [];
+    for await (const role of userRolesRepo.read(new Where("UserId", eq, loaded!.Key)))
+      roles.push(role);
+    expect(admin.Id).toBe(1);
+    expect(user.Key).toBe(1);
+    expect(loaded?.UserType).toBe("admin");
+    expect(loaded?.Roles.map((role) => role.Name).sort()).toEqual(["admin", "editor"]);
+    expect(updated.rowsAffected).toBe(1);
+    expect(current?.Version).toBe(2);
+    expect(current?.Login).toBe("ada-v2");
+    expect(stale.rowsAffected).toBe(0);
+    expect(gone).toBeUndefined();
+    expect(roles).toEqual([]);

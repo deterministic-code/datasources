@@ -10,19 +10,22 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 
     protected BulkCRUDRepository(IWriteEnrichmentStrategy<T>? write = null) : base(write) { }
 
-    public async Task<Response> Create(IReadOnlyList<T> items)
+    public Task<Response> Create(IReadOnlyList<T> items) =>
+        UseTransaction ? InTransaction(() => CreateEach(items)) : CreateEach(items);
+
+    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null) =>
+        UseTransaction ? InTransaction(() => Fold(items, item => UpdateCore(item, byWhere))) : Fold(items, item => UpdateCore(item, byWhere));
+
+    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null) =>
+        UseTransaction ? InTransaction(() => Fold(items, item => DeleteCore(item, byWhere))) : Fold(items, item => DeleteCore(item, byWhere));
+
+    async Task<Response> CreateEach(IReadOnlyList<T> items)
     {
         var result = (Value)Value.Null.Instance;
         foreach (var item in items)
-            result = IdValue(await base.Create(item));
+            result = IdValue(await CreateCore(item));
         return new Response(result, items.Count);
     }
-
-    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null) =>
-        Fold(items, item => base.Update(item, byWhere));
-
-    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null) =>
-        Fold(items, item => base.Delete(item, byWhere));
 
     public Task<Response> BulkCreate(IReadOnlyList<T> items) => Create(items);
 

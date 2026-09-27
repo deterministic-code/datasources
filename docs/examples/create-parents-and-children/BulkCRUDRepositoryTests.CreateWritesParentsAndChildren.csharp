@@ -1,0 +1,11 @@
+test: csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#CreateWritesParentsAndChildren
+lines: 23-30
+
+    public async Task CreateWritesParentsAndChildren()
+    {
+        var connection = await Setup();
+        var parentsRepo = new BulkCRUDRepository<Parent>(connection);
+        var childrenRepo = new BulkCRUDRepository<Child>(connection);
+        var response = await Repo(parentsRepo, childrenRepo).Create(
+        [
+            new Parent { children = [new Child { label = "a" }] },

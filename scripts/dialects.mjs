@@ -1,5 +1,6 @@
-import { blobUrl, readRange, SOURCE_ICON } from "./example.mjs";
+import { blobUrl, exampleCode, SOURCE_ICON } from "./example.mjs";
 import { renderClassReference } from "./reference.mjs";
+import { readSnippet } from "./sync-examples.mjs";
 
 /** @typedef {{ lang: string, label?: string, code: string }} DialectFence */
 
@@ -19,7 +20,7 @@ const EXAMPLE_BLOCK = /^::: example\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const REFERENCE_BLOCK = /^::: reference\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
-const EXAMPLE_FENCE = /^```([a-zA-Z0-9_+-]+)[ \t]+(\S+#L\d+-L\d+)\s*\r?\n([\s\S]*?)^```\s*$/gm;
+const EXAMPLE_FENCE = /^```([a-zA-Z0-9_+-]+)[ \t]+(\S+#\S+)\s*\r?\n([\s\S]*?)^```\s*$/gm;
 const OUTPUT_FENCE = /^```output(?::([a-zA-Z0-9_+-]+))?[ \t]+\[([^\]]+)\]\s*\r?\n([\s\S]*?)^```\s*$/gm;
 const DOC_FENCE = /(^~~~~[\s\S]*?^~~~~)/m;
 const PANEL_ORDER = ["typescript", "csharp", "rust"];
@@ -40,7 +41,7 @@ export const parseExampleFences = (body) => {
     if (match[3].trim()) throw new Error(`Example fence for ${match[2]} must not contain inline code`);
     return { lang: match[1], spec: match[2] };
   });
-  if (!fences.length) throw new Error("::: example has no test ranges");
+  if (!fences.length) throw new Error("::: example has no sample sources");
   return fences;
 };
 
@@ -71,10 +72,20 @@ const renderOutputs = (outputs) =>
     ? `<ExampleOutputs items="${escapeAttr(JSON.stringify(outputs.map(({ title, value }) => ({ title, value }))))}" />`
     : "";
 
-const resolveExamples = (body) =>
+const lastHeading = (prefix) => {
+  let heading = "";
+  for (const line of prefix.split("\n")) {
+    const match = line.match(/^###\s+(.+?)\s*$/);
+    if (match) heading = match[1];
+  }
+  return heading;
+};
+
+const resolveExamples = (body, heading, files) =>
   parseExampleFences(body).map(({ lang, spec }) => {
-    const snippet = readRange(spec);
-    return { lang, code: snippet.code, href: blobUrl(snippet) };
+    const snippet = readSnippet(heading, lang, spec);
+    if (files) files.push(snippet.file);
+    return { lang, code: exampleCode(snippet.body), href: blobUrl(snippet) };
   });
 
 const sourceLink = (href) => `<ExampleSource href="${href}" />`;
@@ -170,9 +181,9 @@ const hasReference = (markdown) => /^::: reference\r?\n/m.test(markdown);
 const readmeOutput = (outputs) =>
   outputs.map(({ title, value }) => `**${title}**\n\n\`\`\`\n${value}\n\`\`\``).join("\n\n");
 
-const toReadmeExamples = (body) => {
+const toReadmeExamples = (body, heading, files) => {
   const outputs = parseExampleOutputs(body);
-  return resolveExamples(body)
+  return resolveExamples(body, heading, files)
     .map(({ lang, code, href }) => {
       const boxes = readmeOutput(outputsFor(outputs, slotName(lang)));
       return `#### ${labelFor(lang)} [${SOURCE_ICON}](${href})\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`;
@@ -180,9 +191,9 @@ const toReadmeExamples = (body) => {
     .join("\n\n");
 };
 
-const toVitePressExamplePanels = (body) => {
+const toVitePressExamplePanels = (body, heading, files) => {
   const outputs = parseExampleOutputs(body);
-  return resolveExamples(body)
+  return resolveExamples(body, heading, files)
     .map(({ lang, code, href }) => {
       const boxes = renderOutputs(outputsFor(outputs, slotName(lang)));
       return toPanel(slotName(lang), `${sourceLink(href)}\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`);
@@ -190,8 +201,8 @@ const toVitePressExamplePanels = (body) => {
     .join("\n\n");
 };
 
-const toVitePressExamples = (body) => {
-  const resolved = resolveExamples(body);
+const toVitePressExamples = (body, heading, files) => {
+  const resolved = resolveExamples(body, heading, files);
   const boxes = renderOutputs(labeledOutputs(parseExampleOutputs(body)));
   const group = resolved
     .map(({ lang, code }) => `\`\`\`${lang} [${labelFor(lang)}]\n${code}\n\`\`\``)
@@ -200,7 +211,7 @@ const toVitePressExamples = (body) => {
   return `${links}\n\n::: code-group\n\n${group}\n\n:::${boxes ? `\n\n${boxes}` : ""}`;
 };
 
-export const transformDialects = (markdown, style) => {
+export const transformDialects = (markdown, style, files) => {
   const page = hasReference(markdown);
   const dialects =
     style === "vitepress" ? (page ? toVitePressDialectPanels : toVitePressDialects) : toReadmeDialects;
@@ -210,7 +221,9 @@ export const transformDialects = (markdown, style) => {
   const reference = style === "vitepress" ? toVitePressReference : toReadmeReference;
   const next = transformOutsideDocFences(markdown, (chunk) =>
     chunk
-      .replace(EXAMPLE_BLOCK, (_, body) => examples(body))
+      .replace(EXAMPLE_BLOCK, (match, body, offset, text) =>
+        examples(body, lastHeading(text.slice(0, offset)), files),
+      )
       .replace(DIALECT_BLOCK, (_, body) => dialects(body))
       .replace(PACKAGES_BLOCK, (_, body) => packages(body))
       .replace(REFERENCE_BLOCK, (_, body) => reference(body)),
@@ -225,6 +238,9 @@ export const dialectsVitePlugin = () => ({
   enforce: "pre",
   transform(code, id) {
     if (!id.split("?")[0].endsWith(".md")) return;
-    return { code: transformDialects(code, "vitepress"), map: null };
+    const files = [];
+    const next = transformDialects(code, "vitepress", files);
+    for (const file of files) this.addWatchFile(file);
+    return { code: next, map: null };
   },
 });

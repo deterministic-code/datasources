@@ -554,11 +554,11 @@ This is a collapse mapper, not enrichment. Related fills after read use [Readonl
 ### Map join rows to a nested contact
 
 ::: example
-```csharp csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L101-L164
+```csharp csharp/Datasources.Tests/FlatToNestedMapperTests.cs#MapsJoinRowsToANestedContact
 ```
-```rust rust/datasources/src/mappers/flat_to_nested_mapper.rs#L383-L453
+```rust rust/datasources/src/mappers/flat_to_nested_mapper.rs#maps_join_rows_to_a_nested_contact
 ```
-```typescript typescript/datasources/src/mappers/FlatToNestedMapper.test.ts#L90-L155
+```typescript typescript/datasources/src/mappers/FlatToNestedMapper.test.ts#maps-join-rows-to-a-nested-contact
 ```
 
 ```output [After: nested contact]

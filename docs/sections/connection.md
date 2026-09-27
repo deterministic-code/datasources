@@ -220,32 +220,32 @@ Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / 
 ### Create from Default
 
 ::: example
-```csharp csharp/Datasources.Tests/ConnectionTests.cs#L27-L33
+```csharp csharp/Datasources.Tests/ConnectionTests.cs#CreateFromDefault
 ```
-```rust rust/datasources/src/tests/connection.rs#L21-L26
+```rust rust/datasources/src/tests/connection.rs#create_from_default
 ```
-```typescript typescript/datasources/src/Connection.test.ts#L31-L35
+```typescript typescript/datasources/src/Connection.test.ts#create-from-default
 ```
 :::
 
 ### Open and close
 
 ::: example
-```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L7-L14
+```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#OpenAndClose
 ```
-```rust rust/providers/memory/src/lib.rs#L47-L52
+```rust rust/providers/memory/src/lib.rs#open_and_close
 ```
-```typescript typescript/providers/memory/src/index.test.ts#L36-L41
+```typescript typescript/providers/memory/src/index.test.ts#open-and-close
 ```
 :::
 
 ### Start a transaction
 
 ::: example
-```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L16-L23
+```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#StartTransaction
 ```
-```rust rust/providers/memory/src/lib.rs#L54-L60
+```rust rust/providers/memory/src/lib.rs#start_a_transaction
 ```
-```typescript typescript/providers/memory/src/index.test.ts#L43-L48
+```typescript typescript/providers/memory/src/index.test.ts#start-a-transaction
 ```
 :::

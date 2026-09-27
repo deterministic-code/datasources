@@ -1,0 +1,11 @@
+test: rust/datasources/src/tests/datasource_factory.rs#missing_provider_throws
+lines: 28-35
+
+#[test]
+fn missing_provider_throws() {
+    reset();
+    assert!(matches!(
+        create(Some(&HashMap::from([("provider".into(), "missing".into())]))),
+        Err(DatasourceError::ProviderNotInstalled(name)) if name == "missing"
+    ));
+}

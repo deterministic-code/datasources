@@ -1,0 +1,17 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 164-177
+
+            OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
+            Limit = 10,
+        });
+        Assert.Equal("SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10", grouped.GetText());
+        var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
+        Assert.Equal("SELECT id FROM users GROUP BY id", byStatus.GetText());
+        var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
+        Assert.Equal("SELECT MIN(n), MAX(n) FROM users", bounds.GetText());
+        var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
+        Assert.Equal("SELECT id FROM users ORDER BY id ASC, name DESC", ordered.GetText());
+        var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
+        Assert.Equal("SELECT id FROM users LIMIT 10", limited.GetText());
+        Assert.Equal("SELECT id FROM users LIMIT 0", new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 0 }).GetText());
+        Assert.Throws<InvalidOperationException>(() => new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = -1 }));

@@ -1,0 +1,6 @@
+test: typescript/datasources/src/mappers/IdentityMapper.test.ts#maps-and-reverses-the-same-value
+lines: 6-8
+
+    const mapper = new IdentityMapper<string>();
+    expect(mapper.map("ada")).toBe("ada");
+    expect(mapper.reverseMap("ada")).toBe("ada");

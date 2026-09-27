@@ -907,11 +907,11 @@ Compiled form is `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTR
 ### Compile a CREATE TABLE
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L162-L163
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L995-L1003
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L239-L243
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: create table]
@@ -922,11 +922,11 @@ CREATE TABLE users (id INTEGER, name TEXT)
 ### Compile named constraints
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L164-L177
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1008-L1031
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L244-L258
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: named constraints]

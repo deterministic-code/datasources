@@ -157,11 +157,11 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](./command.md#pa
 ### Compile a CALL
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L214-L215
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1089-L1090
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L305-L306
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: call]

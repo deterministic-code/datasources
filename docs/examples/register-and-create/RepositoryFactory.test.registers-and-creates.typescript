@@ -1,0 +1,10 @@
+test: typescript/datasources/src/RepositoryFactory.test.ts#registers-and-creates
+lines: 18-24
+
+    const factory = new RepositoryFactory();
+    const repo = new MockRepository<Item>(new MockConnection(), Item);
+    factory.register(repo);
+    const created = factory.create(Item);
+
+    expect(created).toBe(repo);
+    expect(factory.asReadonly.create(Item)).toBe(repo);

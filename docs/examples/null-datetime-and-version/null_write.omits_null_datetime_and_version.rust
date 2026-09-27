@@ -1,0 +1,58 @@
+test: rust/providers/sqlite/tests/null_write.rs#omits_null_datetime_and_version
+lines: 28-82
+
+#[tokio::test]
+async fn omits_null_datetime_and_version() {
+    let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+    conn.open().await.unwrap();
+    SqliteCommand::new(conn.clone())
+        .execute(SQL, None)
+        .await
+        .unwrap();
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "item".into();
+    options.row_converter = Some(item_converter());
+    let repo = CRUDRepository::new(conn, options).unwrap();
+    let mut omitted = Row::new();
+    omitted.insert("name".into(), Value::from("ada"));
+    omitted.insert("created".into(), Value::Null);
+    omitted.insert("version".into(), Value::Null);
+    repo.create(&mut omitted).await.unwrap();
+    let stored = repo
+        .read_single_by_id(omitted.get("id").unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    omitted.insert("name".into(), Value::from("ada-v2"));
+    repo.update(&omitted, None).await.unwrap();
+    let kept = repo
+        .read_single_by_id(omitted.get("id").unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+    let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
+    let mut explicit = Row::new();
+    explicit.insert("name".into(), Value::from("grace"));
+    explicit.insert("created".into(), Value::DateTime(created));
+    explicit.insert("version".into(), Value::Binary(vec![9, 9]));
+    repo.create(&mut explicit).await.unwrap();
+    let written = repo
+        .read_single_by_id(explicit.get("id").unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(
+        stored.get("created"),
+        Some(&Value::from("2020-01-01T00:00:00.000Z"))
+    );
+    assert_eq!(stored.get("version"), Some(&Value::Binary(vec![1, 2])));
+    assert_eq!(kept.get("name"), Some(&Value::from("ada-v2")));
+    assert_eq!(kept.get("created"), stored.get("created"));
+    assert_eq!(kept.get("version"), stored.get("version"));
+    assert_eq!(
+        written.get("created"),
+        Some(&Value::Text(Value::iso_datetime(created)))
+    );
+    assert_eq!(written.get("version"), Some(&Value::Binary(vec![9, 9])));
+}

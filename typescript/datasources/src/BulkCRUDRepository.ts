@@ -41,21 +41,28 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     );
   }
 
-  createMany = async (items: T[]): Promise<Response> => {
+  createMany = (items: T[]): Promise<Response> =>
+    this.useTransaction ? this.inTransaction(() => this.createEach(items)) : this.createEach(items);
+
+  updateMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
+    this.useTransaction
+      ? this.inTransaction(() => fold(items, (item) => this.updateCore(item, byWhere)))
+      : fold(items, (item) => this.updateCore(item, byWhere));
+
+  deleteMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
+    this.useTransaction
+      ? this.inTransaction(() => fold(items, (item) => this.deleteCore(item, byWhere)))
+      : fold(items, (item) => this.deleteCore(item, byWhere));
+
+  private createEach = async (items: T[]): Promise<Response> => {
     let result: Response["result"] = null;
     for (const item of items) {
-      const created = await this.create(item);
+      const created = await this.createCore(item);
       const id = this.idValue(created);
       if (id !== undefined) result = id;
     }
     return { result, rowsAffected: items.length };
   };
-
-  updateMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    fold(items, (item) => this.update(item, byWhere));
-
-  deleteMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    fold(items, (item) => this.delete(item, byWhere));
 
   createBulk = (items: T[]): Promise<Response> => this.createMany(items);
 

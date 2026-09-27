@@ -1,0 +1,5 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 310-311
+
+        [
+          { name: "id", type: "INTEGER", default: new ColumnDefault("0") },

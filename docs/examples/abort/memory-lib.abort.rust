@@ -1,0 +1,10 @@
+test: rust/providers/memory/src/lib.rs#abort
+lines: 72-78
+
+    #[tokio::test]
+    async fn abort() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        let txn = connection.start_transaction(None).await.unwrap();
+        txn.abort().await.unwrap();
+        assert_eq!(txn.isolation(), IsolationLevel::Serializable);

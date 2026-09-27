@@ -1,0 +1,43 @@
+test: rust/providers/sqlite/tests/readonly_repository.rs#reads_users_by_id_and_by_username_and_enabled
+lines: 47-86
+
+#[tokio::test]
+async fn reads_users_by_id_and_by_username_and_enabled() {
+    let built = datasource();
+    let ds: &dyn Datasource = &*built;
+    let connection = open(
+        ds,
+        "
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL,
+            is_enabled INTEGER NOT NULL
+        );
+        INSERT INTO users (id, username, is_enabled) VALUES
+            (1, 'ada', 1),
+            (2, 'grace', 0);
+        ",
+    )
+    .await;
+    let mut options = create_repository_options::<User>();
+    options.entity_mapper = Box::new(PluralizerMapper::new());
+    let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+    let by_id = repo
+        .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
+        .await
+        .unwrap()
+        .unwrap();
+    let disabled = repo
+        .read(
+            Some(&Where::binary("username", eq, "grace").and(
+                "is_enabled",
+                eq,
+                0_i64,
+            )),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
+    assert_eq!(by_id.get("is_enabled"), Some(&Value::Int(1)));
+    assert_eq!(disabled.len(), 1);

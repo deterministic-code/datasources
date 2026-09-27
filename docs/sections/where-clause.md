@@ -399,11 +399,11 @@ Construct the predicate with [Operator](./expressions.md#operator) records, then
 ### Compare, groups, not, and in
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L53-L55
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L659-L663
+```rust rust/datasources/src/tests/mod.rs#published_mocks
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L31-L33
+```typescript typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
 ```
 
 ```output [After: and]
@@ -418,11 +418,11 @@ id IN ($id_0, $id_1)
 ### Column, alias, literal
 
 ::: example
-```csharp csharp/Datasources.Tests/ComparisonAliasTests.cs#L11-L17
+```csharp csharp/Datasources.Tests/ComparisonAliasTests.cs#RendersComparisonSymbols
 ```
-```rust rust/datasources/src/tests/mod.rs#L2060-L2066
+```rust rust/datasources/src/tests/mod.rs#comparison_aliases
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L350-L356
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: equals]
@@ -437,11 +437,11 @@ username = $username AND is_enabled = $is_enabled
 ### Attach to a query
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L127-L130
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L929-L935
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L175-L180
+```typescript typescript/datasources/src/builders/builders.test.ts#evaluates-compare-groups-not-and-in
 ```
 
 ```output [After: select]
