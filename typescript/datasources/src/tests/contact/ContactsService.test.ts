@@ -41,20 +41,20 @@ describe("ContactsService", () => {
       addressesRepo,
       phonesRepo,
     );
-    await service.create(Object.assign(new Contact(), {
+    const other = await service.create(Object.assign(new Contact(), {
       first_name: "Other",
       contact_type_id: person.id,
       contact_source_id: source.id,
     }));
-    const other = (await collectAsync(service.read()))[0];
-    expect(other?.id).toBeGreaterThan(0);
-    await addressesRepo.create(Object.assign(new Address(), {
-      contact_id: other!.id,
+    expect(other.id).toBeGreaterThan(0);
+    const stray = await addressesRepo.create(Object.assign(new Address(), {
+      contact_id: other.id,
       line1: "other",
       city: "x",
       address_type_id: home.id,
     }));
-    await service.create(Object.assign(new Contact(), {
+    expect(stray.id).toBeGreaterThan(0);
+    const created = await service.create(Object.assign(new Contact(), {
       contact_type_id: person.id,
       contact_source_id: source.id,
       first_name: "Ada",
@@ -65,9 +65,10 @@ describe("ContactsService", () => {
       })],
       phones: [Object.assign(new Phone(), { number: "555", phone_type_id: work.id })],
     }));
+    expect(created.id).toBeGreaterThan(0);
     const contact = (await collectAsync(service.read())).find((item) => item.first_name === "Ada");
-    expect(contact?.id).toBeGreaterThan(0);
-    expect(contact?.id).not.toBe(other?.id);
+    expect(contact?.id).toBe(created.id);
+    expect(contact?.id).not.toBe(other.id);
     expect(contact?.contact_type_name).toBe("person");
     expect(contact?.contact_source_name).toBe("import");
     expect(contact?.addresses).toHaveLength(1);

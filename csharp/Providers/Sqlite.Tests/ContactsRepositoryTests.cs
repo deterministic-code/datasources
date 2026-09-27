@@ -30,8 +30,8 @@ public class ContactsRepositoryTests
         Assert.Equal(eager, enriched);
 
         var service = ContactsServiceOf.Create(conn);
-        var created = ExtraContact.New(await ContactLookupIds.Resolve(conn));
-        await service.Create(created);
+        var created = await service.Create(ExtraContact.New(await ContactLookupIds.Resolve(conn)));
+        Assert.True(created.id > 0);
         var extra = await service.ReadSingle(new Where(new Operator.Equals("id", Value.From(created.id))));
         Assert.NotNull(extra);
         Assert.Equal("Extra", extra.first_name);

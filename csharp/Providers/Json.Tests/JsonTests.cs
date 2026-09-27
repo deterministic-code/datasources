@@ -96,10 +96,14 @@ public class JsonTests
         Assert.NotEmpty(await repo.Read(new SelectStatement("{\"id\":1}")).ToListAsync());
         Assert.NotNull(await repo.ReadSingle(new WhereText("{\"id\":1}")));
         Assert.NotEmpty(await repo.Read(new WhereText("{\"id\":1}")).ToListAsync());
-        await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });
-        await repo.Update(new Row { ["id"] = 4, ["name"] = "D" });
-        await repo.Update(new Row { ["name"] = "Z" }, new WhereText("{\"id\":4}"));
-        await repo.Delete(new Row { ["id"] = 4 });
+        var inserted = await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });
+        Assert.Equal(new Value.Int(4), inserted["id"]);
+        var updated = await repo.Update(new Row { ["id"] = 4, ["name"] = "D" });
+        Assert.Equal(1, updated.RowsAffected);
+        var updatedByWhere = await repo.Update(new Row { ["name"] = "Z" }, new WhereText("{\"id\":4}"));
+        Assert.Equal(1, updatedByWhere.RowsAffected);
+        var removed = await repo.Delete(new Row { ["id"] = 4 });
+        Assert.Equal(3, removed.RowsAffected);
         await command.Execute("insert", new[] { new Parameter("id", 5) });
         await command.Execute("update", new[] { new Parameter("id", 5), new Parameter("$where", "{\"id\":5}") });
         await command.Execute("delete", new[] { new Parameter("id", 5) });

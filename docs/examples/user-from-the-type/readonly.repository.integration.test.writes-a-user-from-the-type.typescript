@@ -1,5 +1,5 @@
 test: typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#writes-a-user-from-the-type
-lines: 176-201
+lines: 176-203
 
   it("writes a user from the type", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
@@ -11,16 +11,18 @@ lines: 176-201
       );
     `);
     const usersRepo = new CRUDRepository(User, connection);
-    const created = Object.assign(new User(), { username: "ada", is_enabled: true });
-    await usersRepo.create(created);
+    const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
+    expect(created.id).toBe(1);
     const byId = await usersRepo.readSingleById(created.id);
     const matches: User[] = [];
     for await (const row of usersRepo.read(new Where("username", eq, "ada").and("is_enabled", eq, true)))
       matches.push(row);
     created.username = "ada-v2";
-    await usersRepo.update(created);
+    const updated = await usersRepo.update(created);
+    expect(updated.rowsAffected).toBe(1);
     const renamed = await usersRepo.readSingleById(created.id);
-    await usersRepo.delete(created);
+    const removed = await usersRepo.delete(created);
+    expect(removed.rowsAffected).toBe(1);
     const gone = await usersRepo.readSingleById(created.id);
     expect(created.id).toBe(1);
     expect(byId).toEqual({ id: 1, username: "ada", is_enabled: 1 });

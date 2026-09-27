@@ -68,14 +68,20 @@ mod tests {
             .await
             .unwrap()
             .is_empty());
-        repo.create(&mut rec(2, "b")).await.unwrap();
-        repo.update(&rec(2, "B"), None).await.unwrap();
-        repo.update(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
+        let created = repo.create(&mut rec(2, "b")).await.unwrap();
+        assert_eq!(created.get("id"), Some(&Value::Int(2)));
+        let updated = repo.update(&rec(2, "B"), None).await.unwrap();
+        assert_eq!(updated.rows_affected, 1);
+        let updated_by_where = repo
+            .update(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
             .await
             .unwrap();
-        repo.delete(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
+        assert_eq!(updated_by_where.rows_affected, 1);
+        let removed = repo
+            .delete(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
             .await
             .unwrap();
+        assert_eq!(removed.rows_affected, 0);
         let command = JsonCommand::new(conn.clone());
         command
             .execute("insert", Some(&[Parameter::new("id", 3_i64)]))
@@ -108,10 +114,12 @@ mod tests {
             .await
             .unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
-        repo.create(&mut rec(9, "t")).await.unwrap();
+        let rolled_back = repo.create(&mut rec(9, "t")).await.unwrap();
+        assert_eq!(rolled_back.get("id"), Some(&Value::Int(9)));
         txn.abort().await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
-        repo.create(&mut rec(8, "c")).await.unwrap();
+        let committed = repo.create(&mut rec(8, "c")).await.unwrap();
+        assert_eq!(committed.get("id"), Some(&Value::Int(8)));
         txn.commit().await.unwrap();
         conn.close().await.unwrap();
         assert!(conn.ensure_open().is_err());
@@ -123,7 +131,8 @@ mod tests {
             Some(serde_json::json!({})),
         ));
         memory.open().await.unwrap();
-        crud(memory.clone()).create(&mut rec(1, "a")).await.unwrap();
+        let created = crud(memory.clone()).create(&mut rec(1, "a")).await.unwrap();
+        assert_eq!(created.get("id"), Some(&Value::Int(1)));
         *memory.state.data.lock().unwrap() = JsonValue::Null;
         memory.collection_mut(|_| {});
         *memory.state.data.lock().unwrap() = JsonValue::Array(vec![]);

@@ -183,16 +183,18 @@ describe("user crud", () => {
       );
     `);
     const usersRepo = new CRUDRepository(User, connection);
-    const created = Object.assign(new User(), { username: "ada", is_enabled: true });
-    await usersRepo.create(created);
+    const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
+    expect(created.id).toBe(1);
     const byId = await usersRepo.readSingleById(created.id);
     const matches: User[] = [];
     for await (const row of usersRepo.read(new Where("username", eq, "ada").and("is_enabled", eq, true)))
       matches.push(row);
     created.username = "ada-v2";
-    await usersRepo.update(created);
+    const updated = await usersRepo.update(created);
+    expect(updated.rowsAffected).toBe(1);
     const renamed = await usersRepo.readSingleById(created.id);
-    await usersRepo.delete(created);
+    const removed = await usersRepo.delete(created);
+    expect(removed.rowsAffected).toBe(1);
     const gone = await usersRepo.readSingleById(created.id);
     expect(created.id).toBe(1);
     expect(byId).toEqual({ id: 1, username: "ada", is_enabled: 1 });
@@ -271,8 +273,8 @@ describe("users view crud", () => {
     });
     usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
     usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
-    const admin = Object.assign(new UserType(), { Name: "admin" });
-    await userTypesRepo.create(admin);
+    const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
+    expect(admin.Id).toBe(1);
     const user = Object.assign(new UsersView(), {
       Login: "ada",
       Active: true,
@@ -281,7 +283,8 @@ describe("users view crud", () => {
       Version: 1,
       Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
     });
-    await usersRepo.create(user);
+    const created = await usersRepo.create(user);
+    expect(created.Key).toBe(1);
     const loaded = await usersRepo.readSingle(new Where("Key", eq, user.Key));
     const version = loaded!.Version;
     loaded!.Login = "ada-v2";
@@ -289,7 +292,8 @@ describe("users view crud", () => {
     const updated = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
     const current = await usersRepo.readSingle(new Where("Key", eq, loaded!.Key));
     const stale = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
-    await usersRepo.delete(loaded!);
+    const removed = await usersRepo.delete(loaded!);
+    expect(removed.rowsAffected).toBe(1);
     const gone = await usersRepo.readSingleById(loaded!.Key);
     const roles: UserRole[] = [];
     for await (const role of userRolesRepo.read(new Where("UserId", eq, loaded!.Key)))

@@ -26,22 +26,22 @@ public class ContactsServiceTests
         var phonesRepo = new CRUDRepository<Phone>(connection);
         var service = ContactsService.Open(
             contactsRepo, typesRepo, sourcesRepo, addressTypesRepo, phoneTypesRepo, addressesRepo, phonesRepo);
-        await service.Create(new Contact
+        var other = await service.Create(new Contact
         {
             first_name = "Other",
             contact_type_id = Id(person),
             contact_source_id = Id(source)
         });
-        var other = Assert.Single(await Read(service));
         Assert.True(other.id > 0);
-        await addressesRepo.Create(new Address
+        var stray = await addressesRepo.Create(new Address
         {
             contact_id = other.id,
             line1 = "other",
             city = "x",
             address_type_id = Id(home)
         });
-        await service.Create(new Contact
+        Assert.True(stray.id > 0);
+        var created = await service.Create(new Contact
         {
             contact_type_id = Id(person),
             contact_source_id = Id(source),
@@ -49,8 +49,9 @@ public class ContactsServiceTests
             addresses = [new Address { line1 = "1 Main", city = "Paris", address_type_id = Id(home) }],
             phones = [new Phone { number = "555", phone_type_id = Id(work) }]
         });
+        Assert.True(created.id > 0);
         var contact = Assert.Single(await Read(service), item => item.first_name == "Ada");
-        Assert.True(contact.id > 0);
+        Assert.Equal(created.id, contact.id);
         Assert.NotEqual(other.id, contact.id);
         Assert.Equal("person", contact.contact_type_name);
         Assert.Equal("import", contact.contact_source_name);

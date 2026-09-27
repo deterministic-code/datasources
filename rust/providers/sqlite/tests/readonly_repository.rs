@@ -599,7 +599,8 @@ mod user_crud {
         let mut created = datasources::Row::new();
         created.insert("username".into(), Value::from("ada"));
         created.insert("is_enabled".into(), Value::Bool(true));
-        users_repo.create(&mut created).await.unwrap();
+        let mut created = users_repo.create(&mut created).await.unwrap();
+        assert_eq!(created.get("id"), Some(&Value::Int(1)));
         let by_id = users_repo
             .read_single_by_id(created.get("id").unwrap())
             .await
@@ -617,13 +618,15 @@ mod user_crud {
             .await
             .unwrap();
         created.insert("username".into(), Value::from("ada-v2"));
-        users_repo.update(&created, None).await.unwrap();
+        let updated = users_repo.update(&created, None).await.unwrap();
+        assert_eq!(updated.rows_affected, 1);
         let renamed = users_repo
             .read_single_by_id(created.get("id").unwrap())
             .await
             .unwrap()
             .unwrap();
-        users_repo.delete(&created, None).await.unwrap();
+        let removed = users_repo.delete(&created, None).await.unwrap();
+        assert_eq!(removed.rows_affected, 1);
         let gone = users_repo
             .read_single_by_id(created.get("id").unwrap())
             .await
@@ -699,7 +702,8 @@ mod user_crud {
         users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
         let mut admin = datasources::Row::new();
         admin.insert("Name".into(), Value::from("admin"));
-        user_types_repo.create(&mut admin).await.unwrap();
+        let admin = user_types_repo.create(&mut admin).await.unwrap();
+        assert_eq!(admin.get("Id"), Some(&Value::Int(1)));
         let mut admin_role = datasources::Row::new();
         admin_role.insert("Name".into(), Value::from("admin"));
         let mut editor_role = datasources::Row::new();
@@ -711,7 +715,8 @@ mod user_crud {
         user.insert("UserTypeId".into(), admin.get("Id").cloned().unwrap());
         user.insert("Version".into(), Value::Int(1));
         user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
-        users_repo.create(&mut user).await.unwrap();
+        let user = users_repo.create(&mut user).await.unwrap();
+        assert_eq!(user.get("Key"), Some(&Value::Int(1)));
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
             .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
@@ -740,7 +745,8 @@ mod user_crud {
             )
             .await
             .unwrap();
-        users_repo.delete(&loaded, None).await.unwrap();
+        let removed = users_repo.delete(&loaded, None).await.unwrap();
+        assert_eq!(removed.rows_affected, 1);
         let gone = users_repo.read_single_by_id(&key).await.unwrap();
         let roles = user_roles_repo
             .read(Some(&Where::binary("UserId", eq, key.clone())), None)

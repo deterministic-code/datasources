@@ -426,16 +426,18 @@ public class UserCrudTests
             );
             """);
         var usersRepo = new CRUDRepository<User>(connection);
-        var created = new User { username = "ada", is_enabled = true };
-        await usersRepo.Create(created);
+        var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
+        Assert.Equal(1, created.id);
         var byId = await usersRepo.ReadSingleById(created.id);
         var matches = new List<User>();
         await foreach (var row in usersRepo.Read(new Where("username", eq, "ada").And("is_enabled", eq, true)))
             matches.Add(row);
         created.username = "ada-v2";
-        await usersRepo.Update(created);
+        var updated = await usersRepo.Update(created);
+        Assert.Equal(1, updated.RowsAffected);
         var renamed = await usersRepo.ReadSingleById(created.id);
-        await usersRepo.Delete(created);
+        var removed = await usersRepo.Delete(created);
+        Assert.Equal(1, removed.RowsAffected);
         var gone = await usersRepo.ReadSingleById(created.id);
 
         Assert.Equal(1, created.id);
@@ -536,8 +538,8 @@ public class UsersViewCrudTests
         });
         usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
         usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
-        var admin = new UserType { Name = "admin" };
-        await userTypesRepo.Create(admin);
+        var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
+        Assert.Equal(1, admin.Id);
         var user = new UsersView
         {
             Login = "ada",
@@ -547,7 +549,8 @@ public class UsersViewCrudTests
             Version = 1,
             Roles = [new UserRole { Name = "admin" }, new UserRole { Name = "editor" }],
         };
-        await usersRepo.Create(user);
+        var created = await usersRepo.Create(user);
+        Assert.Equal(1, created.Key);
         var loaded = await usersRepo.ReadSingle(new Where("Key", eq, user.Key));
         var version = loaded!.Version;
         loaded.Login = "ada-v2";
@@ -555,7 +558,8 @@ public class UsersViewCrudTests
         var updated = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
         var current = await usersRepo.ReadSingle(new Where("Key", eq, loaded.Key));
         var stale = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
-        await usersRepo.Delete(loaded);
+        var removed = await usersRepo.Delete(loaded);
+        Assert.Equal(1, removed.RowsAffected);
         var gone = await usersRepo.ReadSingleById(loaded.Key);
         var roles = new List<UserRole>();
         await foreach (var role in userRolesRepo.Read(new Where("UserId", eq, loaded.Key)))

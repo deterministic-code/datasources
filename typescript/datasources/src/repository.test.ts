@@ -115,16 +115,18 @@ describe("CRUDRepository", () => {
     const { repo, command } = create();
     command.response = { result: 9, rowsAffected: 1 };
     const obj = { id: 1, name: "a" };
-    await repo.create(obj);
+    const created = await repo.create(obj);
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO users (name) VALUES ($name)",
     );
-    expect(obj.id).toBe(9);
-    await repo.update(obj);
+    expect(created.id).toBe(9);
+    const updated = await repo.update(obj);
+    expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).toBe(
       "UPDATE users SET name = $name WHERE id = $id",
     );
-    await repo.delete(obj);
+    const removed = await repo.delete(obj);
+    expect(removed.rowsAffected).toBe(1);
     expect(command.executeCalls[2]?.text).toBe("DELETE FROM users WHERE id = $id");
   });
 
@@ -132,36 +134,43 @@ describe("CRUDRepository", () => {
     const { repo, command } = create({ type: asType(PascalId), ids: ["Id"] });
     command.response = { result: 9, rowsAffected: 1 };
     const item = Object.assign(new PascalId(), { Id: 0 });
-    await repo.create(item);
-    expect(item.Id).toBe(9);
+    const created = await repo.create(item);
+    expect(created.Id).toBe(9);
   });
 
   it("updates without id columns using a tautology", async () => {
     const { repo, command } = create({ ids: [] });
-    await repo.update({ id: 1, name: "a" });
+    command.response = { result: undefined, rowsAffected: 1 };
+    const updated = await repo.update({ id: 1, name: "a" });
+    expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[0]?.text).toContain("1 = 1");
     await expect(repo.readSingleById(1)).rejects.toThrow("ReadSingleById requires an Id column");
-    await repo.delete({ id: 1, name: "a" });
+    const removed = await repo.delete({ id: 1, name: "a" });
+    expect(removed.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.parameters).toEqual([]);
-    await repo.delete({ id: 1, name: "a" }, new WhereText("id = $id"));
+    const removedByWhere = await repo.delete({ id: 1, name: "a" }, new WhereText("id = $id"));
+    expect(removedByWhere.rowsAffected).toBe(1);
     expect(command.executeCalls[2]?.parameters).toEqual([
       { name: "id", value: 1 },
       { name: "name", value: "a" },
     ]);
     const versioned = create();
-    await versioned.repo.update(
+    versioned.command.response = { result: undefined, rowsAffected: 1 };
+    const versionedUpdate = await versioned.repo.update(
       { id: 1, name: "b", name_extra: "x" },
       new Where(new Operator.And(
         new Operator.Equals("name_extra", "x"),
         new Operator.Equals("name", "a"),
       )),
     );
+    expect(versionedUpdate.rowsAffected).toBe(1);
     expect(versioned.command.executeCalls[0]?.text).toContain("name = $name__where");
     expect(versioned.command.executeCalls[0]?.text).toContain("name_extra = $name_extra");
-    await versioned.repo.update({ id: 1, name: "b" }, {
+    const versionedWhere = await versioned.repo.update({ id: 1, name: "b" }, {
       getText: () => "name = $name",
       parameters: [{ name: "skipped" }, { name: "name", value: "a" }],
     });
+    expect(versionedWhere.rowsAffected).toBe(1);
     expect(versioned.command.executeCalls[1]?.text).toContain("name = $name__where");
   });
 
@@ -170,10 +179,14 @@ describe("CRUDRepository", () => {
       ids: ["org_id", "user_id"],
       type: asType(Composite),
     });
-    await repo.create({ org_id: 1, user_id: 2, name: 3 });
+    const created = await repo.create({ org_id: 1, user_id: 2, name: 3 });
+    expect(created.org_id).toBe(1);
+    expect(created.user_id).toBe(2);
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (name) VALUES ($name)");
     expect(command.executeCalls[0]?.parameters?.[0]?.value).toBe(3);
-    await repo.update({ org_id: 1, user_id: 2, name: 4 });
+    command.response = { result: undefined, rowsAffected: 1 };
+    const updated = await repo.update({ org_id: 1, user_id: 2, name: 4 });
+    expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).toContain(
       "org_id = $org_id AND user_id = $user_id",
     );
@@ -181,14 +194,18 @@ describe("CRUDRepository", () => {
 
   it("omits null datetime and version on create and update", async () => {
     const { repo, command } = create();
-    await repo.create({ id: 1, name: "ada", created: null, version: undefined });
+    command.response = { result: 7, rowsAffected: 1 };
+    const created = await repo.create({ id: 1, name: "ada", created: null, version: undefined });
+    expect(created.id).toBe(7);
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (name) VALUES ($name)");
-    await repo.update({ id: 1, name: "ada", created: null, version: null });
+    const updated = await repo.update({ id: 1, name: "ada", created: null, version: null });
+    expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).toBe(
       "UPDATE users SET name = $name WHERE id = $id",
     );
     const when = new Date("2024-06-01T00:00:00.000Z");
-    await repo.create({ id: 1, name: "grace", created: when, version: new Uint8Array([9, 9]) });
+    const grace = await repo.create({ id: 1, name: "grace", created: when, version: new Uint8Array([9, 9]) });
+    expect(grace.id).toBe(7);
     expect(command.executeCalls[2]?.text).toBe(
       "INSERT INTO users (created, name, version) VALUES ($created, $name, $version)",
     );
@@ -247,15 +264,20 @@ describe("CRUDRepository", () => {
         /* consume */
       }
     }).rejects.toThrow("Reader current must be a row");
-    await repo.update({ id: 1, name: "a" }, new WhereText("id = 1"));
+    query.response = { result: undefined, rowsAffected: 1 };
+    const updated = await repo.update({ id: 1, name: "a" }, new WhereText("id = 1"));
+    expect(updated.rowsAffected).toBe(1);
     const typed = new CRUDRepository(connection, {
       type: asType(Item),
       entity: "users",
       rowConverter: new RowTypeConverter(),
     });
-    await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
+    command.response = { result: undefined, rowsAffected: 1 };
+    const created = await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
+    expect(created.id).toBe(1);
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
-    await typed.delete(Object.assign(new Item(), { name: "z" }), new Where(new Operator.Equals("name", "z")));
+    const removed = await typed.delete(Object.assign(new Item(), { name: "z" }), new Where(new Operator.Equals("name", "z")));
+    expect(removed.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).toBe("DELETE FROM users WHERE name = $name");
   });
 
@@ -345,7 +367,9 @@ describe("CRUDRepository", () => {
         Object.assign(new Contact(), { name: "roberta" }),
       ],
     });
-    await repo.create(user);
+    command.response = { result: undefined, rowsAffected: 1 };
+    const created = await repo.create(user);
+    expect(created.id).toBe(1);
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO users (contact_name1, contact_name2, email, username) VALUES ($contact_name1, $contact_name2, $email, $username)",
     );
@@ -357,9 +381,11 @@ describe("CRUDRepository", () => {
     );
     expect(values.contact_name1).toBe("bob");
     expect(values.contact_name2).toBe("roberta");
-    await repo.update(user);
+    const updated = await repo.update(user);
+    expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).not.toContain("contacts");
-    await repo.delete(user);
+    const removed = await repo.delete(user);
+    expect(removed.rowsAffected).toBe(1);
     expect(command.executeCalls[2]?.text).toBe("DELETE FROM users WHERE id = $id");
   });
 
@@ -417,16 +443,20 @@ describe("CRUDRepository", () => {
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT full_name, user_id FROM people LIMIT 1",
     );
+    command.response = { result: undefined, rowsAffected: 1 };
     const row = { id: 1, name: "a" };
-    await repo.create(row);
+    const created = await repo.create(row);
+    expect(created.id).toBe(1);
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO people (full_name) VALUES ($full_name) RETURNING id",
     );
-    await repo.update(row);
+    const updated = await repo.update(row);
+    expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).toBe(
       "UPDATE people SET full_name = $full_name WHERE user_id = $user_id RETURNING id",
     );
-    await repo.delete(row);
+    const removed = await repo.delete(row);
+    expect(removed.rowsAffected).toBe(1);
     expect(command.executeCalls[2]?.text).toBe(
       "DELETE FROM people WHERE user_id = $user_id RETURNING id",
     );
@@ -449,11 +479,14 @@ describe("CRUDRepository", () => {
       entity: "rows",
       rowConverter: new RowTypeConverter<Row>({}, { on: new Flag() }),
     });
-    await repo.create(Object.assign(new Row(), { id: 1, on: true }));
-    await repo.update(
+    command.response = { result: undefined, rowsAffected: 1 };
+    const created = await repo.create(Object.assign(new Row(), { id: 1, on: true }));
+    expect(created.id).toBe(1);
+    const updated = await repo.update(
       Object.assign(new Row(), { id: 1, on: true }),
       new Where(new Operator.Equals("on", true)),
     );
+    expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.parameters).toContainEqual({ name: "on", value: 1 });
   });
 
@@ -470,10 +503,12 @@ describe("CRUDRepository", () => {
       entity: "items",
       rowConverter: new Plain(),
     });
-    await repo.update(
+    command.response = { result: undefined, rowsAffected: 1 };
+    const updated = await repo.update(
       Object.assign(new Item(), { id: 1, name: "a" }),
       new Where(new Operator.Equals("name", "a")),
     );
+    expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[0]?.parameters).toContainEqual({ name: "name", value: "a" });
   });
 });

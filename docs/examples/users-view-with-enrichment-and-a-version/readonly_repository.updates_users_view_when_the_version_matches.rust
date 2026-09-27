@@ -1,11 +1,12 @@
 test: rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
-lines: 698-743
+lines: 701-749
 
         users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
         users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
         let mut admin = datasources::Row::new();
         admin.insert("Name".into(), Value::from("admin"));
-        user_types_repo.create(&mut admin).await.unwrap();
+        let admin = user_types_repo.create(&mut admin).await.unwrap();
+        assert_eq!(admin.get("Id"), Some(&Value::Int(1)));
         let mut admin_role = datasources::Row::new();
         admin_role.insert("Name".into(), Value::from("admin"));
         let mut editor_role = datasources::Row::new();
@@ -17,7 +18,8 @@ lines: 698-743
         user.insert("UserTypeId".into(), admin.get("Id").cloned().unwrap());
         user.insert("Version".into(), Value::Int(1));
         user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
-        users_repo.create(&mut user).await.unwrap();
+        let user = users_repo.create(&mut user).await.unwrap();
+        assert_eq!(user.get("Key"), Some(&Value::Int(1)));
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
             .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
@@ -46,4 +48,5 @@ lines: 698-743
             )
             .await
             .unwrap();
-        users_repo.delete(&loaded, None).await.unwrap();
+        let removed = users_repo.delete(&loaded, None).await.unwrap();
+        assert_eq!(removed.rows_affected, 1);

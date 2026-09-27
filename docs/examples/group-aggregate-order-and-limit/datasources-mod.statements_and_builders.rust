@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 977-991
+lines: 983-997
 
     .get_text()
     .contains('='));

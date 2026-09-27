@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1095-1096
+lines: 1101-1102
 
             "customers",
             "orders.customer_id",

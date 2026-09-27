@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1076-1083
+lines: 1082-1089
 
             ..SelectStatementOptions::new("users", &["users.id"])
         })

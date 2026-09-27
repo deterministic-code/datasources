@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#evaluates_where_statement
-lines: 1465-1471
+lines: 1471-1477
 
     assert_eq!(
         evaluator.evaluate(

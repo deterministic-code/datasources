@@ -43,11 +43,15 @@ public class CRUDRepositoryOptionsTests
         command.Reader = new MockReader<Row>([]);
         await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
-        await repo.Create(new UserRow { id = 1, name = "a" });
+        command.Response = new Response(Value.Null.Instance, 1);
+        var created = await repo.Create(new UserRow { id = 1, name = "a" });
+        Assert.Equal(1, created.id);
         Assert.Equal("INSERT INTO people (full_name) VALUES ($full_name)", command.ExecuteCalls[0].Text);
-        await repo.Update(new UserRow { id = 1, name = "a" });
+        var updated = await repo.Update(new UserRow { id = 1, name = "a" });
+        Assert.Equal(1, updated.RowsAffected);
         Assert.StartsWith("UPDATE people SET", command.ExecuteCalls[1].Text);
-        await repo.Delete(new UserRow { id = 1, name = "a" });
+        var removed = await repo.Delete(new UserRow { id = 1, name = "a" });
+        Assert.Equal(1, removed.RowsAffected);
         Assert.StartsWith("DELETE FROM people", command.ExecuteCalls[2].Text);
     }
 
@@ -117,12 +121,16 @@ public class CRUDRepositoryOptionsTests
         command.Reader = new MockReader<Row>([]);
         await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people LIMIT 1", command.ExecuteReaderCalls[0].Text);
+        command.Response = new Response(Value.Null.Instance, 1);
         var row = new UserRow { id = 1, name = "a" };
-        await repo.Create(row);
+        var created = await repo.Create(row);
+        Assert.Equal(1, created.id);
         Assert.Equal("INSERT INTO people (full_name) VALUES ($full_name) RETURNING id", command.ExecuteCalls[0].Text);
-        await repo.Update(row);
+        var updated = await repo.Update(row);
+        Assert.Equal(1, updated.RowsAffected);
         Assert.Equal("UPDATE people SET full_name = $full_name WHERE user_id = $user_id RETURNING id", command.ExecuteCalls[1].Text);
-        await repo.Delete(row);
+        var removed = await repo.Delete(row);
+        Assert.Equal(1, removed.RowsAffected);
         Assert.Equal("DELETE FROM people WHERE user_id = $user_id RETURNING id", command.ExecuteCalls[2].Text);
     }
 }

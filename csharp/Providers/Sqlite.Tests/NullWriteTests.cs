@@ -25,11 +25,12 @@ public class NullWriteTests
             );
             """);
         var repo = new CRUDRepository<Item>(connection, new CRUDRepositoryOptions<Item> { Entity = "item" });
-        var omitted = new Item { name = "ada" };
-        await repo.Create(omitted);
+        var omitted = await repo.Create(new Item { name = "ada" });
+        Assert.True(omitted.id > 0);
         var stored = await repo.ReadSingleById(omitted.id);
         omitted.name = "ada-v2";
-        await repo.Update(omitted);
+        var updated = await repo.Update(omitted);
+        Assert.Equal(1, updated.RowsAffected);
         var kept = await repo.ReadSingleById(omitted.id);
         var explicitItem = new Item
         {
@@ -37,7 +38,8 @@ public class NullWriteTests
             created = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
             version = [9, 9]
         };
-        await repo.Create(explicitItem);
+        var writtenCreate = await repo.Create(explicitItem);
+        Assert.True(writtenCreate.id > 0);
         var written = await repo.ReadSingleById(explicitItem.id);
 
         Assert.Equal(new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), stored!.created);

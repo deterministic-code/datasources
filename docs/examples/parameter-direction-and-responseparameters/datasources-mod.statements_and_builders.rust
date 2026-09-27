@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1114-1124
+lines: 1120-1130
 
     let max_n = Aggregate::max("n", None);
     let bound_fields = [min_n.as_str(), max_n.as_str()];

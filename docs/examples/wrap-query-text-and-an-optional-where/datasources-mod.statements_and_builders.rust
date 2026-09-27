@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1177-1180
+lines: 1183-1186
 
                 .not_null(NotNull::new(Some("nn_id"))),
             Column::new("tenant_id", "INTEGER"),
