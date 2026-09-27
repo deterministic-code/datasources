@@ -972,7 +972,7 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
-`AddEnriched` registers the same read fill as [ReadonlyRepository](./readonly-repository.md). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+`AddEnriched` registers the same read fill as [ReadonlyRepository](./readonly-repository.md). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. `LazyWriteEnrichmentStrategy` skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 
 - **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `by` from the parent `from`, then create children (and nested many).
 - **Update** — write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest).
@@ -1077,5 +1077,38 @@ no row
 
 ```output [After delete]
 no row
+```
+:::
+
+### Users with linked roles and groups
+
+`AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L148-L196
+```
+```rust rust/datasources/tests/user_view.rs#L139-L205
+```
+```typescript typescript/datasources/src/UserViewCRUDRepository.test.ts#L109-L153
+```
+
+```output [Created]
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor'],
+  Groups: ['engineering']
+}
+```
+
+```output [Updated]
+{
+  Roles: ['editor'],
+  Groups: ['engineering', 'ops']
+}
+```
+
+```output [After delete]
+no user
+roles and groups remain
 ```
 :::

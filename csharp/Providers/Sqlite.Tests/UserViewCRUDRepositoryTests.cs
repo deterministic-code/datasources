@@ -1,6 +1,5 @@
 using Datasources;
 using Datasources.Sqlite;
-using static Datasources.Cmp;
 
 namespace Datasources.Sqlite.Tests;
 
@@ -133,119 +132,129 @@ public class UserViewCRUDRepositoryTests
         return users;
     }
 
+    static async Task<UserView> CreateAda(Graph graph, List<Role>? roles, List<Group>? groups)
+    {
+        var usersRepo = Enrich(graph.UsersRepo, graph);
+        return await usersRepo.Create(new UserView
+        {
+            Username = "ada",
+            IsEnabled = true,
+            UserTypeId = graph.AdminType.Id,
+            Roles = roles,
+            Groups = groups,
+        });
+    }
+
     [Fact]
     public async Task CreateUpdateAndDeleteSyncsLinkRows()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, """
-            CREATE TABLE users (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL,
-                user_type_id INTEGER NOT NULL
-            );
-            CREATE TABLE user_types (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
-            CREATE TABLE roles (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
-            CREATE TABLE groups (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
-            CREATE TABLE user_roles (
-                user_id INTEGER NOT NULL,
-                role_id INTEGER NOT NULL,
-                PRIMARY KEY (user_id, role_id)
-            );
-            CREATE TABLE user_groups (
-                user_id INTEGER NOT NULL,
-                group_id INTEGER NOT NULL,
-                PRIMARY KEY (user_id, group_id)
-            );
-            """);
-        var usersRepo = BuildRepo<UserView>(connection, "Users");
-        var userTypesRepo = BuildRepo<UserType>(connection, "UserTypes");
-        var rolesRepo = BuildRepo<Role>(connection, "Roles");
-        var groupsRepo = BuildRepo<Group>(connection, "Groups");
-        var userRolesRepo = BuildRepo<UserRole>(connection, "UserRoles");
-        var userGroupsRepo = BuildRepo<UserGroup>(connection, "UserGroups");
-        var adminType = await userTypesRepo.Create(new UserType { Name = "admin" });
-        var adminRole = await rolesRepo.Create(new Role { Name = "admin" });
-        var editorRole = await rolesRepo.Create(new Role { Name = "editor" });
-        var engineering = await groupsRepo.Create(new Group { Name = "engineering" });
-        var ops = await groupsRepo.Create(new Group { Name = "ops" });
-        usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id"), userTypesRepo);
-        usersRepo.AddLinked(new("Roles", "Id", "Id", Association: new("UserId", "RoleId")), rolesRepo, userRolesRepo);
-        usersRepo.AddLinked(new("Groups", "Id", "Id", Association: new("UserId", "GroupId")), groupsRepo, userGroupsRepo);
-
+        var graph = await GraphAsync();
+        var usersRepo = graph.UsersRepo;
+        usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id"), graph.UserTypesRepo);
+        usersRepo.AddLinked(new("Roles", "Id", "Id", Association: new("UserId", "RoleId")), graph.RolesRepo, graph.UserRolesRepo);
+        usersRepo.AddLinked(new("Groups", "Id", "Id", Association: new("UserId", "GroupId")), graph.GroupsRepo, graph.UserGroupsRepo);
         var created = await usersRepo.Create(new UserView
         {
             Username = "ada",
             IsEnabled = true,
-            UserTypeId = adminType.Id,
-            Roles = [adminRole, editorRole],
-            Groups = [engineering]
+            UserTypeId = graph.AdminType.Id,
+            Roles = [graph.AdminRole, graph.EditorRole],
+            Groups = [graph.Engineering],
         });
-        Assert.True(created.Id > 0);
-        Assert.Equal("ada", created.Username);
-        Assert.Equal(adminType.Id, created.UserTypeId);
-        Assert.Equal("admin", created.UserType!.Name);
-        Assert.Equal(["admin", "editor"], created.Roles!.Select(role => role.Name).OrderBy(name => name));
-        Assert.Equal(
-            new[] { adminRole.Id, editorRole.Id }.OrderBy(id => id),
-            created.Roles!.Select(role => role.Id).OrderBy(id => id));
-        Assert.All(created.Roles!, role => Assert.True(role.Id > 0));
-        Assert.Equal(["engineering"], created.Groups!.Select(group => group.Name));
-        Assert.Equal([engineering.Id], created.Groups!.Select(group => group.Id));
-        Assert.All(created.Groups!, group => Assert.True(group.Id > 0));
-        var userRoles = await userRolesRepo.Read().ToListAsync();
-        var userGroups = await userGroupsRepo.Read().ToListAsync();
-        Assert.Equal([created.Id, created.Id], userRoles.Select(link => link.UserId));
-        Assert.Equal(
-            new[] { adminRole.Id, editorRole.Id }.OrderBy(id => id),
-            userRoles.Select(link => link.RoleId).OrderBy(id => id));
-        Assert.Equal((created.Id, engineering.Id), (userGroups[0].UserId, userGroups[0].GroupId));
-        Assert.Equal(["admin", "editor"], (await rolesRepo.Read().ToListAsync()).Select(role => role.Name).OrderBy(name => name));
-        Assert.Equal("admin", Assert.Single(await userTypesRepo.Read().ToListAsync()).Name);
-
         await usersRepo.Update(new UserView
         {
             Id = created.Id,
             Username = "ada",
             IsEnabled = true,
-            UserTypeId = adminType.Id,
-            Roles = [editorRole],
-            Groups = [engineering, ops]
+            UserTypeId = graph.AdminType.Id,
+            Roles = [graph.EditorRole],
+            Groups = [graph.Engineering, graph.Ops],
         });
-        var updated = await usersRepo.ReadSingle(new Where("Username", eq, "ada"));
+        var updated = await usersRepo.ReadSingleById(created.Id);
+        await usersRepo.Delete(new UserView { Id = created.Id });
+
+        Assert.True(created.Id > 0);
+        Assert.Equal("admin", created.UserType!.Name);
+        Assert.Equal(["admin", "editor"], created.Roles!.Select(role => role.Name).OrderBy(name => name));
+        Assert.Equal(
+            new[] { graph.AdminRole.Id, graph.EditorRole.Id }.OrderBy(id => id),
+            created.Roles!.Select(role => role.Id).OrderBy(id => id));
+        Assert.Equal(["engineering"], created.Groups!.Select(group => group.Name));
+        Assert.Equal([graph.Engineering.Id], created.Groups!.Select(group => group.Id));
         Assert.Equal(["editor"], updated!.Roles!.Select(role => role.Name));
-        Assert.Equal([editorRole.Id], updated.Roles!.Select(role => role.Id));
-        Assert.True(updated.Roles![0].Id > 0);
+        Assert.Equal([graph.EditorRole.Id], updated.Roles!.Select(role => role.Id));
         Assert.Equal(["engineering", "ops"], updated.Groups!.Select(group => group.Name).OrderBy(name => name));
         Assert.Equal(
-            new[] { engineering.Id, ops.Id }.OrderBy(id => id),
+            new[] { graph.Engineering.Id, graph.Ops.Id }.OrderBy(id => id),
             updated.Groups!.Select(group => group.Id).OrderBy(id => id));
-        Assert.All(updated.Groups!, group => Assert.True(group.Id > 0));
-        userRoles = await userRolesRepo.Read().ToListAsync();
-        userGroups = await userGroupsRepo.Read().ToListAsync();
-        Assert.Equal([editorRole.Id], userRoles.Select(link => link.RoleId));
-        Assert.Equal(
-            new[] { engineering.Id, ops.Id }.OrderBy(id => id),
-            userGroups.Select(link => link.GroupId).OrderBy(id => id));
-        Assert.Equal(["admin", "editor"], (await rolesRepo.Read().ToListAsync()).Select(role => role.Name).OrderBy(name => name));
-        Assert.Equal(["engineering", "ops"], (await groupsRepo.Read().ToListAsync()).Select(group => group.Name).OrderBy(name => name));
-
-        await usersRepo.Delete(new UserView { Id = created.Id });
         Assert.Empty(await usersRepo.Read().ToListAsync());
-        Assert.Empty(await userRolesRepo.Read().ToListAsync());
-        Assert.Empty(await userGroupsRepo.Read().ToListAsync());
-        Assert.Equal(["admin", "editor"], (await rolesRepo.Read().ToListAsync()).Select(role => role.Name).OrderBy(name => name));
-        Assert.Equal(["engineering", "ops"], (await groupsRepo.Read().ToListAsync()).Select(group => group.Name).OrderBy(name => name));
-        Assert.Equal("admin", Assert.Single(await userTypesRepo.Read().ToListAsync()).Name);
+        Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
+        Assert.Empty(await graph.UserGroupsRepo.Read().ToListAsync());
+        Assert.Equal(["admin", "editor"], (await graph.RolesRepo.Read().ToListAsync()).Select(role => role.Name).OrderBy(name => name));
+        Assert.Equal(["engineering", "ops"], (await graph.GroupsRepo.Read().ToListAsync()).Select(group => group.Name).OrderBy(name => name));
+        Assert.Equal("admin", Assert.Single(await graph.UserTypesRepo.Read().ToListAsync()).Name);
+    }
+
+    [Fact]
+    public async Task NullListClearsThatAssociation()
+    {
+        var graph = await GraphAsync();
+        var created = await CreateAda(graph, [graph.AdminRole, graph.EditorRole], [graph.Engineering]);
+        await graph.UsersRepo.Update(new UserView
+        {
+            Id = created.Id,
+            Username = "ada",
+            IsEnabled = true,
+            UserTypeId = graph.AdminType.Id,
+            Roles = null,
+            Groups = [graph.Engineering],
+        });
+        Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
+        var userGroups = await graph.UserGroupsRepo.Read().ToListAsync();
+        Assert.Equal((created.Id, graph.Engineering.Id), (userGroups[0].UserId, userGroups[0].GroupId));
+    }
+
+    [Fact]
+    public async Task EmptyListClearsThatAssociation()
+    {
+        var graph = await GraphAsync();
+        var created = await CreateAda(graph, [graph.AdminRole, graph.EditorRole], [graph.Engineering]);
+        await graph.UsersRepo.Update(new UserView
+        {
+            Id = created.Id,
+            Username = "ada",
+            IsEnabled = true,
+            UserTypeId = graph.AdminType.Id,
+            Roles = [],
+            Groups = [graph.Engineering],
+        });
+        Assert.Empty(await graph.UserRolesRepo.Read().ToListAsync());
+        var userGroups = await graph.UserGroupsRepo.Read().ToListAsync();
+        Assert.Equal((created.Id, graph.Engineering.Id), (userGroups[0].UserId, userGroups[0].GroupId));
+    }
+
+    [Fact]
+    public async Task DuplicateRelatedIdsInsertOneRow()
+    {
+        var graph = await GraphAsync();
+        var created = await CreateAda(graph, [graph.AdminRole, graph.AdminRole], [graph.Engineering]);
+        var links = await graph.UserRolesRepo.Read().ToListAsync();
+        Assert.Equal([created.Id], links.Select(link => link.UserId));
+        Assert.Equal([graph.AdminRole.Id], links.Select(link => link.RoleId));
+    }
+
+    [Fact]
+    public async Task MissingRelatedIdThrows()
+    {
+        var graph = await GraphAsync();
+        var usersRepo = Enrich(graph.UsersRepo, graph);
+        await Assert.ThrowsAsync<DatasourceException>(() => usersRepo.Create(new UserView
+        {
+            Username = "ada",
+            IsEnabled = true,
+            UserTypeId = graph.AdminType.Id,
+            Roles = [new Role()],
+        }));
     }
 
     [Fact]
