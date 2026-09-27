@@ -1,0 +1,11 @@
+test: rust/datasources/src/tests/mod.rs#statements_and_builders
+lines: 1076-1083
+
+            ..SelectStatementOptions::new("users", &["users.id"])
+        })
+        .get_text(),
+        "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
+    );
+    assert_eq!(
+        SelectStatement::new(SelectStatementOptions {
+            joins: &[],

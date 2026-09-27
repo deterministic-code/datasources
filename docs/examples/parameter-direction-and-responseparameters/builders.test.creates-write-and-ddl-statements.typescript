@@ -1,0 +1,7 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 325-328
+
+        [{ name: "id", type: "INTEGER" }],
+        [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)],
+      ).getText(),
+    ).toBe(

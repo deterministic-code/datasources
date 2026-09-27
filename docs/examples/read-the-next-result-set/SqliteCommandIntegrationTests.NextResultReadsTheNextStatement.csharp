@@ -1,0 +1,26 @@
+test: csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#NextResultReadsTheNextStatement
+lines: 20-42
+
+    [Fact]
+    public async Task NextResultReadsTheNextStatement()
+    {
+        var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
+        await conn.Open();
+        var command = new SqliteCommand(conn);
+        var reader = await command.ExecuteReader("SELECT 1 AS id; SELECT 2 AS id");
+        var first = new List<Row>();
+        while (await reader.Next())
+            first.Add(reader.Current!);
+        var moved = await reader.NextResult();
+        var second = new List<Row>();
+        while (await reader.Next())
+            second.Add(reader.Current!);
+        var again = await reader.NextResult();
+        if (reader is IAsyncDisposable disposable)
+            await disposable.DisposeAsync();
+        await conn.Close();
+        Assert.True(moved);
+        Assert.False(again);
+        Assert.Equal(new Value.Int(1), first[0]["id"]);
+        Assert.Equal(new Value.Int(2), second[0]["id"]);
+    }

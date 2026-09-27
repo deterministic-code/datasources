@@ -1,0 +1,8 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 239-243
+
+      where: new Where(new Operator.Equals("status", "open")),
+      joins: [Join.inner("customers", "orders.customer_id", "customers.id")],
+      groupBy: ["status"],
+      orderBy: [OrderBy.desc("total"), OrderBy.asc("status")],
+      limit: 10,

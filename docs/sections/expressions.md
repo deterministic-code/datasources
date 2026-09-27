@@ -400,22 +400,22 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 ### Compare tree
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L78-L81
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L743-L758
+```rust rust/datasources/src/tests/mod.rs#published_mocks
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L63-L73
+```typescript typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
 ```
 :::
 
 ### Column, alias, literal
 
 ::: example
-```csharp csharp/Datasources.Tests/ComparisonAliasTests.cs#L11-L17
+```csharp csharp/Datasources.Tests/ComparisonAliasTests.cs#RendersComparisonSymbols
 ```
-```rust rust/datasources/src/tests/mod.rs#L2060-L2066
+```rust rust/datasources/src/tests/mod.rs#comparison_aliases
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L350-L356
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: equals]

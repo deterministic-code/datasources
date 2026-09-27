@@ -1,0 +1,5 @@
+test: typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
+lines: 100-101
+
+    expect(and.left.left).toBeInstanceOf(Identifier);
+    if (!(and.left.left instanceof Identifier)) throw new Error("id");

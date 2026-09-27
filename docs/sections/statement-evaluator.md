@@ -81,10 +81,10 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 ### Match and miss
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L244-L245
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1166-L1170
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L100-L101
+```typescript typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
 ```
 :::

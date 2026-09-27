@@ -1,0 +1,5 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 244-245
+
+        var ret = new ReturnStatement("add", fields);
+        Assert.Equal("SELECT add($id, $name)", ret.GetText());

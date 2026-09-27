@@ -1,0 +1,27 @@
+test: typescript/datasources/src/Command.test.ts#executereader-maps-flat-contacts
+lines: 80-103
+
+  it("executeReader maps flat contacts", async () => {
+    const command = new MockCommand(new MockConnection());
+    command.reader = new MockReader([
+      {
+        id: 1,
+        username: "bobby",
+        email: "bob@asdf.com",
+        contact_name1: "bob",
+        contact_name2: "roberta",
+      },
+    ]);
+    const reader = await command.executeReader(
+      "SELECT contact_name1, contact_name2, email, id, username FROM users",
+    );
+    const converter = new RowTypeConverter<User>();
+    const mapper = userContactsMapper();
+    let user: User | undefined;
+    while (await reader.next()) {
+      user = mapper.map(converter.convert(reader.current!, User));
+    }
+    expect(user?.username).toBe("bobby");
+    expect(user?.email).toBe("bob@asdf.com");
+    expect(user?.contacts.map((contact) => contact.name)).toEqual(["bob", "roberta"]);
+  });

@@ -12,6 +12,16 @@
         "command": ".cursor/hooks/lock-interface.py",
         "failClosed": true
       }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/sync-examples.mjs"
+      }
+    ],
+    "afterTabFileEdit": [
+      {
+        "command": ".cursor/hooks/sync-examples.mjs"
+      }
     ]
   }
 }

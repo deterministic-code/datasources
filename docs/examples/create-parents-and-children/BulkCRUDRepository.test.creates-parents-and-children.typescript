@@ -1,0 +1,10 @@
+test: typescript/datasources/src/BulkCRUDRepository.test.ts#creates-parents-and-children
+lines: 33-39
+
+  it("creates parents and children", async () => {
+    const connection = await setup();
+    const parentsRepo = new BulkCRUDRepository(Parent, connection);
+    const childrenRepo = new BulkCRUDRepository(Child, connection);
+    const response = await relate(parentsRepo, childrenRepo).createBulk([
+      Object.assign(new Parent(), { children: [Object.assign(new Child(), { label: "a" })] }),
+      Object.assign(new Parent(), {

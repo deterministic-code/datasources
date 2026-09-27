@@ -1,0 +1,14 @@
+test: typescript/datasources/src/repository.test.ts#builds-select-and-maps-rows
+lines: 63-73
+
+  it("builds select and maps rows", async () => {
+    const { repo, command } = create();
+    repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
+    command.reader = new MockReader([
+      { id: 1, name: "a" },
+    ]);
+    const rows: Cells[] = [];
+    for await (const row of repo.read()) rows.push(row);
+    expect(rows).toEqual([{ id: 1, name: "a" }]);
+    expect(command.executeReaderCalls[0]?.text).toBe("SELECT id, name FROM users");
+    command.reader = new MockReader([{ id: 1, name: "a" }]);

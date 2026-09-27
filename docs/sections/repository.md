@@ -432,11 +432,11 @@ See [Datasource](./datasource.md) for `CreateRepository` / `createRepository`.
 ### Register and create
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryFactoryTests.cs#L12-L19
+```csharp csharp/Datasources.Tests/RepositoryFactoryTests.cs#RegistersAndCreates
 ```
-```rust rust/datasources/src/repository_factory.rs#L112-L116
+```rust rust/datasources/src/repository_factory.rs#registers_and_creates
 ```
-```typescript typescript/datasources/src/RepositoryFactory.test.ts#L18-L24
+```typescript typescript/datasources/src/RepositoryFactory.test.ts#registers-and-creates
 ```
 :::
 

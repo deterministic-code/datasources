@@ -1,0 +1,10 @@
+test: typescript/providers/memory/src/index.test.ts#commit
+lines: 52-58
+
+  it("commit", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    const txn = await connection.startTransaction();
+    await txn.commit();
+    expect(txn.isolation).toBe("serializable");
+  });

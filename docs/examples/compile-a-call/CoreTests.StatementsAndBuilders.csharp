@@ -1,0 +1,5 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 214-215
+
+        Assert.Equal(
+            "CREATE TABLE users (id INTEGER)",

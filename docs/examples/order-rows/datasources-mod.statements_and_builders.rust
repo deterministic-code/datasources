@@ -1,0 +1,7 @@
+test: rust/datasources/src/tests/mod.rs#statements_and_builders
+lines: 1006-1009
+
+        .get_text(),
+        "(NOT (id = $id)) AND age = $age"
+    );
+    assert_eq!(

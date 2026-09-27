@@ -1,0 +1,20 @@
+test: rust/datasources/src/tests/mod.rs#evaluates_where_statement
+lines: 1428-1444
+
+            &row
+        ),
+        no
+    );
+    assert_eq!(
+        evaluator.evaluate(&Expression::Identifier(Identifier::new("missing")), &row),
+        Value::Null
+    );
+    assert_eq!(
+        evaluator.evaluate(&Expression::Literal(Literal::new(Value::Null)), &row),
+        Value::Null
+    );
+    assert_eq!(
+        evaluator.evaluate_where(&Where::new(Operator::less_than("name", "b")), &row),
+        yes
+    );
+    assert_eq!(

@@ -1,0 +1,24 @@
+test: typescript/datasources/src/Command.test.ts#execute-insert-update-and-delete
+lines: 58-78
+
+  it("execute insert update and delete", async () => {
+    const command = new MockCommand(new MockConnection());
+    await command.execute("insert", [
+      { name: "id", value: 1 },
+      { name: "name", value: "a" },
+    ]);
+    await command.execute("update", [
+      { name: "id", value: 1 },
+      { name: "name", value: "A" },
+    ]);
+    await command.execute("delete", [{ name: "id", value: 1 }]);
+    expect(command.executeCalls.map((call) => call.text)).toEqual([
+      "insert",
+      "update",
+      "delete",
+    ]);
+    expect(command.executeCalls[0]?.parameters?.map((parameter) => parameter.name)).toEqual([
+      "id",
+      "name",
+    ]);
+  });

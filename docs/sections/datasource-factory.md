@@ -286,32 +286,32 @@ A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledExce
 ### Default from environment
 
 ::: example
-```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32
+```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#DefaultFromEnvironment
 ```
-```rust rust/datasources/src/tests/datasource_factory.rs#L21-L28
+```rust rust/datasources/src/tests/datasource_factory.rs#default_from_environment
 ```
-```typescript typescript/datasources/src/DatasourceFactory.test.ts#L34-L38
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#default-from-environment
 ```
 :::
 
 ### Register and Create
 
 ::: example
-```csharp csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16
+```csharp csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#RegisterAndCreate
 ```
-```rust rust/providers/memory/src/lib.rs#L38-L44
+```rust rust/providers/memory/src/lib.rs#register_and_create
 ```
-```typescript typescript/providers/memory/src/index.test.ts#L27-L32
+```typescript typescript/providers/memory/src/index.test.ts#register-and-create
 ```
 :::
 
 ### Missing provider
 
 ::: example
-```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L34-L40
+```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#MissingProviderThrows
 ```
-```rust rust/datasources/src/tests/datasource_factory.rs#L28-L35
+```rust rust/datasources/src/tests/datasource_factory.rs#missing_provider_throws
 ```
-```typescript typescript/datasources/src/DatasourceFactory.test.ts#L41-L45
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#missing-provider-throws
 ```
 :::

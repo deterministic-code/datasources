@@ -1,0 +1,6 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 233-235
+
+    expect(new SelectStatement({ table: "users", fields: ["id"], joins: [] }).getText()).toBe(
+      "SELECT id FROM users",
+    );

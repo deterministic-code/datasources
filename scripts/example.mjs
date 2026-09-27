@@ -96,13 +96,15 @@ const stripHarness = (body) => {
 export const pertinent = (code) =>
   dedent(unwrapThrows(stripTrailingValueAsserts(stripHarness(extractBody(code)))));
 
+export const exampleCode = (slice) => pertinent(dedent(Array.isArray(slice) ? slice.join("\n") : slice));
+
 export const readRange = (spec, base = root) => {
   const { path, from, to } = parseRange(spec);
   const lines = readFileSync(join(base, path), "utf8").split(/\r?\n/);
   if (to > lines.length) throw new Error(`${spec}: file has ${lines.length} lines`);
   const slice = lines.slice(from - 1, to);
   if (slice.every((line) => !line.trim())) throw new Error(`${spec}: range is empty`);
-  return { path, from, to, code: pertinent(dedent(slice)) };
+  return { path, from, to, code: exampleCode(slice) };
 };
 
 export const blobUrl = ({ path, from, to }) => `${REPO}/blob/${BRANCH}/${path}#L${from}-L${to}`;

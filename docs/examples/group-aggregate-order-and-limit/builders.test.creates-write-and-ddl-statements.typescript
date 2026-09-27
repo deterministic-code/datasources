@@ -1,0 +1,12 @@
+test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+lines: 231-239
+
+      "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
+    );
+    expect(new SelectStatement({ table: "users", fields: ["id"], joins: [] }).getText()).toBe(
+      "SELECT id FROM users",
+    );
+    const grouped = new SelectStatement({
+      table: "orders",
+      fields: ["status", Aggregate.count("*", "n"), Aggregate.sum("amount", "total")],
+      where: new Where(new Operator.Equals("status", "open")),

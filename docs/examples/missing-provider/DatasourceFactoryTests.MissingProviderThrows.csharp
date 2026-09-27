@@ -1,0 +1,10 @@
+test: csharp/Datasources.Tests/DatasourceFactoryTests.cs#MissingProviderThrows
+lines: 34-40
+
+    [Fact]
+    public void MissingProviderThrows()
+    {
+        var error = Assert.Throws<ProviderNotInstalledException>(() =>
+            DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" }));
+        Assert.Equal("missing", error.Provider);
+    }

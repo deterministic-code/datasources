@@ -1,0 +1,7 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 226-229
+
+                "t",
+                [new Column("id", "INTEGER")],
+                [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)]).GetText());
+        Assert.Throws<InvalidOperationException>(() =>

@@ -264,32 +264,32 @@ Omitted isolation is `Serializable` (TypeScript omits the argument, C# defaults,
 ### Start a transaction
 
 ::: example
-```csharp csharp/Datasources.Tests/TransactionTests.cs#L27-L35
+```csharp csharp/Datasources.Tests/TransactionTests.cs#StartFromDefault
 ```
-```rust rust/datasources/src/tests/transaction.rs#L21-L28
+```rust rust/datasources/src/tests/transaction.rs#start_from_default
 ```
-```typescript typescript/datasources/src/Transaction.test.ts#L31-L37
+```typescript typescript/datasources/src/Transaction.test.ts#start-from-default
 ```
 :::
 
 ### Commit
 
 ::: example
-```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L7-L15
+```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#Commit
 ```
-```rust rust/providers/memory/src/lib.rs#L63-L69
+```rust rust/providers/memory/src/lib.rs#commit
 ```
-```typescript typescript/providers/memory/src/index.test.ts#L52-L58
+```typescript typescript/providers/memory/src/index.test.ts#commit
 ```
 :::
 
 ### Abort
 
 ::: example
-```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L17-L25
+```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#Abort
 ```
-```rust rust/providers/memory/src/lib.rs#L72-L78
+```rust rust/providers/memory/src/lib.rs#abort
 ```
-```typescript typescript/providers/memory/src/index.test.ts#L60-L66
+```typescript typescript/providers/memory/src/index.test.ts#abort
 ```
 :::

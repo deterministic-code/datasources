@@ -1,0 +1,15 @@
+test: typescript/datasources/src/mocks/mock-driver.ts#MockDriver
+lines: 14-25
+
+export class MockDriver implements IDriver {
+  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
+  generatedId = identityGeneratedId;
+  connection = (_options?: DatasourceOptions): IConnection => new MockConnection();
+  command = (connection: IConnection): ICommand => new MockCommand(connection);
+  transaction = (
+    connection: IConnection,
+    isolation: IsolationLevel = "serializable",
+  ): ITransaction => {
+    const txn = new MockTransaction(connection);
+    txn.isolation = isolation;
+    return txn;

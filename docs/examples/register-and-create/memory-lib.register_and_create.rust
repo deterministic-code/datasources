@@ -1,0 +1,9 @@
+test: rust/providers/memory/src/lib.rs#register_and_create
+lines: 39-44
+
+    #[test]
+    fn register_and_create() {
+        reset();
+        register("memory", Arc::new(MemoryProvider));
+        let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+        assert_eq!(ds.provider(), "memory");

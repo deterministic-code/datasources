@@ -245,21 +245,21 @@ Repository read is convert, then map. See [TransformMapper](./transform-mapper.m
 ### Convert a row
 
 ::: example
-```csharp csharp/Datasources.Tests/RowTypeConverterTests.cs#L28-L46
+```csharp csharp/Datasources.Tests/RowTypeConverterTests.cs#ConvertAndReverseConvertRoundTrip
 ```
-```rust rust/datasources/src/converters/row_type_converter.rs#L101-L108
+```rust rust/datasources/src/converters/row_type_converter.rs#type_converter_round_trips_rows
 ```
-```typescript typescript/datasources/src/converters/RowTypeConverter.test.ts#L13-L19
+```typescript typescript/datasources/src/converters/RowTypeConverter.test.ts#convert-and-reverseconvert-round-trip
 ```
 :::
 
 ### Field converter
 
 ::: example
-```csharp csharp/Datasources.Tests/RowTypeConverterTests.cs#L91-L102
+```csharp csharp/Datasources.Tests/RowTypeConverterTests.cs#AppliesFieldOverrideOnDictionaryRows
 ```
-```rust rust/datasources/src/converters/row_type_converter.rs#L125-L143
+```rust rust/datasources/src/converters/row_type_converter.rs#field_override_beats_type_default
 ```
-```typescript typescript/datasources/src/converters/RowTypeConverter.test.ts#L21-L27
+```typescript typescript/datasources/src/converters/RowTypeConverter.test.ts#lets-field-converters-override
 ```
 :::

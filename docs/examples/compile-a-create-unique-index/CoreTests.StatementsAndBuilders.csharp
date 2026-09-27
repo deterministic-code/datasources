@@ -1,0 +1,6 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 211-213
+
+                "items",
+                [new Column("id", "INTEGER", new ColumnDefault("0")), new Column("name", "TEXT", NotNull: new NotNull())],
+                [new ForeignKey("fk_items_user", ["id"], "users", ["id"])]).GetText());

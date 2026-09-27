@@ -1,6 +1,6 @@
 # Code reference format
 
-Authoring contract for Code Reference pages. Pages live under `docs/sections/` and generate both the VitePress site and `README.md`. Examples are extracted from test line ranges; keep this structure parseable.
+Authoring contract for Code Reference pages. Pages live under `docs/sections/` and generate both the VitePress site and `README.md`. Examples are copied from named tests into `docs/examples/`; keep this structure parseable.
 
 Not published in the sidebar (`toc.yaml`).
 
@@ -69,9 +69,11 @@ VitePress uses one page-level dialect selector for classes and examples. README 
 
 ## Examples
 
-When present, one `###` heading per sample, optional prose, then `::: example`. Each fence is a pointer to unit, integration, or e2e test lines (`path#Lstart-Lend`). The transform reads that range and renders the usage body — not the test method wrapper or equality asserts. Do not paste a second fictional fence. A source icon links to the same range on GitHub. On a reference page those fences follow the page-level selector; they do not get their own tabs.
+When present, one `###` heading per sample, optional prose, then `::: example`. Each fence points at a test or type by name (`path#Name`), not a line range. `npm run docs:examples` copies those source lines into `docs/examples/<heading>/<File>.<Name>.<lang>`. The transform reads that snippet and renders the usage body — not the test method wrapper or equality asserts. Do not paste a second fictional fence. A source icon links to the recorded line range on GitHub. On a reference page those fences follow the page-level selector; they do not get their own tabs.
 
-Optional `output` fences after the test ranges become titled textboxes under the sample. Use a shared fence for every dialect, or `output:typescript` / `output:csharp` / `output:rust` to replace a same-title box for one language.
+A new fence may use `path#Lstart-Lend` once. The command rewrites it to the region name and stores that slice. After that, `path#Name` is the pointer. Run `npm run docs:examples` after adding a sample. A Cursor hook runs it when a cited `.cs`, `.rs`, or `.ts` file changes.
+
+Optional `output` fences after the sample fences become titled textboxes under the sample. Use a shared fence for every dialect, or `output:typescript` / `output:csharp` / `output:rust` to replace a same-title box for one language.
 
 `::: dialects` stays for install or CLI snippets that are not tests.
 
@@ -81,22 +83,22 @@ Optional `output` fences after the test ranges become titled textboxes under the
 ### Create from environment
 
 ::: example
-```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32
+```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#DefaultFromEnvironment
 ```
-```rust rust/datasources/src/tests/datasource_factory.rs#L21-L28
+```rust rust/datasources/src/tests/datasource_factory.rs#default_from_environment
 ```
-```typescript typescript/datasources/src/DatasourceFactory.test.ts#L34-L38
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#default-from-environment
 ```
 :::
 ~~~~
 
 ~~~~markdown
 ::: example
-```csharp csharp/Datasources.Tests/TransformMapperTests.cs#L13-L24
+```csharp csharp/Datasources.Tests/TransformMapperTests.cs#FlattensAndUnflattensUserAndContacts
 ```
-```rust rust/datasources/src/mappers/mod.rs#L59-L94
+```rust rust/datasources/src/mappers/mod.rs#flattens_and_unflattens_user_and_contacts
 ```
-```typescript typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40
+```typescript typescript/datasources/src/mappers/transformMapper.test.ts#flattens-and-unflattens-user-and-contacts
 ```
 
 ```output [Before: nested value]
@@ -125,6 +127,6 @@ Optional `output` fences after the test ranges become titled textboxes under the
 - [ ] Each member has a description; Constructor and Methods also have a definition and parameters (Properties render as a table only)
 - [ ] Associated types and page-local argument/return types are extra `####` headings, not a second page
 - [ ] `## Remarks` is present
-- [ ] Examples use `::: example` test ranges or the Examples heading is omitted
+- [ ] Examples use `::: example` name pointers (`path#Name`) or the Examples heading is omitted
 - [ ] Nested sidebar items set `parent` in `docs/toc.yaml` to the group label
 - [ ] Page is listed in `docs/toc.yaml`

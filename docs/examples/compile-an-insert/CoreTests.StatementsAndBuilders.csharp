@@ -1,0 +1,5 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 151-152
+
+                    Join.Inner("orders", "users.id", "orders.user_id"),
+                    Join.Left("payments", "orders.id", "payments.order_id"),

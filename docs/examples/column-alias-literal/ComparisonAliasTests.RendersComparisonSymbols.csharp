@@ -1,0 +1,10 @@
+test: csharp/Datasources.Tests/ComparisonAliasTests.cs#RendersComparisonSymbols
+lines: 11-17
+
+        var equals = new Where("username", eq, "grace");
+        var notEquals = new Where("id", ne, 2);
+        var greater = new Where("n", gt, 0);
+        var less = new Where("n", lt, 0);
+        var greaterOrEqual = new Where("n", ge, 0);
+        var lessOrEqual = new Where("n", le, 0);
+        var both = equals.And("is_enabled", eq, 0);

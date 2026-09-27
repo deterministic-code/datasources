@@ -157,11 +157,11 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](./command.m
 ### Compile a SELECT function call
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#L217-L218
+```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
 ```
-```rust rust/datasources/src/tests/mod.rs#L1095-L1096
+```rust rust/datasources/src/tests/mod.rs#statements_and_builders
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#L310-L311
+```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
 ```
 
 ```output [After: return]

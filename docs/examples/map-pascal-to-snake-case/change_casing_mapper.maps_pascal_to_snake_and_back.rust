@@ -1,0 +1,11 @@
+test: rust/datasources/src/mappers/change_casing_mapper.rs#maps_pascal_to_snake_and_back
+lines: 34-41
+
+    #[test]
+    fn maps_pascal_to_snake_and_back() {
+        let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+        assert_eq!(mapper.map("UserType".into()), "user_type");
+        assert_eq!(mapper.map("Id".into()), "id");
+        assert_eq!(mapper.reverse_map("user_type".into()), "UserType");
+        assert_eq!(mapper.reverse_map("id".into()), "Id");
+    }

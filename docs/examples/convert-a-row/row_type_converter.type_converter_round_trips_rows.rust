@@ -1,0 +1,11 @@
+test: rust/datasources/src/converters/row_type_converter.rs#type_converter_round_trips_rows
+lines: 101-108
+
+    #[test]
+    fn type_converter_round_trips_rows() {
+        let converter = RowTypeConverter::new(vec!["id".into(), "name".into()]);
+        let row = record(&[("id", Value::Int(7)), ("name", Value::from("ada"))]);
+        let dest = converter.convert(&row).unwrap();
+        assert_eq!(dest, row);
+        assert_eq!(converter.reverse_convert(&dest).unwrap(), row);
+    }

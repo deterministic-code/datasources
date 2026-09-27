@@ -1,0 +1,65 @@
+test: rust/providers/sqlite/tests/readonly_repository.rs#fills_roles_from_a_join
+lines: 466-527
+
+                    "user.is_enabled AS Active",
+                    "user.created AS Opened",
+                    "user_type.name AS UserType",
+                    "user.id AS UserId",
+                    "user_roles.role_id AS RoleId",
+                    "roles.name AS RoleName",
+                ],
+            )
+        }));
+        let options = ReadonlyRepositoryOptions::default();
+        let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
+        users_repo.add_enriched(
+            datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+            Arc::new(ReadonlyRepository::memory(vec![])),
+            Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
+                TypeMap::new(
+                    "Key",
+                    vec![
+                        ("Key".into(), TypeMapField::column("Key")),
+                        ("Login".into(), TypeMapField::column("Login")),
+                        ("Active".into(), TypeMapField::column("Active")),
+                        ("Opened".into(), TypeMapField::column("Opened")),
+                        ("UserType".into(), TypeMapField::column("UserType")),
+                        (
+                            "Roles".into(),
+                            TypeMapField::Group(TypeMapGroup::new(
+                                "RoleId",
+                                vec![
+                                    ("RoleId".into(), TypeMapField::column("RoleId")),
+                                    ("UserId".into(), TypeMapField::column("UserId")),
+                                    ("Name".into(), TypeMapField::column("RoleName")),
+                                ],
+                            )),
+                        ),
+                    ],
+                ),
+            ))),
+        );
+        let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
+        let view = |login: &str| {
+            items
+                .iter()
+                .find(|item| item.get("Login") == Some(&Value::from(login)))
+                .unwrap()
+                .clone()
+        };
+        let ada = view("ada");
+        let grace = view("grace");
+        let lin = view("lin");
+        assert_eq!(items.len(), 3);
+        assert_eq!(ada.get("UserType"), Some(&Value::from("admin")));
+        let mut names = role_names(ada.get("Roles").unwrap());
+        names.sort();
+        assert_eq!(names, ["admin", "editor"]);
+        assert!(ada
+            .get("Roles")
+            .unwrap()
+            .wire_text()
+            .contains(&format!("UserId={ADA}")));
+        assert_eq!(role_names(grace.get("Roles").unwrap()), ["viewer"]);
+        assert_eq!(lin.get("Roles"), Some(&Value::from("")));
+    }

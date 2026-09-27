@@ -1,0 +1,10 @@
+test: csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#RegisterAndCreate
+lines: 10-16
+
+    [Fact]
+    public void RegisterAndCreate()
+    {
+        DatasourceFactory.Register("memory", new MemoryProvider());
+        var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
+        Assert.Equal("memory", ds.Provider);
+    }

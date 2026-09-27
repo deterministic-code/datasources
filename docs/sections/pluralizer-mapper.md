@@ -126,10 +126,10 @@ Use this as [EntityMapper](./readonly-repository.md#entitymapper) when the type 
 ### Pluralize and lowercase
 
 ::: example
-```csharp csharp/Datasources.Tests/PluralizerMapperTests.cs#L8-L14
+```csharp csharp/Datasources.Tests/PluralizerMapperTests.cs#PluralizesAndLowercasesTheTableName
 ```
-```rust rust/datasources/src/mappers/pluralizer_mapper.rs#L37-L42
+```rust rust/datasources/src/mappers/pluralizer_mapper.rs#pluralizes_and_lowercases_the_table_name
 ```
-```typescript typescript/datasources/src/mappers/PluralizerMapper.test.ts#L4-L9
+```typescript typescript/datasources/src/mappers/PluralizerMapper.test.ts#pluralizes-and-lowercases-the-table-name
 ```
 :::

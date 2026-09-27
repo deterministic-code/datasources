@@ -122,10 +122,10 @@ fn reverse_map(&self, value: T) -> T
 ### Map and reverse map
 
 ::: example
-```csharp csharp/Datasources.Tests/IdentityMapperTests.cs#L10-L12
+```csharp csharp/Datasources.Tests/IdentityMapperTests.cs#MapsAndReversesTheSameValue
 ```
-```rust rust/datasources/src/mappers/identity_mapper.rs#L39-L41
+```rust rust/datasources/src/mappers/identity_mapper.rs#maps_and_reverses_the_same_value
 ```
-```typescript typescript/datasources/src/mappers/IdentityMapper.test.ts#L6-L8
+```typescript typescript/datasources/src/mappers/IdentityMapper.test.ts#maps-and-reverses-the-same-value
 ```
 :::

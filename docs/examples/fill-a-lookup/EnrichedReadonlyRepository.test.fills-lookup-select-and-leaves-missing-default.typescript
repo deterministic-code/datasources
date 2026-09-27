@@ -1,0 +1,6 @@
+test: typescript/datasources/src/EnrichedReadonlyRepository.test.ts#fills-lookup-select-and-leaves-missing-default
+lines: 90-92
+
+    const parentsRepo = new ReadonlyRepository(Parent, connection);
+    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);

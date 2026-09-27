@@ -1,0 +1,5 @@
+test: rust/datasources/src/tests/mod.rs#statements_and_builders
+lines: 1089-1090
+
+    let count = Aggregate::count("*", Some("n"));
+    let total = Aggregate::sum("amount", Some("total"));

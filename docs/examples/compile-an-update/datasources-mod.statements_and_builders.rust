@@ -1,0 +1,9 @@
+test: rust/datasources/src/tests/mod.rs#statements_and_builders
+lines: 980-985
+
+        left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
+            chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
+        )))),
+        right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
+            chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
+        )))),

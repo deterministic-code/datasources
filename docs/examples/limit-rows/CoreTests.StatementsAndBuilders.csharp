@@ -1,0 +1,4 @@
+test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+lines: 174-174
+
+        var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });

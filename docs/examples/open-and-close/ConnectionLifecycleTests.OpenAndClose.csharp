@@ -1,0 +1,11 @@
+test: csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#OpenAndClose
+lines: 7-14
+
+    [Fact]
+    public async Task OpenAndClose()
+    {
+        var connection = new MemoryConnection();
+        await connection.Open();
+        await connection.Close();
+        Assert.False(connection.IsOpen);
+    }

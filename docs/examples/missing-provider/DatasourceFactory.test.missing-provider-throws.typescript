@@ -1,0 +1,8 @@
+test: typescript/datasources/src/DatasourceFactory.test.ts#missing-provider-throws
+lines: 56-60
+
+  it("missing provider throws", () => {
+    expect(() => DatasourceFactory.create({ provider: "missing" })).toThrow(
+      ProviderNotInstalledError,
+    );
+  });
