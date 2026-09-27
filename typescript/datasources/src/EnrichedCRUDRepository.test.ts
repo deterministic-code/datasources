@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MemoryProvider } from "@datasources/memory";
 import { collectAsync } from "./collectAsync.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
+import { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { IConnection } from "./IConnection.ts";
@@ -34,6 +35,22 @@ class Note {
   id = 0;
   child_id = 0;
   text = "";
+}
+
+class Tagged {
+  id = 0;
+  tags: Tag[] = [];
+}
+
+class Tag {
+  id = 0;
+  name = "";
+}
+
+class ParentTag {
+  id = 0;
+  parent_id = 0;
+  tag_id = 0;
 }
 
 class SkipDelete<T extends object> extends DeleteEnrichmentStrategy<T> {
@@ -131,6 +148,64 @@ describe("CRUDRepository", () => {
     expect(children.find((child) => child.id === kept?.id)?.label).toBe("aa");
     expect(children.find((child) => child.id !== kept?.id)?.label).toBe("c");
     expect(children.every((child) => child.parent_id === parent?.id)).toBe(true);
+  });
+
+  it("cascade update deletes children and recreates", async () => {
+    const connection = await setup();
+    const parentsRepo = new CRUDRepository(connection, {
+      type: Parent,
+      write: new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
+    });
+    const childrenRepo = new CRUDRepository(Child, connection);
+    const notesRepo = new CRUDRepository(Note, connection);
+    await parentsRepo.create(new Parent());
+    const parent = await parentsRepo.readSingle();
+    await childrenRepo.create(Object.assign(new Child(), { parent_id: parent?.id, label: "a" }));
+    const child = await childrenRepo.readSingle();
+    await notesRepo.create(Object.assign(new Note(), { child_id: child?.id, text: "n" }));
+    childrenRepo.addEnriched({ into: "notes", from: "id", by: "child_id", many: true }, notesRepo);
+    parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
+    await parentsRepo.update(Object.assign(new Parent(), {
+      id: parent?.id,
+      children: [Object.assign(new Child(), { label: "fresh" })],
+    }));
+    const created = await childrenRepo.readSingle();
+    expect(created?.id).not.toBe(child?.id);
+    expect(created?.label).toBe("fresh");
+    expect(created?.parent_id).toBe(parent?.id);
+    expect(await collectAsync(notesRepo.read())).toEqual([]);
+  });
+
+  it("cascade update replaces links and keeps related rows", async () => {
+    const connection = await setup();
+    const parentsRepo = new CRUDRepository(connection, {
+      type: Tagged,
+      write: new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
+    });
+    const tagsRepo = new CRUDRepository(Tag, connection);
+    const linksRepo = new CRUDRepository(ParentTag, connection);
+    await parentsRepo.create(new Tagged());
+    const parent = await parentsRepo.readSingle();
+    await tagsRepo.create(Object.assign(new Tag(), { name: "keep" }));
+    await tagsRepo.create(Object.assign(new Tag(), { name: "drop" }));
+    const tags = await collectAsync(tagsRepo.read());
+    const keep = tags.find((tag) => tag.name === "keep");
+    const drop = tags.find((tag) => tag.name === "drop");
+    await linksRepo.create(Object.assign(new ParentTag(), { parent_id: parent?.id, tag_id: keep?.id }));
+    await linksRepo.create(Object.assign(new ParentTag(), { parent_id: parent?.id, tag_id: drop?.id }));
+    const oldLink = (await collectAsync(linksRepo.read())).find((link) => link.tag_id === keep?.id);
+    parentsRepo.addLinked(
+      { into: "tags", from: "id", by: "id", association: { parent: "parent_id", related: "tag_id" } },
+      tagsRepo,
+      linksRepo,
+    );
+    await parentsRepo.update(Object.assign(new Tagged(), { id: parent?.id, tags: [Object.assign(new Tag(), { id: keep?.id })] }));
+    const links = await collectAsync(linksRepo.read());
+    expect(links).toHaveLength(1);
+    expect(links[0]?.tag_id).toBe(keep?.id);
+    expect(links[0]?.parent_id).toBe(parent?.id);
+    expect(links[0]?.id).not.toBe(oldLink?.id);
+    expect(await collectAsync(tagsRepo.read())).toHaveLength(2);
   });
 
   it("delete cascades children then parent", async () => {

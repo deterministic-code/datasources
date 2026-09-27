@@ -36,6 +36,25 @@ public class CRUDRepositoryTests
         public string text { get; set; } = "";
     }
 
+    sealed class Tagged
+    {
+        public int id { get; set; }
+        public List<Tag> tags { get; set; } = [];
+    }
+
+    sealed class Tag
+    {
+        public int id { get; set; }
+        public string name { get; set; } = "";
+    }
+
+    sealed class ParentTag
+    {
+        public int id { get; set; }
+        public int parent_id { get; set; }
+        public int tag_id { get; set; }
+    }
+
     [Fact]
     public async Task CreateWritesChildrenStampsFkAndSkipsSelect()
     {
@@ -100,6 +119,64 @@ public class CRUDRepositoryTests
         Assert.Equal("aa", children.Single(child => child.id == kept.id).label);
         Assert.Equal("c", children.Single(child => child.id != kept.id).label);
         Assert.All(children, child => Assert.Equal(parent.id, child.parent_id));
+    }
+
+    [Fact]
+    public async Task CascadeUpdateDeletesChildrenAndRecreates()
+    {
+        var connection = await Setup();
+        var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+        {
+            Write = new DefaultWriteEnrichmentStrategy<Parent>(update: new CascadeDeleteUpdateEnrichmentStrategy<Parent>()),
+        });
+        var childrenRepo = new CRUDRepository<Child>(connection);
+        var notesRepo = new CRUDRepository<Note>(connection);
+        await parentsRepo.Create(new Parent());
+        var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
+        await childrenRepo.Create(new Child { parent_id = parent.id, label = "a" });
+        var child = Assert.Single(await childrenRepo.Read().ToListAsync());
+        await notesRepo.Create(new Note { child_id = child.id, text = "n" });
+        childrenRepo.AddEnriched(new("notes", "id", "child_id", Many: true), notesRepo);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        await parentsRepo.Update(new Parent
+        {
+            id = parent.id,
+            children = [new Child { label = "fresh" }]
+        });
+        var created = Assert.Single(await childrenRepo.Read().ToListAsync());
+        Assert.NotEqual(child.id, created.id);
+        Assert.Equal("fresh", created.label);
+        Assert.Equal(parent.id, created.parent_id);
+        Assert.Empty(await notesRepo.Read().ToListAsync());
+    }
+
+    [Fact]
+    public async Task CascadeUpdateReplacesLinksAndKeepsRelated()
+    {
+        var connection = await Setup();
+        var parentsRepo = new CRUDRepository<Tagged>(connection, new CRUDRepositoryOptions<Tagged>
+        {
+            Write = new DefaultWriteEnrichmentStrategy<Tagged>(update: new CascadeDeleteUpdateEnrichmentStrategy<Tagged>()),
+        });
+        var tagsRepo = new CRUDRepository<Tag>(connection);
+        var linksRepo = new CRUDRepository<ParentTag>(connection);
+        await parentsRepo.Create(new Tagged());
+        var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
+        await tagsRepo.Create(new Tag { name = "keep" });
+        await tagsRepo.Create(new Tag { name = "drop" });
+        var tags = await tagsRepo.Read().ToListAsync();
+        var keep = tags.Single(tag => tag.name == "keep");
+        var drop = tags.Single(tag => tag.name == "drop");
+        await linksRepo.Create(new ParentTag { parent_id = parent.id, tag_id = keep.id });
+        await linksRepo.Create(new ParentTag { parent_id = parent.id, tag_id = drop.id });
+        var oldLink = (await linksRepo.Read().ToListAsync()).Single(link => link.tag_id == keep.id);
+        parentsRepo.AddLinked(new("tags", "id", "id", Association: new("parent_id", "tag_id")), tagsRepo, linksRepo);
+        await parentsRepo.Update(new Tagged { id = parent.id, tags = [new Tag { id = keep.id }] });
+        var link = Assert.Single(await linksRepo.Read().ToListAsync());
+        Assert.Equal(keep.id, link.tag_id);
+        Assert.Equal(parent.id, link.parent_id);
+        Assert.NotEqual(oldLink.id, link.id);
+        Assert.Equal(2, (await tagsRepo.Read().ToListAsync()).Count);
     }
 
     [Fact]

@@ -360,7 +360,7 @@ async fn missing_related_id_throws() {
 
 #[tokio::test]
 async fn lazy_write_skips_unloaded_links() {
-    let (mut users, seeded) = open(Some(Arc::new(LazyWriteEnrichmentStrategy::new(None)))).await;
+    let (mut users, seeded) = open(Some(Arc::new(LazyWriteEnrichmentStrategy::new(None, None, false)))).await;
     link(&mut users, &seeded);
     let mut creating = record(&[
         ("username", Value::from("ada")),

@@ -45,6 +45,9 @@ export { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentSt
 export { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 export { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 export { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrategy.ts";
+export { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
+export { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
+export { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
 export { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 export { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStrategy.ts";

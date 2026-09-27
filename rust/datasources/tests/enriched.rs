@@ -313,6 +313,206 @@ async fn deep_update_replace_syncs_children() {
 }
 
 #[tokio::test]
+async fn cascade_update_deletes_children_and_recreates() {
+    let connection = setup(&mut []).await;
+    let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+        DefaultWriteEnrichmentStrategy::new(
+            None,
+            Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+            false,
+        ),
+    ));
+    let mut children_repo = crud(connection.clone(), "Child");
+    let notes = Arc::new(crud(connection, "Note"));
+    parents
+        .create(&mut record(&[("label", Value::from("p"))]))
+        .await
+        .unwrap();
+    let parent_id = parents.read(None, None).await.unwrap()[0].get("id").unwrap().clone();
+    children_repo
+        .create(&mut record(&[("parent_id", parent_id.clone()), ("label", Value::from("a"))]))
+        .await
+        .unwrap();
+    let child_id = children_repo.read(None, None).await.unwrap()[0].get("id").unwrap().clone();
+    notes
+        .create(&mut record(&[("child_id", child_id.clone()), ("text", Value::from("n"))]))
+        .await
+        .unwrap();
+    children_repo.add_enriched(Enrichment::new("notes", "id", "child_id", None, true), notes.clone(), None);
+    let children = Arc::new(children_repo);
+    parents.add_enriched(Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
+    parents
+        .update(
+            &record(&[
+                ("id", parent_id.clone()),
+                ("label", Value::from("p")),
+                ("children", encode_rows(&[record(&[("label", Value::from("fresh"))])])),
+            ]),
+            None,
+        )
+        .await
+        .unwrap();
+    let stored = children.read(None, None).await.unwrap();
+    assert_eq!(stored.len(), 1);
+    assert_ne!(stored[0].get("id"), Some(&child_id));
+    assert_eq!(stored[0].get("label"), Some(&Value::from("fresh")));
+    assert_eq!(stored[0].get("parent_id"), Some(&parent_id));
+    assert!(notes.read(None, None).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn cascade_update_replaces_links_and_keeps_related() {
+    let connection = setup(&mut []).await;
+    let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+        DefaultWriteEnrichmentStrategy::new(
+            None,
+            Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+            false,
+        ),
+    ));
+    let tags = Arc::new(crud(connection.clone(), "Tag"));
+    let links = Arc::new(crud(connection, "ParentTag"));
+    parents.create(&mut record(&[("label", Value::from("p"))])).await.unwrap();
+    let parent_id = parents.read(None, None).await.unwrap()[0].get("id").unwrap().clone();
+    tags.create(&mut record(&[("name", Value::from("keep"))])).await.unwrap();
+    tags.create(&mut record(&[("name", Value::from("drop"))])).await.unwrap();
+    let stored_tags = tags.read(None, None).await.unwrap();
+    let keep_id = stored_tags
+        .iter()
+        .find(|row| row.get("name") == Some(&Value::from("keep")))
+        .unwrap()
+        .get("id")
+        .unwrap()
+        .clone();
+    let drop_id = stored_tags
+        .iter()
+        .find(|row| row.get("name") == Some(&Value::from("drop")))
+        .unwrap()
+        .get("id")
+        .unwrap()
+        .clone();
+    links
+        .create(&mut record(&[("parent_id", parent_id.clone()), ("tag_id", keep_id.clone())]))
+        .await
+        .unwrap();
+    links
+        .create(&mut record(&[("parent_id", parent_id.clone()), ("tag_id", drop_id)]))
+        .await
+        .unwrap();
+    let old_link_id = links
+        .read(None, None)
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|row| row.get("tag_id") == Some(&keep_id))
+        .unwrap()
+        .get("id")
+        .unwrap()
+        .clone();
+    parents.add_linked(
+        Enrichment::new("tags", "id", "id", None, true).linked(Association::new("parent_id", "tag_id")),
+        tags.clone(),
+        links.clone(),
+        None,
+    );
+    parents
+        .update(
+            &record(&[
+                ("id", parent_id.clone()),
+                ("tags", encode_rows(&[record(&[("id", keep_id.clone())])])),
+            ]),
+            None,
+        )
+        .await
+        .unwrap();
+    let stored_links = links.read(None, None).await.unwrap();
+    assert_eq!(stored_links.len(), 1);
+    assert_eq!(stored_links[0].get("tag_id"), Some(&keep_id));
+    assert_eq!(stored_links[0].get("parent_id"), Some(&parent_id));
+    assert_ne!(stored_links[0].get("id"), Some(&old_link_id));
+    assert_eq!(tags.read(None, None).await.unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
+    let connection = setup(&mut []).await;
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "Parent".into();
+    let parents = BulkCRUDRepository::new(connection, options).unwrap();
+    parents
+        .create_bulk(&mut [
+            record(&[("label", Value::from("a"))]),
+            record(&[("label", Value::from("b"))]),
+        ])
+        .await
+        .unwrap();
+    let stored = parents.read(None, None).await.unwrap();
+    let first_id = stored
+        .iter()
+        .find(|row| row.get("label") == Some(&Value::from("a")))
+        .unwrap()
+        .get("id")
+        .unwrap()
+        .clone();
+    let error = parents
+        .update_bulk(
+            &[
+                record(&[("id", first_id.clone()), ("label", Value::from("changed"))]),
+                record(&[("label", Value::from("nope"))]),
+            ],
+            None,
+        )
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("Missing Id"));
+    let after = parents.read(None, None).await.unwrap();
+    assert_eq!(
+        after.iter().find(|row| row.get("id") == Some(&first_id)).unwrap().get("label"),
+        Some(&Value::from("changed"))
+    );
+}
+
+#[tokio::test]
+async fn bulk_update_rolls_back_when_transaction_is_on() {
+    let connection = setup(&mut []).await;
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "Parent".into();
+    options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(None, None, true)));
+    let parents = BulkCRUDRepository::new(connection, options).unwrap();
+    parents
+        .create_bulk(&mut [
+            record(&[("label", Value::from("a"))]),
+            record(&[("label", Value::from("b"))]),
+        ])
+        .await
+        .unwrap();
+    let stored = parents.read(None, None).await.unwrap();
+    let first_id = stored
+        .iter()
+        .find(|row| row.get("label") == Some(&Value::from("a")))
+        .unwrap()
+        .get("id")
+        .unwrap()
+        .clone();
+    let error = parents
+        .update_bulk(
+            &[
+                record(&[("id", first_id.clone()), ("label", Value::from("changed"))]),
+                record(&[("label", Value::from("nope"))]),
+            ],
+            None,
+        )
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("Missing Id"));
+    let after = parents.read(None, None).await.unwrap();
+    assert_eq!(
+        after.iter().find(|row| row.get("id") == Some(&first_id)).unwrap().get("label"),
+        Some(&Value::from("a"))
+    );
+}
+
+#[tokio::test]
 async fn deep_delete_cascades_children_then_parent() {
     let connection = setup(&mut []).await;
     let parents = crud(connection.clone(), "Parent");

@@ -1,6 +1,7 @@
 use crate::cascade_delete_enrichment_strategy::CascadeDeleteEnrichmentStrategy;
 use crate::datasource_error::DatasourceError;
-use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
+use crate::default_update_enrichment_strategy::DefaultUpdateEnrichmentStrategy;
+use crate::delete_enrichment_strategy::DeleteEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::repository_tree::RepositoryTree;
@@ -8,10 +9,10 @@ use crate::repository_tree_node::encode_rows;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::result::Result;
 use crate::row::Row;
+use crate::update_enrichment_strategy::UpdateEnrichmentStrategy;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
-use crate::{Operator, Where};
 use async_trait::async_trait;
 use std::collections::HashSet;
 use std::future::Future;
@@ -20,33 +21,49 @@ use std::sync::Arc;
 
 pub struct DefaultWriteEnrichmentStrategy {
     delete: Arc<dyn DeleteEnrichmentStrategy>,
+    update: Arc<dyn UpdateEnrichmentStrategy>,
     skip_unloaded: bool,
+    use_transaction: bool,
 }
 
 impl DefaultWriteEnrichmentStrategy {
-    pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>) -> Self {
+    pub fn new(
+        delete: Option<Arc<dyn DeleteEnrichmentStrategy>>,
+        update: Option<Arc<dyn UpdateEnrichmentStrategy>>,
+        use_transaction: bool,
+    ) -> Self {
         Self {
             delete: delete.unwrap_or_else(|| Arc::new(CascadeDeleteEnrichmentStrategy)),
+            update: update.unwrap_or_else(|| Arc::new(DefaultUpdateEnrichmentStrategy)),
             skip_unloaded: false,
+            use_transaction,
         }
     }
 
-    pub fn lazy(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>) -> Self {
+    pub fn lazy(
+        delete: Option<Arc<dyn DeleteEnrichmentStrategy>>,
+        update: Option<Arc<dyn UpdateEnrichmentStrategy>>,
+        use_transaction: bool,
+    ) -> Self {
         Self {
-            delete: delete.unwrap_or_else(|| Arc::new(CascadeDeleteEnrichmentStrategy)),
             skip_unloaded: true,
+            ..Self::new(delete, update, use_transaction)
         }
     }
 }
 
 impl Default for DefaultWriteEnrichmentStrategy {
     fn default() -> Self {
-        Self::new(None)
+        Self::new(None, None, false)
     }
 }
 
 #[async_trait]
 impl WriteEnrichmentStrategy for DefaultWriteEnrichmentStrategy {
+    fn use_transaction(&self) -> bool {
+        self.use_transaction
+    }
+
     async fn persist(
         &self,
         tree: &RepositoryTree,
@@ -97,7 +114,9 @@ impl DefaultWriteEnrichmentStrategy {
                             create_links(writer.as_ref(), enrichment, parent).await?
                         }
                         WriteMode::Update => {
-                            sync_links(writer.as_ref(), enrichment, parent).await?
+                            self.update
+                                .update_linked(entry, enrichment, parent)
+                                .await?
                         }
                         WriteMode::Delete => {
                             self.delete
@@ -123,11 +142,11 @@ impl DefaultWriteEnrichmentStrategy {
                 }
                 match mode {
                     WriteMode::Create => {
-                        self.create_children(writer.as_ref(), enrichment, parent)
-                            .await?
+                        create_children(writer.as_ref(), enrichment, parent).await?
                     }
                     WriteMode::Update => {
-                        self.sync_children(writer.as_ref(), enrichment, parent)
+                        self.update
+                            .update_owned(entry, enrichment, parent)
                             .await?
                     }
                     WriteMode::Delete => {
@@ -144,67 +163,6 @@ impl DefaultWriteEnrichmentStrategy {
     fn skip(&self, parent: &Row, into: &str, mode: WriteMode) -> bool {
         self.skip_unloaded && mode != WriteMode::Delete && !parent.contains_key(into)
     }
-
-    async fn create_children(
-        &self,
-        writer: &dyn ICRUDRepository,
-        enrichment: &Enrichment,
-        parent: &mut Row,
-    ) -> Result<()> {
-        let mut related = decode_rows(parent.get(&enrichment.into));
-        let key = parent.get(&enrichment.from).cloned();
-        for row in &mut related {
-            if let Some(key) = &key {
-                row.insert(enrichment.by.clone(), key.clone());
-            }
-            writer.create(row).await?;
-        }
-        parent.insert(enrichment.into.clone(), encode_rows(&related));
-        Ok(())
-    }
-
-    async fn sync_children(
-        &self,
-        writer: &dyn ICRUDRepository,
-        enrichment: &Enrichment,
-        parent: &mut Row,
-    ) -> Result<()> {
-        let existing = load(writer, enrichment, parent).await?;
-        let mut related = decode_rows(parent.get(&enrichment.into));
-        if let Some(key) = parent.get(&enrichment.from).cloned() {
-            for row in &mut related {
-                row.insert(enrichment.by.clone(), key.clone());
-            }
-        }
-        let ids = writer.id_names();
-        let keep: HashSet<String> = related
-            .iter()
-            .filter_map(|row| row_key(row, &ids))
-            .collect();
-        for row in existing.iter().filter(|row| {
-            row_key(row, &ids)
-                .map(|key| !keep.contains(&key))
-                .unwrap_or(true)
-        }) {
-            writer.delete(row, None).await?;
-        }
-        for row in &mut related {
-            match row_key(row, &ids) {
-                Some(key)
-                    if existing
-                        .iter()
-                        .any(|ex| row_key(ex, &ids) == Some(key.clone())) =>
-                {
-                    writer.update(row, None).await?;
-                }
-                _ => {
-                    writer.create(row).await?;
-                }
-            }
-        }
-        parent.insert(enrichment.into.clone(), encode_rows(&related));
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -214,7 +172,24 @@ impl crate::delete_nested::DeleteNested for DefaultWriteEnrichmentStrategy {
     }
 }
 
-async fn create_links(
+pub(crate) async fn create_children(
+    writer: &dyn ICRUDRepository,
+    enrichment: &Enrichment,
+    parent: &mut Row,
+) -> Result<()> {
+    let mut related = decode_rows(parent.get(&enrichment.into));
+    let key = parent.get(&enrichment.from).cloned();
+    for row in &mut related {
+        if let Some(key) = &key {
+            row.insert(enrichment.by.clone(), key.clone());
+        }
+        writer.create(row).await?;
+    }
+    parent.insert(enrichment.into.clone(), encode_rows(&related));
+    Ok(())
+}
+
+pub(crate) async fn create_links(
     writer: &dyn ICRUDRepository,
     enrichment: &Enrichment,
     parent: &Row,
@@ -233,57 +208,7 @@ async fn create_links(
     Ok(())
 }
 
-async fn sync_links(
-    writer: &dyn ICRUDRepository,
-    enrichment: &Enrichment,
-    parent: &Row,
-) -> Result<()> {
-    let association = enrichment
-        .association
-        .as_ref()
-        .ok_or_else(|| DatasourceError::message("Missing association"))?;
-    let parent_key = required(parent, &enrichment.from, &enrichment.into)?;
-    let existing = writer
-        .read(
-            Some(&Where::new(Operator::equals(
-                association.parent.clone(),
-                parent_key.clone(),
-            ))),
-            None,
-        )
-        .await?;
-    let wanted = related_ids(parent, enrichment)?;
-    let keep: HashSet<String> = wanted.iter().map(Value::wire_text).collect();
-    for row in &existing {
-        let id = row.get(&association.related);
-        if id.map(Value::wire_text).is_some_and(|key| keep.contains(&key)) {
-            continue;
-        }
-        let clause = Where::new(Operator::and(
-            Operator::equals(association.parent.clone(), parent_key.clone()),
-            Operator::equals(
-                association.related.clone(),
-                id.cloned().unwrap_or(Value::Null),
-            ),
-        ));
-        writer.delete(row, Some(&clause)).await?;
-    }
-    for id in wanted {
-        if existing
-            .iter()
-            .any(|row| row.get(&association.related).map(Value::wire_text) == Some(id.wire_text()))
-        {
-            continue;
-        }
-        let mut row = Row::new();
-        row.insert(association.parent.clone(), parent_key.clone());
-        row.insert(association.related.clone(), id);
-        writer.create(&mut row).await?;
-    }
-    Ok(())
-}
-
-fn related_ids(parent: &Row, enrichment: &Enrichment) -> Result<Vec<Value>> {
+pub(crate) fn related_ids(parent: &Row, enrichment: &Enrichment) -> Result<Vec<Value>> {
     let mut ids = Vec::new();
     let mut seen = HashSet::new();
     for related in decode_rows(parent.get(&enrichment.into)) {
@@ -306,7 +231,7 @@ fn related_ids(parent: &Row, enrichment: &Enrichment) -> Result<Vec<Value>> {
     Ok(ids)
 }
 
-fn required(parent: &Row, name: &str, into: &str) -> Result<Value> {
+pub(crate) fn required(parent: &Row, name: &str, into: &str) -> Result<Value> {
     parent
         .get(name)
         .filter(|value| !missing(value))
@@ -335,7 +260,7 @@ fn assigned(value: &Value) -> bool {
     }
 }
 
-fn row_key(row: &Row, ids: &[String]) -> Option<String> {
+pub(crate) fn row_key(row: &Row, ids: &[String]) -> Option<String> {
     if ids.is_empty()
         || ids.iter().any(|name| match row.get(name) {
             Some(value) => !assigned(value),
@@ -352,7 +277,7 @@ fn row_key(row: &Row, ids: &[String]) -> Option<String> {
     )
 }
 
-fn decode_rows(value: Option<&Value>) -> Vec<Row> {
+pub(crate) fn decode_rows(value: Option<&Value>) -> Vec<Row> {
     match value {
         Some(Value::Text(text)) if !text.is_empty() => text.split('|').map(decode_row).collect(),
         _ => Vec::new(),

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { MemoryProvider } from "@datasources/memory";
 import { collectAsync } from "./collectAsync.ts";
 import { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
+import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
+import { DatasourceError } from "./DatasourceError.ts";
 import type { IConnection } from "./IConnection.ts";
 
 class Parent {
@@ -53,6 +55,51 @@ describe("BulkCRUDRepository", () => {
       Object.assign(new Parent(), { label: "b" }),
     ]);
     expect(await collectAsync(parentsRepo.read())).toHaveLength(2);
+  });
+
+  it("keeps the first write when a later bulk update throws", async () => {
+    const parentsRepo = new BulkCRUDRepository(Parent, await setup());
+    await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
+    await parentsRepo.create(Object.assign(new Parent(), { label: "b" }));
+    const first = (await collectAsync(parentsRepo.read())).find((parent) => parent.label === "a");
+    let seen = 0;
+    parentsRepo.addMiddleware({
+      beforeCommand() {
+        seen += 1;
+        if (seen === 2) throw new DatasourceError("stop");
+      },
+      afterCommand() {},
+    });
+    await expect(parentsRepo.updateMany([
+      Object.assign(new Parent(), { id: first?.id, label: "changed" }),
+      Object.assign(new Parent(), { id: first?.id, label: "later" }),
+    ])).rejects.toThrow(/stop/);
+    const stored = await collectAsync(parentsRepo.read());
+    expect(stored.find((parent) => parent.id === first?.id)?.label).toBe("changed");
+  });
+
+  it("rolls back a bulk update when useTransaction is on", async () => {
+    const parentsRepo = new BulkCRUDRepository(await setup(), {
+      type: Parent,
+      write: new DefaultWriteEnrichmentStrategy(undefined, undefined, true),
+    });
+    await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
+    await parentsRepo.create(Object.assign(new Parent(), { label: "b" }));
+    const first = (await collectAsync(parentsRepo.read())).find((parent) => parent.label === "a");
+    let seen = 0;
+    parentsRepo.addMiddleware({
+      beforeCommand() {
+        seen += 1;
+        if (seen === 2) throw new DatasourceError("stop");
+      },
+      afterCommand() {},
+    });
+    await expect(parentsRepo.updateMany([
+      Object.assign(new Parent(), { id: first?.id, label: "changed" }),
+      Object.assign(new Parent(), { id: first?.id, label: "later" }),
+    ])).rejects.toThrow(/stop/);
+    const stored = await collectAsync(parentsRepo.read());
+    expect(stored.find((parent) => parent.id === first?.id)?.label).toBe("a");
   });
 
   it("update replace-syncs each parent", async () => {
