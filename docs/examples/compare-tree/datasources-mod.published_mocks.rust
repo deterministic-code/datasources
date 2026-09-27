@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#published_mocks
-lines: 743-758
+lines: 749-764
 
     assert_eq!(q.calls(), 1);
     assert_eq!(w.calls(), 1);

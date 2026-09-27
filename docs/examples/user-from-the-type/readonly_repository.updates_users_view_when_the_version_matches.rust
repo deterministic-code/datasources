@@ -1,5 +1,5 @@
 test: rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
-lines: 641-676
+lines: 644-679
 
     #[tokio::test]
     async fn updates_users_view_when_the_version_matches() {

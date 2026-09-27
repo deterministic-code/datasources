@@ -94,19 +94,20 @@ describe("CRUDRepository", () => {
     const parentsRepo = new CRUDRepository(Parent, connection);
     const typesRepo = new CRUDRepository(TypeRow, connection);
     const childrenRepo = new CRUDRepository(Child, connection);
-    await typesRepo.create(Object.assign(new TypeRow(), { name: "person" }));
-    const type = await typesRepo.readSingle();
+    const type = await typesRepo.create(Object.assign(new TypeRow(), { name: "person" }));
+    expect(type.id).toBeGreaterThan(0);
     relate(parentsRepo, typesRepo, childrenRepo);
-    await parentsRepo.create(Object.assign(new Parent(), {
-      type_id: type?.id,
+    const created = await parentsRepo.create(Object.assign(new Parent(), {
+      type_id: type.id,
       children: [
         Object.assign(new Child(), { label: "a" }),
         Object.assign(new Child(), { label: "b" }),
       ],
     }));
+    expect(created.id).toBeGreaterThan(0);
     const parent = (await collectAsync(parentsRepo.read()))[0];
     const children = await collectAsync(childrenRepo.read());
-    expect(parent?.id).toBeGreaterThan(0);
+    expect(parent?.id).toBe(created.id);
     expect(children).toHaveLength(2);
     expect(children.every((child) => child.parent_id === parent?.id)).toBe(true);
     expect(children.map((child) => child.label)).toEqual(["a", "b"]);
@@ -118,12 +119,13 @@ describe("CRUDRepository", () => {
     const parentsRepo = new CRUDRepository(Parent, connection);
     const childrenRepo = new CRUDRepository(Child, connection);
     parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
-    await parentsRepo.create(Object.assign(new Parent(), {
+    const created = await parentsRepo.create(Object.assign(new Parent(), {
       children: [Object.assign(new Child(), { label: "n" })],
     }));
+    expect(created.id).toBeGreaterThan(0);
     const parent = await parentsRepo.readSingle();
     const child = await childrenRepo.readSingle();
-    expect(parent?.id).toBeGreaterThan(0);
+    expect(parent?.id).toBe(created.id);
     expect(child?.parent_id).toBe(parent?.id);
   });
 
@@ -131,19 +133,21 @@ describe("CRUDRepository", () => {
     const connection = await setup();
     const parentsRepo = new CRUDRepository(Parent, connection);
     const childrenRepo = new CRUDRepository(Child, connection);
-    await parentsRepo.create(new Parent());
-    const parent = await parentsRepo.readSingle();
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: parent?.id, label: "a" }));
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: parent?.id, label: "b" }));
-    const kept = (await collectAsync(childrenRepo.read())).find((child) => child.label === "a");
+    const parent = await parentsRepo.create(new Parent());
+    expect(parent.id).toBeGreaterThan(0);
+    const kept = await childrenRepo.create(Object.assign(new Child(), { parent_id: parent.id, label: "a" }));
+    expect(kept.id).toBeGreaterThan(0);
+    const dropped = await childrenRepo.create(Object.assign(new Child(), { parent_id: parent.id, label: "b" }));
+    expect(dropped.id).toBeGreaterThan(0);
     parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
-    await parentsRepo.update(Object.assign(new Parent(), {
-      id: parent?.id,
+    const updated = await parentsRepo.update(Object.assign(new Parent(), {
+      id: parent.id,
       children: [
-        Object.assign(new Child(), { id: kept?.id, label: "aa" }),
+        Object.assign(new Child(), { id: kept.id, label: "aa" }),
         Object.assign(new Child(), { label: "c" }),
       ],
     }));
+    expect(updated.rowsAffected).toBe(1);
     const children = await collectAsync(childrenRepo.read());
     expect(children).toHaveLength(2);
     expect(children.find((child) => child.id === kept?.id)?.label).toBe("aa");
@@ -159,18 +163,21 @@ describe("CRUDRepository", () => {
     });
     const childrenRepo = new CRUDRepository(Child, connection);
     const notesRepo = new CRUDRepository(Note, connection);
-    await parentsRepo.create(new Parent());
-    const parent = await parentsRepo.readSingle();
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: parent?.id, label: "a" }));
-    await childrenRepo.create(Object.assign(new Child(), { label: "other" }));
-    const child = (await collectAsync(childrenRepo.read())).find((row) => row.label === "a");
-    await notesRepo.create(Object.assign(new Note(), { child_id: child?.id, text: "n" }));
+    const parent = await parentsRepo.create(new Parent());
+    expect(parent.id).toBeGreaterThan(0);
+    const child = await childrenRepo.create(Object.assign(new Child(), { parent_id: parent.id, label: "a" }));
+    expect(child.id).toBeGreaterThan(0);
+    const other = await childrenRepo.create(Object.assign(new Child(), { label: "other" }));
+    expect(other.id).toBeGreaterThan(0);
+    const note = await notesRepo.create(Object.assign(new Note(), { child_id: child.id, text: "n" }));
+    expect(note.id).toBeGreaterThan(0);
     childrenRepo.addEnriched({ into: "notes", from: "id", by: "child_id", many: true }, notesRepo);
     parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
-    await parentsRepo.update(Object.assign(new Parent(), {
-      id: parent?.id,
-      children: [Object.assign(new Child(), { id: child?.id, label: "fresh" })],
+    const updated = await parentsRepo.update(Object.assign(new Parent(), {
+      id: parent.id,
+      children: [Object.assign(new Child(), { id: child.id, label: "fresh" })],
     }));
+    expect(updated.rowsAffected).toBe(1);
     const created = (await collectAsync(childrenRepo.read())).find((row) => row.label === "fresh");
     expect(created?.id).not.toBe(child?.id);
     expect(created?.label).toBe("fresh");
@@ -186,31 +193,33 @@ describe("CRUDRepository", () => {
     });
     const tagsRepo = new CRUDRepository(Tag, connection);
     const linksRepo = new CRUDRepository(ParentTag, connection);
-    await parentsRepo.create(new Tagged());
-    const parent = await parentsRepo.readSingle();
-    await tagsRepo.create(Object.assign(new Tag(), { name: "keep" }));
-    await tagsRepo.create(Object.assign(new Tag(), { name: "drop" }));
-    const tags = await collectAsync(tagsRepo.read());
-    const keep = tags.find((tag) => tag.name === "keep");
-    const drop = tags.find((tag) => tag.name === "drop");
-    await linksRepo.create(Object.assign(new ParentTag(), { parent_id: parent?.id, tag_id: keep?.id }));
-    await linksRepo.create(Object.assign(new ParentTag(), { parent_id: parent?.id, tag_id: drop?.id }));
-    await linksRepo.create(Object.assign(new ParentTag(), { tag_id: keep?.id }));
-    const oldLink = (await collectAsync(linksRepo.read())).find((link) => link.parent_id === parent?.id && link.tag_id === keep?.id);
+    const parent = await parentsRepo.create(new Tagged());
+    expect(parent.id).toBeGreaterThan(0);
+    const keep = await tagsRepo.create(Object.assign(new Tag(), { name: "keep" }));
+    expect(keep.id).toBeGreaterThan(0);
+    const drop = await tagsRepo.create(Object.assign(new Tag(), { name: "drop" }));
+    expect(drop.id).toBeGreaterThan(0);
+    const oldLink = await linksRepo.create(Object.assign(new ParentTag(), { parent_id: parent.id, tag_id: keep.id }));
+    expect(oldLink.id).toBeGreaterThan(0);
+    const droppedLink = await linksRepo.create(Object.assign(new ParentTag(), { parent_id: parent.id, tag_id: drop.id }));
+    expect(droppedLink.id).toBeGreaterThan(0);
+    const leftover = await linksRepo.create(Object.assign(new ParentTag(), { tag_id: keep.id }));
+    expect(leftover.id).toBeGreaterThan(0);
     parentsRepo.addLinked(
       { into: "tags", from: "id", by: "id", association: { parent: "parent_id", related: "tag_id" } },
       tagsRepo,
       linksRepo,
     );
-    await parentsRepo.update(Object.assign(new Tagged(), {
-      id: parent?.id,
+    const updated = await parentsRepo.update(Object.assign(new Tagged(), {
+      id: parent.id,
       label: "p",
-      tags: [Object.assign(new Tag(), { id: keep?.id })],
+      tags: [Object.assign(new Tag(), { id: keep.id })],
     }));
-    const links = (await collectAsync(linksRepo.read())).filter((link) => link.parent_id === parent?.id);
+    expect(updated.rowsAffected).toBe(1);
+    const links = (await collectAsync(linksRepo.read())).filter((link) => link.parent_id === parent.id);
     expect(links).toHaveLength(1);
-    expect(links[0]?.tag_id).toBe(keep?.id);
-    expect(links[0]?.parent_id).toBe(parent?.id);
+    expect(links[0]?.tag_id).toBe(keep.id);
+    expect(links[0]?.parent_id).toBe(parent.id);
     expect(links[0]?.id).not.toBe(oldLink?.id);
     expect(await collectAsync(tagsRepo.read())).toHaveLength(2);
   });
@@ -220,15 +229,18 @@ describe("CRUDRepository", () => {
     const parentsRepo = new CRUDRepository(Parent, connection);
     const childrenRepo = new CRUDRepository(Child, connection);
     const notesRepo = new CRUDRepository(Note, connection);
-    await parentsRepo.create(new Parent());
-    const parent = await parentsRepo.readSingle();
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: parent?.id, label: "a" }));
-    const child = await childrenRepo.readSingle();
-    await notesRepo.create(Object.assign(new Note(), { child_id: child?.id, text: "n" }));
-    await notesRepo.create(Object.assign(new Note(), { text: "other" }));
+    const parent = await parentsRepo.create(new Parent());
+    expect(parent.id).toBeGreaterThan(0);
+    const child = await childrenRepo.create(Object.assign(new Child(), { parent_id: parent.id, label: "a" }));
+    expect(child.id).toBeGreaterThan(0);
+    const note = await notesRepo.create(Object.assign(new Note(), { child_id: child.id, text: "n" }));
+    expect(note.id).toBeGreaterThan(0);
+    const other = await notesRepo.create(Object.assign(new Note(), { text: "other" }));
+    expect(other.id).toBeGreaterThan(0);
     childrenRepo.addEnriched({ into: "notes", from: "id", by: "child_id", many: true }, notesRepo);
     parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
-    await parentsRepo.delete(Object.assign(new Parent(), { id: parent?.id }));
+    const removed = await parentsRepo.delete(Object.assign(new Parent(), { id: parent.id }));
+    expect(removed.rowsAffected).toBe(1);
     expect(await collectAsync(parentsRepo.read())).toEqual([]);
     expect(await collectAsync(childrenRepo.read())).toEqual([]);
     expect((await notesRepo.readSingle())?.text).toBe("other");
@@ -241,11 +253,13 @@ describe("CRUDRepository", () => {
       type: Parent,
       write: new DefaultWriteEnrichmentStrategy(new SkipDelete()),
     });
-    await parentsRepo.create(new Parent());
-    const parent = await parentsRepo.readSingle();
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: parent?.id, label: "a" }));
+    const parent = await parentsRepo.create(new Parent());
+    expect(parent.id).toBeGreaterThan(0);
+    const child = await childrenRepo.create(Object.assign(new Child(), { parent_id: parent.id, label: "a" }));
+    expect(child.id).toBeGreaterThan(0);
     parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
-    await parentsRepo.delete(Object.assign(new Parent(), { id: parent?.id }));
+    const removed = await parentsRepo.delete(Object.assign(new Parent(), { id: parent.id }));
+    expect(removed.rowsAffected).toBe(1);
     expect(await collectAsync(parentsRepo.read())).toEqual([]);
     expect((await childrenRepo.readSingle())?.label).toBe("a");
   });
@@ -256,18 +270,19 @@ describe("CRUDRepository", () => {
     const childrenRepo = new CRUDRepository(Child, connection);
     const notesRepo = new CRUDRepository(Note, connection);
     const childTypesRepo = new CRUDRepository(TypeRow, connection);
-    await childTypesRepo.create(Object.assign(new TypeRow(), { name: "home" }));
-    const home = await childTypesRepo.readSingle();
+    const home = await childTypesRepo.create(Object.assign(new TypeRow(), { name: "home" }));
+    expect(home.id).toBeGreaterThan(0);
     childrenRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, childTypesRepo);
     childrenRepo.addEnriched({ into: "notes", from: "id", by: "child_id", many: true }, notesRepo);
     parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
-    await parentsRepo.create(Object.assign(new Parent(), {
+    const created = await parentsRepo.create(Object.assign(new Parent(), {
       children: [Object.assign(new Child(), {
-        type_id: home?.id,
+        type_id: home.id,
         label: "a",
         notes: [Object.assign(new Note(), { text: "hi" })],
       })],
     }));
+    expect(created.id).toBeGreaterThan(0);
     const note = await notesRepo.readSingle();
     const child = await childrenRepo.readSingle();
     expect(note?.text).toBe("hi");

@@ -34,18 +34,20 @@ describe("null write", () => {
   it("omits null datetime and version", async () => {
     const connection = await open();
     const repo = new CRUDRepository(connection, { ...createRepositoryOptions(Item), entity: "item" });
-    const omitted = Object.assign(new Item(), { name: "ada" });
-    await repo.create(omitted);
+    const omitted = await repo.create(Object.assign(new Item(), { name: "ada" }));
+    expect(omitted.id).toBeGreaterThan(0);
     const stored = await repo.readSingleById(omitted.id);
     omitted.name = "ada-v2";
-    await repo.update(omitted);
+    const updated = await repo.update(omitted);
+    expect(updated.rowsAffected).toBe(1);
     const kept = await repo.readSingleById(omitted.id);
     const explicit = Object.assign(new Item(), {
       name: "grace",
       created: new Date("2024-06-01T00:00:00.000Z"),
       version: new Uint8Array([9, 9]),
     });
-    await repo.create(explicit);
+    const writtenCreate = await repo.create(explicit);
+    expect(writtenCreate.id).toBeGreaterThan(0);
     const written = await repo.readSingleById(explicit.id);
 
     expect(stored?.created).toBe("2020-01-01T00:00:00.000Z");

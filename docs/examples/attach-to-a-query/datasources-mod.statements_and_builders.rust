@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 929-935
+lines: 935-941
 
         })
         .get_text(),

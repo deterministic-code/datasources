@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#comparison_aliases
-lines: 2060-2066
+lines: 2087-2093
 
     let equals = Where::binary("username", eq, "grace");
     let not_equals = Where::binary("id", ne, 2_i64);

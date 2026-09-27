@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#table_repository_maps_flat_row_into_contacts
-lines: 1865-1879
+lines: 1884-1898
 
 #[tokio::test]
 async fn table_repository_maps_flat_row_into_contacts() {

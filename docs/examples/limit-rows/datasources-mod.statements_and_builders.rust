@@ -1,5 +1,5 @@
 test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1014-1017
+lines: 1020-1023
 
         .parameters()
         .is_empty());

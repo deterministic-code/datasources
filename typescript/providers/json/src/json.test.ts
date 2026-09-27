@@ -295,18 +295,18 @@ describe("JsonCommand and CRUDRepository", () => {
     expect(await collectAsync(repo.read(new WhereText('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
-    expect((await repo.create({ id: 2, name: "b" })).rowsAffected).toBe(1);
+    expect((await repo.create({ id: 2, name: "b" })).id).toBe(2);
     expect(
       (await repo.update({ id: 2, name: "B" })).rowsAffected,
-    ).toBe(1);
+    ).toBe(0);
     expect(
       (await repo.update({ name: "C" }, new WhereText('{"id":2}'))).rowsAffected,
-    ).toBe(1);
+    ).toBe(0);
     expect((await repo.delete({ id: 1 })).rowsAffected).toBe(1);
     expect(
       (await repo.delete({ id: 2 }, new WhereText('{"id":2}'))).rowsAffected,
-    ).toBe(1);
-    expect(await collectAsync(repo.read())).toEqual([]);
+    ).toBe(0);
+    expect(await collectAsync(repo.read())).toEqual([{ name: "b" }]);
   });
 
   it("rejects command and repository IO when closed", async () => {

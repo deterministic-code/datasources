@@ -41,14 +41,16 @@ async fn omits_null_datetime_and_version() {
     omitted.insert("name".into(), Value::from("ada"));
     omitted.insert("created".into(), Value::Null);
     omitted.insert("version".into(), Value::Null);
-    repo.create(&mut omitted).await.unwrap();
+    let mut omitted = repo.create(&mut omitted).await.unwrap();
+    assert!(matches!(omitted.get("id"), Some(Value::Int(id)) if *id > 0));
     let stored = repo
         .read_single_by_id(omitted.get("id").unwrap())
         .await
         .unwrap()
         .unwrap();
     omitted.insert("name".into(), Value::from("ada-v2"));
-    repo.update(&omitted, None).await.unwrap();
+    let updated = repo.update(&omitted, None).await.unwrap();
+    assert_eq!(updated.rows_affected, 1);
     let kept = repo
         .read_single_by_id(omitted.get("id").unwrap())
         .await
@@ -59,7 +61,8 @@ async fn omits_null_datetime_and_version() {
     explicit.insert("name".into(), Value::from("grace"));
     explicit.insert("created".into(), Value::DateTime(created));
     explicit.insert("version".into(), Value::Binary(vec![9, 9]));
-    repo.create(&mut explicit).await.unwrap();
+    let explicit = repo.create(&mut explicit).await.unwrap();
+    assert!(matches!(explicit.get("id"), Some(Value::Int(id)) if *id > 0));
     let written = repo
         .read_single_by_id(explicit.get("id").unwrap())
         .await

@@ -703,18 +703,24 @@ async fn published_mocks() {
         repo.read(Some(&MockWhere::new("all")), None).await.unwrap().len(),
         1
     );
-    repo.create(&mut record(&[("id", Value::Int(2))]))
+    let created = repo
+        .create(&mut record(&[("id", Value::Int(2))]))
         .await
         .unwrap();
-    repo.update(
-        &record(&[("id", Value::Int(2))]),
-        Some(&MockWhere::new("id=2")),
-    )
-    .await
-    .unwrap();
-    repo.delete(&record(&[("id", Value::Int(2))]), None)
+    assert_eq!(created["id"], Value::Int(2));
+    let updated = repo
+        .update(
+            &record(&[("id", Value::Int(2))]),
+            Some(&MockWhere::new("id=2")),
+        )
         .await
         .unwrap();
+    assert_eq!(updated.rows_affected, 1);
+    let removed = repo
+        .delete(&record(&[("id", Value::Int(2))]), None)
+        .await
+        .unwrap();
+    assert_eq!(removed.rows_affected, 1);
     repo.set_read_single_error("gs");
     assert!(repo.read_single(None, None).await.is_err());
     repo.set_read_error("g");
@@ -1679,18 +1685,20 @@ async fn table_repository() {
     include_id.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, include_id).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Int(9), 1);
-    repo.create(&mut obj).await.unwrap();
+    let created = repo.create(&mut obj).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO users (name) VALUES ($name)"
     );
-    assert_eq!(obj["id"], Value::Int(9));
-    repo.update(&obj, None).await.unwrap();
+    assert_eq!(created["id"], Value::Int(9));
+    let updated = repo.update(&obj, None).await.unwrap();
+    assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
         "UPDATE users SET name = $name WHERE id = $id"
     );
-    repo.delete(&obj, None).await.unwrap();
+    let removed = repo.delete(&obj, None).await.unwrap();
+    assert_eq!(removed.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
         "DELETE FROM users WHERE id = $id"
@@ -1703,13 +1711,17 @@ async fn table_repository() {
     options.entity = "users".into();
     options.row_converter = Some(RowTypeConverter::of::<Composite>());
     let repo = CRUDRepository::new(connection, options).unwrap();
-    repo.create(&mut record(&[
-        ("org_id", Value::Int(1)),
-        ("user_id", Value::Int(2)),
-        ("name", Value::Int(3)),
-    ]))
-    .await
-    .unwrap();
+    *generated.response.lock().unwrap() = Response::new(Value::Null, 1);
+    let created = repo
+        .create(&mut record(&[
+            ("org_id", Value::Int(1)),
+            ("user_id", Value::Int(2)),
+            ("name", Value::Int(3)),
+        ]))
+        .await
+        .unwrap();
+    assert_eq!(created["org_id"], Value::Int(1));
+    assert_eq!(created["user_id"], Value::Int(2));
     assert_eq!(
         generated.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO users (name) VALUES ($name)"
@@ -1718,16 +1730,18 @@ async fn table_repository() {
         generated.execute_logs.lock().unwrap()[0].1[0].value,
         Value::Int(3)
     );
-    repo.update(
-        &record(&[
-            ("org_id", Value::Int(1)),
-            ("user_id", Value::Int(2)),
-            ("name", Value::Int(4)),
-        ]),
-        None,
-    )
-    .await
-    .unwrap();
+    let updated = repo
+        .update(
+            &record(&[
+                ("org_id", Value::Int(1)),
+                ("user_id", Value::Int(2)),
+                ("name", Value::Int(4)),
+            ]),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(updated.rows_affected, 1);
     assert!(generated.execute_logs.lock().unwrap()[1]
         .0
         .contains("org_id = $org_id AND user_id = $user_id"));
@@ -1759,15 +1773,20 @@ async fn table_repository() {
     options.entity = "users".into();
     options.row_converter = Some(RowTypeConverter::of::<Cells>());
     let repo = CRUDRepository::new(connection, options).unwrap();
-    repo.create(&mut record(&[("id", Value::Int(1))]))
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    let created = repo
+        .create(&mut record(&[("id", Value::Int(1))]))
         .await
         .unwrap();
-    repo.delete(
-        &record(&[("name", Value::from("z"))]),
-        Some(&Where::new(Operator::equals("name", "z"))),
-    )
-    .await
-    .unwrap();
+    assert_eq!(created["id"], Value::Int(1));
+    let removed = repo
+        .delete(
+            &record(&[("name", Value::from("z"))]),
+            Some(&Where::new(Operator::equals("name", "z"))),
+        )
+        .await
+        .unwrap();
+    assert_eq!(removed.rows_affected, 1);
 
     let from_id = create_repository_options::<Item>();
     assert_eq!(from_id.ids, vec!["id".to_string()]);
@@ -1886,16 +1905,20 @@ async fn table_repository_maps_flat_row_into_contacts() {
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT contact_name1, contact_name2, email, id, username FROM users"
     );
-    repo.create(&mut user).await.unwrap();
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    let created = repo.create(&mut user).await.unwrap();
+    assert_eq!(created["id"], Value::Int(1));
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO users (contact_name1, contact_name2, email, username) VALUES ($contact_name1, $contact_name2, $email, $username)"
     );
-    repo.update(&user, None).await.unwrap();
+    let updated = repo.update(&user, None).await.unwrap();
+    assert_eq!(updated.rows_affected, 1);
     assert!(!command.execute_logs.lock().unwrap()[1]
         .0
         .contains("contacts"));
-    repo.delete(&user, None).await.unwrap();
+    let removed = repo.delete(&user, None).await.unwrap();
+    assert_eq!(removed.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
         "DELETE FROM users WHERE id = $id"
@@ -1945,18 +1968,22 @@ async fn table_repository_crud_mapper() {
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT full_name, user_id FROM people LIMIT 1"
     );
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
     let mut row = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
-    repo.create(&mut row).await.unwrap();
+    let created = repo.create(&mut row).await.unwrap();
+    assert_eq!(created["id"], Value::Int(1));
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO people (full_name) VALUES ($full_name) RETURNING id"
     );
-    repo.update(&row, None).await.unwrap();
+    let updated = repo.update(&row, None).await.unwrap();
+    assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
         "UPDATE people SET full_name = $full_name WHERE user_id = $user_id RETURNING id"
     );
-    repo.delete(&row, None).await.unwrap();
+    let removed = repo.delete(&row, None).await.unwrap();
+    assert_eq!(removed.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
         "DELETE FROM people WHERE user_id = $user_id RETURNING id"
@@ -2090,41 +2117,48 @@ async fn create_and_update_omit_null_datetime_and_version() {
     options.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, options).unwrap();
     let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
-    repo.create(&mut record(&[
-        ("id", Value::Int(1)),
-        ("name", Value::from("ada")),
-        ("created", Value::Null),
-        ("version", Value::Null),
-    ]))
-    .await
-    .unwrap();
-    assert_eq!(
-        command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO users (name) VALUES ($name)"
-    );
-    repo.update(
-        &record(&[
+    *command.response.lock().unwrap() = Response::new(Value::Int(7), 1);
+    let created_ada = repo
+        .create(&mut record(&[
             ("id", Value::Int(1)),
             ("name", Value::from("ada")),
             ("created", Value::Null),
             ("version", Value::Null),
-        ]),
-        None,
-    )
-    .await
-    .unwrap();
+        ]))
+        .await
+        .unwrap();
+    assert_eq!(created_ada["id"], Value::Int(7));
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO users (name) VALUES ($name)"
+    );
+    let updated = repo
+        .update(
+            &record(&[
+                ("id", Value::Int(1)),
+                ("name", Value::from("ada")),
+                ("created", Value::Null),
+                ("version", Value::Null),
+            ]),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
         "UPDATE users SET name = $name WHERE id = $id"
     );
-    repo.create(&mut record(&[
-        ("id", Value::Int(1)),
-        ("name", Value::from("grace")),
-        ("created", Value::DateTime(created)),
-        ("version", Value::Binary(vec![9, 9])),
-    ]))
-    .await
-    .unwrap();
+    let created_grace = repo
+        .create(&mut record(&[
+            ("id", Value::Int(1)),
+            ("name", Value::from("grace")),
+            ("created", Value::DateTime(created)),
+            ("version", Value::Binary(vec![9, 9])),
+        ]))
+        .await
+        .unwrap();
+    assert_eq!(created_grace["id"], Value::Int(7));
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
         "INSERT INTO users (created, name, version) VALUES ($created, $name, $version)"

@@ -127,11 +127,11 @@ async fn deep_create_writes_children_stamps_fk() {
     let mut parents = crud(connection.clone(), "Parent");
     let types = Arc::new(crud(connection.clone(), "TypeRow"));
     let children = Arc::new(crud(connection, "Child"));
-    types
+    let kind = types
         .create(&mut record(&[("name", Value::from("person"))]))
         .await
         .unwrap();
-    let kind = types.read(None, None).await.unwrap();
+    assert!(num(&kind, "id") > 0);
     parents
         .add_enriched(
             Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
@@ -143,9 +143,9 @@ async fn deep_create_writes_children_stamps_fk() {
             children.clone(),
             None,
         );
-    parents
+    let created = parents
         .create(&mut record(&[
-            ("type_id", kind[0].get("id").unwrap().clone()),
+            ("type_id", kind.get("id").unwrap().clone()),
             ("label", Value::from("p")),
             (
                 "children",
@@ -157,9 +157,10 @@ async fn deep_create_writes_children_stamps_fk() {
         ]))
         .await
         .unwrap();
+    assert!(num(&created, "id") > 0);
     let stored_parents = parents.read(None, None).await.unwrap();
     let stored = children.read(None, None).await.unwrap();
-    assert!(num(&stored_parents[0], "id") > 0);
+    assert_eq!(stored_parents[0]["id"], created["id"]);
     assert_eq!(stored.len(), 2);
     assert_eq!(stored[0]["parent_id"], stored_parents[0]["id"]);
     assert_eq!(stored[1]["parent_id"], stored_parents[0]["id"]);
@@ -180,7 +181,7 @@ async fn contacts_service_fills_names_and_child_lists() {
     let contacts = crud(connection.clone(), "Contact");
     let addresses = crud(connection.clone(), "Address");
     let phones = crud(connection, "Phone");
-    contacts
+    let other = contacts
         .create(&mut record(&[
             ("contact_type_id", person[0].get("id").unwrap().clone()),
             ("contact_source_id", source[0].get("id").unwrap().clone()),
@@ -189,9 +190,8 @@ async fn contacts_service_fills_names_and_child_lists() {
         ]))
         .await
         .unwrap();
-    let other = contacts.read(None, None).await.unwrap().into_iter().next().unwrap();
     assert!(num(&other, "id") > 0);
-    addresses
+    let stray = addresses
         .create(&mut record(&[
             ("contact_id", other.get("id").unwrap().clone()),
             ("line1", Value::from("other")),
@@ -201,6 +201,7 @@ async fn contacts_service_fills_names_and_child_lists() {
         ]))
         .await
         .unwrap();
+    assert!(num(&stray, "id") > 0);
     let service = open_contacts(
         contacts,
         Arc::new(readonly(types_connection, "ContactType")),
@@ -210,7 +211,7 @@ async fn contacts_service_fills_names_and_child_lists() {
         addresses,
         phones,
     );
-    service
+    let created = service
         .create(&mut record(&[
             ("contact_type_id", person[0].get("id").unwrap().clone()),
             ("contact_source_id", source[0].get("id").unwrap().clone()),
@@ -234,6 +235,7 @@ async fn contacts_service_fills_names_and_child_lists() {
         ]))
         .await
         .unwrap();
+    assert!(num(&created, "id") > 0);
     let contact = service
         .read(None, None)
         .await
@@ -241,7 +243,7 @@ async fn contacts_service_fills_names_and_child_lists() {
         .into_iter()
         .find(|item| item.get("first_name") == Some(&Value::from("Ada")))
         .unwrap();
-    assert!(num(&contact, "id") > 0);
+    assert_eq!(contact["id"], created["id"]);
     assert_ne!(contact["id"], other["id"]);
     assert_eq!(contact["contact_type_name"], Value::from("person"));
     assert_eq!(contact["contact_source_name"], Value::from("import"));
@@ -257,33 +259,28 @@ async fn deep_update_replace_syncs_children() {
     let connection = setup(&mut []).await;
     let mut parents = crud(connection.clone(), "Parent");
     let children = Arc::new(crud(connection, "Child"));
-    parents
+    let parent = parents
         .create(&mut record(&[("label", Value::from("p"))]))
         .await
         .unwrap();
-    let parent = &parents.read(None, None).await.unwrap()[0].clone();
+    assert!(num(&parent, "id") > 0);
     let parent_id = parent.get("id").unwrap().clone();
-    children
+    let kept = children
         .create(&mut record(&[("parent_id", parent_id.clone()), ("label", Value::from("a"))]))
         .await
         .unwrap();
-    children
+    assert!(num(&kept, "id") > 0);
+    let dropped = children
         .create(&mut record(&[("parent_id", parent_id.clone()), ("label", Value::from("b"))]))
         .await
         .unwrap();
-    let kept = children
-        .read(None, None)
-        .await
-        .unwrap()
-        .into_iter()
-        .find(|row| row.get("label") == Some(&Value::from("a")))
-        .unwrap();
+    assert!(num(&dropped, "id") > 0);
     parents.add_enriched(
         Enrichment::new("children", "id", "parent_id", None, true),
         children.clone(),
         None,
     );
-    parents
+    let updated = parents
         .update(
             &record(&[
                 ("id", parent_id.clone()),
@@ -300,6 +297,7 @@ async fn deep_update_replace_syncs_children() {
         )
         .await
         .unwrap();
+    assert_eq!(updated.rows_affected, 1);
     let stored = children.read(None, None).await.unwrap();
     assert_eq!(stored.len(), 2);
     assert_eq!(
@@ -324,37 +322,32 @@ async fn cascade_update_deletes_children_and_recreates() {
     ));
     let mut children_repo = crud(connection.clone(), "Child");
     let notes = Arc::new(crud(connection, "Note"));
-    parents
+    let parent = parents
         .create(&mut record(&[("label", Value::from("p"))]))
         .await
         .unwrap();
-    let parent_id = parents.read(None, None).await.unwrap()[0].get("id").unwrap().clone();
-    children_repo
+    assert!(num(&parent, "id") > 0);
+    let parent_id = parent.get("id").unwrap().clone();
+    let child = children_repo
         .create(&mut record(&[("parent_id", parent_id.clone()), ("label", Value::from("a"))]))
         .await
         .unwrap();
-    children_repo
+    assert!(num(&child, "id") > 0);
+    let other = children_repo
         .create(&mut record(&[("label", Value::from("other"))]))
         .await
         .unwrap();
-    let child_id = children_repo
-        .read(None, None)
-        .await
-        .unwrap()
-        .into_iter()
-        .find(|row| row.get("label") == Some(&Value::from("a")))
-        .unwrap()
-        .get("id")
-        .unwrap()
-        .clone();
-    notes
+    assert!(num(&other, "id") > 0);
+    let child_id = child.get("id").unwrap().clone();
+    let note = notes
         .create(&mut record(&[("child_id", child_id.clone()), ("text", Value::from("n"))]))
         .await
         .unwrap();
+    assert!(num(&note, "id") > 0);
     children_repo.add_enriched(Enrichment::new("notes", "id", "child_id", None, true), notes.clone(), None);
     let children = Arc::new(children_repo);
     parents.add_enriched(Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
-    parents
+    let updated = parents
         .update(
             &record(&[
                 ("id", parent_id.clone()),
@@ -368,6 +361,7 @@ async fn cascade_update_deletes_children_and_recreates() {
         )
         .await
         .unwrap();
+    assert_eq!(updated.rows_affected, 1);
     let stored = children.read(None, None).await.unwrap();
     let created = stored
         .iter()
@@ -392,54 +386,38 @@ async fn cascade_update_replaces_links_and_keeps_related() {
     ));
     let tags = Arc::new(crud(connection.clone(), "Tag"));
     let links = Arc::new(crud(connection, "ParentTag"));
-    parents.create(&mut record(&[("label", Value::from("p"))])).await.unwrap();
-    let parent_id = parents.read(None, None).await.unwrap()[0].get("id").unwrap().clone();
-    tags.create(&mut record(&[("name", Value::from("keep"))])).await.unwrap();
-    tags.create(&mut record(&[("name", Value::from("drop"))])).await.unwrap();
-    let stored_tags = tags.read(None, None).await.unwrap();
-    let keep_id = stored_tags
-        .iter()
-        .find(|row| row.get("name") == Some(&Value::from("keep")))
-        .unwrap()
-        .get("id")
-        .unwrap()
-        .clone();
-    let drop_id = stored_tags
-        .iter()
-        .find(|row| row.get("name") == Some(&Value::from("drop")))
-        .unwrap()
-        .get("id")
-        .unwrap()
-        .clone();
-    links
+    let parent = parents.create(&mut record(&[("label", Value::from("p"))])).await.unwrap();
+    assert!(num(&parent, "id") > 0);
+    let parent_id = parent.get("id").unwrap().clone();
+    let keep = tags.create(&mut record(&[("name", Value::from("keep"))])).await.unwrap();
+    assert!(num(&keep, "id") > 0);
+    let drop = tags.create(&mut record(&[("name", Value::from("drop"))])).await.unwrap();
+    assert!(num(&drop, "id") > 0);
+    let keep_id = keep.get("id").unwrap().clone();
+    let drop_id = drop.get("id").unwrap().clone();
+    let old_link = links
         .create(&mut record(&[("parent_id", parent_id.clone()), ("tag_id", keep_id.clone())]))
         .await
         .unwrap();
-    links
+    assert!(num(&old_link, "id") > 0);
+    let dropped_link = links
         .create(&mut record(&[("parent_id", parent_id.clone()), ("tag_id", drop_id)]))
         .await
         .unwrap();
-    links
+    assert!(num(&dropped_link, "id") > 0);
+    let leftover = links
         .create(&mut record(&[("tag_id", keep_id.clone())]))
         .await
         .unwrap();
-    let old_link_id = links
-        .read(None, None)
-        .await
-        .unwrap()
-        .into_iter()
-        .find(|row| row.get("tag_id") == Some(&keep_id))
-        .unwrap()
-        .get("id")
-        .unwrap()
-        .clone();
+    assert!(num(&leftover, "id") > 0);
+    let old_link_id = old_link.get("id").unwrap().clone();
     parents.add_linked(
         Enrichment::new("tags", "id", "id", None, true).linked(Association::new("parent_id", "tag_id")),
         tags.clone(),
         links.clone(),
         None,
     );
-    parents
+    let updated = parents
         .update(
             &record(&[
                 ("id", parent_id.clone()),
@@ -450,6 +428,7 @@ async fn cascade_update_replaces_links_and_keeps_related() {
         )
         .await
         .unwrap();
+    assert_eq!(updated.rows_affected, 1);
     let stored_links: Vec<_> = links
         .read(None, None)
         .await
@@ -470,14 +449,17 @@ async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "Parent".into();
     let parents = BulkCRUDRepository::new(connection, options).unwrap();
-    parents
+    let created = parents
         .create_bulk(&mut [
             record(&[("label", Value::from("a"))]),
             record(&[("label", Value::from("b"))]),
         ])
         .await
         .unwrap();
+    assert_eq!(created.rows_affected, 2);
     let stored = parents.read(None, None).await.unwrap();
+    let last_id = stored.iter().map(|row| num(row, "id")).max().unwrap();
+    assert_eq!(created.result, Value::Int(last_id));
     let first_id = stored
         .iter()
         .find(|row| row.get("label") == Some(&Value::from("a")))
@@ -510,14 +492,17 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
     options.entity = "Parent".into();
     options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(None, None, true)));
     let parents = BulkCRUDRepository::new(connection, options).unwrap();
-    parents
+    let created = parents
         .create_bulk(&mut [
             record(&[("label", Value::from("a"))]),
             record(&[("label", Value::from("b"))]),
         ])
         .await
         .unwrap();
+    assert_eq!(created.rows_affected, 2);
     let stored = parents.read(None, None).await.unwrap();
+    let last_id = stored.iter().map(|row| num(row, "id")).max().unwrap();
+    assert_eq!(created.result, Value::Int(last_id));
     let first_id = stored
         .iter()
         .find(|row| row.get("label") == Some(&Value::from("a")))
@@ -549,32 +534,37 @@ async fn deep_delete_cascades_children_then_parent() {
     let parents = crud(connection.clone(), "Parent");
     let mut children_repo = crud(connection.clone(), "Child");
     let notes = Arc::new(crud(connection, "Note"));
-    parents
+    let parent = parents
         .create(&mut record(&[("label", Value::from("p"))]))
         .await
         .unwrap();
-    let parent_id = parents.read(None, None).await.unwrap()[0].get("id").unwrap().clone();
-    children_repo
+    assert!(num(&parent, "id") > 0);
+    let parent_id = parent.get("id").unwrap().clone();
+    let child = children_repo
         .create(&mut record(&[("parent_id", parent_id.clone()), ("label", Value::from("a"))]))
         .await
         .unwrap();
-    let child_id = children_repo.read(None, None).await.unwrap()[0].get("id").unwrap().clone();
-    notes
+    assert!(num(&child, "id") > 0);
+    let child_id = child.get("id").unwrap().clone();
+    let note = notes
         .create(&mut record(&[("child_id", child_id), ("text", Value::from("n"))]))
         .await
         .unwrap();
-    notes
+    assert!(num(&note, "id") > 0);
+    let other = notes
         .create(&mut record(&[("text", Value::from("other")), ("label", Value::from("keep"))]))
         .await
         .unwrap();
+    assert!(num(&other, "id") > 0);
     children_repo.add_enriched(Enrichment::new("notes", "id", "child_id", None, true), notes.clone(), None);
     let children = Arc::new(children_repo);
     let mut parents = parents;
     parents.add_enriched(Enrichment::new("children", "id", "parent_id", None, true), children.clone(), None);
-    parents
+    let removed = parents
         .delete(&record(&[("id", parent_id)]), None)
         .await
         .unwrap();
+    assert_eq!(removed.rows_affected, 1);
     assert!(parents.read(None, None).await.unwrap().is_empty());
     assert!(children.read(None, None).await.unwrap().is_empty());
     assert_eq!(notes.read(None, None).await.unwrap()[0]["text"], Value::from("other"));
@@ -625,8 +615,11 @@ async fn bulk_create_writes_parents_and_children() {
         ])
         .await
         .unwrap();
-    assert_eq!(parents.read(None, None).await.unwrap().len(), 2);
+    let stored_parents = parents.read(None, None).await.unwrap();
+    assert_eq!(stored_parents.len(), 2);
     assert_eq!(children.read(None, None).await.unwrap().len(), 3);
     assert_eq!(response.rows_affected, 2);
+    let last_id = stored_parents.iter().map(|row| num(row, "id")).max().unwrap();
+    assert_eq!(response.result, Value::Int(last_id));
 }
 

@@ -249,7 +249,7 @@ describe("MemoryCommand and CRUDRepository", () => {
     expect(await collectAsync(repo.read(new WhereText('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
-    expect((await repo.create({ id: 2, name: "b" })).rowsAffected).toBe(1);
+    expect((await repo.create({ id: 2, name: "b" })).id).toBe(2);
     expect((await repo.update({ id: 2, name: "B" })).rowsAffected).toBe(1);
     expect(
       (await repo.update({ name: "C" }, new WhereText('{"id":2}'))).rowsAffected,

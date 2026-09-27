@@ -123,14 +123,16 @@ public class RepositoryTests
         var (repo, command) = Create();
         command.Response = new Response(new Value.Int(9), 1);
         var obj = new UserRow { id = 1, name = "a" };
-        await repo.Create(obj);
+        var created = await repo.Create(obj);
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
-        Assert.Equal(9, obj.id);
-        await repo.Update(obj);
+        Assert.Equal(9, created.id);
+        var updated = await repo.Update(obj);
+        Assert.Equal(1, updated.RowsAffected);
         Assert.Equal("UPDATE users SET name = $name WHERE id = $id", command.ExecuteCalls[1].Text);
         Assert.Equal(new Value.Text("a"), command.ExecuteCalls[1].Parameters![0].Value);
         Assert.Equal(new Value.Int(9), command.ExecuteCalls[1].Parameters![1].Value);
-        await repo.Delete(obj);
+        var removed = await repo.Delete(obj);
+        Assert.Equal(1, removed.RowsAffected);
         Assert.Equal("DELETE FROM users WHERE id = $id", command.ExecuteCalls[2].Text);
     }
 
@@ -140,8 +142,8 @@ public class RepositoryTests
         var (repo, command) = Create<Item>(id: ["Id"]);
         command.Response = new Response(new Value.Int(4), 1);
         var row = new Item { Name = "a" };
-        await repo.Create(row);
-        Assert.Equal(4, row.Id);
+        var created = await repo.Create(row);
+        Assert.Equal(4, created.Id);
         Assert.Contains("INSERT INTO users (Name)", command.ExecuteCalls[0].Text);
     }
 
@@ -149,10 +151,14 @@ public class RepositoryTests
     public async Task CompositeIdOmitsIdsOnCreate()
     {
         var (repo, command) = Create<Composite>(id: ["org_id", "user_id"]);
-        await repo.Create(new Composite { org_id = 1, user_id = 2, name = 3 });
+        var created = await repo.Create(new Composite { org_id = 1, user_id = 2, name = 3 });
+        Assert.Equal(1, created.org_id);
+        Assert.Equal(2, created.user_id);
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
         Assert.Equal(new Value.Int(3), command.ExecuteCalls[0].Parameters![0].Value);
-        await repo.Update(new Composite { org_id = 1, user_id = 2, name = 4 });
+        command.Response = new Response(Value.Null.Instance, 1);
+        var updated = await repo.Update(new Composite { org_id = 1, user_id = 2, name = 4 });
+        Assert.Equal(1, updated.RowsAffected);
         Assert.Contains("org_id = $org_id AND user_id = $user_id", command.ExecuteCalls[1].Text);
     }
 
@@ -160,36 +166,43 @@ public class RepositoryTests
     public async Task CreateAndUpdateOmitNullDatetimeAndVersion()
     {
         var (repo, command) = Create<Stamp>();
-        await repo.Create(new Stamp { name = "ada" });
+        command.Response = new Response(new Value.Int(7), 1);
+        var created = await repo.Create(new Stamp { name = "ada" });
+        Assert.Equal(7, created.id);
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
-        await repo.Update(new Stamp { id = 1, name = "ada" });
+        var updated = await repo.Update(new Stamp { id = 1, name = "ada" });
+        Assert.Equal(1, updated.RowsAffected);
         Assert.Equal("UPDATE users SET name = $name WHERE id = $id", command.ExecuteCalls[1].Text);
-        await repo.Create(new Stamp
+        var grace = await repo.Create(new Stamp
         {
             name = "grace",
             created = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
             version = [9, 9]
         });
+        Assert.Equal(7, grace.id);
         Assert.Equal(
             "INSERT INTO users (created, name, version) VALUES ($created, $name, $version)",
             command.ExecuteCalls[2].Text);
 
         var (rows, rowCommand) = Create<Row>();
-        await rows.Create(new Row
+        rowCommand.Response = new Response(new Value.Int(7), 1);
+        var createdRow = await rows.Create(new Row
         {
             ["id"] = 1,
             ["name"] = "ada",
             ["created"] = Value.Null.Instance,
             ["version"] = Value.Null.Instance
         });
+        Assert.Equal(new Value.Int(7), createdRow["id"]);
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", rowCommand.ExecuteCalls[0].Text);
-        await rows.Update(new Row
+        var updatedRow = await rows.Update(new Row
         {
             ["id"] = 1,
             ["name"] = "ada-v2",
             ["created"] = Value.Null.Instance,
             ["version"] = Value.Null.Instance
         });
+        Assert.Equal(1, updatedRow.RowsAffected);
         Assert.Equal("UPDATE users SET name = $name WHERE id = $id", rowCommand.ExecuteCalls[1].Text);
     }
 
@@ -236,10 +249,13 @@ public class RepositoryTests
         {
             Entity = "users"
         });
-        await typed.Create(new Item { Id = 1, Name = "a" });
+        command2.Response = new Response(Value.Null.Instance, 1);
+        var created = await typed.Create(new Item { Id = 1, Name = "a" });
+        Assert.Equal(1, created.Id);
         Assert.Contains("INSERT INTO users", command2.ExecuteCalls[0].Text);
         var where = new Where(new Operator.Equals("name", "z"));
-        await typed.Delete(new Item { Name = "z" }, where);
+        var removed = await typed.Delete(new Item { Name = "z" }, where);
+        Assert.Equal(1, removed.RowsAffected);
         Assert.Equal("DELETE FROM users WHERE name = $name", command2.ExecuteCalls[1].Text);
     }
 
@@ -351,16 +367,20 @@ public class RepositoryTests
             email = "bob@asdf.com",
             Contacts = [new Contact { Name = "bob" }, new Contact { Name = "roberta" }]
         };
-        await repo.Create(user);
+        command.Response = new Response(Value.Null.Instance, 1);
+        var created = await repo.Create(user);
+        Assert.Equal(1, created.id);
         Assert.Equal(
             "INSERT INTO users (contact_name1, contact_name2, email, username) VALUES ($contact_name1, $contact_name2, $email, $username)",
             command.ExecuteCalls[0].Text);
         var names = command.ExecuteCalls[0].Parameters!.ToDictionary(p => p.Name, p => p.Value);
         Assert.Equal(new Value.Text("bob"), names["contact_name1"]);
         Assert.Equal(new Value.Text("roberta"), names["contact_name2"]);
-        await repo.Update(user);
+        var updated = await repo.Update(user);
+        Assert.Equal(1, updated.RowsAffected);
         Assert.DoesNotContain("Contacts", command.ExecuteCalls[1].Text);
-        await repo.Delete(user);
+        var removed = await repo.Delete(user);
+        Assert.Equal(1, removed.RowsAffected);
         Assert.Equal("DELETE FROM users WHERE id = $id", command.ExecuteCalls[2].Text);
     }
 

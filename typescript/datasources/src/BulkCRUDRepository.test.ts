@@ -46,22 +46,27 @@ describe("BulkCRUDRepository", () => {
     expect(parents.every((parent) => parent.id > 0)).toBe(true);
     expect(children).toHaveLength(3);
     expect(response.rowsAffected).toBe(2);
+    expect(response.result).toBe(Math.max(...parents.map((parent) => parent.id)));
   });
 
   it("bulkCreate matches list create", async () => {
     const parentsRepo = new BulkCRUDRepository(Parent, await setup());
-    await parentsRepo.bulkCreate([
+    const response = await parentsRepo.bulkCreate([
       Object.assign(new Parent(), { label: "a" }),
       Object.assign(new Parent(), { label: "b" }),
     ]);
-    expect(await collectAsync(parentsRepo.read())).toHaveLength(2);
+    const parents = await collectAsync(parentsRepo.read());
+    expect(parents).toHaveLength(2);
+    expect(response.rowsAffected).toBe(2);
+    expect(response.result).toBe(Math.max(...parents.map((parent) => parent.id)));
   });
 
   it("keeps the first write when a later bulk update throws", async () => {
     const parentsRepo = new BulkCRUDRepository(Parent, await setup());
-    await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
-    await parentsRepo.create(Object.assign(new Parent(), { label: "b" }));
-    const first = (await collectAsync(parentsRepo.read())).find((parent) => parent.label === "a");
+    const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
+    expect(first.id).toBeGreaterThan(0);
+    const second = await parentsRepo.create(Object.assign(new Parent(), { label: "b" }));
+    expect(second.id).toBeGreaterThan(0);
     let seen = 0;
     parentsRepo.addMiddleware({
       beforeCommand() {
@@ -71,11 +76,11 @@ describe("BulkCRUDRepository", () => {
       afterCommand() {},
     });
     await expect(parentsRepo.updateMany([
-      Object.assign(new Parent(), { id: first?.id, label: "changed" }),
-      Object.assign(new Parent(), { id: first?.id, label: "later" }),
+      Object.assign(new Parent(), { id: first.id, label: "changed" }),
+      Object.assign(new Parent(), { id: first.id, label: "later" }),
     ])).rejects.toThrow(/stop/);
     const stored = await collectAsync(parentsRepo.read());
-    expect(stored.find((parent) => parent.id === first?.id)?.label).toBe("changed");
+    expect(stored.find((parent) => parent.id === first.id)?.label).toBe("changed");
   });
 
   it("rolls back a bulk update when useTransaction is on", async () => {
@@ -83,9 +88,10 @@ describe("BulkCRUDRepository", () => {
       type: Parent,
       write: new DefaultWriteEnrichmentStrategy(undefined, undefined, true),
     });
-    await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
-    await parentsRepo.create(Object.assign(new Parent(), { label: "b" }));
-    const first = (await collectAsync(parentsRepo.read())).find((parent) => parent.label === "a");
+    const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
+    expect(first.id).toBeGreaterThan(0);
+    const second = await parentsRepo.create(Object.assign(new Parent(), { label: "b" }));
+    expect(second.id).toBeGreaterThan(0);
     let seen = 0;
     parentsRepo.addMiddleware({
       beforeCommand() {
@@ -95,41 +101,42 @@ describe("BulkCRUDRepository", () => {
       afterCommand() {},
     });
     await expect(parentsRepo.updateMany([
-      Object.assign(new Parent(), { id: first?.id, label: "changed" }),
-      Object.assign(new Parent(), { id: first?.id, label: "later" }),
+      Object.assign(new Parent(), { id: first.id, label: "changed" }),
+      Object.assign(new Parent(), { id: first.id, label: "later" }),
     ])).rejects.toThrow(/stop/);
     const stored = await collectAsync(parentsRepo.read());
-    expect(stored.find((parent) => parent.id === first?.id)?.label).toBe("a");
+    expect(stored.find((parent) => parent.id === first.id)?.label).toBe("a");
   });
 
   it("update replace-syncs each parent", async () => {
     const connection = await setup();
     const parentsRepo = new BulkCRUDRepository(Parent, connection);
     const childrenRepo = new BulkCRUDRepository(Child, connection);
-    await parentsRepo.create(Object.assign(new Parent(), { label: "one" }));
-    await parentsRepo.create(Object.assign(new Parent(), { label: "two" }));
-    const parents = await collectAsync(parentsRepo.read());
-    const first = parents.find((parent) => parent.label === "one");
-    const second = parents.find((parent) => parent.label === "two");
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: first?.id, label: "a" }));
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: second?.id, label: "b" }));
-    const kept = (await collectAsync(childrenRepo.read())).find((child) => child.parent_id === first?.id);
-    await relate(parentsRepo, childrenRepo).updateBulk([
+    const first = await parentsRepo.create(Object.assign(new Parent(), { label: "one" }));
+    expect(first.id).toBeGreaterThan(0);
+    const second = await parentsRepo.create(Object.assign(new Parent(), { label: "two" }));
+    expect(second.id).toBeGreaterThan(0);
+    const kept = await childrenRepo.create(Object.assign(new Child(), { parent_id: first.id, label: "a" }));
+    expect(kept.id).toBeGreaterThan(0);
+    const dropped = await childrenRepo.create(Object.assign(new Child(), { parent_id: second.id, label: "b" }));
+    expect(dropped.id).toBeGreaterThan(0);
+    const response = await relate(parentsRepo, childrenRepo).updateBulk([
       Object.assign(new Parent(), {
-        id: first?.id,
+        id: first.id,
         label: "one",
-        children: [Object.assign(new Child(), { id: kept?.id, label: "aa" })],
+        children: [Object.assign(new Child(), { id: kept.id, label: "aa" })],
       }),
       Object.assign(new Parent(), {
-        id: second?.id,
+        id: second.id,
         label: "two",
         children: [Object.assign(new Child(), { label: "c" })],
       }),
     ]);
+    expect(response.rowsAffected).toBe(2);
     const children = await collectAsync(childrenRepo.read());
     expect(children).toHaveLength(2);
-    expect(children.find((child) => child.parent_id === first?.id)?.label).toBe("aa");
-    expect(children.find((child) => child.parent_id === second?.id)?.label).toBe("c");
+    expect(children.find((child) => child.parent_id === first.id)?.label).toBe("aa");
+    expect(children.find((child) => child.parent_id === second.id)?.label).toBe("c");
     expect(children.some((child) => child.label === "b")).toBe(false);
   });
 
@@ -137,18 +144,21 @@ describe("BulkCRUDRepository", () => {
     const connection = await setup();
     const parentsRepo = new BulkCRUDRepository(Parent, connection);
     const childrenRepo = new BulkCRUDRepository(Child, connection);
-    await parentsRepo.create(Object.assign(new Parent(), { label: "one" }));
-    await parentsRepo.create(Object.assign(new Parent(), { label: "two" }));
-    const parents = await collectAsync(parentsRepo.read());
-    const first = parents.find((parent) => parent.label === "one");
-    const second = parents.find((parent) => parent.label === "two");
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: first?.id, label: "a" }));
-    await childrenRepo.create(Object.assign(new Child(), { parent_id: second?.id, label: "b" }));
-    await childrenRepo.create(Object.assign(new Child(), { label: "keep" }));
-    await relate(parentsRepo, childrenRepo).deleteBulk([
-      Object.assign(new Parent(), { id: first?.id }),
-      Object.assign(new Parent(), { id: second?.id }),
+    const first = await parentsRepo.create(Object.assign(new Parent(), { label: "one" }));
+    expect(first.id).toBeGreaterThan(0);
+    const second = await parentsRepo.create(Object.assign(new Parent(), { label: "two" }));
+    expect(second.id).toBeGreaterThan(0);
+    const firstChild = await childrenRepo.create(Object.assign(new Child(), { parent_id: first.id, label: "a" }));
+    expect(firstChild.id).toBeGreaterThan(0);
+    const secondChild = await childrenRepo.create(Object.assign(new Child(), { parent_id: second.id, label: "b" }));
+    expect(secondChild.id).toBeGreaterThan(0);
+    const kept = await childrenRepo.create(Object.assign(new Child(), { label: "keep" }));
+    expect(kept.id).toBeGreaterThan(0);
+    const response = await relate(parentsRepo, childrenRepo).deleteBulk([
+      Object.assign(new Parent(), { id: first.id }),
+      Object.assign(new Parent(), { id: second.id }),
     ]);
+    expect(response.rowsAffected).toBe(2);
     expect(await collectAsync(parentsRepo.read())).toEqual([]);
     expect((await collectAsync(childrenRepo.read())).map((child) => child.label)).toEqual(["keep"]);
   });
