@@ -10,6 +10,20 @@ use std::sync::Arc;
 
 pub struct PostgresDriver;
 
+pub(crate) fn column_sql(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "int" => "INTEGER",
+        "uuid" => "UUID",
+        "string" => "TEXT",
+        "bool" => "BOOLEAN",
+        "decimal" => "NUMERIC",
+        "float" => "DOUBLE PRECISION",
+        "datetime" => "TIMESTAMPTZ",
+        "binary" => "BYTEA",
+        _ => return None,
+    })
+}
+
 impl Driver for PostgresDriver {
     fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
         PostgresConnection::from_options(options)
@@ -35,22 +49,9 @@ impl Driver for PostgresDriver {
     }
 
     fn column_type(&self, name: &str) -> Result<String> {
-        Ok(match name {
-            "int" => "INTEGER",
-            "uuid" => "UUID",
-            "string" => "TEXT",
-            "bool" => "BOOLEAN",
-            "decimal" => "NUMERIC",
-            "float" => "DOUBLE PRECISION",
-            "datetime" => "TIMESTAMPTZ",
-            "binary" => "BYTEA",
-            _ => {
-                return Err(DatasourceError::message(format!(
-                    "Unknown postgres type \"{name}\""
-                )))
-            }
-        }
-        .into())
+        column_sql(name)
+            .map(str::to_string)
+            .ok_or_else(|| DatasourceError::message(format!("Unknown postgres type \"{name}\"")))
     }
 }
 

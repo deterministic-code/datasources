@@ -844,7 +844,7 @@ The connection must be open before `Execute` / `execute` / `execute` or `Execute
 
 Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
 
-SQLite, MySQL, and Postgres run a provider `CreateTableStatementRenderer` on statement `Execute` / `ExecuteReader`. It overrides column type, default, and identity, then the command executes that text. Wrapped create-table text and every other statement pass through. Other dialects send `GetText()` / `getText()` / `get_text()`.
+SQLite, MySQL, and Postgres map statement `Execute` / `ExecuteReader` through a provider statement factory. A compiled create table is rendered by that dialect's `CreateTableStatementRenderer`, which overrides column type, default, and identity, then the command executes that text. The factory stays separate from the renderer. Wrapped create-table text and every other statement pass through. Other dialects send `GetText()` / `getText()` / `get_text()`.
 
 The Rust `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection today.
 

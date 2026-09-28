@@ -1,7 +1,5 @@
 use crate::connection::{map_err, MysqlConnection};
-use crate::converters::{
-    BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
-};
+use crate::converters;
 use crate::engine::to_mysql;
 use crate::reader::MysqlReader;
 use crate::statement_factory::MysqlStatementFactory;
@@ -9,7 +7,7 @@ use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
     CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, ReturnStatement,
-    Statement, StatementKind, TypeConverter, Value,
+    Statement, StatementKind, Value,
 };
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Row, Value as MysqlValue};
@@ -176,20 +174,8 @@ impl MysqlCommand {
     }
 }
 
-fn reverse(value: &Value) -> Value {
-    match value {
-        Value::DateTime(_) => DateTimeConverter.reverse_convert(value),
-        Value::Bool(_) => BoolConverter.reverse_convert(value),
-        Value::Uuid(_) => UuidConverter.reverse_convert(value),
-        Value::Decimal(_) => DecimalConverter.reverse_convert(value),
-        Value::Binary(_) => BinaryConverter.reverse_convert(value),
-        _ => return value.clone(),
-    }
-    .unwrap_or_else(|_| value.clone())
-}
-
 fn to_mysql_value(value: &Value) -> MysqlValue {
-    match reverse(value) {
+    match converters::reverse(value) {
         Value::Null => MysqlValue::NULL,
         Value::Int(value) => MysqlValue::Int(value),
         Value::Float(value) => MysqlValue::Double(value),

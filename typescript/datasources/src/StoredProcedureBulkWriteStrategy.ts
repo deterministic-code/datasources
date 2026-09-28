@@ -3,16 +3,16 @@ import { DatasourceError } from "./DatasourceError.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import { ExecuteStoredProcedureStatement } from "./statements/ExecuteStoredProcedureStatement.ts";
+import type { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import { execute } from "./ICommand.ts";
-import type { IBulkWrite } from "./IBulkWrite.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 
 const empty = (): Response => ({ result: null, rowsAffected: 0 });
 
-const call = <T>(write: IBulkWrite<T>, name: string, items: T[]): Promise<Response> => {
+const call = <T extends object>(repo: BulkCRUDRepository<T>, name: string, items: T[]): Promise<Response> => {
   if (items.length === 0) return Promise.resolve(empty());
-  const payload = { name: "payload", value: json(write.rows(items)) };
-  return execute(write.command, new ExecuteStoredProcedureStatement(name, [payload]), [payload]);
+  const payload = { name: "payload", value: json(repo.rows(items)) };
+  return execute(repo.command(), new ExecuteStoredProcedureStatement(name, [payload]), [payload]);
 };
 
 const json = (rows: Cells[]): string => `[${rows.map(object).join(",")}]`;
@@ -67,11 +67,11 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
     private readonly deleteName: string,
   ) {}
 
-  create = (items: T[], write: IBulkWrite<T>): Promise<Response> => call(write, this.createName, items);
+  create = (items: T[], repo: BulkCRUDRepository<T>): Promise<Response> => call(repo, this.createName, items);
 
-  update = (items: T[], _byWhere: IWhere | undefined, write: IBulkWrite<T>): Promise<Response> =>
-    call(write, this.updateName, items);
+  update = (items: T[], _byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response> =>
+    call(repo, this.updateName, items);
 
-  delete = (items: T[], _byWhere: IWhere | undefined, write: IBulkWrite<T>): Promise<Response> =>
-    call(write, this.deleteName, items);
+  delete = (items: T[], _byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response> =>
+    call(repo, this.deleteName, items);
 }

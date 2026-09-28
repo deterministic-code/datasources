@@ -1,4 +1,4 @@
-use crate::bulk_write::BulkWrite;
+use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::i_where::IWhere;
 use crate::response::Response;
@@ -11,10 +11,10 @@ pub struct SingleCommands;
 
 #[async_trait]
 impl BulkWriteStrategy for SingleCommands {
-    async fn create(&self, items: &mut [Row], write: &dyn BulkWrite) -> Result<Response> {
+    async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response> {
         let mut result = Value::Null;
         for item in items.iter_mut() {
-            result = write.create_one(item).await?;
+            result = repo.create_one(item).await?;
         }
         Ok(Response::new(result, items.len() as i64))
     }
@@ -23,12 +23,12 @@ impl BulkWriteStrategy for SingleCommands {
         &self,
         items: &[Row],
         by_where: Option<&dyn IWhere>,
-        write: &dyn BulkWrite,
+        repo: &BulkCRUDRepository,
     ) -> Result<Response> {
         let mut result = Value::Null;
         let mut rows_affected = 0;
         for item in items {
-            let response = write.update_one(item, by_where).await?;
+            let response = repo.update_one(item, by_where).await?;
             result = response.result;
             rows_affected += response.rows_affected;
         }
@@ -39,12 +39,12 @@ impl BulkWriteStrategy for SingleCommands {
         &self,
         items: &[Row],
         by_where: Option<&dyn IWhere>,
-        write: &dyn BulkWrite,
+        repo: &BulkCRUDRepository,
     ) -> Result<Response> {
         let mut result = Value::Null;
         let mut rows_affected = 0;
         for item in items {
-            let response = write.delete_one(item, by_where).await?;
+            let response = repo.delete_one(item, by_where).await?;
             result = response.result;
             rows_affected += response.rows_affected;
         }

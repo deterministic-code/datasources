@@ -10,6 +10,17 @@ use std::sync::Arc;
 
 pub struct SqliteDriver;
 
+pub(crate) fn column_sql(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "int" | "bool" => "INTEGER",
+        "uuid" | "string" | "datetime" => "TEXT",
+        "decimal" => "NUMERIC",
+        "float" => "REAL",
+        "binary" => "BLOB",
+        _ => return None,
+    })
+}
+
 impl Driver for SqliteDriver {
     fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
         SqliteConnection::from_options(options)
@@ -35,19 +46,9 @@ impl Driver for SqliteDriver {
     }
 
     fn column_type(&self, name: &str) -> Result<String> {
-        Ok(match name {
-            "int" | "bool" => "INTEGER",
-            "uuid" | "string" | "datetime" => "TEXT",
-            "decimal" => "NUMERIC",
-            "float" => "REAL",
-            "binary" => "BLOB",
-            _ => {
-                return Err(DatasourceError::message(format!(
-                    "Unknown sqlite type \"{name}\""
-                )))
-            }
-        }
-        .into())
+        column_sql(name)
+            .map(str::to_string)
+            .ok_or_else(|| DatasourceError::message(format!("Unknown sqlite type \"{name}\"")))
     }
 }
 

@@ -9,7 +9,7 @@ internal static class PostgresBind
     public static (string Sql, object?[] Values) ToPostgres(string sql, Row parameters)
     {
         var (text, names) = Rewrite(sql);
-        return (text, names.Select(name => parameters.TryGetValue(name, out var value) ? Reverse(value).ToObject() : null).ToArray());
+        return (text, names.Select(name => parameters.TryGetValue(name, out var value) ? PostgresRowTypeConverters.Reverse(value).ToObject() : null).ToArray());
     }
 
     public static (string Sql, Parameter[] Bound) ToPostgres(string sql, IReadOnlyList<Parameter>? parameters)
@@ -40,16 +40,6 @@ internal static class PostgresBind
         });
         return (text, names);
     }
-
-    public static Value Reverse(Value value) => value switch
-    {
-        Value.DateTime => new DateTimeConverter().ReverseConvert(value),
-        Value.Guid => new UuidConverter().ReverseConvert(value),
-        Value.Decimal => new DecimalConverter().ReverseConvert(value),
-        Value.Bool => new BoolConverter().ReverseConvert(value),
-        Value.Binary => new BinaryConverter().ReverseConvert(value),
-        _ => value
-    };
 
     public static string IsolationSql(IsolationLevel isolation) => isolation switch
     {

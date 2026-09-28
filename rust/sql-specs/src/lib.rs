@@ -4,7 +4,7 @@ use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
-    InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
+    InsertedIdStatement, InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
     SelectStatementOptions, Text, TransformMapper, TypeConverter, UpdateStatement, Value, Where,
 };
 use rust_decimal::Decimal;
@@ -491,15 +491,6 @@ fn apply_mappers(options: &mut CRUDRepositoryOptions, spec: &Spec, dialect: &Rep
     }
 }
 
-fn inserted_id_sql(provider: &str, column: &str) -> Option<String> {
-    match provider {
-        "sqlite" => Some(format!("SELECT last_insert_rowid() AS {column}")),
-        "mysql" => Some(format!("SELECT LAST_INSERT_ID() AS {column}")),
-        "postgres" => Some(format!("SELECT lastval() AS {column}")),
-        _ => None,
-    }
-}
-
 fn queries(spec: &Spec, provider: &str) -> Vec<String> {
     let columns = columns_of(&spec.type_spec);
     let refs: Vec<&str> = columns.iter().map(String::as_str).collect();
@@ -597,7 +588,10 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
                     .type_spec
                     .ids
                     .first()
-                    .and_then(|column| inserted_id_sql(provider, column))
+                    .and_then(|column| {
+                        let sql = InsertedIdStatement::select_sql(provider, column);
+                        (!sql.is_empty()).then_some(sql)
+                    })
                 {
                     out.push(inserted);
                 }

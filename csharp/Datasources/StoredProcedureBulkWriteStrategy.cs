@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Datasources;
 
-public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T>
+public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> where T : new()
 {
     readonly string create;
     readonly string update;
@@ -12,21 +12,21 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T>
     public StoredProcedureBulkWriteStrategy(string create, string update, string delete) =>
         (this.create, this.update, this.delete) = (create, update, delete);
 
-    public Task<Response> Create(IReadOnlyList<T> items, IBulkWrite<T> write) =>
-        Call(write, create, items);
+    public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo) =>
+        Call(repo, create, items);
 
-    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, IBulkWrite<T> write) =>
-        Call(write, update, items);
+    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo) =>
+        Call(repo, update, items);
 
-    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, IBulkWrite<T> write) =>
-        Call(write, delete, items);
+    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo) =>
+        Call(repo, delete, items);
 
-    static Task<Response> Call(IBulkWrite<T> write, string name, IReadOnlyList<T> items)
+    static Task<Response> Call(BulkCRUDRepository<T> repo, string name, IReadOnlyList<T> items)
     {
         if (items.Count == 0)
             return Task.FromResult(new Response(Value.Null.Instance, 0));
-        var payload = new Parameter("payload", Json(write.Rows(items)));
-        return write.Command.Execute(new ExecuteStoredProcedureStatement(name, [payload]), [payload]);
+        var payload = new Parameter("payload", Json(repo.Rows(items)));
+        return repo.Command().Execute(new ExecuteStoredProcedureStatement(name, [payload]), [payload]);
     }
 
     static string Json(IReadOnlyList<Row> rows) =>

@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace Datasources;
 
-public class BulkCRUDRepository<T> : CRUDRepository<T>, IBulkWrite<T> where T : new()
+public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 {
     readonly IBulkWriteStrategy<T> bulk;
     readonly bool useTransaction;
@@ -57,24 +57,24 @@ public class BulkCRUDRepository<T> : CRUDRepository<T>, IBulkWrite<T> where T : 
     public Task<Response> BulkDelete(IReadOnlyList<T> items, IWhere? byWhere = null) =>
         Delete(items, byWhere);
 
-    ICommand IBulkWrite<T>.Command => Command();
+    public new ICommand Command() => base.Command();
 
-    async Task<Value> IBulkWrite<T>.CreateOne(T item) => IdOf(await Create(item));
+    public async Task<Value> CreateOne(T item) => IdOf(await Create(item));
 
-    Task<Response> IBulkWrite<T>.UpdateOne(T item, IWhere? byWhere) => Update(item, byWhere);
+    public Task<Response> UpdateOne(T item, IWhere? byWhere) => Update(item, byWhere);
 
-    Task<Response> IBulkWrite<T>.DeleteOne(T item, IWhere? byWhere) => Delete(item, byWhere);
+    public Task<Response> DeleteOne(T item, IWhere? byWhere) => Delete(item, byWhere);
 
-    IReadOnlyList<BulkCommand> IBulkWrite<T>.Inserts(IReadOnlyList<T> items) =>
+    public IReadOnlyList<BulkCommand> Inserts(IReadOnlyList<T> items) =>
         [.. items.Select(item => Insert(Stored(item)))];
 
-    IReadOnlyList<BulkCommand> IBulkWrite<T>.Updates(IReadOnlyList<T> items, IWhere? byWhere) =>
+    public IReadOnlyList<BulkCommand> Updates(IReadOnlyList<T> items, IWhere? byWhere) =>
         [.. items.Select(item => UpdateCommand(Stored(item), byWhere))];
 
-    IReadOnlyList<BulkCommand> IBulkWrite<T>.Deletes(IReadOnlyList<T> items, IWhere? byWhere) =>
+    public IReadOnlyList<BulkCommand> Deletes(IReadOnlyList<T> items, IWhere? byWhere) =>
         [.. items.Select(item => DeleteCommand(Stored(item), byWhere))];
 
-    IReadOnlyList<Row> IBulkWrite<T>.Rows(IReadOnlyList<T> items) =>
+    public IReadOnlyList<Row> Rows(IReadOnlyList<T> items) =>
         [.. items.Select(RowOf)];
 
     Value IdOf(T item)

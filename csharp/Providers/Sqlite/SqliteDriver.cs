@@ -10,13 +10,19 @@ public sealed class SqliteDriver : IDriver
         new SqliteTransaction((SqliteConnection)connection, isolation);
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => SqliteRowTypeConverters.All;
 
-    public string ColumnType(string name) => name switch
-    {
-        "int" or "bool" => "INTEGER",
-        "uuid" or "string" or "datetime" => "TEXT",
-        "decimal" => "NUMERIC",
-        "float" => "REAL",
-        "binary" => "BLOB",
-        _ => throw new DatasourceException($"Unknown sqlite type \"{name}\"")
-    };
+    internal static readonly IReadOnlyDictionary<string, string> ColumnTypes =
+        new Dictionary<string, string>
+        {
+            ["int"] = "INTEGER",
+            ["bool"] = "INTEGER",
+            ["uuid"] = "TEXT",
+            ["string"] = "TEXT",
+            ["datetime"] = "TEXT",
+            ["decimal"] = "NUMERIC",
+            ["float"] = "REAL",
+            ["binary"] = "BLOB",
+        };
+
+    public string ColumnType(string name) =>
+        ColumnTypes.TryGetValue(name, out var sql) ? sql : throw new DatasourceException($"Unknown sqlite type \"{name}\"");
 }

@@ -1,0 +1,9 @@
+using Datasources;
+
+namespace Datasources.Sqlite;
+
+internal sealed class SqliteCreateTableStatementRenderer : CreateTableStatementRenderer
+{
+    protected override string Type(Column column) =>
+        SqliteDriver.ColumnTypes.TryGetValue(column.Type, out var sql) ? sql : column.Type;
+}
