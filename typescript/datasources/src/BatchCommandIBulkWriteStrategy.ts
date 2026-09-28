@@ -1,15 +1,15 @@
+import type { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import type { BulkCommand } from "./BulkCommand.ts";
-import type { IBulkWrite } from "./IBulkWrite.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 
 const empty = (): Response => ({ result: null, rowsAffected: 0 });
 
-const send = <T>(write: IBulkWrite<T>, commands: BulkCommand[]): Promise<Response> => {
+const send = <T extends object>(repo: BulkCRUDRepository<T>, commands: BulkCommand[]): Promise<Response> => {
   if (commands.length === 0) return Promise.resolve(empty());
   const renamed = commands.map(rename);
-  return write.command.execute(
+  return repo.command().execute(
     renamed.map((command) => command.text).join("; "),
     renamed.flatMap((command) => command.parameters),
   );
@@ -47,11 +47,11 @@ const renameToken = (text: string, name: string, alias: string): string => {
 };
 
 export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T> {
-  create = (items: T[], write: IBulkWrite<T>): Promise<Response> => send(write, write.inserts(items));
+  create = (items: T[], repo: BulkCRUDRepository<T>): Promise<Response> => send(repo, repo.inserts(items));
 
-  update = (items: T[], byWhere: IWhere | undefined, write: IBulkWrite<T>): Promise<Response> =>
-    send(write, write.updates(items, byWhere));
+  update = (items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response> =>
+    send(repo, repo.updates(items, byWhere));
 
-  delete = (items: T[], byWhere: IWhere | undefined, write: IBulkWrite<T>): Promise<Response> =>
-    send(write, write.deletes(items, byWhere));
+  delete = (items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response> =>
+    send(repo, repo.deletes(items, byWhere));
 }

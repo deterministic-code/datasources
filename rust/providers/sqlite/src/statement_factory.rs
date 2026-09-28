@@ -1,7 +1,7 @@
-use crate::driver::SqliteDriver;
+use crate::create_table_statement_renderer::SqliteCreateTableStatementRenderer;
 use datasources::{
-    Column, CreateTableStatement, CreateTableStatementRenderer, Driver, InsertedIdStatement,
-    SelectStatement, Statement, Text,
+    CreateTableStatement, CreateTableStatementRenderer, InsertedIdStatement, SelectStatement,
+    Statement, Text,
 };
 
 pub struct SqliteStatementFactory;
@@ -22,29 +22,18 @@ impl Transformed<'_> {
     }
 }
 
-impl CreateTableStatementRenderer for SqliteStatementFactory {
-    fn type_name(&self, column: &Column) -> String {
-        match column.type_name.as_str() {
-            "int" | "uuid" | "string" | "datetime" | "bool" | "decimal" | "float" | "binary" => {
-                SqliteDriver.column_type(&column.type_name).unwrap()
-            }
-            _ => column.type_name.clone(),
-        }
-    }
-}
-
 impl SqliteStatementFactory {
     pub fn transform<'a>(&self, statement: &'a dyn Statement) -> Transformed<'a> {
         if let Some(inserted) = statement.as_any().downcast_ref::<InsertedIdStatement>() {
-            return Transformed::Select(SelectStatement::text(format!(
-                "SELECT last_insert_rowid() AS {}",
-                inserted.column
+            return Transformed::Select(SelectStatement::text(InsertedIdStatement::select_sql(
+                "sqlite",
+                &inserted.column,
             )));
         }
         match statement.as_any().downcast_ref::<CreateTableStatement>() {
-            Some(create) if create.table.is_some() => {
-                Transformed::Create(CreateTableStatement::text(self.render(create)))
-            }
+            Some(create) if create.table.is_some() => Transformed::Create(CreateTableStatement::text(
+                SqliteCreateTableStatementRenderer.render(create),
+            )),
             _ => Transformed::Same(statement),
         }
     }

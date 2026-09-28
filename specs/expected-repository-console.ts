@@ -5,6 +5,7 @@ import {
   InsertStatement,
   UpdateStatement,
   DeleteStatement,
+  InsertedIdStatement,
   Where,
   type Field,
   type IExpression,
@@ -111,13 +112,6 @@ const withStatementSql = (sql: string, write: boolean, type: RepositoryTypeSpec)
       : (type.crudMapper?.querySuffix ?? "")
   }`;
 
-const insertedIdSql = (provider: string, column: string): string =>
-  ({
-    sqlite: `SELECT last_insert_rowid() AS ${column}`,
-    mysql: `SELECT LAST_INSERT_ID() AS ${column}`,
-    postgres: `SELECT lastval() AS ${column}`,
-  })[provider] ?? "";
-
 export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[] => {
   const { type } = spec;
   const ids = idsOf(type);
@@ -190,7 +184,7 @@ export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[]
     const step = spec.steps[index];
     const inserted =
       step?.CREATE && spec.type.ids.length === 1
-        ? insertedIdSql(provider, spec.type.ids[0] ?? "id")
+        ? InsertedIdStatement.select(provider, spec.type.ids[0] ?? "id")
         : "";
     return inserted ? [sql, inserted] : [sql];
   });

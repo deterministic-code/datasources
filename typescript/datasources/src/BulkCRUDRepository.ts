@@ -10,9 +10,9 @@ import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
 import { Literal, Operator, UpdateStatement, Where } from "./statements/index.ts";
 import type { IWhere } from "./statements/IWhere.ts";
+import type { ICommand } from "./ICommand.ts";
 import type { Parameter } from "./Parameter.ts";
 import type { BulkCommand } from "./BulkCommand.ts";
-import type { IBulkWrite } from "./IBulkWrite.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { SingleCommands } from "./SingleCommands.ts";
@@ -29,7 +29,7 @@ const fieldsOf = (
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name: column(name), value: cell(name, value, true) as Scalar }));
 
-const isBulkStrategy = <T>(value: unknown): value is IBulkWriteStrategy<T> =>
+const isBulkStrategy = <T extends object>(value: unknown): value is IBulkWriteStrategy<T> =>
   typeof value === "object" &&
   value !== null &&
   "create" in value &&
@@ -68,6 +68,8 @@ const inTransaction = async <TResult>(
 export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository<T> {
   private readonly strategy: IBulkWriteStrategy<T>;
   private readonly transactional: boolean;
+  /** Widens the protected repository command so a bulk strategy can execute it. */
+  declare command: () => ICommand;
 
   constructor(type: Constructable<T>, connection: IConnection, bulk?: IBulkWriteStrategy<T>);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>, bulk?: IBulkWriteStrategy<T>);
@@ -92,28 +94,29 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   }
 
   createBulk = (items: T[]): Promise<Response> =>
-    inTransaction(this.transactional, this.command().connection, () => this.strategy.create(items, this.asWrite()));
+    inTransaction(this.transactional, this.command().connection, () => this.strategy.create(items, this));
 
   updateBulk = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    inTransaction(this.transactional, this.command().connection, () =>
-      this.strategy.update(items, byWhere, this.asWrite()),
-    );
+    inTransaction(this.transactional, this.command().connection, () => this.strategy.update(items, byWhere, this));
 
   deleteBulk = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    inTransaction(this.transactional, this.command().connection, () =>
-      this.strategy.delete(items, byWhere, this.asWrite()),
-    );
+    inTransaction(this.transactional, this.command().connection, () => this.strategy.delete(items, byWhere, this));
 
-  private asWrite = (): IBulkWrite<T> => ({
-    command: this.command(),
-    createOne: async (item) => this.idOf(await this.create(item)),
-    updateOne: (item, byWhere) => this.update(item, byWhere),
-    deleteOne: (item, byWhere) => this.delete(item, byWhere),
-    inserts: (items) => items.map((item) => this.insertCommand(this.stripped(item))),
-    updates: (items, byWhere) => items.map((item) => this.updateCommand(this.stripped(item), byWhere)),
-    deletes: (items, byWhere) => items.map((item) => this.deleteCommand(this.stripped(item), byWhere)),
-    rows: (items) => items.map((item) => this.rowOf(item)),
-  });
+  createOne = async (item: T): Promise<Scalar | undefined> => this.idOf(await this.create(item));
+
+  updateOne = (item: T, byWhere?: IWhere): Promise<Response> => this.update(item, byWhere);
+
+  deleteOne = (item: T, byWhere?: IWhere): Promise<Response> => this.delete(item, byWhere);
+
+  inserts = (items: T[]): BulkCommand[] => items.map((item) => this.insertCommand(this.stripped(item)));
+
+  updates = (items: T[], byWhere?: IWhere): BulkCommand[] =>
+    items.map((item) => this.updateCommand(this.stripped(item), byWhere));
+
+  deletes = (items: T[], byWhere?: IWhere): BulkCommand[] =>
+    items.map((item) => this.deleteCommand(this.stripped(item), byWhere));
+
+  rows = (items: T[]): Cells[] => items.map((item) => this.rowOf(item));
 
   private idOf = (item: T): Scalar | undefined =>
     this.ids.length === 1 ? scalarOf((item as Record<string, Scalar | object>)[this.ids[0]!]) : undefined;

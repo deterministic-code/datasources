@@ -1,4 +1,4 @@
-use crate::bulk_write::BulkWrite;
+use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::i_where::IWhere;
 use crate::parameter::Parameter;
@@ -36,37 +36,36 @@ impl StoredProcedureBulkWriteStrategy {
 
 #[async_trait]
 impl BulkWriteStrategy for StoredProcedureBulkWriteStrategy {
-    async fn create(&self, items: &mut [Row], write: &dyn BulkWrite) -> Result<Response> {
-        call(write, &self.create, items).await
+    async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response> {
+        call(repo, &self.create, items).await
     }
 
     async fn update(
         &self,
         items: &[Row],
         _by_where: Option<&dyn IWhere>,
-        write: &dyn BulkWrite,
+        repo: &BulkCRUDRepository,
     ) -> Result<Response> {
-        call(write, &self.update, items).await
+        call(repo, &self.update, items).await
     }
 
     async fn delete(
         &self,
         items: &[Row],
         _by_where: Option<&dyn IWhere>,
-        write: &dyn BulkWrite,
+        repo: &BulkCRUDRepository,
     ) -> Result<Response> {
-        call(write, &self.delete, items).await
+        call(repo, &self.delete, items).await
     }
 }
 
-async fn call(write: &dyn BulkWrite, name: &str, items: &[Row]) -> Result<Response> {
+async fn call(repo: &BulkCRUDRepository, name: &str, items: &[Row]) -> Result<Response> {
     if items.is_empty() {
         return Ok(Response::new(Value::Null, 0));
     }
-    let payload = Parameter::new("payload", json(&write.rows(items)?));
+    let payload = Parameter::new("payload", json(&repo.rows(items)?));
     let statement = ExecuteStoredProcedureStatement::new(name, &[payload.clone()]);
-    write
-        .command()
+    repo.command()
         .execute_statement(&statement, Some(&[payload]))
         .await
 }

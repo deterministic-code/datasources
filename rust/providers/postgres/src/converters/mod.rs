@@ -13,23 +13,29 @@ pub use datetime_converter::DateTimeConverter;
 pub use decimal_converter::DecimalConverter;
 pub use uuid_converter::UuidConverter;
 
+fn catalog() -> Vec<(&'static str, Box<dyn TypeConverter<Value, Value> + Send + Sync>)> {
+    vec![
+        ("bool", Box::new(BoolConverter)),
+        ("datetime", Box::new(DateTimeConverter)),
+        ("uuid", Box::new(UuidConverter)),
+        ("decimal", Box::new(DecimalConverter)),
+        ("binary", Box::new(BinaryConverter)),
+    ]
+}
+
 pub fn row_type_converters() -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
 {
-    ["bool", "datetime", "uuid", "decimal", "binary"]
+    catalog()
         .into_iter()
-        .map(|key| (key.into(), field(key).unwrap_or_else(|| panic!("{key}"))))
+        .map(|(key, converter)| (key.to_string(), converter))
         .collect()
 }
 
 pub fn field(canonical: &str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
-    match canonical {
-        "bool" => Some(Box::new(BoolConverter)),
-        "datetime" => Some(Box::new(DateTimeConverter)),
-        "uuid" => Some(Box::new(UuidConverter)),
-        "decimal" => Some(Box::new(DecimalConverter)),
-        "binary" => Some(Box::new(BinaryConverter)),
-        _ => None,
-    }
+    catalog()
+        .into_iter()
+        .find(|(key, _)| *key == canonical)
+        .map(|(_, converter)| converter)
 }
 
 #[cfg(test)]

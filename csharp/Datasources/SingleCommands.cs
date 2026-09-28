@@ -1,20 +1,20 @@
 namespace Datasources;
 
-public sealed class SingleCommands<T> : IBulkWriteStrategy<T>
+public sealed class SingleCommands<T> : IBulkWriteStrategy<T> where T : new()
 {
-    public async Task<Response> Create(IReadOnlyList<T> items, IBulkWrite<T> write)
+    public async Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
     {
         var result = (Value)Value.Null.Instance;
         foreach (var item in items)
-            result = await write.CreateOne(item);
+            result = await repo.CreateOne(item);
         return new Response(result, items.Count);
     }
 
-    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, IBulkWrite<T> write) =>
-        Fold(items, item => write.UpdateOne(item, byWhere));
+    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo) =>
+        Fold(items, item => repo.UpdateOne(item, byWhere));
 
-    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, IBulkWrite<T> write) =>
-        Fold(items, item => write.DeleteOne(item, byWhere));
+    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo) =>
+        Fold(items, item => repo.DeleteOne(item, byWhere));
 
     static async Task<Response> Fold(IReadOnlyList<T> items, Func<T, Task<Response>> write)
     {

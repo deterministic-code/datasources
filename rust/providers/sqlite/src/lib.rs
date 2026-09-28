@@ -2,6 +2,7 @@ mod command;
 mod connection;
 mod connection_string;
 mod converters;
+mod create_table_statement_renderer;
 mod driver;
 mod reader;
 mod sqlite_path;

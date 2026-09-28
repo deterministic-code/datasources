@@ -1,5 +1,5 @@
 use crate::bulk_command::BulkCommand;
-use crate::bulk_write::BulkWrite;
+use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::i_where::IWhere;
 use crate::parameter::Parameter;
@@ -13,30 +13,30 @@ pub struct BatchCommandIBulkWriteStrategy;
 
 #[async_trait]
 impl BulkWriteStrategy for BatchCommandIBulkWriteStrategy {
-    async fn create(&self, items: &mut [Row], write: &dyn BulkWrite) -> Result<Response> {
-        send(write, &write.inserts(items)?).await
+    async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response> {
+        send(repo, &repo.inserts(items)?).await
     }
 
     async fn update(
         &self,
         items: &[Row],
         by_where: Option<&dyn IWhere>,
-        write: &dyn BulkWrite,
+        repo: &BulkCRUDRepository,
     ) -> Result<Response> {
-        send(write, &write.updates(items, by_where)?).await
+        send(repo, &repo.updates(items, by_where)?).await
     }
 
     async fn delete(
         &self,
         items: &[Row],
         by_where: Option<&dyn IWhere>,
-        write: &dyn BulkWrite,
+        repo: &BulkCRUDRepository,
     ) -> Result<Response> {
-        send(write, &write.deletes(items, by_where)?).await
+        send(repo, &repo.deletes(items, by_where)?).await
     }
 }
 
-async fn send(write: &dyn BulkWrite, commands: &[BulkCommand]) -> Result<Response> {
+async fn send(repo: &BulkCRUDRepository, commands: &[BulkCommand]) -> Result<Response> {
     if commands.is_empty() {
         return Ok(Response::new(Value::Null, 0));
     }
@@ -54,7 +54,7 @@ async fn send(write: &dyn BulkWrite, commands: &[BulkCommand]) -> Result<Respons
         .iter()
         .flat_map(|command| command.parameters.clone())
         .collect();
-    write.command().execute(&text, Some(&parameters)).await
+    repo.command().execute(&text, Some(&parameters)).await
 }
 
 fn rename(command: &BulkCommand, index: usize) -> BulkCommand {

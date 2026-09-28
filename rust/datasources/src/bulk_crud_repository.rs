@@ -1,6 +1,5 @@
 use crate::built_repository::BuiltRepository;
 use crate::bulk_command::BulkCommand;
-use crate::bulk_write::BulkWrite;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command::Command;
 use crate::connection::Connection;
@@ -159,28 +158,25 @@ impl BulkCRUDRepository {
         )
         .await
     }
-}
 
-#[async_trait]
-impl BulkWrite for BulkCRUDRepository {
-    fn command(&self) -> Arc<dyn Command> {
+    pub fn command(&self) -> Arc<dyn Command> {
         self.crud.command()
     }
 
-    async fn create_one(&self, item: &mut Row) -> Result<Value> {
+    pub async fn create_one(&self, item: &mut Row) -> Result<Value> {
         let created = self.crud.create(item).await?;
         Ok(id_of(&self.crud, &created))
     }
 
-    async fn update_one(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    pub async fn update_one(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.crud.update(item, by_where).await
     }
 
-    async fn delete_one(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    pub async fn delete_one(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.crud.delete(item, by_where).await
     }
 
-    fn inserts(&self, items: &[Row]) -> Result<Vec<BulkCommand>> {
+    pub fn inserts(&self, items: &[Row]) -> Result<Vec<BulkCommand>> {
         items
             .iter()
             .map(|item| {
@@ -192,7 +188,7 @@ impl BulkWrite for BulkCRUDRepository {
             .collect()
     }
 
-    fn updates(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Vec<BulkCommand>> {
+    pub fn updates(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Vec<BulkCommand>> {
         items
             .iter()
             .map(|item| {
@@ -205,7 +201,7 @@ impl BulkWrite for BulkCRUDRepository {
             .collect()
     }
 
-    fn deletes(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Vec<BulkCommand>> {
+    pub fn deletes(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Vec<BulkCommand>> {
         items
             .iter()
             .map(|item| {
@@ -218,7 +214,7 @@ impl BulkWrite for BulkCRUDRepository {
             .collect()
     }
 
-    fn rows(&self, items: &[Row]) -> Result<Vec<Row>> {
+    pub fn rows(&self, items: &[Row]) -> Result<Vec<Row>> {
         items
             .iter()
             .map(|item| stored_row(&self.crud, item))

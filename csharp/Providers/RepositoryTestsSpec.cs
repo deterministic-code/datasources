@@ -235,18 +235,10 @@ public static class RepositoryTestsSpec
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
             yield return sql;
-            if (step.Create is not null && spec.Type.Ids.Count == 1 && InsertedIdSql(provider, spec.Type.Ids[0]) is { Length: > 0 } inserted)
+            if (step.Create is not null && spec.Type.Ids.Count == 1 && InsertedIdStatement.Select(provider, spec.Type.Ids[0]) is { Length: > 0 } inserted)
                 yield return inserted;
         }
     }
-
-    static string InsertedIdSql(string provider, string column) => provider switch
-    {
-        "sqlite" => $"SELECT last_insert_rowid() AS {column}",
-        "mysql" => $"SELECT LAST_INSERT_ID() AS {column}",
-        "postgres" => $"SELECT lastval() AS {column}",
-        _ => ""
-    };
 
     static Dictionary<string, object?> Flatten(Dictionary<string, object?> row, TypeSpec type)
     {

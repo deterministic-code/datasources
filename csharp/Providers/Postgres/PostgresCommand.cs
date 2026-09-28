@@ -119,7 +119,7 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
     {
         foreach (var parameter in bound)
         {
-            var native = Param(PostgresBind.Reverse(parameter.Value).ToObject());
+            var native = Param(PostgresRowTypeConverters.Reverse(parameter.Value).ToObject());
             native.Direction = Native(parameter.Direction);
             command.Parameters.Add(native);
         }

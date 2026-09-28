@@ -13,6 +13,15 @@ impl InsertedIdStatement {
             column: column.into(),
         }
     }
+
+    pub fn select_sql(provider: &str, column: &str) -> String {
+        match provider {
+            "sqlite" => format!("SELECT last_insert_rowid() AS {column}"),
+            "mysql" => format!("SELECT LAST_INSERT_ID() AS {column}"),
+            "postgres" => format!("SELECT lastval() AS {column}"),
+            _ => String::new(),
+        }
+    }
 }
 
 impl Text for InsertedIdStatement {

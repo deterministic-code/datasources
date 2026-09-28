@@ -10,15 +10,19 @@ public sealed class MysqlDriver : IDriver
         new MysqlTransaction((MysqlConnection)connection, isolation);
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => MysqlRowTypeConverters.All;
 
-    public string ColumnType(string name) => name switch
-    {
-        "int" => "INT",
-        "uuid" => "CHAR(36)",
-        "string" or "datetime" => "TEXT",
-        "bool" => "TINYINT",
-        "decimal" => "DECIMAL(18,4)",
-        "float" => "DOUBLE",
-        "binary" => "BLOB",
-        _ => throw new DatasourceException($"Unknown mysql type \"{name}\"")
-    };
+    internal static readonly IReadOnlyDictionary<string, string> ColumnTypes =
+        new Dictionary<string, string>
+        {
+            ["int"] = "INT",
+            ["uuid"] = "CHAR(36)",
+            ["string"] = "TEXT",
+            ["datetime"] = "TEXT",
+            ["bool"] = "TINYINT",
+            ["decimal"] = "DECIMAL(18,4)",
+            ["float"] = "DOUBLE",
+            ["binary"] = "BLOB",
+        };
+
+    public string ColumnType(string name) =>
+        ColumnTypes.TryGetValue(name, out var sql) ? sql : throw new DatasourceException($"Unknown mysql type \"{name}\"");
 }

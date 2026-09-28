@@ -1,20 +1,12 @@
 namespace Datasources.Mysql;
 
-internal sealed class MysqlStatementFactory : CreateTableStatementRenderer
+internal sealed class MysqlStatementFactory
 {
-    protected override string Type(Column column) => column.Type switch
-    {
-        "int" or "uuid" or "string" or "datetime" or "bool" or "decimal" or "float" or "binary"
-            => new MysqlDriver().ColumnType(column.Type),
-        _ => column.Type
-    };
-
-    protected override string Identity(Column column) => column.Identity ? " AUTO_INCREMENT" : "";
-
     public IStatement Transform(IStatement statement) => statement switch
     {
-        CreateTableStatement { Table: not null } create => new CreateTableStatement(Render(create)),
-        InsertedIdStatement inserted => new SelectStatement($"SELECT LAST_INSERT_ID() AS {inserted.Column}"),
+        CreateTableStatement { Table: not null } create =>
+            new CreateTableStatement(new MysqlCreateTableStatementRenderer().Render(create)),
+        InsertedIdStatement inserted => new SelectStatement(InsertedIdStatement.Select("mysql", inserted.Column)),
         _ => statement
     };
 }

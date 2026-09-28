@@ -53,7 +53,6 @@ export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedRe
 export { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStrategy.ts";
 export { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 export type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
-export type { IBulkWrite } from "./IBulkWrite.ts";
 export type { BulkCommand } from "./BulkCommand.ts";
 export { SingleCommands } from "./SingleCommands.ts";
 export { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy.ts";

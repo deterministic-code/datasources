@@ -1,24 +1,24 @@
 namespace Datasources;
 
-public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T>
+public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> where T : new()
 {
-    public Task<Response> Create(IReadOnlyList<T> items, IBulkWrite<T> write) =>
-        Send(write, write.Inserts(items));
+    public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo) =>
+        Send(repo, repo.Inserts(items));
 
-    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, IBulkWrite<T> write) =>
-        Send(write, write.Updates(items, byWhere));
+    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo) =>
+        Send(repo, repo.Updates(items, byWhere));
 
-    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, IBulkWrite<T> write) =>
-        Send(write, write.Deletes(items, byWhere));
+    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo) =>
+        Send(repo, repo.Deletes(items, byWhere));
 
-    static Task<Response> Send(IBulkWrite<T> write, IReadOnlyList<BulkCommand> commands)
+    static Task<Response> Send(BulkCRUDRepository<T> repo, IReadOnlyList<BulkCommand> commands)
     {
         if (commands.Count == 0)
             return Task.FromResult(new Response(Value.Null.Instance, 0));
         var renamed = new BulkCommand[commands.Count];
         for (var index = 0; index < commands.Count; index++)
             renamed[index] = Rename(commands[index], index);
-        return write.Command.Execute(
+        return repo.Command().Execute(
             string.Join("; ", renamed.Select(command => command.Text)),
             renamed.SelectMany(command => command.Parameters).ToArray());
     }

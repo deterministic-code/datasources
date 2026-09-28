@@ -13,22 +13,24 @@ import { SqliteConnection } from "./connection.ts";
 import { SqliteTransaction } from "./transaction.ts";
 import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
 
+export const columnTypes: Record<string, string> = {
+  int: "INTEGER",
+  uuid: "TEXT",
+  string: "TEXT",
+  bool: "INTEGER",
+  decimal: "NUMERIC",
+  float: "REAL",
+  datetime: "TEXT",
+  binary: "BLOB",
+};
+
 export class SqliteDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
   columnType = (name: string): string =>
-    ({
-      int: "INTEGER",
-      uuid: "TEXT",
-      string: "TEXT",
-      bool: "INTEGER",
-      decimal: "NUMERIC",
-      float: "REAL",
-      datetime: "TEXT",
-      binary: "BLOB",
-    }[name] ??
+    columnTypes[name] ??
     (() => {
       throw new DatasourceError(`Unknown sqlite type "${name}"`);
-    })());
+    })();
   connection = (options?: DatasourceOptions): IConnection =>
     SqliteConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
