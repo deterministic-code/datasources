@@ -66,12 +66,12 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             {
                 var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
-                var filter = whereText is not null ? ParseFilter(whereText) : new Row(Helpers.IdentityFilter(obj));
+                var filter = whereText is not null ? ParseFilter(whereText) : new Row(obj);
                 return Task.FromResult((ApplyUpdate(Typed.GetCollection(), new Row(obj), filter) with { Parameters = paramsList }, EmptyRows()));
             }
 
             if (op == "delete")
-                return Task.FromResult((ApplyDelete(Typed.GetCollection(), obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj))) with { Parameters = paramsList }, EmptyRows()));
+                return Task.FromResult((ApplyDelete(Typed.GetCollection(), new Row(obj)) with { Parameters = paramsList }, EmptyRows()));
 
             throw new DatasourceException($"Unsupported Memory command: {query}");
         });
@@ -132,7 +132,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         }
 
         obj.Remove("$where");
-        var filter = LooksJson(where?.GetText()) ? ParseFilter(where!.GetText()) : new Row(Helpers.IdentityFilter(obj));
+        var filter = LooksJson(where?.GetText()) ? ParseFilter(where!.GetText()) : new Row(obj);
         return ApplyUpdate(rows, new Row(obj), filter) with { Parameters = parameters };
     }
 
@@ -145,9 +145,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             return new Response(Value.Null.Instance, affected, parameters);
         }
 
-        var filter = LooksJson(where?.GetText())
-            ? ParseFilter(where!.GetText())
-            : obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj));
+        var filter = LooksJson(where?.GetText()) ? ParseFilter(where!.GetText()) : new Row(obj);
         return ApplyDelete(rows, filter) with { Parameters = parameters };
     }
 

@@ -2,7 +2,7 @@ use crate::connection::JsonConnection;
 use crate::filter::{matches, parse_filter, record_from_json, value_to_json};
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
+    parameters_to_map, ArrayReader, Command, CommandMiddleware,
     CommandMiddlewareHost, DatasourceError, IWhere, Parameter, Reader, Response, Result, Statement,
     StatementKind, Value,
 };
@@ -87,10 +87,7 @@ impl Command for JsonCommand {
                             let filter = if let Some(text) = where_text {
                                 parse_filter(Some(&text))?
                             } else {
-                                identity_filter(&record_from_json(&JsonValue::Object(obj.clone())))
-                                    .into_iter()
-                                    .map(|(k, v)| (k, value_to_json(&v)))
-                                    .collect()
+                                obj.clone()
                             };
                             let affected = connection.collection_mut(|items| {
                                 let mut count = 0;
@@ -110,14 +107,7 @@ impl Command for JsonCommand {
                             Ok((Response::new(Value::Null, affected), vec![]))
                         }
                         "delete" => {
-                            let filter = if obj.is_empty() {
-                                Map::new()
-                            } else {
-                                identity_filter(&record_from_json(&JsonValue::Object(obj.clone())))
-                                    .into_iter()
-                                    .map(|(k, v)| (k, value_to_json(&v)))
-                                    .collect()
-                            };
+                            let filter = obj.clone();
                             let affected = connection.collection_mut(|items| {
                                 let before = items.len();
                                 items.retain(|row| !matches(row, &filter));

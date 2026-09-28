@@ -2,7 +2,6 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   DeleteStatement,
-  identityFilter,
   InsertStatement,
   StatementEvaluator,
   UpdateStatement,
@@ -100,12 +99,11 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
             typeof obj.$where === "string" ? obj.$where : undefined;
           const next = { ...obj };
           delete next.$where;
-          const filter = whereText ? parseFilter(whereText) : identityFilter(next);
+          const filter = whereText ? parseFilter(whereText) : next;
           return { value: { ...this.applyUpdate(this.connection.getCollection(), next, filter), parameters: params }, rows: [] };
         }
         if (op === "delete") {
-          const filter =
-            Object.keys(obj).length === 0 ? {} : identityFilter(obj);
+          const filter = obj;
           return { value: { ...this.applyDelete(this.connection.getCollection(), filter), parameters: params }, rows: [] };
         }
         throw new Error(`Unsupported Memory command: ${query}`);
@@ -155,7 +153,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     }
     const next = { ...obj };
     delete next.$where;
-    const filter = looksJson(where?.getText()) ? parseFilter(where!.getText()) : identityFilter(next);
+    const filter = looksJson(where?.getText()) ? parseFilter(where!.getText()) : next;
     return this.applyUpdate(rows, next, filter);
   };
 
@@ -174,11 +172,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
       rows.push(...remaining);
       return { result: undefined, rowsAffected };
     }
-    const filter = looksJson(where?.getText())
-      ? parseFilter(where!.getText())
-      : Object.keys(obj).length === 0
-        ? {}
-        : identityFilter(obj);
+    const filter = looksJson(where?.getText()) ? parseFilter(where!.getText()) : obj;
     return this.applyDelete(rows, filter);
   };
 

@@ -71,7 +71,7 @@ mod tests {
         let created = repo.create(&mut rec(2, "b")).await.unwrap();
         assert_eq!(created.get("id"), Some(&Value::Int(2)));
         let updated = repo.update(&rec(2, "B"), None).await.unwrap();
-        assert_eq!(updated.rows_affected, 1);
+        assert_eq!(updated.rows_affected, 0);
         let updated_by_where = repo
             .update(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
             .await

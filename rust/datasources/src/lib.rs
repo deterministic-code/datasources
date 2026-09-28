@@ -40,8 +40,6 @@ mod i_select_statement;
 mod i_unit_of_work;
 mod i_where;
 mod id_key;
-mod identity_filter;
-mod identity_where_text;
 mod isolation_level;
 mod lazy_write_enrichment_strategy;
 pub mod mappers;
@@ -130,8 +128,6 @@ pub use i_select_statement::ISelectStatement;
 pub use i_unit_of_work::IUnitOfWork;
 pub use i_where::IWhere;
 pub use id_key::IdKey;
-pub use identity_filter::identity_filter;
-pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use lazy_write_enrichment_strategy::LazyWriteEnrichmentStrategy;
 pub use mappers::{

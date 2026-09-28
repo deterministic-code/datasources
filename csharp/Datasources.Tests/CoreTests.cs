@@ -42,13 +42,6 @@ public class CoreTests
         Assert.Null(select.Where);
         Assert.Same(byId, withWhere.Where);
         Assert.Equal("id = 1", byId.GetText());
-        var withId = new Row { ["id"] = 9, ["name"] = "a" };
-        Assert.Single(Helpers.IdentityFilter(withId));
-        Assert.Equal("id = $id", Helpers.IdentityWhereText(withId));
-        var noId = new Row { ["name"] = "a", ["city"] = "x" };
-        Assert.Equal(2, Helpers.IdentityFilter(noId).Count);
-        Assert.Contains("name = $name", Helpers.IdentityWhereText(noId));
-        Assert.Equal("1 = 1", Helpers.IdentityWhereText(new Row()));
     }
 
     [Fact]
