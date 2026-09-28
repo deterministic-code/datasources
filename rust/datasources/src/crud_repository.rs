@@ -138,6 +138,35 @@ impl CRUDRepository {
         self.write.use_transaction()
     }
 
+    async fn in_transaction<T, F, Fut>(
+        transactional: bool,
+        connection: Arc<dyn Connection>,
+        write: F,
+    ) -> Result<T>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+    {
+        if !transactional {
+            return write().await;
+        }
+        let mut work = UnitOfWorkTransaction::new(connection);
+        work.begin().await?;
+        let result = write().await;
+        match &result {
+            Ok(_) => {
+                if let Err(error) = work.commit().await {
+                    work.abort().await?;
+                    return Err(error);
+                }
+            }
+            Err(_) => {
+                work.abort().await?;
+            }
+        }
+        result
+    }
+
     async fn create_core(&self, item: &mut Row) -> Result<Row> {
         if !self.enriched() {
             return self.inserted(item).await;
@@ -442,66 +471,24 @@ impl IReadonlyRepository for CRUDRepository {
 #[async_trait]
 impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        if !self.use_transaction() {
-            return self.create_core(item).await;
-        }
-        let mut work = UnitOfWorkTransaction::new(Arc::clone(&self.readonly.connection));
-        work.begin().await?;
-        match self.create_core(item).await {
-            Ok(value) => match work.commit().await {
-                Ok(()) => Ok(value),
-                Err(error) => {
-                    work.abort().await?;
-                    Err(error)
-                }
-            },
-            Err(error) => {
-                work.abort().await?;
-                Err(error)
-            }
-        }
+        Self::in_transaction(self.use_transaction(), Arc::clone(&self.readonly.connection), || {
+            self.create_core(item)
+        })
+        .await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        if !self.use_transaction() {
-            return self.update_core(item, by_where).await;
-        }
-        let mut work = UnitOfWorkTransaction::new(Arc::clone(&self.readonly.connection));
-        work.begin().await?;
-        match self.update_core(item, by_where).await {
-            Ok(value) => match work.commit().await {
-                Ok(()) => Ok(value),
-                Err(error) => {
-                    work.abort().await?;
-                    Err(error)
-                }
-            },
-            Err(error) => {
-                work.abort().await?;
-                Err(error)
-            }
-        }
+        Self::in_transaction(self.use_transaction(), Arc::clone(&self.readonly.connection), || {
+            self.update_core(item, by_where)
+        })
+        .await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        if !self.use_transaction() {
-            return self.delete_core(item, by_where).await;
-        }
-        let mut work = UnitOfWorkTransaction::new(Arc::clone(&self.readonly.connection));
-        work.begin().await?;
-        match self.delete_core(item, by_where).await {
-            Ok(value) => match work.commit().await {
-                Ok(()) => Ok(value),
-                Err(error) => {
-                    work.abort().await?;
-                    Err(error)
-                }
-            },
-            Err(error) => {
-                work.abort().await?;
-                Err(error)
-            }
-        }
+        Self::in_transaction(self.use_transaction(), Arc::clone(&self.readonly.connection), || {
+            self.delete_core(item, by_where)
+        })
+        .await
     }
 
     fn id_names(&self) -> Vec<String> {

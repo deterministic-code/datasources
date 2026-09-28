@@ -55,53 +55,22 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return this;
     }
 
-    public async Task<T> Create(T item)
-    {
-        if (!UseTransaction)
-            return await CreateCore(item);
-        var work = new UnitOfWorkTransaction(Command().Connection);
-        await work.Begin();
-        try
-        {
-            var result = await CreateCore(item);
-            await work.Commit();
-            return result;
-        }
-        catch
-        {
-            await work.Abort();
-            throw;
-        }
-    }
+    public Task<T> Create(T item) => InTransaction(() => CreateCore(item));
 
-    public async Task<Response> Update(T item, IWhere? byWhere = null)
-    {
-        if (!UseTransaction)
-            return await UpdateCore(item, byWhere);
-        var work = new UnitOfWorkTransaction(Command().Connection);
-        await work.Begin();
-        try
-        {
-            var result = await UpdateCore(item, byWhere);
-            await work.Commit();
-            return result;
-        }
-        catch
-        {
-            await work.Abort();
-            throw;
-        }
-    }
+    public Task<Response> Update(T item, IWhere? byWhere = null) =>
+        InTransaction(() => UpdateCore(item, byWhere));
 
-    public async Task<Response> Delete(T item, IWhere? byWhere = null)
+    public Task<Response> Delete(T item, IWhere? byWhere = null) =>
+        InTransaction(() => DeleteCore(item, byWhere));
+
+    async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> write)
     {
-        if (!UseTransaction)
-            return await DeleteCore(item, byWhere);
+        if (!UseTransaction) return await write();
         var work = new UnitOfWorkTransaction(Command().Connection);
         await work.Begin();
         try
         {
-            var result = await DeleteCore(item, byWhere);
+            var result = await write();
             await work.Commit();
             return result;
         }
