@@ -55,15 +55,8 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
     async Task<SqliteExecuteResult> Run(string sql, IReadOnlyList<Parameter>? parameters)
     {
         using var command = Bind(sql, Helpers.ParametersToRecord(parameters));
-        if (sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-        {
-            var scalar = await command.ExecuteScalarAsync();
-            return new SqliteExecuteResult(scalar is null ? 0 : 1, Value.From(scalar), parameters);
-        }
         var rows = await command.ExecuteNonQueryAsync();
-        using var id = connection.Require().CreateCommand();
-        id.CommandText = "SELECT last_insert_rowid()";
-        return new SqliteExecuteResult(rows, ((IDriver)new SqliteDriver()).GeneratedId(Value.From(await id.ExecuteScalarAsync())), parameters);
+        return new SqliteExecuteResult(Math.Max(rows, 0), Value.Null.Instance, parameters);
     }
 
     static string[] ColumnNames(Microsoft.Data.Sqlite.SqliteDataReader reader)

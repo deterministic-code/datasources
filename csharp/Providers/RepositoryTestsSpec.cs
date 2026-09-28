@@ -38,7 +38,7 @@ public static class RepositoryTestsSpec
             await Run(spec, session, new RowTypeConverter<MappedUser>(types, fields), logs, quote);
         SqlSpec.AssertConsoleLogs(
             spec.Name,
-            Queries(spec),
+            Queries(spec, session.Connection.Provider),
             [.. logs.Where(line => line.Contains("[Start]") || line.Contains("[Finish]")).Select(Unquote)]);
     }
 
@@ -215,13 +215,14 @@ public static class RepositoryTestsSpec
             ? null
             : new TransformMapper<T, T>(built => rewrite($"{built.GetText()}{suffix}", built), built => built);
 
-    static IEnumerable<string> Queries(Spec spec)
+    static IEnumerable<string> Queries(Spec spec, string provider)
     {
         var columns = spec.Type.Fields.Keys.OrderBy(key => key).ToArray();
         var ids = spec.Type.Ids.ToHashSet();
         var table = PhysicalTable(spec.Type);
         foreach (var step in spec.Steps)
-            yield return step switch
+        {
+            var sql = step switch
             {
                 { Create: { } create } => WithStatementSql(new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col))).GetText(), true, spec.Type),
                 { Read: { } read } => WithStatementSql(new SelectStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) }).GetText(), false, spec.Type),
@@ -233,7 +234,19 @@ public static class RepositoryTestsSpec
                 { DeleteBy: { } deleteBy } => WithStatementSql(new DeleteStatement(table, SqlWhere(deleteBy.Where)).GetText(), true, spec.Type),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
+            yield return sql;
+            if (step.Create is not null && spec.Type.Ids.Count == 1 && InsertedIdSql(provider, spec.Type.Ids[0]) is { Length: > 0 } inserted)
+                yield return inserted;
+        }
     }
+
+    static string InsertedIdSql(string provider, string column) => provider switch
+    {
+        "sqlite" => $"SELECT last_insert_rowid() AS {column}",
+        "mysql" => $"SELECT LAST_INSERT_ID() AS {column}",
+        "postgres" => $"SELECT lastval() AS {column}",
+        _ => ""
+    };
 
     static Dictionary<string, object?> Flatten(Dictionary<string, object?> row, TypeSpec type)
     {

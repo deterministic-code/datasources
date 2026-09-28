@@ -34,18 +34,46 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         ExecuteReader(new MysqlStatementFactory().Transform(statement).GetText(), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        Execute(new MysqlStatementFactory().Transform(statement).GetText(), parameters);
+        statement switch
+        {
+            IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
+            ExecuteStoredProcedureStatement { Name: { } name } when HasOutput(parameters) =>
+                ExecuteProcedure(name, parameters),
+            _ => Execute(new MysqlStatementFactory().Transform(statement).GetText(), parameters)
+        };
+
+    async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
+    {
+        var reader = await ExecuteReader(statement, parameters);
+        try
+        {
+            if (!await reader.Next())
+                return Response.Of(Value.Null.Instance, 0, parameters);
+            var row = reader.Current ?? throw new DatasourceException("Reader current must be a row");
+            var cell = row.Count == 0 ? Value.Null.Instance : row.First().Value;
+            return Response.Of(cell, 1, parameters);
+        }
+        finally
+        {
+            if (reader is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
+        }
+    }
+
+    Task<Response> ExecuteProcedure(string name, IReadOnlyList<Parameter>? parameters) =>
+        Run(name, parameters, async (_, list) =>
+        {
+            Typed.EnsureOpen();
+            using var command = Bind(name, list, procedure: true);
+            var rows = await command.ExecuteNonQueryAsync();
+            return (Response.Of(Value.Null.Instance, Math.Max(rows, 0), Applied(command, list)), (IReadOnlyList<Row>)[]);
+        });
 
     async Task<MysqlExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
         using var command = Bind(sql, parameters);
-        if (sql.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-        {
-            var scalar = await command.ExecuteScalarAsync();
-            return new MysqlExecuteResult(scalar is null ? 0 : 1, Value.From(scalar), ReadBack(command, parameters));
-        }
         var rows = await command.ExecuteNonQueryAsync();
-        return new MysqlExecuteResult(rows, new MysqlDriver().GeneratedId(Value.From(command.LastInsertedId)), ReadBack(command, parameters));
+        return new MysqlExecuteResult(Math.Max(rows, 0), Value.Null.Instance, Applied(command, parameters));
     }
 
     async Task<StreamingReader> Open(string sql, Row parameters)
@@ -77,15 +105,14 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         }
     }
 
-    MySqlCommand Bind(string sql, IReadOnlyList<Parameter>? parameters)
+    MySqlCommand Bind(string sql, IReadOnlyList<Parameter>? parameters, bool procedure = false)
     {
         var command = Typed.Require().CreateCommand();
         var list = parameters ?? [];
-        if (sql.TrimStart().StartsWith("CALL", StringComparison.OrdinalIgnoreCase)
-            && list.Any(p => p.Direction != Datasources.ParameterDirection.Input))
+        if (procedure)
         {
             command.CommandType = CommandType.StoredProcedure;
-            command.CommandText = ProcedureName(sql);
+            command.CommandText = sql;
         }
         else
             command.CommandText = MysqlBind.ToMysql(sql);
@@ -110,20 +137,14 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         return command;
     }
 
-    static IReadOnlyList<Parameter>? ReadBack(MySqlCommand command, IReadOnlyList<Parameter>? parameters) =>
+    static bool HasOutput(IReadOnlyList<Parameter>? parameters) =>
+        parameters?.Any(parameter => parameter.Direction != Datasources.ParameterDirection.Input) == true;
+
+    static IReadOnlyList<Parameter>? Applied(MySqlCommand command, IReadOnlyList<Parameter>? parameters) =>
         parameters is null ? null
         : [.. parameters.Select(p => p.Direction == Datasources.ParameterDirection.Input
             ? p
             : p with { Value = Value.From(command.Parameters[$"@{p.Name.TrimStart('$', '@', ':')}"].Value) })];
-
-    static string ProcedureName(string sql)
-    {
-        var body = sql.Trim();
-        if (body.StartsWith("CALL", StringComparison.OrdinalIgnoreCase))
-            body = body[4..].Trim();
-        var open = body.IndexOf('(');
-        return open < 0 ? body : body[..open].Trim().Trim('`');
-    }
 
     static DataDirection Native(Datasources.ParameterDirection direction) => direction switch
     {

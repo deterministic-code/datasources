@@ -51,12 +51,6 @@ internal static class PostgresBind
         _ => value
     };
 
-    public static string WithReturning(string sql) =>
-        Regex.IsMatch(sql, @"^\s*insert\b", RegexOptions.IgnoreCase)
-        && !Regex.IsMatch(sql, @"\breturning\b", RegexOptions.IgnoreCase)
-            ? $"{sql.TrimEnd().TrimEnd(';')} RETURNING id"
-            : sql;
-
     public static string IsolationSql(IsolationLevel isolation) => isolation switch
     {
         IsolationLevel.ReadUncommitted => "READ UNCOMMITTED",

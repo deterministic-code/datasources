@@ -28,6 +28,7 @@ public class PostgresStatementFactoryTests
         Assert.Same(raw, factory.Transform(raw));
         var select = new SelectStatement("SELECT id FROM users");
         Assert.Same(select, factory.Transform(select));
+        Assert.Equal("SELECT lastval() AS id", factory.Transform(new InsertedIdStatement("users", "id")).GetText());
     }
 
     [Fact]

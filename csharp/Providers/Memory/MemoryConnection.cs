@@ -12,6 +12,7 @@ internal sealed class MemoryConnection : IConnection
     public bool InTransaction { get; private set; }
     private readonly object? _data;
     private Dictionary<string, List<Row>>? _snapshot;
+    readonly Dictionary<string, Value> inserted = new(StringComparer.Ordinal);
 
     public MemoryConnection(IReadOnlyDictionary<string, string?>? _)
         : this(new MemoryConnectionOptions())
@@ -50,6 +51,11 @@ internal sealed class MemoryConnection : IConnection
     }
 
     public List<Row> GetCollection() => Store.GetCollection(Collection);
+
+    public void RememberInserted(string table, Value id) => inserted[table] = id;
+
+    public Value Inserted(string table) =>
+        inserted.TryGetValue(table, out var id) ? id : Value.Null.Instance;
 
     public void FinishCommit()
     {

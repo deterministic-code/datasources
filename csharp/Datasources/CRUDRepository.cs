@@ -6,18 +6,23 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 {
     readonly IWriteEnrichmentStrategy<T> write;
     readonly IReadOnlyList<string> ids;
+    readonly IMapper<IReturnStatement, IReturnStatement>? returnMapper;
 
     public CRUDRepository(IConnection connection) :
         this(connection, CreateRepositoryOptions.FromType<T>()) { }
 
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
-        this(RepositoryBuilder<T>.Parts(connection, options), options.Write) { }
+        this(RepositoryBuilder<T>.Parts(connection, options), options.Write, options.Return) { }
 
-    public CRUDRepository(BuiltRepository<T> built, IWriteEnrichmentStrategy<T>? write = null) : base(
+    public CRUDRepository(
+        BuiltRepository<T> built,
+        IWriteEnrichmentStrategy<T>? write = null,
+        IMapper<IReturnStatement, IReturnStatement>? returnMapper = null) : base(
         built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
     {
         ids = built.Ids;
         this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
+        this.returnMapper = returnMapper;
     }
 
     public IReadOnlyList<string> Ids => ids;
@@ -122,9 +127,44 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var fields = Params(ReverseConvert(stored), col => !ids.Contains(col));
         var response = await Command().Execute(Statements.Insert(fields), fields);
-        WriteId(target, response.Result);
+        if (ids.Count == 1)
+            await CopyInsertedId(target, fields);
         return response;
     }
+
+    async Task CopyInsertedId(T target, IReadOnlyList<Parameter> fields)
+    {
+        var column = ids[0];
+        var sqlColumn = Column(column);
+        IStatement statement = returnMapper is { } map
+            ? map.Map(new ReturnStatement(sqlColumn, fields))
+            : Statements.SelectInsertedId(sqlColumn);
+        var reader = await Command().ExecuteReader(statement, statement is IReturnStatement ? fields : null);
+        try
+        {
+            if (!await reader.Next()) return;
+            var row = Identified(Named(reader.Current ?? throw new DatasourceException("Reader current must be a row"), column, sqlColumn), column);
+            WriteId(target, IdValue(Mapper!.Map(RowConverter.Convert(row))));
+        }
+        finally
+        {
+            if (reader is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
+        }
+    }
+
+    static Row Named(Row row, string property, string sqlColumn)
+    {
+        if (property == sqlColumn || !row.TryGetValue(sqlColumn, out var cell)) return row;
+        var named = new Row(row.Where(pair => pair.Key != sqlColumn));
+        named[property] = cell;
+        return named;
+    }
+
+    static Row Identified(Row row, string column) =>
+        row.ContainsKey(column) || row.Count != 1
+            ? row
+            : new Row { [column] = row.First().Value };
 
     async Task<Response> Save(T item, IWhere? byWhere)
     {

@@ -20,7 +20,29 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         ExecuteReader(new SqliteStatementFactory().Transform(statement).GetText(), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        Execute(new SqliteStatementFactory().Transform(statement).GetText(), parameters);
+        statement switch
+        {
+            IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
+            _ => Execute(new SqliteStatementFactory().Transform(statement).GetText(), parameters)
+        };
+
+    async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
+    {
+        var reader = await ExecuteReader(statement, parameters);
+        try
+        {
+            if (!await reader.Next())
+                return Response.Of(Value.Null.Instance, 0, parameters);
+            var row = reader.Current ?? throw new DatasourceException("Reader current must be a row");
+            var cell = row.Count == 0 ? Value.Null.Instance : row.First().Value;
+            return Response.Of(cell, 1, parameters);
+        }
+        finally
+        {
+            if (reader is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
+        }
+    }
 
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, async (query, paramsList) =>

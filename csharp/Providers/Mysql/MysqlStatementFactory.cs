@@ -14,6 +14,7 @@ internal sealed class MysqlStatementFactory : CreateTableStatementRenderer
     public IStatement Transform(IStatement statement) => statement switch
     {
         CreateTableStatement { Table: not null } create => new CreateTableStatement(Render(create)),
+        InsertedIdStatement inserted => new SelectStatement($"SELECT LAST_INSERT_ID() AS {inserted.Column}"),
         _ => statement
     };
 }

@@ -28,6 +28,7 @@ public class SqliteStatementFactoryTests
         Assert.Same(raw, factory.Transform(raw));
         var select = new SelectStatement("SELECT id FROM users");
         Assert.Same(select, factory.Transform(select));
+        Assert.Equal("SELECT last_insert_rowid() AS id", factory.Transform(new InsertedIdStatement("users", "id")).GetText());
     }
 
     [Fact]

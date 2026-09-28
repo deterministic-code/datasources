@@ -20,7 +20,14 @@ internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        ExecuteReader(FilterText(statement), parameters);
+        statement is InsertedIdStatement
+            ? Run(statement.GetText(), parameters, (_, _) =>
+            {
+                Typed.EnsureOpen();
+                IReadOnlyList<Row> rows = [];
+                return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
+            })
+            : ExecuteReader(FilterText(statement), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch

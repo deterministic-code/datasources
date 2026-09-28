@@ -13,7 +13,7 @@ public class SqliteCommandIntegrationTests
         await conn.Open();
         var command = new SqliteCommand(conn);
         var parameters = new[] { new Parameter("x", -3) };
-        var response = await command.Execute(new ReturnStatement("abs", parameters).GetText(), parameters);
+        var response = await command.Execute(new ReturnStatement("abs", parameters), parameters);
         Assert.Equal(new Value.Int(3), response.Result);
     }
 
