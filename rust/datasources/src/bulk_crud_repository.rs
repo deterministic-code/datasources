@@ -97,25 +97,42 @@ impl BulkCRUDRepository {
         self
     }
 
-    pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response> {
-        if !self.use_transaction {
-            return self.strategy.create(items, self).await;
+    async fn in_transaction<T, F, Fut>(
+        transactional: bool,
+        connection: Arc<dyn Connection>,
+        write: F,
+    ) -> Result<T>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+    {
+        if !transactional {
+            return write().await;
         }
-        let mut work = UnitOfWorkTransaction::new(Arc::clone(&stored_repo(&self.crud).connection));
+        let mut work = UnitOfWorkTransaction::new(connection);
         work.begin().await?;
-        match self.strategy.create(items, self).await {
-            Ok(value) => match work.commit().await {
-                Ok(()) => Ok(value),
-                Err(error) => {
+        let result = write().await;
+        match &result {
+            Ok(_) => {
+                if let Err(error) = work.commit().await {
                     work.abort().await?;
-                    Err(error)
+                    return Err(error);
                 }
-            },
-            Err(error) => {
+            }
+            Err(_) => {
                 work.abort().await?;
-                Err(error)
             }
         }
+        result
+    }
+
+    pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response> {
+        Self::in_transaction(
+            self.use_transaction,
+            Arc::clone(&stored_repo(&self.crud).connection),
+            || self.strategy.create(items, self),
+        )
+        .await
     }
 
     pub async fn update_bulk(
@@ -123,24 +140,12 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        if !self.use_transaction {
-            return self.strategy.update(items, by_where, self).await;
-        }
-        let mut work = UnitOfWorkTransaction::new(Arc::clone(&stored_repo(&self.crud).connection));
-        work.begin().await?;
-        match self.strategy.update(items, by_where, self).await {
-            Ok(value) => match work.commit().await {
-                Ok(()) => Ok(value),
-                Err(error) => {
-                    work.abort().await?;
-                    Err(error)
-                }
-            },
-            Err(error) => {
-                work.abort().await?;
-                Err(error)
-            }
-        }
+        Self::in_transaction(
+            self.use_transaction,
+            Arc::clone(&stored_repo(&self.crud).connection),
+            || self.strategy.update(items, by_where, self),
+        )
+        .await
     }
 
     pub async fn delete_bulk(
@@ -148,24 +153,12 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        if !self.use_transaction {
-            return self.strategy.delete(items, by_where, self).await;
-        }
-        let mut work = UnitOfWorkTransaction::new(Arc::clone(&stored_repo(&self.crud).connection));
-        work.begin().await?;
-        match self.strategy.delete(items, by_where, self).await {
-            Ok(value) => match work.commit().await {
-                Ok(()) => Ok(value),
-                Err(error) => {
-                    work.abort().await?;
-                    Err(error)
-                }
-            },
-            Err(error) => {
-                work.abort().await?;
-                Err(error)
-            }
-        }
+        Self::in_transaction(
+            self.use_transaction,
+            Arc::clone(&stored_repo(&self.crud).connection),
+            || self.strategy.delete(items, by_where, self),
+        )
+        .await
     }
 }
 

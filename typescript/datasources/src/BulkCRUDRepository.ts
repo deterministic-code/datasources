@@ -48,6 +48,24 @@ const transactionOf = <T extends object>(
 ): boolean =>
   options !== undefined && "write" in options ? options.write?.useTransaction ?? false : false;
 
+const inTransaction = async <TResult>(
+  transactional: boolean,
+  connection: IConnection,
+  write: () => Promise<TResult>,
+): Promise<TResult> => {
+  if (!transactional) return write();
+  const work = new UnitOfWorkTransaction(connection);
+  await work.begin();
+  try {
+    const result = await write();
+    await work.commit();
+    return result;
+  } catch (error) {
+    await work.abort();
+    throw error;
+  }
+};
+
 export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository<T> {
   private readonly strategy: IBulkWriteStrategy<T>;
   private readonly transactional: boolean;
@@ -74,47 +92,18 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     this.transactional = transactional;
   }
 
-  createMany = async (items: T[]): Promise<Response> => {
-    if (!this.transactional) return this.strategy.create(items, this.asWrite());
-    const work = new UnitOfWorkTransaction(this.command().connection);
-    await work.begin();
-    try {
-      const result = await this.strategy.create(items, this.asWrite());
-      await work.commit();
-      return result;
-    } catch (error) {
-      await work.abort();
-      throw error;
-    }
-  };
+  createMany = (items: T[]): Promise<Response> =>
+    inTransaction(this.transactional, this.command().connection, () => this.strategy.create(items, this.asWrite()));
 
-  updateMany = async (items: T[], byWhere?: IWhere): Promise<Response> => {
-    if (!this.transactional) return this.strategy.update(items, byWhere, this.asWrite());
-    const work = new UnitOfWorkTransaction(this.command().connection);
-    await work.begin();
-    try {
-      const result = await this.strategy.update(items, byWhere, this.asWrite());
-      await work.commit();
-      return result;
-    } catch (error) {
-      await work.abort();
-      throw error;
-    }
-  };
+  updateMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
+    inTransaction(this.transactional, this.command().connection, () =>
+      this.strategy.update(items, byWhere, this.asWrite()),
+    );
 
-  deleteMany = async (items: T[], byWhere?: IWhere): Promise<Response> => {
-    if (!this.transactional) return this.strategy.delete(items, byWhere, this.asWrite());
-    const work = new UnitOfWorkTransaction(this.command().connection);
-    await work.begin();
-    try {
-      const result = await this.strategy.delete(items, byWhere, this.asWrite());
-      await work.commit();
-      return result;
-    } catch (error) {
-      await work.abort();
-      throw error;
-    }
-  };
+  deleteMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
+    inTransaction(this.transactional, this.command().connection, () =>
+      this.strategy.delete(items, byWhere, this.asWrite()),
+    );
 
   createBulk = (items: T[]): Promise<Response> => this.createMany(items);
 
