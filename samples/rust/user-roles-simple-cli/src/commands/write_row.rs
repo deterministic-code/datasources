@@ -11,7 +11,10 @@ pub async fn execute(
 ) -> Result<String> {
     if procedures && provider == "mysql" {
         command
-            .execute_statement(&ExecuteStoredProcedureStatement::new(procedure, call), Some(call))
+            .execute_statement(
+                &ExecuteStoredProcedureStatement::new(procedure, call),
+                Some(call),
+            )
             .await?;
     } else {
         command

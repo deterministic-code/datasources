@@ -1,5 +1,5 @@
 use datasources::{
-    provider_from_url, utc_iso_millis, Connection, ConsoleCommandMiddleware, DatasourceError, Driver,
+    provider_from_url, utc_iso_millis, ConsoleCommandMiddleware, DatasourceError, Driver,
 };
 use datasources_mysql::MysqlDriver;
 use datasources_postgres::PostgresDriver;
@@ -24,10 +24,11 @@ async fn main() {
 
 async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     let parsed = parse::args(&args)?;
-    let url = env("DATASOURCE_URL").ok_or_else(|| DatasourceError::message("DATASOURCE_URL is required"))?;
+    let url = env("DATASOURCE_URL")
+        .ok_or_else(|| DatasourceError::message("DATASOURCE_URL is required"))?;
     let schema = env("DATABASE_SCHEMA");
-    let provider = provider_from_url(&url)
-        .ok_or_else(|| DatasourceError::message("unknown provider"))?;
+    let provider =
+        provider_from_url(&url).ok_or_else(|| DatasourceError::message("unknown provider"))?;
     let options = |schema: Option<&str>| {
         let mut map = HashMap::new();
         map.insert("url".to_string(), url.clone());
@@ -36,22 +37,30 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
         }
         map
     };
-    let connection: Arc<dyn Connection> = match provider.as_str() {
-        "sqlite" => SqliteDriver.connection(Some(&options(None))),
-        "mysql" => MysqlDriver.connection(Some(&options(None))),
-        "postgres" => PostgresDriver.connection(Some(&options(schema.as_deref()))),
+    let driver: Arc<dyn Driver> = match provider.as_str() {
+        "sqlite" => Arc::new(SqliteDriver),
+        "mysql" => Arc::new(MysqlDriver),
+        "postgres" => Arc::new(PostgresDriver),
         name => {
             return Err(DatasourceError::message(format!("unknown provider {name}")));
         }
     };
+    let connection = match provider.as_str() {
+        "postgres" => driver.connection(Some(&options(schema.as_deref()))),
+        _ => driver.connection(Some(&options(None))),
+    };
     connection.open().await?;
     let command = connection.create_command();
-    migrate::apply(command.as_ref(), connection.provider()).await?;
+    migrate::apply(command.as_ref(), connection.provider(), driver.as_ref()).await?;
     let stamp = env("CLI_NOW");
     let clock = stamp.clone();
     command.add_middleware(Arc::new(ConsoleCommandMiddleware::with_sink(
         |line| eprintln!("{line}"),
-        move || clock.clone().unwrap_or_else(|| utc_iso_millis(SystemTime::now())),
+        move || {
+            clock
+                .clone()
+                .unwrap_or_else(|| utc_iso_millis(SystemTime::now()))
+        },
     )));
     let app = App::new(command.as_ref(), connection.provider());
     let app = match stamp {

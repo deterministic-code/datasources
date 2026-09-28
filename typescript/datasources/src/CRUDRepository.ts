@@ -24,6 +24,7 @@ import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DefaultWriteEnrichmentStrategy, strip } from "./DefaultWriteEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
+import { UnitOfWork } from "./UnitOfWork.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -68,18 +69,6 @@ export class CRUDRepository<T = Cells>
   protected get useTransaction(): boolean {
     return this.write.useTransaction;
   }
-
-  protected inTransaction = async <TResult>(work: () => Promise<TResult>): Promise<TResult> => {
-    const txn = await this.command().connection.startTransaction();
-    try {
-      const result = await work();
-      await txn.commit();
-      return result;
-    } catch (error) {
-      await txn.abort();
-      throw error;
-    }
-  };
 
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>);
@@ -148,13 +137,19 @@ export class CRUDRepository<T = Cells>
   }
 
   create = (item: T): Promise<T> =>
-    this.useTransaction ? this.inTransaction(() => this.createCore(item)) : this.createCore(item);
+    this.useTransaction
+      ? new UnitOfWork(this.command().connection).inTransaction(() => this.createCore(item))
+      : this.createCore(item);
 
   update = (item: T, byWhere?: IWhere): Promise<Response> =>
-    this.useTransaction ? this.inTransaction(() => this.updateCore(item, byWhere)) : this.updateCore(item, byWhere);
+    this.useTransaction
+      ? new UnitOfWork(this.command().connection).inTransaction(() => this.updateCore(item, byWhere))
+      : this.updateCore(item, byWhere);
 
   delete = (item: T, byWhere?: IWhere): Promise<Response> =>
-    this.useTransaction ? this.inTransaction(() => this.deleteCore(item, byWhere)) : this.deleteCore(item, byWhere);
+    this.useTransaction
+      ? new UnitOfWork(this.command().connection).inTransaction(() => this.deleteCore(item, byWhere))
+      : this.deleteCore(item, byWhere);
 
   protected createCore = async (item: T): Promise<T> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
@@ -215,8 +210,7 @@ export class CRUDRepository<T = Cells>
     const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    const statement = this.statements!.update(fields, where);
-    return execute(this.command(), statement, UpdateStatement.parameterList(fields, where));
+    return execute(this.command(), this.statements!.update(fields, where), UpdateStatement.parameterList(fields, where));
   };
 
   protected remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
@@ -224,13 +218,12 @@ export class CRUDRepository<T = Cells>
     const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
     const statement = this.statements!.delete(where);
     const listed = where.parameters ?? [];
-    return execute(
-      this.command(),
-      statement,
-      listed.length ? listed : statement.getText().includes("$")
+    const parameters = listed.length
+      ? listed
+      : statement.getText().includes("$")
         ? fieldsOf(record, () => true, this.column, this.cell)
-        : [],
-    );
+        : [];
+    return execute(this.command(), statement, parameters);
   };
 
   private mapped = (where: IWhere, fieldsApplied: boolean): IWhere =>

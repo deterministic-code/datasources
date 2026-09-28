@@ -34,6 +34,7 @@ export { InsertStatement } from "./InsertStatement.ts";
 export { UpdateStatement } from "./UpdateStatement.ts";
 export { DeleteStatement } from "./DeleteStatement.ts";
 export { CreateTableStatement } from "./CreateTableStatement.ts";
+export { CreateTableStatementRenderer } from "./CreateTableStatementRenderer.ts";
 export { CreateIndexStatement } from "./CreateIndexStatement.ts";
 export { ColumnDefault } from "./ColumnDefault.ts";
 export { NotNull } from "./NotNull.ts";

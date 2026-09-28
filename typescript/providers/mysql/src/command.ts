@@ -8,9 +8,11 @@ import {
   type Cells,
   type ICommand,
   type IReader,
+  type IStatement,
   type Parameter,
   type Response,
 } from "@datasources/core";
+import { MysqlStatementFactory } from "./MysqlStatementFactory.ts";
 import { bindParameters, toMysql } from "./bind.ts";
 import { MysqlDriver } from "./MysqlDriver.ts";
 import type { MysqlConnection } from "./connection.ts";
@@ -57,6 +59,17 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
         rows: [],
       };
     });
+  }
+
+  async executeReaderStatement(
+    statement: IStatement,
+    parameters?: Parameter[],
+  ): Promise<IReader<Cells>> {
+    return this.executeReader(new MysqlStatementFactory().transform(statement).getText(), parameters);
+  }
+
+  async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    return this.execute(new MysqlStatementFactory().transform(statement).getText(), parameters);
   }
 
   async execute(text: string, parameters?: Parameter[]): Promise<Response> {

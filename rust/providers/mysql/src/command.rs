@@ -5,10 +5,11 @@ use crate::converters::{
 use crate::driver::MysqlDriver;
 use crate::engine::to_mysql;
 use crate::reader::MysqlReader;
+use crate::statement_factory::MysqlStatementFactory;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Driver, Parameter, Reader, Response, Result,
+    CommandMiddlewareHost, DatasourceError, Driver, Parameter, Reader, Response, Result, Statement,
     TypeConverter, Value,
 };
 use mysql_async::prelude::Queryable;
@@ -149,6 +150,24 @@ impl Command for MysqlCommand {
                 }
             })
             .await
+    }
+
+    async fn execute_reader_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Box<dyn Reader>> {
+        let text = MysqlStatementFactory.transform(statement).get_text();
+        self.execute_reader(&text, parameters).await
+    }
+
+    async fn execute_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let text = MysqlStatementFactory.transform(statement).get_text();
+        self.execute(&text, parameters).await
     }
 }
 

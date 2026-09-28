@@ -4,10 +4,13 @@ namespace UserRolesSimpleCli;
 
 public static class Migrate
 {
-    public static async Task Apply(ICommand command)
+    public static async Task Apply(ICommand command, IDriver driver)
     {
-        foreach (var table in Schema.Tables(command.Connection.Provider, ColumnTypes.Map(command.Connection.Provider)))
-            await command.Execute(IfNotExists(table.GetText()));
+        var provider = command.Connection.Provider;
+        foreach (var table in Schema.Tables(provider, driver))
+            await (provider == "sqlite"
+                ? command.Execute(IfNotExists(table.GetText()))
+                : command.Execute(table));
         if (command.Connection.Provider == "mysql")
             foreach (var sql in Schema.MysqlProcedures())
                 await command.Execute(sql);

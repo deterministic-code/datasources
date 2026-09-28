@@ -4,6 +4,7 @@ mod converters;
 mod driver;
 mod engine;
 mod reader;
+mod statement_factory;
 mod transaction;
 
 pub use driver::MysqlDriver;

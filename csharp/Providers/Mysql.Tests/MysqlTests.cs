@@ -49,4 +49,19 @@ public class MysqlTests
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).ExecuteReader("x"));
     }
+
+    [Fact]
+    public void MapsColumnTypes()
+    {
+        var driver = new MysqlDriver();
+        Assert.Equal("INT", driver.ColumnType("int"));
+        Assert.Equal("CHAR(36)", driver.ColumnType("uuid"));
+        Assert.Equal("TEXT", driver.ColumnType("string"));
+        Assert.Equal("TEXT", driver.ColumnType("datetime"));
+        Assert.Equal("TINYINT", driver.ColumnType("bool"));
+        Assert.Equal("DECIMAL(18,4)", driver.ColumnType("decimal"));
+        Assert.Equal("DOUBLE", driver.ColumnType("float"));
+        Assert.Equal("BLOB", driver.ColumnType("binary"));
+        Assert.Contains("Unknown mysql type \"xml\"", Assert.Throws<DatasourceException>(() => driver.ColumnType("xml")).Message);
+    }
 }

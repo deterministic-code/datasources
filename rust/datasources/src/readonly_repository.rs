@@ -18,11 +18,11 @@ use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
-use crate::stored_enrichment::StoredEnrichment;
 use crate::select_statement::SelectStatement;
 use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
+use crate::stored_enrichment::StoredEnrichment;
 use crate::stubs::StubConnection;
 use crate::stubs::StubRepository;
 use crate::table_repository_builder::RepositoryBuilder;
@@ -111,9 +111,10 @@ impl ReadonlyRepository {
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let via = via.read_via();
-        self.enrichments.lock().expect("enrichments").push(
-            StoredEnrichment::direct(enrichment, via, None, strategy),
-        );
+        self.enrichments
+            .lock()
+            .expect("enrichments")
+            .push(StoredEnrichment::direct(enrichment, via, None, strategy));
         self
     }
 
@@ -137,10 +138,7 @@ impl ReadonlyRepository {
         command
     }
 
-    fn query_of(
-        &self,
-        query: Option<&dyn Statement>,
-    ) -> (SelectStatement, Vec<Parameter>) {
+    fn query_of(&self, query: Option<&dyn Statement>) -> (SelectStatement, Vec<Parameter>) {
         if let Some(query) = query {
             let params = query
                 .predicate()
@@ -282,19 +280,13 @@ impl ReadonlyRepository {
         }
         let mut pairs = Vec::new();
         for renamed in self.read_sources(query, parameters).await? {
-            let item = Mapper::map(
-                &self.rows_mapper,
-                self.row_converter.convert(&renamed)?,
-            );
+            let item = Mapper::map(&self.rows_mapper, self.row_converter.convert(&renamed)?);
             pairs.push((item, Some(renamed)));
         }
         Ok(pairs)
     }
 
-    async fn apply(
-        &self,
-        pairs: Vec<(Row, Option<Row>)>,
-    ) -> Result<Vec<(Row, Option<Row>)>> {
+    async fn apply(&self, pairs: Vec<(Row, Option<Row>)>) -> Result<Vec<(Row, Option<Row>)>> {
         if !self.enriched() {
             return Ok(pairs);
         }
@@ -324,7 +316,6 @@ impl ReadonlyRepository {
             )),
         }
     }
-
 }
 
 impl IRepository for ReadonlyRepository {

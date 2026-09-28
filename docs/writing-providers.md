@@ -75,6 +75,18 @@ generatedId(id: Cell): Cell
 
 **Returns** `Cell`
 
+##### columnType(name)
+
+SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default, exported as `columnType`, returns `name`. MySQL, Postgres, and SQLite override it. An unknown name throws.
+
+```typescript
+columnType(name: string): string
+```
+
+- `name` — canonical type name
+
+**Returns** `string`
+
 ### csharp
 #### IDriver
 
@@ -143,6 +155,18 @@ Value GeneratedId(Value id)
 
 **Returns** [Value](./sections/value.md)
 
+##### ColumnType(name)
+
+SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default returns `name`. MySQL, Postgres, and SQLite override it. An unknown name throws.
+
+```csharp
+string ColumnType(string name)
+```
+
+- `name` — canonical type name
+
+**Returns** `string`
+
 ### rust
 #### Driver
 
@@ -210,6 +234,18 @@ fn generated_id(&self, id: Value) -> Value
 - `id` — insert identity from the engine
 
 **Returns** [Value](./sections/value.md)
+
+##### column_type(name)
+
+SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default returns `name`. MySQL, Postgres, and SQLite override it. An unknown name returns an error.
+
+```rust
+fn column_type(&self, name: &str) -> Result<String>
+```
+
+- `name` — canonical type name
+
+**Returns** `Result<String>`
 :::
 
 ## Remarks
@@ -219,6 +255,10 @@ fn generated_id(&self, id: Value) -> Value
 `rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](./sections/type-converters.md). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
 `generatedId` / `GeneratedId` / `generated_id` runs only on an insert identity (`last_insert_rowid`, `LastInsertedId`, `RETURNING` on `INSERT`, the memory inserted id) before that value is stored on `Response.result`. SELECT scalars stay `Value.From`. The default returns the value unchanged. TypeScript drivers assign the exported `generatedId` function; C# and Rust inherit the default method.
+
+`columnType` / `ColumnType` / `column_type` maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. TypeScript drivers assign the exported `columnType` function; C# and Rust inherit the default method. MySQL, Postgres, and SQLite override it and throw on an unknown name.
+
+MySQL and Postgres commands own an internal statement factory that extends `CreateTableStatementRenderer`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call it before the string execute. The factory overrides column type, default, and identity, and leaves every other statement unchanged. The factory is not exported.
 
 The package exports only the driver type.
 

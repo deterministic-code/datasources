@@ -4,13 +4,15 @@ namespace ContactsCrudEnrichedMediumRest;
 
 public static class Migrate
 {
-    public static async Task Apply(ICommand command)
+    public static async Task Apply(ICommand command, IDriver driver)
     {
         var provider = command.Connection.Provider;
         if (provider == "sqlite")
             await command.Execute("PRAGMA foreign_keys = ON");
-        foreach (var table in Schema.Tables(provider))
-            await command.Execute(IfNotExists(table.GetText()));
+        foreach (var table in Schema.Tables(provider, driver))
+            await (provider == "sqlite"
+                ? command.Execute(IfNotExists(table.GetText()))
+                : command.Execute(table));
         await Seed(command, provider);
         if (provider == "mysql")
             foreach (var sql in MysqlProcedures.Statements())

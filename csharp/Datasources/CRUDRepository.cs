@@ -30,22 +30,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     protected bool UseTransaction => write.UseTransaction;
 
-    protected async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> work)
-    {
-        var txn = await Command().Connection.StartTransaction();
-        try
-        {
-            var result = await work();
-            await txn.Commit();
-            return result;
-        }
-        catch
-        {
-            await txn.Abort();
-            throw;
-        }
-    }
-
     public new CRUDRepository<T> AddMiddleware(ICommandMiddleware middleware)
     {
         base.AddMiddleware(middleware);
@@ -78,13 +62,13 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     }
 
     public Task<T> Create(T item) =>
-        UseTransaction ? InTransaction(() => CreateCore(item)) : CreateCore(item);
+        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => CreateCore(item)) : CreateCore(item);
 
     public Task<Response> Update(T item, IWhere? byWhere = null) =>
-        UseTransaction ? InTransaction(() => UpdateCore(item, byWhere)) : UpdateCore(item, byWhere);
+        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => UpdateCore(item, byWhere)) : UpdateCore(item, byWhere);
 
     public Task<Response> Delete(T item, IWhere? byWhere = null) =>
-        UseTransaction ? InTransaction(() => DeleteCore(item, byWhere)) : DeleteCore(item, byWhere);
+        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => DeleteCore(item, byWhere)) : DeleteCore(item, byWhere);
 
     protected async Task<T> CreateCore(T item)
     {

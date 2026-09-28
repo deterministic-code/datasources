@@ -6,6 +6,7 @@ import {
   ColumnDefault,
   CreateIndexStatement,
   CreateTableStatement,
+  CreateTableStatementRenderer,
   DeleteStatement,
   ForeignKey,
   Identifier,
@@ -286,6 +287,11 @@ describe("statements", () => {
       { name: "name", type: "TEXT" },
     ]);
     expect(createTable.getText()).toBe("CREATE TABLE users (id INTEGER, name TEXT)");
+    expect(new class extends CreateTableStatementRenderer {
+      override render(_statement: CreateTableStatement): string {
+        return "CREATE TABLE replaced";
+      }
+    }().render(createTable)).toBe("CREATE TABLE replaced");
     const namedTable = new CreateTableStatement(
       "orders",
       [

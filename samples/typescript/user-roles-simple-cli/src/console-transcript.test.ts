@@ -55,7 +55,7 @@ describe("console transcript", () => {
     const connection = new SqliteDriver().connection({ filename: ":memory:" });
     await connection.open();
     const command = connection.createCommand();
-    await migrate(command);
+    await migrate(command, new SqliteDriver());
     const now = () => new Date(spec.now);
     const middleware = new ExpectConsoleMiddleware(expected, now, normalizeConsoleLine);
     command.addMiddleware(middleware);

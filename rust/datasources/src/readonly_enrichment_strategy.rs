@@ -1,6 +1,8 @@
 use crate::enrichment::Enrichment;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::repository_tree_node::{encode_row, encode_rows, source_at, source_key, RepositoryTreeNode};
+use crate::repository_tree_node::{
+    encode_row, encode_rows, source_at, source_key, RepositoryTreeNode,
+};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -71,10 +73,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
             };
             let related = via
                 .read(
-                    Some(&Where::new(Operator::equals(
-                        enrichment.by.clone(),
-                        key,
-                    ))),
+                    Some(&Where::new(Operator::equals(enrichment.by.clone(), key))),
                     None,
                 )
                 .await?;
@@ -112,10 +111,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                 };
                 if let Some(entity) = via
                     .read_single(
-                        Some(&Where::new(Operator::equals(
-                            enrichment.by.clone(),
-                            id,
-                        ))),
+                        Some(&Where::new(Operator::equals(enrichment.by.clone(), id))),
                         None,
                     )
                     .await?

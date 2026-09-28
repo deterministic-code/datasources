@@ -1,4 +1,5 @@
 #[allow(dead_code)]
+mod bulk_write_strategy;
 mod command;
 mod connection;
 mod contact;
@@ -609,7 +610,10 @@ async fn stubs_throw() {
         .read_single(Some(&WhereText::new("1=1")), None)
         .await
         .is_err());
-    assert!(readonly.read(Some(&WhereText::new("1=1")), None).await.is_err());
+    assert!(readonly
+        .read(Some(&WhereText::new("1=1")), None)
+        .await
+        .is_err());
     let txn = StubTransaction::new("text");
     assert!(txn.commit().await.is_err());
     assert!(txn.abort().await.is_err());
@@ -700,7 +704,10 @@ async fn published_mocks() {
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read(Some(&MockWhere::new("all")), None).await.unwrap().len(),
+        repo.read(Some(&MockWhere::new("all")), None)
+            .await
+            .unwrap()
+            .len(),
         1
     );
     let created = repo
@@ -1174,6 +1181,16 @@ fn statements_and_builders() {
     assert_eq!(
         create_table.get_text(),
         "CREATE TABLE users (id INTEGER, name TEXT)"
+    );
+    struct ReplacedRenderer;
+    impl CreateTableStatementRenderer for ReplacedRenderer {
+        fn render(&self, _statement: &CreateTableStatement) -> String {
+            "CREATE TABLE replaced".into()
+        }
+    }
+    assert_eq!(
+        ReplacedRenderer.render(&create_table),
+        "CREATE TABLE replaced"
     );
     let named_table = CreateTableStatement::new(
         "orders",
@@ -1656,7 +1673,11 @@ async fn table_repository() {
         ..SelectStatementOptions::new("users", &["id"])
     });
     command.reader_rows.lock().unwrap().clear();
-    assert!(repo.read_single(Some(&query), None).await.unwrap().is_none());
+    assert!(repo
+        .read_single(Some(&query), None)
+        .await
+        .unwrap()
+        .is_none());
     assert_eq!(
         command.reader_logs.lock().unwrap().last().unwrap().0,
         "SELECT id FROM users WHERE id = $id"

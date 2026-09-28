@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, generatedId, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, generatedId, columnType, CreateTableStatement, SelectStatement, type IDriver } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlConnection } from "./connection.ts";
@@ -86,6 +86,11 @@ describe("MysqlConnection", () => {
     await connection.open();
     expect(await command.execute("INSERT INTO items (id) VALUES ($id)", [{ name: "id", value: 1 }]))
       .toMatchObject({ rowsAffected: 2, result: 5 });
+    expect(await command.executeStatement(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }])))
+      .toMatchObject({ rowsAffected: 2 });
+    expect(client.queries.at(-1)?.sql).toBe("CREATE TABLE users (id INTEGER)");
+    client.arrayResult = true;
+    expect(await (await command.executeReaderStatement(new SelectStatement("SELECT 1"))).next()).toBe(true);
     expect(await command.execute("   ")).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
     client.arrayResult = true;
     const reader = await command.executeReader("SELECT * FROM items");
@@ -105,6 +110,8 @@ describe("MysqlConnection", () => {
     expect(client.queries.map((q) => q.sql)).toEqual([
       "SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')",
       "INSERT INTO items (id) VALUES (:id)",
+      "CREATE TABLE users (id INTEGER)",
+      "SELECT 1",
       "SELECT * FROM items",
       "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
       "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED",
@@ -222,6 +229,7 @@ describe("Mysql datasource", () => {
         new MysqlTransaction(c as MysqlConnection, isolation),
       rowTypeConverters: MysqlRowTypeConverters,
       generatedId,
+      columnType,
     });
     const ds = new Datasource("mysql", of());
     expect(ds.provider).toBe("mysql");
@@ -247,6 +255,15 @@ describe("Mysql datasource", () => {
     expect(MysqlConnection.from({ database_url: "mysql://db/app" }).url).toBe("mysql://db/app");
     expect(MysqlConnection.from().url).toBe("");
     const provider = new MysqlDriver();
+    expect(provider.columnType("int")).toBe("INT");
+    expect(provider.columnType("uuid")).toBe("CHAR(36)");
+    expect(provider.columnType("string")).toBe("TEXT");
+    expect(provider.columnType("datetime")).toBe("TEXT");
+    expect(provider.columnType("bool")).toBe("TINYINT");
+    expect(provider.columnType("decimal")).toBe("DECIMAL(18,4)");
+    expect(provider.columnType("float")).toBe("DOUBLE");
+    expect(provider.columnType("binary")).toBe("BLOB");
+    expect(() => provider.columnType("xml")).toThrow('Unknown mysql type "xml"');
     expect(provider.command(connection)).toBeInstanceOf(MysqlCommand);
     expect(provider.transaction(connection as MysqlConnection).isolation).toBe("serializable");
   });

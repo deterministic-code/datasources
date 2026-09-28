@@ -3,11 +3,13 @@ use crate::connection::{map_err, PostgresConnection};
 use crate::driver::PostgresDriver;
 use crate::pg_value::PgValue;
 use crate::reader::PostgresReader;
+use crate::statement_factory::PostgresStatementFactory;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Driver, Parameter, Reader, Response, Result, Value,
+    CommandMiddlewareHost, DatasourceError, Driver, Parameter, Reader, Response, Result, Statement,
+    Value,
 };
 use rust_decimal::Decimal;
 use std::collections::HashMap;
@@ -154,6 +156,24 @@ impl Command for PostgresCommand {
                 }
             })
             .await
+    }
+
+    async fn execute_reader_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Box<dyn Reader>> {
+        let text = PostgresStatementFactory.transform(statement).get_text();
+        self.execute_reader(&text, parameters).await
+    }
+
+    async fn execute_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let text = PostgresStatementFactory.transform(statement).get_text();
+        self.execute(&text, parameters).await
     }
 }
 

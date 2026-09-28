@@ -62,4 +62,19 @@ public class PostgresTests
         await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).ExecuteReader("x"));
     }
+
+    [Fact]
+    public void MapsColumnTypes()
+    {
+        var driver = new PostgresDriver();
+        Assert.Equal("INTEGER", driver.ColumnType("int"));
+        Assert.Equal("UUID", driver.ColumnType("uuid"));
+        Assert.Equal("TEXT", driver.ColumnType("string"));
+        Assert.Equal("BOOLEAN", driver.ColumnType("bool"));
+        Assert.Equal("NUMERIC", driver.ColumnType("decimal"));
+        Assert.Equal("DOUBLE PRECISION", driver.ColumnType("float"));
+        Assert.Equal("TIMESTAMPTZ", driver.ColumnType("datetime"));
+        Assert.Equal("BYTEA", driver.ColumnType("binary"));
+        Assert.Contains("Unknown postgres type \"xml\"", Assert.Throws<DatasourceException>(() => driver.ColumnType("xml")).Message);
+    }
 }

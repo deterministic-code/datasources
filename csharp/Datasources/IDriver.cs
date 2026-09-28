@@ -7,4 +7,5 @@ public interface IDriver
     ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable);
     IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
     Value GeneratedId(Value id) => id;
+    string ColumnType(string name) => name;
 }

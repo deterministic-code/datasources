@@ -41,7 +41,8 @@ fn repo() -> PathBuf {
 
 fn spec() -> CliSpec {
     serde_yaml::from_str(
-        &fs::read_to_string(sample().join("../../user-roles-simple-cli-shared/cli.yaml")).expect("spec"),
+        &fs::read_to_string(sample().join("../../user-roles-simple-cli-shared/cli.yaml"))
+            .expect("spec"),
     )
     .expect("yaml")
 }
@@ -276,7 +277,11 @@ fn start_sql(line: &str) -> Option<String> {
     let prefix = "[datasource][Start]-[";
     signed
         .starts_with(prefix)
-        .then(|| signed.strip_prefix(prefix).and_then(|rest| rest.strip_suffix(']')))
+        .then(|| {
+            signed
+                .strip_prefix(prefix)
+                .and_then(|rest| rest.strip_suffix(']'))
+        })
         .flatten()
         .map(str::to_string)
 }
@@ -339,7 +344,10 @@ async fn postgres() {
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
     fresh_compose("postgres");
     let _stop = StopCompose("postgres");
-    let url = env_or("POSTGRES_URL", "postgres://ds:ds@127.0.0.1:5432/datasources");
+    let url = env_or(
+        "POSTGRES_URL",
+        "postgres://ds:ds@127.0.0.1:5432/datasources",
+    );
     let schema = format!("ds_{}", &uuid()[..16]);
     let (client, connection) = tokio_postgres::connect(&url, tokio_postgres::NoTls)
         .await
@@ -378,7 +386,8 @@ async fn console_transcript(
 ) {
     let shared = sample().join("../../user-roles-simple-cli-shared");
     let spec: TranscriptSpec =
-        serde_yaml::from_str(&fs::read_to_string(shared.join("cli.yaml")).expect("spec")).expect("yaml");
+        serde_yaml::from_str(&fs::read_to_string(shared.join("cli.yaml")).expect("spec"))
+            .expect("yaml");
     let expected = fs::read_to_string(shared.join(file))
         .expect("log")
         .lines()
@@ -387,7 +396,13 @@ async fn console_transcript(
         .collect();
     connection.open().await.expect("open");
     let command = connection.create_command();
-    user_roles_simple_cli::migrate::apply(command.as_ref(), connection.provider())
+    let driver: Box<dyn datasources::Driver> = match connection.provider() {
+        "sqlite" => Box::new(datasources_sqlite::SqliteDriver),
+        "mysql" => Box::new(datasources_mysql::MysqlDriver),
+        "postgres" => Box::new(datasources_postgres::PostgresDriver),
+        name => panic!("unknown provider {name}"),
+    };
+    user_roles_simple_cli::migrate::apply(command.as_ref(), connection.provider(), driver.as_ref())
         .await
         .expect("migrate");
     let clock = spec.now.clone();
@@ -401,10 +416,10 @@ async fn console_transcript(
     let app = user_roles_simple_cli::app::App::new(command.as_ref(), connection.provider())
         .procedures(procedures)
         .with_clock(
-        move || stamp.clone(),
-        |_| Ok("hash".into()),
-        || vec![1, 2, 3],
-    );
+            move || stamp.clone(),
+            |_| Ok("hash".into()),
+            || vec![1, 2, 3],
+        );
     for step in spec.steps {
         app.run(user_roles_simple_cli::parse::args(&step.argv).expect("parse"))
             .await
@@ -428,9 +443,12 @@ async fn console_transcript_mysql() {
         mysql_async::prelude::Queryable::query_drop(&mut conn, format!("CREATE DATABASE `{name}`"))
             .await
             .expect("create");
-        mysql_async::prelude::Queryable::query_drop(&mut conn, format!("CREATE DATABASE `{procedures}`"))
-            .await
-            .expect("procedures");
+        mysql_async::prelude::Queryable::query_drop(
+            &mut conn,
+            format!("CREATE DATABASE `{procedures}`"),
+        )
+        .await
+        .expect("procedures");
     }
     let mut options = std::collections::HashMap::new();
     options.insert("url".into(), replace_mysql_db(&url, &name));
@@ -463,7 +481,10 @@ async fn console_transcript_postgres() {
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
     fresh_compose("postgres");
     let _stop = StopCompose("postgres");
-    let url = env_or("POSTGRES_URL", "postgres://ds:ds@127.0.0.1:5432/datasources");
+    let url = env_or(
+        "POSTGRES_URL",
+        "postgres://ds:ds@127.0.0.1:5432/datasources",
+    );
     let schema = format!("ds_{}", &uuid()[..16]);
     let (client, connection) = tokio_postgres::connect(&url, tokio_postgres::NoTls)
         .await

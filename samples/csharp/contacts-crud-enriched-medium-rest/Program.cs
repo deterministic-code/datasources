@@ -9,15 +9,19 @@ using Datasources.Sqlite;
 var url = Env("DATASOURCE_URL") ?? throw new InvalidOperationException("DATASOURCE_URL is required");
 var schema = Env("DATABASE_SCHEMA");
 var provider = ProviderFromUrl.From(url) ?? throw new InvalidOperationException("unknown provider");
-var connection = provider switch
+IDriver driver = provider switch
 {
-    "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["url"] = url }),
-    "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["url"] = url }),
-    "postgres" => new PostgresDriver().Connection(new Dictionary<string, string?> { ["url"] = url, ["schema"] = schema }),
+    "sqlite" => new SqliteDriver(),
+    "mysql" => new MysqlDriver(),
+    "postgres" => new PostgresDriver(),
     _ => throw new InvalidOperationException($"unknown provider {provider}")
 };
+var options = new Dictionary<string, string?> { ["url"] = url };
+if (provider == "postgres")
+    options["schema"] = schema;
+var connection = driver.Connection(options);
 await connection.Open();
-await Migrate.Apply(connection.CreateCommand());
+await Migrate.Apply(connection.CreateCommand(), driver);
 var api = new Api(new ContactsRepository(connection), new LegacyContactRepository(connection));
 var port = int.TryParse(Env("PORT"), out var parsed) ? parsed : 8080;
 using var listener = new HttpListener();
