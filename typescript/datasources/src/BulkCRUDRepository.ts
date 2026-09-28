@@ -4,7 +4,6 @@ import type { Cell, Cells } from "./converters/Cell.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
-import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { Response } from "./Response.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
@@ -41,43 +40,52 @@ const isBulkStrategy = <T>(value: unknown): value is IBulkWriteStrategy<T> =>
   !("createCommand" in value) &&
   !("statements" in value);
 
+const scalarOf = (value: Scalar | object | undefined): Scalar | undefined =>
+  value === undefined || value === null || typeof value === "object" ? undefined : value;
+
+const transactionOf = <T extends object>(
+  options: IConnection | CRUDRepositoryOptions<T> | IBulkWriteStrategy<T> | undefined,
+): boolean =>
+  options !== undefined && "write" in options ? options.write?.useTransaction ?? false : false;
+
 export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository<T> {
   private readonly strategy: IBulkWriteStrategy<T>;
+  private readonly transactional: boolean;
 
   constructor(type: Constructable<T>, connection: IConnection, bulk?: IBulkWriteStrategy<T>);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>, bulk?: IBulkWriteStrategy<T>);
   constructor(built: BuiltRepository<T>, bulk?: IBulkWriteStrategy<T>);
-  constructor(write?: IWriteEnrichmentStrategy<T>);
   constructor(
-    typeOrConnectionOrBuiltOrWrite?:
+    typeOrConnectionOrBuilt:
       | Constructable<T>
       | IConnection
       | BuiltRepository<T>
-      | IWriteEnrichmentStrategy<T>
       | IBulkWriteStrategy<T>,
     connectionOrOptions?: IConnection | CRUDRepositoryOptions<T> | IBulkWriteStrategy<T>,
     bulk?: IBulkWriteStrategy<T>,
   ) {
     const strategy = bulk ?? (isBulkStrategy<T>(connectionOrOptions) ? connectionOrOptions : undefined);
+    const transactional = transactionOf(connectionOrOptions);
     super(
-      typeOrConnectionOrBuiltOrWrite as Constructable<T> & IConnection & BuiltRepository<T> & IWriteEnrichmentStrategy<T>,
+      typeOrConnectionOrBuilt as Constructable<T> & IConnection & BuiltRepository<T>,
       (isBulkStrategy(connectionOrOptions) ? undefined : connectionOrOptions) as IConnection & CRUDRepositoryOptions<T>,
     );
     this.strategy = strategy ?? new SingleCommands<T>();
+    this.transactional = transactional;
   }
 
   createMany = (items: T[]): Promise<Response> =>
-    this.useTransaction
+    this.transactional
       ? new UnitOfWork(this.command().connection).inTransaction(() => this.strategy.create(items, this.asWrite()))
       : this.strategy.create(items, this.asWrite());
 
   updateMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    this.useTransaction
+    this.transactional
       ? new UnitOfWork(this.command().connection).inTransaction(() => this.strategy.update(items, byWhere, this.asWrite()))
       : this.strategy.update(items, byWhere, this.asWrite());
 
   deleteMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    this.useTransaction
+    this.transactional
       ? new UnitOfWork(this.command().connection).inTransaction(() => this.strategy.delete(items, byWhere, this.asWrite()))
       : this.strategy.delete(items, byWhere, this.asWrite());
 
@@ -99,14 +107,17 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
 
   private asWrite = (): IBulkWrite<T> => ({
     command: this.command(),
-    createOne: async (item) => this.idValue(await this.createCore(item)),
-    updateOne: (item, byWhere) => this.updateCore(item, byWhere),
-    deleteOne: (item, byWhere) => this.deleteCore(item, byWhere),
+    createOne: async (item) => this.idOf(await this.create(item)),
+    updateOne: (item, byWhere) => this.update(item, byWhere),
+    deleteOne: (item, byWhere) => this.delete(item, byWhere),
     inserts: (items) => items.map((item) => this.insertCommand(this.stripped(item))),
     updates: (items, byWhere) => items.map((item) => this.updateCommand(this.stripped(item), byWhere)),
     deletes: (items, byWhere) => items.map((item) => this.deleteCommand(this.stripped(item), byWhere)),
     rows: (items) => items.map((item) => this.rowOf(item)),
   });
+
+  private idOf = (item: T): Scalar | undefined =>
+    this.ids.length === 1 ? scalarOf((item as Record<string, Scalar | object>)[this.ids[0]!]) : undefined;
 
   private stripped = (item: T): T => (this.enriched ? (strip(this, item) as T) : item);
 

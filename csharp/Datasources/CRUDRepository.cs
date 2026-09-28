@@ -20,15 +20,9 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
     }
 
-    protected CRUDRepository(IWriteEnrichmentStrategy<T>? write = null)
-    {
-        ids = CreateRepositoryOptions.FromType<T>().Ids;
-        this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
-    }
-
     public IReadOnlyList<string> Ids => ids;
 
-    protected bool UseTransaction => write.UseTransaction;
+    bool UseTransaction => write.UseTransaction;
 
     public new CRUDRepository<T> AddMiddleware(ICommandMiddleware middleware)
     {
@@ -70,7 +64,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public Task<Response> Delete(T item, IWhere? byWhere = null) =>
         UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => DeleteCore(item, byWhere)) : DeleteCore(item, byWhere);
 
-    protected async Task<T> CreateCore(T item)
+    async Task<T> CreateCore(T item)
     {
         var stored = Enriched ? StripEnriched(item) : item;
         await Insert(stored, item);
@@ -81,7 +75,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return id is Value.Null ? item : await ReadSingleById(id) ?? item;
     }
 
-    protected async Task<Response> UpdateCore(T item, IWhere? byWhere = null)
+    async Task<Response> UpdateCore(T item, IWhere? byWhere = null)
     {
         var stored = Enriched ? StripEnriched(item) : item;
         var response = await Save(stored, byWhere);
@@ -90,7 +84,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return response;
     }
 
-    protected async Task<Response> DeleteCore(T item, IWhere? byWhere = null)
+    async Task<Response> DeleteCore(T item, IWhere? byWhere = null)
     {
         if (Enriched)
             await write.Persist(Tree, [item!], WriteMode.Delete);
@@ -107,12 +101,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return await ReadSingle(IdWhere(key));
     }
 
-    protected virtual async Task<T> Inserted(T item)
-    {
-        await Insert(item, item);
-        return item;
-    }
-
     async Task<Response> Insert(T stored, T target)
     {
         var fields = Params(ReverseConvert(stored), col => !ids.Contains(col));
@@ -121,7 +109,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return response;
     }
 
-    protected virtual async Task<Response> Save(T item, IWhere? byWhere)
+    async Task<Response> Save(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
         var where = byWhere is null ? Mapped(IdWhere(record), fieldsApplied: true) : Mapped(byWhere, fieldsApplied: false);
@@ -132,7 +120,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return await Command().Execute(statement, UpdateStatement.ParameterList(fields, where));
     }
 
-    protected virtual async Task<Response> Remove(T item, IWhere? byWhere)
+    async Task<Response> Remove(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
         var where = byWhere is null ? Mapped(IdWhere(record), fieldsApplied: true) : Mapped(byWhere, fieldsApplied: false);
@@ -185,7 +173,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             prop.SetValue(target, prop.GetValue(patch));
     }
 
-    protected Value IdValue(T item)
+    Value IdValue(T item)
     {
         if (ids.Count != 1) return Value.Null.Instance;
         var name = ids[0];

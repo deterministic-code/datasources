@@ -6,6 +6,7 @@ mod contact;
 mod datasource_factory;
 mod statement_parser;
 mod transaction;
+mod unit_of_work;
 
 use crate::converters::{Cells, RowTypeConverter};
 use crate::*;

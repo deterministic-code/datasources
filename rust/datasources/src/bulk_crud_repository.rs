@@ -15,6 +15,7 @@ use crate::id_key::IdKey;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
+use crate::readonly_repository::ReadonlyRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::unit_of_work::UnitOfWork;
 use crate::response::Response;
@@ -32,6 +33,7 @@ use std::sync::Arc;
 pub struct BulkCRUDRepository {
     crud: CRUDRepository,
     strategy: Arc<dyn BulkWriteStrategy>,
+    use_transaction: bool,
 }
 
 impl BulkCRUDRepository {
@@ -44,9 +46,14 @@ impl BulkCRUDRepository {
         options: CRUDRepositoryOptions,
         strategy: Arc<dyn BulkWriteStrategy>,
     ) -> Result<Self> {
+        let use_transaction = options
+            .write
+            .as_ref()
+            .is_some_and(|write| write.use_transaction());
         Ok(Self {
             crud: CRUDRepository::new(connection, options)?,
             strategy,
+            use_transaction,
         })
     }
 
@@ -55,9 +62,14 @@ impl BulkCRUDRepository {
     }
 
     pub fn from_built_with(built: BuiltRepository, strategy: Arc<dyn BulkWriteStrategy>) -> Self {
+        let use_transaction = built
+            .write
+            .as_ref()
+            .is_some_and(|write| write.use_transaction());
         Self {
             crud: CRUDRepository::from_built(built),
             strategy,
+            use_transaction,
         }
     }
 
@@ -66,9 +78,11 @@ impl BulkCRUDRepository {
     }
 
     pub fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
+        let use_transaction = write.as_ref().is_some_and(|write| write.use_transaction());
         Self {
             crud: CRUDRepository::memory_with(items, write),
             strategy: Arc::new(SingleCommands),
+            use_transaction,
         }
     }
 
@@ -83,10 +97,10 @@ impl BulkCRUDRepository {
     }
 
     pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response> {
-        if !self.crud.use_transaction() {
+        if !self.use_transaction {
             return self.strategy.create(items, self).await;
         }
-        let connection = Arc::clone(&self.crud.readonly.connection);
+        let connection = Arc::clone(&stored_repo(&self.crud).connection);
         UnitOfWork::new(connection)
             .in_transaction(self.strategy.create(items, self))
             .await
@@ -97,10 +111,10 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        if !self.crud.use_transaction() {
+        if !self.use_transaction {
             return self.strategy.update(items, by_where, self).await;
         }
-        let connection = Arc::clone(&self.crud.readonly.connection);
+        let connection = Arc::clone(&stored_repo(&self.crud).connection);
         UnitOfWork::new(connection)
             .in_transaction(self.strategy.update(items, by_where, self))
             .await
@@ -111,10 +125,10 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        if !self.crud.use_transaction() {
+        if !self.use_transaction {
             return self.strategy.delete(items, by_where, self).await;
         }
-        let connection = Arc::clone(&self.crud.readonly.connection);
+        let connection = Arc::clone(&stored_repo(&self.crud).connection);
         UnitOfWork::new(connection)
             .in_transaction(self.strategy.delete(items, by_where, self))
             .await
@@ -128,16 +142,16 @@ impl BulkWrite for BulkCRUDRepository {
     }
 
     async fn create_one(&self, item: &mut Row) -> Result<Value> {
-        let created = self.crud.create_core(item).await?;
-        Ok(self.crud.id_value(&created))
+        let created = self.crud.create(item).await?;
+        Ok(id_of(&self.crud, &created))
     }
 
     async fn update_one(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.crud.update_core(item, by_where).await
+        self.crud.update(item, by_where).await
     }
 
     async fn delete_one(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.crud.delete_core(item, by_where).await
+        self.crud.delete(item, by_where).await
     }
 
     fn inserts(&self, items: &[Row]) -> Result<Vec<BulkCommand>> {
@@ -170,9 +184,22 @@ fn command((text, parameters): (String, Vec<Parameter>)) -> BulkCommand {
     BulkCommand { text, parameters }
 }
 
+fn stored_repo(repo: &CRUDRepository) -> &ReadonlyRepository {
+    repo
+}
+
+fn id_of(repo: &CRUDRepository, item: &Row) -> Value {
+    let ids = repo.id_names();
+    if ids.len() != 1 {
+        return Value::Null;
+    }
+    item.get(&ids[0]).cloned().unwrap_or(Value::Null)
+}
+
 fn stored(repo: &CRUDRepository, item: &Row) -> Row {
-    if repo.readonly.enriched() {
-        let entries = repo.readonly.enrichments.lock().expect("enrichments");
+    let readonly = stored_repo(repo);
+    if readonly.enriched() {
+        let entries = readonly.enrichments.lock().expect("enrichments");
         strip_enriched(item, &entries)
     } else {
         item.clone()
@@ -180,9 +207,10 @@ fn stored(repo: &CRUDRepository, item: &Row) -> Row {
 }
 
 fn insert_command(repo: &CRUDRepository, item: &Row) -> Result<(String, Vec<Parameter>)> {
-    let record = repo.readonly.reverse_convert(item)?;
+    let readonly = stored_repo(repo);
+    let record = readonly.reverse_convert(item)?;
     let fields = params(repo, &record, false)?;
-    let statement = repo.readonly.statements.insert(&fields);
+    let statement = readonly.statements.insert(&fields);
     Ok((statement.get_text(), fields))
 }
 
@@ -191,7 +219,8 @@ fn update_command(
     item: &Row,
     by_where: Option<&dyn IWhere>,
 ) -> Result<(String, Vec<Parameter>)> {
-    let record = repo.readonly.reverse_convert(item)?;
+    let readonly = stored_repo(repo);
+    let record = readonly.reverse_convert(item)?;
     let fields = params(repo, &record, false)?;
     if fields.is_empty() {
         return Err(DatasourceError::message(
@@ -204,7 +233,7 @@ fn update_command(
         (None, Some(clause)) => clause,
         _ => unreachable!(),
     };
-    let statement = repo.readonly.statements.update(&fields, clause);
+    let statement = readonly.statements.update(&fields, clause);
     let parameters = crate::UpdateStatement::parameter_list(&fields, Some(clause));
     Ok((statement.get_text(), parameters))
 }
@@ -214,14 +243,15 @@ fn delete_command(
     item: &Row,
     by_where: Option<&dyn IWhere>,
 ) -> Result<(String, Vec<Parameter>)> {
-    let record = repo.readonly.reverse_convert(item)?;
+    let readonly = stored_repo(repo);
+    let record = readonly.reverse_convert(item)?;
     let (owned, raw) = predicate(repo, &record, by_where)?;
     let clause: &dyn IWhere = match (owned.as_ref(), raw) {
         (Some(clause), _) => clause,
         (None, Some(clause)) => clause,
         _ => unreachable!(),
     };
-    let statement = repo.readonly.statements.delete(clause);
+    let statement = readonly.statements.delete(clause);
     let parameters = clause.parameters();
     let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
         params(repo, &record, true)?
@@ -232,12 +262,13 @@ fn delete_command(
 }
 
 fn stored_row(repo: &CRUDRepository, item: &Row) -> Result<Row> {
-    let record = repo.readonly.reverse_convert(&stored(repo, item))?;
+    let readonly = stored_repo(repo);
+    let record = readonly.reverse_convert(&stored(repo, item))?;
     let mut row = Row::new();
-    for name in repo.readonly.statements.columns() {
+    for name in readonly.statements.columns() {
         let value = record
             .iter()
-            .find(|(key, _)| repo.readonly.column(key) == *name)
+            .find(|(key, _)| readonly.column(key) == *name)
             .map(|(_, value)| value.clone())
             .unwrap_or(Value::Null);
         row.insert(name.clone(), value);
@@ -257,8 +288,8 @@ fn params(repo: &CRUDRepository, record: &Row, include_ids: bool) -> Result<Vec<
         .into_iter()
         .map(|(name, value)| {
             Ok(Parameter::new(
-                repo.readonly.column(&name),
-                repo.readonly.cell(&name, &value, true)?,
+                stored_repo(repo).column(&name),
+                stored_repo(repo).cell(&name, &value, true)?,
             ))
         })
         .collect()
@@ -271,12 +302,12 @@ fn predicate<'a>(
 ) -> Result<(Option<Where>, Option<&'a dyn IWhere>)> {
     match by_where {
         Some(clause) => match clause.as_any().downcast_ref::<Where>() {
-            Some(typed) => Ok((Some(typed.map(|name| repo.readonly.column(name), |name, cell| repo.readonly.cell(name, cell, false))?), None)),
+            Some(typed) => Ok((Some(typed.map(|name| stored_repo(repo).column(name), |name, cell| stored_repo(repo).cell(name, cell, false))?), None)),
             None => Ok((None, Some(clause))),
         },
         None => {
             let clause = id_where(repo, record)?;
-            Ok((Some(clause.map(|name| repo.readonly.column(name), |name, cell| repo.readonly.cell(name, cell, true))?), None))
+            Ok((Some(clause.map(|name| stored_repo(repo).column(name), |name, cell| stored_repo(repo).cell(name, cell, true))?), None))
         }
     }
 }

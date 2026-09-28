@@ -75,6 +75,10 @@ impl MockConnection {
         self.state.lock().expect("mock").open_calls
     }
 
+    pub fn start_calls(&self) -> usize {
+        self.state.lock().expect("mock").start_calls
+    }
+
     pub fn is_open(&self) -> bool {
         self.state.lock().expect("mock").opened
     }
