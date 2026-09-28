@@ -10,6 +10,7 @@ use crate::datasource_error::DatasourceError;
 use crate::default_write_enrichment_strategy::strip_enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
+use crate::i_unit_of_work::IUnitOfWork;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::parameter::Parameter;
@@ -100,10 +101,21 @@ impl BulkCRUDRepository {
         if !self.use_transaction {
             return self.strategy.create(items, self).await;
         }
-        let connection = Arc::clone(&stored_repo(&self.crud).connection);
-        UnitOfWorkTransaction::new(connection)
-            .do_work(self.strategy.create(items, self))
-            .await
+        let mut work = UnitOfWorkTransaction::new(Arc::clone(&stored_repo(&self.crud).connection));
+        work.begin().await?;
+        match self.strategy.create(items, self).await {
+            Ok(value) => match work.commit().await {
+                Ok(()) => Ok(value),
+                Err(error) => {
+                    work.abort().await?;
+                    Err(error)
+                }
+            },
+            Err(error) => {
+                work.abort().await?;
+                Err(error)
+            }
+        }
     }
 
     pub async fn update_bulk(
@@ -114,10 +126,21 @@ impl BulkCRUDRepository {
         if !self.use_transaction {
             return self.strategy.update(items, by_where, self).await;
         }
-        let connection = Arc::clone(&stored_repo(&self.crud).connection);
-        UnitOfWorkTransaction::new(connection)
-            .do_work(self.strategy.update(items, by_where, self))
-            .await
+        let mut work = UnitOfWorkTransaction::new(Arc::clone(&stored_repo(&self.crud).connection));
+        work.begin().await?;
+        match self.strategy.update(items, by_where, self).await {
+            Ok(value) => match work.commit().await {
+                Ok(()) => Ok(value),
+                Err(error) => {
+                    work.abort().await?;
+                    Err(error)
+                }
+            },
+            Err(error) => {
+                work.abort().await?;
+                Err(error)
+            }
+        }
     }
 
     pub async fn delete_bulk(
@@ -128,10 +151,21 @@ impl BulkCRUDRepository {
         if !self.use_transaction {
             return self.strategy.delete(items, by_where, self).await;
         }
-        let connection = Arc::clone(&stored_repo(&self.crud).connection);
-        UnitOfWorkTransaction::new(connection)
-            .do_work(self.strategy.delete(items, by_where, self))
-            .await
+        let mut work = UnitOfWorkTransaction::new(Arc::clone(&stored_repo(&self.crud).connection));
+        work.begin().await?;
+        match self.strategy.delete(items, by_where, self).await {
+            Ok(value) => match work.commit().await {
+                Ok(()) => Ok(value),
+                Err(error) => {
+                    work.abort().await?;
+                    Err(error)
+                }
+            },
+            Err(error) => {
+                work.abort().await?;
+                Err(error)
+            }
+        }
     }
 }
 

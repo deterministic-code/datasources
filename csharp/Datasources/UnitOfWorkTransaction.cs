@@ -1,39 +1,66 @@
 namespace Datasources;
 
-public sealed class UnitOfWorkTransaction
+public sealed class UnitOfWorkTransaction : IUnitOfWork
 {
     static readonly HashSet<IConnection> open = new(ReferenceEqualityComparer.Instance);
     readonly IConnection connection;
+    ITransaction? transaction;
+    bool begun;
 
     public UnitOfWorkTransaction(IConnection connection) => this.connection = connection;
 
-    public async Task<TResult> DoWork<TResult>(Func<Task<TResult>> work)
+    public async Task Begin()
     {
-        var joined = false;
+        if (begun)
+            throw new DatasourceException("Unit of work already begun");
+        begun = true;
+        var owner = false;
         lock (open)
-            joined = !open.Add(connection);
-        if (joined)
-            return await work();
-
+            owner = open.Add(connection);
+        if (!owner)
+            return;
         try
         {
-            var txn = await connection.StartTransaction();
-            try
-            {
-                var result = await work();
-                await txn.Commit();
-                return result;
-            }
-            catch
-            {
-                await txn.Abort();
-                throw;
-            }
+            transaction = await connection.StartTransaction();
         }
-        finally
+        catch
         {
             lock (open)
                 open.Remove(connection);
+            throw;
         }
+    }
+
+    public async Task Commit()
+    {
+        if (!begun)
+            throw new DatasourceException("Unit of work has not begun");
+        if (transaction is not { } txn)
+            return;
+        await txn.Commit();
+        Release();
+    }
+
+    public async Task Abort()
+    {
+        if (!begun)
+            throw new DatasourceException("Unit of work has not begun");
+        if (transaction is not { } txn)
+            return;
+        try
+        {
+            await txn.Abort();
+        }
+        finally
+        {
+            Release();
+        }
+    }
+
+    void Release()
+    {
+        lock (open)
+            open.Remove(connection);
+        transaction = null;
     }
 }

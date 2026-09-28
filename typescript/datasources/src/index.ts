@@ -69,6 +69,7 @@ export type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 export type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 export type { Response } from "./Response.ts";
 export type { ITransaction } from "./ITransaction.ts";
+export type { IUnitOfWork } from "./IUnitOfWork.ts";
 export { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 export { IsolationLevel } from "./IsolationLevel.ts";
 export type { IsolationLevel as IsolationLevelName } from "./IsolationLevel.ts";
