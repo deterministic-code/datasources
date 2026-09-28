@@ -149,9 +149,6 @@ fn builds_schema() {
         assert!(sql.contains(&format!("FOREIGN KEY ({}) REFERENCES", schema::ident(provider, "user_id"))));
         assert!(sql.contains(&format!("FOREIGN KEY ({}) REFERENCES", schema::ident(provider, "bad_role_id"))));
         assert!(sql.contains("ugly_name"));
-        if provider == "sqlite" {
-            eprintln!("{sql}");
-        }
     }
     assert!(
         schema::tables("sqlite", &datasources_sqlite::SqliteDriver).unwrap()[0]
