@@ -31,10 +31,6 @@ impl SharedItems {
         })
     }
 
-    pub fn snapshot(&self) -> Vec<Row> {
-        self.items.lock().expect("items").clone()
-    }
-
     pub fn filter(&self, where_clause: Option<&dyn IWhere>) -> Vec<Row> {
         let items = self.items.lock().expect("items");
         match where_clause {

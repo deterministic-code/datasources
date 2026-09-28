@@ -1,31 +1,35 @@
+using System.Collections;
+
 namespace Datasources;
 
 public class BulkCRUDRepository<T> : CRUDRepository<T>, IBulkWrite<T> where T : new()
 {
-    readonly IBulkWriteStrategy<T> bulk = new SingleCommands<T>();
+    readonly IBulkWriteStrategy<T> bulk;
+    readonly bool useTransaction;
 
-    public BulkCRUDRepository(IConnection connection) : base(connection) { }
+    public BulkCRUDRepository(IConnection connection) : base(connection) =>
+        (bulk, useTransaction) = (new SingleCommands<T>(), false);
 
-    public BulkCRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) : base(connection, options) { }
+    public BulkCRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
+        this(connection, options, new SingleCommands<T>()) { }
 
     public BulkCRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options, IBulkWriteStrategy<T> bulk)
-        : base(connection, options) => this.bulk = bulk;
+        : base(connection, options) =>
+        (this.bulk, useTransaction) = (bulk, options.Write?.UseTransaction ?? false);
 
-    public BulkCRUDRepository(BuiltRepository<T> built) : base(built) { }
+    public BulkCRUDRepository(BuiltRepository<T> built) : this(built, new SingleCommands<T>()) { }
 
     public BulkCRUDRepository(BuiltRepository<T> built, IBulkWriteStrategy<T> bulk) : base(built) =>
-        this.bulk = bulk;
-
-    protected BulkCRUDRepository(IWriteEnrichmentStrategy<T>? write = null) : base(write) { }
+        (this.bulk, useTransaction) = (bulk, false);
 
     public Task<Response> Create(IReadOnlyList<T> items) =>
-        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Create(items, this)) : bulk.Create(items, this);
+        useTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Create(items, this)) : bulk.Create(items, this);
 
     public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null) =>
-        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Update(items, byWhere, this)) : bulk.Update(items, byWhere, this);
+        useTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Update(items, byWhere, this)) : bulk.Update(items, byWhere, this);
 
     public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null) =>
-        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Delete(items, byWhere, this)) : bulk.Delete(items, byWhere, this);
+        useTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Delete(items, byWhere, this)) : bulk.Delete(items, byWhere, this);
 
     public Task<Response> BulkCreate(IReadOnlyList<T> items) => Create(items);
 
@@ -37,11 +41,11 @@ public class BulkCRUDRepository<T> : CRUDRepository<T>, IBulkWrite<T> where T : 
 
     ICommand IBulkWrite<T>.Command => Command();
 
-    async Task<Value> IBulkWrite<T>.CreateOne(T item) => IdValue(await CreateCore(item));
+    async Task<Value> IBulkWrite<T>.CreateOne(T item) => IdOf(await Create(item));
 
-    Task<Response> IBulkWrite<T>.UpdateOne(T item, IWhere? byWhere) => UpdateCore(item, byWhere);
+    Task<Response> IBulkWrite<T>.UpdateOne(T item, IWhere? byWhere) => Update(item, byWhere);
 
-    Task<Response> IBulkWrite<T>.DeleteOne(T item, IWhere? byWhere) => DeleteCore(item, byWhere);
+    Task<Response> IBulkWrite<T>.DeleteOne(T item, IWhere? byWhere) => Delete(item, byWhere);
 
     IReadOnlyList<BulkCommand> IBulkWrite<T>.Inserts(IReadOnlyList<T> items) =>
         [.. items.Select(item => Insert(Stored(item)))];
@@ -54,6 +58,17 @@ public class BulkCRUDRepository<T> : CRUDRepository<T>, IBulkWrite<T> where T : 
 
     IReadOnlyList<Row> IBulkWrite<T>.Rows(IReadOnlyList<T> items) =>
         [.. items.Select(RowOf)];
+
+    Value IdOf(T item)
+    {
+        if (Ids.Count != 1) return Value.Null.Instance;
+        var name = Ids[0];
+        if (item is IDictionary dict)
+            return dict.Contains(name) ? Value.From(dict[name]) : Value.Null.Instance;
+        return typeof(T).GetProperty(name)?.GetValue(item) is { } value
+            ? Value.From(value)
+            : Value.Null.Instance;
+    }
 
     T Stored(T item) =>
         Enriched ? (T)DefaultWriteEnrichmentStrategy<T>.Strip((IEnrichmentHost)this, item!) : item;

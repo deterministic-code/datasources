@@ -66,33 +66,21 @@ export class CRUDRepository<T = Cells>
 {
   readonly ids: readonly string[];
   private readonly write: IWriteEnrichmentStrategy<T>;
-  protected get useTransaction(): boolean {
+  private get useTransaction(): boolean {
     return this.write.useTransaction;
   }
 
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>);
   constructor(built: BuiltRepository<T>, write?: IWriteEnrichmentStrategy<T>);
-  constructor(write?: IWriteEnrichmentStrategy<T>);
   constructor(
-    typeOrConnectionOrBuiltOrWrite?:
+    typeOrConnectionOrBuiltOrWrite:
       | Constructable<T>
       | IConnection
-      | BuiltRepository<T>
-      | IWriteEnrichmentStrategy<T>,
+      | BuiltRepository<T>,
     connectionOrOptionsOrWrite?: IConnection | CRUDRepositoryOptions<T> | IWriteEnrichmentStrategy<T>,
   ) {
-    if (
-      typeOrConnectionOrBuiltOrWrite === undefined ||
-      isWrite(typeOrConnectionOrBuiltOrWrite)
-    ) {
-      super();
-      this.ids = createRepositoryOptions(Object as never as Constructable<T>).ids!;
-      this.write = (typeOrConnectionOrBuiltOrWrite as IWriteEnrichmentStrategy<T> | undefined)
-        ?? new DefaultWriteEnrichmentStrategy<T>();
-      return;
-    }
-    if (isBuilt(typeOrConnectionOrBuiltOrWrite)) {
+    if (typeof typeOrConnectionOrBuiltOrWrite !== "function" && isBuilt(typeOrConnectionOrBuiltOrWrite)) {
       super(typeOrConnectionOrBuiltOrWrite);
       this.ids = typeOrConnectionOrBuiltOrWrite.ids;
       this.write =
@@ -151,7 +139,7 @@ export class CRUDRepository<T = Cells>
       ? new UnitOfWork(this.command().connection).inTransaction(() => this.deleteCore(item, byWhere))
       : this.deleteCore(item, byWhere);
 
-  protected createCore = async (item: T): Promise<T> => {
+  private createCore = async (item: T): Promise<T> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
     await this.insert(stored, item);
     if (!this.enriched) return item;
@@ -161,25 +149,20 @@ export class CRUDRepository<T = Cells>
     return id === undefined ? item : (await this.readSingleById(id)) ?? item;
   };
 
-  protected updateCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  private updateCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;
     const response = await this.save(stored, byWhere);
     if (this.enriched) await this.write.persist(this.tree, [item], "update");
     return response;
   };
 
-  protected deleteCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  private deleteCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
     if (this.enriched) await this.write.persist(this.tree, [item], "delete");
     return this.remove(item, byWhere);
   };
 
   readSingleById = async (id: Scalar | Cells): Promise<T | undefined> =>
     this.readSingle(this.byId(id));
-
-  protected inserted = async (item: T): Promise<T> => {
-    await this.insert(item, item);
-    return item;
-  };
 
   private insert = async (stored: T, target: T): Promise<Response> => {
     const fields = fieldsOf(this.reverseConvert(stored), (col) => !this.ids.includes(col), this.column, this.cell);
@@ -202,10 +185,10 @@ export class CRUDRepository<T = Cells>
       (item as Props)[name] = value;
   };
 
-  protected idValue = (item: T): Scalar | undefined =>
+  private idValue = (item: T): Scalar | undefined =>
     this.ids.length === 1 ? scalarOf((item as Props)[this.ids[0]!]) : undefined;
 
-  protected save = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
@@ -213,7 +196,7 @@ export class CRUDRepository<T = Cells>
     return execute(this.command(), this.statements!.update(fields, where), UpdateStatement.parameterList(fields, where));
   };
 
-  protected remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  private remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
     const statement = this.statements!.delete(where);
@@ -269,13 +252,3 @@ const lastEnrichment = (host: object): StoredEnrichment => {
   if (!stored) throw new DatasourceError("Missing enrichment");
   return stored;
 };
-
-const isWrite = <T>(
-  value: Constructable<T> | IConnection | BuiltRepository<T> | IWriteEnrichmentStrategy<T>,
-): value is IWriteEnrichmentStrategy<T> =>
-  typeof value === "object" &&
-  value !== null &&
-  "persist" in value &&
-  typeof value.persist === "function" &&
-  !("createCommand" in value) &&
-  !isBuilt(value as BuiltRepository<T>);

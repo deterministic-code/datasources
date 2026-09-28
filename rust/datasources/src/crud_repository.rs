@@ -19,7 +19,6 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::shared_items::SharedItems;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::unit_of_work::UnitOfWork;
@@ -33,7 +32,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 pub struct CRUDRepository {
-    pub(crate) readonly: ReadonlyRepository,
+    readonly: ReadonlyRepository,
     ids: Vec<String>,
     write: Arc<dyn WriteEnrichmentStrategy>,
 }
@@ -130,19 +129,15 @@ impl CRUDRepository {
         self.readonly.add_middleware(middleware);
     }
 
-    pub fn items(&self) -> Option<&Arc<SharedItems>> {
-        self.readonly.memory_items()
-    }
-
     fn enriched(&self) -> bool {
         self.readonly.enriched()
     }
 
-    pub(crate) fn use_transaction(&self) -> bool {
+    fn use_transaction(&self) -> bool {
         self.write.use_transaction()
     }
 
-    pub(crate) async fn create_core(&self, item: &mut Row) -> Result<Row> {
+    async fn create_core(&self, item: &mut Row) -> Result<Row> {
         if !self.enriched() {
             return self.inserted(item).await;
         }
@@ -178,7 +173,7 @@ impl CRUDRepository {
             .unwrap_or_else(|| item.clone()))
     }
 
-    pub(crate) async fn update_core(
+    async fn update_core(
         &self,
         item: &Row,
         by_where: Option<&dyn IWhere>,
@@ -203,7 +198,7 @@ impl CRUDRepository {
         Ok(response)
     }
 
-    pub(crate) async fn delete_core(
+    async fn delete_core(
         &self,
         item: &Row,
         by_where: Option<&dyn IWhere>,
@@ -258,7 +253,7 @@ impl CRUDRepository {
         Ok(Where::new(and_all(children)))
     }
 
-    pub(crate) async fn inserted(&self, item: &mut Row) -> Result<Row> {
+    async fn inserted(&self, item: &mut Row) -> Result<Row> {
         if let Some(memory) = self.readonly.memory_items() {
             return Ok(memory.insert(item));
         }
@@ -277,7 +272,7 @@ impl CRUDRepository {
             .await
     }
 
-    pub(crate) fn id_value(&self, item: &Row) -> Value {
+    fn id_value(&self, item: &Row) -> Value {
         if self.ids.len() != 1 {
             return Value::Null;
         }
@@ -300,7 +295,7 @@ impl CRUDRepository {
         Ok(())
     }
 
-    pub(crate) async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(memory) = self.readonly.memory_items() {
             return Ok(memory.save(item));
         }
@@ -325,7 +320,7 @@ impl CRUDRepository {
             .await
     }
 
-    pub(crate) async fn remove(
+    async fn remove(
         &self,
         item: &Row,
         by_where: Option<&dyn IWhere>,
