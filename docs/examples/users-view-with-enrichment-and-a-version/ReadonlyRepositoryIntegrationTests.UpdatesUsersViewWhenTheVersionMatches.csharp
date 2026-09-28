@@ -1,21 +1,5 @@
-var connection = await Open(ds, """
-    CREATE TABLE user_type (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL
-    );
-    CREATE TABLE user (
-        id INTEGER PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL,
-        created TEXT NOT NULL,
-        user_type_id INTEGER NOT NULL,
-        version INTEGER NOT NULL
-    );
-    CREATE TABLE user_role (
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL
-    );
-    """);
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, "user-view-version");
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
 {

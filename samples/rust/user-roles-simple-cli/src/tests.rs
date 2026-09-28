@@ -150,11 +150,9 @@ fn builds_schema() {
         assert!(sql.contains(&format!("FOREIGN KEY ({}) REFERENCES", schema::ident(provider, "bad_role_id"))));
         assert!(sql.contains("ugly_name"));
     }
-    assert!(
-        schema::tables("sqlite", &datasources_sqlite::SqliteDriver).unwrap()[0]
-            .get_text()
-            .contains("INTEGER PRIMARY KEY")
-    );
+    let sqlite = schema::tables("sqlite", &datasources_sqlite::SqliteDriver).unwrap();
+    assert!(sqlite[0].columns[0].identity);
+    assert!(sqlite[0].get_text().contains("CONSTRAINT pk_users PRIMARY KEY"));
     assert!(
         schema::tables("mysql", &datasources_mysql::MysqlDriver).unwrap()[0].columns[0].identity
     );
@@ -179,7 +177,6 @@ fn builds_schema() {
         user_table("postgres"),
         "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" UUID, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" DOUBLE PRECISION, \"created\" TIMESTAMPTZ, \"version\" BYTEA)"
     );
-    assert!(schema::tables("oracle", &datasources_sqlite::SqliteDriver).is_err());
     assert_eq!(columns::map("name"), "ugly_name");
     assert_eq!(columns::map("role_id"), "bad_role_id");
     assert_eq!(columns::map("username"), "username");

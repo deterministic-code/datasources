@@ -25,8 +25,12 @@ public sealed class SchemaTests
     }
 
     [Fact]
-    public void SqliteUsesIntegerPrimaryKey() =>
-        Assert.Contains("\"Id\" INTEGER PRIMARY KEY", Schema.Tables("sqlite", new SqliteDriver())[0].GetText());
+    public void SqliteUsesIntegerPrimaryKey()
+    {
+        var source = Schema.Tables("sqlite", new SqliteDriver())[0];
+        Assert.True(source.Columns[0].Identity);
+        Assert.Contains("CONSTRAINT pk_ContactSource PRIMARY KEY", source.GetText());
+    }
 
     [Fact]
     public void MysqlUsesIdentityFlag() =>
@@ -41,17 +45,16 @@ public sealed class SchemaTests
     {
         var sqlite = Schema.Tables("sqlite", new SqliteDriver()).Single(table => table.GetText().Contains("legacy_contact")).GetText();
         var mysql = Schema.Tables("mysql", new MysqlDriver()).Single(table => table.GetText().Contains("legacy_contact")).GetText();
-        Assert.Contains("\"m_Key\" TEXT PRIMARY KEY", sqlite);
+        Assert.Contains("PRIMARY KEY (\"m_Key\")", sqlite);
         Assert.Contains("PRIMARY KEY (`m_Key`)", mysql);
     }
 
     [Fact]
-    public void QuotesIdentifiersAndRejectsUnknownProviders()
+    public void QuotesIdentifiers()
     {
         Assert.Equal("\"tbl_Contacts\"", Schema.Ident("sqlite", "tbl_Contacts"));
         Assert.Equal("\"a\"\"b\"", Schema.Ident("postgres", "a\"b"));
         Assert.Equal("`a``b`", Schema.Ident("mysql", "a`b"));
-        Assert.Throws<InvalidOperationException>(() => Schema.Tables("oracle", new SqliteDriver()));
     }
 
     static IDriver Driver(string provider) => provider switch

@@ -1,5 +1,5 @@
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, Seed());
+var connection = await Open(ds, "user-roles-read", Seed());
 var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
 {
     ["Key"] = "id",

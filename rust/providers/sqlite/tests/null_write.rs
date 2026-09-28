@@ -1,7 +1,7 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, Connection, ICRUDRepository, Row,
-    RowTypeConverter, Text, Value,
+    RowTypeConverter, Value,
 };
 use std::sync::Arc;
 
@@ -26,18 +26,8 @@ async fn omits_null_datetime_and_version() {
     let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
     let command = SqliteCommand::new(conn.clone());
-    for statement in datasources_sql_specs::schema_tables(
-        "null-write-item",
-        "sqlite",
-        quote_ident,
-        datasources_sql_specs::type_mapper("sqlite"),
-        None,
-        true,
-    ) {
-        command
-            .execute(&statement.get_text(), None)
-            .await
-            .unwrap();
+    for statement in datasources_sql_specs::schema_tables("null-write-item", quote_ident, None) {
+        command.execute_statement(&statement, None).await.unwrap();
     }
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "item".into();

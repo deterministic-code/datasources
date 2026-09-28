@@ -22,8 +22,12 @@ public sealed class SchemaTests
     }
 
     [Fact]
-    public void SqliteUsesIntegerPrimaryKey() =>
-        Assert.Contains("\"id\" INTEGER PRIMARY KEY", Schema.Tables("sqlite", new SqliteDriver())[0].GetText());
+    public void SqliteUsesIntegerPrimaryKey()
+    {
+        var users = Schema.Tables("sqlite", new SqliteDriver())[0];
+        Assert.True(users.Columns[0].Identity);
+        Assert.Contains("CONSTRAINT pk_users PRIMARY KEY", users.GetText());
+    }
 
     [Fact]
     public void MysqlUsesIdentityFlag() =>
@@ -32,10 +36,6 @@ public sealed class SchemaTests
     [Fact]
     public void PostgresUsesIdentityFlag() =>
         Assert.True(Schema.Tables("postgres", new PostgresDriver())[0].Columns[0].Identity);
-
-    [Fact]
-    public void RejectsUnknownProvider() =>
-        Assert.Throws<InvalidOperationException>(() => Schema.Tables("oracle", new SqliteDriver()));
 
     [Fact]
     public void QuotesIdentifiersAndMapsColumnTypes()

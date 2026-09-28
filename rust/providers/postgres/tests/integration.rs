@@ -92,22 +92,18 @@ fn quote_ident(id: &str) -> String {
     format!("\"{}\"", id.replace('"', "\"\""))
 }
 
+fn render_schema(name: &str) -> String {
+    datasources_sql_specs::schema_tables(name, quote_ident, None)
+        .iter()
+        .map(|statement| crate::statement_factory::PostgresStatementFactory.transform(statement).get_text())
+        .collect::<Vec<_>>()
+        .join(";\n")
+}
+
 fn resolve_sql(sql: &str, dialect: &DialectFile) -> String {
     match sql.trim() {
-        "createUserTable" => datasources_sql_specs::schema_sql(
-            &dialect.create_user_table,
-            "postgres",
-            quote_ident,
-            datasources_sql_specs::type_mapper("postgres"),
-            None,
-        ),
-        "createUserTableVersioned" => datasources_sql_specs::schema_sql(
-            &dialect.create_user_table_versioned,
-            "postgres",
-            quote_ident,
-            datasources_sql_specs::type_mapper("postgres"),
-            None,
-        ),
+        "createUserTable" => render_schema(&dialect.create_user_table),
+        "createUserTableVersioned" => render_schema(&dialect.create_user_table_versioned),
         _ => sql.to_string(),
     }
 }

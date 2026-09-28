@@ -1,4 +1,5 @@
 import { beforeAll, describe, it } from "vitest";
+import { execute } from "@datasources/core";
 import { ensureCompose } from "../../ensure-compose.ts";
 import {
   repositorySpecFiles,
@@ -59,7 +60,7 @@ describe("repository specs", () => {
         await runRepositorySpec(
           file,
           connection,
-          (sql) => command.execute(sql),
+          (statement) => execute(command, statement),
           dialect,
           MysqlRowTypeConverters,
         );

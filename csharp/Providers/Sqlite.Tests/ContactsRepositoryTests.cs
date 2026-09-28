@@ -16,8 +16,8 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        foreach (var statement in SchemaSpec.Tables("contacts", "sqlite", Quote, canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
-            await command.Execute(statement.GetText());
+        foreach (var statement in SchemaSpec.Tables("contacts", Quote))
+            await command.Execute(statement);
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
             await command.Execute(sql);
 
@@ -54,8 +54,8 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        foreach (var statement in SchemaSpec.Tables("contacts", "sqlite", Quote, canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
-            await command.Execute(statement.GetText());
+        foreach (var statement in SchemaSpec.Tables("contacts", Quote))
+            await command.Execute(statement);
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
             await command.Execute(sql);
 

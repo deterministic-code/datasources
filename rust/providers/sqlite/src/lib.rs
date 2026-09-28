@@ -5,6 +5,7 @@ mod converters;
 mod driver;
 mod reader;
 mod sqlite_path;
+mod statement_factory;
 mod transaction;
 
 pub use driver::SqliteDriver;

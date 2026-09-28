@@ -7,8 +7,9 @@ import {
 } from "../../sql-spec-runner.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
+import { SqliteStatementFactory } from "../src/SqliteStatementFactory.ts";
 
-const dialect = loadDialect("sqlite");
+const dialect = loadDialect("sqlite", (statement) => new SqliteStatementFactory().transform(statement).getText());
 
 describe("shared sql specs", () => {
   for (const file of specFiles()) {

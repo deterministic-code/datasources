@@ -1,4 +1,5 @@
 use crate::connection::{map_err, SqliteConnection};
+use crate::statement_factory::SqliteStatementFactory;
 use crate::converters::{
     BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
 };
@@ -6,7 +7,7 @@ use crate::driver::SqliteDriver;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, Driver, Parameter, Reader, Response, Result, TypeConverter, Value,
+    DatasourceError, Driver, Parameter, Reader, Response, Result, Statement, TypeConverter, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
 use std::collections::HashMap;
@@ -135,6 +136,24 @@ impl Command for SqliteCommand {
                 }
             })
             .await
+    }
+
+    async fn execute_reader_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Box<dyn Reader>> {
+        let text = SqliteStatementFactory.transform(statement).get_text();
+        self.execute_reader(&text, parameters).await
+    }
+
+    async fn execute_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let text = SqliteStatementFactory.transform(statement).get_text();
+        self.execute(&text, parameters).await
     }
 }
 

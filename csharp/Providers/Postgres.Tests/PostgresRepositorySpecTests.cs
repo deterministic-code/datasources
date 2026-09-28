@@ -33,7 +33,7 @@ public class PostgresRepositorySpecTests
                         Schema = schema,
                     });
                     return new RepositoryTestsSpec.Session(conn, new PostgresCommand(conn), PostgresRowTypeConverters.All);
-                }, Quote, Map);
+                }, Quote);
             }
             finally
             {
@@ -47,17 +47,4 @@ public class PostgresRepositorySpecTests
     }
 
     static string Quote(string id) => $"\"{id.Replace("\"", "\"\"")}\"";
-
-    static string Map(string canonical) => canonical switch
-    {
-        "int" => "INTEGER",
-        "uuid" => "UUID",
-        "string" => "TEXT",
-        "bool" => "BOOLEAN",
-        "decimal" => "NUMERIC",
-        "float" => "DOUBLE PRECISION",
-        "datetime" => "TIMESTAMPTZ",
-        "binary" => "BYTEA",
-        _ => throw new InvalidOperationException($"Unknown postgres type \"{canonical}\"")
-    };
 }

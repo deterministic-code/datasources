@@ -25,7 +25,7 @@ public class MysqlRepositorySpecTests
                         Url = isolated.Url,
                     });
                     return new RepositoryTestsSpec.Session(conn, new MysqlCommand(conn), MysqlRowTypeConverters.All);
-                }, Quote, Map);
+                }, Quote);
             }
             finally
             {
@@ -35,19 +35,6 @@ public class MysqlRepositorySpecTests
     }
 
     static string Quote(string id) => $"`{id.Replace("`", "``")}`";
-
-    static string Map(string canonical) => canonical switch
-    {
-        "int" => "INT",
-        "uuid" => "CHAR(36)",
-        "string" => "TEXT",
-        "bool" => "TINYINT",
-        "decimal" => "DECIMAL(18,4)",
-        "float" => "DOUBLE",
-        "datetime" => "TEXT",
-        "binary" => "BLOB",
-        _ => throw new InvalidOperationException($"Unknown mysql type \"{canonical}\"")
-    };
 
     static async Task<(string Url, Func<Task> Cleanup)> Isolate(string baseUrl)
     {

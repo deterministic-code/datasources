@@ -2,12 +2,8 @@ let built = datasource();
 let ds: &dyn Datasource = &*built;
 let connection = open(
     ds,
+    "minimal-users",
     "
-    CREATE TABLE users (
-        id INTEGER PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL
-    );
     INSERT INTO users (id, username, is_enabled) VALUES
         (1, 'ada', 1),
         (2, 'grace', 0);

@@ -164,11 +164,12 @@ public static class SqlSpec
     {
         public ConnectionMeta Connection { get; init; } = new();
         public string Engine { get; init; } = "";
+        public Func<CreateTableStatement, string> Render { get; init; } = static statement => statement.GetText();
         public string CreateUserTable { get; init; } = "";
         public string CreateUserTableVersioned { get; init; } = "";
         public List<Dictionary<string, Value>> DirtyReadRows { get; init; } = [];
 
-        public static Dialect Load(string engine)
+        public static Dialect Load(string engine, Func<CreateTableStatement, string> render)
         {
             var yaml = new YamlStream();
             yaml.Load(new StringReader(File.ReadAllText(Path.Combine(SpecsDir(), "dialects", $"{engine}.yaml"))));
@@ -187,6 +188,7 @@ public static class SqlSpec
             return new Dialect
             {
                 Engine = engine,
+                Render = render,
                 Connection = new ConnectionMeta { Kind = Conn("kind"), Filename = Conn("filename"), Env = Conn("env") },
                 CreateUserTable = Scalar("createUserTable"),
                 CreateUserTableVersioned = Scalar("createUserTableVersioned"),
@@ -213,7 +215,7 @@ public static class SqlSpec
         };
 
         string Schema(string name) =>
-            SchemaSpec.Sql(name, Engine, static id => $"\"{id.Replace("\"", "\"\"")}\"", canonical => SchemaSpec.ColumnType(Engine, canonical));
+            string.Join(";\n", SchemaSpec.Tables(name, static id => $"\"{id.Replace("\"", "\"\"")}\"").Select(Render));
 
         public List<Row>? ResolveRows(object? rows) => rows switch
         {

@@ -11,7 +11,8 @@ import { contactsServiceOf } from "../../../datasources/src/tests/contact/contac
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { columnType, tables } from "../../../schema-spec.ts";
+import { execute } from "@datasources/core";
+import { tables } from "../../../schema-spec.ts";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
@@ -56,8 +57,8 @@ describe("contacts readonly repository", () => {
       const connection = PostgresConnection.from({ url, schema: isolated.schema });
       await connection.open();
       const command = new PostgresCommand(connection);
-      for (const statement of tables("contacts", "postgres", quote, (canonical) => columnType("postgres", canonical), undefined, true))
-        await command.execute(statement.getText());
+      for (const statement of tables("contacts", quote))
+        await execute(command, statement);
       for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql(seedContactCount, "'\\x'")])
         await command.execute(sql);
 
