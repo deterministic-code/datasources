@@ -92,34 +92,18 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     this.transactional = transactional;
   }
 
-  createMany = (items: T[]): Promise<Response> =>
+  createBulk = (items: T[]): Promise<Response> =>
     inTransaction(this.transactional, this.command().connection, () => this.strategy.create(items, this.asWrite()));
 
-  updateMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
+  updateBulk = (items: T[], byWhere?: IWhere): Promise<Response> =>
     inTransaction(this.transactional, this.command().connection, () =>
       this.strategy.update(items, byWhere, this.asWrite()),
     );
 
-  deleteMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
+  deleteBulk = (items: T[], byWhere?: IWhere): Promise<Response> =>
     inTransaction(this.transactional, this.command().connection, () =>
       this.strategy.delete(items, byWhere, this.asWrite()),
     );
-
-  createBulk = (items: T[]): Promise<Response> => this.createMany(items);
-
-  updateBulk = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    this.updateMany(items, byWhere);
-
-  deleteBulk = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    this.deleteMany(items, byWhere);
-
-  bulkCreate = (items: T[]): Promise<Response> => this.createMany(items);
-
-  bulkUpdate = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    this.updateMany(items, byWhere);
-
-  bulkDelete = (items: T[], byWhere?: IWhere): Promise<Response> =>
-    this.deleteMany(items, byWhere);
 
   private asWrite = (): IBulkWrite<T> => ({
     command: this.command(),

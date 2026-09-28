@@ -49,9 +49,9 @@ describe("BulkCRUDRepository", () => {
     expect(response.result).toBe(Math.max(...parents.map((parent) => parent.id)));
   });
 
-  it("bulkCreate matches list create", async () => {
+  it("createBulk writes each parent", async () => {
     const parentsRepo = new BulkCRUDRepository(Parent, await setup());
-    const response = await parentsRepo.bulkCreate([
+    const response = await parentsRepo.createBulk([
       Object.assign(new Parent(), { label: "a" }),
       Object.assign(new Parent(), { label: "b" }),
     ]);
@@ -75,7 +75,7 @@ describe("BulkCRUDRepository", () => {
       },
       afterCommand() {},
     });
-    await expect(parentsRepo.updateMany([
+    await expect(parentsRepo.updateBulk([
       Object.assign(new Parent(), { id: first.id, label: "changed" }),
       Object.assign(new Parent(), { id: first.id, label: "later" }),
     ])).rejects.toThrow(/stop/);
@@ -100,7 +100,7 @@ describe("BulkCRUDRepository", () => {
       },
       afterCommand() {},
     });
-    await expect(parentsRepo.updateMany([
+    await expect(parentsRepo.updateBulk([
       Object.assign(new Parent(), { id: first.id, label: "changed" }),
       Object.assign(new Parent(), { id: first.id, label: "later" }),
     ])).rejects.toThrow(/stop/);
