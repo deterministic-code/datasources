@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { exampleCode } from "./example.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DOC_FENCE = /(^~~~~[\s\S]*?^~~~~)/m;
@@ -45,18 +46,34 @@ export const fileStem = (sourcePath) => {
 export const snippetFile = ({ heading, sourcePath, name, lang }) =>
   `docs/examples/${slug(heading)}/${fileStem(sourcePath)}.${name}.${normalizeLang(lang)}`;
 
-export const formatSnippet = ({ test, from, to, body }) =>
-  `test: ${test}\nlines: ${from}-${to}\n\n${norm(body).replace(/\n$/, "")}\n`;
+export const LINES = "docs/examples/lines";
 
-export const parseSnippet = (text) => {
+const parseSnippet = (text) => {
   const match = norm(text).match(/^test: (\S+)\nlines: (\d+)-(\d+)\n\n([\s\S]*)$/);
   if (!match) throw new Error("Invalid example snippet");
   return {
     test: match[1],
     from: Number(match[2]),
     to: Number(match[3]),
-    body: match[4].replace(/\n$/, ""),
+    raw: match[4].replace(/\n$/, ""),
   };
+};
+
+export const formatLines = (records) => {
+  const lines = [...records].sort((a, b) => a.file.localeCompare(b.file)).map((record) =>
+    JSON.stringify({ file: record.file, test: record.test, from: record.from, to: record.to, raw: record.raw }),
+  );
+  return lines.length ? `${lines.join("\n")}\n` : "";
+};
+
+export const parseLines = (text) => {
+  const records = new Map();
+  for (const line of norm(text).split("\n")) {
+    if (!line.trim()) continue;
+    const record = JSON.parse(line);
+    records.set(record.file, record);
+  }
+  return records;
 };
 
 const lineStartsOf = (source) => {
@@ -433,9 +450,23 @@ export const regionByName = (regions, name) => regions.find((region) => region.n
 export const readSnippet = (heading, lang, spec, base = root) => {
   const pointer = parsePointer(spec);
   if (!pointer.name) throw new Error(`${spec}: run npm run docs:examples`);
-  const file = join(base, snippetFile({ heading, sourcePath: pointer.path, name: pointer.name, lang }));
-  const snippet = parseSnippet(readFileSync(file, "utf8"));
-  return { path: pointer.path, from: snippet.from, to: snippet.to, body: snippet.body, file };
+  const rel = snippetFile({ heading, sourcePath: pointer.path, name: pointer.name, lang });
+  let record = null;
+  try {
+    record = parseLines(readFileSync(join(base, LINES), "utf8")).get(rel) ?? null;
+  } catch {
+    record = null;
+  }
+  if (!record) throw new Error(`${spec}: run npm run docs:examples`);
+  const file = join(base, rel);
+  return {
+    path: pointer.path,
+    from: record.from,
+    to: record.to,
+    body: readFileSync(file, "utf8").replace(/\n$/, ""),
+    file,
+    linesFile: join(base, LINES),
+  };
 };
 
 export const locateSlice = (source, region, slice, hint) => {
@@ -459,6 +490,33 @@ export const locateSlice = (source, region, slice, hint) => {
 };
 
 const readLines = (source, from, to) => norm(source).split("\n").slice(from - 1, to).join("\n");
+
+const readCatalog = (base) => {
+  try {
+    return parseLines(readFileSync(join(base, LINES), "utf8"));
+  } catch {
+    return new Map();
+  }
+};
+
+const loadStored = (catalog, rel, path) => {
+  const record = catalog.get(rel);
+  if (record) return { from: record.from, to: record.to, raw: record.raw };
+  try {
+    return parseSnippet(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+};
+
+const readSample = (path) => {
+  try {
+    const text = readFileSync(path, "utf8");
+    return text.startsWith("test: ") ? null : text.replace(/\n$/, "");
+  } catch {
+    return null;
+  }
+};
 
 const walkMd = (dir) => {
   const files = [];
@@ -509,7 +567,9 @@ const relPath = (file) => relative(root, resolve(file)).split("\\").join("/");
 export const syncExamples = ({ files, check = false, edits = null, base = root } = {}) => {
   const only = files?.length ? new Set(files.map((file) => relPath(file))) : null;
   const errors = [];
-  const snippetWrites = new Map();
+  const catalog = readCatalog(base);
+  const sampleWrites = new Map();
+  const lineRecords = new Map();
   const docEdits = new Map();
   let count = 0;
   for (const doc of walkMd(join(base, "docs"))) {
@@ -555,23 +615,18 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
             lang,
           });
           const snippetPath = join(base, relSnippet);
-          let stored = null;
-          try {
-            stored = parseSnippet(readFileSync(snippetPath, "utf8"));
-          } catch {
-            stored = null;
-          }
+          const stored = loadStored(catalog, relSnippet, snippetPath);
           if (!stored) {
             if (check) throw new Error("missing snippet");
             body = readLines(source, region.from, region.to);
             from = region.from;
             to = region.to;
           } else {
-            let found = locateSlice(source, region, stored.body, stored);
-            let nextBody = stored.body;
+            let found = locateSlice(source, region, stored.raw, stored);
+            let nextBody = stored.raw;
             if (!found && edits?.length) {
-              const edited = applyEdits(stored.body, edits);
-              if (edited && edited !== stored.body) {
+              const edited = applyEdits(stored.raw, edits);
+              if (edited && edited !== stored.raw) {
                 found = locateSlice(source, region, edited);
                 nextBody = edited;
               }
@@ -581,7 +636,13 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
             body = nextBody;
             from = found.from;
             to = found.to;
-            if (check && (stored.from !== from || stored.to !== to || stored.body !== body))
+            if (
+              check &&
+              (stored.from !== from ||
+                stored.to !== to ||
+                stored.raw !== body ||
+                readSample(snippetPath) !== exampleCode(body))
+            )
               throw new Error(`drifted to ${from}-${to}`);
           }
         } else {
@@ -599,18 +660,21 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
       const name = region.name;
       const test = `${pointer.path}#${name}`;
       const relSnippet = snippetFile({ heading: sample.heading, sourcePath: pointer.path, name, lang });
-      const nextSnippet = formatSnippet({ test, from, to, body });
-      const previous = snippetWrites.get(relSnippet);
-      if (previous && previous !== nextSnippet)
+      const record = { file: relSnippet, test, from, to, raw: body };
+      const previous = lineRecords.get(relSnippet);
+      if (previous && JSON.stringify(previous) !== JSON.stringify(record))
         errors.push(`${where}: snippet ${relSnippet} already holds a different slice`);
-      else snippetWrites.set(relSnippet, nextSnippet);
+      else {
+        lineRecords.set(relSnippet, record);
+        sampleWrites.set(relSnippet, `${exampleCode(body)}\n`);
+      }
       if (sample.spec !== test)
         docEdits.set(doc, [...(docEdits.get(doc) ?? []), { index: sample.index, length: sample.spec.length, text: test }]);
     }
   }
   if (check || errors.length) return { errors, count, changed: 0 };
   let changed = 0;
-  for (const [relSnippet, text] of snippetWrites) {
+  for (const [relSnippet, text] of sampleWrites) {
     const path = join(base, relSnippet);
     let current = null;
     try {
@@ -621,6 +685,21 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
     if (current === text) continue;
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, text);
+    changed++;
+  }
+  const nextCatalog = only ? new Map(catalog) : new Map();
+  for (const record of lineRecords.values()) nextCatalog.set(record.file, record);
+  const linesText = formatLines(nextCatalog.values());
+  const linesFile = join(base, LINES);
+  let currentLines = null;
+  try {
+    currentLines = readFileSync(linesFile, "utf8");
+  } catch {
+    currentLines = null;
+  }
+  if (currentLines !== linesText) {
+    mkdirSync(dirname(linesFile), { recursive: true });
+    writeFileSync(linesFile, linesText);
     changed++;
   }
   for (const [doc, editsOfDoc] of docEdits) {

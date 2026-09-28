@@ -1,6 +1,3 @@
-test: csharp/Datasources/Mocks/MockDriver.cs#MockDriver
-lines: 3-11
-
 public sealed class MockDriver : IDriver
 {
     public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new MockConnection();

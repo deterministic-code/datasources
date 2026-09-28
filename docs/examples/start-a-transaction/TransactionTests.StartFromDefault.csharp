@@ -1,12 +1,4 @@
-test: csharp/Datasources.Tests/TransactionTests.cs#StartFromDefault
-lines: 27-35
-
-    [Fact]
-    public async Task StartFromDefault()
-    {
-        var ds = DatasourceFactory.Default;
-        var connection = await ds.CreateConnection();
-        await connection.Open();
-        var txn = await connection.StartTransaction();
-        Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
-    }
+var ds = DatasourceFactory.Default;
+var connection = await ds.CreateConnection();
+await connection.Open();
+var txn = await connection.StartTransaction();

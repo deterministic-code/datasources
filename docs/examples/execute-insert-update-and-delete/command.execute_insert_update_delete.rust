@@ -1,32 +1,17 @@
-test: rust/datasources/src/tests/command.rs#execute_insert_update_delete
-lines: 84-112
-
-        .execute(
-            "insert",
-            Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "a")]),
-        )
-        .await
-        .unwrap();
-    command
-        .execute(
-            "update",
-            Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "A")]),
-        )
-        .await
-        .unwrap();
-    command
-        .execute("delete", Some(&[Parameter::new("id", 1_i64)]))
-        .await
-        .unwrap();
-    assert_eq!(command.execute_logs.lock().unwrap()[0].0, "insert");
-    assert_eq!(command.execute_logs.lock().unwrap()[1].0, "update");
-    assert_eq!(command.execute_logs.lock().unwrap()[2].0, "delete");
-    assert_eq!(
-        command.execute_logs.lock().unwrap()[0]
-            .1
-            .iter()
-            .map(|parameter| parameter.name.as_str())
-            .collect::<Vec<_>>(),
-        ["id", "name"]
-    );
-}
+    .execute(
+        "insert",
+        Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "a")]),
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "update",
+        Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "A")]),
+    )
+    .await
+    .unwrap();
+command
+    .execute("delete", Some(&[Parameter::new("id", 1_i64)]))
+    .await
+    .unwrap();

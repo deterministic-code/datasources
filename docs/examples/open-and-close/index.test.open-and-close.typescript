@@ -1,9 +1,3 @@
-test: typescript/providers/memory/src/index.test.ts#open-and-close
-lines: 36-41
-
-  it("open and close", async () => {
-    const connection = new MemoryConnection();
-    await connection.open();
-    await connection.close();
-    expect(connection.isOpen).toBe(false);
-  });
+const connection = new MemoryConnection();
+await connection.open();
+await connection.close();

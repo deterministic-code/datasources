@@ -1,10 +1,2 @@
-test: csharp/Datasources.Tests/ConnectionTests.cs#CreateFromDefault
-lines: 27-33
-
-    [Fact]
-    public async Task CreateFromDefault()
-    {
-        var ds = DatasourceFactory.Default;
-        var connection = await ds.CreateConnection();
-        Assert.False(connection.IsOpen);
-    }
+var ds = DatasourceFactory.Default;
+var connection = await ds.CreateConnection();

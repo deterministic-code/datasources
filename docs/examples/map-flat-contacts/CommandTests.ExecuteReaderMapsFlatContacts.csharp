@@ -1,28 +1,18 @@
-test: csharp/Datasources.Tests/CommandTests.cs#ExecuteReaderMapsFlatContacts
-lines: 73-97
-
-    [Fact]
-    public async Task ExecuteReaderMapsFlatContacts()
+var command = new MockCommand(new MockConnection())
+{
+    Reader = new MockReader<Row>([new Row
     {
-        var command = new MockCommand(new MockConnection())
-        {
-            Reader = new MockReader<Row>([new Row
-            {
-                ["id"] = 1,
-                ["username"] = "bobby",
-                ["email"] = "bob@asdf.com",
-                ["contact_name1"] = "bob",
-                ["contact_name2"] = "roberta"
-            }])
-        };
-        var reader = await command.ExecuteReader(
-            "SELECT contact_name1, contact_name2, email, id, username FROM users");
-        var converter = new RowTypeConverter<User>();
-        var mapper = UserContactsMapper();
-        User? user = null;
-        while (await reader.Next())
-            user = mapper.Map(converter.Convert(reader.Current!));
-        Assert.Equal("bobby", user!.username);
-        Assert.Equal("bob@asdf.com", user.email);
-        Assert.Equal(["bob", "roberta"], user.Contacts.Select(contact => contact.Name));
-    }
+        ["id"] = 1,
+        ["username"] = "bobby",
+        ["email"] = "bob@asdf.com",
+        ["contact_name1"] = "bob",
+        ["contact_name2"] = "roberta"
+    }])
+};
+var reader = await command.ExecuteReader(
+    "SELECT contact_name1, contact_name2, email, id, username FROM users");
+var converter = new RowTypeConverter<User>();
+var mapper = UserContactsMapper();
+User? user = null;
+while (await reader.Next())
+    user = mapper.Map(converter.Convert(reader.Current!));

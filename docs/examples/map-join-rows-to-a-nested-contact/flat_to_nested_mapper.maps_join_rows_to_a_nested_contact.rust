@@ -1,72 +1,66 @@
-test: rust/datasources/src/mappers/flat_to_nested_mapper.rs#maps_join_rows_to_a_nested_contact
-lines: 385-453
-
-    #[test]
-    fn maps_join_rows_to_a_nested_contact() {
-        let mapper = FlatToNestedMapper::new(TypeMap::new(
-            "id",
-            vec![
-                ("id".into(), TypeMapField::column("id")),
-                ("first_name".into(), TypeMapField::column("first_name")),
-                ("last_name".into(), TypeMapField::column("last_name")),
-                ("email".into(), TypeMapField::column("email")),
-                (
-                    "contact_source_name".into(),
-                    TypeMapField::column("contact_source_name"),
-                ),
-                (
-                    "contact_type_name".into(),
-                    TypeMapField::column("contact_type_name"),
-                ),
-                (
-                    "addresses".into(),
-                    TypeMapField::Group(TypeMapGroup::new(
-                        "address_id",
-                        vec![
-                            ("id".into(), TypeMapField::column("address_id")),
-                            ("line1".into(), TypeMapField::column("address_line1")),
-                            ("city".into(), TypeMapField::column("address_city")),
-                            (
-                                "address_type_name".into(),
-                                TypeMapField::column("address_type_name"),
-                            ),
-                        ],
-                    )),
-                ),
-                (
-                    "phones".into(),
-                    TypeMapField::Group(TypeMapGroup::new(
-                        "phone_id",
-                        vec![
-                            ("id".into(), TypeMapField::column("phone_id")),
-                            ("number".into(), TypeMapField::column("phone_number")),
-                            (
-                                "phone_type_name".into(),
-                                TypeMapField::column("phone_type_name"),
-                            ),
-                        ],
-                    )),
-                ),
-            ],
-        ));
-        let ada_home = cell(&[
-            ("id", Value::Int(7)),
-            ("first_name", Value::from("Ada")),
-            ("last_name", Value::from("Lovelace")),
-            ("email", Value::from("ada@ex.com")),
-            ("contact_source_name", Value::from("Web")),
-            ("contact_type_name", Value::from("Person")),
-            ("address_id", Value::Int(101)),
-            ("address_line1", Value::from("10 Downing St")),
-            ("address_city", Value::from("London")),
-            ("address_type_name", Value::from("Home")),
-            ("phone_id", Value::Int(201)),
-            ("phone_number", Value::from("+44")),
-            ("phone_type_name", Value::from("Mobile")),
-        ]);
-        let mut ada_work = ada_home.clone();
-        ada_work.insert("address_id".into(), Value::Int(102));
-        ada_work.insert("address_line1".into(), Value::from("1 Parliament Sq"));
-        let nested = Mapper::map(&mapper, vec![ada_home.clone(), ada_work.clone()]);
-        let flat = Mapper::reverse_map(&mapper, nested.clone());
-        assert_eq!(many(&nested[0], "addresses").len(), 2);
+let mapper = FlatToNestedMapper::new(TypeMap::new(
+    "id",
+    vec![
+        ("id".into(), TypeMapField::column("id")),
+        ("first_name".into(), TypeMapField::column("first_name")),
+        ("last_name".into(), TypeMapField::column("last_name")),
+        ("email".into(), TypeMapField::column("email")),
+        (
+            "contact_source_name".into(),
+            TypeMapField::column("contact_source_name"),
+        ),
+        (
+            "contact_type_name".into(),
+            TypeMapField::column("contact_type_name"),
+        ),
+        (
+            "addresses".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "address_id",
+                vec![
+                    ("id".into(), TypeMapField::column("address_id")),
+                    ("line1".into(), TypeMapField::column("address_line1")),
+                    ("city".into(), TypeMapField::column("address_city")),
+                    (
+                        "address_type_name".into(),
+                        TypeMapField::column("address_type_name"),
+                    ),
+                ],
+            )),
+        ),
+        (
+            "phones".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "phone_id",
+                vec![
+                    ("id".into(), TypeMapField::column("phone_id")),
+                    ("number".into(), TypeMapField::column("phone_number")),
+                    (
+                        "phone_type_name".into(),
+                        TypeMapField::column("phone_type_name"),
+                    ),
+                ],
+            )),
+        ),
+    ],
+));
+let ada_home = cell(&[
+    ("id", Value::Int(7)),
+    ("first_name", Value::from("Ada")),
+    ("last_name", Value::from("Lovelace")),
+    ("email", Value::from("ada@ex.com")),
+    ("contact_source_name", Value::from("Web")),
+    ("contact_type_name", Value::from("Person")),
+    ("address_id", Value::Int(101)),
+    ("address_line1", Value::from("10 Downing St")),
+    ("address_city", Value::from("London")),
+    ("address_type_name", Value::from("Home")),
+    ("phone_id", Value::Int(201)),
+    ("phone_number", Value::from("+44")),
+    ("phone_type_name", Value::from("Mobile")),
+]);
+let mut ada_work = ada_home.clone();
+ada_work.insert("address_id".into(), Value::Int(102));
+ada_work.insert("address_line1".into(), Value::from("1 Parliament Sq"));
+let nested = Mapper::map(&mapper, vec![ada_home.clone(), ada_work.clone()]);
+let flat = Mapper::reverse_map(&mapper, nested.clone());

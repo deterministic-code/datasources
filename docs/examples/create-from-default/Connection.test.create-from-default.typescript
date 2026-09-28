@@ -1,8 +1,2 @@
-test: typescript/datasources/src/Connection.test.ts#create-from-default
-lines: 31-35
-
-  it("create from default", async () => {
-    const ds = DatasourceFactory.default;
-    const connection = await ds.createConnection();
-    expect(connection.isOpen).toBe(false);
-  });
+const ds = DatasourceFactory.default;
+const connection = await ds.createConnection();

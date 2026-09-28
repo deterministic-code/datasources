@@ -1,6 +1,3 @@
-test: typescript/datasources/src/mocks/mock-driver.ts#MockDriver
-lines: 14-25
-
 export class MockDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   generatedId = identityGeneratedId;

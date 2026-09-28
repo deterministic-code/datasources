@@ -1,4 +1,1 @@
-test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
-lines: 170-170
-
-        var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
+var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });

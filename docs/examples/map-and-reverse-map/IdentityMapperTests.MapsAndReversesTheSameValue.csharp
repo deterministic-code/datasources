@@ -1,6 +1,1 @@
-test: csharp/Datasources.Tests/IdentityMapperTests.cs#MapsAndReversesTheSameValue
-lines: 10-12
-
-        var mapper = new IdentityMapper<string>();
-        Assert.Equal("ada", mapper.Map("ada"));
-        Assert.Equal("ada", mapper.ReverseMap("ada"));
+var mapper = new IdentityMapper<string>();

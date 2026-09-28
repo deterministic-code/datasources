@@ -25,15 +25,136 @@ const dedent = (lines) => {
   return list.map((line) => line.slice(pad)).join("\n").replace(/^\n+|\n+$/g, "");
 };
 
-const balanced = (text, open, close) => {
-  const start = text.indexOf(open);
-  if (start < 0) return null;
-  let depth = 0;
-  for (let i = start; i < text.length; i++) {
-    if (text[i] === open) depth++;
-    else if (text[i] === close && --depth === 0) return text.slice(start + 1, i);
+const ATTRIBUTE = /^\s*(?:\[[^\]]*\]|#\[[^\]]*\])\s*$/;
+const SIGNATURE =
+  /^(?:it|test)(?:\.\w+)?\s*\(|^(?:(?:export|public|private|protected|internal|static|async|override|virtual|sealed|new|unsafe)\s+)*(?:void|Task)\b.*\(|^(?:(?:pub(?:\([^)]*\))?\s+|async\s+|unsafe\s+|const\s+)*)fn\s+\w+/;
+
+const skipQuoted = (text, i, quote) => {
+  let j = i + 1;
+  while (j < text.length) {
+    if (text[j] === "\\") {
+      j += 2;
+      continue;
+    }
+    if (text[j] === "\n") return null;
+    if (text[j] === quote) return j + 1;
+    j++;
   }
   return null;
+};
+
+const skipCsRaw = (text, i) => {
+  const token = ['$@"""', '@$"""', '$"""', '@"""', '"""'].find((item) => text.startsWith(item, i));
+  if (token) {
+    const end = text.indexOf('"""', i + token.length);
+    return end < 0 ? text.length : end + 3;
+  }
+  if (text.startsWith('$@"', i) || text.startsWith('@$"', i) || text.startsWith('@"', i) || text.startsWith('$"', i)) {
+    let j = text.indexOf('"', i) + 1;
+    while (j < text.length) {
+      if (text[j] === '"' && text[j + 1] === '"') {
+        j += 2;
+        continue;
+      }
+      if (text[j] === '"') return j + 1;
+      j++;
+    }
+    return text.length;
+  }
+  return null;
+};
+
+const skipRustRaw = (text, i) => {
+  let j = i;
+  if (text[j] === "b" || text[j] === "c") j++;
+  if (text[j] !== "r") return null;
+  j++;
+  let hashes = 0;
+  while (text[j] === "#") {
+    hashes++;
+    j++;
+  }
+  if (text[j] !== '"') return null;
+  const end = `"${"#".repeat(hashes)}`;
+  const at = text.indexOf(end, j + 1);
+  return at < 0 ? text.length : at + end.length;
+};
+
+const skipTemplate = (text, i) => {
+  let j = i + 1;
+  while (j < text.length) {
+    if (text[j] === "\\") {
+      j += 2;
+      continue;
+    }
+    if (text[j] === "`") return j + 1;
+    if (text[j] === "$" && text[j + 1] === "{") {
+      j = closeBrace(text, j + 1);
+      continue;
+    }
+    j++;
+  }
+  return text.length;
+};
+
+const skipAtom = (text, i) => {
+  if (text.startsWith("//", i)) {
+    const nl = text.indexOf("\n", i);
+    return nl < 0 ? text.length : nl + 1;
+  }
+  if (text.startsWith("/*", i)) {
+    const end = text.indexOf("*/", i + 2);
+    return end < 0 ? text.length : end + 2;
+  }
+  return (
+    skipCsRaw(text, i) ??
+    skipRustRaw(text, i) ??
+    (text[i] === "'" || text[i] === '"' ? skipQuoted(text, i, text[i]) : null) ??
+    (text[i] === "`" ? skipTemplate(text, i) : null)
+  );
+};
+
+const closeBrace = (text, openAt) => {
+  let depth = 1;
+  let j = openAt + 1;
+  while (j < text.length) {
+    const skipped = skipAtom(text, j);
+    if (skipped != null) {
+      j = skipped;
+      continue;
+    }
+    if (text[j] === "{") depth++;
+    else if (text[j] === "}" && --depth === 0) return j + 1;
+    j++;
+  }
+  return text.length;
+};
+
+const interior = (text) => {
+  let i = 0;
+  let depth = 0;
+  let start = -1;
+  while (i < text.length) {
+    const skipped = skipAtom(text, i);
+    if (skipped != null) {
+      i = skipped;
+      continue;
+    }
+    if (text[i] === "{") {
+      if (depth === 0) start = i + 1;
+      depth++;
+    } else if (text[i] === "}" && depth > 0 && --depth === 0 && start >= 0) return text.slice(start, i);
+    i++;
+  }
+  return start < 0 ? null : text.slice(start);
+};
+
+const leadingWrapper = (code) => {
+  const lines = code.split("\n");
+  let i = 0;
+  while (i < lines.length && (!lines[i].trim() || ATTRIBUTE.test(lines[i]))) i++;
+  const line = (lines[i] ?? "").replace(/^(?:\s*(?:\[[^\]]*\]|#\[[^\]]*\])\s*)+/, "").trim();
+  return SIGNATURE.test(line);
 };
 
 const parseTo = (text, stop) => {
@@ -53,11 +174,7 @@ const VALUE_ASSERT =
   /^(Assert\.(Equal|True|False|Same|NotSame|Empty|NotEmpty|Null|NotNull|StartsWith|Contains|IsType)|assert_eq!|assert_ne!|expect\(.+\)\.(toBe|toEqual|toStrictEqual))/;
 
 const extractBody = (code) =>
-  /^(?:pub(?:\([^)]*\))? +)?impl\b/.test(code.trim())
-    ? code
-    : /\[Fact\]|#\[test\]|\bit\(|public void |fn \w+\(/.test(code)
-      ? (balanced(code, "{", "}") ?? code)
-      : code;
+  /^(?:pub(?:\([^)]*\))? +)?impl\b/.test(code.trim()) || !leadingWrapper(code) ? code : (interior(code) ?? "");
 
 const stripTrailingValueAsserts = (body) => {
   const lines = body.split("\n");

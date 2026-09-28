@@ -1,35 +1,24 @@
-test: rust/datasources/src/tests/command.rs#execute_reader_maps_flat_contacts
-lines: 115-146
-
-async fn execute_reader_maps_flat_contacts() {
-    let command = MockCommand::new();
-    command.reader_rows.lock().unwrap().push(row(&[
-        ("id", Value::Int(1)),
-        ("username", Value::from("bobby")),
-        ("email", Value::from("bob@asdf.com")),
-        ("contact_name1", Value::from("bob")),
-        ("contact_name2", Value::from("roberta")),
-    ]));
-    let reader = command
-        .execute_reader(
-            "SELECT contact_name1, contact_name2, email, id, username FROM users",
-            None,
-        )
-        .await
-        .unwrap();
-    let converter = RowTypeConverter::of::<UserRow>();
-    let mapper = user_contacts_mapper();
-    let mut user = None;
-    while reader.next().await.unwrap() {
-        user = Some(Mapper::map(
-            &mapper,
-            converter.convert(&reader.current().unwrap()).unwrap(),
-        ));
-    }
-    assert_eq!(user.as_ref().unwrap()["username"], Value::from("bobby"));
-    assert_eq!(user.as_ref().unwrap()["email"], Value::from("bob@asdf.com"));
-    assert_eq!(
-        user.as_ref().unwrap()["contacts"],
-        Value::from("bob,roberta")
-    );
+let command = MockCommand::new();
+command.reader_rows.lock().unwrap().push(row(&[
+    ("id", Value::Int(1)),
+    ("username", Value::from("bobby")),
+    ("email", Value::from("bob@asdf.com")),
+    ("contact_name1", Value::from("bob")),
+    ("contact_name2", Value::from("roberta")),
+]));
+let reader = command
+    .execute_reader(
+        "SELECT contact_name1, contact_name2, email, id, username FROM users",
+        None,
+    )
+    .await
+    .unwrap();
+let converter = RowTypeConverter::of::<UserRow>();
+let mapper = user_contacts_mapper();
+let mut user = None;
+while reader.next().await.unwrap() {
+    user = Some(Mapper::map(
+        &mapper,
+        converter.convert(&reader.current().unwrap()).unwrap(),
+    ));
 }

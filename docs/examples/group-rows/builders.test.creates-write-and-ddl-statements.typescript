@@ -1,4 +1,1 @@
-test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
-lines: 243-243
-
-      limit: 10,
+limit: 10,

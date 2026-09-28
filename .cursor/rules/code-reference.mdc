@@ -67,5 +67,5 @@ static create(provider?: string, options?: DatasourceOptions): IDatasource
 - Rust may use `#### datasources` for free functions.
 - Omit `bindInstall` / `bind_install`.
 - The page-level selector switches both the class list and `::: example` samples.
-- Under `## Examples`, use `::: example` pointing at a test or type by name (`path#Name`) in all three languages. `npm run docs:examples` copies those lines into `docs/examples/`. The transform reads the snippet and extracts the usage body (not the test wrapper or equality asserts); do not paste fictional fences.
+- Under `## Examples`, use `::: example` pointing at a test or type by name (`path#Name`) in all three languages. `npm run docs:examples` writes the usage sample into `docs/examples/` and the test path plus line range into `docs/examples/lines`. The transform renders that sample; do not paste fictional fences.
 - Optional `output [Title]` fences in `::: example` render as titled textboxes under the sample. Use `output:typescript` / `output:csharp` / `output:rust` when the printed value differs by dialect.

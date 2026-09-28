@@ -1,4 +1,4 @@
-import { blobUrl, exampleCode, SOURCE_ICON } from "./example.mjs";
+import { blobUrl, SOURCE_ICON } from "./example.mjs";
 import { renderClassReference } from "./reference.mjs";
 import { readSnippet } from "./sync-examples.mjs";
 
@@ -84,8 +84,11 @@ const lastHeading = (prefix) => {
 const resolveExamples = (body, heading, files) =>
   parseExampleFences(body).map(({ lang, spec }) => {
     const snippet = readSnippet(heading, lang, spec);
-    if (files) files.push(snippet.file);
-    return { lang, code: exampleCode(snippet.body), href: blobUrl(snippet) };
+    if (files) {
+      files.push(snippet.file);
+      if (!files.includes(snippet.linesFile)) files.push(snippet.linesFile);
+    }
+    return { lang, code: snippet.body, href: blobUrl(snippet) };
   });
 
 const sourceLink = (href) => `<ExampleSource href="${href}" />`;

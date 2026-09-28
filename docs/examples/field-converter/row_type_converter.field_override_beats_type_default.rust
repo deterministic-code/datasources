@@ -1,22 +1,6 @@
-test: rust/datasources/src/converters/row_type_converter.rs#field_override_beats_type_default
-lines: 125-143
-
-    #[test]
-    fn field_override_beats_type_default() {
-        let converter =
-            RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([(
-                "is_enabled".into(),
-                Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-            )]));
-        let row = record(&[("is_enabled", Value::Int(2))]);
-        assert_eq!(
-            converter.convert(&row).unwrap()["is_enabled"],
-            Value::Bool(false)
-        );
-        assert_eq!(
-            converter
-                .convert(&record(&[("is_enabled", Value::Int(1))]))
-                .unwrap()["is_enabled"],
-            Value::Bool(true)
-        );
-    }
+let converter =
+    RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([(
+        "is_enabled".into(),
+        Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+    )]));
+let row = record(&[("is_enabled", Value::Int(2))]);

@@ -1,11 +1,4 @@
-test: rust/datasources/src/tests/transaction.rs#start_from_default
-lines: 21-28
-
-async fn start_from_default() {
-    clear_env();
-    let ds = default().expect("default");
-    let connection = ds.create_connection().await.expect("connection");
-    connection.open().await.expect("open");
-    let txn = connection.start_transaction(None).await.expect("txn");
-    assert_eq!(txn.isolation(), IsolationLevel::Serializable);
-}
+let ds = default().expect("default");
+let connection = ds.create_connection().await.expect("connection");
+connection.open().await.expect("open");
+let txn = connection.start_transaction(None).await.expect("txn");

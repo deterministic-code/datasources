@@ -1,6 +1,2 @@
-test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
-lines: 53-55
-
-            new Operator.Equals("id", 1),
-            new Operator.GreaterThan("age", 18)));
-        Assert.Equal("id = $id AND age > $age", where.GetText());
+new Operator.Equals("id", 1),
+new Operator.GreaterThan("age", 18)));

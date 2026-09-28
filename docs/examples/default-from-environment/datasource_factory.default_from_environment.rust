@@ -1,9 +1,4 @@
-test: rust/datasources/src/tests/datasource_factory.rs#default_from_environment
-lines: 21-26
-
-    register("sqlite", MockDriver::arc());
-    std::env::set_var("PROVIDER", "sqlite");
-    std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
-    let ds = default().expect("default");
-    assert_eq!(Datasource::provider(&*ds), "sqlite");
-}
+register("sqlite", MockDriver::arc());
+std::env::set_var("PROVIDER", "sqlite");
+std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
+let ds = default().expect("default");

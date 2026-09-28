@@ -1,5 +1,2 @@
-test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
-lines: 209-210
-
-            "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
-            new CreateTableStatement(
+"CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
+new CreateTableStatement(

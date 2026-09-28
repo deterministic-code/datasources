@@ -1,14 +1,1 @@
-test: typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
-lines: 63-73
-
-    ]);
-    expect(new Where(new Operator.NotEquals("id", 2)).getText()).toBe("id <> $id");
-    expect(new Where(new Operator.LessThan("n", 0)).getText()).toBe("n < $n");
-    expect(new Where(new Operator.GreaterThanOrEqual("n", 0)).getText()).toBe("n >= $n");
-    expect(new Where(new Operator.LessThanOrEqual("n", 0)).getText()).toBe("n <= $n");
-    expect(new Where(new Operator.Equals(new Literal(1), new Literal(1))).getText()).toBe("1 = 1");
-    expect(new Where(new Operator.Equals(new Literal(1), new Literal(0))).getText()).toBe("1 = 0");
-    expect(new Where(new Operator.Equals("id", 1)).getText()).toBe("id = $id");
-    expect(new Where(new Operator.Or(where, new Operator.Equals("name", "a"))).getText()).toBe(
-      "(id = $id AND age > $age) OR name = $name",
-    );
+]);

@@ -1,33 +1,20 @@
-test: csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#ReadsUsersByIdAndByUsernameAndEnabled
-lines: 28-57
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, """
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL
+    );
+    INSERT INTO users (id, username, is_enabled) VALUES
+        (1, 'ada', 1),
+        (2, 'grace', 0);
+    """);
+var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+{
+    EntityMapper = new PluralizerMapper(),
+});
 
-    [Fact]
-    public async Task ReadsUsersByIdAndByUsernameAndEnabled()
-    {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, """
-            CREATE TABLE users (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL
-            );
-            INSERT INTO users (id, username, is_enabled) VALUES
-                (1, 'ada', 1),
-                (2, 'grace', 0);
-            """);
-        var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
-        {
-            EntityMapper = new PluralizerMapper(),
-        });
-
-        var byId = await repo.ReadSingle(new Where("id", eq, 1));
-        var disabled = new List<User>();
-        await foreach (var row in repo.Read(new Where("username", eq, "grace").And("is_enabled", eq, 0)))
-            disabled.Add(row);
-
-        Assert.Equal("ada", byId!.username);
-        Assert.True(byId.is_enabled);
-        var grace = Assert.Single(disabled);
-        Assert.Equal(2, grace.id);
-        Assert.False(grace.is_enabled);
-    }
+var byId = await repo.ReadSingle(new Where("id", eq, 1));
+var disabled = new List<User>();
+await foreach (var row in repo.Read(new Where("username", eq, "grace").And("is_enabled", eq, 0)))
+    disabled.Add(row);

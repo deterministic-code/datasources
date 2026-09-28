@@ -1,9 +1,1 @@
-test: rust/datasources/src/mappers/pluralizer_mapper.rs#pluralizes_and_lowercases_the_table_name
-lines: 37-42
-
-    #[test]
-    fn pluralizes_and_lowercases_the_table_name() {
-        let mapper = PluralizerMapper::new();
-        assert_eq!(mapper.map("User".into()), "users");
-        assert_eq!(mapper.reverse_map("users".into()), "user");
-    }
+let mapper = PluralizerMapper::new();

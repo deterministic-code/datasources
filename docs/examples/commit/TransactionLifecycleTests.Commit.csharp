@@ -1,12 +1,4 @@
-test: csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#Commit
-lines: 7-15
-
-    [Fact]
-    public async Task Commit()
-    {
-        var connection = new MemoryConnection();
-        await connection.Open();
-        var txn = await connection.StartTransaction();
-        await txn.Commit();
-        Assert.NotNull(txn);
-    }
+var connection = new MemoryConnection();
+await connection.Open();
+var txn = await connection.StartTransaction();
+await txn.Commit();

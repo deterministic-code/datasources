@@ -1,6 +1,3 @@
-test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
-lines: 153-155
-
-                    Join.Right("profiles", "users.id", "profiles.user_id"),
-                ],
-            }).GetText());
+        Join.Right("profiles", "users.id", "profiles.user_id"),
+    ],
+}).GetText());

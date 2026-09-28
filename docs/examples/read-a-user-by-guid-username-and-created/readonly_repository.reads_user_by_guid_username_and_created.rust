@@ -1,65 +1,56 @@
-test: rust/providers/sqlite/tests/readonly_repository.rs#reads_user_by_guid_username_and_created
-lines: 91-152
-
-#[tokio::test]
-async fn reads_user_by_guid_username_and_created() {
-    let built = datasource();
-    let ds: &dyn Datasource = &*built;
-    let connection = open(
-        ds,
-        &format!(
-            "
-        CREATE TABLE user (
-            id TEXT PRIMARY KEY,
-            username TEXT NOT NULL,
-            is_enabled INTEGER NOT NULL,
-            created TEXT NOT NULL
-        );
-        INSERT INTO user (id, username, is_enabled, created) VALUES
-            ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
-            ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
-            ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    &format!(
         "
-        ),
+    CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL,
+        created TEXT NOT NULL
+    );
+    INSERT INTO user (id, username, is_enabled, created) VALUES
+        ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+        ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+        ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+    "
+    ),
+)
+.await;
+let mut options = create_repository_options::<UserAccount>();
+options.entity = "user".into();
+options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+]));
+let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
+let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+let by_id = repo
+    .read_single(
+        Some(&Where::binary(
+            "Key",
+            eq,
+            Uuid::parse_str(ADA).unwrap(),
+        )),
+        None,
     )
-    .await;
-    let mut options = create_repository_options::<UserAccount>();
-    options.entity = "user".into();
-    options.column_mappings = Box::new(DictionaryMapper::new([
-        ("Key".to_string(), "id".to_string()),
-        ("Login".to_string(), "username".to_string()),
-        ("Active".to_string(), "is_enabled".to_string()),
-        ("Opened".to_string(), "created".to_string()),
-    ]));
-    let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
-    let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-    let by_id = repo
-        .read_single(
-            Some(&Where::binary(
-                "Key",
-                eq,
-                Uuid::parse_str(ADA).unwrap(),
-            )),
-            None,
-        )
-        .await
-        .unwrap()
-        .unwrap();
-    let by_login = repo
-        .read(
-            Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
-            None,
-        )
-        .await
-        .unwrap();
-    let later = repo
-        .read(
-            Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
-            None,
-        )
-        .await
-        .unwrap();
-    assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
-    assert_eq!(by_id.get("Key"), Some(&Value::from(ADA)));
-    assert_eq!(by_id.get("Active"), Some(&Value::Int(1)));
-    assert_eq!(
+    .await
+    .unwrap()
+    .unwrap();
+let by_login = repo
+    .read(
+        Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
+        None,
+    )
+    .await
+    .unwrap();
+let later = repo
+    .read(
+        Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
+        None,
+    )
+    .await
+    .unwrap();

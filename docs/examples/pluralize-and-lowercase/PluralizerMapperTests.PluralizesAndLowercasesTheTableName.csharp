@@ -1,9 +1,1 @@
-test: csharp/Datasources.Tests/PluralizerMapperTests.cs#PluralizesAndLowercasesTheTableName
-lines: 8-13
-
-    public void PluralizesAndLowercasesTheTableName()
-    {
-        var mapper = new PluralizerMapper();
-        Assert.Equal("users", mapper.Map("User"));
-        Assert.Equal("user", mapper.ReverseMap("users"));
-    }
+var mapper = new PluralizerMapper();
