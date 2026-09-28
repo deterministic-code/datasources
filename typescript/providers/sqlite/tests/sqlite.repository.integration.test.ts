@@ -5,6 +5,7 @@ import {
 } from "../../repository-spec-runner.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
+import { execute } from "@datasources/core";
 import { SqliteRowTypeConverters } from "../src/converters/SqliteRowTypeConverters.ts";
 import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 
@@ -18,7 +19,7 @@ describe("repository specs", () => {
       const connection = SqliteConnection.from({ filename: ":memory:" });
       await connection.open();
       const command = new SqliteCommand(connection);
-      await runRepositorySpec(file, connection, (sql) => command.execute(sql), dialect, SqliteRowTypeConverters);
+      await runRepositorySpec(file, connection, (statement) => execute(command, statement), dialect, SqliteRowTypeConverters);
     });
   }
 });

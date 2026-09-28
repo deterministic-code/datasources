@@ -18,22 +18,9 @@ public class SqliteRepositorySpecTests
                     Filename = ":memory:",
                 });
                 return new RepositoryTestsSpec.Session(conn, new SqliteCommand(conn), SqliteRowTypeConverters.All);
-            }, Quote, Map);
+            }, Quote);
         }
     }
 
     static string Quote(string id) => $"\"{id.Replace("\"", "\"\"")}\"";
-
-    static string Map(string canonical) => canonical switch
-    {
-        "int" => "INTEGER",
-        "uuid" => "TEXT",
-        "string" => "TEXT",
-        "bool" => "INTEGER",
-        "decimal" => "NUMERIC",
-        "float" => "REAL",
-        "datetime" => "TEXT",
-        "binary" => "BLOB",
-        _ => throw new InvalidOperationException($"Unknown sqlite type \"{canonical}\"")
-    };
 }

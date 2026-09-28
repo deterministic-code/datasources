@@ -11,10 +11,11 @@ import {
   TransformMapper,
   Where,
   eq,
+  execute,
   type IConnection,
   type IDatasource,
 } from "@datasources/core";
-import { columnType, tables } from "../../../schema-spec.ts";
+import { tables } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 const ada = "11111111-1111-1111-1111-111111111111";
@@ -182,8 +183,8 @@ const open = async (ds: IDatasource, schema: string, sql = ""): Promise<IConnect
   const connection = await ds.createConnection();
   await connection.open();
   const command = connection.createCommand();
-  for (const statement of tables(schema, "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
-    await command.execute(statement.getText());
+  for (const statement of tables(schema, quote))
+    await execute(command, statement);
   for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))
     await command.execute(statement);
   return connection;

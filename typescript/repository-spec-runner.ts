@@ -6,6 +6,7 @@ import {
   DeleteStatement,
   InsertStatement,
   SelectStatement,
+  CreateTableStatement,
   CRUDRepository,
   RowTypeConverter,
   TransformMapper,
@@ -32,7 +33,7 @@ import {
   type CRUDMapperSpec,
 } from "../specs/expected-repository-console.ts";
 import { consoleSignature } from "../specs/expected-console-output.ts";
-import { columnType, tables } from "./schema-spec.ts";
+import { tables } from "./schema-spec.ts";
 import { repoRoot, specVerbose } from "./sql-spec-runner.ts";
 
 export type RepositoryDialect = {
@@ -233,7 +234,7 @@ const assertAffected = (name: string, actual: { rowsAffected: number }, expect?:
 export const runRepositorySpec = async (
   path: string,
   connection: IConnection,
-  execute: (sql: string) => Promise<unknown>,
+  execute: (statement: CreateTableStatement) => Promise<unknown>,
   dialect: RepositoryDialect,
   types: Record<string, TypeConverter<Cell, Cell>>,
 ): Promise<void> => {
@@ -242,15 +243,8 @@ export const runRepositorySpec = async (
   const rename = spec.type.crudMapper?.entity && spec.type.crudMapper.entity !== spec.type.table
     ? { [spec.type.table]: spec.type.crudMapper.entity }
     : undefined;
-  for (const statement of tables(
-    spec.schema,
-    connection.provider,
-    dialect.quote,
-    (canonical) => columnType(connection.provider, canonical),
-    rename,
-    true,
-  ))
-    await execute(statement.getText());
+  for (const statement of tables(spec.schema, dialect.quote, rename))
+    await execute(statement);
   const catalog = types;
   const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
   const repo = new CRUDRepository<SpecRow>(connection, {

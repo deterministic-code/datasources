@@ -16,6 +16,12 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
             return (reader, (IReadOnlyList<Row>)[]);
         });
 
+    public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        ExecuteReader(new SqliteStatementFactory().Transform(statement).GetText(), parameters);
+
+    public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        Execute(new SqliteStatementFactory().Transform(statement).GetText(), parameters);
+
     public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, async (query, paramsList) =>
         {

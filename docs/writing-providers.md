@@ -258,7 +258,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 `columnType` / `ColumnType` / `column_type` maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. TypeScript drivers assign the exported `columnType` function; C# and Rust inherit the default method. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
-MySQL and Postgres commands own an internal statement factory that extends `CreateTableStatementRenderer`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call it before the string execute. The factory overrides column type, default, and identity, and leaves every other statement unchanged. The factory is not exported.
+SQLite, MySQL, and Postgres commands own an internal statement factory that extends `CreateTableStatementRenderer`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call it before the string execute. The factory overrides column type. MySQL and Postgres also override default and identity. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
 
 The package exports only the driver type.
 

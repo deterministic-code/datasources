@@ -8,7 +8,7 @@ use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, Connection, ConsoleCommandMiddleware,
-    FlatToNestedMapper, IReadonlyRepository, Mapper, TypeConverter, Value,
+    CreateTableStatement, FlatToNestedMapper, IReadonlyRepository, Mapper, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -18,8 +18,12 @@ fn quote_ident(id: &str) -> String {
     format!("\"{}\"", id.replace('"', "\"\""))
 }
 
-pub fn contact_schema(dialect: &str) -> String {
-    let ddl = crate::schema_sql("contacts", dialect, quote_ident, crate::type_mapper(dialect), None);
+pub fn contact_schema(dialect: &str, render: impl Fn(&CreateTableStatement) -> String) -> String {
+    let ddl = crate::schema_tables("contacts", quote_ident, None)
+        .iter()
+        .map(render)
+        .collect::<Vec<_>>()
+        .join(";\n");
     let seed = fs::read_to_string(repo_root().join(format!("specs/contacts/{dialect}.sql")))
         .unwrap_or_else(|err| panic!("contact seed {dialect}: {err}"));
     format!("{ddl};\n{seed}")

@@ -1,10 +1,4 @@
 const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-const connection = await open(ds, `
-  CREATE TABLE User (
-    id INTEGER PRIMARY KEY,
-    is_enabled INTEGER NOT NULL,
-    username TEXT NOT NULL
-  );
-`);
+const connection = await open(ds, "user-pascal");
 const usersRepo = new CRUDRepository(User, connection);
 const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));

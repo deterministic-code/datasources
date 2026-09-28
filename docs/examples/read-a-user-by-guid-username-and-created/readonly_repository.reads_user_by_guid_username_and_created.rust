@@ -2,14 +2,9 @@ let built = datasource();
 let ds: &dyn Datasource = &*built;
 let connection = open(
     ds,
+    "user-account",
     &format!(
         "
-    CREATE TABLE user (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL,
-        created TEXT NOT NULL
-    );
     INSERT INTO user (id, username, is_enabled, created) VALUES
         ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
         ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),

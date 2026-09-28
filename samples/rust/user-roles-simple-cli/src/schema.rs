@@ -1,4 +1,4 @@
-use datasources::{CreateTableStatement, DatasourceError, Driver, Result, Value};
+use datasources::{CreateTableStatement, Driver, Result, Value};
 
 pub fn flag(provider: &str, value: bool) -> Value {
     if provider == "sqlite" {
@@ -26,23 +26,11 @@ fn quote(provider: &str, id: &str) -> String {
     }
 }
 
-pub fn tables(provider: &str, driver: &dyn Driver) -> Result<Vec<CreateTableStatement>> {
-    if !matches!(provider, "sqlite" | "mysql" | "postgres") {
-        return Err(DatasourceError::message(format!("unknown provider {provider}")));
-    }
+pub fn tables(provider: &str, _driver: &dyn Driver) -> Result<Vec<CreateTableStatement>> {
     Ok(datasources_sql_specs::schema_tables(
         "user-roles-cli",
-        provider,
         |id| ident(provider, id),
-        |canonical| {
-            if provider == "sqlite" {
-                driver.column_type(canonical).expect("column type")
-            } else {
-                canonical.to_string()
-            }
-        },
         None,
-        false,
     ))
 }
 

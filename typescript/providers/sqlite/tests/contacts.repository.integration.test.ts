@@ -13,7 +13,8 @@ import { addExtraContact } from "../../../datasources/src/tests/contact/extraCon
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { columnType, tables } from "../../../schema-spec.ts";
+import { execute } from "@datasources/core";
+import { tables } from "../../../schema-spec.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";
 import { SqliteCommand } from "../src/command.ts";
@@ -33,8 +34,8 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ filename: ":memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    for (const statement of tables("contacts", "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
-      await command.execute(statement.getText());
+    for (const statement of tables("contacts", quote))
+      await execute(command, statement);
     for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
       await command.execute(sql);
 
@@ -67,8 +68,8 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ filename: ":memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    for (const statement of tables("contacts", "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
-      await command.execute(statement.getText());
+    for (const statement of tables("contacts", quote))
+      await execute(command, statement);
     for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
       await command.execute(sql);
 

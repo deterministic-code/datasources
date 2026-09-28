@@ -51,7 +51,7 @@ public class NullWriteTests
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         return connection;
     }

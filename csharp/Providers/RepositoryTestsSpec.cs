@@ -15,8 +15,7 @@ public static class RepositoryTestsSpec
     public static async Task Run(
         string path,
         Func<Session> open,
-        Func<string, string> quote,
-        Func<string, string> columnType)
+        Func<string, string> quote)
     {
         var spec = new DeserializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
@@ -27,8 +26,8 @@ public static class RepositoryTestsSpec
         var rename = spec.Type.CRUDMapper?.Entity is { Length: > 0 } entity && entity != spec.Type.Table
             ? new Dictionary<string, string> { [spec.Type.Table] = entity }
             : null;
-        foreach (var statement in SchemaSpec.Tables(spec.Schema, session.Connection.Provider, quote, columnType, rename, true))
-            await session.Command.Execute(statement.GetText());
+        foreach (var statement in SchemaSpec.Tables(spec.Schema, quote, rename))
+            await session.Command.Execute(statement);
         var types = session.Types;
         var fields = FieldsOf(spec.Type, types);
         if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");

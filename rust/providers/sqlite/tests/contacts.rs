@@ -17,12 +17,16 @@ fn verbose() -> bool {
     matches!(std::env::var("VERBOSE").as_deref(), Ok("1") | Ok("true"))
 }
 
+fn render(statement: &datasources::CreateTableStatement) -> String {
+    crate::statement_factory::SqliteStatementFactory.transform(statement).get_text()
+}
+
 #[tokio::test]
 async fn matches_enriched_contacts_service_to_flat_mapper() {
     let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
     let command = SqliteCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_schema("sqlite"));
+    let mut sql = statements_of(&contact_schema("sqlite", render));
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 
@@ -63,7 +67,7 @@ async fn maps_join_rows_to_nested_contacts() {
     let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
     let command = SqliteCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_schema("sqlite"));
+    let mut sql = statements_of(&contact_schema("sqlite", render));
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 

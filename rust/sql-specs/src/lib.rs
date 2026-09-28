@@ -42,7 +42,7 @@ pub use contacts_service_of::contacts_service_of;
 pub use contacts_view::contacts_view;
 pub use expect_contacts_view::{contact_with, expect_contacts_view};
 pub use from_mapped_contacts::from_mapped_contacts;
-pub use schema_spec::{column_type, schema_sql, tables as schema_tables, type_mapper};
+pub use schema_spec::tables as schema_tables;
 pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
 
 pub struct RepositoryDialect {
@@ -639,13 +639,10 @@ pub async fn run(
     }
     for statement in schema_tables(
         &spec.schema,
-        dialect.provider,
         dialect.quote,
-        type_mapper(dialect.provider),
         if rename.is_empty() { None } else { Some(&rename) },
-        true,
     ) {
-        command.execute(&statement.get_text(), None).await?;
+        command.execute_statement(&statement, None).await?;
     }
     let mapping = mapping_of(&spec, dialect);
     let mut options = CRUDRepositoryOptions::default();

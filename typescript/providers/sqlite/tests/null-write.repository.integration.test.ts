@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CRUDRepository, Datasource, createRepositoryOptions, type IConnection } from "@datasources/core";
-import { columnType, tables } from "../../../schema-spec.ts";
+import { CRUDRepository, Datasource, createRepositoryOptions, execute, type IConnection } from "@datasources/core";
+import { tables } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 class Item {
@@ -17,8 +17,8 @@ const open = async (): Promise<IConnection> => {
   const connection = await ds.createConnection();
   await connection.open();
   const command = connection.createCommand();
-  for (const statement of tables("null-write-item", "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
-    await command.execute(statement.getText());
+  for (const statement of tables("null-write-item", quote))
+    await execute(command, statement);
   return connection;
 };
 

@@ -82,8 +82,8 @@ public class PostgresCommandIntegrationTests
             });
             await conn.Open();
             var command = new PostgresCommand(conn);
-            foreach (var statement in SchemaSpec.Tables("postgres-items", "postgres", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("postgres", canonical), executableText: true))
-                await command.Execute(statement.GetText());
+            foreach (var statement in SchemaSpec.Tables("postgres-items", static id => $"\"{id.Replace("\"", "\"\"")}\""))
+                await command.Execute(statement);
             await command.Execute(
                 "INSERT INTO items (id, name) VALUES ($id, $name)",
                 [new Parameter("id", 7), new Parameter("name", "bound")]);
@@ -109,7 +109,7 @@ public class PostgresCommandIntegrationTests
     {
         var url = Environment.GetEnvironmentVariable("POSTGRES_URL");
         if (string.IsNullOrEmpty(url)) return;
-        var dialect = SqlSpec.Dialect.Load("postgres");
+        var dialect = SqlSpec.Dialect.Load("postgres", static statement => new PostgresStatementFactory().Transform(statement).GetText());
         foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml").Where(path => Path.GetFileName(path) != "schemas.yaml"))
         {
             var schema = $"ds_{Guid.NewGuid():N}"[..18];

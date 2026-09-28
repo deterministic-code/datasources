@@ -96,7 +96,7 @@ public class ReadonlyRepositoryIntegrationTests
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
@@ -173,7 +173,7 @@ public class UserViewEnrichmentTests
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
@@ -363,7 +363,7 @@ public class UsersViewRoleTests
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
@@ -414,7 +414,7 @@ public class UserCrudTests
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
@@ -527,7 +527,7 @@ public class UsersViewCrudTests
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);

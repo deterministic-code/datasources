@@ -12,9 +12,10 @@ import {
 } from "../../sql-spec-runner.ts";
 import { MysqlCommand } from "../src/command.ts";
 import { MysqlConnection } from "../src/connection.ts";
+import { MysqlStatementFactory } from "../src/MysqlStatementFactory.ts";
 import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 
-const dialect = loadDialect("mysql");
+const dialect = loadDialect("mysql", (statement) => new MysqlStatementFactory().transform(statement).getText());
 const url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
 

@@ -1,7 +1,7 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
     create_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
-    DictionaryMapper, PluralizerMapper, Text, Value, Where,
+    DictionaryMapper, PluralizerMapper, Value, Where,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -158,18 +158,8 @@ async fn open(ds: &dyn Datasource, schema: &str, sql: &str) -> Arc<dyn Connectio
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
     let command = ds.create_command(Some(connection.clone()));
-    for statement in datasources_sql_specs::schema_tables(
-        schema,
-        "sqlite",
-        quote_ident,
-        datasources_sql_specs::type_mapper("sqlite"),
-        None,
-        true,
-    ) {
-        command
-            .execute(&statement.get_text(), None)
-            .await
-            .unwrap();
+    for statement in datasources_sql_specs::schema_tables(schema, quote_ident, None) {
+        command.execute_statement(&statement, None).await.unwrap();
     }
     for statement in sql
         .split(';')

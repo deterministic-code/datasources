@@ -15,13 +15,8 @@ export const qualified = (provider: string, name: string): string =>
 export const flag = (provider: string, value: boolean): number | boolean =>
   provider === "sqlite" ? (value ? 1 : 0) : value;
 
-export const schema = (provider: string, driver: IDriver): CreateTableStatement[] =>
-  tables(
-    "user-roles-cli",
-    provider,
-    (name) => ident(provider, name),
-    (canonical) => (provider === "sqlite" ? driver.columnType(canonical) : canonical),
-  );
+export const schema = (provider: string, _driver: IDriver): CreateTableStatement[] =>
+  tables("user-roles-cli", (name) => ident(provider, name));
 
 export const mysqlProcedures = (): string[] =>
   readFileSync(

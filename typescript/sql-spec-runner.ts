@@ -6,6 +6,7 @@ import { parse } from "yaml";
 import { expect } from "vitest";
 import {
   ConsoleCommandMiddleware,
+  CreateTableStatement,
   DatasourceError,
   IsolationLevel,
   type ICommand,
@@ -19,7 +20,7 @@ import {
   consoleSignature,
   expectedConsoleSignatures,
 } from "../specs/expected-console-output.ts";
-import { columnType, schemaSql } from "./schema-spec.ts";
+import { tables } from "./schema-spec.ts";
 
 export type Scalar = string | number | boolean | bigint | null;
 export type Cells = Record<string, Scalar>;
@@ -60,6 +61,7 @@ export type DialectConnection = {
 export type Dialect = {
   connection: DialectConnection;
   provider: string;
+  render: (statement: CreateTableStatement) => string;
   createUserTable: string;
   createUserTableVersioned: string;
   dirtyReadRows: Cells[];
@@ -93,9 +95,10 @@ export const specFiles = (root = repoRoot()): string[] =>
     .filter((name) => name.endsWith(".yaml") && name !== "schemas.yaml")
     .map((name) => join(root, "specs", name));
 
-export const loadDialect = (engine: string, root = repoRoot()): Dialect => ({
-  ...(parse(readFileSync(join(root, "specs", "dialects", `${engine}.yaml`), "utf8")) as Omit<Dialect, "provider">),
+export const loadDialect = (engine: string, render: (statement: CreateTableStatement) => string, root = repoRoot()): Dialect => ({
+  ...(parse(readFileSync(join(root, "specs", "dialects", `${engine}.yaml`), "utf8")) as Omit<Dialect, "provider" | "render">),
   provider: engine,
+  render,
 });
 
 export const dialectTarget = (dialect: Dialect, connections: number): string => {
@@ -115,7 +118,7 @@ const quoteIdent = (id: string): string => `"${id.replaceAll('"', '""')}"`;
 const resolveSql = (sql: string, dialect: Dialect): string => {
   const key = sql.trim();
   return isSqlFragment(key)
-    ? schemaSql(dialect[key], dialect.provider, quoteIdent, (canonical) => columnType(dialect.provider, canonical))
+    ? tables(dialect[key], quoteIdent).map((statement) => dialect.render(statement)).join(";\n")
     : sql;
 };
 

@@ -1,20 +1,9 @@
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, $"""
-    CREATE TABLE user_type (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL
-    );
+var connection = await Open(ds, "user-type-lookup", $"""
     INSERT INTO user_type (id, name) VALUES
         (1, 'admin'),
         (2, 'user'),
         (3, 'service');
-    CREATE TABLE user (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL,
-        created TEXT NOT NULL,
-        user_type_id INTEGER NOT NULL
-    );
     INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
         ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
         ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),

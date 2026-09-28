@@ -110,7 +110,8 @@ describe("schema", () => {
       expect(sql).toContain(`FOREIGN KEY (${ident(provider, "bad_role_id")}) REFERENCES`);
       expect(sql).toContain("ugly_name");
     }
-    expect(schema("sqlite", driver("sqlite"))[0]!.getText()).toContain("INTEGER PRIMARY KEY");
+    expect(schema("sqlite", driver("sqlite"))[0]!.columns[0]!.identity).toBe(true);
+    expect(schema("sqlite", driver("sqlite"))[0]!.getText()).toContain("CONSTRAINT pk_users PRIMARY KEY");
     expect(schema("mysql", driver("mysql"))[0]!.columns[0]!.identity).toBe(true);
     expect(schema("postgres", driver("postgres"))[0]!.columns[0]!.identity).toBe(true);
     expect(ident("sqlite", "user")).toBe('"user"');
@@ -127,7 +128,6 @@ describe("schema", () => {
     expect(userTable("postgres")).toBe(
       'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" UUID, "username" TEXT, "is_enabled" BOOLEAN, "balance" NUMERIC, "location" DOUBLE PRECISION, "created" TIMESTAMPTZ, "version" BYTEA)',
     );
-    expect(() => schema("oracle", driver("sqlite"))).toThrow("unknown provider");
     expect(ident("oracle", "groups")).toBe('"groups"');
     expect(columns.map("name")).toBe("ugly_name");
     expect(columns.map("role_id")).toBe("bad_role_id");

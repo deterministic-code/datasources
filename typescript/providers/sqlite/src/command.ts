@@ -10,10 +10,12 @@ import {
   type Scalar,
   type ICommand,
   type IReader,
+  type IStatement,
   type Parameter,
   type Response,
 } from "@datasources/core";
 import { SqliteDriver } from "./SqliteDriver.ts";
+import { SqliteStatementFactory } from "./SqliteStatementFactory.ts";
 import type { SqliteConnection } from "./connection.ts";
 import type { SqliteStatement } from "./i-sqlite-driver.ts";
 import { reverse } from "./converters/SqliteRowTypeConverters.ts";
@@ -66,6 +68,17 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
         rows: [],
       };
     });
+  }
+
+  async executeReaderStatement(
+    statement: IStatement,
+    parameters?: Parameter[],
+  ): Promise<IReader<Cells>> {
+    return this.executeReader(new SqliteStatementFactory().transform(statement).getText(), parameters);
+  }
+
+  async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    return this.execute(new SqliteStatementFactory().transform(statement).getText(), parameters);
   }
 
   async execute(text: string, parameters?: Parameter[]): Promise<Response> {

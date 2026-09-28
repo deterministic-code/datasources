@@ -1,22 +1,5 @@
 const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-const connection = await open(ds, `
-  CREATE TABLE user_type (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL
-  );
-  CREATE TABLE user (
-    id INTEGER PRIMARY KEY,
-    username TEXT NOT NULL,
-    is_enabled INTEGER NOT NULL,
-    created TEXT NOT NULL,
-    user_type_id INTEGER NOT NULL,
-    version INTEGER NOT NULL
-  );
-  CREATE TABLE user_role (
-    user_id INTEGER NOT NULL,
-    name TEXT NOT NULL
-  );
-`);
+const connection = await open(ds, "user-view-version");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
   ...createRepositoryOptions(UsersView),
