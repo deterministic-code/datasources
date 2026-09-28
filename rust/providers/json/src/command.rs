@@ -2,9 +2,8 @@ use crate::connection::JsonConnection;
 use crate::filter::{matches, parse_filter, record_from_json, value_to_json};
 use async_trait::async_trait;
 use datasources::{
-    parameters_to_map, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, IWhere, Parameter, Reader, Response, Result, Statement,
-    StatementKind, Value,
+    parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
+    DatasourceError, IWhere, Parameter, Reader, Response, Result, Statement, StatementKind, Value,
 };
 use serde_json::{Map, Value as JsonValue};
 use std::sync::Arc;
@@ -130,6 +129,27 @@ impl Command for JsonCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
+        if statement
+            .as_any()
+            .downcast_ref::<datasources::InsertedIdStatement>()
+            .is_some()
+        {
+            let connection = self.connection.clone();
+            let text = statement.get_text();
+            return self
+                .host
+                .run(&text, parameters, move |_query, _params| {
+                    let connection = connection.clone();
+                    async move {
+                        connection.ensure_open()?;
+                        Ok((
+                            Box::new(ArrayReader::new(vec![])) as Box<dyn Reader>,
+                            vec![],
+                        ))
+                    }
+                })
+                .await;
+        }
         self.execute_reader(&filter_text(statement), parameters)
             .await
     }

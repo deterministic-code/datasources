@@ -13,20 +13,20 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         var index = new Dictionary<string, TRelated>();
         await foreach (var item in via.Read(new Where(new Operator.In(enrichment.By, keys.Values.ToList()))))
         {
-            var by = RepositoryTreeNode.Get(item!, enrichment.By);
+            var by = Get(item!, enrichment.By);
             if (by is not null)
-                index[RepositoryTreeNode.KeyOf(by)] = item;
+                index[KeyOf(by)] = item;
         }
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
-            if (key is null || !index.TryGetValue(RepositoryTreeNode.KeyOf(key), out var related))
+            var key = SourceKey(parent, enrichment.From, At(sources, i));
+            if (key is null || !index.TryGetValue(KeyOf(key), out var related))
                 continue;
-            RepositoryTreeNode.Set(
+            Set(
                 parent,
                 enrichment.Into,
-                enrichment.Select is { } select ? RepositoryTreeNode.Get(related!, select) : related);
+                enrichment.Select is { } select ? Get(related!, select) : related);
         }
     }
 
@@ -41,9 +41,9 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         var index = new Dictionary<string, List<TRelated>>();
         await foreach (var item in via.Read(new Where(new Operator.In(enrichment.By, keys.Values.ToList()))))
         {
-            var by = RepositoryTreeNode.Get(item!, enrichment.By);
+            var by = Get(item!, enrichment.By);
             if (by is null) continue;
-            var cacheKey = RepositoryTreeNode.KeyOf(by);
+            var cacheKey = KeyOf(by);
             if (!index.TryGetValue(cacheKey, out var list))
                 index[cacheKey] = list = [];
             list.Add(item);
@@ -51,12 +51,12 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
+            var key = SourceKey(parent, enrichment.From, At(sources, i));
             if (key is null) continue;
-            RepositoryTreeNode.Set(
+            Set(
                 parent,
                 enrichment.Into,
-                index.GetValueOrDefault(RepositoryTreeNode.KeyOf(key)) ?? []);
+                index.GetValueOrDefault(KeyOf(key)) ?? []);
         }
     }
 
@@ -65,9 +65,9 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         var keys = new Dictionary<string, Value>();
         for (var i = 0; i < parents.Count; i++)
         {
-            var key = RepositoryTreeNode.SourceKey(parents[i], from, At(sources, i));
+            var key = SourceKey(parents[i], from, At(sources, i));
             if (key is not null)
-                keys.TryAdd(RepositoryTreeNode.KeyOf(key), Value.From(key));
+                keys.TryAdd(KeyOf(key), Value.From(key));
         }
         return keys;
     }

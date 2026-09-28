@@ -6,12 +6,13 @@ use crate::create_repository_options::create_repository_options;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-use crate::default_write_enrichment_strategy::{strip_enriched, DefaultWriteEnrichmentStrategy};
+use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
+use crate::mappers::{Mapper, TransformMapper};
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -20,6 +21,7 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statements::ReturnStatement;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::table_repository_builder::RepositoryBuilder;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
@@ -36,6 +38,7 @@ pub struct CRUDRepository {
     readonly: ReadonlyRepository,
     ids: Vec<String>,
     write: Arc<dyn WriteEnrichmentStrategy>,
+    return_sql: Option<Arc<TransformMapper<String, String>>>,
 }
 
 impl RepositoryBuilder {
@@ -57,9 +60,10 @@ impl CRUDRepository {
     }
 
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
-        Ok(Self::from_built(RepositoryBuilder::parts_crud(
-            connection, options,
-        )?))
+        let return_sql = options.return_.clone();
+        let mut repo = Self::from_built(RepositoryBuilder::parts_crud(connection, options)?);
+        repo.return_sql = return_sql;
+        Ok(repo)
     }
 
     pub fn from_built(mut built: BuiltRepository) -> Self {
@@ -72,6 +76,7 @@ impl CRUDRepository {
             readonly: ReadonlyRepository::from_built(built),
             ids: id,
             write,
+            return_sql: None,
         }
     }
 
@@ -85,6 +90,7 @@ impl CRUDRepository {
             readonly: ReadonlyRepository::memory(items),
             ids,
             write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
+            return_sql: None,
         }
     }
 
@@ -183,8 +189,7 @@ impl CRUDRepository {
             let id = self.id_value(&created);
             self.write_id(item, &id)?;
         } else {
-            let response = self.execute_insert(&stored).await?;
-            self.write_id(item, &response.result)?;
+            self.execute_insert(&stored, item).await?;
         }
         self.write
             .persist(
@@ -203,11 +208,7 @@ impl CRUDRepository {
             .unwrap_or_else(|| item.clone()))
     }
 
-    async fn update_core(
-        &self,
-        item: &Row,
-        by_where: Option<&dyn IWhere>,
-    ) -> Result<Response> {
+    async fn update_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         let stored = if self.enriched() {
             let entries = self.readonly.enrichments.lock().expect("enrichments");
             strip_enriched(item, &entries)
@@ -228,11 +229,7 @@ impl CRUDRepository {
         Ok(response)
     }
 
-    async fn delete_core(
-        &self,
-        item: &Row,
-        by_where: Option<&dyn IWhere>,
-    ) -> Result<Response> {
+    async fn delete_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if self.enriched() {
             let mut parent = item.clone();
             self.write
@@ -287,19 +284,55 @@ impl CRUDRepository {
         if let Some(memory) = self.readonly.memory_items() {
             return Ok(memory.insert(item));
         }
-        let response = self.execute_insert(item).await?;
-        self.write_id(item, &response.result)?;
+        let stored = item.clone();
+        self.execute_insert(&stored, item).await?;
         Ok(item.clone())
     }
 
-    async fn execute_insert(&self, item: &Row) -> Result<Response> {
-        let record = self.readonly.reverse_convert(item)?;
+    async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
+        let record = self.readonly.reverse_convert(stored)?;
         let fields = self.params(&record, false)?;
         let statement = self.readonly.statements.insert(&fields);
-        self.readonly
+        let response = self
+            .readonly
             .command()
             .execute_statement(&statement, Some(&fields))
-            .await
+            .await?;
+        if self.ids.len() == 1 {
+            self.copy_inserted_id(target, &fields).await?;
+        }
+        Ok(response)
+    }
+
+    async fn copy_inserted_id(&self, item: &mut Row, fields: &[Parameter]) -> Result<()> {
+        let column = self.ids[0].clone();
+        let sql_column = self.readonly.column(&column);
+        let reader = if let Some(map) = &self.return_sql {
+            let built = ReturnStatement::new(&sql_column, fields);
+            let mapped = ReturnStatement::text(Mapper::map(map.as_ref(), built.get_text()));
+            self.readonly
+                .command()
+                .execute_reader_statement(&mapped, Some(fields))
+                .await?
+        } else {
+            let inserted = self.readonly.statements.select_inserted_id(&sql_column);
+            self.readonly
+                .command()
+                .execute_reader_statement(&inserted, None)
+                .await?
+        };
+        if !reader.next().await? {
+            return Ok(());
+        }
+        let current = reader
+            .current()
+            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
+        let row = identified(named(current, &column, &sql_column), &column);
+        let mapped = Mapper::map(
+            &self.readonly.rows_mapper,
+            self.readonly.row_converter.convert(&row)?,
+        );
+        self.write_id(item, &self.id_value(&mapped))
     }
 
     fn id_value(&self, item: &Row) -> Value {
@@ -350,11 +383,7 @@ impl CRUDRepository {
             .await
     }
 
-    async fn remove(
-        &self,
-        item: &Row,
-        by_where: Option<&dyn IWhere>,
-    ) -> Result<Response> {
+    async fn remove(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(memory) = self.readonly.memory_items() {
             return Ok(memory.remove(item, by_where));
         }
@@ -471,23 +500,29 @@ impl IReadonlyRepository for CRUDRepository {
 #[async_trait]
 impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        Self::in_transaction(self.use_transaction(), Arc::clone(&self.readonly.connection), || {
-            self.create_core(item)
-        })
+        Self::in_transaction(
+            self.use_transaction(),
+            Arc::clone(&self.readonly.connection),
+            || self.create_core(item),
+        )
         .await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        Self::in_transaction(self.use_transaction(), Arc::clone(&self.readonly.connection), || {
-            self.update_core(item, by_where)
-        })
+        Self::in_transaction(
+            self.use_transaction(),
+            Arc::clone(&self.readonly.connection),
+            || self.update_core(item, by_where),
+        )
         .await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        Self::in_transaction(self.use_transaction(), Arc::clone(&self.readonly.connection), || {
-            self.delete_core(item, by_where)
-        })
+        Self::in_transaction(
+            self.use_transaction(),
+            Arc::clone(&self.readonly.connection),
+            || self.delete_core(item, by_where),
+        )
         .await
     }
 
@@ -513,6 +548,26 @@ impl ICRUDRepository for CRUDRepository {
     }
 }
 
+fn named(mut row: Row, property: &str, sql_column: &str) -> Row {
+    if property == sql_column {
+        return row;
+    }
+    if let Some(cell) = row.remove(sql_column) {
+        row.insert(property.to_string(), cell);
+    }
+    row
+}
+
+fn identified(row: Row, column: &str) -> Row {
+    if row.contains_key(column) || row.len() != 1 {
+        return row;
+    }
+    let value = row.into_values().next().unwrap_or(Value::Null);
+    let mut named = Row::new();
+    named.insert(column.to_string(), value);
+    named
+}
+
 fn and_all(parts: Vec<Expression>) -> Expression {
     parts
         .into_iter()
@@ -524,4 +579,12 @@ fn and_all(parts: Vec<Expression>) -> Expression {
             }
             .into()
         })
+}
+
+pub(crate) fn strip_enriched(item: &Row, entries: &[StoredEnrichment]) -> Row {
+    let mut row = item.clone();
+    for entry in entries {
+        row.remove(&entry.enrichment.into);
+    }
+    row
 }

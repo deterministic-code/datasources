@@ -23,7 +23,6 @@ steps:
         version: 1
       expect:
         rowsAffected: 1
-        result: 1
   - execute:
       connection: writer
       sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
@@ -93,7 +92,6 @@ steps:
         version: 1
       expect:
         rowsAffected: 1
-        result: 2
   - execute:
       connection: writer
       sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version
@@ -148,7 +146,6 @@ steps:
         version: 1
       expect:
         rowsAffected: 1
-        result: 3
   - execute:
       connection: writer
       sql: UPDATE "user" SET username = $username, version = version + 1 WHERE id = $id AND version = $version

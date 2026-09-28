@@ -9,11 +9,13 @@ const args = (parameters: Parameter[]): string =>
     .join(", ");
 
 export class ExecuteStoredProcedureStatement implements IExecuteStoredProcedureStatement {
+  readonly name?: string;
   private readonly text: string;
 
   constructor(text: string);
   constructor(name: string, parameters: Parameter[]);
   constructor(nameOrText: string, parameters?: Parameter[]) {
+    this.name = parameters ? nameOrText : undefined;
     this.text = parameters ? `CALL ${nameOrText}(${args(parameters)})` : nameOrText;
   }
 

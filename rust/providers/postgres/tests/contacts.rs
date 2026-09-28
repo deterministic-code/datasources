@@ -15,7 +15,9 @@ fn verbose() -> bool {
 }
 
 fn render(statement: &datasources::CreateTableStatement) -> String {
-    crate::statement_factory::PostgresStatementFactory.transform(statement).get_text()
+    crate::statement_factory::PostgresStatementFactory
+        .transform(statement)
+        .get_text()
 }
 
 #[tokio::test]

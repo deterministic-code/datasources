@@ -312,7 +312,7 @@ export const runRepositorySpec = async (
         throw new Error(`${spec.name}: empty step`);
       }))();
   }
-  const expected = expectedRepositoryConsoleSignatures(spec);
+  const expected = expectedRepositoryConsoleSignatures(spec, connection.provider);
   const actual = logs
     .filter((line) => /\[(Start|Finish)\]/.test(line))
     .map((line) => unquoteSql(consoleSignature(line)));

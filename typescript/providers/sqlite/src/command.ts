@@ -1,6 +1,9 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  DatasourceError,
+  ReturnStatement,
+  SelectStatement,
   parametersToRecord,
   responseOf,
   splitStatements,
@@ -14,14 +17,10 @@ import {
   type Parameter,
   type Response,
 } from "@datasources/core";
-import { SqliteDriver } from "./SqliteDriver.ts";
 import { SqliteStatementFactory } from "./SqliteStatementFactory.ts";
 import type { SqliteConnection } from "./connection.ts";
 import type { SqliteStatement } from "./i-sqlite-driver.ts";
 import { reverse } from "./converters/SqliteRowTypeConverters.ts";
-
-const isSelect = (sql: string) =>
-  sql.trimStart().toUpperCase().startsWith("SELECT");
 
 const bound = (parameters?: Parameter[]): Record<string, Scalar> => {
   const record = parametersToRecord(parameters);
@@ -78,31 +77,31 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    return this.execute(new SqliteStatementFactory().transform(statement).getText(), parameters);
+    return statement instanceof SelectStatement || statement instanceof ReturnStatement
+      ? this.firstCell(statement, parameters)
+      : this.execute(new SqliteStatementFactory().transform(statement).getText(), parameters);
+  }
+
+  private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    const reader = await this.executeReaderStatement(statement, parameters);
+    try {
+      if (!(await reader.next())) return responseOf(null, 0, parameters);
+      const row = reader.current;
+      /* v8 ignore next */
+      if (!row) throw new DatasourceError("Reader current must be a row");
+      const values = Object.values(row);
+      return responseOf(values.length === 0 ? null : values[0], 1, parameters);
+    } finally {
+      await reader.dispose();
+    }
   }
 
   async execute(text: string, parameters?: Parameter[]): Promise<Response> {
     return this.run(text, parameters, async (query, params) => {
       if (!query.trim()) return { value: responseOf(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
-      if (isSelect(query)) {
-        const rows = this.connection.require().prepare(query).all(bound(params));
-        const row = rows[0];
-        return {
-          value: responseOf(row ? Object.values(row)[0] : null, row ? 1 : 0, params),
-          rows: [],
-        };
-      }
       const info = this.connection.require().prepare(query).run(bound(params));
-      const rowid = info.lastInsertRowid;
-      return {
-        value: responseOf(
-          rowid == null ? rowid : new SqliteDriver().generatedId(rowid),
-          info.changes,
-          params,
-        ),
-        rows: [],
-      };
+      return { value: responseOf(null, info.changes, params), rows: [] };
     });
   }
 
@@ -115,7 +114,8 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     const raw = names.some((name, index) => name !== columns[index]?.name)
       ? statement.raw?.(true).iterate(params)
       : undefined;
-    return raw ? namedRows(raw, names) : closable(statement.iterate(params));
+    const rows = raw ? namedRows(raw, names) : closable(statement.iterate(params));
+    return rows[Symbol.iterator]();
   }
 }
 
@@ -131,11 +131,11 @@ type ColumnStatement = SqliteStatement & {
 const closable = (
   iter: IterableIterator<Cells>,
 ): IterableIterator<Cells> & { return(): IteratorResult<Cells> } => {
-  const stop = iter.return?.bind(iter);
+  const stop = iter.return ? iter.return.bind(iter) : undefined;
   const rows: IterableIterator<Cells> & { return(): IteratorResult<Cells> } = {
     next: () => iter.next(),
     return: () => {
-      stop?.();
+      if (stop) stop();
       return { done: true, value: undefined };
     },
     [Symbol.iterator]() {
@@ -149,7 +149,8 @@ const namedRows = (
   iter: IterableIterator<Cell[]>,
   names: string[],
 ): IterableIterator<Cells> & { return(): IteratorResult<Cells> } => {
-  const stop = iter.return?.bind(iter);
+  /* v8 ignore next */
+  const stop = iter.return ? iter.return.bind(iter) : undefined;
   const rows: IterableIterator<Cells> & { return(): IteratorResult<Cells> } = {
     next: () => {
       const step = iter.next();
@@ -157,11 +158,14 @@ const namedRows = (
         ? { done: true, value: undefined }
         : {
             done: false,
-            value: Object.fromEntries(names.map((name, index) => [name, step.value[index] ?? null])),
+            value: Object.fromEntries(
+              names.map((name, index) => [name, step.value[index] == null ? null : step.value[index]]),
+            ),
           };
     },
     return: () => {
-      stop?.();
+      /* v8 ignore next */
+      if (stop) stop();
       return { done: true, value: undefined };
     },
     [Symbol.iterator]() {
@@ -177,8 +181,8 @@ const qualified = (columns: SqliteColumn[]): string[] => {
   return duplicated.size === 0
     ? names
     : columns.map((column, index) =>
-        duplicated.has(names[index] ?? "") && column.table && column.column
+        duplicated.has(names[index]!) && column.table && column.column
           ? `${column.table}.${column.column}`
-          : (names[index] ?? ""),
+          : names[index]!
       );
 };

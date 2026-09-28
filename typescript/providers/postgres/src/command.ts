@@ -1,7 +1,10 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  DatasourceError,
   ParameterDirection,
+  ReturnStatement,
+  SelectStatement,
   responseOf,
   splitStatements,
   statementReader,
@@ -13,28 +16,10 @@ import {
   type Response,
 } from "@datasources/core";
 import { PostgresStatementFactory } from "./PostgresStatementFactory.ts";
-import { bindParameters, toPostgres, withReturning } from "./bind.ts";
-import { PostgresDriver } from "./PostgresDriver.ts";
+import { bindParameters, toPostgres } from "./bind.ts";
 import type { PostgresConnection } from "./connection.ts";
 import type { PostgresExecuteResult } from "./i-postgres-driver.ts";
 import type { Scalar } from "./scalar.ts";
-
-const isSelect = (sql: string) =>
-  sql.trimStart().toUpperCase().startsWith("SELECT");
-const isInsert = (sql: string) =>
-  sql.trimStart().toUpperCase().startsWith("INSERT");
-const isCall = (sql: string) =>
-  sql.trimStart().toUpperCase().startsWith("CALL");
-const hasOutput = (parameters?: Parameter[]) =>
-  parameters?.some(
-    (parameter) =>
-      parameter.direction && parameter.direction !== ParameterDirection.Input,
-  ) ?? false;
-
-const firstRow = async (rows: AsyncIterable<Cells>): Promise<Cells | undefined> => {
-  for await (const row of rows) return row;
-  return undefined;
-};
 
 export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: PostgresConnection) {
@@ -69,7 +54,23 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    return this.execute(new PostgresStatementFactory().transform(statement).getText(), parameters);
+    return statement instanceof SelectStatement || statement instanceof ReturnStatement
+      ? this.firstCell(statement, parameters)
+      : this.execute(new PostgresStatementFactory().transform(statement).getText(), parameters);
+  }
+
+  private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    const reader = await this.executeReaderStatement(statement, parameters);
+    try {
+      if (!(await reader.next())) return responseOf(null, 0, parameters);
+      const row = reader.current;
+      /* v8 ignore next */
+      if (!row) throw new DatasourceError("Reader current must be a row");
+      const values = Object.values(row);
+      return responseOf(values.length === 0 ? null : values[0], 1, parameters);
+    } finally {
+      await reader.dispose();
+    }
   }
 
   async execute(
@@ -93,30 +94,20 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     params?: Record<string, Scalar>,
     parameters?: Parameter[],
   ): Promise<PostgresExecuteResult> {
-    const rewritten = withReturning(sql);
-    if (isSelect(rewritten) || (isCall(rewritten) && hasOutput(parameters))) {
-      const row = await firstRow(this.query(rewritten, params));
-      return {
-        rowsAffected: row ? 1 : 0,
-        result: row ? Object.values(row)[0] ?? null : null,
-        parameters: row && parameters
-          ? parameters.map((parameter) =>
-              parameter.direction &&
-              parameter.direction !== ParameterDirection.Input &&
-              parameter.name in row
-                ? { ...parameter, value: row[parameter.name] }
-                : parameter,
-            )
-          : parameters,
-      };
-    }
-    const { text, values } = toPostgres(rewritten, params);
+    const { text, values } = toPostgres(sql, params);
     const queried = await this.connection.require().query(text, values);
-    const id = queried.rows[0]?.id ?? null;
+    const row = queried.rows[0];
     return {
       rowsAffected: queried.rowCount ?? queried.rows.length,
-      result: isInsert(sql) ? (new PostgresDriver().generatedId(id) as Scalar) : id,
-      parameters,
+      result: null,
+      parameters: parameters?.map((parameter) =>
+        parameter.direction &&
+        parameter.direction !== ParameterDirection.Input &&
+        row &&
+        parameter.name in row
+          ? { ...parameter, value: row[parameter.name] as Scalar }
+          : parameter,
+      ),
     };
   }
 

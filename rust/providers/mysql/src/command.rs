@@ -2,15 +2,14 @@ use crate::connection::{map_err, MysqlConnection};
 use crate::converters::{
     BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
 };
-use crate::driver::MysqlDriver;
 use crate::engine::to_mysql;
 use crate::reader::MysqlReader;
 use crate::statement_factory::MysqlStatementFactory;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Driver, Parameter, Reader, Response, Result, Statement,
-    TypeConverter, Value,
+    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, ReturnStatement,
+    Statement, StatementKind, TypeConverter, Value,
 };
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Row, Value as MysqlValue};
@@ -40,25 +39,6 @@ impl MysqlCommand {
         sql: &str,
         params: &HashMap<String, Value>,
     ) -> Result<MysqlExecuteResult> {
-        if sql.trim_start().len() >= 6 && sql.trim_start()[..6].eq_ignore_ascii_case("SELECT") {
-            let mut slot = connection.lock_conn().await?;
-            let conn = slot
-                .as_mut()
-                .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-            let row: Option<Row> = conn
-                .exec_first(to_mysql(sql), named_params(params))
-                .await
-                .map_err(map_err)?;
-            let found = row.is_some();
-            let result = row
-                .and_then(|row| row.as_ref(0).cloned())
-                .map(from_mysql_value)
-                .unwrap_or(Value::Null);
-            return Ok(MysqlExecuteResult {
-                rows_affected: if found { 1 } else { 0 },
-                result,
-            });
-        }
         let sql = to_mysql(sql);
         let mut slot = connection.lock_conn().await?;
         let conn = slot
@@ -73,7 +53,7 @@ impl MysqlCommand {
         }
         Ok(MysqlExecuteResult {
             rows_affected: conn.affected_rows() as i64,
-            result: MysqlDriver.generated_id(Value::Int(conn.last_insert_id().unwrap_or(0) as i64)),
+            result: Value::Null,
         })
     }
 }
@@ -166,8 +146,33 @@ impl Command for MysqlCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
+        if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
+            return self.first_cell(statement, parameters).await;
+        }
         let text = MysqlStatementFactory.transform(statement).get_text();
         self.execute(&text, parameters).await
+    }
+}
+
+impl MysqlCommand {
+    async fn first_cell(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let reader = self.execute_reader_statement(statement, parameters).await?;
+        if !reader.next().await? {
+            return Ok(Response::of(
+                Value::Null,
+                0,
+                parameters.map(|list| list.to_vec()),
+            ));
+        }
+        let row = reader
+            .current()
+            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
+        let cell = row.into_values().next().unwrap_or(Value::Null);
+        Ok(Response::of(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 

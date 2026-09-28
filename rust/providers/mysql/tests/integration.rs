@@ -96,7 +96,11 @@ fn quote_ident(id: &str) -> String {
 fn render_schema(name: &str) -> String {
     datasources_sql_specs::schema_tables(name, quote_ident, None)
         .iter()
-        .map(|statement| crate::statement_factory::MysqlStatementFactory.transform(statement).get_text())
+        .map(|statement| {
+            crate::statement_factory::MysqlStatementFactory
+                .transform(statement)
+                .get_text()
+        })
         .collect::<Vec<_>>()
         .join(";\n")
 }
@@ -341,7 +345,7 @@ fn uuid_name() -> String {
 
 #[tokio::test]
 async fn return_statement_selects_scalar() {
-    use datasources::{ReturnStatement, Text};
+    use datasources::ReturnStatement;
     let Ok(base) = std::env::var("MYSQL_URL") else {
         return;
     };
@@ -365,8 +369,8 @@ async fn return_statement_selects_scalar() {
         .unwrap();
     let parameters = [Parameter::new("n", 4_i64)];
     let response = command
-        .execute(
-            &ReturnStatement::new("add_one", &parameters).get_text(),
+        .execute_statement(
+            &ReturnStatement::new("add_one", &parameters),
             Some(&parameters),
         )
         .await

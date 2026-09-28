@@ -2,7 +2,9 @@ use crate::command::MemoryCommand;
 use crate::store::{MemoryData, MemoryStore};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
-use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Row, Transaction};
+use datasources::{
+    Command, Connection, DatasourceError, IsolationLevel, Result, Row, Transaction, Value,
+};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -12,6 +14,7 @@ pub(crate) struct MemoryState {
     pub(crate) opened: Mutex<bool>,
     pub(crate) in_transaction: Mutex<bool>,
     pub(crate) snapshot: Mutex<Option<HashMap<String, Vec<Row>>>>,
+    pub(crate) inserted: Mutex<HashMap<String, Value>>,
     pub(crate) data: Option<MemoryData>,
 }
 
@@ -32,6 +35,7 @@ impl MemoryConnection {
                 opened: Mutex::new(false),
                 in_transaction: Mutex::new(false),
                 snapshot: Mutex::new(None),
+                inserted: Mutex::new(HashMap::new()),
                 data,
             }),
         }
@@ -91,6 +95,24 @@ impl MemoryConnection {
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn in_transaction(&self) -> bool {
         *self.state.in_transaction.lock().unwrap()
+    }
+
+    pub(crate) fn remember_inserted(&self, table: &str, id: Value) {
+        self.state
+            .inserted
+            .lock()
+            .expect("inserted")
+            .insert(table.to_string(), id);
+    }
+
+    pub(crate) fn inserted(&self, table: &str) -> Value {
+        self.state
+            .inserted
+            .lock()
+            .expect("inserted")
+            .get(table)
+            .cloned()
+            .unwrap_or(Value::Null)
     }
 }
 

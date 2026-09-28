@@ -14,7 +14,6 @@ steps:
         created: "2024-01-15T10:00:00Z"
       expect:
         rowsAffected: 1
-        result: 1
   - execute:
       sql: INSERT INTO "user" (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
       parameters:
@@ -24,7 +23,6 @@ steps:
         created: "2024-02-20T15:30:00Z"
       expect:
         rowsAffected: 1
-        result: 2
   - executeReader:
       sql: SELECT * FROM "user" ORDER BY id
       expect:

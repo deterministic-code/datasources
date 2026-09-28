@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, generatedId, columnType, CreateTableStatement, SelectStatement, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, columnType, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlConnection } from "./connection.ts";
@@ -85,7 +85,7 @@ describe("MysqlConnection", () => {
     const { connection, client, command } = await opened("mysql://db/app");
     await connection.open();
     expect(await command.execute("INSERT INTO items (id) VALUES ($id)", [{ name: "id", value: 1 }]))
-      .toMatchObject({ rowsAffected: 2, result: 5 });
+      .toMatchObject({ rowsAffected: 2, result: null });
     expect(await command.executeStatement(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }])))
       .toMatchObject({ rowsAffected: 2 });
     expect(client.queries.at(-1)?.sql).toBe("CREATE TABLE users (id INTEGER)");
@@ -134,7 +134,7 @@ describe("MysqlConnection", () => {
 
     const { command, client, connection } = await opened("x");
     client.arrayResult = true;
-    expect(await command.execute("SELECT 1")).toMatchObject({ rowsAffected: 1, result: 1 });
+    expect(await command.execute("SELECT 1")).toMatchObject({ rowsAffected: 1, result: undefined });
     client.arrayResult = false;
     client.header = {};
     expect(await command.execute("UPDATE items")).toMatchObject({ rowsAffected: 0 });
@@ -180,8 +180,9 @@ describe("MysqlCommand", () => {
     expect(await empty.next()).toBe(false);
     expect(await (await command.executeReader(";")).next()).toBe(false);
     client.rows = [{ add_one: 5 }];
-    expect(await command.execute("SELECT add_one($n)", [{ name: "n", value: 4 }]))
-      .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });
+    const n = { name: "n", value: 4 };
+    expect(await command.executeStatement(new ReturnStatement("add_one", [n]), [n]))
+      .toEqual({ result: 5, rowsAffected: 1, parameters: [n] });
     client.rows = [];
     expect(await command.execute("SELECT 1")).toEqual({
       result: undefined,
@@ -192,25 +193,41 @@ describe("MysqlCommand", () => {
     const start = { name: "start_n", value: 4 };
     const out = { name: "result", direction: ParameterDirection.Output };
     expect(
-      await command.execute("CALL bump($start_n, $result)", [start, out]),
+      await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [start, out]), [start, out]),
     ).toMatchObject({
       parameters: [start, { name: "result", direction: ParameterDirection.Output, value: 5 }],
     });
     const inout = { name: "n", value: 4, direction: ParameterDirection.InputOutput };
     client.rows = [{ n: 5 }];
-    expect(await command.execute("CALL bump($n)", [inout])).toMatchObject({
+    expect(await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [inout]), [inout])).toMatchObject({
       parameters: [{ name: "n", value: 5, direction: ParameterDirection.InputOutput }],
     });
     expect(
-      await command.execute("CALL bump($start_n, $result)", [
+      await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [
+        { name: "start_n" },
+        { name: "result", direction: ParameterDirection.Output },
+      ]), [
         { name: "start_n" },
         { name: "result", direction: ParameterDirection.Output },
       ]),
     ).toMatchObject({ rowsAffected: 0 });
+    client.arrayResult = true;
+    client.rows = [];
+    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({
+      result: null,
+      rowsAffected: 0,
+    });
+    client.rows = [{}];
+    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({ result: null });
+    expect(await command.executeStatement(new ExecuteStoredProcedureStatement("bump", []))).toMatchObject({
+      result: undefined,
+    });
     client.arrayResult = false;
     expect(await (await command.executeReader("SELECT 1")).next()).toBe(false);
     expect(
-      await command.execute("CALL bump($result)", [
+      await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [
+        { name: "result", direction: ParameterDirection.Output },
+      ]), [
         { name: "result", direction: ParameterDirection.Output },
       ]),
     ).toMatchObject({ rowsAffected: 0 });
@@ -228,7 +245,6 @@ describe("Mysql datasource", () => {
       transaction: (c, isolation = "serializable") =>
         new MysqlTransaction(c as MysqlConnection, isolation),
       rowTypeConverters: MysqlRowTypeConverters,
-      generatedId,
       columnType,
     });
     const ds = new Datasource("mysql", of());

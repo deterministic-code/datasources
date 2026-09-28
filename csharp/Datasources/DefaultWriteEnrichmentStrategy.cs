@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Reflection;
 
 namespace Datasources;
 
@@ -43,7 +42,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
                 if (Skip(parent, enrichment.Into, mode)) continue;
                 await (mode switch
                 {
-                    WriteMode.Create => UpdateEnrichmentStrategy<T>.CreateLinks(writer, enrichment, association, parent),
+                    WriteMode.Create => update.CreateLinks(writer, enrichment, association, parent),
                     WriteMode.Update => update.UpdateLinked(entry, enrichment, parent),
                     WriteMode.Delete => delete.DeleteLinked(entry, enrichment, parent),
                     _ => throw new DatasourceException("Unknown persist mode")
@@ -60,7 +59,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             if (Skip(parent, owned.Into, mode)) continue;
             await (mode switch
             {
-                WriteMode.Create => UpdateEnrichmentStrategy<T>.CreateChildren(childWriter, owned, parent),
+                WriteMode.Create => update.CreateChildren(childWriter, owned, parent),
                 WriteMode.Update => update.UpdateOwned(entry, owned, parent),
                 WriteMode.Delete => delete.DeleteOwned(entry, owned, parent, _ => Task.CompletedTask),
                 _ => throw new DatasourceException("Unknown persist mode")
@@ -69,30 +68,5 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     }
 
     bool Skip(object parent, string into, WriteMode mode) =>
-        SkipUnloaded && mode is not WriteMode.Delete && UpdateEnrichmentStrategy<T>.Get(parent, into) is null;
-
-    internal static object Strip(IEnrichmentHost host, object item)
-    {
-        var skip = host.Enrichments.Select(entry => entry.Enrichment.Into).ToHashSet();
-        if (item is IDictionary<string, Value> row)
-        {
-            var copy = new Row(row);
-            foreach (var name in skip)
-                copy.Remove(name);
-            return copy;
-        }
-        var dest = Activator.CreateInstance(item.GetType())!;
-        foreach (var prop in item.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(prop => prop is { CanRead: true, CanWrite: true } && prop.GetIndexParameters().Length == 0))
-        {
-            if (skip.Contains(prop.Name))
-            {
-                if (!prop.PropertyType.IsValueType)
-                    prop.SetValue(dest, null);
-                continue;
-            }
-            prop.SetValue(dest, prop.GetValue(item));
-        }
-        return dest;
-    }
+        SkipUnloaded && mode is not WriteMode.Delete && parent.GetType().GetProperty(into)?.GetValue(parent) is null;
 }

@@ -1,6 +1,5 @@
 import {
   DatasourceError,
-  generatedId as identityGeneratedId,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -16,7 +15,6 @@ import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
 
 export class MysqlDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = MysqlRowTypeConverters;
-  generatedId = identityGeneratedId;
   columnType = (name: string): string =>
     ({
       int: "INT",

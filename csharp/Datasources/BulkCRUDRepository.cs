@@ -88,8 +88,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T>, IBulkWrite<T> where T : 
             : Value.Null.Instance;
     }
 
-    T Stored(T item) =>
-        Enriched ? (T)DefaultWriteEnrichmentStrategy<T>.Strip((IEnrichmentHost)this, item!) : item;
+    T Stored(T item) => Enriched ? StripEnriched(item) : item;
 
     BulkCommand Insert(T stored)
     {

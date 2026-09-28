@@ -491,15 +491,24 @@ fn apply_mappers(options: &mut CRUDRepositoryOptions, spec: &Spec, dialect: &Rep
     }
 }
 
-fn queries(spec: &Spec) -> Vec<String> {
+fn inserted_id_sql(provider: &str, column: &str) -> Option<String> {
+    match provider {
+        "sqlite" => Some(format!("SELECT last_insert_rowid() AS {column}")),
+        "mysql" => Some(format!("SELECT LAST_INSERT_ID() AS {column}")),
+        "postgres" => Some(format!("SELECT lastval() AS {column}")),
+        _ => None,
+    }
+}
+
+fn queries(spec: &Spec, provider: &str) -> Vec<String> {
     let columns = columns_of(&spec.type_spec);
     let refs: Vec<&str> = columns.iter().map(String::as_str).collect();
     let ids: HashSet<&str> = spec.type_spec.ids.iter().map(String::as_str).collect();
     let table = physical_table(&spec.type_spec);
     spec.steps
         .iter()
-        .map(|step| {
-            if let Some(create) = &step.create {
+        .flat_map(|step| {
+            let sql = if let Some(create) = &step.create {
                 with_statement_sql(
                     InsertStatement::new(
                         &table,
@@ -581,7 +590,19 @@ fn queries(spec: &Spec) -> Vec<String> {
                 )
             } else {
                 panic!("{}: empty step", spec.name);
+            };
+            let mut out = vec![sql];
+            if step.create.is_some() && spec.type_spec.ids.len() == 1 {
+                if let Some(inserted) = spec
+                    .type_spec
+                    .ids
+                    .first()
+                    .and_then(|column| inserted_id_sql(provider, column))
+                {
+                    out.push(inserted);
+                }
             }
+            out
         })
         .collect()
 }
@@ -640,7 +661,11 @@ pub async fn run(
     for statement in schema_tables(
         &spec.schema,
         dialect.quote,
-        if rename.is_empty() { None } else { Some(&rename) },
+        if rename.is_empty() {
+            None
+        } else {
+            Some(&rename)
+        },
     ) {
         command.execute_statement(&statement, None).await?;
     }
@@ -776,7 +801,7 @@ pub async fn run(
             _ => panic!("{}: empty step", spec.name),
         }
     }
-    let expected: Vec<String> = queries(&spec)
+    let expected: Vec<String> = queries(&spec, dialect.provider)
         .into_iter()
         .flat_map(|query| {
             [

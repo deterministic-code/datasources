@@ -68,11 +68,7 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
         .unwrap();
     let disabled = repo
         .read(
-            Some(&Where::binary("username", eq, "grace").and(
-                "is_enabled",
-                eq,
-                0_i64,
-            )),
+            Some(&Where::binary("username", eq, "grace").and("is_enabled", eq, 0_i64)),
             None,
         )
         .await
@@ -113,11 +109,7 @@ async fn reads_user_by_guid_username_and_created() {
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
         .read_single(
-            Some(&Where::binary(
-                "Key",
-                eq,
-                Uuid::parse_str(ADA).unwrap(),
-            )),
+            Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
             None,
         )
         .await
@@ -237,21 +229,24 @@ mod user_view {
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         type_options.column_mappings =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        let mut users_repo = ReadonlyRepository::new(
-            connection.clone(),
-            users_options.read,
-        )
-        .unwrap();
+        let mut users_repo =
+            ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
         let types =
             ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
-        users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), types, None);
+        users_repo.add_enriched(
+            datasources::Enrichment::new(
+                "UserType",
+                "UserTypeId",
+                "Id",
+                Some("Name".into()),
+                false,
+            ),
+            types,
+            None,
+        );
         let account = users_repo
             .read_single(
-                Some(&Where::binary(
-                    "Key",
-                    eq,
-                    Uuid::parse_str(ADA).unwrap(),
-                )),
+                Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
                 None,
             )
             .await
@@ -386,11 +381,8 @@ mod users_view_roles {
             ("Name".to_string(), "name".to_string()),
         ]));
         role_options.query = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
-        let mut users_repo = ReadonlyRepository::new(
-            connection.clone(),
-            users_options.read,
-        )
-        .unwrap();
+        let mut users_repo =
+            ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
         let types = ds.create_readonly_repository::<UserType>(
             Some(connection.clone()),
             Some(type_options.read),
@@ -398,8 +390,16 @@ mod users_view_roles {
         let roles =
             ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
         let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
-        users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), false), types, Some(strategy.clone()));
-        users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), roles, Some(strategy));
+        users_repo.add_enriched(
+            datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), false),
+            types,
+            Some(strategy.clone()),
+        );
+        users_repo.add_enriched(
+            datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+            roles,
+            Some(strategy),
+        );
         let users_view = users_repo
             .read_single(Some(&Where::binary("Key", eq, ADA)), None)
             .await
@@ -553,8 +553,7 @@ mod user_crud {
     async fn writes_user_from_the_type() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(ds, "user-pascal", "")
-        .await;
+        let connection = open(ds, "user-pascal", "").await;
         let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
         let mut created = datasources::Row::new();
         created.insert("username".into(), Value::from("ada"));
@@ -605,8 +604,7 @@ mod user_crud {
     async fn updates_users_view_when_the_version_matches() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(ds, "user-view-version", "")
-        .await;
+        let connection = open(ds, "user-view-version", "").await;
         let mut users_options = create_repository_options::<UsersView>();
         users_options.ids = vec!["Key".into()];
         users_options.entity_mapper = Box::new(DictionaryMapper::new([(
@@ -638,8 +636,22 @@ mod user_crud {
         let user_types_repo =
             Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
         let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
-        users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
-        users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
+        users_repo.add_enriched(
+            datasources::Enrichment::new(
+                "UserType",
+                "UserTypeId",
+                "Id",
+                Some("Name".into()),
+                false,
+            ),
+            user_types_repo.clone(),
+            None,
+        );
+        users_repo.add_enriched(
+            datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+            user_roles_repo.clone(),
+            None,
+        );
         let mut admin = datasources::Row::new();
         admin.insert("Name".into(), Value::from("admin"));
         let admin = user_types_repo.create(&mut admin).await.unwrap();

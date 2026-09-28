@@ -5,7 +5,6 @@ use crate::delete_enrichment_strategy::DeleteEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::repository_tree::RepositoryTree;
-use crate::repository_tree_node::encode_rows;
 use crate::result::Result;
 use crate::row::Row;
 use crate::stored_enrichment::StoredEnrichment;
@@ -238,14 +237,6 @@ fn missing(value: &Value) -> bool {
         || matches!(value, Value::Text(text) if text.is_empty())
 }
 
-pub(crate) fn strip_enriched(item: &Row, entries: &[StoredEnrichment]) -> Row {
-    let mut row = item.clone();
-    for entry in entries {
-        row.remove(&entry.enrichment.into);
-    }
-    row
-}
-
 fn assigned(value: &Value) -> bool {
     match value {
         Value::Null | Value::Int(0) => false,
@@ -296,4 +287,29 @@ fn parse_value(text: &str) -> Value {
             .map(Value::Int)
             .unwrap_or_else(|_| Value::Text(text.into())),
     }
+}
+
+pub fn encode_rows(rows: &[Row]) -> Value {
+    Value::Text(
+        rows.iter()
+            .map(encode_row_text)
+            .collect::<Vec<_>>()
+            .join("|"),
+    )
+}
+
+pub(crate) fn encode_row(row: &Row) -> Value {
+    Value::Text(encode_row_text(row))
+}
+
+fn encode_row_text(row: &Row) -> String {
+    let mut keys: Vec<_> = row.keys().cloned().collect();
+    keys.sort();
+    keys.into_iter()
+        .filter_map(|key| {
+            row.get(&key)
+                .map(|value| format!("{key}={}", value.wire_text()))
+        })
+        .collect::<Vec<_>>()
+        .join(",")
 }

@@ -1,8 +1,8 @@
+use crate::default_write_enrichment_strategy::encode_rows;
 use crate::enrichment::Enrichment;
 use crate::mappers::{FlatToNestedMapper, MappedRow, MappedValue, Mapper, TypeMap};
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
-use crate::repository_tree_node::encode_rows;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;

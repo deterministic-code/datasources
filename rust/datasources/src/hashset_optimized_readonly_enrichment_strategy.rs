@@ -1,9 +1,9 @@
+use crate::default_write_enrichment_strategy::{encode_row, encode_rows};
 use crate::enrichment::Enrichment;
-use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::repository::IReadonlyRepository;
-use crate::repository_tree_node::{
-    encode_row, encode_rows, source_at, source_key, RepositoryTreeNode,
+use crate::readonly_enrichment_strategy::{
+    key_of, source_at, source_key, ReadonlyEnrichmentStrategy,
 };
+use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -39,7 +39,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
         let mut index = HashMap::new();
         for related in loaded {
             if let Some(by) = related.get(&enrichment.by) {
-                index.insert(RepositoryTreeNode::key_of(by), related);
+                index.insert(key_of(by), related);
             }
         }
         for (index_i, parent) in parents.iter_mut().enumerate() {
@@ -47,7 +47,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
             else {
                 continue;
             };
-            let Some(related) = index.get(&RepositoryTreeNode::key_of(&key)) else {
+            let Some(related) = index.get(&key_of(&key)) else {
                 continue;
             };
             let value = enrichment
@@ -83,10 +83,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
         let mut index: HashMap<String, Vec<Row>> = HashMap::new();
         for row in loaded {
             if let Some(by) = row.get(&enrichment.by) {
-                index
-                    .entry(RepositoryTreeNode::key_of(by))
-                    .or_default()
-                    .push(row);
+                index.entry(key_of(by)).or_default().push(row);
             }
         }
         for (index_i, parent) in parents.iter_mut().enumerate() {
@@ -94,10 +91,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
             else {
                 continue;
             };
-            let related = index
-                .get(&RepositoryTreeNode::key_of(&key))
-                .cloned()
-                .unwrap_or_default();
+            let related = index.get(&key_of(&key)).cloned().unwrap_or_default();
             parent.insert(enrichment.into.clone(), encode_rows(&related));
         }
         Ok(())
@@ -108,7 +102,7 @@ fn keys(parents: &[Row], sources: Option<&[Option<Row>]>, from: &str) -> HashMap
     let mut keys = HashMap::new();
     for (index, parent) in parents.iter().enumerate() {
         if let Some(key) = source_key(parent, from, source_at(sources, index)) {
-            keys.entry(RepositoryTreeNode::key_of(&key)).or_insert(key);
+            keys.entry(key_of(&key)).or_insert(key);
         }
     }
     keys

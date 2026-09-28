@@ -17337,7 +17337,6 @@ interface IDriver
 | [command(connection)](#typescript-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
 | [transaction(connection, isolation?)](#typescript-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
 | [rowTypeConverters](#typescript-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
-| [generatedId(id)](#typescript-idriver-generatedid-id) | Canonicalizes an engine insert id before it is stored on `Response.result`. The default, exported as `generatedId`, returns `id`. |
 | [columnType(name)](#typescript-idriver-columntype-name) | SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default, exported as `columnType`, returns `name`. MySQL, Postgres, and SQLite override it. An unknown name throws. |
 
 ###### connection(options?) {#typescript-idriver-connection-options}
@@ -17414,26 +17413,6 @@ rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
 **Returns**
 
 `Record<string, TypeConverter<Cell, Cell>>`
-
-###### generatedId(id) {#typescript-idriver-generatedid-id}
-
-Canonicalizes an engine insert id before it is stored on `Response.result`. The default, exported as `generatedId`, returns `id`.
-
-**Definition**
-
-```typescript
-generatedId(id: Cell): Cell
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | insert identity from the engine |
-
-**Returns**
-
-`Cell`
 
 ###### columnType(name) {#typescript-idriver-columntype-name}
 
@@ -17584,7 +17563,6 @@ pub trait Driver
 | [command(connection)](#rust-driver-command-connection) | Builds a [Command](#command) for the connection. |
 | [transaction(connection, isolation)](#rust-driver-transaction-connection-isolation) | Builds a [Transaction](#transaction) for the connection. |
 | [row_type_converters()](#rust-driver-row_type_converters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
-| [generated_id(id)](#rust-driver-generated_id-id) | Canonicalizes an engine insert id before it is stored on `Response.result`. The default returns `id`. |
 | [column_type(name)](#rust-driver-column_type-name) | SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default returns `name`. MySQL, Postgres, and SQLite override it. An unknown name returns an error. |
 
 ###### connection(options) {#rust-driver-connection-options}
@@ -17662,26 +17640,6 @@ fn row_type_converters(&self) -> HashMap<String, Box<dyn TypeConverter<Value, Va
 
 `HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>`
 
-###### generated_id(id) {#rust-driver-generated_id-id}
-
-Canonicalizes an engine insert id before it is stored on `Response.result`. The default returns `id`.
-
-**Definition**
-
-```rust
-fn generated_id(&self, id: Value) -> Value
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | insert identity from the engine |
-
-**Returns**
-
-[Value](./sections/value.md)
-
 ###### column_type(name) {#rust-driver-column_type-name}
 
 SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default returns `name`. MySQL, Postgres, and SQLite override it. An unknown name returns an error.
@@ -17708,7 +17666,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 `rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
-`generatedId` / `generated_id` canonicalizes an insert id in Rust and TypeScript. Those commands apply it to `last_insert_rowid`, `LastInsertedId`, `RETURNING` on `INSERT`, or the memory inserted id, before that value is stored on `Response.result`. SELECT scalars stay `Value.From`. The default returns the value unchanged. TypeScript drivers assign the exported `generatedId` function; Rust inherits the default method. C# has no `GeneratedId`. The statement factory formats `InsertedIdStatement`, and the repository reads that row.
+The statement factory formats `InsertedIdStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id.
 
 `columnType` / `ColumnType` / `column_type` maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. TypeScript drivers assign the exported `columnType` function; C# and Rust inherit the default method. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
@@ -17796,7 +17754,6 @@ impl Driver for MockDriver {
 ```typescript
 export class MockDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
-  generatedId = identityGeneratedId;
   columnType = identityColumnType;
   connection = (_options?: DatasourceOptions): IConnection => new MockConnection();
   command = (connection: IConnection): ICommand => new MockCommand(connection);

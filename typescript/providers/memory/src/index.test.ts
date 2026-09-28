@@ -7,9 +7,13 @@ import {
   Datasource,
   DatasourceFactory,
   DatasourceError,
+  DeleteStatement,
+  InsertedIdStatement,
   InsertStatement,
+  Operator,
   SelectStatement,
   UpdateStatement,
+  Where,
   WhereText,
 } from "@datasources/core";
 import { MemoryCommand } from "./command.ts";
@@ -310,6 +314,48 @@ describe("Memory datasource", () => {
     await expect(command.executeStatement(new SelectStatement("nope"))).rejects.toThrow(
       "Unsupported Memory",
     );
+    await command.executeStatement(new InsertStatement("people", [{ name: "name", value: "ada" }]));
+    const inserted = await command.executeReaderStatement(new InsertedIdStatement("people", "id"));
+    expect(await inserted.next()).toBe(true);
+    expect(inserted.current).toEqual({ id: 1 });
+    const matched = await command.executeReaderStatement(
+      new SelectStatement("SELECT id FROM people", new Where(new Operator.Equals("id", 1))),
+    );
+    expect(await matched.next()).toBe(true);
+    await command.executeStatement(new InsertStatement("people", [{ name: "id", value: 7 }, { name: "name", value: "bea" }]));
+    await command.executeStatement(new UpdateStatement("people", [{ name: "name", value: "bee" }]));
+    await command.executeStatement(
+      new UpdateStatement("people", [{ name: "name", value: "bee" }], new Where(new Operator.Equals("id", 7))),
+    );
+    await command.executeStatement(new DeleteStatement("people"));
+    await command.executeStatement(new InsertStatement("", [{ name: "name", value: "x" }]));
+    await command.executeReaderStatement({
+      getText: () => "SELECT id FROM people",
+      table: "people",
+      where: new Where(new Operator.Equals("id", 1)),
+    } as SelectStatement);
+    await command.executeReaderStatement({
+      getText: () => "SELECT id FROM people",
+      table: "",
+      where: new Where(new Operator.Equals("id", 1)),
+    } as SelectStatement);
+    class OpenWhere extends Where {
+      override get parameters() {
+        return undefined as unknown as Where["parameters"];
+      }
+    }
+    await command.executeStatement(
+      new UpdateStatement("people", [{ name: "name", value: "bee" }], new OpenWhere(new Operator.Equals("id", 1))),
+    );
+    const missingId = await command.executeReaderStatement(new InsertedIdStatement("other", "id"));
+    expect(await missingId.next()).toBe(false);
+    await command.executeReaderStatement(
+      new SelectStatement("SELECT id FROM missing", new Where(new Operator.Equals("id", 1))),
+    );
+    await command.executeReaderStatement({
+      getText: () => "nope",
+      where: { getText: () => "id = 1" },
+    } as SelectStatement);
     await command.executeReaderStatement(new InsertStatement("t", []));
     await command.executeStatement(
       new UpdateStatement("t", [{ name: "name", value: "Z" }], new WhereText('{"id":99}')),

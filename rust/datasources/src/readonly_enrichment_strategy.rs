@@ -1,8 +1,6 @@
+use crate::default_write_enrichment_strategy::{encode_row, encode_rows};
 use crate::enrichment::Enrichment;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::repository_tree_node::{
-    encode_row, encode_rows, source_at, source_key, RepositoryTreeNode,
-};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -39,7 +37,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
             let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index)) else {
                 continue;
             };
-            let cache_key = RepositoryTreeNode::key_of(&key);
+            let cache_key = key_of(&key);
             if !cache.contains_key(&cache_key) {
                 let related = via
                     .read_single(
@@ -131,4 +129,28 @@ fn selected(enrichment: &Enrichment, related: &Row) -> Value {
         .as_ref()
         .and_then(|select| related.get(select).cloned())
         .unwrap_or_else(|| encode_row(related))
+}
+
+pub(crate) fn source_key(parent: &Row, name: &str, source: Option<&Row>) -> Option<Value> {
+    if let Some(source) = source {
+        if let Some(cell) = source.get(name) {
+            if *cell != Value::Null {
+                return Some(cell.clone());
+            }
+        }
+    }
+    parent
+        .get(name)
+        .filter(|value| **value != Value::Null)
+        .cloned()
+}
+
+pub(crate) fn source_at<'a>(sources: Option<&'a [Option<Row>]>, index: usize) -> Option<&'a Row> {
+    sources
+        .and_then(|rows| rows.get(index))
+        .and_then(|row| row.as_ref())
+}
+
+pub(crate) fn key_of(key: &Value) -> String {
+    key.wire_text()
 }

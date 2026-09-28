@@ -113,6 +113,7 @@ pub use datasource::{BuiltDatasource, Datasource};
 pub use datasource_error::DatasourceError;
 pub use default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 pub use default_update_enrichment_strategy::DefaultUpdateEnrichmentStrategy;
+pub use default_write_enrichment_strategy::encode_rows;
 pub use default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 pub use defaults::{bind_install, defaults};
 pub use delete_enrichment_strategy::DeleteEnrichmentStrategy;
@@ -154,7 +155,7 @@ pub use registered::registered;
 pub use repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 pub use repository_factory::{CRUDRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory};
 pub use repository_tree::RepositoryTree;
-pub use repository_tree_node::{encode_rows, RepositoryTreeNode};
+pub use repository_tree_node::RepositoryTreeNode;
 pub use reset::reset;
 pub use response::Response;
 pub use result::Result;
@@ -167,10 +168,10 @@ pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault,
     CreateIndexStatement, CreateTableStatement, CreateTableStatementRenderer, DeleteStatement,
-    ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier, InsertStatement, Literal,
-    NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction, ReturnStatement,
-    SelectStatementOptions, SortDirection, Statement, StatementEvaluator, StatementKind,
-    TableConstraint, Text, UniqueConstraint, UpdateStatement, Where,
+    ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier, InsertStatement,
+    InsertedIdStatement, Literal, NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction,
+    ReturnStatement, SelectStatementOptions, SortDirection, Statement, StatementEvaluator,
+    StatementKind, TableConstraint, Text, UniqueConstraint, UpdateStatement, Where,
 };
 pub use stored_enrichment::StoredEnrichment;
 pub use stored_procedure_bulk_write_strategy::StoredProcedureBulkWriteStrategy;

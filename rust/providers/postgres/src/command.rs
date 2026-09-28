@@ -1,6 +1,5 @@
-use crate::bind::{to_postgres, with_returning};
+use crate::bind::to_postgres;
 use crate::connection::{map_err, PostgresConnection};
-use crate::driver::PostgresDriver;
 use crate::pg_value::PgValue;
 use crate::reader::PostgresReader;
 use crate::statement_factory::PostgresStatementFactory;
@@ -8,8 +7,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Driver, Parameter, Reader, Response, Result, Statement,
-    Value,
+    CommandMiddlewareHost, DatasourceError, Parameter, ParameterDirection, Reader, Response,
+    Result, ReturnStatement, Statement, StatementKind, Value,
 };
 use rust_decimal::Decimal;
 use std::collections::HashMap;
@@ -41,42 +40,34 @@ impl PostgresCommand {
         sql: &str,
         params: &HashMap<String, Value>,
     ) -> Result<PostgresExecuteResult> {
-        let rewritten = with_returning(sql);
-        let (text, values) = to_postgres(&rewritten, params);
+        let (text, values) = to_postgres(sql, params);
         let boxed: Vec<Box<dyn ToSql + Sync + Send>> = values.iter().map(box_value).collect();
         let refs: Vec<&(dyn ToSql + Sync)> = boxed.iter().map(|v| v.as_ref() as _).collect();
         let slot = connection.lock_client().await?;
         let client = slot
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        if rewritten.to_ascii_lowercase().contains("returning")
-            || rewritten.trim_start().len() >= 6
-                && rewritten.trim_start()[..6].eq_ignore_ascii_case("SELECT")
-            || rewritten.trim_start().len() >= 4
-                && rewritten.trim_start()[..4].eq_ignore_ascii_case("CALL")
-        {
-            let rows = client.query(&text, &refs).await.map_err(map_err)?;
-            let result = rows
-                .first()
-                .map(|row| from_cell(row, 0))
-                .unwrap_or(Value::Null);
-            let result = if sql.trim_start().len() >= 6
-                && sql.trim_start()[..6].eq_ignore_ascii_case("insert")
-            {
-                PostgresDriver.generated_id(result)
-            } else {
-                result
-            };
-            return Ok(PostgresExecuteResult {
-                rows_affected: rows.len() as i64,
-                result,
-            });
-        }
         let rows = client.execute(&text, &refs).await.map_err(map_err)?;
         Ok(PostgresExecuteResult {
             rows_affected: rows as i64,
             result: Value::Null,
         })
+    }
+
+    async fn query_first(
+        connection: &PostgresConnection,
+        sql: &str,
+        params: &HashMap<String, Value>,
+    ) -> Result<Option<Row>> {
+        let (text, values) = to_postgres(sql, params);
+        let boxed: Vec<Box<dyn ToSql + Sync + Send>> = values.iter().map(box_value).collect();
+        let refs: Vec<&(dyn ToSql + Sync)> = boxed.iter().map(|v| v.as_ref() as _).collect();
+        let slot = connection.lock_client().await?;
+        let client = slot
+            .as_ref()
+            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        let rows = client.query(&text, &refs).await.map_err(map_err)?;
+        Ok(rows.into_iter().next())
     }
 }
 
@@ -139,6 +130,44 @@ impl Command for PostgresCommand {
                         ));
                     }
                     connection.ensure_open()?;
+                    let outputs = params.as_ref().is_some_and(|list| {
+                        list.iter()
+                            .any(|parameter| parameter.direction != ParameterDirection::Input)
+                    });
+                    if outputs {
+                        let row = PostgresCommand::query_first(
+                            &connection,
+                            &sql,
+                            &parameters_to_map(params.as_deref()),
+                        )
+                        .await?;
+                        let record = row.as_ref().map(row_record);
+                        let applied = params.map(|list| {
+                            list.iter()
+                                .map(|parameter| {
+                                    let value = (parameter.direction != ParameterDirection::Input)
+                                        .then(|| {
+                                            record
+                                                .as_ref()
+                                                .and_then(|cells| cells.get(&parameter.name))
+                                        })
+                                        .flatten()
+                                        .cloned();
+                                    match value {
+                                        Some(value) => Parameter {
+                                            value,
+                                            ..parameter.clone()
+                                        },
+                                        None => parameter.clone(),
+                                    }
+                                })
+                                .collect()
+                        });
+                        return Ok((
+                            Response::of(Value::Null, i64::from(row.is_some()), applied),
+                            vec![],
+                        ));
+                    }
                     let result = PostgresCommand::execute_sql(
                         &connection,
                         &sql,
@@ -172,8 +201,33 @@ impl Command for PostgresCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
+        if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
+            return self.first_cell(statement, parameters).await;
+        }
         let text = PostgresStatementFactory.transform(statement).get_text();
         self.execute(&text, parameters).await
+    }
+}
+
+impl PostgresCommand {
+    async fn first_cell(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let reader = self.execute_reader_statement(statement, parameters).await?;
+        if !reader.next().await? {
+            return Ok(Response::of(
+                Value::Null,
+                0,
+                parameters.map(|list| list.to_vec()),
+            ));
+        }
+        let row = reader
+            .current()
+            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
+        let cell = row.into_values().next().unwrap_or(Value::Null);
+        Ok(Response::of(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 

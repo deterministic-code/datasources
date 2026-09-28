@@ -13,10 +13,7 @@ async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> 
     let repo = CRUDRepository::new(connection, options)?;
     let row = repo
         .read_single(
-            Some(&Where::new(Operator::equals(
-                "name",
-                Value::from(name),
-            ))),
+            Some(&Where::new(Operator::equals("name", Value::from(name)))),
             None,
         )
         .await?

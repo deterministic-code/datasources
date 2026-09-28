@@ -18,7 +18,9 @@ fn verbose() -> bool {
 }
 
 fn render(statement: &datasources::CreateTableStatement) -> String {
-    crate::statement_factory::SqliteStatementFactory.transform(statement).get_text()
+    crate::statement_factory::SqliteStatementFactory
+        .transform(statement)
+        .get_text()
 }
 
 #[tokio::test]
@@ -77,7 +79,10 @@ async fn maps_join_rows_to_nested_contacts() {
     let join_repo = CRUDRepository::new(conn, cells).expect("join repo");
     let contacts = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
-        join_repo.read(Some(&contacts_join_query()), None).await.unwrap(),
+        join_repo
+            .read(Some(&contacts_join_query()), None)
+            .await
+            .unwrap(),
     ));
     let mapped = contact_with(&contacts, 2, 1);
     assert_eq!(mapped.addresses.len(), 2);

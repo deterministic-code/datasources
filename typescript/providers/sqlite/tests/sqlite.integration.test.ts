@@ -32,8 +32,8 @@ describe("return statement", () => {
     await connection.open();
     const command = new SqliteCommand(connection);
     const parameters = [{ name: "x", value: -3 }];
-    const response = await command.execute(
-      new ReturnStatement("abs", parameters).getText(),
+    const response = await command.executeStatement(
+      new ReturnStatement("abs", parameters),
       parameters,
     );
     expect(response.result).toBe(3);

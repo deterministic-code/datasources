@@ -1,6 +1,5 @@
 import {
   columnType as identityColumnType,
-  generatedId as identityGeneratedId,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -15,7 +14,6 @@ import { SqlServerConnection } from "./connection.ts";
 
 export class SqlServerProvider implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
-  generatedId = identityGeneratedId;
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
     SqlServerConnection.from(options);

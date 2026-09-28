@@ -14,11 +14,11 @@ pub use driver::SqliteDriver;
 #[path = "../tests/contacts.rs"]
 mod contacts;
 #[cfg(test)]
-#[path = "../tests/null_write.rs"]
-mod null_write;
-#[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
+#[cfg(test)]
+#[path = "../tests/null_write.rs"]
+mod null_write;
 #[cfg(test)]
 #[path = "../tests/readonly_repository.rs"]
 mod readonly_repository;
@@ -172,16 +172,13 @@ mod tests {
 
     #[tokio::test]
     async fn return_statement_selects_scalar() {
-        use datasources::{Parameter, ReturnStatement, Text};
+        use datasources::{Parameter, ReturnStatement};
         let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
         conn.open().await.unwrap();
         let command = SqliteCommand::new(conn);
         let parameters = [Parameter::new("x", -3_i64)];
         let response = command
-            .execute(
-                &ReturnStatement::new("abs", &parameters).get_text(),
-                Some(&parameters),
-            )
+            .execute_statement(&ReturnStatement::new("abs", &parameters), Some(&parameters))
             .await
             .unwrap();
         assert_eq!(response.result, datasources::Value::Int(3));

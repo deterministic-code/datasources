@@ -11,8 +11,8 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, generatedId, columnType, CreateTableStatement, SelectStatement, type IDriver } from "@datasources/core";
-import { bindParameters, toPostgres, withReturning } from "./bind.ts";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, columnType, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
+import { bindParameters, toPostgres } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
 import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
@@ -64,13 +64,6 @@ describe("bind", () => {
       text: "SELECT * FROM t WHERE id = $1",
       values: [null],
     });
-    expect(withReturning("INSERT INTO t (id) VALUES (1)")).toBe(
-      "INSERT INTO t (id) VALUES (1) RETURNING id",
-    );
-    expect(withReturning("INSERT INTO t VALUES (1) RETURNING id")).toBe(
-      "INSERT INTO t VALUES (1) RETURNING id",
-    );
-    expect(withReturning("UPDATE t SET x = 1")).toBe("UPDATE t SET x = 1");
   });
 });
 
@@ -87,7 +80,7 @@ describe("PostgresConnection", () => {
     expect(client.connected).toBe(true);
     const command = new PostgresCommand(connection);
     expect(await command.execute("INSERT INTO items (id) VALUES ($id)", [{ name: "id", value: 1 }]))
-      .toMatchObject({ rowsAffected: 2, result: 5 });
+      .toMatchObject({ rowsAffected: 2, result: null });
     client.result = { rowCount: 0, rows: [] };
     expect(await command.execute("INSERT INTO items (id) VALUES (1)")).toEqual({
       rowsAffected: 0,
@@ -97,7 +90,7 @@ describe("PostgresConnection", () => {
     client.result = { rowCount: null, rows: [{ id: 9 }] };
     expect(await command.execute("UPDATE items SET n = 1")).toMatchObject({
       rowsAffected: 1,
-      result: 9,
+      result: null,
     });
     expect(await command.execute("   ")).toEqual({ rowsAffected: 0, parameters: undefined });
     client.result = { rowCount: null, rows: [{ id: 1 }] };
@@ -115,8 +108,8 @@ describe("PostgresConnection", () => {
     await new PostgresTransaction(connection).abort();
     expect(client.queries.map((q) => q.text)).toEqual([
       "SET search_path TO iso",
-      "INSERT INTO items (id) VALUES ($1) RETURNING id",
-      "INSERT INTO items (id) VALUES (1) RETURNING id",
+      "INSERT INTO items (id) VALUES ($1)",
+      "INSERT INTO items (id) VALUES (1)",
       "UPDATE items SET n = 1",
       "SELECT * FROM items",
       "CREATE TABLE users (id INTEGER)",
@@ -198,7 +191,7 @@ describe("PostgresCommand", () => {
   it("executes SQL through the client", async () => {
     const { command, client } = await setup();
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
-      .toEqual({ result: 5, rowsAffected: 2, parameters: [{ name: "id", value: 1 }] });
+      .toEqual({ result: null, rowsAffected: 2, parameters: [{ name: "id", value: 1 }] });
     expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
@@ -207,8 +200,16 @@ describe("PostgresCommand", () => {
     expect(await empty.next()).toBe(false);
     expect(await (await command.executeReader(";")).next()).toBe(false);
     client.result = { rowCount: 1, rows: [{ add_one: 5 }] };
-    expect(await command.execute("SELECT add_one($n)", [{ name: "n", value: 4 }]))
-      .toEqual({ result: 5, rowsAffected: 1, parameters: [{ name: "n", value: 4 }] });
+    const n = { name: "n", value: 4 };
+    expect(await command.executeStatement(new ReturnStatement("add_one", [n]), [n]))
+      .toEqual({ result: 5, rowsAffected: 1, parameters: [n] });
+    client.result = { rowCount: 0, rows: [] };
+    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({
+      result: null,
+      rowsAffected: 0,
+    });
+    client.result = { rowCount: 1, rows: [{}] };
+    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({ result: null });
     client.result = { rowCount: 0, rows: [] };
     expect(await command.execute("SELECT 1")).toEqual({
       result: null,
@@ -221,8 +222,8 @@ describe("PostgresCommand", () => {
     expect(await command.execute("SELECT blob($b)", [{ name: "b", value: new Uint8Array([1, 2, 3]) }])).toMatchObject({ result: null });
     const inout = { name: "result", value: 4, direction: ParameterDirection.InputOutput };
     client.result = { rowCount: 1, rows: [{ result: 5 }] };
-    expect(await command.execute("CALL bump($result)", [inout])).toMatchObject({
-      result: 5,
+    expect(await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [inout]), [inout])).toMatchObject({
+      result: null,
       parameters: [{ name: "result", value: 5, direction: ParameterDirection.InputOutput }],
     });
     client.result = { rowCount: 1, rows: [{ id: 1 }] };
@@ -254,7 +255,6 @@ describe("Postgres datasource", () => {
       transaction: (c, isolation = "serializable") =>
         new PostgresTransaction(c as PostgresConnection, isolation),
       rowTypeConverters: PostgresRowTypeConverters,
-      generatedId,
       columnType,
     });
     const ds = new Datasource("postgres", of());

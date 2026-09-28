@@ -2,7 +2,9 @@ use crate::i_where::IWhere;
 use crate::mappers::Mapper;
 use crate::mappers::TransformMapper;
 use crate::parameter::Parameter;
-use crate::statements::{DeleteStatement, InsertStatement, Text, UpdateStatement};
+use crate::statements::{
+    DeleteStatement, InsertStatement, InsertedIdStatement, Text, UpdateStatement,
+};
 use crate::where_text::WhereText;
 use crate::{SelectStatement, SelectStatementOptions};
 use std::sync::Arc;
@@ -78,6 +80,10 @@ impl RepositoryStatements {
             map_sql(&self.update, built.get_text()),
             Some(Box::new(WhereText::new(where_clause.get_text()))),
         )
+    }
+
+    pub fn select_inserted_id(&self, column: &str) -> InsertedIdStatement {
+        InsertedIdStatement::new(&self.table, column)
     }
 
     pub fn delete(&self, where_clause: &dyn IWhere) -> DeleteStatement {
