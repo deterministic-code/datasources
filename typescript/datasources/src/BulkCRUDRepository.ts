@@ -102,13 +102,13 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     createOne: async (item) => this.idValue(await this.createCore(item)),
     updateOne: (item, byWhere) => this.updateCore(item, byWhere),
     deleteOne: (item, byWhere) => this.deleteCore(item, byWhere),
-    inserts: (items) => items.map((item) => this.insertCommand(this.stored(item))),
-    updates: (items, byWhere) => items.map((item) => this.updateCommand(this.stored(item), byWhere)),
-    deletes: (items, byWhere) => items.map((item) => this.deleteCommand(this.stored(item), byWhere)),
+    inserts: (items) => items.map((item) => this.insertCommand(this.stripped(item))),
+    updates: (items, byWhere) => items.map((item) => this.updateCommand(this.stripped(item), byWhere)),
+    deletes: (items, byWhere) => items.map((item) => this.deleteCommand(this.stripped(item), byWhere)),
     rows: (items) => items.map((item) => this.rowOf(item)),
   });
 
-  private stored = (item: T): T => (this.enriched ? (strip(this, item) as T) : item);
+  private stripped = (item: T): T => (this.enriched ? (strip(this, item) as T) : item);
 
   private insertCommand = (stored: T): BulkCommand => {
     const fields = fieldsOf(this.reverse(stored), (col) => !this.ids.includes(col), this.column, this.cell);
@@ -117,7 +117,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
-    const where = byWhere ? this.map(byWhere, false) : this.map(this.idWhere(record), true);
+    const where = byWhere ? this.map(byWhere, false) : this.map(this.idsWhere(record), true);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     return { text: this.statements!.update(fields, where).getText(), parameters: UpdateStatement.parameterList(fields, where) };
@@ -125,7 +125,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
 
   private deleteCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
-    const where = byWhere ? this.map(byWhere, false) : this.map(this.idWhere(record), true);
+    const where = byWhere ? this.map(byWhere, false) : this.map(this.idsWhere(record), true);
     const statement = this.statements!.delete(where);
     const listed = where.parameters ?? [];
     const parameters: Parameter[] = listed.length
@@ -137,7 +137,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   };
 
   private rowOf = (item: T): Cells => {
-    const stored = this.reverse(this.stored(item));
+    const stored = this.reverse(this.stripped(item));
     const row: Cells = {};
     for (const name of this.statements?.columns ?? []) {
       const match = Object.entries(stored).find(([key]) => this.column(key) === name);
@@ -151,7 +151,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   private map = (where: IWhere, fieldsApplied: boolean): IWhere =>
     where instanceof Where ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied)) : where;
 
-  private idWhere = (record: Cells): IWhere => {
+  private idsWhere = (record: Cells): IWhere => {
     const parts: IExpression[] = this.ids.map((col) => {
       if (!Object.prototype.hasOwnProperty.call(record, col))
         throw new DatasourceError(`Missing Id value "${col}"`);
