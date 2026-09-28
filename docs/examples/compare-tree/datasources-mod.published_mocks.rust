@@ -1,19 +1,1 @@
-test: rust/datasources/src/tests/mod.rs#published_mocks
-lines: 749-764
 
-    assert_eq!(q.calls(), 1);
-    assert_eq!(w.calls(), 1);
-    assert_eq!(WhereText::new("x").get_text(), "x");
-
-    let command = MockCommand::new();
-    let seen = Arc::new(Mutex::new(Vec::new()));
-    command.add_middleware(Arc::new(RecordingMiddleware {
-        before: {
-            let seen = seen.clone();
-            Arc::new(move |query| {
-                seen.lock().unwrap().push(format!("b:{query}"));
-                Ok(None)
-            })
-        },
-        after: {
-            let seen = seen.clone();

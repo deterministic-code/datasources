@@ -1,6 +1,3 @@
-test: rust/datasources/src/mocks/mock_driver.rs#DriverForMockDriver
-lines: 22-44
-
 impl Driver for MockDriver {
     fn connection(&self, _: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
         MockConnection::new()

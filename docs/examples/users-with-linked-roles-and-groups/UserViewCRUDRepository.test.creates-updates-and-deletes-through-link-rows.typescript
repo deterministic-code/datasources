@@ -1,69 +1,34 @@
-test: typescript/datasources/src/UserViewCRUDRepository.test.ts#creates-updates-and-deletes-through-link-rows
-lines: 109-174
-
-  it("creates, updates, and deletes through link rows", async () => {
-    const seeded = await graph();
-    const usersRepo = seeded.usersRepo;
-    usersRepo.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypesRepo);
-    usersRepo.addLinked(
-      { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
-      seeded.rolesRepo,
-      seeded.userRolesRepo,
-    );
-    usersRepo.addLinked(
-      { into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } },
-      seeded.groupsRepo,
-      seeded.userGroupsRepo,
-    );
-    const created = await usersRepo.create(Object.assign(new UserView(), {
-      username: "ada",
-      is_enabled: true,
-      user_type_id: seeded.adminType.id,
-      roles: [seeded.adminRole, seeded.editorRole],
-      groups: [seeded.engineering],
-    }));
-    const createdRoleLinks = await collectAsync(seeded.userRolesRepo.read());
-    const createdGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
-    const saved = await usersRepo.update(Object.assign(new UserView(), {
-      id: created.id,
-      username: "ada",
-      is_enabled: true,
-      user_type_id: seeded.adminType.id,
-      roles: [seeded.editorRole],
-      groups: [seeded.engineering, seeded.ops],
-    }));
-    const updated = await usersRepo.readSingleById(created.id);
-    const updatedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
-    const updatedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
-    const removed = await usersRepo.delete(Object.assign(new UserView(), { id: created.id }));
-
-    expect(created.id > 0).toEqual(true);
-    expect(created.username).toEqual("ada");
-    expect(created.is_enabled).toEqual(true);
-    expect(created.user_type_id).toEqual(seeded.adminType.id);
-    expect(created.user_type?.name).toEqual("admin");
-    expect(ids(created.roles?.map((role) => role.id) ?? [])).toEqual(ids([seeded.adminRole.id, seeded.editorRole.id]));
-    expect(created.groups?.map((group) => group.name)).toEqual(["engineering"]);
-    expect(createdRoleLinks.map((linkRow) => linkRow.user_id)).toEqual([created.id, created.id]);
-    expect(ids(createdRoleLinks.map((linkRow) => linkRow.role_id))).toEqual(ids([seeded.adminRole.id, seeded.editorRole.id]));
-    expect(createdGroupLinks.map((linkRow) => linkRow.user_id)).toEqual([created.id]);
-    expect(createdGroupLinks.map((linkRow) => linkRow.group_id)).toEqual([seeded.engineering.id]);
-    expect(saved.rowsAffected).toEqual(1);
-    expect(updated?.id).toEqual(created.id);
-    expect(updated?.username).toEqual("ada");
-    expect(updated?.is_enabled).toEqual(true);
-    expect(updated?.user_type_id).toEqual(seeded.adminType.id);
-    expect(updated?.roles?.map((role) => role.id)).toEqual([seeded.editorRole.id]);
-    expect(ids(updated?.groups?.map((group) => group.id) ?? [])).toEqual(ids([seeded.engineering.id, seeded.ops.id]));
-    expect(updatedRoleLinks.map((linkRow) => linkRow.user_id)).toEqual([created.id]);
-    expect(updatedRoleLinks.map((linkRow) => linkRow.role_id)).toEqual([seeded.editorRole.id]);
-    expect(updatedGroupLinks.map((linkRow) => linkRow.user_id)).toEqual([created.id, created.id]);
-    expect(ids(updatedGroupLinks.map((linkRow) => linkRow.group_id))).toEqual(ids([seeded.engineering.id, seeded.ops.id]));
-    expect(removed.rowsAffected).toEqual(1);
-    expect(await collectAsync(usersRepo.read())).toEqual([]);
-    expect(await collectAsync(seeded.userRolesRepo.read())).toEqual([]);
-    expect(await collectAsync(seeded.userGroupsRepo.read())).toEqual([]);
-    expect((await collectAsync(seeded.rolesRepo.read())).map((role) => role.name).sort()).toEqual(["admin", "editor"]);
-    expect((await collectAsync(seeded.groupsRepo.read())).map((group) => group.name).sort()).toEqual(["engineering", "ops"]);
-    expect((await collectAsync(seeded.userTypesRepo.read())).map((type) => type.name)).toEqual(["admin"]);
-  });
+const seeded = await graph();
+const usersRepo = seeded.usersRepo;
+usersRepo.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypesRepo);
+usersRepo.addLinked(
+  { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
+  seeded.rolesRepo,
+  seeded.userRolesRepo,
+);
+usersRepo.addLinked(
+  { into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } },
+  seeded.groupsRepo,
+  seeded.userGroupsRepo,
+);
+const created = await usersRepo.create(Object.assign(new UserView(), {
+  username: "ada",
+  is_enabled: true,
+  user_type_id: seeded.adminType.id,
+  roles: [seeded.adminRole, seeded.editorRole],
+  groups: [seeded.engineering],
+}));
+const createdRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const createdGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const saved = await usersRepo.update(Object.assign(new UserView(), {
+  id: created.id,
+  username: "ada",
+  is_enabled: true,
+  user_type_id: seeded.adminType.id,
+  roles: [seeded.editorRole],
+  groups: [seeded.engineering, seeded.ops],
+}));
+const updated = await usersRepo.readSingleById(created.id);
+const updatedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const updatedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const removed = await usersRepo.delete(Object.assign(new UserView(), { id: created.id }));

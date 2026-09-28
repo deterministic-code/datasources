@@ -1,12 +1,4 @@
-test: csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#Abort
-lines: 17-25
-
-    [Fact]
-    public async Task Abort()
-    {
-        var connection = new MemoryConnection();
-        await connection.Open();
-        var txn = await connection.StartTransaction();
-        await txn.Abort();
-        Assert.NotNull(txn);
-    }
+var connection = new MemoryConnection();
+await connection.Open();
+var txn = await connection.StartTransaction();
+await txn.Abort();

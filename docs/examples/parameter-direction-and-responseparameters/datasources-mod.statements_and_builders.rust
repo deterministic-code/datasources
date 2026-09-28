@@ -1,14 +1,3 @@
-test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1120-1130
-
-    let max_n = Aggregate::max("n", None);
-    let bound_fields = [min_n.as_str(), max_n.as_str()];
-    let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));
-    assert_eq!(bounds.get_text(), "SELECT MIN(n), MAX(n) FROM users");
-    let ordered = SelectStatement::new(SelectStatementOptions {
-        order_by: &[OrderBy::asc("id"), OrderBy::desc("name")],
-        ..SelectStatementOptions::new("users", &["id"])
-    });
-    assert_eq!(
-        ordered.get_text(),
-        "SELECT id FROM users ORDER BY id ASC, name DESC"
+let max_n = Aggregate::max("n", None);
+let bound_fields = [min_n.as_str(), max_n.as_str()];
+let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));

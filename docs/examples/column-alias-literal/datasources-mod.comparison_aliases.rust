@@ -1,10 +1,7 @@
-test: rust/datasources/src/tests/mod.rs#comparison_aliases
-lines: 2087-2093
-
-    let equals = Where::binary("username", eq, "grace");
-    let not_equals = Where::binary("id", ne, 2_i64);
-    let greater = Where::binary("n", gt, 0);
-    let less = Where::binary("n", lt, 0);
-    let greater_or_equal = Where::binary("n", ge, 0);
-    let less_or_equal = Where::binary("n", le, 0);
-    let both = equals.clone().and("is_enabled", eq, 0);
+let equals = Where::binary("username", eq, "grace");
+let not_equals = Where::binary("id", ne, 2_i64);
+let greater = Where::binary("n", gt, 0);
+let less = Where::binary("n", lt, 0);
+let greater_or_equal = Where::binary("n", ge, 0);
+let less_or_equal = Where::binary("n", le, 0);
+let both = equals.clone().and("is_enabled", eq, 0);

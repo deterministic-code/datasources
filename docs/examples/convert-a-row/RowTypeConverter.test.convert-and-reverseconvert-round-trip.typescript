@@ -1,9 +1,3 @@
-test: typescript/datasources/src/converters/RowTypeConverter.test.ts#convert-and-reverseconvert-round-trip
-lines: 13-18
-
-    const converter = new RowTypeConverter();
-    const item = converter.convert({ id: 7, username: "ada" });
-    const row = converter.reverseConvert(item);
-    expect(item).toEqual({ id: 7, username: "ada" });
-    expect(row).toEqual({ id: 7, username: "ada" });
-  });
+const converter = new RowTypeConverter();
+const item = converter.convert({ id: 7, username: "ada" });
+const row = converter.reverseConvert(item);

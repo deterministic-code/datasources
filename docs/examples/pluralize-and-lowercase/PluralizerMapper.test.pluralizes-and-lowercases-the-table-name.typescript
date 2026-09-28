@@ -1,8 +1,1 @@
-test: typescript/datasources/src/mappers/PluralizerMapper.test.ts#pluralizes-and-lowercases-the-table-name
-lines: 5-9
-
-  it("pluralizes and lowercases the table name", () => {
-    const mapper = new PluralizerMapper();
-    expect(mapper.map("User")).toBe("users");
-    expect(mapper.reverseMap("users")).toBe("user");
-  });
+const mapper = new PluralizerMapper();

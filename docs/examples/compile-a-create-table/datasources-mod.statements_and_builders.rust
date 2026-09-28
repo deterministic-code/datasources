@@ -1,12 +1,6 @@
-test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1001-1009
-
-    assert!(Where::new(Operator::In {
-        left: Box::new(Expression::Literal(Literal::new(1_i64))),
-        right: Box::new(Expression::Literal(Literal::new(2_i64))),
-    })
-    .parameters()
-    .is_empty());
-    assert_eq!(
-        Where::new(Operator::and(
-            Operator::not(Operator::equals("id", 1_i64)),
+assert!(Where::new(Operator::In {
+    left: Box::new(Expression::Literal(Literal::new(1_i64))),
+    right: Box::new(Expression::Literal(Literal::new(2_i64))),
+})
+.parameters()
+.is_empty());

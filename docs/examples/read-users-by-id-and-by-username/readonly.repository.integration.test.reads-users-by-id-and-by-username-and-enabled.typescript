@@ -1,27 +1,18 @@
-test: typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#reads-users-by-id-and-by-username-and-enabled
-lines: 35-58
-
-  it("reads users by id and by username and enabled", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, `
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL
-      );
-      INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    `);
-    const repo = ds.createReadonlyRepository(User, connection, {
-      entityMapper: new PluralizerMapper(),
-    });
-    const byId = await repo.readSingle(new Where("id", eq, 1));
-    const disabled: User[] = [];
-    for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
-      disabled.push(row);
-    expect(byId?.username).toBe("ada");
-    expect(byId?.is_enabled).toBe(1);
-    expect(disabled.length).toBe(1);
-    expect(disabled[0]?.id).toBe(2);
-    expect(disabled[0]?.is_enabled).toBe(0);
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, `
+  CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL
+  );
+  INSERT INTO users (id, username, is_enabled) VALUES
+    (1, 'ada', 1),
+    (2, 'grace', 0);
+`);
+const repo = ds.createReadonlyRepository(User, connection, {
+  entityMapper: new PluralizerMapper(),
+});
+const byId = await repo.readSingle(new Where("id", eq, 1));
+const disabled: User[] = [];
+for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
+  disabled.push(row);

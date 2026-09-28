@@ -1,10 +1,1 @@
-test: typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#maps-pascal-to-snake-and-back
-lines: 5-11
-
-  it("maps pascal to snake and back", () => {
-    const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");
-    expect(mapper.map("UserType")).toBe("user_type");
-    expect(mapper.map("Id")).toBe("id");
-    expect(mapper.reverseMap("user_type")).toBe("UserType");
-    expect(mapper.reverseMap("id")).toBe("Id");
-  });
+const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");

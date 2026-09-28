@@ -1,9 +1,2 @@
-test: typescript/datasources/src/converters/RowTypeConverter.test.ts#lets-field-converters-override
-lines: 21-26
-
-    const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
-    const dest = converter.convert({ flag: 1, name: "a" });
-    expect(dest.flag).toBe(true);
-    expect(dest.name).toBe("a");
-    expect(converter.reverseConvert(dest).flag).toBe(true);
-  });
+const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
+const dest = converter.convert({ flag: 1, name: "a" });

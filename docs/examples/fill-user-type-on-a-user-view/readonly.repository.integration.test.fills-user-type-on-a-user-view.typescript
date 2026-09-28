@@ -1,50 +1,39 @@
-test: typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#fills-user-type-on-a-user-view
-lines: 117-163
-
-  it("fills user type on a user view", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, `
-      CREATE TABLE user_type (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL
-      );
-      INSERT INTO user_type (id, name) VALUES
-        (1, 'admin'),
-        (2, 'user'),
-        (3, 'service');
-      CREATE TABLE user (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL,
-        created TEXT NOT NULL,
-        user_type_id INTEGER NOT NULL
-      );
-      INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
-        ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
-        ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
-        ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
-    `);
-    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-    const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
-      entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-      columnMappings: new DictionaryMapper([
-        ["Key", "id"],
-        ["Login", "username"],
-        ["Active", "is_enabled"],
-        ["Opened", "created"],
-        ["UserType", "user_type_id"],
-      ]),
-    }) as ReadonlyRepository<UsersView>;
-    const typesRepo = ds.createReadonlyRepository(UserType, connection, {
-      entityMapper: casing,
-      columnMappings: casing,
-    });
-    usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
-    const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
-    expect(usersView?.UserType).toBe("admin");
-    expect(usersView?.Login).toBe("ada");
-    expect(usersView?.Key).toBe(ada);
-    expect(usersView?.Active).toBe(1);
-    expect(usersView?.Opened).toBe("2020-01-01T00:00:00.000Z");
-    expect(usersView === undefined || !("UserTypeId" in usersView)).toBe(true);
-  });
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, `
+  CREATE TABLE user_type (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+  );
+  INSERT INTO user_type (id, name) VALUES
+    (1, 'admin'),
+    (2, 'user'),
+    (3, 'service');
+  CREATE TABLE user (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    is_enabled INTEGER NOT NULL,
+    created TEXT NOT NULL,
+    user_type_id INTEGER NOT NULL
+  );
+  INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+    ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+    ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+    ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+`);
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
+  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserType", "user_type_id"],
+  ]),
+}) as ReadonlyRepository<UsersView>;
+const typesRepo = ds.createReadonlyRepository(UserType, connection, {
+  entityMapper: casing,
+  columnMappings: casing,
+});
+usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
+const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));

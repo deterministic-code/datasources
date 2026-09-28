@@ -1,11 +1,3 @@
-test: csharp/Datasources.Tests/RepositoryTests.cs#GetBuildsSelectAndMapsRows
-lines: 69-76
-
-        await foreach (var row in repo.Read())
-            rows.Add(row);
-        Assert.Single(rows);
-        Assert.Equal(1, rows[0].id);
-        Assert.Equal("SELECT id, name FROM users", command.ExecuteReaderCalls[0].Text);
-        command.Reader = new MockReader<Row>([new Row { ["id"] = 1, ["name"] = "a" }]);
-        Assert.Equal(1, (await repo.ReadSingle())!.id);
-    }
+await foreach (var row in repo.Read())
+    rows.Add(row);
+Assert.Single(rows);

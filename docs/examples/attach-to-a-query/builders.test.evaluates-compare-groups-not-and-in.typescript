@@ -1,9 +1,5 @@
-test: typescript/datasources/src/builders/builders.test.ts#evaluates-compare-groups-not-and-in
-lines: 175-180
-
-    ).toEqual([]);
-    class Ghost extends Operator {}
-    expect(() => evaluator.evaluate(new Ghost(), row)).toThrow("empty expression");
-    expect(() => new Where(new Ghost()).getText()).toThrow("empty expression");
-    expect(() => new Where(new Ghost()).parameters).toThrow("empty expression");
-    expect(new Where(new ArrayExpression([new Literal(1)])).getText()).toBe("1");
+).toEqual([]);
+class Ghost extends Operator {}
+expect(() => evaluator.evaluate(new Ghost(), row)).toThrow("empty expression");
+expect(() => new Where(new Ghost()).getText()).toThrow("empty expression");
+expect(() => new Where(new Ghost()).parameters).toThrow("empty expression");

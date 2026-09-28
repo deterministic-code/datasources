@@ -1,8 +1,2 @@
-test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1172-1176
-
-        &[],
-    );
-    assert_eq!(
-        create_table.get_text(),
-        "CREATE TABLE users (id INTEGER, name TEXT)"
+    &[],
+);

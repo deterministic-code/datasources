@@ -1,8 +1,5 @@
-test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 981-985
-
-        )))),
-    })
-    .get_text()
-    .contains('='));
-    assert!(Where::new(Operator::Equals {
+    )))),
+})
+.get_text()
+.contains('='));
+assert!(Where::new(Operator::Equals {

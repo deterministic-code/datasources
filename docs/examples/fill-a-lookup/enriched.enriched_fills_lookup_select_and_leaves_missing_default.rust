@@ -1,10 +1,7 @@
-test: rust/datasources/tests/enriched.rs#enriched_fills_lookup_select_and_leaves_missing_default
-lines: 112-118
-
-    let mut parents_repo = readonly(connection, "Parent");
-    let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
-    parents_repo.add_enriched(
-        Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
-        types_repo,
-        None,
-    );
+let mut parents_repo = readonly(connection, "Parent");
+let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+parents_repo.add_enriched(
+    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    types_repo,
+    None,
+);

@@ -1,78 +1,68 @@
-test: csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#FillsRolesFromAJoin
-lines: 283-357
-
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, Seed());
-        var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, Seed());
+var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
+{
+    ["Key"] = "id",
+    ["Login"] = "username",
+    ["Active"] = "is_enabled",
+    ["Opened"] = "created",
+    ["UserType"] = "user_type.name",
+    ["UserId"] = "user_id",
+    ["RoleId"] = "role_id",
+    ["Name"] = "roles.name",
+});
+var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+{
+    ColumnMappings = mappings,
+});
+usersRepo.AddEnriched(
+    new("Roles", "Key", "UserId", Many: true),
+    usersRepo,
+    new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
+    {
+        Key = "Key",
+        Fields = new Dictionary<string, TypeMapField>
         {
-            ["Key"] = "id",
-            ["Login"] = "username",
-            ["Active"] = "is_enabled",
-            ["Opened"] = "created",
-            ["UserType"] = "user_type.name",
-            ["UserId"] = "user_id",
-            ["RoleId"] = "role_id",
-            ["Name"] = "roles.name",
-        });
-        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
-        {
-            ColumnMappings = mappings,
-        });
-        usersRepo.AddEnriched(
-            new("Roles", "Key", "UserId", Many: true),
-            usersRepo,
-            new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
+            ["Key"] = "Key",
+            ["Login"] = "Login",
+            ["Active"] = "Active",
+            ["Opened"] = "Opened",
+            ["UserType"] = "UserType",
+            ["Roles"] = new TypeMapGroup
             {
-                Key = "Key",
+                Key = "RoleId",
                 Fields = new Dictionary<string, TypeMapField>
                 {
-                    ["Key"] = "Key",
-                    ["Login"] = "Login",
-                    ["Active"] = "Active",
-                    ["Opened"] = "Opened",
-                    ["UserType"] = "UserType",
-                    ["Roles"] = new TypeMapGroup
-                    {
-                        Key = "RoleId",
-                        Fields = new Dictionary<string, TypeMapField>
-                        {
-                            ["RoleId"] = "RoleId",
-                            ["UserId"] = "UserId",
-                            ["Name"] = "Name",
-                        }
-                    }
+                    ["RoleId"] = "RoleId",
+                    ["UserId"] = "UserId",
+                    ["Name"] = "Name",
                 }
-            }));
-        var items = new List<UsersView>();
-        await foreach (var item in usersRepo.Read(new SelectStatement(new()
-        {
-            Table = "user",
-            Fields =
-            [
-                "user.id",
-                "user.username",
-                "user.is_enabled",
-                "user.created",
-                "user_type.name",
-                "user_roles.user_id",
-                "user_roles.role_id",
-                "roles.name",
-            ],
-            Joins =
-            [
-                new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
-                new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
-                new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
-            ],
-        })))
-            items.Add(item);
-        var ada = Assert.Single(items, item => item.Login == "ada");
-        var grace = Assert.Single(items, item => item.Login == "grace");
-        var lin = Assert.Single(items, item => item.Login == "lin");
-
-        Assert.Equal("admin", ada.UserType);
-        Assert.Equal(["admin", "editor"], ada.Roles.Select(role => role.Name).OrderBy(name => name));
-        Assert.Equal(ada.Roles.Count, ada.Roles.Count(role => role.UserId == Ada));
-        Assert.Equal(["viewer"], grace.Roles.Select(role => role.Name));
-        Assert.Empty(lin.Roles);
-    }
+            }
+        }
+    }));
+var items = new List<UsersView>();
+await foreach (var item in usersRepo.Read(new SelectStatement(new()
+{
+    Table = "user",
+    Fields =
+    [
+        "user.id",
+        "user.username",
+        "user.is_enabled",
+        "user.created",
+        "user_type.name",
+        "user_roles.user_id",
+        "user_roles.role_id",
+        "roles.name",
+    ],
+    Joins =
+    [
+        new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
+        new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
+        new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
+    ],
+})))
+    items.Add(item);
+var ada = Assert.Single(items, item => item.Login == "ada");
+var grace = Assert.Single(items, item => item.Login == "grace");
+var lin = Assert.Single(items, item => item.Login == "lin");

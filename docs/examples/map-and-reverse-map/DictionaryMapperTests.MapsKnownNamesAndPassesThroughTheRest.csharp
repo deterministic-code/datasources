@@ -1,15 +1,5 @@
-test: csharp/Datasources.Tests/DictionaryMapperTests.cs#MapsKnownNamesAndPassesThroughTheRest
-lines: 14-25
-
-    public void MapsKnownNamesAndPassesThroughTheRest()
-    {
-        var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
-        {
-            ["Key"] = "id",
-            ["Login"] = "username",
-        });
-        Assert.Equal("id", mapper.Map("Key"));
-        Assert.Equal("Key", mapper.ReverseMap("id"));
-        Assert.Equal("other", mapper.Map("other"));
-        Assert.Equal("other", mapper.ReverseMap("other"));
-    }
+var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
+{
+    ["Key"] = "id",
+    ["Login"] = "username",
+});

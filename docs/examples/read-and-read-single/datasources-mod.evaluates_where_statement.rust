@@ -1,10 +1,1 @@
-test: rust/datasources/src/tests/mod.rs#evaluates_where_statement
-lines: 1471-1477
 
-    assert_eq!(
-        evaluator.evaluate(
-            &Expression::Operator(Operator::GreaterThan {
-                left: Box::new(Expression::Literal(Literal::new(Value::Decimal(
-                    rust_decimal::Decimal::new(25, 1)
-                )))),
-                right: Box::new(Expression::Literal(Literal::new(Value::Decimal(

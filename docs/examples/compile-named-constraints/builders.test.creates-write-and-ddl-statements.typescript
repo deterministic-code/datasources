@@ -1,18 +1,1 @@
-test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
-lines: 244-258
-
-    });
-    expect(grouped.getText()).toBe(
-      "SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10",
-    );
-    const byStatus = new SelectStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
-    expect(byStatus.getText()).toBe("SELECT id FROM users GROUP BY id");
-    const bounds = new SelectStatement({ table: "users", fields: [Aggregate.min("n"), Aggregate.max("n")] });
-    expect(bounds.getText()).toBe("SELECT MIN(n), MAX(n) FROM users");
-    const ordered = new SelectStatement({
-      table: "users",
-      fields: ["id"],
-      orderBy: [OrderBy.asc("id"), OrderBy.desc("name")],
-    });
-    expect(ordered.getText()).toBe("SELECT id FROM users ORDER BY id ASC, name DESC");
-    const limited = new SelectStatement({ table: "users", fields: ["id"], limit: 10 });
+});

@@ -1,7 +1,4 @@
-test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1183-1186
-
-                .not_null(NotNull::new(Some("nn_id"))),
-            Column::new("tenant_id", "INTEGER"),
-            Column::new("user_id", "INTEGER"),
-            Column::new("qty", "INTEGER"),
+    .not_null(NotNull::new(Some("nn_id"))),
+Column::new("tenant_id", "INTEGER"),
+Column::new("user_id", "INTEGER"),
+Column::new("qty", "INTEGER"),

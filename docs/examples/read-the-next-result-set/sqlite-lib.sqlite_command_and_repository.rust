@@ -1,16 +1,13 @@
-test: rust/providers/sqlite/src/lib.rs#sqlite_command_and_repository
-lines: 90-102
-
-        let sets = command
-            .execute_reader("SELECT 1 AS id; SELECT 2 AS id", None)
-            .await
-            .unwrap();
-        let mut first = Vec::new();
-        while sets.next().await.unwrap() {
-            first.push(sets.current());
-        }
-        let moved = sets.next_result().await.unwrap();
-        let mut second = Vec::new();
-        while sets.next().await.unwrap() {
-            second.push(sets.current());
-        }
+let sets = command
+    .execute_reader("SELECT 1 AS id; SELECT 2 AS id", None)
+    .await
+    .unwrap();
+let mut first = Vec::new();
+while sets.next().await.unwrap() {
+    first.push(sets.current());
+}
+let moved = sets.next_result().await.unwrap();
+let mut second = Vec::new();
+while sets.next().await.unwrap() {
+    second.push(sets.current());
+}

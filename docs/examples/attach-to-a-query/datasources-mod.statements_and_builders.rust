@@ -1,10 +1,4 @@
-test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 935-941
-
-        })
-        .get_text(),
-        "true = false"
-    );
-    assert_eq!(
-        Where::new(Operator::Equals {
-            left: Box::new(Expression::Literal(Literal::new(Value::Null))),
+    })
+    .get_text(),
+    "true = false"
+);

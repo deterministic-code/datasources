@@ -1,7 +1,1 @@
-test: rust/datasources/src/tests/mod.rs#statements_and_builders
-lines: 1007-1010
 
-    assert_eq!(
-        Where::new(Operator::and(
-            Operator::not(Operator::equals("id", 1_i64)),
-            Operator::equals("age", 18_i64)

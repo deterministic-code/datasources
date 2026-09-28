@@ -1,15 +1,8 @@
-test: typescript/datasources/src/Command.test.ts#executereader-returns-namevalue-objects
-lines: 45-56
-
-  it("executeReader returns NameValue objects", async () => {
-    const command = new MockCommand(new MockConnection());
-    command.reader = new MockReader([{ name: "theme", value: "dark" }]);
-    const reader = await command.executeReader("SELECT name, value FROM settings");
-    const converter = new RowTypeConverter<NameValue>();
-    const items: NameValue[] = [];
-    while (await reader.next()) {
-      items.push(converter.convert(reader.current!, NameValue));
-    }
-    expect(items[0]?.name).toBe("theme");
-    expect(items[0]?.value).toBe("dark");
-  });
+const command = new MockCommand(new MockConnection());
+command.reader = new MockReader([{ name: "theme", value: "dark" }]);
+const reader = await command.executeReader("SELECT name, value FROM settings");
+const converter = new RowTypeConverter<NameValue>();
+const items: NameValue[] = [];
+while (await reader.next()) {
+  items.push(converter.convert(reader.current!, NameValue));
+}

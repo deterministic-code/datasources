@@ -1,6 +1,3 @@
-test: typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
-lines: 56-58
-
-    const where = new Where(
-      new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
-    );
+const where = new Where(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);

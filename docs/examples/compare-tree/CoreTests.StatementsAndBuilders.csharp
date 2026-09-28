@@ -1,7 +1,1 @@
-test: csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
-lines: 78-81
 
-        Assert.Equal(
-            "(id IN ($id_0)) OR name = $name",
-            new Where(new Operator.Or(
-                new Operator.In("id", [1]),

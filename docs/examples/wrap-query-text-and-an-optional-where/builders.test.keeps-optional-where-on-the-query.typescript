@@ -1,6 +1,3 @@
-test: typescript/datasources/src/builders/builders.test.ts#keeps-optional-where-on-the-query
-lines: 41-43
-
-    const select = new SelectStatement("SELECT 1");
-    const where = new WhereText("id = 1");
-    const withWhere = new SelectStatement("SELECT 1", where);
+const select = new SelectStatement("SELECT 1");
+const where = new WhereText("id = 1");
+const withWhere = new SelectStatement("SELECT 1", where);

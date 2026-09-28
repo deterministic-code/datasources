@@ -1,8 +1,3 @@
-test: rust/datasources/src/repository_factory.rs#registers_and_creates
-lines: 112-116
-
-        let factory = RepositoryFactory::new();
-        factory.register(Arc::new(StubRepository::typed::<Item>("memory")));
-        let created = factory.create::<Item>().unwrap();
-
-        assert_eq!(created.entity_type(), TypeId::of::<Item>());
+let factory = RepositoryFactory::new();
+factory.register(Arc::new(StubRepository::typed::<Item>("memory")));
+let created = factory.create::<Item>().unwrap();

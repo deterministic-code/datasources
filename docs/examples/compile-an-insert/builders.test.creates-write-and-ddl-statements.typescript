@@ -1,7 +1,4 @@
-test: typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
-lines: 221-224
-
-        table: "users",
-        fields: ["users.id"],
-        where: new Where(new Operator.Equals("users.id", 1)),
-        joins: [
+table: "users",
+fields: ["users.id"],
+where: new Where(new Operator.Equals("users.id", 1)),
+joins: [

@@ -1,56 +1,53 @@
-test: typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#fills-roles-from-a-join
-lines: 131-183
-
-    const usersRepo = new ReadonlyRepository(connection, {
-      type: UsersView,
-      columnMappings: new DictionaryMapper([
-        ["Key", "id"],
-        ["Login", "username"],
-        ["Active", "is_enabled"],
-        ["Opened", "created"],
-        ["UserType", "user_type.name"],
-        ["UserId", "user_id"],
-        ["RoleId", "role_id"],
-        ["Name", "roles.name"],
-      ]),
-    });
-    usersRepo.addEnriched(
-      { into: "Roles", from: "Key", by: "UserId", many: true },
-      usersRepo,
-      new NestedToObjectEnrichmentStrategy<UsersView>({
-        key: "Key",
-        fields: {
-          Key: "Key",
-          Login: "Login",
-          Active: "Active",
-          Opened: "Opened",
-          UserType: "UserType",
-          Roles: {
-            key: "RoleId",
-            fields: { RoleId: "RoleId", UserId: "UserId", Name: "Name" },
-          },
-        },
-      }),
-    );
-    const items: UsersView[] = [];
-    for await (const item of usersRepo.read(
-      new SelectStatement({
-        table: "user",
-        fields: [
-          "user.id",
-          "user.username",
-          "user.is_enabled",
-          "user.created",
-          "user_type.name",
-          "user_roles.user_id",
-          "user_roles.role_id",
-          "roles.name",
-        ],
-        joins: [
-          Join.left("user_type", "user_type.id", "user.user_type_id"),
-          Join.left("user_roles", "user_roles.user_id", "user.id"),
-          Join.left("roles", "roles.id", "user_roles.role_id"),
-        ],
-      }),
-    ))
-      items.push(item);
+const usersRepo = new ReadonlyRepository(connection, {
+  type: UsersView,
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserType", "user_type.name"],
+    ["UserId", "user_id"],
+    ["RoleId", "role_id"],
+    ["Name", "roles.name"],
+  ]),
+});
+usersRepo.addEnriched(
+  { into: "Roles", from: "Key", by: "UserId", many: true },
+  usersRepo,
+  new NestedToObjectEnrichmentStrategy<UsersView>({
+    key: "Key",
+    fields: {
+      Key: "Key",
+      Login: "Login",
+      Active: "Active",
+      Opened: "Opened",
+      UserType: "UserType",
+      Roles: {
+        key: "RoleId",
+        fields: { RoleId: "RoleId", UserId: "UserId", Name: "Name" },
+      },
+    },
+  }),
+);
+const items: UsersView[] = [];
+for await (const item of usersRepo.read(
+  new SelectStatement({
+    table: "user",
+    fields: [
+      "user.id",
+      "user.username",
+      "user.is_enabled",
+      "user.created",
+      "user_type.name",
+      "user_roles.user_id",
+      "user_roles.role_id",
+      "roles.name",
+    ],
+    joins: [
+      Join.left("user_type", "user_type.id", "user.user_type_id"),
+      Join.left("user_roles", "user_roles.user_id", "user.id"),
+      Join.left("roles", "roles.id", "user_roles.role_id"),
+    ],
+  }),
+))
+  items.push(item);

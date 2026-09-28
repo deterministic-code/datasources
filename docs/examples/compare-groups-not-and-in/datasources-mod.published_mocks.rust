@@ -1,8 +1,5 @@
-test: rust/datasources/src/tests/mod.rs#published_mocks
-lines: 659-663
+assert!(txn.commit().await.is_err());
+txn.set_abort_error("a");
+assert!(txn.abort().await.is_err());
 
-    assert!(txn.commit().await.is_err());
-    txn.set_abort_error("a");
-    assert!(txn.abort().await.is_err());
-
-    let command = MockCommand::new();
+let command = MockCommand::new();

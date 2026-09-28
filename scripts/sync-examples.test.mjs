@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyEdits, findRegions, locateSlice, regionForRange } from "./sync-examples.mjs";
+import { exampleCode } from "./example.mjs";
+import { applyEdits, findRegions, formatLines, locateSlice, parseLines, regionForRange } from "./sync-examples.mjs";
 
 const csharp = `public class IdentityMapperTests
 {
@@ -70,6 +71,64 @@ test("keeps the recorded lines when the slice text appears twice", () => {
   const found = locateSlice(source, region, "    let x = 1;", { from: 4, to: 4 });
   assert.equal(found.from, 4);
   assert.equal(found.ambiguous, undefined);
+});
+
+test("keeps source lines apart from the usage sample", () => {
+  const raw = [
+    "    [Fact]",
+    "    public void M()",
+    "    {",
+    "        var ds = DatasourceFactory.Default;",
+    "        Assert.Equal(1, ds);",
+    "    }",
+  ].join("\n");
+  const file = "docs/examples/m/T.M.csharp";
+  const text = formatLines([{ file, test: "a.cs#M", from: 1, to: 6, raw }]);
+  const record = parseLines(text).get(file);
+  assert.equal(record.from, 1);
+  assert.equal(record.to, 6);
+  assert.equal(record.raw, raw);
+  assert.equal(exampleCode(record.raw), "var ds = DatasourceFactory.Default;");
+});
+
+test("drops a truncated tokio test wrapper", () => {
+  const raw = [
+    "#[tokio::test]",
+    "async fn open_and_close() {",
+    "    let connection = MemoryConnection::from_options(None);",
+    "    connection.open().await.unwrap();",
+  ].join("\n");
+  assert.equal(
+    exampleCode(raw),
+    "let connection = MemoryConnection::from_options(None);\nconnection.open().await.unwrap();",
+  );
+});
+
+test("drops a public async Task wrapper", () => {
+  const raw = ["public async Task CreateWritesParentsAndChildren()", "{", "    var connection = await Setup();", "}"].join(
+    "\n",
+  );
+  assert.equal(exampleCode(raw), "var connection = await Setup();");
+});
+
+test("keeps an it() body that contains a template", () => {
+  const raw = [
+    'it("reads", async () => {',
+    "  const sql = `",
+    "    INSERT INTO user VALUES ('${ada}', 'ada');",
+    "  `;",
+    "  const repo = ds.createReadonlyRepository(User);",
+    "});",
+  ].join("\n");
+  assert.equal(
+    exampleCode(raw),
+    "const sql = `\n  INSERT INTO user VALUES ('${ada}', 'ada');\n`;\nconst repo = ds.createReadonlyRepository(User);",
+  );
+});
+
+test("keeps a fn that appears after the sample starts", () => {
+  const raw = "let x = 1;\nfn helper() {\n    let y = 2;\n}";
+  assert.equal(exampleCode(raw), raw);
 });
 
 test("applies an edit inside the stored slice", () => {
