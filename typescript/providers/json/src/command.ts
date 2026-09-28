@@ -2,7 +2,6 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   DeleteStatement,
-  identityFilter,
   InsertStatement,
   UpdateStatement,
   type Cells,
@@ -79,12 +78,11 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
             typeof obj.$where === "string" ? obj.$where : undefined;
           const next = { ...obj };
           delete next.$where;
-          const filter = whereText ? parseFilter(whereText) : identityFilter(next);
+          const filter = whereText ? parseFilter(whereText) : next;
           return { value: { ...(await this.applyUpdate(next, filter)), parameters: params }, rows: [] };
         }
         if (op === "delete") {
-          const filter =
-            Object.keys(obj).length === 0 ? {} : identityFilter(obj);
+          const filter = obj;
           return { value: { ...(await this.applyDelete(filter)), parameters: params }, rows: [] };
         }
         throw new Error(`Unsupported JSON command: ${query}`);

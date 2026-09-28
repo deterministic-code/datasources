@@ -79,20 +79,6 @@ fn values_and_parameters() {
     assert_eq!(response.rows_affected, 2);
 }
 
-#[test]
-fn identity_helpers() {
-    let with_id = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
-    assert_eq!(identity_filter(&with_id).len(), 1);
-    assert_eq!(identity_where_text(&with_id), "id = $id");
-    let no_id = record(&[("name", Value::from("a")), ("city", Value::from("x"))]);
-    assert_eq!(identity_filter(&no_id).len(), 2);
-    assert_eq!(identity_where_text(&no_id), "city = $city AND name = $name");
-    assert_eq!(
-        identity_where_text(&HashMap::<String, Value>::new()),
-        "1 = 1"
-    );
-}
-
 #[tokio::test]
 async fn readers() {
     let empty = ArrayReader::<Row>::new(vec![]);

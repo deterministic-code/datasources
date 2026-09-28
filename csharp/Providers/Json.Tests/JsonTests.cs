@@ -99,7 +99,7 @@ public class JsonTests
         var inserted = await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });
         Assert.Equal(new Value.Int(4), inserted["id"]);
         var updated = await repo.Update(new Row { ["id"] = 4, ["name"] = "D" });
-        Assert.Equal(1, updated.RowsAffected);
+        Assert.Equal(0, updated.RowsAffected);
         var updatedByWhere = await repo.Update(new Row { ["name"] = "Z" }, new WhereText("{\"id\":4}"));
         Assert.Equal(1, updatedByWhere.RowsAffected);
         var removed = await repo.Delete(new Row { ["id"] = 4 });

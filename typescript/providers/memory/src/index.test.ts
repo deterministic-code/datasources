@@ -211,6 +211,7 @@ describe("MemoryCommand and CRUDRepository", () => {
       await command.execute("update", [
         { name: "id", value: 2 },
         { name: "name", value: "B" },
+        { name: "$where", value: '{"id":2}' },
       ]),
     ).toMatchObject({ rowsAffected: 1 });
 

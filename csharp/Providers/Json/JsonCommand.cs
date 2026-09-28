@@ -48,13 +48,13 @@ internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
             {
                 var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
-                var filter = whereText is not null ? ParseFilter(whereText) : new Row(Helpers.IdentityFilter(obj));
+                var filter = whereText is not null ? ParseFilter(whereText) : new Row(obj);
                 return (await ApplyUpdate(new Row(obj), filter) with { Parameters = paramsList }, EmptyRows());
             }
 
             if (op == "delete")
             {
-                var filter = obj.Count == 0 ? new Row() : new Row(Helpers.IdentityFilter(obj));
+                var filter = new Row(obj);
                 return (await ApplyDelete(filter) with { Parameters = paramsList }, EmptyRows());
             }
 

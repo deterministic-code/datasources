@@ -154,8 +154,6 @@ export { PluralizerMapper } from "./mappers/PluralizerMapper.ts";
 export { TransformMapper } from "./mappers/TransformMapper.ts";
 export { TransformConverterMapper } from "./mappers/TransformConverterMapper.ts";
 export { RowTypeMapper } from "./mappers/RowTypeMapper.ts";
-export { identityFilter } from "./identityFilter.ts";
-export { identityWhereText } from "./identityWhereText.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";
 export { ProviderNotImplementedError } from "./ProviderNotImplementedError.ts";
 export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";

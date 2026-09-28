@@ -3,7 +3,7 @@ use crate::filter::{matches, parse_filter};
 use crate::provider::MemoryProvider;
 use async_trait::async_trait;
 use datasources::{
-    identity_filter, parameters_to_map, ArrayReader, Command, CommandMiddleware,
+    parameters_to_map, ArrayReader, Command, CommandMiddleware,
     CommandMiddlewareHost, DatasourceError, Driver, IWhere, Parameter, Reader, Response, Result,
     Row, Statement, StatementEvaluator, StatementKind, Value, Where,
 };
@@ -84,7 +84,7 @@ impl Command for MemoryCommand {
                             let filter = if let Some(text) = where_text {
                                 parse_filter(Some(&text))?
                             } else {
-                                identity_filter(&obj)
+                                obj.clone()
                             };
                             let affected = connection.collection(|items| {
                                 let mut count = 0i64;
@@ -99,11 +99,7 @@ impl Command for MemoryCommand {
                             Ok((Response::new(Value::Null, affected), vec![]))
                         }
                         "delete" => {
-                            let filter = if params.is_empty() {
-                                Row::new()
-                            } else {
-                                identity_filter(&params)
-                            };
+                            let filter = params.clone();
                             let affected = connection.collection(|items| {
                                 let before = items.len();
                                 items.retain(|row| !matches(row, &filter));
@@ -334,14 +330,7 @@ fn row_matches(
     }
     let filter = match predicate_text {
         Some(text) if text.trim_start().starts_with('{') => parse_filter(Some(text)).unwrap_or_else(|_| Row::new()),
-        Some(_) => identity_filter(params),
-        None => {
-            if params.is_empty() {
-                Row::new()
-            } else {
-                identity_filter(params)
-            }
-        }
+        _ => params.clone(),
     };
     matches(row, &filter)
 }
