@@ -18,16 +18,9 @@ public class SqliteRepositorySpecTests
                     Filename = ":memory:",
                 });
                 return new RepositoryTestsSpec.Session(conn, new SqliteCommand(conn), SqliteRowTypeConverters.All);
-            }, CreateTable, Quote);
+            }, Quote, Map);
         }
     }
-
-    static string CreateTable(string table, IReadOnlyList<SpecColumn> columns) =>
-        new CreateTableStatement(
-            Quote(table),
-            [.. columns.Select(column => new Column(
-                Quote(column.Name),
-                column.Id ? $"{Map(column.Type)} PRIMARY KEY" : Map(column.Type)))]).GetText();
 
     static string Quote(string id) => $"\"{id.Replace("\"", "\"\"")}\"";
 

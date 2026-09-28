@@ -1,4 +1,5 @@
 name: complex-crud-mappings
+schema: repository-users-mapped
 type:
   name: user
   table: users

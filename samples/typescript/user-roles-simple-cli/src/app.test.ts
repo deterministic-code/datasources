@@ -106,8 +106,8 @@ describe("schema", () => {
       const sql = schema(provider, driver(provider))
         .map((table) => table.getText())
         .join("\n");
-      expect(sql).toContain("FOREIGN KEY (user_id) REFERENCES");
-      expect(sql).toContain("FOREIGN KEY (bad_role_id) REFERENCES");
+      expect(sql).toContain(`FOREIGN KEY (${ident(provider, "user_id")}) REFERENCES`);
+      expect(sql).toContain(`FOREIGN KEY (${ident(provider, "bad_role_id")}) REFERENCES`);
       expect(sql).toContain("ugly_name");
     }
     expect(schema("sqlite", driver("sqlite"))[0]!.getText()).toContain("INTEGER PRIMARY KEY");

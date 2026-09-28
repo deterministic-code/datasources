@@ -25,7 +25,7 @@ public class MysqlRepositorySpecTests
                         Url = isolated.Url,
                     });
                     return new RepositoryTestsSpec.Session(conn, new MysqlCommand(conn), MysqlRowTypeConverters.All);
-                }, CreateTable, Quote);
+                }, Quote, Map);
             }
             finally
             {
@@ -33,13 +33,6 @@ public class MysqlRepositorySpecTests
             }
         }
     }
-
-    static string CreateTable(string table, IReadOnlyList<SpecColumn> columns) =>
-        new CreateTableStatement(
-            Quote(table),
-            [.. columns.Select(column => new Column(
-                Quote(column.Name),
-                column.Id ? $"{Map(column.Type)} PRIMARY KEY AUTO_INCREMENT" : Map(column.Type)))]).GetText();
 
     static string Quote(string id) => $"`{id.Replace("`", "``")}`";
 

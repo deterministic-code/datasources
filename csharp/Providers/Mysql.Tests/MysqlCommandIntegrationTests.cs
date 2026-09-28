@@ -51,7 +51,7 @@ public class MysqlCommandIntegrationTests
         var url = Environment.GetEnvironmentVariable("MYSQL_URL");
         if (string.IsNullOrEmpty(url)) return;
         var dialect = SqlSpec.Dialect.Load("mysql");
-        foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml"))
+        foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml").Where(path => Path.GetFileName(path) != "schemas.yaml"))
         {
             var isolated = await Isolate(url);
             try

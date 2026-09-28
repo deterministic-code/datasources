@@ -1,9 +1,19 @@
 let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
 conn.open().await.unwrap();
-SqliteCommand::new(conn.clone())
-    .execute(SQL, None)
-    .await
-    .unwrap();
+let command = SqliteCommand::new(conn.clone());
+for statement in datasources_sql_specs::schema_tables(
+    "null-write-item",
+    "sqlite",
+    quote_ident,
+    datasources_sql_specs::type_mapper("sqlite"),
+    None,
+    true,
+) {
+    command
+        .execute(&statement.get_text(), None)
+        .await
+        .unwrap();
+}
 let mut options = CRUDRepositoryOptions::default();
 options.entity = "item".into();
 options.row_converter = Some(item_converter());

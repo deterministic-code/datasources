@@ -1,20 +1,16 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, Connection, ICRUDRepository, Row,
-    RowTypeConverter, Value,
+    RowTypeConverter, Text, Value,
 };
 use std::sync::Arc;
 
 use crate::command::SqliteCommand;
 use crate::connection::SqliteConnection;
 
-const SQL: &str = "
-CREATE TABLE item (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
-    version BLOB NOT NULL DEFAULT X'0102'
-)";
+fn quote_ident(id: &str) -> String {
+    format!("\"{}\"", id.replace('"', "\"\""))
+}
 
 fn item_converter() -> RowTypeConverter {
     RowTypeConverter::new(vec![
@@ -29,10 +25,20 @@ fn item_converter() -> RowTypeConverter {
 async fn omits_null_datetime_and_version() {
     let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
-    SqliteCommand::new(conn.clone())
-        .execute(SQL, None)
-        .await
-        .unwrap();
+    let command = SqliteCommand::new(conn.clone());
+    for statement in datasources_sql_specs::schema_tables(
+        "null-write-item",
+        "sqlite",
+        quote_ident,
+        datasources_sql_specs::type_mapper("sqlite"),
+        None,
+        true,
+    ) {
+        command
+            .execute(&statement.get_text(), None)
+            .await
+            .unwrap();
+    }
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "item".into();
     options.row_converter = Some(item_converter());

@@ -28,6 +28,7 @@ mod contacts_view;
 mod expect_contacts_view;
 mod from_enriched_contacts;
 mod from_mapped_contacts;
+mod schema_spec;
 mod seed_contacts;
 
 pub use add_extra_contact::add_extra_contact;
@@ -41,28 +42,12 @@ pub use contacts_service_of::contacts_service_of;
 pub use contacts_view::contacts_view;
 pub use expect_contacts_view::{contact_with, expect_contacts_view};
 pub use from_mapped_contacts::from_mapped_contacts;
+pub use schema_spec::{column_type, schema_sql, tables as schema_tables, type_mapper};
 pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
-
-pub struct SpecColumn {
-    pub name: String,
-    pub type_name: String,
-    pub id: bool,
-}
-
-impl SpecColumn {
-    pub fn new(name: impl Into<String>, type_name: impl Into<String>, id: bool) -> Self {
-        Self {
-            name: name.into(),
-            type_name: type_name.into(),
-            id,
-        }
-    }
-}
 
 pub struct RepositoryDialect {
     pub provider: &'static str,
     pub quote: fn(&str) -> String,
-    pub create_table: fn(&str, &[SpecColumn]) -> String,
     pub field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     pub types: fn() -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
@@ -70,6 +55,7 @@ pub struct RepositoryDialect {
 #[derive(Deserialize)]
 struct Spec {
     name: String,
+    schema: String,
     #[serde(rename = "type")]
     type_spec: TypeSpec,
     steps: Vec<Step>,
@@ -646,24 +632,21 @@ pub async fn run(
     if verbose() {
         println!("\n--- {} ({}) ---", spec.name, dialect.provider);
     }
-    let columns: Vec<SpecColumn> = spec
-        .type_spec
-        .fields
-        .iter()
-        .map(|(name, canonical)| {
-            SpecColumn::new(
-                name.clone(),
-                canonical.clone(),
-                spec.type_spec.ids.contains(name),
-            )
-        })
-        .collect();
-    command
-        .execute(
-            &(dialect.create_table)(&physical_table(&spec.type_spec), &columns),
-            None,
-        )
-        .await?;
+    let physical = physical_table(&spec.type_spec);
+    let mut rename = HashMap::new();
+    if physical != spec.type_spec.table {
+        rename.insert(spec.type_spec.table.clone(), physical);
+    }
+    for statement in schema_tables(
+        &spec.schema,
+        dialect.provider,
+        dialect.quote,
+        type_mapper(dialect.provider),
+        if rename.is_empty() { None } else { Some(&rename) },
+        true,
+    ) {
+        command.execute(&statement.get_text(), None).await?;
+    }
     let mapping = mapping_of(&spec, dialect);
     let mut options = CRUDRepositoryOptions::default();
     options.ids = spec.type_spec.ids.clone();

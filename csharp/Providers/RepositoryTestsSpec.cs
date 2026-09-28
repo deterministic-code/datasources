@@ -7,8 +7,6 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Datasources.SqlSpecs;
 
-public sealed record SpecColumn(string Name, string Type, bool Id = false);
-
 public static class RepositoryTestsSpec
 {
     public static IEnumerable<string> Files() =>
@@ -17,8 +15,8 @@ public static class RepositoryTestsSpec
     public static async Task Run(
         string path,
         Func<Session> open,
-        Func<string, IReadOnlyList<SpecColumn>, string> createTable,
-        Func<string, string> quote)
+        Func<string, string> quote,
+        Func<string, string> columnType)
     {
         var spec = new DeserializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
@@ -26,7 +24,11 @@ public static class RepositoryTestsSpec
             .Deserialize<Spec>(File.ReadAllText(path));
         var session = open();
         await session.Connection.Open();
-        await session.Command.Execute(createTable(PhysicalTable(spec.Type), Columns(spec.Type)));
+        var rename = spec.Type.CRUDMapper?.Entity is { Length: > 0 } entity && entity != spec.Type.Table
+            ? new Dictionary<string, string> { [spec.Type.Table] = entity }
+            : null;
+        foreach (var statement in SchemaSpec.Tables(spec.Schema, session.Connection.Provider, quote, columnType, rename, true))
+            await session.Command.Execute(statement.GetText());
         var types = session.Types;
         var fields = FieldsOf(spec.Type, types);
         if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");
@@ -378,9 +380,6 @@ public static class RepositoryTestsSpec
         _ => value
     };
 
-    static SpecColumn[] Columns(TypeSpec type) =>
-        [.. type.Fields.Select(pair => new SpecColumn(pair.Key, pair.Value, type.Ids.Contains(pair.Key)))];
-
     static bool Verbose() =>
         Environment.GetEnvironmentVariable("VERBOSE") is "1" or "true";
 
@@ -421,6 +420,7 @@ public static class RepositoryTestsSpec
     sealed class Spec
     {
         [YamlMember(Alias = "name")] public string Name { get; set; } = "";
+        [YamlMember(Alias = "schema")] public string Schema { get; set; } = "";
         [YamlMember(Alias = "type")] public TypeSpec Type { get; set; } = new();
         [YamlMember(Alias = "steps")] public List<Step> Steps { get; set; } = [];
     }

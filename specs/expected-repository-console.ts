@@ -57,6 +57,7 @@ export type RepositoryStep = {
 
 export type RepositorySpec = {
   name: string;
+  schema: string;
   type: RepositoryTypeSpec;
   steps: RepositoryStep[];
 };

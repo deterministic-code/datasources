@@ -9,7 +9,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="*Tests.cs" />
+    <Compile Include="..\..\..\csharp\Providers\SchemaSpec.cs" Link="SchemaSpec.cs" />
     <InternalsVisibleTo Include="ContactsCrudEnrichedMediumRest.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\csharp\Datasources\Datasources.csproj" />

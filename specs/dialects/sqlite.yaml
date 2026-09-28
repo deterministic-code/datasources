@@ -2,19 +2,6 @@ connection:
   kind: file
   filename: ":memory:"
   shared: true
-createUserTable: |
-  CREATE TABLE "user" (
-    id INTEGER PRIMARY KEY,
-    username TEXT NOT NULL,
-    is_enabled INTEGER NOT NULL,
-    created TEXT NOT NULL
-  )
-createUserTableVersioned: |
-  CREATE TABLE "user" (
-    id INTEGER PRIMARY KEY,
-    username TEXT NOT NULL,
-    is_enabled INTEGER NOT NULL,
-    created TEXT NOT NULL,
-    version INTEGER NOT NULL
-  )
+createUserTable: command-user
+createUserTableVersioned: command-user-versioned
 dirtyReadRows: []

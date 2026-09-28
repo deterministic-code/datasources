@@ -112,10 +112,26 @@ fn load_dialect(engine: &str) -> DialectFile {
     serde_yaml::from_str(&fs::read_to_string(path).unwrap()).unwrap()
 }
 
+fn quote_ident(id: &str) -> String {
+    format!("\"{}\"", id.replace('"', "\"\""))
+}
+
 fn resolve_sql(sql: &str, dialect: &DialectFile) -> String {
     match sql.trim() {
-        "createUserTable" => dialect.create_user_table.clone(),
-        "createUserTableVersioned" => dialect.create_user_table_versioned.clone(),
+        "createUserTable" => datasources_sql_specs::schema_sql(
+            &dialect.create_user_table,
+            "sqlite",
+            quote_ident,
+            datasources_sql_specs::type_mapper("sqlite"),
+            None,
+        ),
+        "createUserTableVersioned" => datasources_sql_specs::schema_sql(
+            &dialect.create_user_table_versioned,
+            "sqlite",
+            quote_ident,
+            datasources_sql_specs::type_mapper("sqlite"),
+            None,
+        ),
         _ => sql.to_string(),
     }
 }
@@ -372,7 +388,9 @@ async fn shared_specs() {
     let dialect = load_dialect("sqlite");
     for entry in fs::read_dir(specs_dir()).unwrap() {
         let path = entry.unwrap().path();
-        if path.extension().and_then(|e| e.to_str()) == Some("yaml") {
+        if path.extension().and_then(|e| e.to_str()) == Some("yaml")
+            && path.file_name().and_then(|name| name.to_str()) != Some("schemas.yaml")
+        {
             run(&path, &dialect).await;
         }
     }

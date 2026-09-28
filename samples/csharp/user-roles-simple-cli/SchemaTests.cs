@@ -14,16 +14,16 @@ public sealed class SchemaTests
     public void CreatesTablesWithForeignKeys(string provider)
     {
         var sql = string.Join("\n", Schema.Tables(provider, Driver(provider)).Select(table => table.GetText()));
-        Assert.Contains("FOREIGN KEY (user_id) REFERENCES", sql);
-        Assert.Contains("FOREIGN KEY (group_id) REFERENCES", sql);
-        Assert.Contains("FOREIGN KEY (bad_role_id) REFERENCES", sql);
+        Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "user_id")}) REFERENCES", sql);
+        Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "group_id")}) REFERENCES", sql);
+        Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "bad_role_id")}) REFERENCES", sql);
         Assert.Contains("ugly_name", sql);
         Assert.DoesNotContain("password", UsersRolesGroupsQuery.Create(provider).GetText());
     }
 
     [Fact]
     public void SqliteUsesIntegerPrimaryKey() =>
-        Assert.Contains("id INTEGER PRIMARY KEY", Schema.Tables("sqlite", new SqliteDriver())[0].GetText());
+        Assert.Contains("\"id\" INTEGER PRIMARY KEY", Schema.Tables("sqlite", new SqliteDriver())[0].GetText());
 
     [Fact]
     public void MysqlUsesIdentityFlag() =>

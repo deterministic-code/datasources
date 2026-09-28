@@ -1,4 +1,5 @@
 name: repository-user-crud
+schema: repository-user
 type:
   name: user
   table: user

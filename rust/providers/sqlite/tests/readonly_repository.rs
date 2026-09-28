@@ -1,7 +1,7 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
     create_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
-    DictionaryMapper, PluralizerMapper, Value, Where,
+    DictionaryMapper, PluralizerMapper, Text, Value, Where,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -50,12 +50,8 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     let ds: &dyn Datasource = &*built;
     let connection = open(
         ds,
+        "minimal-users",
         "
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY,
-            username TEXT NOT NULL,
-            is_enabled INTEGER NOT NULL
-        );
         INSERT INTO users (id, username, is_enabled) VALUES
             (1, 'ada', 1),
             (2, 'grace', 0);
@@ -94,14 +90,9 @@ async fn reads_user_by_guid_username_and_created() {
     let ds: &dyn Datasource = &*built;
     let connection = open(
         ds,
+        "user-account",
         &format!(
             "
-        CREATE TABLE user (
-            id TEXT PRIMARY KEY,
-            username TEXT NOT NULL,
-            is_enabled INTEGER NOT NULL,
-            created TEXT NOT NULL
-        );
         INSERT INTO user (id, username, is_enabled, created) VALUES
             ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
             ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
@@ -159,10 +150,27 @@ async fn reads_user_by_guid_username_and_created() {
     assert_eq!(later[0].get("Login"), Some(&Value::from("grace")));
 }
 
-async fn open(ds: &dyn Datasource, sql: &str) -> Arc<dyn Connection> {
+fn quote_ident(id: &str) -> String {
+    format!("\"{}\"", id.replace('"', "\"\""))
+}
+
+async fn open(ds: &dyn Datasource, schema: &str, sql: &str) -> Arc<dyn Connection> {
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
     let command = ds.create_command(Some(connection.clone()));
+    for statement in datasources_sql_specs::schema_tables(
+        schema,
+        "sqlite",
+        quote_ident,
+        datasources_sql_specs::type_mapper("sqlite"),
+        None,
+        true,
+    ) {
+        command
+            .execute(&statement.get_text(), None)
+            .await
+            .unwrap();
+    }
     for statement in sql
         .split(';')
         .map(str::trim)
@@ -209,23 +217,13 @@ mod user_view {
         let ds: &dyn Datasource = &*built;
         let connection = open(
             ds,
+            "user-type-lookup",
             &format!(
                 "
-            CREATE TABLE user_type (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
             INSERT INTO user_type (id, name) VALUES
                 (1, 'admin'),
                 (2, 'user'),
                 (3, 'service');
-            CREATE TABLE user (
-                id TEXT PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL,
-                created TEXT NOT NULL,
-                user_type_id INTEGER NOT NULL
-            );
             INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
                 ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
                 ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
@@ -328,37 +326,18 @@ mod users_view_roles {
     fn seed() -> String {
         format!(
             "
-            CREATE TABLE user_type (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
             INSERT INTO user_type (id, name) VALUES
                 (1, 'admin'),
                 (2, 'user'),
                 (3, 'service');
-            CREATE TABLE user (
-                id TEXT PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL,
-                created TEXT NOT NULL,
-                user_type_id INTEGER NOT NULL
-            );
             INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
                 ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
                 ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
                 ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
-            CREATE TABLE roles (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
             INSERT INTO roles (id, name) VALUES
                 (1, 'admin'),
                 (2, 'editor'),
                 (3, 'viewer');
-            CREATE TABLE user_roles (
-                user_id TEXT NOT NULL,
-                role_id INTEGER NOT NULL
-            );
             INSERT INTO user_roles (user_id, role_id) VALUES
                 ('{ADA}', 1),
                 ('{ADA}', 2),
@@ -392,7 +371,7 @@ mod users_view_roles {
     async fn fills_roles_with_a_hashset() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(ds, &seed()).await;
+        let connection = open(ds, "user-roles-read", &seed()).await;
         let mut users_options = create_repository_options::<UsersView>();
         users_options.entity_mapper = Box::new(DictionaryMapper::new([(
             "UsersView".to_string(),
@@ -451,7 +430,7 @@ mod users_view_roles {
     async fn fills_roles_from_a_join() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(ds, &seed()).await;
+        let connection = open(ds, "user-roles-read", &seed()).await;
         let command = Arc::new(SelectStatement::new(SelectStatementOptions {
             joins: &[
                 Join::left("user_type", "user_type.id", "user.user_type_id"),
@@ -584,16 +563,7 @@ mod user_crud {
     async fn writes_user_from_the_type() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(
-            ds,
-            "
-            CREATE TABLE User (
-                id INTEGER PRIMARY KEY,
-                is_enabled INTEGER NOT NULL,
-                username TEXT NOT NULL
-            );
-            ",
-        )
+        let connection = open(ds, "user-pascal", "")
         .await;
         let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
         let mut created = datasources::Row::new();
@@ -645,27 +615,7 @@ mod user_crud {
     async fn updates_users_view_when_the_version_matches() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(
-            ds,
-            "
-            CREATE TABLE user_type (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
-            CREATE TABLE user (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL,
-                created TEXT NOT NULL,
-                user_type_id INTEGER NOT NULL,
-                version INTEGER NOT NULL
-            );
-            CREATE TABLE user_role (
-                user_id INTEGER NOT NULL,
-                name TEXT NOT NULL
-            );
-            ",
-        )
+        let connection = open(ds, "user-view-version", "")
         .await;
         let mut users_options = create_repository_options::<UsersView>();
         users_options.ids = vec!["Key".into()];

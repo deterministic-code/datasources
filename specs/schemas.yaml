@@ -1,0 +1,379 @@
+fragments:
+  audit:
+    - { name: id, type: int, primaryKey: true }
+    - { name: uuid, type: uuid, notNull: true }
+    - { name: created, type: datetime, notNull: true }
+    - { name: updated, type: datetime, notNull: true }
+    - { name: version, type: binary, notNull: true }
+  lookup:
+    - { name: name, type: string, notNull: true }
+    - { name: description, type: string }
+
+schemas:
+  minimal-users:
+    - name: users
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true }
+
+  user-account:
+    - name: user
+      columns:
+        - { name: id, type: uuid, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true }
+        - { name: created, type: datetime, notNull: true }
+
+  user-type-lookup:
+    - name: user_type
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+    - name: user
+      columns:
+        - { name: id, type: uuid, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true }
+        - { name: created, type: datetime, notNull: true }
+        - { name: user_type_id, type: int, notNull: true }
+
+  user-roles-read:
+    - name: user_type
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+    - name: user
+      columns:
+        - { name: id, type: uuid, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true }
+        - { name: created, type: datetime, notNull: true }
+        - { name: user_type_id, type: int, notNull: true }
+    - name: roles
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+    - name: user_roles
+      columns:
+        - { name: user_id, type: uuid, notNull: true }
+        - { name: role_id, type: int, notNull: true }
+
+  user-view-version:
+    - name: user_type
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+    - name: user
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true }
+        - { name: created, type: datetime, notNull: true }
+        - { name: user_type_id, type: int, notNull: true }
+        - { name: version, type: int, notNull: true }
+    - name: user_role
+      columns:
+        - { name: user_id, type: int, notNull: true }
+        - { name: name, type: string, notNull: true }
+
+  user-pascal:
+    - name: User
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: is_enabled, type: bool, notNull: true }
+        - { name: username, type: string, notNull: true }
+
+  user-view-links:
+    - name: users
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true }
+        - { name: user_type_id, type: int, notNull: true }
+    - name: user_types
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+    - name: roles
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+    - name: groups
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+    - name: user_roles
+      columns:
+        - { name: user_id, type: int, notNull: true }
+        - { name: role_id, type: int, notNull: true }
+      constraints:
+        - { kind: primaryKey, name: pk_user_roles, columns: [user_id, role_id] }
+    - name: user_groups
+      columns:
+        - { name: user_id, type: int, notNull: true }
+        - { name: group_id, type: int, notNull: true }
+      constraints:
+        - { kind: primaryKey, name: pk_user_groups, columns: [user_id, group_id] }
+
+  null-write-item:
+    - name: item
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+        - { name: created, type: datetime, notNull: true, default: "'2020-01-01T00:00:00.000Z'" }
+        - { name: version, type: binary, notNull: true, default: "X'0102'" }
+
+  command-user:
+    - name: user
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: is_enabled, type: int, notNull: true }
+        - { name: created, type: string, notNull: true }
+
+  command-user-versioned:
+    - name: user
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: is_enabled, type: int, notNull: true }
+        - { name: created, type: string, notNull: true }
+        - { name: version, type: int, notNull: true }
+
+  repository-user:
+    - name: user
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: uuid, type: uuid }
+        - { name: username, type: string }
+        - { name: is_enabled, type: bool }
+        - { name: balance, type: decimal }
+        - { name: location, type: float }
+        - { name: created, type: datetime }
+        - { name: version, type: binary }
+
+  repository-users-mapped:
+    - name: users
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: uuid, type: uuid }
+        - { name: username, type: string }
+        - { name: usertypename, type: string }
+        - { name: decimal_text, type: string }
+        - { name: create_string, type: string }
+        - { name: version, type: binary }
+
+  contacts:
+    - { name: contact_source, use: [audit, lookup] }
+    - { name: contact_type, use: [audit, lookup] }
+    - name: contacts_base
+      use: [audit]
+      columns:
+        - { name: contact_source_id, type: int, notNull: true }
+        - { name: contact_type_id, type: int, notNull: true }
+        - { name: first_name, type: string, notNull: true }
+        - { name: last_name, type: string, notNull: true }
+        - { name: email, type: string }
+        - { name: notes, type: string }
+      constraints:
+        - { kind: foreignKey, name: fk_contacts_source, columns: [contact_source_id], references: contact_source, referencesColumns: [id] }
+        - { kind: foreignKey, name: fk_contacts_type, columns: [contact_type_id], references: contact_type, referencesColumns: [id] }
+    - { name: address_type, use: [audit, lookup] }
+    - { name: phone_type, use: [audit, lookup] }
+    - name: address
+      use: [audit]
+      columns:
+        - { name: contact_id, type: int, notNull: true }
+        - { name: address_type_id, type: int, notNull: true }
+        - { name: line1, type: string, notNull: true }
+        - { name: line2, type: string }
+        - { name: city, type: string, notNull: true }
+        - { name: region, type: string }
+        - { name: postal_code, type: string }
+        - { name: country, type: string }
+      constraints:
+        - { kind: foreignKey, name: fk_address_contact, columns: [contact_id], references: contacts_base, referencesColumns: [id] }
+        - { kind: foreignKey, name: fk_address_type, columns: [address_type_id], references: address_type, referencesColumns: [id] }
+    - name: phone
+      use: [audit]
+      columns:
+        - { name: contact_id, type: int, notNull: true }
+        - { name: phone_type_id, type: int, notNull: true }
+        - { name: number, type: string, notNull: true }
+      constraints:
+        - { kind: foreignKey, name: fk_phone_contact, columns: [contact_id], references: contacts_base, referencesColumns: [id] }
+        - { kind: foreignKey, name: fk_phone_type, columns: [phone_type_id], references: phone_type, referencesColumns: [id] }
+    - { name: contact_groups_base, use: [audit, lookup] }
+    - name: contact_group_member
+      use: [audit]
+      columns:
+        - { name: contact_id, type: int, notNull: true }
+        - { name: contact_group_id, type: int, notNull: true }
+      constraints:
+        - { kind: foreignKey, name: fk_member_contact, columns: [contact_id], references: contacts_base, referencesColumns: [id] }
+        - { kind: foreignKey, name: fk_member_group, columns: [contact_group_id], references: contact_groups_base, referencesColumns: [id] }
+        - { kind: unique, name: uq_contact_group_member, columns: [contact_id, contact_group_id] }
+    - name: legacy_contact
+      columns:
+        - { name: key, type: string, primaryKey: true }
+        - { name: first_name, type: string, notNull: true }
+        - { name: last_name, type: string, notNull: true }
+        - { name: email, type: string }
+        - { name: imported_at, type: datetime }
+    - name: contact_change_log
+      use: [audit]
+      columns:
+        - { name: occurred_at, type: datetime, notNull: true }
+        - { name: contact_id, type: int, notNull: true }
+        - { name: changed_by, type: string, notNull: true }
+        - { name: change_summary, type: string, notNull: true }
+
+  contacts-rest:
+    - name: ContactSource
+      columns: &lookup
+        - { name: Id, type: int, primaryKey: true }
+        - { name: m_Uuid, type: uuid, notNull: true }
+        - { name: Created, type: datetime, notNull: true }
+        - { name: m_Updated, type: datetime, notNull: true }
+        - { name: Version, type: binary, notNull: true }
+        - { name: m_Name, type: string, notNull: true }
+        - { name: Description, type: string }
+    - name: tbl_ContactType
+      columns: *lookup
+    - name: AddressType
+      columns: *lookup
+    - name: tbl_PhoneType
+      columns: *lookup
+    - name: tbl_Contacts
+      columns:
+        - { name: Id, type: int, primaryKey: true }
+        - { name: m_Uuid, type: uuid, notNull: true }
+        - { name: Created, type: datetime, notNull: true }
+        - { name: m_Updated, type: datetime, notNull: true }
+        - { name: Version, type: binary, notNull: true }
+        - { name: ContactSourceId, type: int, notNull: true }
+        - { name: m_ContactTypeId, type: int, notNull: true }
+        - { name: m_FirstName, type: string, notNull: true }
+        - { name: LastName, type: string, notNull: true }
+        - { name: m_Email, type: string }
+        - { name: Notes, type: string }
+      constraints:
+        - { kind: foreignKey, name: fk_contacts_source, columns: [ContactSourceId], references: ContactSource, referencesColumns: [Id] }
+        - { kind: foreignKey, name: fk_contacts_type, columns: [m_ContactTypeId], references: tbl_ContactType, referencesColumns: [Id] }
+    - name: tbl_Address
+      columns:
+        - { name: Id, type: int, primaryKey: true }
+        - { name: m_Uuid, type: uuid, notNull: true }
+        - { name: Created, type: datetime, notNull: true }
+        - { name: m_Updated, type: datetime, notNull: true }
+        - { name: Version, type: binary, notNull: true }
+        - { name: ContactId, type: int, notNull: true }
+        - { name: m_AddressTypeId, type: int, notNull: true }
+        - { name: m_Line1, type: string, notNull: true }
+        - { name: Line2, type: string }
+        - { name: m_City, type: string, notNull: true }
+        - { name: Region, type: string }
+        - { name: m_PostalCode, type: string }
+        - { name: Country, type: string }
+      constraints:
+        - { kind: foreignKey, name: fk_address_contact, columns: [ContactId], references: tbl_Contacts, referencesColumns: [Id] }
+        - { kind: foreignKey, name: fk_address_type, columns: [m_AddressTypeId], references: AddressType, referencesColumns: [Id] }
+    - name: tbl_Phone
+      columns:
+        - { name: Id, type: int, primaryKey: true }
+        - { name: m_Uuid, type: uuid, notNull: true }
+        - { name: Created, type: datetime, notNull: true }
+        - { name: m_Updated, type: datetime, notNull: true }
+        - { name: Version, type: binary, notNull: true }
+        - { name: ContactId, type: int, notNull: true }
+        - { name: PhoneTypeId, type: int, notNull: true }
+        - { name: m_Number, type: string, notNull: true }
+      constraints:
+        - { kind: foreignKey, name: fk_phone_contact, columns: [ContactId], references: tbl_Contacts, referencesColumns: [Id] }
+        - { kind: foreignKey, name: fk_phone_type, columns: [PhoneTypeId], references: tbl_PhoneType, referencesColumns: [Id] }
+    - name: tbl_ContactGroups
+      columns: *lookup
+    - name: tbl_ContactGroupMember
+      columns:
+        - { name: Id, type: int, primaryKey: true }
+        - { name: m_Uuid, type: uuid, notNull: true }
+        - { name: Created, type: datetime, notNull: true }
+        - { name: m_Updated, type: datetime, notNull: true }
+        - { name: Version, type: binary, notNull: true }
+        - { name: ContactId, type: int, notNull: true }
+        - { name: ContactGroupId, type: int, notNull: true }
+      constraints:
+        - { kind: foreignKey, name: fk_member_contact, columns: [ContactId], references: tbl_Contacts, referencesColumns: [Id] }
+        - { kind: foreignKey, name: fk_member_group, columns: [ContactGroupId], references: tbl_ContactGroups, referencesColumns: [Id] }
+        - { kind: unique, name: uq_contact_group_member, columns: [ContactId, ContactGroupId] }
+    - name: legacy_contact
+      columns:
+        - { name: m_Key, type: string, primaryKey: true, notNull: true }
+        - { name: m_FirstName, type: string, notNull: true }
+        - { name: LastName, type: string, notNull: true }
+        - { name: m_Email, type: string }
+        - { name: ImportedAt, type: datetime }
+    - name: tbl_ContactChangeLog
+      columns:
+        - { name: Id, type: int, primaryKey: true }
+        - { name: m_Uuid, type: uuid, notNull: true }
+        - { name: Created, type: datetime, notNull: true }
+        - { name: m_Updated, type: datetime, notNull: true }
+        - { name: Version, type: binary, notNull: true }
+        - { name: m_OccurredAt, type: datetime, notNull: true }
+        - { name: ContactId, type: int, notNull: true }
+        - { name: ChangedBy, type: string, notNull: true }
+        - { name: m_ChangeSummary, type: string, notNull: true }
+      constraints:
+        - { kind: foreignKey, name: fk_change_log_contact, columns: [ContactId], references: tbl_Contacts, referencesColumns: [Id] }
+
+  user-roles-cli:
+    - name: users
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: username, type: string, notNull: true }
+        - { name: password, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true, default: "1" }
+        - { name: created, type: datetime, notNull: true }
+        - { name: updated, type: binary, notNull: true }
+    - name: roles
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true, default: "1" }
+        - { name: created, type: datetime, notNull: true }
+        - { name: updated, type: binary, notNull: true }
+    - name: groups
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: ugly_name, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true, default: "1" }
+        - { name: created, type: datetime, notNull: true }
+        - { name: updated, type: binary, notNull: true }
+    - name: user_groups
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: user_id, type: int, notNull: true }
+        - { name: group_id, type: int, notNull: true }
+        - { name: created, type: datetime, notNull: true }
+        - { name: updated, type: binary, notNull: true }
+      constraints:
+        - { kind: foreignKey, name: fk_user_groups_user, columns: [user_id], references: users, referencesColumns: [id] }
+        - { kind: foreignKey, name: fk_user_groups_group, columns: [group_id], references: groups, referencesColumns: [id] }
+    - name: user_roles
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: user_id, type: int, notNull: true }
+        - { name: bad_role_id, type: int, notNull: true }
+        - { name: created, type: datetime, notNull: true }
+        - { name: updated, type: binary, notNull: true }
+      constraints:
+        - { kind: foreignKey, name: fk_user_roles_user, columns: [user_id], references: users, referencesColumns: [id] }
+        - { kind: foreignKey, name: fk_user_roles_role, columns: [bad_role_id], references: roles, referencesColumns: [id] }
+
+  postgres-items:
+    - name: items
+      columns:
+        - { name: id, type: int }
+        - { name: name, type: string }
