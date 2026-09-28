@@ -149,7 +149,7 @@ const open = async (ds: IDatasource, schema: string, sql = ""): Promise<IConnect
   await connection.open();
   const command = connection.createCommand();
   for (const statement of tables(schema, "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
-    await command.execute(statement);
+    await command.execute(statement.getText());
   for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))
     await command.execute(statement);
   return connection;

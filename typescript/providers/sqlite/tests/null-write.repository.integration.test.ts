@@ -18,7 +18,7 @@ const open = async (): Promise<IConnection> => {
   await connection.open();
   const command = connection.createCommand();
   for (const statement of tables("null-write-item", "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
-    await command.execute(statement);
+    await command.execute(statement.getText());
   return connection;
 };
 
