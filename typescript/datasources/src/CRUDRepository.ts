@@ -124,20 +124,47 @@ export class CRUDRepository<T = Cells>
     return this;
   }
 
-  create = (item: T): Promise<T> =>
-    this.useTransaction
-      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.createCore(item))
-      : this.createCore(item);
+  create = async (item: T): Promise<T> => {
+    if (!this.useTransaction) return this.createCore(item);
+    const work = new UnitOfWorkTransaction(this.command().connection);
+    await work.begin();
+    try {
+      const result = await this.createCore(item);
+      await work.commit();
+      return result;
+    } catch (error) {
+      await work.abort();
+      throw error;
+    }
+  };
 
-  update = (item: T, byWhere?: IWhere): Promise<Response> =>
-    this.useTransaction
-      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.updateCore(item, byWhere))
-      : this.updateCore(item, byWhere);
+  update = async (item: T, byWhere?: IWhere): Promise<Response> => {
+    if (!this.useTransaction) return this.updateCore(item, byWhere);
+    const work = new UnitOfWorkTransaction(this.command().connection);
+    await work.begin();
+    try {
+      const result = await this.updateCore(item, byWhere);
+      await work.commit();
+      return result;
+    } catch (error) {
+      await work.abort();
+      throw error;
+    }
+  };
 
-  delete = (item: T, byWhere?: IWhere): Promise<Response> =>
-    this.useTransaction
-      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.deleteCore(item, byWhere))
-      : this.deleteCore(item, byWhere);
+  delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
+    if (!this.useTransaction) return this.deleteCore(item, byWhere);
+    const work = new UnitOfWorkTransaction(this.command().connection);
+    await work.begin();
+    try {
+      const result = await this.deleteCore(item, byWhere);
+      await work.commit();
+      return result;
+    } catch (error) {
+      await work.abort();
+      throw error;
+    }
+  };
 
   private createCore = async (item: T): Promise<T> => {
     const stored = this.enriched ? this.stripEnriched(item) : item;

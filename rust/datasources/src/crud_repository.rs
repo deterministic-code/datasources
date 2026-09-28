@@ -9,6 +9,7 @@ use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrate
 use crate::default_write_enrichment_strategy::{strip_enriched, DefaultWriteEnrichmentStrategy};
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
+use crate::i_unit_of_work::IUnitOfWork;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::parameter::Parameter;
@@ -444,30 +445,63 @@ impl ICRUDRepository for CRUDRepository {
         if !self.use_transaction() {
             return self.create_core(item).await;
         }
-        let connection = Arc::clone(&self.readonly.connection);
-        UnitOfWorkTransaction::new(connection)
-            .do_work(self.create_core(item))
-            .await
+        let mut work = UnitOfWorkTransaction::new(Arc::clone(&self.readonly.connection));
+        work.begin().await?;
+        match self.create_core(item).await {
+            Ok(value) => match work.commit().await {
+                Ok(()) => Ok(value),
+                Err(error) => {
+                    work.abort().await?;
+                    Err(error)
+                }
+            },
+            Err(error) => {
+                work.abort().await?;
+                Err(error)
+            }
+        }
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if !self.use_transaction() {
             return self.update_core(item, by_where).await;
         }
-        let connection = Arc::clone(&self.readonly.connection);
-        UnitOfWorkTransaction::new(connection)
-            .do_work(self.update_core(item, by_where))
-            .await
+        let mut work = UnitOfWorkTransaction::new(Arc::clone(&self.readonly.connection));
+        work.begin().await?;
+        match self.update_core(item, by_where).await {
+            Ok(value) => match work.commit().await {
+                Ok(()) => Ok(value),
+                Err(error) => {
+                    work.abort().await?;
+                    Err(error)
+                }
+            },
+            Err(error) => {
+                work.abort().await?;
+                Err(error)
+            }
+        }
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if !self.use_transaction() {
             return self.delete_core(item, by_where).await;
         }
-        let connection = Arc::clone(&self.readonly.connection);
-        UnitOfWorkTransaction::new(connection)
-            .do_work(self.delete_core(item, by_where))
-            .await
+        let mut work = UnitOfWorkTransaction::new(Arc::clone(&self.readonly.connection));
+        work.begin().await?;
+        match self.delete_core(item, by_where).await {
+            Ok(value) => match work.commit().await {
+                Ok(()) => Ok(value),
+                Err(error) => {
+                    work.abort().await?;
+                    Err(error)
+                }
+            },
+            Err(error) => {
+                work.abort().await?;
+                Err(error)
+            }
+        }
     }
 
     fn id_names(&self) -> Vec<String> {

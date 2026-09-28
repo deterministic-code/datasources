@@ -22,14 +22,62 @@ public class BulkCRUDRepository<T> : CRUDRepository<T>, IBulkWrite<T> where T : 
     public BulkCRUDRepository(BuiltRepository<T> built, IBulkWriteStrategy<T> bulk) : base(built) =>
         (this.bulk, useTransaction) = (bulk, false);
 
-    public Task<Response> Create(IReadOnlyList<T> items) =>
-        useTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => bulk.Create(items, this)) : bulk.Create(items, this);
+    public async Task<Response> Create(IReadOnlyList<T> items)
+    {
+        if (!useTransaction)
+            return await bulk.Create(items, this);
+        var work = new UnitOfWorkTransaction(Command().Connection);
+        await work.Begin();
+        try
+        {
+            var result = await bulk.Create(items, this);
+            await work.Commit();
+            return result;
+        }
+        catch
+        {
+            await work.Abort();
+            throw;
+        }
+    }
 
-    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null) =>
-        useTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => bulk.Update(items, byWhere, this)) : bulk.Update(items, byWhere, this);
+    public async Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null)
+    {
+        if (!useTransaction)
+            return await bulk.Update(items, byWhere, this);
+        var work = new UnitOfWorkTransaction(Command().Connection);
+        await work.Begin();
+        try
+        {
+            var result = await bulk.Update(items, byWhere, this);
+            await work.Commit();
+            return result;
+        }
+        catch
+        {
+            await work.Abort();
+            throw;
+        }
+    }
 
-    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null) =>
-        useTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => bulk.Delete(items, byWhere, this)) : bulk.Delete(items, byWhere, this);
+    public async Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null)
+    {
+        if (!useTransaction)
+            return await bulk.Delete(items, byWhere, this);
+        var work = new UnitOfWorkTransaction(Command().Connection);
+        await work.Begin();
+        try
+        {
+            var result = await bulk.Delete(items, byWhere, this);
+            await work.Commit();
+            return result;
+        }
+        catch
+        {
+            await work.Abort();
+            throw;
+        }
+    }
 
     public Task<Response> BulkCreate(IReadOnlyList<T> items) => Create(items);
 

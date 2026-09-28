@@ -44,6 +44,10 @@ impl MockTransaction {
         *self.commit_calls.lock().expect("mock")
     }
 
+    pub fn abort_calls(&self) -> usize {
+        *self.abort_calls.lock().expect("mock")
+    }
+
     pub fn committed(&self) -> bool {
         *self.committed.lock().expect("mock")
     }
