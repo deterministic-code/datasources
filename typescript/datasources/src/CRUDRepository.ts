@@ -124,40 +124,20 @@ export class CRUDRepository<T = Cells>
     return this;
   }
 
-  create = async (item: T): Promise<T> => {
-    if (!this.useTransaction) return this.createCore(item);
-    const work = new UnitOfWorkTransaction(this.command().connection);
-    await work.begin();
-    try {
-      const result = await this.createCore(item);
-      await work.commit();
-      return result;
-    } catch (error) {
-      await work.abort();
-      throw error;
-    }
-  };
+  create = (item: T): Promise<T> => this.inTransaction(() => this.createCore(item));
 
-  update = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    if (!this.useTransaction) return this.updateCore(item, byWhere);
-    const work = new UnitOfWorkTransaction(this.command().connection);
-    await work.begin();
-    try {
-      const result = await this.updateCore(item, byWhere);
-      await work.commit();
-      return result;
-    } catch (error) {
-      await work.abort();
-      throw error;
-    }
-  };
+  update = (item: T, byWhere?: IWhere): Promise<Response> =>
+    this.inTransaction(() => this.updateCore(item, byWhere));
 
-  delete = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    if (!this.useTransaction) return this.deleteCore(item, byWhere);
+  delete = (item: T, byWhere?: IWhere): Promise<Response> =>
+    this.inTransaction(() => this.deleteCore(item, byWhere));
+
+  private inTransaction = async <TResult>(write: () => Promise<TResult>): Promise<TResult> => {
+    if (!this.useTransaction) return write();
     const work = new UnitOfWorkTransaction(this.command().connection);
     await work.begin();
     try {
-      const result = await this.deleteCore(item, byWhere);
+      const result = await write();
       await work.commit();
       return result;
     } catch (error) {
