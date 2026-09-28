@@ -56,13 +56,13 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     }
 
     public Task<T> Create(T item) =>
-        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => CreateCore(item)) : CreateCore(item);
+        UseTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => CreateCore(item)) : CreateCore(item);
 
     public Task<Response> Update(T item, IWhere? byWhere = null) =>
-        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => UpdateCore(item, byWhere)) : UpdateCore(item, byWhere);
+        UseTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => UpdateCore(item, byWhere)) : UpdateCore(item, byWhere);
 
     public Task<Response> Delete(T item, IWhere? byWhere = null) =>
-        UseTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => DeleteCore(item, byWhere)) : DeleteCore(item, byWhere);
+        UseTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => DeleteCore(item, byWhere)) : DeleteCore(item, byWhere);
 
     async Task<T> CreateCore(T item)
     {

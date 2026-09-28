@@ -1,5 +1,5 @@
 use crate::{
-    BatchCommands, BulkCRUDRepository, CRUDRepositoryOptions, MockCommand, MockConnection,
+    BatchCommandIBulkWriteStrategy, BulkCRUDRepository, CRUDRepositoryOptions, MockCommand, MockConnection,
     RowTypeConverter, SingleCommands, StoredProcedureBulkWriteStrategy, Value,
 };
 use chrono::{TimeZone, Utc};
@@ -68,8 +68,8 @@ async fn single_commands_writes_one_statement_per_row() {
 }
 
 #[tokio::test]
-async fn batch_commands_joins_statements() {
-    let (repo, command) = parents(Arc::new(BatchCommands));
+async fn batch_command_i_bulk_write_strategy_joins_statements() {
+    let (repo, command) = parents(Arc::new(BatchCommandIBulkWriteStrategy));
     let mut created = [
         row(&[("label", Value::from("a"))]),
         row(&[("label", Value::from("b"))]),
@@ -130,7 +130,7 @@ async fn batch_commands_joins_statements() {
 }
 
 #[tokio::test]
-async fn stored_procedure_commands_sends_one_json_call() {
+async fn stored_procedure_bulk_write_strategy_sends_one_json_call() {
     let (repo, command) = parents(Arc::new(StoredProcedureBulkWriteStrategy::new(
         "bulk_create_parent",
         "bulk_update_parent",
@@ -233,7 +233,7 @@ async fn payload_encodes_scalars() {
 async fn empty_list_does_not_execute() {
     for strategy in [
         Arc::new(SingleCommands) as Arc<dyn crate::BulkWriteStrategy>,
-        Arc::new(BatchCommands),
+        Arc::new(BatchCommandIBulkWriteStrategy),
         Arc::new(StoredProcedureBulkWriteStrategy::new(
             "create_parent",
             "update_parent",

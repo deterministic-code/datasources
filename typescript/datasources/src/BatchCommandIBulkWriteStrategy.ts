@@ -46,7 +46,7 @@ const renameToken = (text: string, name: string, alias: string): string => {
   return result + text.slice(index);
 };
 
-export class BatchCommands<T extends object> implements IBulkWriteStrategy<T> {
+export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T> {
   create = (items: T[], write: IBulkWrite<T>): Promise<Response> => send(write, write.inserts(items));
 
   update = (items: T[], byWhere: IWhere | undefined, write: IBulkWrite<T>): Promise<Response> =>

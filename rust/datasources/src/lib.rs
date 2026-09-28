@@ -1,6 +1,6 @@
 mod array_reader;
 mod association;
-mod batch_commands;
+mod batch_command_i_bulk_write_strategy;
 pub mod builders;
 mod built_repository;
 mod bulk_command;
@@ -73,12 +73,12 @@ mod split_statements;
 mod statement_parser;
 pub mod statements;
 mod stored_enrichment;
-mod stored_procedure_commands;
+mod stored_procedure_bulk_write_strategy;
 pub mod stubs;
 mod table_repository_builder;
 mod table_repository_statements;
 mod transaction;
-mod unit_of_work;
+mod unit_of_work_transaction;
 mod update_enrichment_strategy;
 mod value;
 mod where_text;
@@ -87,7 +87,7 @@ mod write_mode;
 
 pub use array_reader::ArrayReader;
 pub use association::Association;
-pub use batch_commands::BatchCommands;
+pub use batch_command_i_bulk_write_strategy::BatchCommandIBulkWriteStrategy;
 pub use builders::{Column, Join, JoinKind};
 pub use built_repository::BuiltRepository;
 pub use bulk_command::BulkCommand;
@@ -175,7 +175,7 @@ pub use statements::{
     TableConstraint, Text, UniqueConstraint, UpdateStatement, Where,
 };
 pub use stored_enrichment::StoredEnrichment;
-pub use stored_procedure_commands::StoredProcedureBulkWriteStrategy;
+pub use stored_procedure_bulk_write_strategy::StoredProcedureBulkWriteStrategy;
 pub use stubs::{
     create_stub_datasource, StubCommand, StubConnection, StubDatasource, StubReader,
     StubRepository, StubTransaction,
@@ -183,7 +183,7 @@ pub use stubs::{
 pub use table_repository_builder::RepositoryBuilder;
 pub use table_repository_statements::RepositoryStatements;
 pub use transaction::Transaction;
-pub use unit_of_work::UnitOfWork;
+pub use unit_of_work_transaction::UnitOfWorkTransaction;
 pub use update_enrichment_strategy::UpdateEnrichmentStrategy;
 pub use value::Value;
 pub use where_text::WhereText;

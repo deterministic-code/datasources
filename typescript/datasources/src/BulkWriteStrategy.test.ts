@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BatchCommands } from "./BatchCommands.ts";
+import { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy.ts";
 import { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
@@ -57,7 +57,7 @@ describe("bulk write strategies", () => {
   });
 
   it("batch commands joins statements", async () => {
-    const { repo, command } = open(Parent, new BatchCommands<Parent>());
+    const { repo, command } = open(Parent, new BatchCommandIBulkWriteStrategy<Parent>());
     await repo.createBulk([
       Object.assign(new Parent(), { label: "a" }),
       Object.assign(new Parent(), { label: "b" }),
@@ -153,7 +153,7 @@ describe("bulk write strategies", () => {
   it("empty list does not execute", async () => {
     for (const strategy of [
       new SingleCommands<Parent>(),
-      new BatchCommands<Parent>(),
+      new BatchCommandIBulkWriteStrategy<Parent>(),
       new StoredProcedureBulkWriteStrategy<Parent>("create_parent", "update_parent", "delete_parent"),
     ]) {
       const { repo, command } = open(Parent, strategy);

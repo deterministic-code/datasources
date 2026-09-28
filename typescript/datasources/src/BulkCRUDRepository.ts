@@ -17,7 +17,7 @@ import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { strip } from "./DefaultWriteEnrichmentStrategy.ts";
 import { SingleCommands } from "./SingleCommands.ts";
-import { UnitOfWork } from "./UnitOfWork.ts";
+import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 
 const fieldsOf = (
   record: Cells,
@@ -76,17 +76,17 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
 
   createMany = (items: T[]): Promise<Response> =>
     this.transactional
-      ? new UnitOfWork(this.command().connection).inTransaction(() => this.strategy.create(items, this.asWrite()))
+      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.strategy.create(items, this.asWrite()))
       : this.strategy.create(items, this.asWrite());
 
   updateMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
     this.transactional
-      ? new UnitOfWork(this.command().connection).inTransaction(() => this.strategy.update(items, byWhere, this.asWrite()))
+      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.strategy.update(items, byWhere, this.asWrite()))
       : this.strategy.update(items, byWhere, this.asWrite());
 
   deleteMany = (items: T[], byWhere?: IWhere): Promise<Response> =>
     this.transactional
-      ? new UnitOfWork(this.command().connection).inTransaction(() => this.strategy.delete(items, byWhere, this.asWrite()))
+      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.strategy.delete(items, byWhere, this.asWrite()))
       : this.strategy.delete(items, byWhere, this.asWrite());
 
   createBulk = (items: T[]): Promise<Response> => this.createMany(items);

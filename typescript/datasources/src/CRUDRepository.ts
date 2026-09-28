@@ -24,7 +24,7 @@ import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DefaultWriteEnrichmentStrategy, strip } from "./DefaultWriteEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
-import { UnitOfWork } from "./UnitOfWork.ts";
+import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -126,17 +126,17 @@ export class CRUDRepository<T = Cells>
 
   create = (item: T): Promise<T> =>
     this.useTransaction
-      ? new UnitOfWork(this.command().connection).inTransaction(() => this.createCore(item))
+      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.createCore(item))
       : this.createCore(item);
 
   update = (item: T, byWhere?: IWhere): Promise<Response> =>
     this.useTransaction
-      ? new UnitOfWork(this.command().connection).inTransaction(() => this.updateCore(item, byWhere))
+      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.updateCore(item, byWhere))
       : this.updateCore(item, byWhere);
 
   delete = (item: T, byWhere?: IWhere): Promise<Response> =>
     this.useTransaction
-      ? new UnitOfWork(this.command().connection).inTransaction(() => this.deleteCore(item, byWhere))
+      ? new UnitOfWorkTransaction(this.command().connection).doWork(() => this.deleteCore(item, byWhere))
       : this.deleteCore(item, byWhere);
 
   private createCore = async (item: T): Promise<T> => {

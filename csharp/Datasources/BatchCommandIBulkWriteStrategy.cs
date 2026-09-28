@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class BatchCommands<T> : IBulkWriteStrategy<T>
+public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T>
 {
     public Task<Response> Create(IReadOnlyList<T> items, IBulkWrite<T> write) =>
         Send(write, write.Inserts(items));
