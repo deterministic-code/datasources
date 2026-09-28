@@ -3,6 +3,7 @@ import {
   ColumnDefault,
   CreateTableStatement,
   ForeignKey,
+  InsertedIdStatement,
   NotNull,
   PrimaryKey,
   ReferentialAction,
@@ -37,6 +38,9 @@ describe("MysqlStatementFactory", () => {
     expect(factory.transform(raw)).toBe(raw);
     const select = new SelectStatement("SELECT id FROM users");
     expect(factory.transform(select)).toBe(select);
+    expect(factory.transform(new InsertedIdStatement("users", "id")).getText()).toBe(
+      "SELECT LAST_INSERT_ID() AS id",
+    );
 
     const plain = new CreateTableStatement("users", [
       { name: "id", type: "INTEGER", default: new ColumnDefault("0"), notNull: new NotNull() },

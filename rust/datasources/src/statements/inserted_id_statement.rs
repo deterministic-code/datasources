@@ -1,0 +1,28 @@
+use super::statement::Statement;
+use super::text::Text;
+
+pub struct InsertedIdStatement {
+    pub table: String,
+    pub column: String,
+}
+
+impl InsertedIdStatement {
+    pub fn new(table: impl Into<String>, column: impl Into<String>) -> Self {
+        Self {
+            table: table.into(),
+            column: column.into(),
+        }
+    }
+}
+
+impl Text for InsertedIdStatement {
+    fn get_text(&self) -> String {
+        format!("{}.{}", self.table, self.column)
+    }
+}
+
+impl Statement for InsertedIdStatement {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}

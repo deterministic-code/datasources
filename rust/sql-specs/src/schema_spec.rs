@@ -51,8 +51,10 @@ struct CatalogFile {
 }
 
 fn catalog() -> CatalogFile {
-    serde_yaml::from_str(&fs::read_to_string(repo_root().join("specs/schemas.yaml")).expect("schemas.yaml"))
-        .expect("schemas.yaml")
+    serde_yaml::from_str(
+        &fs::read_to_string(repo_root().join("specs/schemas.yaml")).expect("schemas.yaml"),
+    )
+    .expect("schemas.yaml")
 }
 
 fn physical(logical: &str, rename: Option<&HashMap<String, String>>) -> String {
@@ -91,7 +93,13 @@ where
         .collect();
     let mut constraints = Vec::new();
     if !keys.is_empty() {
-        let quoted = quote_all(&keys.iter().map(|key| (*key).to_string()).collect::<Vec<_>>(), quote);
+        let quoted = quote_all(
+            &keys
+                .iter()
+                .map(|key| (*key).to_string())
+                .collect::<Vec<_>>(),
+            quote,
+        );
         let borrowed: Vec<&str> = quoted.iter().map(String::as_str).collect();
         constraints.push(PrimaryKey::new(
             format!("pk_{}", physical(&table.name, rename)),
@@ -117,7 +125,8 @@ where
                     .as_deref()
                     .unwrap_or_else(|| panic!("{}: empty references", constraint.name));
                 let referenced = quote_all(&constraint.references_columns, quote);
-                let referenced_borrowed: Vec<&str> = referenced.iter().map(String::as_str).collect();
+                let referenced_borrowed: Vec<&str> =
+                    referenced.iter().map(String::as_str).collect();
                 ForeignKey::new(
                     &constraint.name,
                     &borrowed,
@@ -158,7 +167,10 @@ where
     Q: Fn(&str) -> String,
 {
     let file = catalog();
-    let schemas = file.schemas.get(name).unwrap_or_else(|| panic!("unknown schema {name}"));
+    let schemas = file
+        .schemas
+        .get(name)
+        .unwrap_or_else(|| panic!("unknown schema {name}"));
     schemas
         .iter()
         .map(|table| statement_of(table, &quote, rename, &file.fragments))

@@ -4,10 +4,9 @@ use crate::bulk_write::BulkWrite;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::crud_repository::CRUDRepository;
+use crate::crud_repository::{strip_enriched, CRUDRepository};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
-use crate::default_write_enrichment_strategy::strip_enriched;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
@@ -18,14 +17,14 @@ use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::{Expression, Literal, Operator, Text, Where};
 use crate::single_commands::SingleCommands;
+use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
+use crate::{Expression, Literal, Operator, Text, Where};
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
@@ -184,26 +183,46 @@ impl BulkWrite for BulkCRUDRepository {
     fn inserts(&self, items: &[Row]) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| Ok(command(insert_command(&self.crud, &stored(&self.crud, item))?)))
+            .map(|item| {
+                Ok(command(insert_command(
+                    &self.crud,
+                    &stored(&self.crud, item),
+                )?))
+            })
             .collect()
     }
 
     fn updates(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| Ok(command(update_command(&self.crud, &stored(&self.crud, item), by_where)?)))
+            .map(|item| {
+                Ok(command(update_command(
+                    &self.crud,
+                    &stored(&self.crud, item),
+                    by_where,
+                )?))
+            })
             .collect()
     }
 
     fn deletes(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| Ok(command(delete_command(&self.crud, &stored(&self.crud, item), by_where)?)))
+            .map(|item| {
+                Ok(command(delete_command(
+                    &self.crud,
+                    &stored(&self.crud, item),
+                    by_where,
+                )?))
+            })
             .collect()
     }
 
     fn rows(&self, items: &[Row]) -> Result<Vec<Row>> {
-        items.iter().map(|item| stored_row(&self.crud, item)).collect()
+        items
+            .iter()
+            .map(|item| stored_row(&self.crud, item))
+            .collect()
     }
 }
 
@@ -307,7 +326,9 @@ fn params(repo: &CRUDRepository, record: &Row, include_ids: bool) -> Result<Vec<
     let ids = repo.id_names();
     let mut pairs: Vec<_> = record
         .iter()
-        .filter(|(key, value)| (include_ids || !ids.iter().any(|id| id == *key)) && !matches!(value, Value::Null))
+        .filter(|(key, value)| {
+            (include_ids || !ids.iter().any(|id| id == *key)) && !matches!(value, Value::Null)
+        })
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();
     pairs.sort_by(|left, right| left.0.cmp(&right.0));
@@ -329,12 +350,24 @@ fn predicate<'a>(
 ) -> Result<(Option<Where>, Option<&'a dyn IWhere>)> {
     match by_where {
         Some(clause) => match clause.as_any().downcast_ref::<Where>() {
-            Some(typed) => Ok((Some(typed.map(|name| stored_repo(repo).column(name), |name, cell| stored_repo(repo).cell(name, cell, false))?), None)),
+            Some(typed) => Ok((
+                Some(typed.map(
+                    |name| stored_repo(repo).column(name),
+                    |name, cell| stored_repo(repo).cell(name, cell, false),
+                )?),
+                None,
+            )),
             None => Ok((None, Some(clause))),
         },
         None => {
             let clause = id_where(repo, record)?;
-            Ok((Some(clause.map(|name| stored_repo(repo).column(name), |name, cell| stored_repo(repo).cell(name, cell, true))?), None))
+            Ok((
+                Some(clause.map(
+                    |name| stored_repo(repo).column(name),
+                    |name, cell| stored_repo(repo).cell(name, cell, true),
+                )?),
+                None,
+            ))
         }
     }
 }
@@ -344,9 +377,9 @@ fn id_where(repo: &CRUDRepository, record: &Row) -> Result<Where> {
         .id_names()
         .into_iter()
         .map(|col| {
-            let value = record.get(&col).ok_or_else(|| {
-                DatasourceError::message(format!("Missing Id value \"{col}\""))
-            })?;
+            let value = record
+                .get(&col)
+                .ok_or_else(|| DatasourceError::message(format!("Missing Id value \"{col}\"")))?;
             Ok(Expression::from(Operator::equals(col, value.clone())))
         })
         .collect::<Result<Vec<_>>>()?;

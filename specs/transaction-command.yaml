@@ -23,7 +23,6 @@ steps:
         created: "2024-01-15T10:00:00Z"
       expect:
         rowsAffected: 1
-        result: 1
   - execute:
       connection: writer
       sql: INSERT INTO "user" (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
@@ -34,7 +33,6 @@ steps:
         created: "2024-02-20T15:30:00Z"
       expect:
         rowsAffected: 1
-        result: 2
   - abort:
       transaction: rollbackTx
   - executeReader:
@@ -63,7 +61,6 @@ steps:
         created: "2024-01-15T10:00:00Z"
       expect:
         rowsAffected: 1
-        result: 1
   - execute:
       connection: writer
       sql: INSERT INTO "user" (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
@@ -74,7 +71,6 @@ steps:
         created: "2024-02-20T15:30:00Z"
       expect:
         rowsAffected: 1
-        result: 2
   - startTransaction:
       connection: reader
       isolation: readUncommitted
@@ -104,7 +100,6 @@ steps:
         created: "2024-01-15T10:00:00Z"
       expect:
         rowsAffected: 1
-        result: 1
   - execute:
       connection: writer
       sql: INSERT INTO "user" (id, username, is_enabled, created) VALUES ($id, $username, $is_enabled, $created)
@@ -115,7 +110,6 @@ steps:
         created: "2024-02-20T15:30:00Z"
       expect:
         rowsAffected: 1
-        result: 2
   - startTransaction:
       connection: reader
       isolation: serializable

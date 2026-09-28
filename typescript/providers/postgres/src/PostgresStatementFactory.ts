@@ -2,6 +2,8 @@ import {
   ColumnDefault,
   CreateTableStatement,
   CreateTableStatementRenderer,
+  InsertedIdStatement,
+  SelectStatement,
   type Column,
   type IStatement,
 } from "@datasources/core";
@@ -25,6 +27,8 @@ export class PostgresStatementFactory extends CreateTableStatementRenderer {
   }
 
   transform(statement: IStatement): IStatement {
+    if (statement instanceof InsertedIdStatement)
+      return new SelectStatement(`SELECT lastval() AS ${statement.column}`);
     return statement instanceof CreateTableStatement && statement.table != null
       ? new CreateTableStatement(this.render(statement))
       : statement;

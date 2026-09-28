@@ -22,7 +22,7 @@ mod repository_spec;
 
 #[cfg(test)]
 mod tests {
-    use crate::bind::{isolation_sql, to_postgres, with_returning};
+    use crate::bind::{isolation_sql, to_postgres};
     use crate::command::PostgresCommand;
     use crate::connection::PostgresConnection;
     use crate::transaction::PostgresTransaction;
@@ -77,16 +77,6 @@ mod tests {
         assert_eq!(values, vec![Value::Int(1)]);
         let (_, missing) = to_postgres("SELECT $missing", &HashMap::new());
         assert_eq!(missing, vec![Value::Null]);
-        assert_eq!(
-            with_returning("INSERT INTO t (id) VALUES (1)"),
-            "INSERT INTO t (id) VALUES (1) RETURNING id"
-        );
-        assert_eq!(
-            with_returning("INSERT INTO t VALUES (1) RETURNING id"),
-            "INSERT INTO t VALUES (1) RETURNING id"
-        );
-        assert_eq!(with_returning("UPDATE t SET x = 1"), "UPDATE t SET x = 1");
-        assert_eq!(with_returning("in"), "in");
         assert_eq!(
             isolation_sql(IsolationLevel::ReadUncommitted),
             "READ UNCOMMITTED"

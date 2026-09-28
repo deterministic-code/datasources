@@ -2,6 +2,7 @@ import {
   ColumnDefault,
   CreateTableStatement,
   ForeignKey,
+  InsertedIdStatement,
   NotNull,
   PrimaryKey,
   ReferentialAction,
@@ -34,6 +35,9 @@ describe("SqliteStatementFactory", () => {
     expect(factory.transform(raw)).toBe(raw);
     const select = new SelectStatement("SELECT id FROM users");
     expect(factory.transform(select)).toBe(select);
+    expect(factory.transform(new InsertedIdStatement("users", "id")).getText()).toBe(
+      "SELECT last_insert_rowid() AS id",
+    );
   });
 
   it("renders canonical types", () => {

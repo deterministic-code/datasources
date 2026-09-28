@@ -8,22 +8,11 @@ import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
-import { createChildren, createLinks, getCell } from "./UpdateEnrichmentStrategy.ts";
 import type { WriteMode } from "./WriteMode.ts";
 
-type Props = Record<string, Scalar | object>;
-
 const unloaded = (parent: object, into: string): boolean => {
-  const value = getCell(parent, into);
+  const value = (parent as Record<string, Scalar | object>)[into];
   return value === undefined || value === null;
-};
-
-export const strip = (host: object, item: object): object => {
-  const entries = enrichmentsOf(host);
-  if (!entries) return item;
-  const copy = { ...item } as Props;
-  for (const entry of entries) delete copy[entry.enrichment.into];
-  return copy;
 };
 
 const childWriter = (entry: StoredEnrichment, into: string): ICRUDRepository<object> => {
@@ -75,7 +64,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       for (const parent of parents) {
         if (this.skip(parent, enrichment.into, mode)) continue;
         await dispatch(mode, {
-          create: () => createLinks(writer, enrichment, parent),
+          create: () => this.updateStrategy.createLinks(writer, enrichment, parent),
           update: () => this.updateStrategy.updateLinked(entry, enrichment, parent),
           delete: () => this.deleteStrategy.deleteLinked(entry, enrichment, parent),
         });
@@ -87,7 +76,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     for (const parent of parents) {
       if (this.skip(parent, enrichment.into, mode)) continue;
       await dispatch(mode, {
-        create: () => createChildren(writer, enrichment, parent),
+        create: () => this.updateStrategy.createChildren(writer, enrichment, parent),
         update: () => this.updateStrategy.updateOwned(entry, enrichment, parent),
         delete: () => this.deleteStrategy.deleteOwned(entry, enrichment, parent, async () => {}),
       });

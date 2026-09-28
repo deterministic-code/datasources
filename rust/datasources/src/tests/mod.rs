@@ -1692,7 +1692,12 @@ async fn table_repository() {
     include_id.entity = "users".into();
     include_id.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, include_id).unwrap();
-    *command.response.lock().unwrap() = Response::new(Value::Int(9), 1);
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(9))]));
     let created = repo.create(&mut obj).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
@@ -2125,7 +2130,12 @@ async fn create_and_update_omit_null_datetime_and_version() {
     options.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, options).unwrap();
     let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
-    *command.response.lock().unwrap() = Response::new(Value::Int(7), 1);
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(7))]));
     let created_ada = repo
         .create(&mut record(&[
             ("id", Value::Int(1)),

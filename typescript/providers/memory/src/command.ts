@@ -3,6 +3,7 @@ import {
   CommandMiddlewareHost,
   DeleteStatement,
   InsertStatement,
+  InsertedIdStatement,
   StatementEvaluator,
   UpdateStatement,
   Where,
@@ -16,7 +17,6 @@ import {
   type Scalar,
 } from "@datasources/core";
 import type { MemoryConnection } from "./connection.ts";
-import { MemoryProvider } from "./MemoryProvider.ts";
 import type { MemoryRecord } from "./store.ts";
 import { matches, parametersToObject, parseFilter } from "./filter.ts";
 
@@ -46,6 +46,14 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> => {
+    if (statement instanceof InsertedIdStatement) {
+      return this.run(statement.getText(), parameters, async () => {
+        this.connection.ensureOpen();
+        const id = this.connection.insertedId(statement.table);
+        const rows = id === undefined ? [] : [{ [statement.column]: id }];
+        return { value: new ArrayReader(rows), rows };
+      });
+    }
     const clause = "where" in statement && statement.where instanceof Where ? statement.where : undefined;
     if (clause) {
       return this.run(statement.getText(), parameters, async () => {
@@ -89,9 +97,10 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         const obj = parametersToObject(params);
         if (op === "insert") {
           const row = { ...obj };
-          const id = new MemoryProvider().generatedId(insertedId(row, this.connection.getCollection()));
+          const id = insertedId(row, this.connection.getCollection());
           row.id = id;
           this.connection.getCollection().push(row);
+          this.connection.rememberInserted(this.connection.collection, id);
           return { value: { result: id, rowsAffected: 1, parameters: params }, rows: [] };
         }
         if (op === "update") {
@@ -123,9 +132,10 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
       const obj = parametersToObject(params);
       if (op === "insert") {
         const row = { ...obj };
-        const id = new MemoryProvider().generatedId(insertedId(row, rows));
+        const id = insertedId(row, rows);
         row.id = id;
         rows.push(row);
+        this.connection.rememberInserted(table ?? this.connection.collection, id);
         return { value: { result: id, rowsAffected: 1, parameters: params }, rows: [] };
       }
       if (op === "update") {

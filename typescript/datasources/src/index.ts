@@ -4,7 +4,7 @@ export type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
 export type { IDriver } from "./IDriver.ts";
-export { generatedId, columnType } from "./IDriver.ts";
+export { columnType } from "./IDriver.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory, bindInstall } from "./DatasourceFactory.ts";
 export type {
@@ -103,6 +103,7 @@ export {
   ReferentialAction,
   StatementEvaluator,
   ExecuteStoredProcedureStatement,
+  InsertedIdStatement,
   ReturnStatement,
   UniqueConstraint,
   UpdateStatement,

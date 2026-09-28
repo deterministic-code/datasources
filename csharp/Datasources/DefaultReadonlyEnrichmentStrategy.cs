@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace Datasources;
 
 public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T> where T : new()
@@ -21,17 +23,17 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         for (var i = 0; i < parents.Count; i++)
         {
-            var key = RepositoryTreeNode.SourceKey(parents[i], enrichment.From, At(sources, i));
+            var key = SourceKey(parents[i], enrichment.From, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
             await foreach (var row in link.Read(new Where(new Operator.Equals(association.Parent, Value.From(key)))))
             {
-                if (RepositoryTreeNode.Get(row!, association.Related) is not { } id) continue;
+                if (Get(row!, association.Related) is not { } id) continue;
                 var entity = await via.ReadSingle(new Where(new Operator.Equals(enrichment.By, Value.From(id))));
                 if (entity is not null)
                     related.Add(entity);
             }
-            RepositoryTreeNode.Set(parents[i], enrichment.Into, related);
+            Set(parents[i], enrichment.Into, related);
         }
     }
 
@@ -45,19 +47,16 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
+            var key = SourceKey(parent, enrichment.From, At(sources, i));
             if (key is null) continue;
-            var cacheKey = RepositoryTreeNode.KeyOf(key);
+            var cacheKey = KeyOf(key);
             if (!cache.TryGetValue(cacheKey, out var related))
             {
                 related = await via.ReadSingle(new Where(new Operator.Equals(enrichment.By, Value.From(key))));
                 cache[cacheKey] = related;
             }
             if (related is null) continue;
-            RepositoryTreeNode.Set(
-                parent,
-                enrichment.Into,
-                enrichment.Select is { } select ? RepositoryTreeNode.Get(related, select) : related);
+            Set(parent, enrichment.Into, enrichment.Select is { } select ? Get(related, select) : related);
         }
     }
 
@@ -70,15 +69,30 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = RepositoryTreeNode.SourceKey(parent, enrichment.From, At(sources, i));
+            var key = SourceKey(parent, enrichment.From, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
             await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.By, Value.From(key)))))
                 related.Add(item);
-            RepositoryTreeNode.Set(parent, enrichment.Into, related);
+            Set(parent, enrichment.Into, related);
         }
     }
 
     protected static Row? At(IReadOnlyList<Row?>? sources, int index) =>
         sources is not null && index < sources.Count ? sources[index] : null;
+
+    protected static object? SourceKey(object parent, string name, Row? source) =>
+        source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
+            ? cell.ToObject()
+            : parent.GetType().GetProperty(name)?.GetValue(parent);
+
+    protected static string KeyOf(object? key) => key?.ToString() ?? "";
+
+    protected static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
+
+    protected static void Set(object obj, string name, object? value) => Prop(obj, name).SetValue(obj, value);
+
+    static PropertyInfo Prop(object obj, string name) =>
+        obj.GetType().GetProperty(name)
+        ?? throw new DatasourceException($"Unknown property \"{name}\"");
 }

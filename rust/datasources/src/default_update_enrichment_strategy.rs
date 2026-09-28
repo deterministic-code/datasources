@@ -1,8 +1,9 @@
 use crate::datasource_error::DatasourceError;
-use crate::default_write_enrichment_strategy::{decode_rows, related_ids, required, row_key};
+use crate::default_write_enrichment_strategy::{
+    decode_rows, encode_rows, related_ids, required, row_key,
+};
 use crate::delete_enrichment_strategy::load;
 use crate::enrichment::Enrichment;
-use crate::repository_tree_node::encode_rows;
 use crate::result::Result;
 use crate::row::Row;
 use crate::stored_enrichment::StoredEnrichment;

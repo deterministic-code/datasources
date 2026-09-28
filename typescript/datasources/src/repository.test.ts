@@ -113,12 +113,14 @@ describe("CRUDRepository", () => {
 
   it("adds updates and deletes through builders", async () => {
     const { repo, command } = create();
-    command.response = { result: 9, rowsAffected: 1 };
+    command.response = { result: undefined, rowsAffected: 1 };
+    command.reader = new MockReader([{ id: 9 }]);
     const obj = { id: 1, name: "a" };
     const created = await repo.create(obj);
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO users (name) VALUES ($name)",
     );
+    expect(command.executeReaderCalls[0]?.text).toBe("users.id");
     expect(created.id).toBe(9);
     const updated = await repo.update(obj);
     expect(updated.rowsAffected).toBe(1);
@@ -132,7 +134,8 @@ describe("CRUDRepository", () => {
 
   it("maps create result onto Id when id is absent", async () => {
     const { repo, command } = create({ type: asType(PascalId), ids: ["Id"] });
-    command.response = { result: 9, rowsAffected: 1 };
+    command.response = { result: undefined, rowsAffected: 1 };
+    command.reader = new MockReader([{ Id: 9 }]);
     const item = Object.assign(new PascalId(), { Id: 0 });
     const created = await repo.create(item);
     expect(created.Id).toBe(9);
@@ -194,7 +197,8 @@ describe("CRUDRepository", () => {
 
   it("omits null datetime and version on create and update", async () => {
     const { repo, command } = create();
-    command.response = { result: 7, rowsAffected: 1 };
+    command.response = { result: undefined, rowsAffected: 1 };
+    command.reader = new MockReader([{ id: 7 }, { id: 7 }]);
     const created = await repo.create({ id: 1, name: "ada", created: null, version: undefined });
     expect(created.id).toBe(7);
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (name) VALUES ($name)");

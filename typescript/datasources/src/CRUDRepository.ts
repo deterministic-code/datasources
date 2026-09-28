@@ -5,8 +5,10 @@ import type { IWhere } from "./IWhere.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
+import type { IMapper } from "./mappers/IMapper.ts";
+import type { IReturnStatement } from "./statements/IReturnStatement.ts";
 import { Literal } from "./statements/Literal.ts";
-import { Operator, UpdateStatement, Where } from "./statements/index.ts";
+import { Operator, ReturnStatement, UpdateStatement, Where } from "./statements/index.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -20,9 +22,9 @@ import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import { StoredEnrichment } from "./StoredEnrichment.ts";
-import { execute } from "./ICommand.ts";
+import { execute, executeReader } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { DefaultWriteEnrichmentStrategy, strip } from "./DefaultWriteEnrichmentStrategy.ts";
+import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 
@@ -40,6 +42,17 @@ const fieldsOf = (
     .map(([name, value]) => ({ name: column(name), value: cell(name, value, true) as Scalar }));
 
 const isCells = (id: Scalar | Cells): id is Cells => typeof id === "object" && id !== null;
+
+const named = (row: Cells, property: string, sqlColumn: string): Cells => {
+  if (property === sqlColumn || !(sqlColumn in row)) return row;
+  const { [sqlColumn]: cell, ...rest } = row;
+  return { ...rest, [property]: cell };
+};
+
+const identified = (row: Cells, column: string): Cells => {
+  const values = Object.values(row);
+  return column in row || values.length !== 1 ? row : { [column]: values[0] };
+};
 
 const scalarOf = (value: Scalar | object | undefined): Scalar | undefined =>
   value === undefined || value === null || typeof value === "object" ? undefined : value;
@@ -66,6 +79,7 @@ export class CRUDRepository<T = Cells>
 {
   readonly ids: readonly string[];
   private readonly write: IWriteEnrichmentStrategy<T>;
+  private readonly returnMapper?: IMapper<IReturnStatement, IReturnStatement>;
   private get useTransaction(): boolean {
     return this.write.useTransaction;
   }
@@ -86,16 +100,16 @@ export class CRUDRepository<T = Cells>
       this.write =
         (connectionOrOptionsOrWrite as IWriteEnrichmentStrategy<T> | undefined) ??
         new DefaultWriteEnrichmentStrategy<T>();
+      this.returnMapper = undefined;
       return;
     }
     const options = connectionOrOptionsOrWrite as IConnection | CRUDRepositoryOptions<T>;
     const built = crudBuilt(typeOrConnectionOrBuiltOrWrite, options);
     super(built);
     this.ids = built.ids;
-    this.write =
-      (typeof options === "object" && options !== null && "write" in options
-        ? (options as CRUDRepositoryOptions<T>).write
-        : undefined)       ?? new DefaultWriteEnrichmentStrategy<T>();
+    const crud = typeof options === "object" && options !== null ? (options as CRUDRepositoryOptions<T>) : undefined;
+    this.write = crud?.write ?? new DefaultWriteEnrichmentStrategy<T>();
+    this.returnMapper = crud?.return;
   }
 
   override addEnriched<TRelated extends object>(
@@ -174,12 +188,39 @@ export class CRUDRepository<T = Cells>
   private insert = async (stored: T, target: T): Promise<Response> => {
     const fields = fieldsOf(this.reverseConvert(stored), (col) => !this.ids.includes(col), this.column, this.cell);
     const response = await execute(this.command(), this.statements!.insert(fields), fields);
-    this.writeId(target, response.result);
+    if (this.ids.length === 1) await this.copyInsertedId(target, fields);
     return response;
   };
 
-  private writeId = (item: T, id: Response["result"]): void => {
-    const scalar = scalarOf(id as Scalar | object | undefined);
+  private copyInsertedId = async (target: T, fields: Field[]): Promise<void> => {
+    const column = this.ids[0]!;
+    const sqlColumn = this.column(column);
+    const statement = this.returnMapper
+      ? this.returnMapper.map(new ReturnStatement(sqlColumn, fields))
+      : this.statements!.selectInsertedId(sqlColumn);
+    const reader = await executeReader(
+      this.command(),
+      statement,
+      statement instanceof ReturnStatement ? fields : undefined,
+    );
+    try {
+      if (!(await reader.next())) return;
+      const current = reader.current;
+      if (!current) throw new DatasourceError("Reader current must be a row");
+      const row = identified(named(current, column, sqlColumn), column);
+      const converted = (
+        this.rowConverter instanceof RowTypeConverter
+          ? this.rowConverter.convert(row, this.type)
+          : this.rowConverter!.convert(row)
+      ) as T;
+      this.writeId(target, this.idValue(this.mapper!.map(converted)));
+    } finally {
+      await reader.dispose();
+    }
+  };
+
+  private writeId = (item: T, id: Scalar | undefined): void => {
+    const scalar = scalarOf(id);
     if (this.ids.length !== 1 || scalar === undefined || !this.rowConverter) return;
     const name = this.ids[0]!;
     const patch = (
@@ -245,7 +286,13 @@ export class CRUDRepository<T = Cells>
     );
   };
 
-  private stripEnriched = (item: T): T => strip(this, item) as T;
+  protected stripEnriched = (item: T): T => {
+    const entries = enrichmentsOf(this);
+    if (!entries) return item;
+    const copy = { ...item } as Props;
+    for (const entry of entries) delete copy[entry.enrichment.into];
+    return copy as T;
+  };
 }
 
 const writerOf = <TRelated extends object>(

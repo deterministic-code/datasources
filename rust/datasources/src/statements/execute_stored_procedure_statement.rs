@@ -5,16 +5,22 @@ use crate::parameter_direction::ParameterDirection;
 
 pub struct ExecuteStoredProcedureStatement {
     text: String,
+    pub name: Option<String>,
 }
 
 impl ExecuteStoredProcedureStatement {
     pub fn text(text: impl Into<String>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            name: None,
+        }
     }
 
     pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self {
+        let name = name.as_ref().to_string();
         Self {
-            text: format!("CALL {}({})", name.as_ref(), args(parameters)),
+            text: format!("CALL {name}({})", args(parameters)),
+            name: Some(name),
         }
     }
 }

@@ -86,14 +86,14 @@ describe("return and output parameters", () => {
         value: 4,
         direction: ParameterDirection.InputOutput,
       };
-      const call = await command.execute(
-        new ExecuteStoredProcedureStatement("bump", [result]).getText(),
+      const call = await command.executeStatement(
+        new ExecuteStoredProcedureStatement("bump", [result]),
         [result],
       );
       expect(call.parameters?.[0]?.value).toBe(5);
       const n = { name: "n", value: 4 };
-      const ret = await command.execute(
-        new ReturnStatement("add_one", [n]).getText(),
+      const ret = await command.executeStatement(
+        new ReturnStatement("add_one", [n]),
         [n],
       );
       expect(ret.result).toBe(5);

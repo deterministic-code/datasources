@@ -95,7 +95,11 @@ fn quote_ident(id: &str) -> String {
 fn render_schema(name: &str) -> String {
     datasources_sql_specs::schema_tables(name, quote_ident, None)
         .iter()
-        .map(|statement| crate::statement_factory::PostgresStatementFactory.transform(statement).get_text())
+        .map(|statement| {
+            crate::statement_factory::PostgresStatementFactory
+                .transform(statement)
+                .get_text()
+        })
         .collect::<Vec<_>>()
         .join(";\n")
 }
@@ -328,7 +332,7 @@ async fn shared_specs() {
 
 #[tokio::test]
 async fn return_and_output_parameters() {
-    use datasources::{ExecuteStoredProcedureStatement, ParameterDirection, ReturnStatement, Text};
+    use datasources::{ExecuteStoredProcedureStatement, ParameterDirection, ReturnStatement};
     let Ok(url) = std::env::var("POSTGRES_URL") else {
         return;
     };
@@ -373,17 +377,17 @@ async fn return_and_output_parameters() {
         ParameterDirection::InputOutput,
     )];
     let call = command
-        .execute(
-            &ExecuteStoredProcedureStatement::new("bump", &result).get_text(),
+        .execute_statement(
+            &ExecuteStoredProcedureStatement::new("bump", &result),
             Some(&result),
         )
         .await
         .unwrap();
-    assert_eq!(call.result, Value::Int(5));
+    assert_eq!(call.parameters.as_ref().unwrap()[0].value, Value::Int(5));
     let parameters = [Parameter::new("n", 4_i64)];
     let ret = command
-        .execute(
-            &ReturnStatement::new("add_one", &parameters).get_text(),
+        .execute_statement(
+            &ReturnStatement::new("add_one", &parameters),
             Some(&parameters),
         )
         .await

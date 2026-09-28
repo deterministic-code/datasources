@@ -7,10 +7,13 @@ import {
   DatasourceError,
   DatasourceFactory,
   IsolationLevel,
+  type Cell,
   type Cells,
-  generatedId,
   columnType,
   type IDriver,
+  CreateTableStatement,
+  ReturnStatement,
+  SelectStatement,
   type Scalar,
 } from "@datasources/core";
 import { SqliteCommand } from "./command.ts";
@@ -30,6 +33,8 @@ class FakeDatabase implements SqliteDatabase {
   rows: Cells[] = [{ id: 1 }];
   bySql?: Record<string, Cells[]>;
   omitRowid = false;
+  columns?: Array<{ name: string; column: string | null; table: string | null }>;
+  rawRows?: Array<Array<Cell | null>>;
 
   constructor(public filename: string) {
     FakeDatabase.latest = this;
@@ -49,6 +54,12 @@ class FakeDatabase implements SqliteDatabase {
         this.alls.push({ sql, params });
         return (this.bySql?.[sql] ?? this.rows)[Symbol.iterator]();
       },
+      columns: this.columns ? () => this.columns! : undefined,
+      raw: this.rawRows
+        ? () => ({
+            iterate: () => this.rawRows![Symbol.iterator](),
+          })
+        : undefined,
     };
   }
 
@@ -130,22 +141,23 @@ describe("SqliteCommand", () => {
     const command = new SqliteCommand(connection);
     db.rows = [{ id: 1, name: "a" }];
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }])).toEqual({
-      result: 5,
+      result: null,
       rowsAffected: 2,
       parameters: [{ name: "id", value: 1 }],
     });
     expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0 });
     db.rows = [{ abs: 3 }];
-    expect(await command.execute("SELECT abs($x)", [{ name: "x", value: -3 }])).toEqual({
+    const x = { name: "x", value: -3 };
+    expect(await command.executeStatement(new ReturnStatement("abs", [x]), [x])).toEqual({
       result: 3,
       rowsAffected: 1,
-      parameters: [{ name: "x", value: -3 }],
+      parameters: [x],
     });
     db.rows = [];
-    expect(await command.execute("SELECT 1")).toEqual({ result: null, rowsAffected: 0 });
+    expect(await command.execute("SELECT 1")).toEqual({ result: null, rowsAffected: 2 });
     db.omitRowid = true;
     expect(await command.execute("INSERT INTO items DEFAULT VALUES")).toEqual({
-      result: undefined,
+      result: null,
       rowsAffected: 1,
     });
     db.rows = [{ id: 1, name: "a" }, { id: 2, name: "b" }];
@@ -170,6 +182,37 @@ describe("SqliteCommand", () => {
     expect(second).toEqual([{ id: 2 }]);
     expect(await sets.nextResult()).toBe(false);
     await sets.dispose();
+    db.bySql = undefined;
+    db.rows = [];
+    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toEqual({
+      result: null,
+      rowsAffected: 0,
+      parameters: undefined,
+    });
+    db.rows = [{}];
+    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({ result: null });
+    db.omitRowid = false;
+    expect(await command.executeStatement(new CreateTableStatement("items"))).toMatchObject({
+      result: null,
+      rowsAffected: 2,
+    });
+    db.columns = [
+      { name: "id", column: "id", table: "a" },
+      { name: "id", column: null, table: null },
+    ];
+    db.rawRows = [[1, null]];
+    const qualified = await command.executeReader("SELECT a.id, id");
+    expect(await qualified.next()).toBe(true);
+    expect(qualified.current).toEqual({ "a.id": 1, id: null });
+    expect(await qualified.next()).toBe(false);
+    await qualified.dispose();
+    db.columns = [{ name: "id", column: "id", table: "t" }];
+    db.rawRows = undefined;
+    db.rows = [{ id: 4 }];
+    const plain = await command.executeReader("SELECT id");
+    expect(await plain.next()).toBe(true);
+    expect(plain.current).toEqual({ id: 4 });
+    await plain.dispose();
     await connection.close();
     await expect(command.execute("DELETE FROM items")).rejects.toThrow("not open");
   });
@@ -186,7 +229,6 @@ describe("Sqlite datasource", () => {
       transaction: (c, isolation = "serializable") =>
         new SqliteTransaction(c as SqliteConnection, isolation),
       rowTypeConverters: SqliteRowTypeConverters,
-      generatedId,
       columnType,
     });
     const ds = new Datasource("sqlite", of());

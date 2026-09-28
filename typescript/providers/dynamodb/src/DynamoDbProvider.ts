@@ -1,6 +1,5 @@
 import {
   columnType as identityColumnType,
-  generatedId as identityGeneratedId,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -15,7 +14,6 @@ import { DynamoDbConnection } from "./connection.ts";
 
 export class DynamoDbProvider implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
-  generatedId = identityGeneratedId;
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
     DynamoDbConnection.from(options);

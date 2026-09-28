@@ -1,6 +1,5 @@
 import {
   DatasourceError,
-  generatedId as identityGeneratedId,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -16,7 +15,6 @@ import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts
 
 export class SqliteDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
-  generatedId = identityGeneratedId;
   columnType = (name: string): string =>
     ({
       int: "INTEGER",

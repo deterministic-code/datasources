@@ -44,7 +44,7 @@ public abstract class DeleteEnrichmentStrategy<T>
             new Operator.Equals(association.Parent, Value.From(parentKey)),
             new Operator.Equals(association.Related, Value.From(relatedKey))));
 
-    internal static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
+    protected static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
 
     static PropertyInfo Prop(object obj, string name) =>
         obj.GetType().GetProperty(name)

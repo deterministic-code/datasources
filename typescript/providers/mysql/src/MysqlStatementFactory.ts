@@ -1,6 +1,8 @@
 import {
   CreateTableStatement,
   CreateTableStatementRenderer,
+  InsertedIdStatement,
+  SelectStatement,
   type Column,
   type IStatement,
 } from "@datasources/core";
@@ -18,6 +20,8 @@ export class MysqlStatementFactory extends CreateTableStatementRenderer {
   }
 
   transform(statement: IStatement): IStatement {
+    if (statement instanceof InsertedIdStatement)
+      return new SelectStatement(`SELECT LAST_INSERT_ID() AS ${statement.column}`);
     return statement instanceof CreateTableStatement && statement.table != null
       ? new CreateTableStatement(this.render(statement))
       : statement;

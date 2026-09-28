@@ -15,7 +15,6 @@ import type { BulkCommand } from "./BulkCommand.ts";
 import type { IBulkWrite } from "./IBulkWrite.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { strip } from "./DefaultWriteEnrichmentStrategy.ts";
 import { SingleCommands } from "./SingleCommands.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 
@@ -119,7 +118,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   private idOf = (item: T): Scalar | undefined =>
     this.ids.length === 1 ? scalarOf((item as Record<string, Scalar | object>)[this.ids[0]!]) : undefined;
 
-  private stripped = (item: T): T => (this.enriched ? (strip(this, item) as T) : item);
+  private stripped = (item: T): T => (this.enriched ? this.stripEnriched(item) : item);
 
   private insertCommand = (stored: T): BulkCommand => {
     const fields = fieldsOf(this.reverse(stored), (col) => !this.ids.includes(col), this.column, this.cell);

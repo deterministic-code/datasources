@@ -1,7 +1,11 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  DatasourceError,
+  ExecuteStoredProcedureStatement,
   ParameterDirection,
+  ReturnStatement,
+  SelectStatement,
   responseOf,
   splitStatements,
   statementReader,
@@ -14,30 +18,15 @@ import {
 } from "@datasources/core";
 import { MysqlStatementFactory } from "./MysqlStatementFactory.ts";
 import { bindParameters, toMysql } from "./bind.ts";
-import { MysqlDriver } from "./MysqlDriver.ts";
 import type { MysqlConnection } from "./connection.ts";
 import type { MysqlExecuteResult } from "./i-mysql-engine.ts";
 import type { Scalar } from "./scalar.ts";
 
-const isSelect = (sql: string) =>
-  sql.trimStart().toUpperCase().startsWith("SELECT");
-const isCall = (sql: string) =>
-  sql.trimStart().toUpperCase().startsWith("CALL");
 const outputs = (parameters?: Parameter[]) =>
   parameters?.filter(
     (parameter) =>
       parameter.direction && parameter.direction !== ParameterDirection.Input,
   ) ?? [];
-
-const scalarOf = (row: Cells | undefined): Scalar | undefined => {
-  const value = row ? Object.values(row)[0] : undefined;
-  return value;
-};
-
-const firstRow = async (rows: AsyncIterable<Cells>): Promise<Cells | undefined> => {
-  for await (const row of rows) return row;
-  return undefined;
-};
 
 export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: MysqlConnection) {
@@ -69,7 +58,25 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    if (statement instanceof SelectStatement || statement instanceof ReturnStatement)
+      return this.firstCell(statement, parameters);
+    if (statement instanceof ExecuteStoredProcedureStatement && statement.name && outputs(parameters).length)
+      return this.executeProcedure(statement.getText(), parameters);
     return this.execute(new MysqlStatementFactory().transform(statement).getText(), parameters);
+  }
+
+  private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    const reader = await this.executeReaderStatement(statement, parameters);
+    try {
+      if (!(await reader.next())) return responseOf(null, 0, parameters);
+      const row = reader.current;
+      /* v8 ignore next */
+      if (!row) throw new DatasourceError("Reader current must be a row");
+      const values = Object.values(row);
+      return responseOf(values.length === 0 ? null : values[0], 1, parameters);
+    } finally {
+      await reader.dispose();
+    }
   }
 
   async execute(text: string, parameters?: Parameter[]): Promise<Response> {
@@ -84,19 +91,12 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     });
   }
 
-  private async runSql(
-    sql: string,
-    params?: Record<string, Scalar>,
-    parameters?: Parameter[],
-  ): Promise<MysqlExecuteResult> {
-    if (isSelect(sql)) {
-      const row = await firstRow(this.query(sql, params));
-      return { rowsAffected: row ? 1 : 0, result: scalarOf(row), parameters };
-    }
-    const outs = outputs(parameters);
-    if (isCall(sql) && outs.length && parameters) {
+  private async executeProcedure(sql: string, parameters?: Parameter[]): Promise<Response> {
+    return this.run(sql, parameters, async (query, params) => {
+      this.connection.ensureOpen();
+      const outs = outputs(params);
       const client = this.connection.require();
-      for (const parameter of parameters) {
+      for (const parameter of params!) {
         if (
           !parameter.direction ||
           parameter.direction === ParameterDirection.Input ||
@@ -106,30 +106,35 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
             [parameter.name]: parameter.value ?? null,
           });
       }
-      await client.query(toMysql(sql).replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, "@$1"));
+      await client.query(toMysql(query).replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, "@$1"));
       const [rows] = await client.query(
         `SELECT ${outs.map((parameter) => `@${parameter.name} AS \`${parameter.name}\``).join(", ")}`,
       );
-      const row = Array.isArray(rows) ? rows[0] : undefined;
+      const row = Array.isArray(rows) ? (rows[0] as Cells | undefined) : undefined;
       return {
-        rowsAffected: 0,
-        parameters: parameters.map((parameter) =>
-          row &&
-          parameter.direction &&
-          parameter.direction !== ParameterDirection.Input
-            ? { ...parameter, value: row[parameter.name] }
-            : parameter,
+        value: responseOf(
+          undefined,
+          0,
+          params?.map((parameter) =>
+            row && parameter.direction && parameter.direction !== ParameterDirection.Input
+              ? { ...parameter, value: row[parameter.name] as Scalar }
+              : parameter,
+          ),
         ),
+        rows: [],
       };
-    }
+    });
+  }
+
+  private async runSql(
+    sql: string,
+    params?: Record<string, Scalar>,
+    parameters?: Parameter[],
+  ): Promise<MysqlExecuteResult> {
     const [result] = await this.connection.require().query(toMysql(sql), params);
     return Array.isArray(result)
       ? { rowsAffected: result.length, parameters }
-      : {
-          rowsAffected: result.affectedRows ?? 0,
-          result: new MysqlDriver().generatedId(result.insertId ?? null) as Scalar,
-          parameters,
-        };
+      : { rowsAffected: result.affectedRows ?? 0, result: null, parameters };
   }
 
   private query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {

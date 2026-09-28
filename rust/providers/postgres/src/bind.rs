@@ -38,20 +38,6 @@ pub fn to_postgres(sql: &str, params: &HashMap<String, Value>) -> (String, Vec<V
     (out, values)
 }
 
-pub fn with_returning(sql: &str) -> String {
-    let trimmed = sql.trim();
-    let head = trimmed
-        .get(..6)
-        .unwrap_or("")
-        .eq_ignore_ascii_case("insert");
-    let returning = trimmed.to_ascii_lowercase().contains("returning");
-    if head && !returning {
-        format!("{} RETURNING id", trimmed.trim_end_matches(';'))
-    } else {
-        sql.to_string()
-    }
-}
-
 pub fn isolation_sql(isolation: IsolationLevel) -> &'static str {
     match isolation {
         IsolationLevel::ReadUncommitted => "READ UNCOMMITTED",

@@ -1,7 +1,7 @@
 use crate::driver::PostgresDriver;
 use datasources::{
-    Column, ColumnDefault, CreateTableStatement, CreateTableStatementRenderer, Driver, Statement,
-    Text,
+    Column, ColumnDefault, CreateTableStatement, CreateTableStatementRenderer, Driver,
+    InsertedIdStatement, SelectStatement, Statement, Text,
 };
 
 pub struct PostgresStatementFactory;
@@ -9,6 +9,7 @@ pub struct PostgresStatementFactory;
 pub enum Transformed<'a> {
     Same(&'a dyn Statement),
     Create(CreateTableStatement),
+    Select(SelectStatement),
 }
 
 impl Transformed<'_> {
@@ -16,6 +17,7 @@ impl Transformed<'_> {
         match self {
             Self::Same(statement) => statement.get_text(),
             Self::Create(statement) => statement.get_text(),
+            Self::Select(statement) => statement.get_text(),
         }
     }
 }
@@ -50,6 +52,12 @@ impl CreateTableStatementRenderer for PostgresStatementFactory {
 
 impl PostgresStatementFactory {
     pub fn transform<'a>(&self, statement: &'a dyn Statement) -> Transformed<'a> {
+        if let Some(inserted) = statement.as_any().downcast_ref::<InsertedIdStatement>() {
+            return Transformed::Select(SelectStatement::text(format!(
+                "SELECT lastval() AS {}",
+                inserted.column
+            )));
+        }
         match statement.as_any().downcast_ref::<CreateTableStatement>() {
             Some(create) if create.table.is_some() => {
                 Transformed::Create(CreateTableStatement::text(self.render(create)))
@@ -103,6 +111,11 @@ mod tests {
         assert!(matches!(factory.transform(&raw), Transformed::Same(_)));
         let delete = DeleteStatement::raw("DELETE FROM users", None);
         assert!(matches!(factory.transform(&delete), Transformed::Same(_)));
+        let inserted = datasources::InsertedIdStatement::new("users", "id");
+        assert_eq!(
+            factory.transform(&inserted).get_text(),
+            "SELECT lastval() AS id"
+        );
     }
 
     #[test]

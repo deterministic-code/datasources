@@ -1,6 +1,5 @@
 import {
   columnType as identityColumnType,
-  generatedId as identityGeneratedId,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -15,7 +14,6 @@ import { XmlConnection } from "./connection.ts";
 
 export class XmlProvider implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
-  generatedId = identityGeneratedId;
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
     XmlConnection.from(options);

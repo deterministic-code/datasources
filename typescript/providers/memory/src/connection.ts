@@ -6,6 +6,7 @@ import {
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
+  type Scalar,
 } from "@datasources/core";
 import { MemoryCommand } from "./command.ts";
 import type { MemoryConnectionOptions } from "./connection-options.ts";
@@ -19,6 +20,7 @@ export class MemoryConnection implements IConnection {
   isOpen = false;
   inTransaction = false;
   private snapshot?: Map<string, MemoryRecord[]>;
+  private readonly inserted = new Map<string, Scalar>();
   private readonly data?: MemoryRecord[] | Record<string, MemoryRecord[]>;
 
   static from = (_options?: DatasourceOptions): MemoryConnection =>
@@ -60,6 +62,14 @@ export class MemoryConnection implements IConnection {
 
   getCollection(): MemoryRecord[] {
     return this.store.getCollection(this.collection);
+  }
+
+  rememberInserted(table: string, id: Scalar): void {
+    this.inserted.set(table, id);
+  }
+
+  insertedId(table: string): Scalar | undefined {
+    return this.inserted.get(table);
   }
 
   rows(table: string | undefined, create: boolean): MemoryRecord[] {

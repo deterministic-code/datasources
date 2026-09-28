@@ -1,13 +1,13 @@
 use crate::connection::{map_err, SqliteConnection};
-use crate::statement_factory::SqliteStatementFactory;
 use crate::converters::{
     BinaryConverter, BoolConverter, DateTimeConverter, DecimalConverter, UuidConverter,
 };
-use crate::driver::SqliteDriver;
+use crate::statement_factory::SqliteStatementFactory;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, Driver, Parameter, Reader, Response, Result, Statement, TypeConverter, Value,
+    DatasourceError, Parameter, Reader, Response, Result, ReturnStatement, Statement,
+    StatementKind, TypeConverter, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
 use std::collections::HashMap;
@@ -43,22 +43,6 @@ impl SqliteCommand {
         let pairs = bind_pairs(params);
         let bound = as_params(&pairs);
         let mut statement = conn.prepare(sql).map_err(map_err)?;
-        if sql.trim_start().len() >= 6
-            && sql.trim_start()[..6].eq_ignore_ascii_case("SELECT")
-            && statement.column_count() > 0
-        {
-            let mut rows = statement.query(bound.as_slice()).map_err(map_err)?;
-            return Ok(match rows.next().map_err(map_err)? {
-                Some(row) => SqliteExecuteResult {
-                    rows_affected: 1,
-                    result: from_sql(row.get_ref(0).map_err(map_err)?),
-                },
-                None => SqliteExecuteResult {
-                    rows_affected: 0,
-                    result: Value::Null,
-                },
-            });
-        }
         let rows_affected = if statement.column_count() > 0 {
             let mut rows = statement.query(bound.as_slice()).map_err(map_err)?;
             while rows.next().map_err(map_err)?.is_some() {}
@@ -68,7 +52,7 @@ impl SqliteCommand {
         };
         Ok(SqliteExecuteResult {
             rows_affected,
-            result: SqliteDriver.generated_id(Value::Int(conn.last_insert_rowid())),
+            result: Value::Null,
         })
     }
 }
@@ -152,8 +136,33 @@ impl Command for SqliteCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
+        if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
+            return self.first_cell(statement, parameters).await;
+        }
         let text = SqliteStatementFactory.transform(statement).get_text();
         self.execute(&text, parameters).await
+    }
+}
+
+impl SqliteCommand {
+    async fn first_cell(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let reader = self.execute_reader_statement(statement, parameters).await?;
+        if !reader.next().await? {
+            return Ok(Response::of(
+                Value::Null,
+                0,
+                parameters.map(|list| list.to_vec()),
+            ));
+        }
+        let row = reader
+            .current()
+            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
+        let cell = row.into_values().next().unwrap_or(Value::Null);
+        Ok(Response::of(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 

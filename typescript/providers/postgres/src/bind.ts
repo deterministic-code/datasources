@@ -20,11 +20,6 @@ export const toPostgres = (
   return { text, values: names.map((name) => params?.[name] ?? null) };
 };
 
-export const withReturning = (sql: string): string =>
-  /^\s*insert\b/i.test(sql) && !/\breturning\b/i.test(sql)
-    ? `${sql.replace(/;?\s*$/, "")} RETURNING id`
-    : sql;
-
 export const bindParameters = (
   parameters?: Parameter[] | null,
 ): Record<string, Scalar> => {

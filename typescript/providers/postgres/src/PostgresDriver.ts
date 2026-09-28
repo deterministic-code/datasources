@@ -1,6 +1,5 @@
 import {
   DatasourceError,
-  generatedId as identityGeneratedId,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -16,7 +15,6 @@ import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverter
 
 export class PostgresDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = PostgresRowTypeConverters;
-  generatedId = identityGeneratedId;
   columnType = (name: string): string =>
     ({
       int: "INTEGER",
