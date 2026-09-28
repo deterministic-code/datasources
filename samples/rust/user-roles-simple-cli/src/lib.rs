@@ -1,9 +1,8 @@
 pub mod app;
 pub mod as_user_view;
+pub mod columns;
 pub mod commands;
 pub mod console_log;
-pub mod column_types;
-pub mod columns;
 pub mod group_view;
 pub mod migrate;
 pub mod parse;

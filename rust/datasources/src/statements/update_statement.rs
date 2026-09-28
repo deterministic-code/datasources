@@ -17,7 +17,10 @@ impl UpdateStatement {
         }
     }
 
-    pub fn parameter_list(fields: &[Parameter], where_clause: Option<&dyn IWhere>) -> Vec<Parameter> {
+    pub fn parameter_list(
+        fields: &[Parameter],
+        where_clause: Option<&dyn IWhere>,
+    ) -> Vec<Parameter> {
         compose("", where_clause, fields).1
     }
 

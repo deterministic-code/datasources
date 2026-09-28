@@ -6,9 +6,9 @@ use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::encode_rows;
-use crate::stored_enrichment::StoredEnrichment;
 use crate::result::Result;
 use crate::row::Row;
+use crate::stored_enrichment::StoredEnrichment;
 use crate::update_enrichment_strategy::UpdateEnrichmentStrategy;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
@@ -114,14 +114,10 @@ impl DefaultWriteEnrichmentStrategy {
                             create_links(writer.as_ref(), enrichment, parent).await?
                         }
                         WriteMode::Update => {
-                            self.update
-                                .update_linked(entry, enrichment, parent)
-                                .await?
+                            self.update.update_linked(entry, enrichment, parent).await?
                         }
                         WriteMode::Delete => {
-                            self.delete
-                                .delete_linked(entry, enrichment, parent)
-                                .await?
+                            self.delete.delete_linked(entry, enrichment, parent).await?
                         }
                     }
                 }
@@ -145,9 +141,7 @@ impl DefaultWriteEnrichmentStrategy {
                         create_children(writer.as_ref(), enrichment, parent).await?
                     }
                     WriteMode::Update => {
-                        self.update
-                            .update_owned(entry, enrichment, parent)
-                            .await?
+                        self.update.update_owned(entry, enrichment, parent).await?
                     }
                     WriteMode::Delete => {
                         self.delete

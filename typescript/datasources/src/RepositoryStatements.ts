@@ -11,6 +11,7 @@ import type { Field } from "./builders/Field.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 
 export type RepositoryStatements = {
+  columns: readonly string[];
   query: (where?: IWhere) => ISelectStatement;
   insert: (fields: Field[]) => IInsertStatement;
   update: (fields: Field[], where?: IWhere) => IUpdateStatement;
@@ -28,6 +29,7 @@ export const statementsOf = (
   update?: IMapper<IUpdateStatement, IUpdateStatement>,
   deleteMapper?: IMapper<IDeleteStatement, IDeleteStatement>,
 ): RepositoryStatements => ({
+  columns,
   query: (where) => mapped(new SelectStatement({ table, fields: columns, where }), query),
   insert: (fields) => mapped(new InsertStatement(table, fields), insert),
   update: (fields, where) => mapped(new UpdateStatement(table, fields, where), update),

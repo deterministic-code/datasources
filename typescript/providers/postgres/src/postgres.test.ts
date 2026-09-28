@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, generatedId, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, generatedId, columnType, CreateTableStatement, SelectStatement, type IDriver } from "@datasources/core";
 import { bindParameters, toPostgres, withReturning } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
@@ -104,6 +104,9 @@ describe("PostgresConnection", () => {
     expect(await command.executeReader("SELECT * FROM items")).toBeInstanceOf(Object);
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
+    expect(await command.executeStatement(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }])))
+      .toMatchObject({ rowsAffected: 1 });
+    expect(await (await command.executeReaderStatement(new SelectStatement("SELECT 1"))).next()).toBe(true);
     await connection.startTransaction();
     await connection.startTransaction(IsolationLevel.ReadUncommitted);
     await connection.startTransaction(IsolationLevel.ReadCommitted);
@@ -116,6 +119,8 @@ describe("PostgresConnection", () => {
       "INSERT INTO items (id) VALUES (1) RETURNING id",
       "UPDATE items SET n = 1",
       "SELECT * FROM items",
+      "CREATE TABLE users (id INTEGER)",
+      "SELECT 1",
       "BEGIN ISOLATION LEVEL SERIALIZABLE",
       "BEGIN ISOLATION LEVEL READ UNCOMMITTED",
       "BEGIN ISOLATION LEVEL READ COMMITTED",
@@ -250,6 +255,7 @@ describe("Postgres datasource", () => {
         new PostgresTransaction(c as PostgresConnection, isolation),
       rowTypeConverters: PostgresRowTypeConverters,
       generatedId,
+      columnType,
     });
     const ds = new Datasource("postgres", of());
     expect(ds.provider).toBe("postgres");
@@ -281,6 +287,15 @@ describe("Postgres datasource", () => {
     expect(PostgresConnection.from().url).toBe("");
     expect(PostgresConnection.from().schema).toBeUndefined();
     const provider = new PostgresDriver();
+    expect(provider.columnType("int")).toBe("INTEGER");
+    expect(provider.columnType("uuid")).toBe("UUID");
+    expect(provider.columnType("string")).toBe("TEXT");
+    expect(provider.columnType("bool")).toBe("BOOLEAN");
+    expect(provider.columnType("decimal")).toBe("NUMERIC");
+    expect(provider.columnType("float")).toBe("DOUBLE PRECISION");
+    expect(provider.columnType("datetime")).toBe("TIMESTAMPTZ");
+    expect(provider.columnType("binary")).toBe("BYTEA");
+    expect(() => provider.columnType("xml")).toThrow('Unknown postgres type "xml"');
     expect(provider.command(connection)).toBeInstanceOf(PostgresCommand);
     expect(provider.transaction(connection as PostgresConnection).isolation).toBe("serializable");
   });

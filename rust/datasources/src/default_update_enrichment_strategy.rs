@@ -36,7 +36,10 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
             }
         }
         let ids = writer.id_names();
-        let keep: HashSet<String> = related.iter().filter_map(|row| row_key(row, &ids)).collect();
+        let keep: HashSet<String> = related
+            .iter()
+            .filter_map(|row| row_key(row, &ids))
+            .collect();
         for row in existing.iter().filter(|row| {
             row_key(row, &ids)
                 .map(|key| !keep.contains(&key))
@@ -92,7 +95,10 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
         let keep: HashSet<String> = wanted.iter().map(Value::wire_text).collect();
         for row in &existing {
             let id = row.get(&association.related);
-            if id.map(Value::wire_text).is_some_and(|key| keep.contains(&key)) {
+            if id
+                .map(Value::wire_text)
+                .is_some_and(|key| keep.contains(&key))
+            {
                 continue;
             }
             let clause = Where::new(Operator::and(
@@ -105,10 +111,9 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
             writer.delete(row, Some(&clause)).await?;
         }
         for id in wanted {
-            if existing
-                .iter()
-                .any(|row| row.get(&association.related).map(Value::wire_text) == Some(id.wire_text()))
-            {
+            if existing.iter().any(|row| {
+                row.get(&association.related).map(Value::wire_text) == Some(id.wire_text())
+            }) {
                 continue;
             }
             let mut row = Row::new();

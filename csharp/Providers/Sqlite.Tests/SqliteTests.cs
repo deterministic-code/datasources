@@ -62,4 +62,19 @@ public class SqliteTests
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).Execute("x"));
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).ExecuteReader("x"));
     }
+
+    [Fact]
+    public void MapsColumnTypes()
+    {
+        var driver = new SqliteDriver();
+        Assert.Equal("INTEGER", driver.ColumnType("int"));
+        Assert.Equal("TEXT", driver.ColumnType("uuid"));
+        Assert.Equal("TEXT", driver.ColumnType("string"));
+        Assert.Equal("INTEGER", driver.ColumnType("bool"));
+        Assert.Equal("NUMERIC", driver.ColumnType("decimal"));
+        Assert.Equal("REAL", driver.ColumnType("float"));
+        Assert.Equal("TEXT", driver.ColumnType("datetime"));
+        Assert.Equal("BLOB", driver.ColumnType("binary"));
+        Assert.Contains("Unknown sqlite type \"xml\"", Assert.Throws<DatasourceException>(() => driver.ColumnType("xml")).Message);
+    }
 }

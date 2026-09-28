@@ -1,7 +1,9 @@
 use crate::enrichment::Enrichment;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
-use crate::repository_tree_node::{encode_row, encode_rows, source_at, source_key, RepositoryTreeNode};
+use crate::repository_tree_node::{
+    encode_row, encode_rows, source_at, source_key, RepositoryTreeNode,
+};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -41,7 +43,8 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
             }
         }
         for (index_i, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index_i)) else {
+            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index_i))
+            else {
                 continue;
             };
             let Some(related) = index.get(&RepositoryTreeNode::key_of(&key)) else {
@@ -87,7 +90,8 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
             }
         }
         for (index_i, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index_i)) else {
+            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index_i))
+            else {
                 continue;
             };
             let related = index
@@ -104,8 +108,7 @@ fn keys(parents: &[Row], sources: Option<&[Option<Row>]>, from: &str) -> HashMap
     let mut keys = HashMap::new();
     for (index, parent) in parents.iter().enumerate() {
         if let Some(key) = source_key(parent, from, source_at(sources, index)) {
-            keys.entry(RepositoryTreeNode::key_of(&key))
-                .or_insert(key);
+            keys.entry(RepositoryTreeNode::key_of(&key)).or_insert(key);
         }
     }
     keys

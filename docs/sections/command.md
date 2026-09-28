@@ -844,6 +844,8 @@ The connection must be open before `Execute` / `execute` / `execute` or `Execute
 
 Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
 
+MySQL and Postgres run a provider `CreateTableStatementRenderer` on statement `Execute` / `ExecuteReader`. It overrides column type, default, and identity, then the command executes that text. Wrapped create-table text and every other statement pass through. Other dialects send `GetText()` / `getText()` / `get_text()`.
+
 The Rust `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection today.
 
 `ExecuteReader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next`. SQL `AfterCommand` for `ExecuteReader` receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.

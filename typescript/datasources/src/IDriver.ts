@@ -8,6 +8,8 @@ import type { TypeConverter } from "./converters/TypeConverter.ts";
 
 export const generatedId = (id: Cell): Cell => id;
 
+export const columnType = (name: string): string => name;
+
 export interface IDriver {
   connection(options?: DatasourceOptions): IConnection;
   command(connection: IConnection): ICommand;
@@ -17,4 +19,5 @@ export interface IDriver {
   ): ITransaction;
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>;
   generatedId(id: Cell): Cell;
+  columnType(name: string): string;
 }

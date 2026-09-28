@@ -1,4 +1,5 @@
 import {
+  DatasourceError,
   generatedId as identityGeneratedId,
   type Cell,
   type DatasourceOptions,
@@ -16,6 +17,20 @@ import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
 export class MysqlDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = MysqlRowTypeConverters;
   generatedId = identityGeneratedId;
+  columnType = (name: string): string =>
+    ({
+      int: "INT",
+      uuid: "CHAR(36)",
+      string: "TEXT",
+      datetime: "TEXT",
+      bool: "TINYINT",
+      decimal: "DECIMAL(18,4)",
+      float: "DOUBLE",
+      binary: "BLOB",
+    }[name] ??
+    (() => {
+      throw new DatasourceError(`Unknown mysql type "${name}"`);
+    })());
   connection = (options?: DatasourceOptions): IConnection =>
     MysqlConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

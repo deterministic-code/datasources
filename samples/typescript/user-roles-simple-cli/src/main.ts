@@ -19,27 +19,28 @@ const env = (key: string): string => {
   return "";
 };
 
-const connect = (): IConnection => {
+const connect = (): { connection: IConnection; driver: SqliteDriver | MysqlDriver | PostgresDriver } => {
   const url = env("DATASOURCE_URL");
   const schema = env("DATABASE_SCHEMA");
   const provider = providerFromUrl(url);
   const options: DatasourceOptions = schema ? { url, schema } : { url };
-  return ({
-    sqlite: () => new SqliteDriver().connection(options),
-    mysql: () => new MysqlDriver().connection(options),
-    postgres: () => new PostgresDriver().connection(options),
+  const driver = ({
+    sqlite: () => new SqliteDriver(),
+    mysql: () => new MysqlDriver(),
+    postgres: () => new PostgresDriver(),
   }[provider] ?? (() => {
     throw new Error("DATASOURCE_URL is required");
   }))();
+  return { connection: driver.connection(options), driver };
 };
 
 const run = async (args: string[]): Promise<number> => {
   try {
     const parsed = parse(args);
-    const connection = await connect();
+    const { connection, driver } = connect();
     await connection.open();
     const command = connection.createCommand();
-    await migrate(command);
+    await migrate(command, driver);
     const frozen = env("CLI_NOW");
     const now = frozen ? () => new Date(frozen) : () => new Date();
     command.addMiddleware(new ConsoleCommandMiddleware((line) => console.error(line), now));

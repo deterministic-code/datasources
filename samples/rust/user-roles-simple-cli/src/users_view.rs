@@ -26,7 +26,10 @@ pub fn type_map() -> TypeMap {
                     vec![
                         ("id".into(), TypeMapField::column("group_id")),
                         ("name".into(), TypeMapField::column("group_name")),
-                        ("is_enabled".into(), TypeMapField::column("group_is_enabled")),
+                        (
+                            "is_enabled".into(),
+                            TypeMapField::column("group_is_enabled"),
+                        ),
                     ],
                 )),
             ),

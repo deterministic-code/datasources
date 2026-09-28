@@ -35,10 +35,7 @@ pub(crate) async fn load(
     };
     writer
         .read(
-            Some(&Where::new(Operator::equals(
-                enrichment.by.clone(),
-                key,
-            ))),
+            Some(&Where::new(Operator::equals(enrichment.by.clone(), key))),
             None,
         )
         .await

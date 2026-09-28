@@ -17,6 +17,7 @@ Read `docs/writing-providers.md` for the interface. Implement these members:
 - `transaction` — build a transaction; isolation defaults to serializable
 - `rowTypeConverters` — canonical cell converters (`bool`, `datetime`, `uuid`, `decimal`, `binary`). Empty when cells are already canonical
 - `generatedId` — canonicalize an engine insert id before it is stored on the response. Default returns the value unchanged. C# and Rust inherit that default. TypeScript assigns the exported `generatedId`. MySQL C# parses a text insert id into an integer. Call it only for insert identities, not SELECT scalars.
+- `columnType` — SQL type name for a canonical column type. Default returns the name. C# and Rust inherit that default. TypeScript assigns the exported `columnType`. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
 ## Public surface
 

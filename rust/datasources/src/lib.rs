@@ -1,8 +1,12 @@
 mod array_reader;
 mod association;
+mod batch_commands;
 pub mod builders;
 mod built_repository;
+mod bulk_command;
 mod bulk_crud_repository;
+mod bulk_write;
+mod bulk_write_strategy;
 mod cascade_delete_enrichment_strategy;
 mod cascade_delete_update_enrichment_strategy;
 mod collect_reader;
@@ -39,9 +43,9 @@ mod identity_filter;
 mod identity_where_text;
 mod isolation_level;
 mod lazy_write_enrichment_strategy;
-mod nested_to_object_enrichment_strategy;
 pub mod mappers;
 pub mod mocks;
+mod nested_to_object_enrichment_strategy;
 mod parameter;
 mod parameter_direction;
 mod parameters_to_map;
@@ -64,14 +68,17 @@ mod result;
 mod row;
 mod select_statement;
 mod shared_items;
-mod stored_enrichment;
+mod single_commands;
 mod split_statements;
 mod statement_parser;
 pub mod statements;
+mod stored_enrichment;
+mod stored_procedure_commands;
 pub mod stubs;
 mod table_repository_builder;
 mod table_repository_statements;
 mod transaction;
+mod unit_of_work;
 mod update_enrichment_strategy;
 mod value;
 mod where_text;
@@ -80,9 +87,13 @@ mod write_mode;
 
 pub use array_reader::ArrayReader;
 pub use association::Association;
+pub use batch_commands::BatchCommands;
 pub use builders::{Column, Join, JoinKind};
 pub use built_repository::BuiltRepository;
+pub use bulk_command::BulkCommand;
 pub use bulk_crud_repository::BulkCRUDRepository;
+pub use bulk_write::BulkWrite;
+pub use bulk_write_strategy::BulkWriteStrategy;
 pub use cascade_delete_enrichment_strategy::CascadeDeleteEnrichmentStrategy;
 pub use cascade_delete_update_enrichment_strategy::CascadeDeleteUpdateEnrichmentStrategy;
 pub use collect_reader::collect_reader;
@@ -121,7 +132,6 @@ pub use identity_filter::identity_filter;
 pub use identity_where_text::identity_where_text;
 pub use isolation_level::IsolationLevel;
 pub use lazy_write_enrichment_strategy::LazyWriteEnrichmentStrategy;
-pub use nested_to_object_enrichment_strategy::NestedToObjectEnrichmentStrategy;
 pub use mappers::{
     ChangeCasingMapper, DictionaryMapper, FlatToNestedMapper, FlatToNestedMapperTrait,
     IdentityMapper, MappedRow, MappedValue, Mapper, PluralizerMapper, RowTypeMapper,
@@ -131,6 +141,7 @@ pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockDriver, MockReader, MockRepository,
     MockSelectStatement, MockTransaction, MockWhere,
 };
+pub use nested_to_object_enrichment_strategy::NestedToObjectEnrichmentStrategy;
 pub use parameter::Parameter;
 pub use parameter_direction::ParameterDirection;
 pub use parameters_to_map::parameters_to_map;
@@ -146,23 +157,25 @@ pub use repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 pub use repository_factory::{CRUDRepositoryFactory, ReadonlyRepositoryFactory, RepositoryFactory};
 pub use repository_tree::RepositoryTree;
 pub use repository_tree_node::{encode_rows, RepositoryTreeNode};
-pub use stored_enrichment::StoredEnrichment;
 pub use reset::reset;
 pub use response::Response;
 pub use result::Result;
 pub use row::Row;
 pub use select_statement::SelectStatement;
+pub use single_commands::SingleCommands;
 pub use split_statements::split_statements;
 pub use statement_parser::StatementParser;
 pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault,
-    CreateIndexStatement, CreateTableStatement, DeleteStatement, ExecuteStoredProcedureStatement,
-    Expression, ForeignKey, Identifier, InsertStatement, Literal, NotNull, Operator, OrderBy,
-    PrimaryKey, ReferentialAction, ReturnStatement, SelectStatementOptions, SortDirection,
-    Statement, StatementEvaluator, StatementKind, TableConstraint, Text, UniqueConstraint,
-    UpdateStatement, Where,
+    CreateIndexStatement, CreateTableStatement, CreateTableStatementRenderer, DeleteStatement,
+    ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier, InsertStatement, Literal,
+    NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction, ReturnStatement,
+    SelectStatementOptions, SortDirection, Statement, StatementEvaluator, StatementKind,
+    TableConstraint, Text, UniqueConstraint, UpdateStatement, Where,
 };
+pub use stored_enrichment::StoredEnrichment;
+pub use stored_procedure_commands::StoredProcedureBulkWriteStrategy;
 pub use stubs::{
     create_stub_datasource, StubCommand, StubConnection, StubDatasource, StubReader,
     StubRepository, StubTransaction,
@@ -170,6 +183,7 @@ pub use stubs::{
 pub use table_repository_builder::RepositoryBuilder;
 pub use table_repository_statements::RepositoryStatements;
 pub use transaction::Transaction;
+pub use unit_of_work::UnitOfWork;
 pub use update_enrichment_strategy::UpdateEnrichmentStrategy;
 pub use value::Value;
 pub use where_text::WhereText;

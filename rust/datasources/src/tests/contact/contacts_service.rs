@@ -1,3 +1,4 @@
+use crate::crud_repository::CRUDRepository;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
@@ -6,7 +7,6 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::crud_repository::CRUDRepository;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::sync::Arc;
@@ -25,13 +25,61 @@ impl ContactsService {
         mut addresses: CRUDRepository,
         mut phones: CRUDRepository,
     ) -> Self {
-        addresses.add_enriched(crate::enrichment::Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), false), address_types, None);
-        phones.add_enriched(crate::enrichment::Enrichment::new("phone_type_name", "phone_type_id", "id", Some("name".into()), false), phone_types, None);
+        addresses.add_enriched(
+            crate::enrichment::Enrichment::new(
+                "address_type_name",
+                "address_type_id",
+                "id",
+                Some("name".into()),
+                false,
+            ),
+            address_types,
+            None,
+        );
+        phones.add_enriched(
+            crate::enrichment::Enrichment::new(
+                "phone_type_name",
+                "phone_type_id",
+                "id",
+                Some("name".into()),
+                false,
+            ),
+            phone_types,
+            None,
+        );
         contacts
-            .add_enriched(crate::enrichment::Enrichment::new("contact_type_name", "contact_type_id", "id", Some("name".into()), false), types, None)
-            .add_enriched(crate::enrichment::Enrichment::new("contact_source_name", "contact_source_id", "id", Some("name".into()), false), sources, None)
-            .add_enriched(crate::enrichment::Enrichment::new("addresses", "id", "contact_id", None, true), Arc::new(addresses), None)
-            .add_enriched(crate::enrichment::Enrichment::new("phones", "id", "contact_id", None, true), Arc::new(phones), None);
+            .add_enriched(
+                crate::enrichment::Enrichment::new(
+                    "contact_type_name",
+                    "contact_type_id",
+                    "id",
+                    Some("name".into()),
+                    false,
+                ),
+                types,
+                None,
+            )
+            .add_enriched(
+                crate::enrichment::Enrichment::new(
+                    "contact_source_name",
+                    "contact_source_id",
+                    "id",
+                    Some("name".into()),
+                    false,
+                ),
+                sources,
+                None,
+            )
+            .add_enriched(
+                crate::enrichment::Enrichment::new("addresses", "id", "contact_id", None, true),
+                Arc::new(addresses),
+                None,
+            )
+            .add_enriched(
+                crate::enrichment::Enrichment::new("phones", "id", "contact_id", None, true),
+                Arc::new(phones),
+                None,
+            );
         Self { contacts }
     }
 }

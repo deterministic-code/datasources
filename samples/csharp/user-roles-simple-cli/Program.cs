@@ -13,16 +13,21 @@ static async Task<int> Run(string[] args)
         var parsed = Parse.Args(args);
         var url = Env("DATASOURCE_URL") ?? throw new InvalidOperationException("DATASOURCE_URL is required");
         var schema = Env("DATABASE_SCHEMA");
-        var connection = (ProviderFromUrl.From(url) ?? throw new InvalidOperationException("unknown provider")) switch
+        var name = ProviderFromUrl.From(url) ?? throw new InvalidOperationException("unknown provider");
+        IDriver driver = name switch
         {
-            "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["url"] = url }),
-            "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["url"] = url }),
-            "postgres" => new PostgresDriver().Connection(new Dictionary<string, string?> { ["url"] = url, ["schema"] = schema }),
-            var provider => throw new InvalidOperationException($"unknown provider {provider}")
+            "sqlite" => new SqliteDriver(),
+            "mysql" => new MysqlDriver(),
+            "postgres" => new PostgresDriver(),
+            _ => throw new InvalidOperationException($"unknown provider {name}")
         };
+        var options = new Dictionary<string, string?> { ["url"] = url };
+        if (name == "postgres")
+            options["schema"] = schema;
+        var connection = driver.Connection(options);
         await connection.Open();
         var command = connection.CreateCommand();
-        await Migrate.Apply(command);
+        await Migrate.Apply(command, driver);
         var stamp = Env("CLI_NOW");
         command.AddMiddleware(new ConsoleCommandMiddleware(
             Console.Error.WriteLine,

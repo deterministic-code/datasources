@@ -1,6 +1,7 @@
 import { ExpectConsoleMiddleware, type IConnection } from "@datasources/core";
 import { MysqlDriver } from "@datasources/mysql";
 import { PostgresDriver } from "@datasources/postgres";
+import { SqliteDriver } from "@datasources/sqlite";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -160,7 +161,13 @@ describe.sequential("cli e2e", () => {
     await connection.open();
     try {
       const command = connection.createCommand();
-      await migrate(command);
+      await migrate(command, ({
+        sqlite: () => new SqliteDriver(),
+        mysql: () => new MysqlDriver(),
+        postgres: () => new PostgresDriver(),
+      }[connection.provider] ?? (() => {
+        throw new Error(connection.provider);
+      }))());
       const now = () => new Date(spec.now);
       const middleware = new ExpectConsoleMiddleware(expected, now, normalizeConsoleLine);
       command.addMiddleware(middleware);

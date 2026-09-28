@@ -1,4 +1,5 @@
 import {
+  DatasourceError,
   generatedId as identityGeneratedId,
   type Cell,
   type DatasourceOptions,
@@ -16,6 +17,20 @@ import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts
 export class SqliteDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
   generatedId = identityGeneratedId;
+  columnType = (name: string): string =>
+    ({
+      int: "INTEGER",
+      uuid: "TEXT",
+      string: "TEXT",
+      bool: "INTEGER",
+      decimal: "NUMERIC",
+      float: "REAL",
+      datetime: "TEXT",
+      binary: "BLOB",
+    }[name] ??
+    (() => {
+      throw new DatasourceError(`Unknown sqlite type "${name}"`);
+    })());
   connection = (options?: DatasourceOptions): IConnection =>
     SqliteConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

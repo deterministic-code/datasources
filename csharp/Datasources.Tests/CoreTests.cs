@@ -2,6 +2,11 @@ using Datasources;
 
 namespace Datasources.Tests;
 
+sealed class ReplacedRenderer : CreateTableStatementRenderer
+{
+    public override string Render(CreateTableStatement statement) => "CREATE TABLE replaced";
+}
+
 public class CoreTests
 {
     static readonly string[] EnvKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "DEFAULT_PROVIDER", "DEFAULT_DATASOURCE_URL", "PROVIDER"];
@@ -188,6 +193,7 @@ public class CoreTests
         Assert.Equal("DELETE FROM users", new DeleteStatement("users").GetText());
         var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
         Assert.Equal("CREATE TABLE users (id INTEGER, name TEXT)", createTable.GetText());
+        Assert.Equal("CREATE TABLE replaced", new ReplacedRenderer().Render(createTable));
         var namedTable = new CreateTableStatement(
             "orders",
             [

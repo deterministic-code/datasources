@@ -21,11 +21,15 @@ pub fn args(args: &[String]) -> Result<CliCommand> {
             password: password.clone(),
         })),
         [cmd, name] if cmd == "add-role" => Ok(CliCommand::AddRole(AddRole { name: name.clone() })),
-        [cmd, name] if cmd == "add-group" => Ok(CliCommand::AddGroup(AddGroup { name: name.clone() })),
-        [cmd, username, role] if cmd == "add-user-role" => Ok(CliCommand::AddUserRole(AddUserRole {
-            username: username.clone(),
-            role: role.clone(),
-        })),
+        [cmd, name] if cmd == "add-group" => {
+            Ok(CliCommand::AddGroup(AddGroup { name: name.clone() }))
+        }
+        [cmd, username, role] if cmd == "add-user-role" => {
+            Ok(CliCommand::AddUserRole(AddUserRole {
+                username: username.clone(),
+                role: role.clone(),
+            }))
+        }
         [cmd, username, group] if cmd == "add-user-group" => {
             Ok(CliCommand::AddUserGroup(AddUserGroup {
                 username: username.clone(),

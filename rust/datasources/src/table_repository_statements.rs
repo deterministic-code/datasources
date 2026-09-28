@@ -39,6 +39,10 @@ impl RepositoryStatements {
         }
     }
 
+    pub(crate) fn columns(&self) -> &[String] {
+        &self.columns
+    }
+
     pub fn query(&self, where_clause: Option<&dyn IWhere>) -> SelectStatement {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
         let built = SelectStatement::new(SelectStatementOptions {
@@ -53,7 +57,9 @@ impl RepositoryStatements {
                 statement
             }
             None => match where_clause {
-                Some(predicate) => SelectStatement::with_where(text, WhereText::new(predicate.get_text())),
+                Some(predicate) => {
+                    SelectStatement::with_where(text, WhereText::new(predicate.get_text()))
+                }
                 None => SelectStatement::text(text),
             },
         }

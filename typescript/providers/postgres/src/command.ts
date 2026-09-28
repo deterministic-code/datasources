@@ -8,9 +8,11 @@ import {
   type Cells,
   type ICommand,
   type IReader,
+  type IStatement,
   type Parameter,
   type Response,
 } from "@datasources/core";
+import { PostgresStatementFactory } from "./PostgresStatementFactory.ts";
 import { bindParameters, toPostgres, withReturning } from "./bind.ts";
 import { PostgresDriver } from "./PostgresDriver.ts";
 import type { PostgresConnection } from "./connection.ts";
@@ -54,6 +56,20 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
         rows: [],
       };
     });
+  }
+
+  async executeReaderStatement(
+    statement: IStatement,
+    parameters?: Parameter[],
+  ): Promise<IReader<Cells>> {
+    return this.executeReader(
+      new PostgresStatementFactory().transform(statement).getText(),
+      parameters,
+    );
+  }
+
+  async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    return this.execute(new PostgresStatementFactory().transform(statement).getText(), parameters);
   }
 
   async execute(

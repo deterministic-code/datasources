@@ -22,7 +22,7 @@ use crate::row::Row;
 use crate::shared_items::SharedItems;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::table_repository_builder::RepositoryBuilder;
-use crate::transaction::Transaction;
+use crate::unit_of_work::UnitOfWork;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
@@ -101,9 +101,11 @@ impl CRUDRepository {
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let (via, persist) = via.into_repos();
-        self.readonly.enrichments.lock().expect("enrichments").push(
-            StoredEnrichment::direct(enrichment, via, persist, strategy),
-        );
+        self.readonly
+            .enrichments
+            .lock()
+            .expect("enrichments")
+            .push(StoredEnrichment::direct(enrichment, via, persist, strategy));
         self
     }
 
@@ -116,9 +118,11 @@ impl CRUDRepository {
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let (via, _) = via.into_repos();
-        self.readonly.enrichments.lock().expect("enrichments").push(
-            StoredEnrichment::linked(enrichment, via, link, strategy),
-        );
+        self.readonly
+            .enrichments
+            .lock()
+            .expect("enrichments")
+            .push(StoredEnrichment::linked(enrichment, via, link, strategy));
         self
     }
 
@@ -134,29 +138,8 @@ impl CRUDRepository {
         self.readonly.enriched()
     }
 
-    pub(crate) async fn begin_transaction(&self) -> Result<Option<Arc<dyn Transaction>>> {
-        if !self.write.use_transaction() {
-            return Ok(None);
-        }
-        Ok(Some(self.readonly.connection.start_transaction(None).await?))
-    }
-
-    pub(crate) async fn finish_transaction<T>(
-        &self,
-        txn: Option<Arc<dyn Transaction>>,
-        result: Result<T>,
-    ) -> Result<T> {
-        match (txn, result) {
-            (None, result) => result,
-            (Some(txn), Ok(value)) => {
-                txn.commit().await?;
-                Ok(value)
-            }
-            (Some(txn), Err(error)) => {
-                txn.abort().await?;
-                Err(error)
-            }
-        }
+    pub(crate) fn use_transaction(&self) -> bool {
+        self.write.use_transaction()
     }
 
     pub(crate) async fn create_core(&self, item: &mut Row) -> Result<Row> {
@@ -195,7 +178,11 @@ impl CRUDRepository {
             .unwrap_or_else(|| item.clone()))
     }
 
-    pub(crate) async fn update_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    pub(crate) async fn update_core(
+        &self,
+        item: &Row,
+        by_where: Option<&dyn IWhere>,
+    ) -> Result<Response> {
         let stored = if self.enriched() {
             let entries = self.readonly.enrichments.lock().expect("enrichments");
             strip_enriched(item, &entries)
@@ -216,7 +203,11 @@ impl CRUDRepository {
         Ok(response)
     }
 
-    pub(crate) async fn delete_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    pub(crate) async fn delete_core(
+        &self,
+        item: &Row,
+        by_where: Option<&dyn IWhere>,
+    ) -> Result<Response> {
         if self.enriched() {
             let mut parent = item.clone();
             self.write
@@ -309,11 +300,7 @@ impl CRUDRepository {
         Ok(())
     }
 
-    pub(crate) async fn save(
-        &self,
-        item: &Row,
-        by_where: Option<&dyn IWhere>,
-    ) -> Result<Response> {
+    pub(crate) async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(memory) = self.readonly.memory_items() {
             return Ok(memory.save(item));
         }
@@ -459,21 +446,33 @@ impl IReadonlyRepository for CRUDRepository {
 #[async_trait]
 impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        let txn = self.begin_transaction().await?;
-        let result = self.create_core(item).await;
-        self.finish_transaction(txn, result).await
+        if !self.use_transaction() {
+            return self.create_core(item).await;
+        }
+        let connection = Arc::clone(&self.readonly.connection);
+        UnitOfWork::new(connection)
+            .in_transaction(self.create_core(item))
+            .await
     }
 
     async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let txn = self.begin_transaction().await?;
-        let result = self.update_core(item, by_where).await;
-        self.finish_transaction(txn, result).await
+        if !self.use_transaction() {
+            return self.update_core(item, by_where).await;
+        }
+        let connection = Arc::clone(&self.readonly.connection);
+        UnitOfWork::new(connection)
+            .in_transaction(self.update_core(item, by_where))
+            .await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let txn = self.begin_transaction().await?;
-        let result = self.delete_core(item, by_where).await;
-        self.finish_transaction(txn, result).await
+        if !self.use_transaction() {
+            return self.delete_core(item, by_where).await;
+        }
+        let connection = Arc::clone(&self.readonly.connection);
+        UnitOfWork::new(connection)
+            .in_transaction(self.delete_core(item, by_where))
+            .await
     }
 
     fn id_names(&self) -> Vec<String> {

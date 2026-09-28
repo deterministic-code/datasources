@@ -9,6 +9,7 @@ import {
   IsolationLevel,
   type Cells,
   generatedId,
+  columnType,
   type IDriver,
   type Scalar,
 } from "@datasources/core";
@@ -186,6 +187,7 @@ describe("Sqlite datasource", () => {
         new SqliteTransaction(c as SqliteConnection, isolation),
       rowTypeConverters: SqliteRowTypeConverters,
       generatedId,
+      columnType,
     });
     const ds = new Datasource("sqlite", of());
     expect(ds.provider).toBe("sqlite");
@@ -213,6 +215,15 @@ describe("Sqlite datasource", () => {
     expect(SqliteConnection.from({ database_url: "sqlite:///:memory:" }).filename).toBe(":memory:");
     expect(SqliteConnection.from().filename).toBe(":memory:");
     const provider = new SqliteDriver();
+    expect(provider.columnType("int")).toBe("INTEGER");
+    expect(provider.columnType("uuid")).toBe("TEXT");
+    expect(provider.columnType("string")).toBe("TEXT");
+    expect(provider.columnType("bool")).toBe("INTEGER");
+    expect(provider.columnType("decimal")).toBe("NUMERIC");
+    expect(provider.columnType("float")).toBe("REAL");
+    expect(provider.columnType("datetime")).toBe("TEXT");
+    expect(provider.columnType("binary")).toBe("BLOB");
+    expect(() => provider.columnType("xml")).toThrow(DatasourceError);
     expect(provider.command(connection)).toBeInstanceOf(SqliteCommand);
     expect(provider.transaction(connection as SqliteConnection).isolation).toBe("serializable");
   });

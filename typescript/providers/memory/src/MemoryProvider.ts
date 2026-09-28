@@ -1,4 +1,5 @@
 import {
+  columnType as identityColumnType,
   generatedId as identityGeneratedId,
   type Cell,
   type DatasourceOptions,
@@ -15,6 +16,7 @@ import { MemoryTransaction } from "./transaction.ts";
 export class MemoryProvider implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   generatedId = identityGeneratedId;
+  columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
     MemoryConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

@@ -2,8 +2,8 @@ use crate::connection::PostgresConnection;
 use crate::converters;
 use crate::transaction::PostgresTransaction;
 use datasources::{
-    downcast_connection, Command, Connection, Driver, IsolationLevel, Transaction, TypeConverter,
-    Value,
+    downcast_connection, Command, Connection, DatasourceError, Driver, IsolationLevel, Result,
+    Transaction, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -32,5 +32,48 @@ impl Driver for PostgresDriver {
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
         converters::row_type_converters()
+    }
+
+    fn column_type(&self, name: &str) -> Result<String> {
+        Ok(match name {
+            "int" => "INTEGER",
+            "uuid" => "UUID",
+            "string" => "TEXT",
+            "bool" => "BOOLEAN",
+            "decimal" => "NUMERIC",
+            "float" => "DOUBLE PRECISION",
+            "datetime" => "TIMESTAMPTZ",
+            "binary" => "BYTEA",
+            _ => {
+                return Err(DatasourceError::message(format!(
+                    "Unknown postgres type \"{name}\""
+                )))
+            }
+        }
+        .into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PostgresDriver;
+    use datasources::Driver;
+
+    #[test]
+    fn maps_column_types() {
+        let driver = PostgresDriver;
+        assert_eq!(driver.column_type("int").unwrap(), "INTEGER");
+        assert_eq!(driver.column_type("uuid").unwrap(), "UUID");
+        assert_eq!(driver.column_type("string").unwrap(), "TEXT");
+        assert_eq!(driver.column_type("bool").unwrap(), "BOOLEAN");
+        assert_eq!(driver.column_type("decimal").unwrap(), "NUMERIC");
+        assert_eq!(driver.column_type("float").unwrap(), "DOUBLE PRECISION");
+        assert_eq!(driver.column_type("datetime").unwrap(), "TIMESTAMPTZ");
+        assert_eq!(driver.column_type("binary").unwrap(), "BYTEA");
+        assert!(driver
+            .column_type("xml")
+            .unwrap_err()
+            .to_string()
+            .contains("Unknown postgres type \"xml\""));
     }
 }

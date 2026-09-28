@@ -6,6 +6,7 @@ pub struct Column {
     pub type_name: String,
     pub default: Option<ColumnDefault>,
     pub not_null: Option<NotNull>,
+    pub identity: bool,
 }
 
 impl Column {
@@ -15,6 +16,14 @@ impl Column {
             type_name: type_name.into(),
             default: None,
             not_null: None,
+            identity: false,
+        }
+    }
+
+    pub fn identity(self) -> Self {
+        Self {
+            identity: true,
+            ..self
         }
     }
 

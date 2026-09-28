@@ -152,7 +152,7 @@ public sealed class ApiTests
     {
         var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["filename"] = ":memory:" });
         await connection.Open();
-        await Migrate.Apply(connection.CreateCommand());
+        await Migrate.Apply(connection.CreateCommand(), new SqliteDriver());
         var contacts = new ContactsRepository(connection);
         var legacy = new LegacyContactRepository(connection);
         if (middleware is not null)

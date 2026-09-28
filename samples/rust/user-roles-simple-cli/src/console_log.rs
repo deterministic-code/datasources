@@ -9,11 +9,17 @@ fn regex(source: &str) -> &'static Regex {
     static UPDATED: OnceLock<Regex> = OnceLock::new();
     static TOKEN: OnceLock<Regex> = OnceLock::new();
     match source {
-        "date" => DATE.get_or_init(|| Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z").expect("date")),
-        "uuid" => UUID.get_or_init(|| {
-            Regex::new(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b").expect("uuid")
+        "date" => DATE.get_or_init(|| {
+            Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z").expect("date")
         }),
-        "ident" => IDENT.get_or_init(|| Regex::new(r#"[\"`]([A-Za-z_][A-Za-z0-9_]*)[\"`]"#).expect("ident")),
+        "uuid" => UUID.get_or_init(|| {
+            Regex::new(
+                r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b",
+            )
+            .expect("uuid")
+        }),
+        "ident" => IDENT
+            .get_or_init(|| Regex::new(r#"[\"`]([A-Za-z_][A-Za-z0-9_]*)[\"`]"#).expect("ident")),
         "password" => PASSWORD.get_or_init(|| Regex::new(r"password: [^,}\]]+").expect("password")),
         "updated" => UPDATED.get_or_init(|| Regex::new(r"updated: [^,}\]]+").expect("updated")),
         _ => TOKEN.get_or_init(|| Regex::new(r"[A-Za-z0-9+/]{4,}={0,2}").expect("token")),
@@ -22,7 +28,9 @@ fn regex(source: &str) -> &'static Regex {
 
 pub fn normalize_console_line(line: &str) -> String {
     let signed = match line.rfind("] ") {
-        Some(duration) if line.ends_with("ms") || line.ends_with("μs") => line[..=duration].to_string(),
+        Some(duration) if line.ends_with("ms") || line.ends_with("μs") => {
+            line[..=duration].to_string()
+        }
         _ => line.to_string(),
     };
     let dated = regex("date").replace_all(&signed, "<date>");
@@ -33,7 +41,9 @@ pub fn normalize_console_line(line: &str) -> String {
     regex("token")
         .replace_all(&stamped, |caps: &Captures| {
             let value = &caps[0];
-            if value.chars().any(|c| c.is_ascii_digit()) && value.chars().any(|c| c.is_ascii_alphabetic()) {
+            if value.chars().any(|c| c.is_ascii_digit())
+                && value.chars().any(|c| c.is_ascii_alphabetic())
+            {
                 "<token>".to_string()
             } else {
                 value.to_string()
@@ -55,7 +65,9 @@ fn mask_update_result(line: &str) -> String {
         return line.to_string();
     };
     let rest = &line[at + "result: ".len()..];
-    let end = rest.find(|c: char| c == ',' || c == '}').unwrap_or(rest.len());
+    let end = rest
+        .find(|c: char| c == ',' || c == '}')
+        .unwrap_or(rest.len());
     format!("{}result: <id>{}", &line[..at], &rest[end..])
 }
 

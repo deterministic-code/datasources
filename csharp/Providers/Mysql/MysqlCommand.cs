@@ -30,6 +30,12 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             return (Response.Of(result.Result, result.RowsAffected, result.Parameters), (IReadOnlyList<Row>)[]);
         });
 
+    public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        ExecuteReader(new MysqlStatementFactory().Transform(statement).GetText(), parameters);
+
+    public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        Execute(new MysqlStatementFactory().Transform(statement).GetText(), parameters);
+
     async Task<MysqlExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
         using var command = Bind(sql, parameters);

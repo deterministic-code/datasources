@@ -1,4 +1,6 @@
 using Datasources;
+using Datasources.Mysql;
+using Datasources.Sqlite;
 
 namespace ContactsCrudEnrichedMediumRest.Tests;
 
@@ -8,7 +10,7 @@ public sealed class MigrateTests
     public async Task SqliteMigrateSkipsProcedures()
     {
         var command = new MockCommand(new MockConnection { Provider = "sqlite" });
-        await Migrate.Apply(command);
+        await Migrate.Apply(command, new SqliteDriver());
         Assert.Contains(command.ExecuteCalls, call => call.Text.StartsWith("PRAGMA", StringComparison.Ordinal));
         Assert.Contains(command.ExecuteCalls, call => call.Text.Contains("CREATE TABLE IF NOT EXISTS"));
         Assert.Contains(command.ExecuteCalls, call => call.Text.Contains("m_Name"));
@@ -19,7 +21,7 @@ public sealed class MigrateTests
     public async Task MysqlMigrateInstallsProcedures()
     {
         var command = new MockCommand(new MockConnection { Provider = "mysql" });
-        await Migrate.Apply(command);
+        await Migrate.Apply(command, new MysqlDriver());
         Assert.Contains(command.ExecuteCalls, call => call.Text.Contains("CREATE PROCEDURE add_contact"));
         Assert.Contains(command.ExecuteCalls, call => call.Text.Contains("`tbl_Contacts`"));
         Assert.Contains(command.ExecuteCalls, call => call.Text.Contains("m_FirstName"));

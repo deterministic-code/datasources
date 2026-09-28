@@ -6,4 +6,5 @@ export interface Column {
   type: string;
   default?: ColumnDefault;
   notNull?: NotNull;
+  identity?: boolean;
 }

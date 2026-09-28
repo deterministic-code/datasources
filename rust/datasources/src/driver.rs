@@ -22,4 +22,8 @@ pub trait Driver: Send + Sync {
     fn generated_id(&self, id: Value) -> Value {
         id
     }
+
+    fn column_type(&self, name: &str) -> crate::Result<String> {
+        Ok(name.to_string())
+    }
 }

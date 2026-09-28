@@ -2,7 +2,7 @@ use crate::app::App;
 use crate::commands::lookup_id;
 use crate::schema;
 use datasources::{
-    ExecuteStoredProcedureStatement, Operator, Parameter, Result, UpdateStatement, IWhere, Where,
+    ExecuteStoredProcedureStatement, IWhere, Operator, Parameter, Result, UpdateStatement, Where,
 };
 
 pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<String> {

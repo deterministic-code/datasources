@@ -4,7 +4,7 @@ export type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
 export type { IDriver } from "./IDriver.ts";
-export { generatedId } from "./IDriver.ts";
+export { generatedId, columnType } from "./IDriver.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory, bindInstall } from "./DatasourceFactory.ts";
 export type {
@@ -52,6 +52,12 @@ export { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 export { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStrategy.ts";
 export { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
+export type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
+export type { IBulkWrite } from "./IBulkWrite.ts";
+export type { BulkCommand } from "./BulkCommand.ts";
+export { SingleCommands } from "./SingleCommands.ts";
+export { BatchCommands } from "./BatchCommands.ts";
+export { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStrategy.ts";
 export { RepositoryTree } from "./RepositoryTree.ts";
 export { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 export { CRUDRepository } from "./CRUDRepository.ts";
@@ -63,6 +69,7 @@ export type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 export type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 export type { Response } from "./Response.ts";
 export type { ITransaction } from "./ITransaction.ts";
+export { UnitOfWork } from "./UnitOfWork.ts";
 export { IsolationLevel } from "./IsolationLevel.ts";
 export type { IsolationLevel as IsolationLevelName } from "./IsolationLevel.ts";
 export type { Comparison } from "./statements/index.ts";
@@ -72,6 +79,7 @@ export {
   ColumnDefault,
   CreateIndexStatement,
   CreateTableStatement,
+  CreateTableStatementRenderer,
   DeleteStatement,
   ForeignKey,
   Identifier,

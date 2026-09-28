@@ -16,4 +16,16 @@ public sealed class MysqlDriver : IDriver
         Value.Text(var text) when long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) => new Value.Int(n),
         _ => id
     };
+
+    public string ColumnType(string name) => name switch
+    {
+        "int" => "INT",
+        "uuid" => "CHAR(36)",
+        "string" or "datetime" => "TEXT",
+        "bool" => "TINYINT",
+        "decimal" => "DECIMAL(18,4)",
+        "float" => "DOUBLE",
+        "binary" => "BLOB",
+        _ => throw new DatasourceException($"Unknown mysql type \"{name}\"")
+    };
 }
