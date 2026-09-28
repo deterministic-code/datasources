@@ -20,6 +20,7 @@ internal sealed class PostgresStatementFactory : CreateTableStatementRenderer
     public IStatement Transform(IStatement statement) => statement switch
     {
         CreateTableStatement { Table: not null } create => new CreateTableStatement(Render(create)),
+        InsertedIdStatement inserted => new SelectStatement($"SELECT lastval() AS {inserted.Column}"),
         _ => statement
     };
 }

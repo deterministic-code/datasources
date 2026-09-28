@@ -33,10 +33,10 @@ public class MysqlCommandIntegrationTests
                 """);
             var start = new Parameter("start_n", 4);
             var result = new Parameter("result", ParameterDirection.Output);
-            var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [start, result]).GetText(), [start, result]);
+            var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [start, result]), [start, result]);
             Assert.Equal(new Value.Int(5), call.Parameters![1].Value);
             var n = new Parameter("n", 4);
-            var ret = await command.Execute(new ReturnStatement("add_one", [n]).GetText(), [n]);
+            var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
             Assert.Equal(new Value.Int(5), ret.Result);
         }
         finally

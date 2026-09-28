@@ -81,6 +81,7 @@ public class CRUDRepositoryOptionsTests
         Assert.Equal("UPDATE users SET name = $name RETURNING id", updated.GetText());
         Assert.Equal("name", Assert.Single(UpdateStatement.ParameterList([new Parameter("name", "a")])).Name);
         Assert.Equal("DELETE FROM users RETURNING id", statements.Delete().GetText());
+        Assert.Equal("users.id", statements.SelectInsertedId("id").GetText());
     }
 
     [Fact]
@@ -95,6 +96,24 @@ public class CRUDRepositoryOptionsTests
         var built = new ReturnStatement("add", [new Parameter("id", 1)]);
         var statement = options.Return is { } map ? map.Map(built) : built;
         Assert.Equal("SELECT add($id) /* mapped */", statement.GetText());
+    }
+
+    [Fact]
+    public async Task ReturnMapperReadsTheInsertedId()
+    {
+        var (repo, command) = Create(new CRUDRepositoryOptions<UserRow>
+        {
+            Entity = "users",
+            Return = new TransformMapper<IReturnStatement, IReturnStatement>(
+                ret => new ReturnStatement($"{ret.GetText()} /* mapped */"),
+                ret => ret)
+        });
+        command.Reader = new MockReader<Row>([new Row { ["add"] = 2 }]);
+        command.Response = new Response(Value.Null.Instance, 1);
+        var created = await repo.Create(new UserRow { name = "a" });
+        Assert.Equal(2, created.id);
+        Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
+        Assert.Equal("SELECT id($name) /* mapped */", command.ExecuteReaderCalls[0].Text);
     }
 
     [Fact]

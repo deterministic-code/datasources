@@ -3227,7 +3227,7 @@ while (await reader.next()) {
 
 #### Parameter direction and Response.Parameters
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L232-L235)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L225-L228)
 
 ```csharp
         "t",
@@ -3236,7 +3236,7 @@ while (await reader.next()) {
 Assert.Throws<InvalidOperationException>(() =>
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1128-L1138)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1114-L1124)
 
 ```rust
 let max_n = Aggregate::max("n", None);
@@ -4597,7 +4597,7 @@ var byId = new WhereText("id = 1");
 var withWhere = new SelectStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1201-L1204)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1187-L1190)
 
 ```rust
     .not_null(NotNull::new(Some("nn_id"))),
@@ -4616,7 +4616,7 @@ const withWhere = new SelectStatement("SELECT 1", where);
 
 #### Compile a SELECT
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L133-L135)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L126-L128)
 
 ```csharp
 var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
@@ -4628,7 +4628,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L940-L947)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L926-L933)
 
 ```rust
     Where::new(Operator::Equals {
@@ -4661,7 +4661,7 @@ SELECT id, name FROM users WHERE id = $id
 
 #### Group, aggregate, order, and limit
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L162-L171)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L155-L164)
 
 ```csharp
 var grouped = new SelectStatement(new()
@@ -4682,7 +4682,7 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L991-L1005)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L977-L991)
 
 ```rust
 .get_text()
@@ -4723,7 +4723,7 @@ SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN custom
 
 #### Group rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L173-L173)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L166-L166)
 
 ```csharp
 var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
@@ -4735,7 +4735,7 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1010-L1013)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L996-L999)
 
 ```rust
     left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -4764,7 +4764,7 @@ SELECT id FROM users GROUP BY id
 
 #### Aggregate without grouping
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L175-L175)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L168-L168)
 
 ```csharp
 var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
@@ -4776,7 +4776,7 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1015-L1018)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1001-L1004)
 
 ```rust
 
@@ -4802,7 +4802,7 @@ SELECT MIN(n), MAX(n) FROM users
 
 #### Order rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L177-L177)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L170-L170)
 
 ```csharp
 var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
@@ -4814,7 +4814,7 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1020-L1023)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1006-L1009)
 
 ```rust
     .get_text(),
@@ -4843,7 +4843,7 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 
 #### Limit rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L179-L179)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L172-L172)
 
 ```csharp
 var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
@@ -4855,7 +4855,7 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1028-L1031)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1014-L1017)
 
 ```rust
     .parameters()
@@ -5132,7 +5132,7 @@ Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](#command) 
 
 #### Compile an INSERT
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L156-L157)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L149-L150)
 
 ```csharp
 Join.Inner("orders", "users.id", "orders.user_id"),
@@ -5145,7 +5145,7 @@ Join.Left("payments", "orders.id", "payments.order_id"),
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L993)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L985-L989)
 
 ```rust
     )))),
@@ -5459,7 +5459,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 
 #### Compile an UPDATE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L158-L160)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L151-L153)
 
 ```csharp
         Join.Right("profiles", "users.id", "profiles.user_id"),
@@ -5473,7 +5473,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L994-L999)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L985)
 
 ```rust
 left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
@@ -5794,7 +5794,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 
 #### Compile a DELETE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L163-L165)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L156-L158)
 
 ```csharp
 {
@@ -5808,7 +5808,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1003-L1008)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L994)
 
 ```rust
 assert!(Where::new(Operator::Equals {
@@ -6769,7 +6769,7 @@ A compiled statement stores the table, columns, and constraints. `GetText()` / `
 
 #### Compile a CREATE TABLE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L167-L168)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L160-L161)
 
 ```csharp
 Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
@@ -6782,7 +6782,7 @@ GroupBy = ["status"],
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1009-L1017)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L995-L1003)
 
 ```rust
 assert!(Where::new(Operator::In {
@@ -6817,7 +6817,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 
 #### Compile named constraints
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L169-L182)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L162-L175)
 
 ```csharp
     OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
@@ -6831,7 +6831,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1022-L1045)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1008-L1031)
 
 ```rust
 );
@@ -7099,7 +7099,7 @@ Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX nam
 
 #### Compile a CREATE INDEX
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L215-L216)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L208-L209)
 
 ```csharp
 "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
@@ -7112,7 +7112,7 @@ new CreateTableStatement(
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1090-L1097)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1076-L1083)
 
 ```rust
         ..SelectStatementOptions::new("users", &["users.id"])
@@ -7143,7 +7143,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 
 #### Compile a CREATE UNIQUE INDEX
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L217-L219)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L210-L212)
 
 ```csharp
 "items",
@@ -7157,7 +7157,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1099-L1101)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1085-L1087)
 
 ```rust
 })
@@ -7422,7 +7422,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 
 #### Compile a CALL
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L220-L221)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L213-L214)
 
 ```csharp
 
@@ -7434,7 +7434,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1103-L1104)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1089-L1090)
 
 ```rust
 let count = Aggregate::count("*", Some("n"));
@@ -7698,7 +7698,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 
 #### Compile a SELECT function call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L223-L224)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L216-L217)
 
 ```csharp
 
@@ -7710,7 +7710,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1109-L1110)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1095-L1096)
 
 ```rust
 "customers",
@@ -8302,7 +8302,7 @@ Construct the predicate with [Operator](#operator) records, then wrap it: `new W
 
 #### Compare, groups, not, and in
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L58-L60)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L51-L53)
 
 ```csharp
 new Operator.Equals("id", 1),
@@ -8321,7 +8321,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L664-L668)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L650-L654)
 
 ```rust
 assert!(txn.commit().await.is_err());
@@ -8389,7 +8389,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2109-L2115)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2095-L2101)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -8433,7 +8433,7 @@ username = $username AND is_enabled = $is_enabled
 
 #### Attach to a query
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L132-L135)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L125-L128)
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
@@ -8446,7 +8446,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L943-L949)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L935)
 
 ```rust
     })
@@ -8948,13 +8948,13 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 #### Compare tree
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L83-L86)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L76-L79)
 
 ```csharp
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L757-L772)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L743-L758)
 
 ```rust
 
@@ -8992,7 +8992,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2109-L2115)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2095-L2101)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -9153,13 +9153,13 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 
 #### Match and miss
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L250-L251)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L243-L244)
 
 ```csharp
 var ret = new ReturnStatement("add", fields);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1180-L1184)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1166-L1170)
 
 ```rust
     &[],
@@ -11237,7 +11237,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1452-L1468)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1438-L1454)
 
 ```rust
         &row
@@ -11296,7 +11296,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1489-L1495)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1475-L1481)
 
 ```rust
 
@@ -13002,7 +13002,7 @@ pub struct BuiltRepository
 
 ### Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After execute, insert writes `Response.Result` onto the single id column through the driver's generated-id method and the row converter. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, maps it, and copies the id onto the entity. The driver statement factory formats that statement. A stored-procedure create reads that id from the `Return` mapper instead. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
@@ -13020,7 +13020,7 @@ See [Bulk repository](#bulk-repository) for list writes.
 
 #### User from the type
 
-The table, columns, and id come from `User`. Create omits `id`. SQLite writes `last_insert_rowid` back onto `user.id`.
+The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L383-L410)
 
@@ -13646,7 +13646,7 @@ var omitted = await repo.Create(new Item { name = "ada" });
 let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
 conn.open().await.unwrap();
 let command = SqliteCommand::new(conn.clone());
-for statement in datasources_sql_specs::schema_tables("null-write-item", "sqlite", quote_ident, None) {
+for statement in datasources_sql_specs::schema_tables("null-write-item", quote_ident, None) {
     command.execute_statement(&statement, None).await.unwrap();
 }
 let mut options = CRUDRepositoryOptions::default();
@@ -14135,7 +14135,7 @@ var response = await Repo(parentsRepo, childrenRepo).Create(
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1906-L1920)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1892-L1906)
 
 ```rust
 let command = Arc::new(MockCommand::new());
@@ -17471,7 +17471,6 @@ public interface IDriver
 | [Command(connection)](#csharp-idriver-command-connection) | Builds an [ICommand](#command) for the connection. |
 | [Transaction(connection, isolation)](#csharp-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
 | [RowTypeConverters](#csharp-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
-| [GeneratedId(id)](#csharp-idriver-generatedid-id) | Canonicalizes an engine insert id before it is stored on `Response.Result`. The default returns `id`. MySQL parses a text insert id into `Value.Int`. |
 | [ColumnType(name)](#csharp-idriver-columntype-name) | SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default returns `name`. MySQL, Postgres, and SQLite override it. An unknown name throws. |
 
 ###### Connection(options) {#csharp-idriver-connection-options}
@@ -17548,26 +17547,6 @@ IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get
 **Returns**
 
 `IReadOnlyDictionary<string, TypeConverter<Value, Value>>`
-
-###### GeneratedId(id) {#csharp-idriver-generatedid-id}
-
-Canonicalizes an engine insert id before it is stored on `Response.Result`. The default returns `id`. MySQL parses a text insert id into `Value.Int`.
-
-**Definition**
-
-```csharp
-Value GeneratedId(Value id)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | insert identity from the engine |
-
-**Returns**
-
-[Value](./sections/value.md)
 
 ###### ColumnType(name) {#csharp-idriver-columntype-name}
 
@@ -17729,11 +17708,11 @@ fn column_type(&self, name: &str) -> Result<String>
 
 `rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
-`generatedId` / `GeneratedId` / `generated_id` runs only on an insert identity (`last_insert_rowid`, `LastInsertedId`, `RETURNING` on `INSERT`, the memory inserted id) before that value is stored on `Response.result`. SELECT scalars stay `Value.From`. The default returns the value unchanged. TypeScript drivers assign the exported `generatedId` function; C# and Rust inherit the default method.
+`generatedId` / `generated_id` canonicalizes an insert id in Rust and TypeScript. Those commands apply it to `last_insert_rowid`, `LastInsertedId`, `RETURNING` on `INSERT`, or the memory inserted id, before that value is stored on `Response.result`. SELECT scalars stay `Value.From`. The default returns the value unchanged. TypeScript drivers assign the exported `generatedId` function; Rust inherits the default method. C# has no `GeneratedId`. The statement factory formats `InsertedIdStatement`, and the repository reads that row.
 
 `columnType` / `ColumnType` / `column_type` maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. TypeScript drivers assign the exported `columnType` function; C# and Rust inherit the default method. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
-SQLite, MySQL, and Postgres commands own an internal statement factory that extends `CreateTableStatementRenderer`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call it before the string execute. The factory overrides column type. MySQL and Postgres also override default and identity. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
+SQLite, MySQL, and Postgres commands own an internal statement factory that extends `CreateTableStatementRenderer`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call it before the string execute. The factory overrides column type. MySQL and Postgres also override default and identity. SQLite leaves identity empty. C# `Transform` also formats `InsertedIdStatement` as `SELECT last_insert_rowid()`, `SELECT LAST_INSERT_ID()`, or `SELECT lastval()`. Every other statement is left unchanged. The factory is not exported.
 
 The package exports only the driver type.
 

@@ -35,12 +35,33 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         ExecuteReader(new PostgresStatementFactory().Transform(statement).GetText(), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        Execute(new PostgresStatementFactory().Transform(statement).GetText(), parameters);
+        statement switch
+        {
+            IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
+            _ => Execute(new PostgresStatementFactory().Transform(statement).GetText(), parameters)
+        };
+
+    async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
+    {
+        var reader = await ExecuteReader(statement, parameters);
+        try
+        {
+            if (!await reader.Next())
+                return Response.Of(Value.Null.Instance, 0, parameters);
+            var row = reader.Current ?? throw new DatasourceException("Reader current must be a row");
+            var cell = row.Count == 0 ? Value.Null.Instance : row.First().Value;
+            return Response.Of(cell, 1, parameters);
+        }
+        finally
+        {
+            if (reader is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
+        }
+    }
 
     async Task<PostgresExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
-        var rewritten = PostgresBind.WithReturning(sql);
-        var (text, bound) = PostgresBind.ToPostgres(rewritten, parameters);
+        var (text, bound) = PostgresBind.ToPostgres(sql, parameters);
         using var command = Typed.Require().CreateCommand();
         command.CommandText = text;
         Bind(command, bound);
@@ -52,17 +73,8 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
                         Direction = DataDirection.ReturnValue,
                         Value = parameter.Value.ToObject() ?? DBNull.Value
                     });
-        if (rewritten.Contains("RETURNING", StringComparison.OrdinalIgnoreCase)
-            || rewritten.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-        {
-            var result = await command.ExecuteScalarAsync();
-            var value = Value.From(result);
-            if (sql.TrimStart().StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
-                value = ((IDriver)new PostgresDriver()).GeneratedId(value);
-            return new PostgresExecuteResult(result is null ? 0 : 1, value, ReadBack(command, parameters, bound));
-        }
         var rows = await command.ExecuteNonQueryAsync();
-        return new PostgresExecuteResult(Math.Max(rows, 0), Value.Null.Instance, ReadBack(command, parameters, bound));
+        return new PostgresExecuteResult(Math.Max(rows, 0), Value.Null.Instance, Applied(command, parameters, bound));
     }
 
     async Task<StreamingReader> Open(string sql, Row parameters)
@@ -113,7 +125,7 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         }
     }
 
-    static IReadOnlyList<Parameter>? ReadBack(
+    static IReadOnlyList<Parameter>? Applied(
         NpgsqlCommand command,
         IReadOnlyList<Parameter>? parameters,
         Parameter[] bound)

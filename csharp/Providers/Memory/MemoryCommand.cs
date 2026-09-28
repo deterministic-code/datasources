@@ -21,6 +21,13 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch
         {
+            InsertedIdStatement inserted => Run(statement.GetText(), parameters, (_, _) =>
+            {
+                Typed.EnsureOpen();
+                var id = Typed.Inserted(inserted.Table);
+                IReadOnlyList<Row> rows = id is Value.Null ? [] : [new Row { [inserted.Column] = id }];
+                return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
+            }),
             ISelectStatement { Where: Where clause } => Run(statement.GetText(), parameters, (_, _) =>
             {
                 Typed.EnsureOpen();
@@ -56,9 +63,10 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
-                var id = ((IDriver)new MemoryProvider()).GeneratedId(InsertedId(obj, Typed.GetCollection()));
+                var id = InsertedId(obj, Typed.GetCollection());
                 obj["id"] = id;
                 Typed.GetCollection().Add(new Row(obj));
+                Typed.RememberInserted(Typed.Collection, id);
                 return Task.FromResult((Response.Of(id, 1, paramsList), EmptyRows()));
             }
 
@@ -102,9 +110,10 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             var obj = Helpers.ParametersToRecord(paramsList).ToDictionary(k => k.Key, v => v.Value);
             if (op == "insert")
             {
-                var id = ((IDriver)new MemoryProvider()).GeneratedId(InsertedId(obj, rows));
+                var id = InsertedId(obj, rows);
                 obj["id"] = id;
                 rows.Add(new Row(obj));
+                Typed.RememberInserted(table ?? Typed.Collection, id);
                 return Task.FromResult((Response.Of(id, 1, paramsList), EmptyRows()));
             }
 

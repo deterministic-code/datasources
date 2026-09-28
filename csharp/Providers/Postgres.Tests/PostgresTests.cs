@@ -23,9 +23,6 @@ public class PostgresTests
         Assert.Contains("Host=127.0.0.1", PostgresConnectionString.ToConnectionString("postgres://ds:ds@127.0.0.1:5432/datasources"));
         Assert.Contains("Username=ds", PostgresConnectionString.ToConnectionString("postgresql://ds@127.0.0.1/datasources"));
         Assert.Equal("Host=db;Port=1", PostgresConnectionString.ToConnectionString("Host=db;Port=1"));
-        Assert.Equal("INSERT INTO t (id) VALUES (1) RETURNING id", PostgresBind.WithReturning("INSERT INTO t (id) VALUES (1)"));
-        Assert.Equal("INSERT INTO t VALUES (1) RETURNING id", PostgresBind.WithReturning("INSERT INTO t VALUES (1) RETURNING id"));
-        Assert.Equal("UPDATE t SET x = 1", PostgresBind.WithReturning("UPDATE t SET x = 1"));
         Assert.Equal("READ UNCOMMITTED", PostgresBind.IsolationSql(IsolationLevel.ReadUncommitted));
         Assert.Equal("READ COMMITTED", PostgresBind.IsolationSql(IsolationLevel.ReadCommitted));
         Assert.Equal("REPEATABLE READ", PostgresBind.IsolationSql(IsolationLevel.RepeatableRead));

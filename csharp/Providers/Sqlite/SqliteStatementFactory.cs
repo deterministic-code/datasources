@@ -14,6 +14,7 @@ internal sealed class SqliteStatementFactory : CreateTableStatementRenderer
     public IStatement Transform(IStatement statement) => statement switch
     {
         CreateTableStatement { Table: not null } create => new CreateTableStatement(Render(create)),
+        InsertedIdStatement inserted => new SelectStatement($"SELECT last_insert_rowid() AS {inserted.Column}"),
         _ => statement
     };
 }

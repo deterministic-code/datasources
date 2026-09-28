@@ -122,9 +122,11 @@ public class RepositoryTests
     {
         var (repo, command) = Create();
         command.Response = new Response(new Value.Int(9), 1);
+        command.Reader = new MockReader<Row>([new Row { ["id"] = 9 }]);
         var obj = new UserRow { id = 1, name = "a" };
         var created = await repo.Create(obj);
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
+        Assert.Equal("users.id", command.ExecuteReaderCalls[0].Text);
         Assert.Equal(9, created.id);
         var updated = await repo.Update(obj);
         Assert.Equal(1, updated.RowsAffected);
@@ -141,6 +143,7 @@ public class RepositoryTests
     {
         var (repo, command) = Create<Item>(id: ["Id"]);
         command.Response = new Response(new Value.Int(4), 1);
+        command.Reader = new MockReader<Row>([new Row { ["Id"] = 4 }]);
         var row = new Item { Name = "a" };
         var created = await repo.Create(row);
         Assert.Equal(4, created.Id);
@@ -167,6 +170,7 @@ public class RepositoryTests
     {
         var (repo, command) = Create<Stamp>();
         command.Response = new Response(new Value.Int(7), 1);
+        command.Reader = new MockReader<Row>([new Row { ["id"] = 7 }, new Row { ["id"] = 7 }]);
         var created = await repo.Create(new Stamp { name = "ada" });
         Assert.Equal(7, created.id);
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
@@ -186,6 +190,7 @@ public class RepositoryTests
 
         var (rows, rowCommand) = Create<Row>();
         rowCommand.Response = new Response(new Value.Int(7), 1);
+        rowCommand.Reader = new MockReader<Row>([new Row { ["id"] = 7 }]);
         var createdRow = await rows.Create(new Row
         {
             ["id"] = 1,
