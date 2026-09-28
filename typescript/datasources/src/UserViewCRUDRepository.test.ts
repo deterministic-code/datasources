@@ -31,13 +31,11 @@ class Group {
 }
 
 class UserRole {
-  id = 0;
   user_id = 0;
   role_id = 0;
 }
 
 class UserGroup {
-  id = 0;
   user_id = 0;
   group_id = 0;
 }

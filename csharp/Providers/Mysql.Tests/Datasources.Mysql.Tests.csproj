@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\SqlSpec.cs" Link="SqlSpec.cs" />
+    <Compile Include="..\SchemaSpec.cs" Link="SchemaSpec.cs" />
     <Compile Include="..\RepositoryTestsSpec.cs" Link="RepositoryTestsSpec.cs" />
     <ProjectReference Include="..\Mysql\Datasources.Mysql.csproj" />
   </ItemGroup>

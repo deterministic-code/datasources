@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.SqlSpecs;
 using Datasources.Sqlite;
 
 namespace Datasources.Sqlite.Tests;
@@ -16,14 +17,7 @@ public class NullWriteTests
     [Fact]
     public async Task OmitsNullDatetimeAndVersion()
     {
-        var connection = await Open("""
-            CREATE TABLE item (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
-                version BLOB NOT NULL DEFAULT X'0102'
-            );
-            """);
+        var connection = await Open("null-write-item");
         var repo = new CRUDRepository<Item>(connection, new CRUDRepositoryOptions<Item> { Entity = "item" });
         var omitted = await repo.Create(new Item { name = "ada" });
         Assert.True(omitted.id > 0);
@@ -51,13 +45,13 @@ public class NullWriteTests
         Assert.Equal(explicitItem.version, written.version);
     }
 
-    static async Task<IConnection> Open(string sql)
+    static async Task<IConnection> Open(string schema)
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
             await command.Execute(statement);
         return connection;
     }

@@ -546,6 +546,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "datasources-sql-specs"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "datasources",
+ "rust_decimal",
+ "serde",
+ "serde_yaml",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "datasources-sqlite"
 version = "0.1.0"
 dependencies = [
@@ -2368,6 +2382,7 @@ dependencies = [
  "datasources-mysql",
  "datasources-postgres",
  "datasources-register",
+ "datasources-sql-specs",
  "datasources-sqlite",
  "mysql_async",
  "regex",
@@ -2390,6 +2405,7 @@ version = "1.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2ef6dac1e96601b4fb3acccccff2139741fcb757cb9a36089bf5be91cfb285ce"
 dependencies = [
+ "getrandom 0.4.3",
  "js-sys",
  "wasm-bindgen",
 ]

@@ -12,6 +12,7 @@ import {
   type IConnection,
   type IDatasource,
 } from "@datasources/core";
+import { columnType, tables } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 const ada = "11111111-1111-1111-1111-111111111111";
@@ -34,12 +35,7 @@ class UserAccount {
 describe("readonly repository", () => {
   it("reads users by id and by username and enabled", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, `
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL
-      );
+    const connection = await open(ds, "minimal-users", `
       INSERT INTO users (id, username, is_enabled) VALUES
         (1, 'ada', 1),
         (2, 'grace', 0);
@@ -60,13 +56,7 @@ describe("readonly repository", () => {
 
   it("reads user by guid username and created", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, `
-      CREATE TABLE user (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL,
-        created TEXT NOT NULL
-      );
+    const connection = await open(ds, "user-account", `
       INSERT INTO user (id, username, is_enabled, created) VALUES
         ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
         ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
@@ -116,22 +106,11 @@ describe("user view", () => {
 
   it("fills user type on a user view", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, `
-      CREATE TABLE user_type (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL
-      );
+    const connection = await open(ds, "user-type-lookup", `
       INSERT INTO user_type (id, name) VALUES
         (1, 'admin'),
         (2, 'user'),
         (3, 'service');
-      CREATE TABLE user (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL,
-        created TEXT NOT NULL,
-        user_type_id INTEGER NOT NULL
-      );
       INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
         ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
         ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
@@ -163,10 +142,14 @@ describe("user view", () => {
   });
 });
 
-const open = async (ds: IDatasource, sql: string): Promise<IConnection> => {
+const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
+
+const open = async (ds: IDatasource, schema: string, sql = ""): Promise<IConnection> => {
   const connection = await ds.createConnection();
   await connection.open();
   const command = connection.createCommand();
+  for (const statement of tables(schema, "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
+    await command.execute(statement);
   for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))
     await command.execute(statement);
   return connection;
@@ -175,13 +158,7 @@ const open = async (ds: IDatasource, sql: string): Promise<IConnection> => {
 describe("user crud", () => {
   it("writes a user from the type", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, `
-      CREATE TABLE User (
-        id INTEGER PRIMARY KEY,
-        is_enabled INTEGER NOT NULL,
-        username TEXT NOT NULL
-      );
-    `);
+    const connection = await open(ds, "user-pascal");
     const usersRepo = new CRUDRepository(User, connection);
     const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
     expect(created.id).toBe(1);
@@ -228,24 +205,7 @@ describe("users view crud", () => {
 
   it("updates a user view when the version matches", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, `
-      CREATE TABLE user_type (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL
-      );
-      CREATE TABLE user (
-        id INTEGER PRIMARY KEY,
-        username TEXT NOT NULL,
-        is_enabled INTEGER NOT NULL,
-        created TEXT NOT NULL,
-        user_type_id INTEGER NOT NULL,
-        version INTEGER NOT NULL
-      );
-      CREATE TABLE user_role (
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL
-      );
-    `);
+    const connection = await open(ds, "user-view-version");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const usersRepo = new CRUDRepository(connection, {
       ...createRepositoryOptions(UsersView),

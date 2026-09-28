@@ -163,6 +163,7 @@ public static class SqlSpec
     public sealed class Dialect
     {
         public ConnectionMeta Connection { get; init; } = new();
+        public string Engine { get; init; } = "";
         public string CreateUserTable { get; init; } = "";
         public string CreateUserTableVersioned { get; init; } = "";
         public List<Dictionary<string, Value>> DirtyReadRows { get; init; } = [];
@@ -185,6 +186,7 @@ public static class SqlSpec
                 : [];
             return new Dialect
             {
+                Engine = engine,
                 Connection = new ConnectionMeta { Kind = Conn("kind"), Filename = Conn("filename"), Env = Conn("env") },
                 CreateUserTable = Scalar("createUserTable"),
                 CreateUserTableVersioned = Scalar("createUserTableVersioned"),
@@ -205,10 +207,13 @@ public static class SqlSpec
 
         public string ResolveSql(string sql) => sql.Trim() switch
         {
-            "createUserTable" => CreateUserTable,
-            "createUserTableVersioned" => CreateUserTableVersioned,
+            "createUserTable" => Schema(CreateUserTable),
+            "createUserTableVersioned" => Schema(CreateUserTableVersioned),
             _ => sql
         };
+
+        string Schema(string name) =>
+            SchemaSpec.Sql(name, Engine, static id => $"\"{id.Replace("\"", "\"\"")}\"", canonical => SchemaSpec.ColumnType(Engine, canonical));
 
         public List<Row>? ResolveRows(object? rows) => rows switch
         {

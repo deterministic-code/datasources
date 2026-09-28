@@ -32,12 +32,10 @@ import {
   type CRUDMapperSpec,
 } from "../specs/expected-repository-console.ts";
 import { consoleSignature } from "../specs/expected-console-output.ts";
+import { columnType, tables } from "./schema-spec.ts";
 import { repoRoot, specVerbose } from "./sql-spec-runner.ts";
 
-export type RepositoryColumn = { name: string; type: string; id?: boolean };
-
 export type RepositoryDialect = {
-  createTable: (table: string, columns: RepositoryColumn[]) => { getText: () => string };
   quote: (id: string) => string;
 };
 
@@ -68,13 +66,6 @@ const typeOf = (type: RepositoryTypeSpec): Constructable<Cells> => {
     }
   };
 };
-
-const columnsOf = (type: RepositoryTypeSpec): RepositoryColumn[] =>
-  Object.entries(type.fields).map(([name, canonical]) => ({
-    name,
-    type: canonical,
-    id: type.ids.includes(name),
-  }));
 
 const unquoteSql = (text: string): string =>
   text.replaceAll(/`([^`]+)`/g, "$1").replaceAll(/"([^"]+)"/g, "$1");
@@ -248,7 +239,18 @@ export const runRepositorySpec = async (
 ): Promise<void> => {
   const spec = parse(readFileSync(path, "utf8")) as RepositorySpec;
   if (specVerbose()) console.log(`\n--- ${spec.name} (${connection.provider}) ---`);
-  await execute(dialect.createTable(physicalTableOf(spec.type), columnsOf(spec.type)).getText());
+  const rename = spec.type.crudMapper?.entity && spec.type.crudMapper.entity !== spec.type.table
+    ? { [spec.type.table]: spec.type.crudMapper.entity }
+    : undefined;
+  for (const statement of tables(
+    spec.schema,
+    connection.provider,
+    dialect.quote,
+    (canonical) => columnType(connection.provider, canonical),
+    rename,
+    true,
+  ))
+    await execute(statement.getText());
   const catalog = types;
   const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
   const repo = new CRUDRepository<SpecRow>(connection, {

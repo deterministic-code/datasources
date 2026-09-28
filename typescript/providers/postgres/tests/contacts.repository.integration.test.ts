@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { asContactsView } from "../../../datasources/src/tests/contact/asContactsView.ts";
 import { contactsParity } from "../../../datasources/src/tests/contact/contactsParity.ts";
@@ -11,7 +10,8 @@ import { addExtraContact } from "../../../datasources/src/tests/contact/extraCon
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
-import { specVerbose } from "../../../sql-spec-runner.ts";
+import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
+import { columnType, tables } from "../../../schema-spec.ts";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
@@ -19,10 +19,8 @@ import type { PgModule } from "../src/i-postgres-driver.ts";
 const url = (process.env.POSTGRES_URL ??=
   "postgres://ds:ds@127.0.0.1:5432/datasources");
 
-const schemaPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../datasources/src/tests/contact/postgres.sql",
-);
+const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
+const seedPath = join(repoRoot(), "specs/contacts/postgres.sql");
 
 const statementsOf = (sql: string) =>
   sql
@@ -58,7 +56,9 @@ describe("contacts readonly repository", () => {
       const connection = PostgresConnection.from({ url, schema: isolated.schema });
       await connection.open();
       const command = new PostgresCommand(connection);
-      for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql(seedContactCount, "'\\x'")])
+      for (const statement of tables("contacts", "postgres", quote, (canonical) => columnType("postgres", canonical), undefined, true))
+        await command.execute(statement.getText());
+      for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql(seedContactCount, "'\\x'")])
         await command.execute(sql);
 
       const { eager, enriched } = await contactsParity(connection, specVerbose());

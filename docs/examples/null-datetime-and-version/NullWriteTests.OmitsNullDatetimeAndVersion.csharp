@@ -1,10 +1,3 @@
-var connection = await Open("""
-    CREATE TABLE item (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
-        version BLOB NOT NULL DEFAULT X'0102'
-    );
-    """);
+var connection = await Open("null-write-item");
 var repo = new CRUDRepository<Item>(connection, new CRUDRepositoryOptions<Item> { Entity = "item" });
 var omitted = await repo.Create(new Item { name = "ada" });

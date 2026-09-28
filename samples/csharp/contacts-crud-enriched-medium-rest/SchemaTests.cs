@@ -16,17 +16,17 @@ public sealed class SchemaTests
         var sql = string.Join("\n", Schema.Tables(provider, Driver(provider)).Select(table => table.GetText()));
         Assert.Contains("tbl_Contacts", sql);
         Assert.Contains("m_FirstName", sql);
-        Assert.Contains("FOREIGN KEY (ContactSourceId) REFERENCES", sql);
-        Assert.Contains("FOREIGN KEY (m_ContactTypeId) REFERENCES", sql);
-        Assert.Contains("FOREIGN KEY (m_AddressTypeId) REFERENCES", sql);
-        Assert.Contains("FOREIGN KEY (PhoneTypeId) REFERENCES", sql);
-        Assert.Contains("UNIQUE (ContactId, ContactGroupId)", sql);
+        Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "ContactSourceId")}) REFERENCES", sql);
+        Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "m_ContactTypeId")}) REFERENCES", sql);
+        Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "m_AddressTypeId")}) REFERENCES", sql);
+        Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "PhoneTypeId")}) REFERENCES", sql);
+        Assert.Contains($"UNIQUE ({Schema.Ident(provider, "ContactId")}, {Schema.Ident(provider, "ContactGroupId")})", sql);
         Assert.DoesNotContain("first_name", sql);
     }
 
     [Fact]
     public void SqliteUsesIntegerPrimaryKey() =>
-        Assert.Contains("Id INTEGER PRIMARY KEY", Schema.Tables("sqlite", new SqliteDriver())[0].GetText());
+        Assert.Contains("\"Id\" INTEGER PRIMARY KEY", Schema.Tables("sqlite", new SqliteDriver())[0].GetText());
 
     [Fact]
     public void MysqlUsesIdentityFlag() =>
@@ -41,8 +41,8 @@ public sealed class SchemaTests
     {
         var sqlite = Schema.Tables("sqlite", new SqliteDriver()).Single(table => table.GetText().Contains("legacy_contact")).GetText();
         var mysql = Schema.Tables("mysql", new MysqlDriver()).Single(table => table.GetText().Contains("legacy_contact")).GetText();
-        Assert.Contains("m_Key TEXT PRIMARY KEY", sqlite);
-        Assert.Contains("PRIMARY KEY (m_Key)", mysql);
+        Assert.Contains("\"m_Key\" TEXT PRIMARY KEY", sqlite);
+        Assert.Contains("PRIMARY KEY (`m_Key`)", mysql);
     }
 
     [Fact]

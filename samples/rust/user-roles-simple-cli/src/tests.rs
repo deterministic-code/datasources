@@ -146,9 +146,12 @@ fn builds_schema() {
             .map(Text::get_text)
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(sql.contains("FOREIGN KEY (user_id) REFERENCES"));
-        assert!(sql.contains("FOREIGN KEY (bad_role_id) REFERENCES"));
+        assert!(sql.contains(&format!("FOREIGN KEY ({}) REFERENCES", schema::ident(provider, "user_id"))));
+        assert!(sql.contains(&format!("FOREIGN KEY ({}) REFERENCES", schema::ident(provider, "bad_role_id"))));
         assert!(sql.contains("ugly_name"));
+        if provider == "sqlite" {
+            eprintln!("{sql}");
+        }
     }
     assert!(
         schema::tables("sqlite", &datasources_sqlite::SqliteDriver).unwrap()[0]

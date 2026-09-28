@@ -4,7 +4,6 @@ import {
   repositorySpecFiles,
   runRepositorySpec,
 } from "../../repository-spec-runner.ts";
-import { CreateTableStatement } from "@datasources/core";
 import { MysqlCommand } from "../src/command.ts";
 import { MysqlConnection } from "../src/connection.ts";
 import { MysqlRowTypeConverters } from "../src/converters/MysqlRowTypeConverters.ts";
@@ -12,31 +11,7 @@ import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 
 const quote = (id: string): string => `\`${id.replaceAll("`", "``")}\``;
 
-const map = (canonical: string): string => {
-  switch (canonical) {
-    case "int": return "INT";
-    case "uuid": return "CHAR(36)";
-    case "string":
-    case "datetime": return "TEXT";
-    case "bool": return "TINYINT";
-    case "decimal": return "DECIMAL(18,4)";
-    case "float": return "DOUBLE";
-    case "binary": return "BLOB";
-    default: throw new Error(`Unknown mysql type "${canonical}"`);
-  }
-};
-
-const dialect: RepositoryDialect = {
-  quote,
-  createTable: (table, columns) =>
-    new CreateTableStatement(
-      quote(table),
-      columns.map((column) => ({
-        name: quote(column.name),
-        type: column.id ? `${map(column.type)} PRIMARY KEY AUTO_INCREMENT` : map(column.type),
-      })),
-    ),
-};
+const dialect: RepositoryDialect = { quote };
 import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 
 const url = (process.env.MYSQL_URL ??=

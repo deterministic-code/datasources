@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.SqlSpecs;
 using Datasources.Sqlite;
 
 namespace Datasources.Sqlite.Tests;
@@ -64,36 +65,7 @@ public class UserViewCRUDRepositoryTests
     static async Task<Graph> GraphAsync(IWriteEnrichmentStrategy<UserView>? write = null)
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, """
-            CREATE TABLE users (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL,
-                user_type_id INTEGER NOT NULL
-            );
-            CREATE TABLE user_types (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
-            CREATE TABLE roles (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
-            CREATE TABLE groups (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
-            CREATE TABLE user_roles (
-                user_id INTEGER NOT NULL,
-                role_id INTEGER NOT NULL,
-                PRIMARY KEY (user_id, role_id)
-            );
-            CREATE TABLE user_groups (
-                user_id INTEGER NOT NULL,
-                group_id INTEGER NOT NULL,
-                PRIMARY KEY (user_id, group_id)
-            );
-            """);
+        var connection = await Open(ds, "user-view-links");
         var usersRepo = BuildRepo<UserView>(connection, "Users", write);
         var userTypesRepo = BuildRepo<UserType>(connection, "UserTypes");
         var rolesRepo = BuildRepo<Role>(connection, "Roles");
@@ -393,12 +365,12 @@ public class UserViewCRUDRepositoryTests
         Assert.Equal("admin", Assert.Single(await graph.UserTypesRepo.Read().ToListAsync()).Name);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string sql)
+    static async Task<IConnection> Open(IDatasource ds, string schema)
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
             await command.Execute(statement);
         return connection;
     }

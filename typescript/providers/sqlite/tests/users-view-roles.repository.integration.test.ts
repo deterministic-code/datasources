@@ -14,6 +14,7 @@ import {
   type IConnection,
   type IDatasource,
 } from "@datasources/core";
+import { columnType, tables } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 const ada = "11111111-1111-1111-1111-111111111111";
@@ -40,37 +41,18 @@ class UsersView {
 }
 
 const seed = () => `
-  CREATE TABLE user_type (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL
-  );
   INSERT INTO user_type (id, name) VALUES
     (1, 'admin'),
     (2, 'user'),
     (3, 'service');
-  CREATE TABLE user (
-    id TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    is_enabled INTEGER NOT NULL,
-    created TEXT NOT NULL,
-    user_type_id INTEGER NOT NULL
-  );
   INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
     ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
     ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
     ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
-  CREATE TABLE roles (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL
-  );
   INSERT INTO roles (id, name) VALUES
     (1, 'admin'),
     (2, 'editor'),
     (3, 'viewer');
-  CREATE TABLE user_roles (
-    user_id TEXT NOT NULL,
-    role_id INTEGER NOT NULL
-  );
   INSERT INTO user_roles (user_id, role_id) VALUES
     ('${ada}', 1),
     ('${ada}', 2),
@@ -82,7 +64,7 @@ const names = (roles: UserRole[]) => roles.map((role) => role.Name).sort();
 describe("users view roles", () => {
   it("fills roles with a hashset", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, seed());
+    const connection = await open(ds, "user-roles-read", seed());
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>();
     const usersRepo = new ReadonlyRepository(connection, {
@@ -127,7 +109,7 @@ describe("users view roles", () => {
 
   it("fills roles from a join", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-    const connection = await open(ds, seed());
+    const connection = await open(ds, "user-roles-read", seed());
     const usersRepo = new ReadonlyRepository(connection, {
       type: UsersView,
       columnMappings: new DictionaryMapper([
@@ -194,10 +176,14 @@ describe("users view roles", () => {
   });
 });
 
-const open = async (ds: IDatasource, sql: string): Promise<IConnection> => {
+const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
+
+const open = async (ds: IDatasource, schema: string, sql = ""): Promise<IConnection> => {
   const connection = await ds.createConnection();
   await connection.open();
   const command = connection.createCommand();
+  for (const statement of tables(schema, "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
+    await command.execute(statement);
   for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))
     await command.execute(statement);
   return connection;

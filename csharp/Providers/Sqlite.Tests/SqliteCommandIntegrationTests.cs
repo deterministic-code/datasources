@@ -45,7 +45,7 @@ public class SqliteCommandIntegrationTests
     public async Task SharedSpecs()
     {
         var dialect = SqlSpec.Dialect.Load("sqlite");
-        foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml"))
+        foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml").Where(path => Path.GetFileName(path) != "schemas.yaml"))
             await SqlSpec.Run(path, dialect, target =>
             {
                 var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = target });

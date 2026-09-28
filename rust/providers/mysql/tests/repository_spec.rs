@@ -1,6 +1,6 @@
 use super::command::MysqlCommand;
 use super::connection::MysqlConnection;
-use datasources::{Column, Connection, CreateTableStatement, Text};
+use datasources::Connection;
 use datasources_sql_specs::RepositoryDialect;
 use mysql_async::prelude::Queryable;
 use mysql_async::Conn;
@@ -11,41 +11,10 @@ fn quote(id: &str) -> String {
     format!("`{}`", id.replace('`', "``"))
 }
 
-fn map(canonical: &str) -> String {
-    match canonical {
-        "int" => "INT",
-        "uuid" => "CHAR(36)",
-        "string" | "datetime" => "TEXT",
-        "bool" => "TINYINT",
-        "decimal" => "DECIMAL(18,4)",
-        "float" => "DOUBLE",
-        "binary" => "BLOB",
-        _ => panic!("Unknown mysql type \"{canonical}\""),
-    }
-    .into()
-}
-
 fn dialect() -> RepositoryDialect {
     RepositoryDialect {
         provider: "mysql",
-        quote: quote,
-        create_table: |table, columns| {
-            let mapped: Vec<Column> = columns
-                .iter()
-                .map(|column| {
-                    let affinity = map(&column.type_name);
-                    Column::new(
-                        quote(&column.name),
-                        if column.id {
-                            format!("{affinity} PRIMARY KEY AUTO_INCREMENT")
-                        } else {
-                            affinity
-                        },
-                    )
-                })
-                .collect();
-            CreateTableStatement::new(quote(table), &mapped, &[]).get_text()
-        },
+        quote,
         field: super::converters::field,
         types: super::converters::row_type_converters,
     }

@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { collectAsync } from "../../../datasources/src/collectAsync.ts";
 import { asContactsView } from "../../../datasources/src/tests/contact/asContactsView.ts";
@@ -13,16 +12,15 @@ import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
 import { addExtraContact } from "../../../datasources/src/tests/contact/extraContact.ts";
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
-import { specVerbose } from "../../../sql-spec-runner.ts";
+import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
+import { columnType, tables } from "../../../schema-spec.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
 
-const schemaPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../datasources/src/tests/contact/sqlite.sql",
-);
+const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
+const seedPath = join(repoRoot(), "specs/contacts/sqlite.sql");
 
 const statementsOf = (sql: string) =>
   sql
@@ -35,7 +33,9 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ filename: ":memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql()])
+    for (const statement of tables("contacts", "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
+      await command.execute(statement.getText());
+    for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
       await command.execute(sql);
 
     const { eager, enriched } = await contactsParity(connection, specVerbose());
@@ -67,7 +67,9 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ filename: ":memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    for (const sql of [...statementsOf(readFileSync(schemaPath, "utf8")), ...seedContactsSql()])
+    for (const statement of tables("contacts", "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
+      await command.execute(statement.getText());
+    for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
       await command.execute(sql);
 
     const contacts = new FlatToNestedMapper(contactsView).map(

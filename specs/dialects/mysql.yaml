@@ -1,21 +1,8 @@
 connection:
   kind: url
   env: MYSQL_URL
-createUserTable: |
-  CREATE TABLE "user" (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username TEXT NOT NULL,
-    is_enabled INT NOT NULL,
-    created TEXT NOT NULL
-  )
-createUserTableVersioned: |
-  CREATE TABLE "user" (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username TEXT NOT NULL,
-    is_enabled INT NOT NULL,
-    created TEXT NOT NULL,
-    version INT NOT NULL
-  )
+createUserTable: command-user
+createUserTableVersioned: command-user-versioned
 dirtyReadRows:
   - id: 1
     username: alice

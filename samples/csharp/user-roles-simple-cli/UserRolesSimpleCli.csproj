@@ -10,12 +10,14 @@
   <ItemGroup>
     <Compile Remove="*Tests.cs" />
     <Compile Remove="CliE2ETests.cs" />
+    <Compile Include="..\..\..\csharp\Providers\SchemaSpec.cs" Link="SchemaSpec.cs" />
     <EmbeddedResource Include="..\..\user-roles-simple-cli-shared\mysql-procedures.sql" Link="mysql-procedures.sql">
       <LogicalName>mysql-procedures.sql</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\csharp\Datasources\Datasources.csproj" />

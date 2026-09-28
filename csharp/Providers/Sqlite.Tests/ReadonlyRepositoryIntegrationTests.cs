@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.SqlSpecs;
 using Datasources.Sqlite;
 using static Datasources.Cmp;
 
@@ -29,12 +30,7 @@ public class ReadonlyRepositoryIntegrationTests
     public async Task ReadsUsersByIdAndByUsernameAndEnabled()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, """
-            CREATE TABLE users (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL
-            );
+        var connection = await Open(ds, "minimal-users", """
             INSERT INTO users (id, username, is_enabled) VALUES
                 (1, 'ada', 1),
                 (2, 'grace', 0);
@@ -60,13 +56,7 @@ public class ReadonlyRepositoryIntegrationTests
     public async Task ReadsUserByGuidUsernameAndCreated()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, $"""
-            CREATE TABLE user (
-                id TEXT PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL,
-                created TEXT NOT NULL
-            );
+        var connection = await Open(ds, "user-account", $"""
             INSERT INTO user (id, username, is_enabled, created) VALUES
                 ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
                 ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
@@ -101,11 +91,13 @@ public class ReadonlyRepositoryIntegrationTests
         Assert.Equal("grace", Assert.Single(later).Login);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string sql)
+    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
+        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
         return connection;
@@ -137,22 +129,11 @@ public class UserViewEnrichmentTests
     public async Task FillsUserTypeOnUsersView()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, $"""
-            CREATE TABLE user_type (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
+        var connection = await Open(ds, "user-type-lookup", $"""
             INSERT INTO user_type (id, name) VALUES
                 (1, 'admin'),
                 (2, 'user'),
                 (3, 'service');
-            CREATE TABLE user (
-                id TEXT PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL,
-                created TEXT NOT NULL,
-                user_type_id INTEGER NOT NULL
-            );
             INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
                 ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
                 ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
@@ -187,11 +168,13 @@ public class UserViewEnrichmentTests
         Assert.Null(typeof(UsersView).GetProperty("UserTypeId"));
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string sql)
+    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
+        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
         return connection;
@@ -230,7 +213,7 @@ public class UsersViewRoleTests
     public async Task FillsRolesWithHashset()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, Seed());
+        var connection = await Open(ds, "user-roles-read", Seed());
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
@@ -281,7 +264,7 @@ public class UsersViewRoleTests
     public async Task FillsRolesFromAJoin()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, Seed());
+        var connection = await Open(ds, "user-roles-read", Seed());
         var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
         {
             ["Key"] = "id",
@@ -357,48 +340,31 @@ public class UsersViewRoleTests
     }
 
     static string Seed() => $"""
-        CREATE TABLE user_type (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL
-        );
         INSERT INTO user_type (id, name) VALUES
             (1, 'admin'),
             (2, 'user'),
             (3, 'service');
-        CREATE TABLE user (
-            id TEXT PRIMARY KEY,
-            username TEXT NOT NULL,
-            is_enabled INTEGER NOT NULL,
-            created TEXT NOT NULL,
-            user_type_id INTEGER NOT NULL
-        );
         INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
             ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
             ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
             ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
-        CREATE TABLE roles (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL
-        );
         INSERT INTO roles (id, name) VALUES
             (1, 'admin'),
             (2, 'editor'),
             (3, 'viewer');
-        CREATE TABLE user_roles (
-            user_id TEXT NOT NULL,
-            role_id INTEGER NOT NULL
-        );
         INSERT INTO user_roles (user_id, role_id) VALUES
             ('{Ada}', 1),
             ('{Ada}', 2),
             ('{Grace}', 3);
         """;
 
-    static async Task<IConnection> Open(IDatasource ds, string sql)
+    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
+        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
         return connection;
@@ -418,13 +384,7 @@ public class UserCrudTests
     public async Task WritesUserFromTheType()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, """
-            CREATE TABLE User (
-                id INTEGER PRIMARY KEY,
-                is_enabled INTEGER NOT NULL,
-                username TEXT NOT NULL
-            );
-            """);
+        var connection = await Open(ds, "user-pascal");
         var usersRepo = new CRUDRepository<User>(connection);
         var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
         Assert.Equal(1, created.id);
@@ -449,11 +409,13 @@ public class UserCrudTests
         Assert.Null(gone);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string sql)
+    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
+        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
         return connection;
@@ -490,24 +452,7 @@ public class UsersViewCrudTests
     public async Task UpdatesUsersViewWhenTheVersionMatches()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-        var connection = await Open(ds, """
-            CREATE TABLE user_type (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
-            );
-            CREATE TABLE user (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                is_enabled INTEGER NOT NULL,
-                created TEXT NOT NULL,
-                user_type_id INTEGER NOT NULL,
-                version INTEGER NOT NULL
-            );
-            CREATE TABLE user_role (
-                user_id INTEGER NOT NULL,
-                name TEXT NOT NULL
-            );
-            """);
+        var connection = await Open(ds, "user-view-version");
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
         {
@@ -577,11 +522,13 @@ public class UsersViewCrudTests
         Assert.Empty(roles);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string sql)
+    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
+        foreach (var statement in SchemaSpec.Tables(schema, "sqlite", static id => $"\"{id.Replace("\"", "\"\"")}\"", static canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(statement);
         return connection;

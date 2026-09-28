@@ -16,8 +16,9 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        foreach (var sql in StatementsOf(File.ReadAllText(SchemaPath()))
-            .Concat(SeedContacts.Sql()))
+        foreach (var statement in SchemaSpec.Tables("contacts", "sqlite", Quote, canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+            await command.Execute(statement.GetText());
+        foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
             await command.Execute(sql);
 
         var (eager, enriched) = await ContactsParity.Run(conn);
@@ -53,7 +54,9 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        foreach (var sql in StatementsOf(File.ReadAllText(SchemaPath())).Concat(SeedContacts.Sql()))
+        foreach (var statement in SchemaSpec.Tables("contacts", "sqlite", Quote, canonical => SchemaSpec.ColumnType("sqlite", canonical), executableText: true))
+            await command.Execute(statement.GetText());
+        foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
             await command.Execute(sql);
 
         var rows = new List<Row>();
@@ -68,12 +71,9 @@ public class ContactsRepositoryTests
         Assert.False(string.IsNullOrEmpty(mapped.contact_source_name));
     }
 
-    static string SchemaPath()
-    {
-        var root = Directory.GetParent(SqlSpec.SpecsDir())?.FullName
-            ?? throw new DirectoryNotFoundException("repo root");
-        return Path.Combine(root, "csharp", "Datasources.Tests", "Contact", "sqlite.sql");
-    }
+    static string Quote(string id) => $"\"{id.Replace("\"", "\"\"")}\"";
+
+    static string SeedPath() => Path.Combine(SqlSpec.SpecsDir(), "contacts", "sqlite.sql");
 
     static IEnumerable<string> StatementsOf(string sql) =>
         sql.Split(';').Select(part => part.Trim()).Where(part => part.Length > 0);

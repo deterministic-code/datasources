@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CRUDRepository, Datasource, createRepositoryOptions, type IConnection } from "@datasources/core";
+import { columnType, tables } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 class Item {
@@ -9,21 +10,14 @@ class Item {
   version: Uint8Array | null = null;
 }
 
-const sql = `
-  CREATE TABLE item (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
-    version BLOB NOT NULL DEFAULT X'0102'
-  );
-`;
+const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
 
 const open = async (): Promise<IConnection> => {
   const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
   const connection = await ds.createConnection();
   await connection.open();
   const command = connection.createCommand();
-  for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))
+  for (const statement of tables("null-write-item", "sqlite", quote, (canonical) => columnType("sqlite", canonical), undefined, true))
     await command.execute(statement);
   return connection;
 };
