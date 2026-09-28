@@ -17,7 +17,7 @@ use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
-use crate::unit_of_work::UnitOfWork;
+use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -101,8 +101,8 @@ impl BulkCRUDRepository {
             return self.strategy.create(items, self).await;
         }
         let connection = Arc::clone(&stored_repo(&self.crud).connection);
-        UnitOfWork::new(connection)
-            .in_transaction(self.strategy.create(items, self))
+        UnitOfWorkTransaction::new(connection)
+            .do_work(self.strategy.create(items, self))
             .await
     }
 
@@ -115,8 +115,8 @@ impl BulkCRUDRepository {
             return self.strategy.update(items, by_where, self).await;
         }
         let connection = Arc::clone(&stored_repo(&self.crud).connection);
-        UnitOfWork::new(connection)
-            .in_transaction(self.strategy.update(items, by_where, self))
+        UnitOfWorkTransaction::new(connection)
+            .do_work(self.strategy.update(items, by_where, self))
             .await
     }
 
@@ -129,8 +129,8 @@ impl BulkCRUDRepository {
             return self.strategy.delete(items, by_where, self).await;
         }
         let connection = Arc::clone(&stored_repo(&self.crud).connection);
-        UnitOfWork::new(connection)
-            .in_transaction(self.strategy.delete(items, by_where, self))
+        UnitOfWorkTransaction::new(connection)
+            .do_work(self.strategy.delete(items, by_where, self))
             .await
     }
 }

@@ -23,13 +23,13 @@ public class BulkCRUDRepository<T> : CRUDRepository<T>, IBulkWrite<T> where T : 
         (this.bulk, useTransaction) = (bulk, false);
 
     public Task<Response> Create(IReadOnlyList<T> items) =>
-        useTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Create(items, this)) : bulk.Create(items, this);
+        useTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => bulk.Create(items, this)) : bulk.Create(items, this);
 
     public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null) =>
-        useTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Update(items, byWhere, this)) : bulk.Update(items, byWhere, this);
+        useTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => bulk.Update(items, byWhere, this)) : bulk.Update(items, byWhere, this);
 
     public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null) =>
-        useTransaction ? new UnitOfWork(Command().Connection).InTransaction(() => bulk.Delete(items, byWhere, this)) : bulk.Delete(items, byWhere, this);
+        useTransaction ? new UnitOfWorkTransaction(Command().Connection).DoWork(() => bulk.Delete(items, byWhere, this)) : bulk.Delete(items, byWhere, this);
 
     public Task<Response> BulkCreate(IReadOnlyList<T> items) => Create(items);
 

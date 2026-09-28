@@ -9,10 +9,10 @@ use crate::row::Row;
 use crate::value::Value;
 use async_trait::async_trait;
 
-pub struct BatchCommands;
+pub struct BatchCommandIBulkWriteStrategy;
 
 #[async_trait]
-impl BulkWriteStrategy for BatchCommands {
+impl BulkWriteStrategy for BatchCommandIBulkWriteStrategy {
     async fn create(&self, items: &mut [Row], write: &dyn BulkWrite) -> Result<Response> {
         send(write, &write.inserts(items)?).await
     }

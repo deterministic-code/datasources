@@ -6,16 +6,16 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 static OPEN: LazyLock<Mutex<HashSet<usize>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 
-pub struct UnitOfWork {
+pub struct UnitOfWorkTransaction {
     connection: Arc<dyn Connection>,
 }
 
-impl UnitOfWork {
+impl UnitOfWorkTransaction {
     pub fn new(connection: Arc<dyn Connection>) -> Self {
         Self { connection }
     }
 
-    pub async fn in_transaction<T>(&self, work: impl Future<Output = Result<T>>) -> Result<T> {
+    pub async fn do_work<T>(&self, work: impl Future<Output = Result<T>>) -> Result<T> {
         let key = data_ptr(&self.connection);
         let joined = {
             let mut open = OPEN.lock().expect("transactions");

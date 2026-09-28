@@ -1,13 +1,13 @@
 namespace Datasources;
 
-public sealed class UnitOfWork
+public sealed class UnitOfWorkTransaction
 {
     static readonly HashSet<IConnection> open = new(ReferenceEqualityComparer.Instance);
     readonly IConnection connection;
 
-    public UnitOfWork(IConnection connection) => this.connection = connection;
+    public UnitOfWorkTransaction(IConnection connection) => this.connection = connection;
 
-    public async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> work)
+    public async Task<TResult> DoWork<TResult>(Func<Task<TResult>> work)
     {
         var joined = false;
         lock (open)

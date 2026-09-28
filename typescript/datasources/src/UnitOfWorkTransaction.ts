@@ -2,10 +2,10 @@ import type { IConnection } from "./IConnection.ts";
 
 const open = new WeakSet<IConnection>();
 
-export class UnitOfWork {
+export class UnitOfWorkTransaction {
   constructor(private readonly connection: IConnection) {}
 
-  inTransaction = async <TResult>(work: () => Promise<TResult>): Promise<TResult> => {
+  doWork = async <TResult>(work: () => Promise<TResult>): Promise<TResult> => {
     if (open.has(this.connection)) return work();
     open.add(this.connection);
     try {

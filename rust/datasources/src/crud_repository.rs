@@ -21,7 +21,7 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::table_repository_builder::RepositoryBuilder;
-use crate::unit_of_work::UnitOfWork;
+use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
@@ -445,8 +445,8 @@ impl ICRUDRepository for CRUDRepository {
             return self.create_core(item).await;
         }
         let connection = Arc::clone(&self.readonly.connection);
-        UnitOfWork::new(connection)
-            .in_transaction(self.create_core(item))
+        UnitOfWorkTransaction::new(connection)
+            .do_work(self.create_core(item))
             .await
     }
 
@@ -455,8 +455,8 @@ impl ICRUDRepository for CRUDRepository {
             return self.update_core(item, by_where).await;
         }
         let connection = Arc::clone(&self.readonly.connection);
-        UnitOfWork::new(connection)
-            .in_transaction(self.update_core(item, by_where))
+        UnitOfWorkTransaction::new(connection)
+            .do_work(self.update_core(item, by_where))
             .await
     }
 
@@ -465,8 +465,8 @@ impl ICRUDRepository for CRUDRepository {
             return self.delete_core(item, by_where).await;
         }
         let connection = Arc::clone(&self.readonly.connection);
-        UnitOfWork::new(connection)
-            .in_transaction(self.delete_core(item, by_where))
+        UnitOfWorkTransaction::new(connection)
+            .do_work(self.delete_core(item, by_where))
             .await
     }
 

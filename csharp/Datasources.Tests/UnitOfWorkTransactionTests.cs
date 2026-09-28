@@ -2,16 +2,16 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-public class UnitOfWorkTests
+public class UnitOfWorkTransactionTests
 {
     [Fact]
     public async Task NestedCallStartsOnce()
     {
         var connection = new MockConnection();
         var txn = (MockTransaction)connection.Transaction;
-        await new UnitOfWork(connection).InTransaction(async () =>
+        await new UnitOfWorkTransaction(connection).DoWork(async () =>
         {
-            await new UnitOfWork(connection).InTransaction(() => Task.FromResult(0));
+            await new UnitOfWorkTransaction(connection).DoWork(() => Task.FromResult(0));
             return 0;
         });
         Assert.Equal(1, connection.StartTransactionCalls);

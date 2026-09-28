@@ -40,9 +40,9 @@ public class BulkWriteStrategyTests
     }
 
     [Fact]
-    public async Task BatchCommandsJoinsStatements()
+    public async Task BatchCommandIBulkWriteStrategyJoinsStatements()
     {
-        var (repo, command) = Repo(new BatchCommands<Parent>());
+        var (repo, command) = Repo(new BatchCommandIBulkWriteStrategy<Parent>());
         await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
         Assert.Single(command.ExecuteCalls);
         Assert.Equal(
@@ -122,7 +122,7 @@ public class BulkWriteStrategyTests
     public async Task EmptyListDoesNotExecute()
     {
         await AssertEmpty(new SingleCommands<Parent>());
-        await AssertEmpty(new BatchCommands<Parent>());
+        await AssertEmpty(new BatchCommandIBulkWriteStrategy<Parent>());
         await AssertEmpty(new StoredProcedureBulkWriteStrategy<Parent>("create_parent", "update_parent", "delete_parent"));
     }
 
