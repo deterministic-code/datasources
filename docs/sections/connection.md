@@ -227,13 +227,20 @@ async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<A
 
 ## Remarks
 
-`CreateConnection` / `createConnection` / `create_connection` returns a closed connection. It is not open until `Open` / `open`. Calling `Open` / `open` on an open connection throws.
+{{CreateConnection|createConnection|create_connection}} returns a closed connection. It is not open until {{Open|open|open}}. Calling {{Open|open|open}} on an open connection throws.
 
-C# and TypeScript close the connection at the end of an `await using` block. Otherwise call `Close` / `close`. Rust has no `using`; call `close().await`.
+::: prose
+### typescript
+Close the connection at the end of an `await using` block, or call `close`.
+### csharp
+Close the connection at the end of an `await using` block, or call `Close`.
+### rust
+There is no `using`. Call `close().await`.
+:::
 
-`StartTransaction` requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
+{{StartTransaction|startTransaction|start_transaction}} requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
 
-Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`). SQLite, MySQL, and Postgres open the database client on the connection. Stub dialects throw not-implemented on open, close, and start-transaction.
+Working dialects (`json`, `memory`) open against injected ports ({{IFileStore|IFileStore|FileStore}}, `MemoryStore`). SQLite, MySQL, and Postgres open the database client on the connection. Stub dialects throw not-implemented on open, close, and start-transaction.
 
 ## Examples
 
@@ -272,7 +279,10 @@ Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / 
 
 ### Close with using
 
-Rust has no `using`. Call `close`.
+::: prose
+### rust
+There is no `using`. Call `close`.
+:::
 
 ::: example
 ```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#CloseWithUsing

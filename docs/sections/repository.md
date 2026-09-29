@@ -1,6 +1,6 @@
 # Repository
 
-Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
+Typed item marker and instance registry. {{Type|type|entity_type}} is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
 
 Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
 
@@ -423,9 +423,16 @@ pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
 
 SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
 
-A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
+::: prose
+### typescript
+A missing repository throws [RepositoryNotRegisteredError](#repositorynotregisterederror).
+### csharp
+A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception).
+### rust
+A missing repository throws `DatasourceError`.
+:::
 
-See [Datasource](./datasource.md) for `CreateRepository` / `createRepository`.
+See [Datasource](./datasource.md) for {{CreateRepository|createRepository|create_repository}}.
 
 ## Examples
 

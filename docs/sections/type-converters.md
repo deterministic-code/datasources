@@ -1,6 +1,6 @@
 # TypeConverter
 
-`TypeConverter` is only `Convert` / `ReverseConvert`. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
+`TypeConverter` is only {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}}. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
 ## Classes
 

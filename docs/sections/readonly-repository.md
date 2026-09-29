@@ -1,8 +1,8 @@
 # Readonly repository
 
-Read-only typed read over a connection. `ReadSingle` / `readSingle` / `read_single` returns the first row or none. `Read` / `read` yields every row.
+Read-only typed read over a connection. {{ReadSingle|readSingle|read_single}} returns the first row or none. {{Read|read|read}} yields every row.
 
-Construct it with a connection, then register each fill with `AddEnriched` / `addEnriched` / `add_enriched`. That fill runs after convert-then-map. Lookups use `ReadSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read`. Missing lookups leave the destination default. This type does not write. Writes are [CRUDRepository](./crud-repository.md).
+Construct it with a connection, then register each fill with {{AddEnriched|addEnriched|add_enriched}}. That fill runs after convert-then-map. Lookups use {{ReadSingle|readSingle|read_single}} (cached per distinct key). Lists use {{Read|read|read}}. Missing lookups leave the destination default. This type does not write. Writes are [CRUDRepository](./crud-repository.md).
 
 ## Classes
 
@@ -1077,7 +1077,7 @@ async fn enrich(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()>
 
 ## Remarks
 
-`AddEnriched` / `addEnriched` / `add_enriched` registers a read fill. With no enrichments, `Read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](./crud-repository.md).
+{{AddEnriched|addEnriched|add_enriched}} registers a read fill. With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](./crud-repository.md).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 

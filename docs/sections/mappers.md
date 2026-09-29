@@ -1,6 +1,6 @@
 # Mapper
 
-Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
+Bidirectional {{Map|map|map}} and {{ReverseMap|reverseMap|reverse_map}}. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
 
 ## Classes
 

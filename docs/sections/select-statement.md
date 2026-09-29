@@ -912,7 +912,7 @@ pub enum JoinKind
 
 ## Remarks
 
-[Command](./command.md) uses `GetText()` / `getText()` / `get_text()` only. Keep the [Where](./where-clause.md) when the caller needs bound parameters. Empty `fields` compiles `SELECT *`. Clauses append as `GROUP BY`, `ORDER BY`, then `LIMIT`. An empty group or order list is omitted. `Aggregate` returns a select-list fragment such as `COUNT(*) AS n`.
+[Command](./command.md) uses {{GetText()|getText()|get_text()}} only. Keep the [Where](./where-clause.md) when the caller needs bound parameters. Empty `fields` compiles `SELECT *`. Clauses append as `GROUP BY`, `ORDER BY`, then `LIMIT`. An empty group or order list is omitted. `Aggregate` returns a select-list fragment such as `COUNT(*) AS n`.
 
 ## Examples
 

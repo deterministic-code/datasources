@@ -174,7 +174,7 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](./command.md) uses `GetText()` / `getText()` / `get_text()` only.
+Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](./command.md) uses {{GetText()|getText()|get_text()}} only.
 
 ## Examples
 

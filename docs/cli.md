@@ -1,6 +1,6 @@
 # Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. `Datasource.Default` / `Datasource.default` / `default()` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
+`@datasources/cli` installs provider packages and writes a local `.env`. {{Datasource.Default|Datasource.default|default()}} reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
 
 ```sh
 npx @datasources/cli setup
@@ -56,7 +56,7 @@ npx @datasources/cli remove postgres
 
 ## .env
 
-`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. Process env overrides the same three keys. `Create` with omitted options registers each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL`. The datasource itself is `PROVIDER`.
+`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. Process env overrides the same three keys. {{Create|create|create}} with omitted options registers each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL`. The datasource itself is `PROVIDER`.
 
 | Key | Default | Meaning |
 | --- | --- | --- |

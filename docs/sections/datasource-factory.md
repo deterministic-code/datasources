@@ -231,11 +231,11 @@ pub fn registered() -> Vec<String>
 
 ## Remarks
 
-`Create(null)` / `create()` / `create(None)` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError`. [Datasource.Default](./datasource.md) uses that path.
+{{Create(null)|create()|create(None)}} reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws {{DatasourceException|DatasourceError|DatasourceError}}. [Datasource.Default](./datasource.md) uses that path.
 
-A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
+A missing factory throws {{ProviderNotInstalledException|ProviderNotInstalledError|DatasourceError::ProviderNotInstalled}}.
 
-When `Create` is called with null / `undefined` / `None` options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. Every dialect loads those with `DriverLoader` and `ProviderCatalog`. Each dialect implements [IDriver](../writing-providers.md#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
+When {{Create|create|create}} is called with {{null|undefined|None}} options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. Every dialect loads those with `DriverLoader` and `ProviderCatalog`. Each dialect implements [IDriver](../writing-providers.md#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what {{Register|register|register}} stores.
 
 ## Examples
 

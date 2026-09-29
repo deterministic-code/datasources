@@ -156,7 +156,7 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX name ON table (cols)`. Table and column names are interpolated as given. [Command](./command.md) uses `GetText()` / `getText()` / `get_text()` only.
+Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX name ON table (cols)`. Table and column names are interpolated as given. [Command](./command.md) uses {{GetText()|getText()|get_text()}} only.
 
 ## Examples
 

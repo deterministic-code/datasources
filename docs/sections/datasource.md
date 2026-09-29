@@ -1,6 +1,6 @@
 # Datasource
 
-Use Datasource to create repositories, commands, and connections for a datasource provider. After setup has written an `.env`, `Datasource.Default` / `Datasource.default` / `default()` returns that provider. The connection is closed by default.
+Use Datasource to create repositories, commands, and connections for a datasource provider. After setup has written an `.env`, {{Datasource.Default|Datasource.default|default()}} returns that provider. The connection is closed by default.
 
 ## Classes
 
@@ -405,11 +405,20 @@ Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`
 
 ## Remarks
 
-`Datasource.Default` / `Datasource.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `DatasourceFactory.Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
+{{Datasource.Default|Datasource.default|default()}} loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. {{DatasourceFactory.Create(null)|DatasourceFactory.create()|create(None)}} uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
 
-Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalog`. C# loads the assembly, TypeScript loads the package, and Rust loads the provider cdylib.
+Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalog`.
 
-`Reset` / `reset` clears the registry. Use it in tests.
+::: prose
+### typescript
+Load the provider package.
+### csharp
+Load the assembly.
+### rust
+Load the provider cdylib.
+:::
+
+{{Reset|reset|reset}} clears the registry. Use it in tests.
 
 See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [CLI](../cli.md#command-line-cli) for `setup` and adding providers.
 
