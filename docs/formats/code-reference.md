@@ -63,7 +63,6 @@ Rules:
 - The first paragraph under a member is the table description. Constructor and Methods also use it as the detail lead.
 - Parameter lines are `- \`name\` — description`. Link page-local and cross-page types (`[DatasourceOptions](#datasourceoptions)`, `[IDatasourceFactory](../sections/datasource-factory.md)`).
 - Rust may use a module heading (`#### datasources`) for free functions when there is no registry class.
-- Omit internal hooks (`bindInstall` / `bind_install`) from the class list.
 
 VitePress uses one page-level dialect selector for classes and examples. README expands each panel under `#### TypeScript` / `#### C#` / `#### Rust`.
 

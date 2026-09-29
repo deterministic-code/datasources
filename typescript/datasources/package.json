@@ -9,6 +9,7 @@
     "./mocks": "./src/mocks/index.ts"
   },
   "devDependencies": {
+    "@datasources/json": "*",
     "@datasources/memory": "*"
   },
   "scripts": {

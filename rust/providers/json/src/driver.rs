@@ -33,3 +33,5 @@ impl Driver for JsonDriver {
         HashMap::new()
     }
 }
+
+datasources::export_driver!(datasources_json_driver, JsonDriver);

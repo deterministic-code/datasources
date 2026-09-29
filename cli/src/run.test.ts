@@ -95,24 +95,29 @@ describe("run", () => {
     expect(io.ran.some((line) => line.includes("install") && line.includes("memory"))).toBe(true);
   });
 
-  it("adds and removes on rust with a feature patch", async () => {
+  it("adds and removes rust crates and builds the plugin", async () => {
+    const toml = `datasources-json = { version = "0.1.0" }\n`;
     const { files, fs } = mem(["Cargo.toml"], {
-      [join(cwd, "Cargo.toml")]:
-        `datasources-register = { version = "0.1.0", features = ["json"] }\n`,
+      [join(cwd, "Cargo.toml")]: toml,
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\n",
     });
     const io = deps(fs);
     expect(await run(["add", "sqlite", "--cwd", cwd, "--ecosystem", "rust"], io)).toBe(0);
-    expect(files[join(cwd, "Cargo.toml")]).toMatch(/features = \["json", "sqlite"\]/);
+    expect(files[join(cwd, "Cargo.toml")]).toBe(toml);
     expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=json,sqlite/);
+    expect(io.ran).toContain("cargo add datasources");
+    expect(io.ran).toContain("cargo add datasources-sqlite");
+    expect(io.ran).toContain("cargo build -p datasources-sqlite");
     expect(await run(["remove", "json", "--cwd", cwd, "--ecosystem", "rust"], io)).toBe(0);
+    expect(io.ran).toContain("cargo remove datasources-json");
     const dry = deps(fs);
     expect(await run(["remove", "sqlite", "--cwd", cwd, "--dry-run"], dry)).toBe(0);
-    expect(dry.logs.some((line) => line.includes("features: (none)"))).toBe(true);
+    expect(dry.ran).toEqual([]);
+    expect(dry.logs.some((line) => line.includes("cargo remove datasources-sqlite"))).toBe(true);
     expect(await run(["add", "json", "--cwd", cwd], deps(mem(["Cargo.toml"]).fs))).toBe(0);
   });
 
-  it("dry-runs csharp without writing cargo features", async () => {
+  it("dry-runs csharp without writing env", async () => {
     const { files, fs } = mem(["App.csproj"], {
       [join(cwd, "App.csproj")]: `<PackageReference Include="Datasources.Json" />`,
     });

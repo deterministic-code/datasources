@@ -548,11 +548,9 @@ fn registry() {
     assert!(default().is_err());
     std::env::set_var("DATASOURCE_URL", "json://");
     assert!(default().is_err());
+    std::env::remove_var("DATASOURCE_URL");
     std::env::set_var("PROVIDER", "json");
     assert_eq!(default().unwrap().provider(), "json");
-    std::env::set_var("DATASOURCE_URL", "json://extra");
-    assert_eq!(default().unwrap().provider(), "json");
-    std::env::remove_var("DATASOURCE_URL");
     reset();
     assert!(create(Some(&HashMap::from([("PROVIDER".into(), "json".into())]))).is_err());
     assert!(default().is_err());

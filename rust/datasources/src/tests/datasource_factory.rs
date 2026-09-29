@@ -18,7 +18,6 @@ fn default_from_environment() {
     clear_env();
     register("sqlite", MockDriver::arc());
     std::env::set_var("PROVIDER", "sqlite");
-    std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
     let ds = default().expect("default");
     assert_eq!(Datasource::provider(&*ds), "sqlite");
 }

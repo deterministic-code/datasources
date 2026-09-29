@@ -10,7 +10,6 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 datasources = { path = "../../../rust/datasources" }
 datasources-mysql = { path = "../../../rust/providers/mysql" }
 datasources-postgres = { path = "../../../rust/providers/postgres" }
-datasources-register = { path = "../../../rust/register", features = ["sqlite", "mysql", "postgres"] }
 datasources-sqlite = { path = "../../../rust/providers/sqlite" }
 datasources-sql-specs = { path = "../../../rust/sql-specs" }
 regex = "1"

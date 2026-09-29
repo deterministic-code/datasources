@@ -12,7 +12,6 @@ beforeEach(() => {
   for (const key of envKeys) delete process.env[key];
   DatasourceFactory.register("sqlite", new MockDriver());
   process.env.PROVIDER = "sqlite";
-  process.env.DATASOURCE_URL = "sqlite:///:memory:";
 });
 
 afterEach(() => DatasourceFactory.reset());

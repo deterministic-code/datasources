@@ -12,7 +12,6 @@
     "@datasources/core": "file:../../../typescript/datasources",
     "@datasources/mysql": "file:../../../typescript/providers/mysql",
     "@datasources/postgres": "file:../../../typescript/providers/postgres",
-    "@datasources/register": "file:../../../typescript/register",
     "@datasources/sqlite": "file:../../../typescript/providers/sqlite",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.10.0",
@@ -35,7 +34,6 @@
     "@datasources/memory": "file:../../../typescript/providers/memory",
     "@datasources/mysql": "file:../../../typescript/providers/mysql",
     "@datasources/postgres": "file:../../../typescript/providers/postgres",
-    "@datasources/register": "file:../../../typescript/register",
     "@datasources/sqlite": "file:../../../typescript/providers/sqlite"
   }
 }

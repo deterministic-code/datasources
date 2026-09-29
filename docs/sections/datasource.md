@@ -407,7 +407,7 @@ Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`
 
 `Datasource.Default` / `Datasource.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `DatasourceFactory.Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
 
-C# loads each installed provider with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust register those names through `@datasources/register` and `datasources-register` when that package is present.
+Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalog`. C# loads the assembly, TypeScript loads the package, and Rust loads the provider cdylib.
 
 `Reset` / `reset` clears the registry. Use it in tests.
 

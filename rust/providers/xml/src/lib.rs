@@ -1,5 +1,6 @@
 mod command;
 mod connection;
+mod export;
 
 pub use connection::XmlDriver;
 
