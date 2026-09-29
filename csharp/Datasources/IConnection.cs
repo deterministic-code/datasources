@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public interface IConnection
+public interface IConnection : IAsyncDisposable
 {
     string Provider { get; }
     bool IsOpen { get; }
@@ -8,4 +8,5 @@ public interface IConnection
     Task Open();
     Task Close();
     Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable);
+    ValueTask IAsyncDisposable.DisposeAsync() => new(Close());
 }

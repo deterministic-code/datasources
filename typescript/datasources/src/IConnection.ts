@@ -9,4 +9,5 @@ export interface IConnection {
   open(): Promise<void>;
   close(): Promise<void>;
   startTransaction(isolation?: IsolationLevel): Promise<ITransaction>;
+  [Symbol.asyncDispose](): Promise<void>;
 }

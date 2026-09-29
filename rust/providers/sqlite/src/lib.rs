@@ -80,7 +80,6 @@ mod tests {
     async fn sqlite_command_and_repository() {
         let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
         conn.open().await.unwrap();
-        conn.open().await.unwrap();
         let command = SqliteCommand::new(conn.clone());
         command.execute("", None).await.unwrap();
         command

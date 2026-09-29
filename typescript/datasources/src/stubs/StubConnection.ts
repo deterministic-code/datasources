@@ -14,6 +14,8 @@ export class StubConnection implements IConnection {
 
   close = async (): Promise<void> => notImplemented(this.provider);
 
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
+
   startTransaction = async (): Promise<ITransaction> =>
     notImplemented(this.provider);
 }

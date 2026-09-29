@@ -91,7 +91,7 @@ impl Connection for SqliteConnection {
 
     async fn open(&self) -> Result<()> {
         if *self.opened.lock().unwrap() {
-            return Ok(());
+            return Err(DatasourceError::message("Connection is already open"));
         }
         let mut db = self.db.lock().unwrap();
         if db.is_some() {

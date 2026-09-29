@@ -36,7 +36,6 @@ public class JsonTests
         var existing = new JsonConnection(new JsonConnectionOptions { Path = "a.json", FileStore = store });
         await existing.Open();
         Assert.Single(existing.GetCollection());
-        await existing.Open();
 
         var missing = new JsonConnection(new JsonConnectionOptions { Path = "none.json", FileStore = new MemoryFileStore() });
         await missing.Open();
@@ -127,7 +126,6 @@ public class JsonTests
         await bound.Execute("insert", [new Parameter("id", 99)]);
         await bound.ExecuteReader("");
         var implicitCommand = Assert.IsType<JsonCommand>(ds.CreateCommand());
-        await implicitCommand.Connection.Open();
         await implicitCommand.Execute("insert", [new Parameter("id", 1)]);
         await implicitCommand.ExecuteReader("");
         ds.CreateRepository<Dictionary<string, Value>>(created);

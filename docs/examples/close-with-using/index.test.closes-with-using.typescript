@@ -1,0 +1,5 @@
+const connection = new MemoryConnection();
+{
+  await using held = connection;
+  await held.open();
+}

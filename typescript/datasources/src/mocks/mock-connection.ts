@@ -1,3 +1,4 @@
+import { DatasourceError } from "../DatasourceError.ts";
 import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { ITransaction } from "../ITransaction.ts";
@@ -25,6 +26,7 @@ export class MockConnection implements IConnection {
   createCommand = (): ICommand => this.command ?? new MockCommand(this);
 
   async open(): Promise<void> {
+    if (this.isOpen) throw new DatasourceError("Connection is already open");
     this.openCalls += 1;
     if (this.openError) {
       throw this.openError;
@@ -39,6 +41,8 @@ export class MockConnection implements IConnection {
     }
     this.isOpen = false;
   }
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(isolation: Isolation = IsolationLevel.Serializable): Promise<ITransaction> {
     this.startTransactionCalls += 1;

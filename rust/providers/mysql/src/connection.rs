@@ -96,7 +96,7 @@ impl Connection for MysqlConnection {
 
     async fn open(&self) -> Result<()> {
         if *self.opened.lock().unwrap() {
-            return Ok(());
+            return Err(DatasourceError::message("Connection is already open"));
         }
         let mut slot = self.conn.lock().await;
         if slot.is_some() {

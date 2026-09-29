@@ -906,7 +906,7 @@ const repo = ds.createRepository(Item);
 
 ## Connection
 
-Connection represents a connection to a datasource and handles opening and closing. A new command or transaction can be created from an existing connection.
+Connection represents a connection to a datasource. You can create commands and transactions from the connection.
 
 ### Classes
 
@@ -930,8 +930,9 @@ interface IConnection
 | Name | Description |
 | --- | --- |
 | [createCommand()](#typescript-iconnection-createcommand) | Creates a command bound to this connection. |
-| [open()](#typescript-iconnection-open) | Opens the connection. A no-op if already open. |
+| [open()](#typescript-iconnection-open) | Opens the connection. Throws if it is already open. |
 | [close()](#typescript-iconnection-close) | Closes the connection. |
+| [[Symbol.asyncDispose]()](#typescript-iconnection-symbol-asyncdispose) | Closes the connection. `await using` calls this. |
 | [startTransaction(isolation?)](#typescript-iconnection-starttransaction-isolation) | Begins a transaction. The connection must be open. |
 
 ###### createCommand() {#typescript-iconnection-createcommand}
@@ -950,7 +951,7 @@ createCommand(): ICommand
 
 ###### open() {#typescript-iconnection-open}
 
-Opens the connection. A no-op if already open.
+Opens the connection. Throws if it is already open.
 
 **Definition**
 
@@ -966,6 +967,16 @@ Closes the connection.
 
 ```typescript
 close(): Promise<void>
+```
+
+###### [Symbol.asyncDispose]() {#typescript-iconnection-symbol-asyncdispose}
+
+Closes the connection. `await using` calls this.
+
+**Definition**
+
+```typescript
+[Symbol.asyncDispose](): Promise<void>
 ```
 
 ###### startTransaction(isolation?) {#typescript-iconnection-starttransaction-isolation}
@@ -993,7 +1004,7 @@ startTransaction(isolation?: IsolationLevel): Promise<ITransaction>
 ##### IConnection {#csharp-iconnection}
 
 ```csharp
-public interface IConnection
+public interface IConnection : IAsyncDisposable
 ```
 
 **Properties**
@@ -1008,8 +1019,9 @@ public interface IConnection
 | Name | Description |
 | --- | --- |
 | [CreateCommand()](#csharp-iconnection-createcommand) | Creates a command bound to this connection. |
-| [Open()](#csharp-iconnection-open) | Opens the connection. A no-op if already open. |
+| [Open()](#csharp-iconnection-open) | Opens the connection. Throws if it is already open. |
 | [Close()](#csharp-iconnection-close) | Closes the connection. |
+| [DisposeAsync()](#csharp-iconnection-disposeasync) | Closes the connection. `await using` calls this. |
 | [StartTransaction(isolation)](#csharp-iconnection-starttransaction-isolation) | Begins a transaction. The connection must be open. |
 
 ###### CreateCommand() {#csharp-iconnection-createcommand}
@@ -1028,7 +1040,7 @@ ICommand CreateCommand()
 
 ###### Open() {#csharp-iconnection-open}
 
-Opens the connection. A no-op if already open.
+Opens the connection. Throws if it is already open.
 
 **Definition**
 
@@ -1045,6 +1057,20 @@ Closes the connection.
 ```csharp
 Task Close()
 ```
+
+###### DisposeAsync() {#csharp-iconnection-disposeasync}
+
+Closes the connection. `await using` calls this.
+
+**Definition**
+
+```csharp
+ValueTask DisposeAsync()
+```
+
+**Returns**
+
+`ValueTask`
 
 ###### StartTransaction(isolation) {#csharp-iconnection-starttransaction-isolation}
 
@@ -1081,7 +1107,7 @@ pub trait Connection: Send + Sync
 | [provider()](#rust-connection-provider) | Registered provider name. |
 | [is_open()](#rust-connection-is_open) | Whether the connection is open. |
 | [create_command()](#rust-connection-create_command) | Creates a command bound to this connection. |
-| [open()](#rust-connection-open) | Opens the connection. A no-op if already open. |
+| [open()](#rust-connection-open) | Opens the connection. Throws if it is already open. |
 | [close()](#rust-connection-close) | Closes the connection. |
 | [start_transaction(isolation)](#rust-connection-start_transaction-isolation) | Begins a transaction. The connection must be open. |
 
@@ -1129,7 +1155,7 @@ fn create_command(&self) -> Arc<dyn Command>
 
 ###### open() {#rust-connection-open}
 
-Opens the connection. A no-op if already open.
+Opens the connection. Throws if it is already open.
 
 **Definition**
 
@@ -1177,7 +1203,9 @@ async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<A
 
 ### Remarks
 
-`CreateConnection` / `createConnection` / `create_connection` is async and returns a closed connection. The caller opens it. `Open` / `open` is a no-op if already open. Do not open during process bootstrap.
+`CreateConnection` / `createConnection` / `create_connection` returns a closed connection. It is not open until `Open` / `open`. Calling `Open` / `open` on an open connection throws.
+
+C# and TypeScript close the connection at the end of an `await using` block. Otherwise call `Close` / `close`. Rust has no `using`; call `close().await`.
 
 `StartTransaction` requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
 
@@ -1234,9 +1262,70 @@ await connection.open();
 await connection.close();
 ```
 
+#### Create and run a command
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L35-L43)
+
+```csharp
+var connection = new MemoryConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+var response = await command.Execute("insert");
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L65-L72)
+
+```rust
+let connection = MemoryConnection::from_options(None);
+connection.open().await.unwrap();
+let command = connection.create_command();
+let response = command.execute("insert", None).await.unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L60-L66)
+
+```typescript
+const connection = new MemoryConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.execute("insert");
+```
+
+#### Close with using
+
+Rust has no `using`. Call `close`.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L45-L54)
+
+```csharp
+var connection = new MemoryConnection();
+await using (connection)
+{
+    await connection.Open();
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L47-L53)
+
+```rust
+let connection = MemoryConnection::from_options(None);
+connection.open().await.unwrap();
+connection.close().await.unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L68-L75)
+
+```typescript
+const connection = new MemoryConnection();
+{
+  await using held = connection;
+  await held.open();
+}
+```
+
 #### Start a transaction
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L16-L23)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L26-L33)
 
 ```csharp
 var connection = new MemoryConnection();
@@ -1244,7 +1333,7 @@ await connection.Open();
 var txn = await connection.StartTransaction();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L55-L60)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L75-L80)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1252,7 +1341,7 @@ connection.open().await.unwrap();
 let txn = connection.start_transaction(None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L47-L52)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L53-L58)
 
 ```typescript
 const connection = new MemoryConnection();
@@ -1503,7 +1592,7 @@ var txn = await connection.StartTransaction();
 await txn.Commit();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L63-L69)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L82-L88)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1512,7 +1601,7 @@ let txn = connection.start_transaction(None).await.unwrap();
 txn.commit().await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L56-L62)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L79-L85)
 
 ```typescript
 const connection = new MemoryConnection();
@@ -1532,7 +1621,7 @@ var txn = await connection.StartTransaction();
 await txn.Abort();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L72-L78)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L91-L97)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1541,7 +1630,7 @@ let txn = connection.start_transaction(None).await.unwrap();
 txn.abort().await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L64-L70)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L87-L93)
 
 ```typescript
 const connection = new MemoryConnection();

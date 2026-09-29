@@ -42,7 +42,7 @@ export class SqliteConnection implements IConnection {
   createCommand = (): ICommand => new SqliteCommand(this);
 
   async open(): Promise<void> {
-    if (this.isOpen) return;
+    if (this.isOpen) throw new DatasourceError("Connection is already open");
     if (!this.Database) throw new DatasourceError("SQLite driver is required");
     this.db = new this.Database(this.filename, { timeout: 0 });
     this.isOpen = true;
@@ -53,6 +53,8 @@ export class SqliteConnection implements IConnection {
     this.db = undefined;
     this.isOpen = false;
   }
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(
     isolation: IsolationLevelName = IsolationLevel.Serializable,

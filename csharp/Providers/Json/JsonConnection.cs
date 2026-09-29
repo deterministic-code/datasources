@@ -38,7 +38,7 @@ internal sealed class JsonConnection : IConnection
 
     public async Task Open()
     {
-        if (IsOpen) return;
+        if (IsOpen) throw new DatasourceException("Connection is already open");
         if (_hasInitial)
             Data = _initial?.DeepClone() ?? Empty();
         else if (!string.IsNullOrEmpty(Path) && await FileStore.Exists(Path))

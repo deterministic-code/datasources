@@ -36,7 +36,7 @@ internal sealed class PostgresConnection : IConnection
 
     public async Task Open()
     {
-        if (IsOpen) return;
+        if (IsOpen) throw new DatasourceException("Connection is already open");
         _db = new NpgsqlConnection(PostgresConnectionString.ToConnectionString(Url));
         await _db.OpenAsync();
         if (!string.IsNullOrEmpty(Schema))

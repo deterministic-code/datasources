@@ -19,6 +19,7 @@ public sealed class MockConnection : IConnection
 
     public Task Open()
     {
+        if (IsOpen) throw new DatasourceException("Connection is already open");
         OpenCalls++;
         if (OpenError is not null) throw OpenError;
         IsOpen = true;

@@ -50,7 +50,7 @@ export class MysqlConnection implements IConnection {
   createCommand = (): ICommand => new MysqlCommand(this);
 
   async open(): Promise<void> {
-    if (this.isOpen) return;
+    if (this.isOpen) throw new DatasourceError("Connection is already open");
     if (!this.client) {
       if (!this.connect) throw new DatasourceError("MySQL engine is required");
       this.client = await this.connect(this.url);
@@ -64,6 +64,8 @@ export class MysqlConnection implements IConnection {
     this.client = undefined;
     this.isOpen = false;
   }
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(
     isolation: IsolationLevelName = IsolationLevel.Serializable,

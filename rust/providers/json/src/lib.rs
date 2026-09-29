@@ -44,7 +44,6 @@ mod tests {
         ));
         let conn = Arc::new(JsonConnection::new("db.json", None, store.clone(), None));
         conn.open().await.unwrap();
-        conn.open().await.unwrap();
         assert_eq!(conn.path(), "db.json");
         let repo = crud(conn.clone());
         assert!(repo.read_single(None, None).await.unwrap().is_some());

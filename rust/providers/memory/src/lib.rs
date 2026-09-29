@@ -16,7 +16,7 @@ mod tests {
     use crate::store::{MemoryData, MemoryStore};
     use datasources::{
         converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
-        Connection, ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter, Row,
+        Connection, DatasourceError, ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter, Row,
         SelectStatement, Value, WhereText,
     };
     use serde_json::Value as JsonValue;
@@ -50,6 +50,25 @@ mod tests {
         connection.open().await.unwrap();
         connection.close().await.unwrap();
         assert_eq!(connection.is_open(), false);
+    }
+
+    #[tokio::test]
+    async fn open_twice_throws() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        assert_eq!(
+            connection.open().await.unwrap_err(),
+            DatasourceError::message("Connection is already open")
+        );
+    }
+
+    #[tokio::test]
+    async fn create_and_run_a_command() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        let command = connection.create_command();
+        let response = command.execute("insert", None).await.unwrap();
+        assert_eq!(response.rows_affected, 1);
     }
 
     #[tokio::test]
@@ -99,7 +118,6 @@ mod tests {
             "",
             Some(MemoryData::Rows(vec![rec(8, "x")])),
         ));
-        conn.open().await.unwrap();
         conn.open().await.unwrap();
         assert_eq!(conn.collection_name(), "");
         let repo = crud(conn.clone());

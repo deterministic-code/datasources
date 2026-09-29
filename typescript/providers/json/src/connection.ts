@@ -44,9 +44,7 @@ export class JsonConnection implements IConnection {
   createCommand = (): ICommand => new JsonCommand(this);
 
   async open(): Promise<void> {
-    if (this.isOpen) {
-      return;
-    }
+    if (this.isOpen) throw new DatasourceError("Connection is already open");
     if (this.hasInitialData) {
       this.data = structuredClone(this.initialData);
     } else if (this.path && (await this.fileStore.exists(this.path))) {
@@ -64,6 +62,8 @@ export class JsonConnection implements IConnection {
   async close(): Promise<void> {
     this.isOpen = false;
   }
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(
     isolation: IsolationLevelName = IsolationLevel.Serializable,

@@ -138,7 +138,7 @@ impl Connection for MemoryConnection {
 
     async fn open(&self) -> Result<()> {
         if *self.state.opened.lock().unwrap() {
-            return Ok(());
+            return Err(DatasourceError::message("Connection is already open"));
         }
         if let Some(data) = &self.state.data {
             self.state.store.seed(data, &self.collection_name());
