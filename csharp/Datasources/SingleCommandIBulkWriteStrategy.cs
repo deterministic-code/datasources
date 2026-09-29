@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class SingleCommands<T> : IBulkWriteStrategy<T> where T : new()
+public sealed class SingleCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> where T : new()
 {
     public async Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
     {

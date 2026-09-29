@@ -8,10 +8,10 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
     readonly bool useTransaction;
 
     public BulkCRUDRepository(IConnection connection) : base(connection) =>
-        (bulk, useTransaction) = (new SingleCommands<T>(), false);
+        (bulk, useTransaction) = (new SingleCommandIBulkWriteStrategy<T>(), false);
 
     public BulkCRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
-        this(connection, options, new SingleCommands<T>()) { }
+        this(connection, options, new SingleCommandIBulkWriteStrategy<T>()) { }
 
     public BulkCRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options, IBulkWriteStrategy<T> bulk)
         : base(connection, options) =>

@@ -3,7 +3,7 @@ import { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy
 import { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
-import { SingleCommands } from "./SingleCommands.ts";
+import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
 import { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStrategy.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 
@@ -33,7 +33,7 @@ const open = <T extends object>(type: new () => T, strategy: IBulkWriteStrategy<
 
 describe("bulk write strategies", () => {
   it("single commands writes one statement per row", async () => {
-    const { repo, command } = open(Parent, new SingleCommands<Parent>());
+    const { repo, command } = open(Parent, new SingleCommandIBulkWriteStrategy<Parent>());
     command.response = { result: 9, rowsAffected: 1 };
     await repo.createBulk([
       Object.assign(new Parent(), { label: "a" }),
@@ -152,7 +152,7 @@ describe("bulk write strategies", () => {
 
   it("empty list does not execute", async () => {
     for (const strategy of [
-      new SingleCommands<Parent>(),
+      new SingleCommandIBulkWriteStrategy<Parent>(),
       new BatchCommandIBulkWriteStrategy<Parent>(),
       new StoredProcedureBulkWriteStrategy<Parent>("create_parent", "update_parent", "delete_parent"),
     ]) {

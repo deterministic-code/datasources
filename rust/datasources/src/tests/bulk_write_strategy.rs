@@ -1,6 +1,7 @@
 use crate::{
     BatchCommandIBulkWriteStrategy, BulkCRUDRepository, CRUDRepositoryOptions, MockCommand,
-    MockConnection, RowTypeConverter, SingleCommands, StoredProcedureBulkWriteStrategy, Value,
+    MockConnection, RowTypeConverter, SingleCommandIBulkWriteStrategy,
+    StoredProcedureBulkWriteStrategy, Value,
 };
 use chrono::{TimeZone, Utc};
 use rust_decimal::Decimal;
@@ -25,8 +26,8 @@ fn parents(strategy: Arc<dyn crate::BulkWriteStrategy>) -> (BulkCRUDRepository, 
 }
 
 #[tokio::test]
-async fn single_commands_writes_one_statement_per_row() {
-    let (repo, command) = parents(Arc::new(SingleCommands));
+async fn single_command_i_bulk_write_strategy_writes_one_statement_per_row() {
+    let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
     *command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1);
     let mut created = [
         row(&[("label", Value::from("a"))]),
@@ -232,7 +233,7 @@ async fn payload_encodes_scalars() {
 #[tokio::test]
 async fn empty_list_does_not_execute() {
     for strategy in [
-        Arc::new(SingleCommands) as Arc<dyn crate::BulkWriteStrategy>,
+        Arc::new(SingleCommandIBulkWriteStrategy) as Arc<dyn crate::BulkWriteStrategy>,
         Arc::new(BatchCommandIBulkWriteStrategy),
         Arc::new(StoredProcedureBulkWriteStrategy::new(
             "create_parent",
