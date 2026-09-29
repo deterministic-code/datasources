@@ -1,4 +1,0 @@
-const connection = new MemoryConnection();
-await connection.open();
-const txn = await connection.startTransaction();
-await txn.commit();

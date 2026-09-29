@@ -2,3 +2,9 @@ let ds = default().expect("default");
 let connection = ds.create_connection().await.expect("connection");
 connection.open().await.expect("open");
 let txn = connection.start_transaction(None).await.expect("txn");
+let saved = true;
+if saved {
+    txn.commit().await.expect("commit");
+} else {
+    txn.abort().await.expect("abort");
+}

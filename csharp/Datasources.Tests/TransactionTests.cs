@@ -22,12 +22,17 @@ public class TransactionTests
     }
 
     [Fact]
-    public async Task StartFromDefault()
+    public async Task CommitOrAbort()
     {
         var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
         await connection.Open();
         var txn = await connection.StartTransaction();
+        var saved = true;
+        if (saved)
+            await txn.Commit();
+        else
+            await txn.Abort();
         Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
     }
 }

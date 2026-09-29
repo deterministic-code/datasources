@@ -1,4 +1,0 @@
-var connection = new MemoryConnection();
-await connection.Open();
-var txn = await connection.StartTransaction();
-await txn.Abort();
