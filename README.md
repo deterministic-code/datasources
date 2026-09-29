@@ -17,59 +17,20 @@ The feature stack starts with standard data-access modules for commands, connect
 
 ##### TypeScript
 
-Install Core
-
 ```typescript
 npm install @datasources/core
 ```
 
-Install Providers
-
-```typescript
-npm install @datasources/register
-npm install @datasources/sqlite
-npm install @datasources/mysql
-npm install @datasources/postgres
-npm install @datasources/memory
-npm install @datasources/json
-```
-
 ##### C#
-
-Install Core
 
 ```csharp
 dotnet add package Datasources
 ```
 
-Install Providers
-
-```csharp
-dotnet add package Datasources.Sqlite
-dotnet add package Datasources.Sqlite.Microsoft
-dotnet add package Datasources.Mysql
-dotnet add package Datasources.Postgres
-dotnet add package Datasources.Memory
-dotnet add package Datasources.Json
-```
-
 ##### Rust
-
-Install Core
 
 ```rust
 cargo add datasources
-```
-
-Install Providers
-
-```rust
-cargo add datasources-register --features sqlite
-cargo add datasources-sqlite
-cargo add datasources-mysql
-cargo add datasources-postgres
-cargo add datasources-memory
-cargo add datasources-json
 ```
 
 ### Setup
@@ -1613,7 +1574,7 @@ var ds = DatasourceFactory.Default;
 var connection = await ds.CreateConnection();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L19-L24)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L18-L23)
 
 ```rust
 let ds = default().expect("default");
@@ -3230,7 +3191,7 @@ while (await reader.next()) {
 Assert.Throws<InvalidOperationException>(() =>
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1112-L1122)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1117-L1127)
 
 ```rust
 let max_n = Aggregate::max("n", None);
@@ -4591,7 +4552,7 @@ var byId = new WhereText("id = 1");
 var withWhere = new SelectStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1185-L1188)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1190-L1193)
 
 ```rust
     .not_null(NotNull::new(Some("nn_id"))),
@@ -4622,7 +4583,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L924-L931)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L936)
 
 ```rust
     Where::new(Operator::Equals {
@@ -4676,7 +4637,7 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L975-L989)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L994)
 
 ```rust
 .get_text()
@@ -4729,7 +4690,7 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L994-L997)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L999-L1002)
 
 ```rust
     left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -4770,7 +4731,7 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L999-L1002)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1007)
 
 ```rust
 
@@ -4808,7 +4769,7 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1007)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1009-L1012)
 
 ```rust
     .get_text(),
@@ -4849,7 +4810,7 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1012-L1015)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1017-L1020)
 
 ```rust
     .parameters()
@@ -5139,7 +5100,7 @@ Join.Left("payments", "orders.id", "payments.order_id"),
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L983-L987)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L988-L992)
 
 ```rust
     )))),
@@ -5467,7 +5428,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L978-L983)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L983-L988)
 
 ```rust
 left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
@@ -5802,7 +5763,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L987-L992)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L992-L997)
 
 ```rust
 assert!(Where::new(Operator::Equals {
@@ -6776,7 +6737,7 @@ GroupBy = ["status"],
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L993-L1001)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L998-L1006)
 
 ```rust
 assert!(Where::new(Operator::In {
@@ -6825,7 +6786,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1006-L1029)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1011-L1034)
 
 ```rust
 );
@@ -7106,7 +7067,7 @@ new CreateTableStatement(
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1074-L1081)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1079-L1086)
 
 ```rust
         ..SelectStatementOptions::new("users", &["users.id"])
@@ -7151,7 +7112,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1083-L1085)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1088-L1090)
 
 ```rust
 })
@@ -7428,7 +7389,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1087-L1088)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1092-L1093)
 
 ```rust
 let count = Aggregate::count("*", Some("n"));
@@ -7704,7 +7665,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1093-L1094)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1098-L1099)
 
 ```rust
 "customers",
@@ -8315,7 +8276,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L648-L652)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L653-L657)
 
 ```rust
 assert!(txn.commit().await.is_err());
@@ -8383,7 +8344,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2098-L2104)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2103-L2109)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -8440,7 +8401,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L927-L933)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L932-L938)
 
 ```rust
     })
@@ -8948,7 +8909,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L741-L756)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L746-L761)
 
 ```rust
 
@@ -8986,7 +8947,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2098-L2104)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2103-L2109)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -9153,7 +9114,7 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 var ret = new ReturnStatement("add", fields);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1164-L1168)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1169-L1173)
 
 ```rust
     &[],
@@ -11231,7 +11192,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1436-L1452)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1441-L1457)
 
 ```rust
         &row
@@ -11290,7 +11251,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1473-L1479)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1478-L1484)
 
 ```rust
 
@@ -14074,7 +14035,7 @@ var response = await Repo(parentsRepo, childrenRepo).Create(
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1895-L1909)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1900-L1914)
 
 ```rust
 let command = Arc::new(MockCommand::new());
