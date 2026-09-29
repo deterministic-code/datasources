@@ -2,3 +2,8 @@
 # Tests, samples, and other files are ignored.
 # Edit this file in the editor. The agent cannot change it.
 ReadonlyRepository
+IConnection
+Connection
+IDataource
+Datasource
+DatasourceFactory
