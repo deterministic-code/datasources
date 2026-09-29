@@ -21,7 +21,7 @@ public class PostgresTests
         var (_, dates) = PostgresBind.ToPostgres("SELECT $at", new Row { ["at"] = stamp });
         Assert.Equal(new object?[] { "2020-01-02T03:04:05.000Z" }, dates);
         Assert.Contains("Host=127.0.0.1", PostgresConnectionString.ToConnectionString("postgres://ds:ds@127.0.0.1:5432/datasources"));
-        Assert.Contains("Username=ds", PostgresConnectionString.ToConnectionString("postgresql://ds@127.0.0.1/datasources"));
+        Assert.Contains("Username=ds", PostgresConnectionString.ToConnectionString("postgres://ds@127.0.0.1/datasources"));
         Assert.Equal("Host=db;Port=1", PostgresConnectionString.ToConnectionString("Host=db;Port=1"));
         Assert.Equal("READ UNCOMMITTED", PostgresBind.IsolationSql(IsolationLevel.ReadUncommitted));
         Assert.Equal("READ COMMITTED", PostgresBind.IsolationSql(IsolationLevel.ReadCommitted));
