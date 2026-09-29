@@ -1,17 +1,10 @@
 pub fn provider_from_url(url: &str) -> Option<String> {
     let scheme = url.split_once(':')?.0.to_ascii_lowercase();
     if scheme.is_empty() {
-        return None;
+        None
+    } else {
+        Some(scheme)
     }
-    Some(
-        match scheme.as_str() {
-            "postgresql" => "postgres",
-            "mssql" => "sqlserver",
-            "sqlite3" => "sqlite",
-            other => other,
-        }
-        .into(),
-    )
 }
 
 #[cfg(test)]
@@ -30,7 +23,7 @@ mod tests {
         );
         assert_eq!(
             provider_from_url("postgresql://localhost/db").as_deref(),
-            Some("postgres")
+            Some("postgresql")
         );
         assert_eq!(
             provider_from_url("mysql://localhost/db").as_deref(),

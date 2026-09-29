@@ -49,7 +49,8 @@ describe("env", () => {
     expect(answersFromEnv({ SQLITE_FILENAME: "app.db" }).url).toBe("sqlite:///app.db");
     expect(answersFromEnv({ SQLITE_FILENAME: ":memory:" }).url).toBe("sqlite:///:memory:");
     expect(answersFromEnv({ SQLITE_FILENAME: ":memory" }).url).toBe("sqlite:///:memory:");
-    expect(providerFromUrl("postgresql://localhost/db")).toBe("postgres");
+    expect(providerFromUrl("postgresql://localhost/db")).toBe("postgresql");
+    expect(providerFromUrl("postgres://localhost/db")).toBe("postgres");
     expect(providerFromUrl("sqlite:///:memory:")).toBe("sqlite");
   });
 
