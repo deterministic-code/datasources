@@ -53,7 +53,7 @@ public class PostgresTests
         await bound.ExecuteReader("");
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
             ds.CreateRepository<Dictionary<string, Value>>(provided));
-        Assert.Equal("postgres", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "postgres" }).Provider);
+        Assert.Equal("postgres", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "postgres" }).Provider);
 
         var closed = new PostgresConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute("x"));

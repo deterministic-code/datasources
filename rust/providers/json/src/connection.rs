@@ -2,7 +2,9 @@ use crate::command::JsonCommand;
 use crate::file_store::{FileStore, MemoryFileStore};
 use crate::transaction::JsonTransaction;
 use async_trait::async_trait;
-use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
+use datasources::{
+    Command, Connection, DatasourceError, DatasourceUrlParser, IsolationLevel, Result, Transaction,
+};
 use serde_json::{Map, Value as JsonValue};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -45,8 +47,9 @@ impl JsonConnection {
 
     pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
         let path = options
-            .and_then(|o| o.get("path"))
-            .cloned()
+            .and_then(|o| o.get("DATASOURCE_URL"))
+            .and_then(|url| DatasourceUrlParser::parse(url))
+            .and_then(|parsed| parsed.datasource().map(str::to_string))
             .unwrap_or_default();
         Arc::new(JsonConnection::new(
             path,

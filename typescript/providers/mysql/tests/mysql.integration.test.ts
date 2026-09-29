@@ -57,7 +57,7 @@ describe("shared sql specs", () => {
       try {
         await runSpec(file, dialect, {
           openSession: async () => {
-            const connection = MysqlConnection.from({ url: isolated.url });
+            const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
             return { connection, command: new MysqlCommand(connection) };
           },
           closedCommand: () =>
@@ -74,7 +74,7 @@ describe("return and output parameters", () => {
   it("reads OUT and function results", async () => {
     const isolated = await isolate(url);
     try {
-      const connection = MysqlConnection.from({ url: isolated.url });
+      const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
       await connection.open();
       const command = new MysqlCommand(connection);
       await command.execute(`

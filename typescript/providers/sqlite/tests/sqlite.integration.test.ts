@@ -16,7 +16,9 @@ describe("shared sql specs", () => {
     it(file.split("/").pop()!, async () => {
       await runSpec(file, dialect, {
         openSession: async (filename) => {
-          const connection = SqliteConnection.from({ filename });
+          const connection = SqliteConnection.from({
+            DATASOURCE_URL: filename === ":memory:" ? "sqlite:///:memory:" : `sqlite:///${filename}`,
+          });
           return { connection, command: new SqliteCommand(connection) };
         },
         closedCommand: () =>
@@ -28,7 +30,7 @@ describe("shared sql specs", () => {
 
 describe("return statement", () => {
   it("selects a scalar", async () => {
-    const connection = SqliteConnection.from({ filename: ":memory:" });
+    const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
     const parameters = [{ name: "x", value: -3 }];

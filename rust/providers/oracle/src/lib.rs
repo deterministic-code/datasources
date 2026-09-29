@@ -19,7 +19,7 @@ mod tests {
         reset();
         register("oracle", Arc::new(OracleDriver));
         assert_eq!(
-            create(Some(&HashMap::from([("provider".into(), "oracle".into())])))
+            create(Some(&HashMap::from([("PROVIDER".into(), "oracle".into())])))
                 .unwrap()
                 .provider(),
             "oracle"

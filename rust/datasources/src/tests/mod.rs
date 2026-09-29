@@ -15,7 +15,12 @@ use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
 use std::any::TypeId;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
+
+pub(crate) fn env_lock() -> MutexGuard<'static, ()> {
+    static LOCK: Mutex<()> = Mutex::new(());
+    LOCK.lock().unwrap_or_else(|error| error.into_inner())
+}
 
 fn record(pairs: &[(&str, Value)]) -> Row {
     pairs
@@ -525,13 +530,11 @@ fn parses_dotenv() {
 
 #[test]
 fn registry() {
+    let _guard = env_lock();
     reset();
     for key in [
         "INSTALLED_PROVIDERS",
         "DATASOURCE_URL",
-        "DATABASE_SCHEMA",
-        "DEFAULT_PROVIDER",
-        "DEFAULT_DATASOURCE_URL",
         "PROVIDER",
     ] {
         std::env::remove_var(key);
@@ -539,7 +542,7 @@ fn registry() {
     assert!(registered().is_empty());
     register("json", MockDriver::arc());
     assert_eq!(registered(), vec!["json".to_string()]);
-    let created = create(Some(&HashMap::from([("provider".into(), "json".into())]))).unwrap();
+    let created = create(Some(&HashMap::from([("PROVIDER".into(), "json".into())]))).unwrap();
     assert_eq!(created.provider(), "json");
     assert!(create_default().is_err());
     std::env::set_var("DATASOURCE_URL", "json://");
@@ -547,14 +550,11 @@ fn registry() {
     std::env::set_var("PROVIDER", "json");
     assert_eq!(create_default().unwrap().provider(), "json");
     assert_eq!(default().unwrap().provider(), "json");
-    std::env::set_var("DEFAULT_PROVIDER", "json");
-    std::env::set_var("DEFAULT_DATASOURCE_URL", "json://extra");
+    std::env::set_var("DATASOURCE_URL", "json://extra");
     assert_eq!(default().unwrap().provider(), "json");
     std::env::remove_var("DATASOURCE_URL");
-    std::env::remove_var("DEFAULT_PROVIDER");
-    std::env::remove_var("DEFAULT_DATASOURCE_URL");
     reset();
-    assert!(create(Some(&HashMap::from([("provider".into(), "json".into())]))).is_err());
+    assert!(create(Some(&HashMap::from([("PROVIDER".into(), "json".into())]))).is_err());
     assert!(create_default().is_err());
     assert!(default().is_err());
 }

@@ -9,7 +9,7 @@ describe("sqlserver", () => {
   it("creates", () => {
     DatasourceFactory.register("sqlserver", new SqlServerDriver());
     expect(SqlServerConnection.from()).toBeInstanceOf(SqlServerConnection);
-    expect(Datasource.create({ provider: "sqlserver" }).provider).toBe("sqlserver");
+    expect(Datasource.create({ PROVIDER: "sqlserver" }).provider).toBe("sqlserver");
   });
 
   it("creates a named connection that throws on open", async () => {

@@ -214,7 +214,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 ## Remarks
 
-`connection` receives the options bag (`url`, `filename`, `host`, `database`, `schema`, …). A provider may parse `url` / `database_url` with [DatasourceUrlParser](./sections/datasource-url.md). That call is optional. `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
+`connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](./sections/datasource-url.md). `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
 
 `rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](./sections/type-converters.md). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 

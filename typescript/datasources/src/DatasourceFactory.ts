@@ -25,19 +25,10 @@ const nonEmpty = (value: string | undefined): string | undefined =>
 
 const merge = (file: DatasourceOptions, env: Record<string, string | undefined>): DatasourceOptions => {
   const options: DatasourceOptions = { ...file };
-  for (const key of ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "PROVIDER", "provider"] as const) {
+  for (const key of ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] as const) {
     const value = nonEmpty(env[key]);
     if (value) options[key] = value;
   }
-  const url = nonEmpty(env.DEFAULT_DATASOURCE_URL) ?? get(options, "DATASOURCE_URL");
-  const provider = nonEmpty(env.DEFAULT_PROVIDER) ?? get(options, "PROVIDER") ?? get(options, "provider");
-  if (url) {
-    options.DATASOURCE_URL = url;
-    options.database_url = url;
-  }
-  if (provider) options.provider = provider;
-  const schema = get(options, "DATABASE_SCHEMA");
-  if (schema) options.database_schema = schema;
   return options;
 };
 
@@ -46,7 +37,7 @@ const registerInstalled = (options: DatasourceOptions): void => install?.(option
 const resolve = (options?: DatasourceOptions): IDatasource => {
   const listed = options ?? merge(DotEnv.load(), process.env);
   if (options === undefined) registerInstalled(listed);
-  const name = get(listed, "provider")
+  const name = get(listed, "PROVIDER")
     ?? (() => { throw new DatasourceError("Datasource defaults are not specified"); })();
   const driver = factories.get(name);
   if (!driver) throw new ProviderNotInstalledError(name);

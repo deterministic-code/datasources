@@ -266,9 +266,9 @@ describe("Mysql datasource", () => {
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
     expect(new Datasource("mysql", of()).createRepository(untyped())).toBeInstanceOf(CRUDRepository);
-    expect(Datasource.create({ provider: "mysql" }).provider).toBe("mysql");
-    expect(MysqlConnection.from({ url: "mysql://db/app" }).url).toBe("mysql://db/app");
-    expect(MysqlConnection.from({ database_url: "mysql://db/app" }).url).toBe("mysql://db/app");
+    expect(Datasource.create({ PROVIDER: "mysql" }).provider).toBe("mysql");
+    expect(MysqlConnection.from({ DATASOURCE_URL: "mysql://db/app" }).url).toBe("mysql://db/app");
+    expect(MysqlConnection.from({ DATASOURCE_URL: "mysql://db/app" }).url).toBe("mysql://db/app");
     expect(MysqlConnection.from().url).toBe("");
     const provider = new MysqlDriver();
     expect(provider.columnType("int")).toBe("INT");

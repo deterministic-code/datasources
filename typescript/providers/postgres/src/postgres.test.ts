@@ -148,7 +148,7 @@ describe("PostgresConnection", () => {
     });
     await viaDefault.open();
     await viaDefault.close();
-    expect(PostgresConnection.from({ url: "postgres://db/app" }).url).toBe("postgres://db/app");
+    expect(PostgresConnection.from({ DATASOURCE_URL: "postgres://db/app" }).url).toBe("postgres://db/app");
   });
 
   it("opens, reopens, transacts, and closes through the connection", async () => {
@@ -276,14 +276,13 @@ describe("Postgres datasource", () => {
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
     expect(new Datasource("postgres", of()).createRepository(untyped())).toBeInstanceOf(CRUDRepository);
-    expect(Datasource.create({ provider: "postgres" }).provider).toBe("postgres");
+    expect(Datasource.create({ PROVIDER: "postgres" }).provider).toBe("postgres");
     const provided = PostgresConnection.from({
-      database_url: "postgres://db/app",
-      database_schema: "s",
+      DATASOURCE_URL: "postgres://db/app?schema=s",
     });
-    expect(provided.url).toBe("postgres://db/app");
+    expect(provided.url).toBe("postgres://db/app?schema=s");
     expect(provided.schema).toBe("s");
-    expect(PostgresConnection.from({ url: "postgres://db/app", schema: "app" }).schema).toBe("app");
+    expect(PostgresConnection.from({ DATASOURCE_URL: "postgres://db/app?schema=app" }).schema).toBe("app");
     expect(PostgresConnection.from().url).toBe("");
     expect(PostgresConnection.from().schema).toBeUndefined();
     const provider = new PostgresDriver();

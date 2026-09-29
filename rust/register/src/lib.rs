@@ -108,9 +108,6 @@ mod tests {
         for key in [
             "INSTALLED_PROVIDERS",
             "DATASOURCE_URL",
-            "DATABASE_SCHEMA",
-            "DEFAULT_PROVIDER",
-            "DEFAULT_DATASOURCE_URL",
             "PROVIDER",
         ] {
             std::env::remove_var(key);
@@ -180,15 +177,15 @@ mod tests {
             assert_eq!(names, vec!["json", "memory"]);
             assert_eq!(
                 create(Some(&opts(&[
-                    ("provider", "memory"),
-                    ("database_url", "memory://"),
+                    ("PROVIDER", "memory"),
+                    ("DATASOURCE_URL", "memory://"),
                 ])))
                 .unwrap()
                 .provider(),
                 "memory"
             );
             assert_eq!(
-                create(Some(&opts(&[("provider", "json")])))
+                create(Some(&opts(&[("PROVIDER", "json")])))
                     .unwrap()
                     .provider(),
                 "json"
@@ -209,8 +206,8 @@ mod tests {
             assert_eq!(names, vec!["json", "memory"]);
             assert_eq!(
                 create(Some(&opts(&[
-                    ("provider", "memory"),
-                    ("database_url", "memory://"),
+                    ("PROVIDER", "memory"),
+                    ("DATASOURCE_URL", "memory://"),
                 ])))
                 .unwrap()
                 .provider(),
@@ -228,8 +225,8 @@ mod tests {
             std::env::set_var("PROVIDER", "memory");
             assert_eq!(create_default().unwrap().provider(), "memory");
             assert_eq!(default().unwrap().provider(), "memory");
-            std::env::set_var("DEFAULT_PROVIDER", "json");
-            std::env::set_var("DEFAULT_DATASOURCE_URL", "json://");
+            std::env::set_var("PROVIDER", "json");
+            std::env::set_var("DATASOURCE_URL", "json://");
             assert_eq!(default().unwrap().provider(), "json");
         });
     }

@@ -64,7 +64,7 @@ public class UserViewCRUDRepositoryTests
 
     static async Task<Graph> GraphAsync(IWriteEnrichmentStrategy<UserView>? write = null)
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds, "user-view-links");
         var usersRepo = BuildRepo<UserView>(connection, "Users", write);
         var userTypesRepo = BuildRepo<UserType>(connection, "UserTypes");

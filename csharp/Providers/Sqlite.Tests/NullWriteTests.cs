@@ -47,7 +47,7 @@ public class NullWriteTests
 
     static async Task<IConnection> Open(string schema)
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();

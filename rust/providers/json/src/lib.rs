@@ -142,7 +142,7 @@ mod tests {
 
         reset();
         register("json", Arc::new(JsonDriver));
-        let ds = create(Some(&HashMap::from([("provider".into(), "json".into())]))).unwrap();
+        let ds = create(Some(&HashMap::from([("PROVIDER".into(), "json".into())]))).unwrap();
         assert_eq!(ds.provider(), "json");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);

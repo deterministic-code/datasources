@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Datasources;
 
 public sealed class DatasourceFactory : IDatasourceFactory
@@ -26,7 +24,7 @@ public sealed class DatasourceFactory : IDatasourceFactory
             options = Merge(DotEnv.Load(), Environment.GetEnvironmentVariable);
             RegisterInstalled(options);
         }
-        var name = Get(options, "provider")
+        var name = Get(options, "PROVIDER")
             ?? throw new DatasourceException("Datasource defaults are not specified");
         return Factories.TryGetValue(name, out var driver)
             ? new Datasource(name, driver, options)
@@ -46,42 +44,43 @@ public sealed class DatasourceFactory : IDatasourceFactory
         Func<string, string?> env)
     {
         var options = file.ToDictionary(entry => entry.Key, entry => entry.Value);
-        foreach (var key in (string[])["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "PROVIDER", "provider"])
+        foreach (var key in (string[])["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"])
         {
             var value = NonEmpty(env(key));
             if (value is not null)
                 options[key] = value;
         }
-        var url = NonEmpty(env("DEFAULT_DATASOURCE_URL")) ?? Get(options, "DATASOURCE_URL");
-        var provider = NonEmpty(env("DEFAULT_PROVIDER")) ?? Get(options, "PROVIDER") ?? Get(options, "provider");
-        if (url is not null)
-        {
-            options["DATASOURCE_URL"] = url;
-            options["database_url"] = url;
-        }
-        if (provider is not null)
-            options["provider"] = provider;
-        var schema = Get(options, "DATABASE_SCHEMA");
-        if (schema is not null)
-            options["database_schema"] = schema;
         return options;
     }
 
     static void RegisterInstalled(IReadOnlyDictionary<string, string?>? options)
     {
         if (options is null) return;
-        var method = Type.GetType("Datasources.DatasourceInstall, Datasources.Hosting")
-            ?.GetMethod("RegisterListed", BindingFlags.Public | BindingFlags.Static);
-        if (method is null) return;
-        try
-        {
-            method.Invoke(null, [options]);
-        }
-        catch (TargetInvocationException ex)
-        {
-            throw ex.InnerException ?? ex;
-        }
+        foreach (var name in Installed(options))
+            Register(name, DriverLoader.Load(Catalog(name)));
     }
+
+    static ProviderCatalog Catalog(string name) =>
+        ProviderCatalog.Default.TryGetValue(name, out var catalog)
+            ? catalog
+            : throw new ProviderNotInstalledException(name);
+
+    static IEnumerable<string> Installed(IReadOnlyDictionary<string, string?> options)
+    {
+        var names = new HashSet<string>();
+        foreach (var name in Split(Get(options, "INSTALLED_PROVIDERS")))
+            if (names.Add(name))
+                yield return name;
+        var url = Get(options, "DATASOURCE_URL")?.Trim();
+        if (string.IsNullOrEmpty(url)) yield break;
+        var provider = DatasourceUrlParser.Parse(url)?.Provider
+            ?? throw new DatasourceException("DATASOURCE_URL has no provider");
+        if (names.Add(provider))
+            yield return provider;
+    }
+
+    static string[] Split(string? value) =>
+        (value ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
     public static void Reset() => Factories.Clear();
 

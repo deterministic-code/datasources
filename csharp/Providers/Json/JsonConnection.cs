@@ -18,7 +18,10 @@ internal sealed class JsonConnection : IConnection
     private readonly bool _hasInitial;
 
     public JsonConnection(IReadOnlyDictionary<string, string?>? options)
-        : this(new JsonConnectionOptions { Path = DatasourceOptions.Value(options, "path") ?? "" })
+        : this(new JsonConnectionOptions
+        {
+            Path = DatasourceUrlParser.Parse(DatasourceOptions.Value(options, "DATASOURCE_URL"))?.Datasource ?? ""
+        })
     {
     }
 

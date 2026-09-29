@@ -35,7 +35,7 @@ export class MysqlConnection implements IConnection {
   private readonly connect?: MysqlCreateConnection;
 
   static from = (options?: DatasourceOptions): MysqlConnection => {
-    const url = options?.url ?? options?.database_url ?? "";
+    const url = options?.DATASOURCE_URL ?? "";
     return new MysqlConnection({
       url,
       connect: mysql2Connect(require("mysql2/promise") as Mysql2Module),

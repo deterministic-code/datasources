@@ -2,15 +2,13 @@ using Datasources;
 
 namespace Datasources.Tests;
 
+[Collection("DatasourceFactory")]
 public class ConnectionTests
 {
     static readonly string[] EnvKeys =
     [
         "INSTALLED_PROVIDERS",
         "DATASOURCE_URL",
-        "DATABASE_SCHEMA",
-        "DEFAULT_PROVIDER",
-        "DEFAULT_DATASOURCE_URL",
         "PROVIDER",
     ];
 
@@ -21,7 +19,6 @@ public class ConnectionTests
             Environment.SetEnvironmentVariable(key, null);
         DatasourceFactory.Register("sqlite", new MockDriver());
         Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
-        Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
     }
 
     [Fact]

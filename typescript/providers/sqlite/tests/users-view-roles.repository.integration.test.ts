@@ -64,7 +64,7 @@ const names = (roles: UserRole[]) => roles.map((role) => role.Name).sort();
 
 describe("users view roles", () => {
   it("fills roles with a hashset", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds, "user-roles-read", seed());
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>();
@@ -109,7 +109,7 @@ describe("users view roles", () => {
   });
 
   it("fills roles from a join", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds, "user-roles-read", seed());
     const usersRepo = new ReadonlyRepository(connection, {
       type: UsersView,

@@ -45,7 +45,6 @@ dotnet add package Datasources
 Install Providers
 
 ```csharp
-dotnet add package Datasources.Hosting
 dotnet add package Datasources.Sqlite
 dotnet add package Datasources.Sqlite.Microsoft
 dotnet add package Datasources.Mysql
@@ -359,7 +358,7 @@ class DatasourceFactory implements IDatasourceFactory
 
 | Name | Description |
 | --- | --- |
-| default | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [create](#typescript-create-options). |
+| default | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#typescript-create-options). |
 
 **Methods**
 
@@ -418,7 +417,7 @@ static create(options?: DatasourceOptions): IDatasource
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA` |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
 
 **Returns**
 
@@ -492,7 +491,7 @@ public sealed class DatasourceFactory : IDatasourceFactory
 
 | Name | Description |
 | --- | --- |
-| Default | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [Create](#csharp-create-options). |
+| Default | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [Create](#csharp-create-options). |
 
 **Methods**
 
@@ -551,7 +550,7 @@ public static IDatasource Create(IReadOnlyDictionary<string, string?>? options =
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#csharp-datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA` |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
 
 **Returns**
 
@@ -628,7 +627,7 @@ IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
 | [defaults(options)](#rust-datasources-defaults-options) | Registers listed provider packages. Does not apply to a `Some` `create` bag. |
 | [register(provider, driver)](#rust-datasources-register-provider-driver) | Registers a provider [Driver](#rust-driver) by name. |
 | [create(options)](#rust-datasources-create-options) | Creates one datasource. `None` reads process env; `Some` is used as-is. |
-| [default()](#rust-datasources-default) | Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [create](#rust-create-options). |
+| [default()](#rust-datasources-default) | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#rust-create-options). |
 | [create_default()](#rust-datasources-create_default) | `default()`. |
 | [reset()](#rust-datasources-reset) | Clears the registry. Use in tests. |
 | [registered()](#rust-datasources-registered) | Lists registered provider names. |
@@ -684,7 +683,7 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#rust-datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA` |
+| `options` | [DatasourceOptions](#rust-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
 
 **Returns**
 
@@ -692,7 +691,7 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
 
 ###### default() {#rust-datasources-default}
 
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [create](#rust-create-options).
+Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#rust-create-options).
 
 **Definition**
 
@@ -744,26 +743,25 @@ pub fn registered() -> Vec<String>
 
 ### Remarks
 
-`Default` requires `.env` `PROVIDER` and `DATASOURCE_URL`, or process `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` to override them. Missing both throws `DatasourceException` / `DatasourceError`.
+`Default` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError`.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
+When `Create` is called with null / `undefined` / `None` options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. C# loads those with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust use `@datasources/register` and `datasources-register`. Each dialect implements [IDriver](#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
 
 ### Examples
 
 #### Default from environment
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L24-L32)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L23-L30)
 
 ```csharp
-DatasourceFactory.Register("sqlite", new MockDriver());
-Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
-Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
-var ds = DatasourceFactory.Default;
+Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "memory");
+Environment.SetEnvironmentVariable("PROVIDER", "memory");
+Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L21-L26)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L19-L24)
 
 ```rust
 register("sqlite", MockDriver::arc());
@@ -772,7 +770,7 @@ std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
 let ds = default().expect("default");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L48-L54)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L46-L52)
 
 ```typescript
 DatasourceFactory.register("sqlite", new MockDriver());
@@ -806,19 +804,19 @@ const ds = DatasourceFactory.create({ provider: "memory" });
 
 #### Missing provider
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L34-L40)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L32-L38)
 
 ```csharp
 DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L28-L35)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L26-L33)
 
 ```rust
 create(Some(&HashMap::from([("provider".into(), "missing".into())])));
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L56-L60)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L54-L58)
 
 ```typescript
 DatasourceFactory.create({ provider: "missing" });
@@ -882,7 +880,7 @@ static create(options?: DatasourceOptions): IDatasource
 
 | Name | Description |
 | --- | --- |
-| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA` |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
 
 **Returns**
 
@@ -997,9 +995,8 @@ type DatasourceOptions = Record<string, string>
 
 | Name | Description |
 | --- | --- |
-| provider | Which datasource to return. |
-| database_url | Connection URL. `provider` is required separately. |
-| database_schema | Default schema. |
+| PROVIDER | Which datasource to return. |
+| DATASOURCE_URL | Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`). |
 
 ##### C#
 
@@ -1140,9 +1137,8 @@ IReadOnlyDictionary<string, string?>
 
 | Name | Description |
 | --- | --- |
-| provider | Which datasource to return. |
-| database_url | Connection URL. `provider` is required separately. |
-| database_schema | Default schema. |
+| PROVIDER | Which datasource to return. |
+| DATASOURCE_URL | Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`). |
 
 ##### Rust
 
@@ -1292,15 +1288,14 @@ HashMap<String, String>
 
 | Name | Description |
 | --- | --- |
-| provider | Which datasource to return. |
-| database_url | Connection URL. `provider` is required separately. |
-| database_schema | Default schema. |
+| PROVIDER | Which datasource to return. |
+| DATASOURCE_URL | Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`). |
 
 ### Remarks
 
-`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env` `PROVIDER` and `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `provider` throws.
+`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
 
-Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
+C# loads each installed provider with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust register those names through `@datasources/register` and `datasources-register` when that package is present.
 
 `Reset` / `reset` clears the registry. Use it in tests.
 
@@ -1611,21 +1606,21 @@ Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / 
 
 #### Create from Default
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ConnectionTests.cs#L27-L33)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ConnectionTests.cs#L25-L31)
 
 ```csharp
 var ds = DatasourceFactory.Default;
 var connection = await ds.CreateConnection();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L21-L26)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L19-L24)
 
 ```rust
 let ds = default().expect("default");
 let connection = ds.create_connection().await.expect("connection");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Connection.test.ts#L31-L35)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Connection.test.ts#L29-L33)
 
 ```typescript
 const ds = DatasourceFactory.default;
@@ -1889,7 +1884,7 @@ Omitted isolation is `Serializable` (TypeScript omits the argument, C# defaults,
 
 #### Start a transaction
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransactionTests.cs#L27-L35)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransactionTests.cs#L25-L33)
 
 ```csharp
 var ds = DatasourceFactory.Default;
@@ -1898,7 +1893,7 @@ await connection.Open();
 var txn = await connection.StartTransaction();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/transaction.rs#L21-L28)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/transaction.rs#L19-L26)
 
 ```rust
 let ds = default().expect("default");
@@ -1907,7 +1902,7 @@ connection.open().await.expect("open");
 let txn = connection.start_transaction(None).await.expect("txn");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Transaction.test.ts#L31-L37)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Transaction.test.ts#L29-L35)
 
 ```typescript
 const ds = DatasourceFactory.default;
@@ -3092,7 +3087,7 @@ while sets.next().await.unwrap() {
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/src/sqlite.test.ts#L160-L166)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/src/sqlite.test.ts#L172-L178)
 
 ```typescript
 
@@ -3226,7 +3221,7 @@ while (await reader.next()) {
 
 #### Parameter direction and Response.Parameters
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L225-L228)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L226-L229)
 
 ```csharp
         "t",
@@ -3235,7 +3230,7 @@ while (await reader.next()) {
 Assert.Throws<InvalidOperationException>(() =>
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1117-L1127)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1112-L1122)
 
 ```rust
 let max_n = Aggregate::max("n", None);
@@ -4588,7 +4583,7 @@ pub enum JoinKind
 
 #### Wrap query text and an optional where
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L38-L43)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L39-L44)
 
 ```csharp
 var select = new SelectStatement("SELECT 1");
@@ -4596,7 +4591,7 @@ var byId = new WhereText("id = 1");
 var withWhere = new SelectStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1190-L1193)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1185-L1188)
 
 ```rust
     .not_null(NotNull::new(Some("nn_id"))),
@@ -4615,7 +4610,7 @@ const withWhere = new SelectStatement("SELECT 1", where);
 
 #### Compile a SELECT
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L126-L128)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L127-L129)
 
 ```csharp
 var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
@@ -4627,7 +4622,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L936)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L924-L931)
 
 ```rust
     Where::new(Operator::Equals {
@@ -4660,7 +4655,7 @@ SELECT id, name FROM users WHERE id = $id
 
 #### Group, aggregate, order, and limit
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L155-L164)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L156-L165)
 
 ```csharp
 var grouped = new SelectStatement(new()
@@ -4681,7 +4676,7 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L994)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L975-L989)
 
 ```rust
 .get_text()
@@ -4722,7 +4717,7 @@ SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN custom
 
 #### Group rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L166-L166)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L167-L167)
 
 ```csharp
 var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
@@ -4734,7 +4729,7 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L999-L1002)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L994-L997)
 
 ```rust
     left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -4763,7 +4758,7 @@ SELECT id FROM users GROUP BY id
 
 #### Aggregate without grouping
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L168-L168)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L169-L169)
 
 ```csharp
 var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
@@ -4775,7 +4770,7 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1007)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L999-L1002)
 
 ```rust
 
@@ -4801,7 +4796,7 @@ SELECT MIN(n), MAX(n) FROM users
 
 #### Order rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L170-L170)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L171-L171)
 
 ```csharp
 var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
@@ -4813,7 +4808,7 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1009-L1012)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1007)
 
 ```rust
     .get_text(),
@@ -4842,7 +4837,7 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 
 #### Limit rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L172-L172)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L173-L173)
 
 ```csharp
 var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
@@ -4854,7 +4849,7 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1017-L1020)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1012-L1015)
 
 ```rust
     .parameters()
@@ -5131,7 +5126,7 @@ Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](#command) 
 
 #### Compile an INSERT
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L149-L150)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L150-L151)
 
 ```csharp
 Join.Inner("orders", "users.id", "orders.user_id"),
@@ -5144,7 +5139,7 @@ Join.Left("payments", "orders.id", "payments.order_id"),
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L988-L992)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L983-L987)
 
 ```rust
     )))),
@@ -5458,7 +5453,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 
 #### Compile an UPDATE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L151-L153)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L152-L154)
 
 ```csharp
         Join.Right("profiles", "users.id", "profiles.user_id"),
@@ -5472,7 +5467,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L983-L988)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L978-L983)
 
 ```rust
 left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
@@ -5793,7 +5788,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 
 #### Compile a DELETE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L156-L158)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L157-L159)
 
 ```csharp
 {
@@ -5807,7 +5802,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L992-L997)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L987-L992)
 
 ```rust
 assert!(Where::new(Operator::Equals {
@@ -6768,7 +6763,7 @@ A compiled statement stores the table, columns, and constraints. `GetText()` / `
 
 #### Compile a CREATE TABLE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L160-L161)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L161-L162)
 
 ```csharp
 Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
@@ -6781,7 +6776,7 @@ GroupBy = ["status"],
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L998-L1006)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L993-L1001)
 
 ```rust
 assert!(Where::new(Operator::In {
@@ -6816,7 +6811,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 
 #### Compile named constraints
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L162-L175)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L163-L176)
 
 ```csharp
     OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
@@ -6830,7 +6825,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1011-L1034)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1006-L1029)
 
 ```rust
 );
@@ -7098,7 +7093,7 @@ Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX nam
 
 #### Compile a CREATE INDEX
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L208-L209)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L209-L210)
 
 ```csharp
 "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
@@ -7111,7 +7106,7 @@ new CreateTableStatement(
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1079-L1086)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1074-L1081)
 
 ```rust
         ..SelectStatementOptions::new("users", &["users.id"])
@@ -7142,7 +7137,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 
 #### Compile a CREATE UNIQUE INDEX
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L210-L212)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L211-L213)
 
 ```csharp
 "items",
@@ -7156,7 +7151,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1088-L1090)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1083-L1085)
 
 ```rust
 })
@@ -7421,7 +7416,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 
 #### Compile a CALL
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L213-L214)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L214-L215)
 
 ```csharp
 
@@ -7433,7 +7428,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1092-L1093)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1087-L1088)
 
 ```rust
 let count = Aggregate::count("*", Some("n"));
@@ -7697,7 +7692,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 
 #### Compile a SELECT function call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L216-L217)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L217-L218)
 
 ```csharp
 
@@ -7709,7 +7704,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1098-L1099)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1093-L1094)
 
 ```rust
 "customers",
@@ -8301,7 +8296,7 @@ Construct the predicate with [Operator](#operator) records, then wrap it: `new W
 
 #### Compare, groups, not, and in
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L51-L53)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L52-L54)
 
 ```csharp
 new Operator.Equals("id", 1),
@@ -8320,7 +8315,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L653-L657)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L648-L652)
 
 ```rust
 assert!(txn.commit().await.is_err());
@@ -8388,7 +8383,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2103-L2109)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2098-L2104)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -8432,7 +8427,7 @@ username = $username AND is_enabled = $is_enabled
 
 #### Attach to a query
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L125-L128)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L126-L129)
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
@@ -8445,7 +8440,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L932-L938)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L927-L933)
 
 ```rust
     })
@@ -8947,13 +8942,13 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 #### Compare tree
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L76-L79)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L77-L80)
 
 ```csharp
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L746-L761)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L741-L756)
 
 ```rust
 
@@ -8991,7 +8986,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2103-L2109)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2098-L2104)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -9152,13 +9147,13 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 
 #### Match and miss
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L243-L244)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L244-L245)
 
 ```csharp
 var ret = new ReturnStatement("add", fields);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1169-L1173)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1164-L1168)
 
 ```rust
     &[],
@@ -11236,7 +11231,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1441-L1457)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1436-L1452)
 
 ```rust
         &row
@@ -11295,7 +11290,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1478-L1484)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1473-L1479)
 
 ```rust
 
@@ -14079,7 +14074,7 @@ var response = await Repo(parentsRepo, childrenRepo).Create(
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1900-L1914)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1895-L1909)
 
 ```rust
 let command = Arc::new(MockCommand::new());
@@ -17184,7 +17179,7 @@ Types that sit beside a connection, command, or repository. A provider may use t
 
 ## Datasource URL
 
-A connection URL split into provider, host, credentials, datasource, schema, and options. A provider may parse `url` or `database_url` with `DatasourceUrlParser`. The call is optional.
+A connection URL split into provider, host, credentials, datasource, schema, and options. A provider parses `DATASOURCE_URL` with `DatasourceUrlParser`. Schema is the `schema` query.
 
 ### Classes
 
@@ -17452,7 +17447,7 @@ const connectionString = DatasourceUrlParser.parse("Host=db;Port=1");
 
 ## Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. `Default` / `default` / `DatasourceFactory.default` reads that file for `PROVIDER` and `DATASOURCE_URL`. `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` in the process override `.env`. If neither source sets a provider or URL, create throws.
+`@datasources/cli` installs provider packages and writes a local `.env`. `Default` / `default` / `DatasourceFactory.default` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
 
 ```sh
 npx @datasources/cli setup
@@ -17508,26 +17503,19 @@ npx @datasources/cli remove postgres
 
 ### .env
 
-`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. `Default` uses the `DATASOURCE_URL` scheme as the default provider (`sqlite://`, `postgres://`, `mysql://`, …) unless `PROVIDER` or `DEFAULT_PROVIDER` is set.
+`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. Process env overrides the same three keys. `Create` with omitted options registers each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL`. The datasource itself is `PROVIDER`.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `INSTALLED_PROVIDERS` | scheme of `DATASOURCE_URL` | Comma-separated providers `Create` registers. |
-| `DATASOURCE_URL` | `sqlite:///:memory:` | Connection URL. The scheme is the default provider. |
-| `DATABASE_SCHEMA` | *(empty)* | Schema / search path (postgres). |
+| `PROVIDER` | | Datasource `Create` returns. |
+| `DATASOURCE_URL` | `sqlite:///:memory:` | Connection URL. Schema is the `schema` query. |
 
 ```sh
 INSTALLED_PROVIDERS=sqlite,postgres
-DATASOURCE_URL=sqlite:///:memory:
-DATABASE_SCHEMA=public
+PROVIDER=postgres
+DATASOURCE_URL=postgres://localhost/db?schema=public
 ```
-
-Process overrides (not written by `setup`):
-
-| Key | Meaning |
-| --- | --- |
-| `DEFAULT_PROVIDER` | Overrides `.env` `PROVIDER` / inferred scheme. |
-| `DEFAULT_DATASOURCE_URL` | Overrides `.env` `DATASOURCE_URL`. |
 
 SQLAlchemy-style SQLite URLs: `sqlite:///:memory:`, `sqlite:///app.db`, `sqlite:////tmp/app.db`.
 
@@ -17880,7 +17868,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 ### Remarks
 
-`connection` receives the options bag (`url`, `filename`, `host`, `database`, `schema`, …). A provider may parse `url` / `database_url` with [DatasourceUrlParser](#datasource-url). That call is optional. `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
+`connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](#datasource-url). `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
 
 `rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 

@@ -20,7 +20,7 @@ mod tests {
         register("dynamodb", Arc::new(DynamoDbDriver));
         assert_eq!(
             create(Some(&HashMap::from([(
-                "provider".into(),
+                "PROVIDER".into(),
                 "dynamodb".into()
             )])))
             .unwrap()

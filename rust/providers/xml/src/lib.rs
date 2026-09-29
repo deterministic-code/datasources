@@ -19,7 +19,7 @@ mod tests {
         reset();
         register("xml", Arc::new(XmlDriver));
         assert_eq!(
-            create(Some(&HashMap::from([("provider".into(), "xml".into())])))
+            create(Some(&HashMap::from([("PROVIDER".into(), "xml".into())])))
                 .unwrap()
                 .provider(),
             "xml"

@@ -43,7 +43,7 @@ public class MysqlTests
         await bound.ExecuteReader("");
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
             ds.CreateRepository<Dictionary<string, Value>>(provided));
-        Assert.Equal("mysql", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "mysql" }).Provider);
+        Assert.Equal("mysql", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "mysql" }).Provider);
 
         var closed = new MysqlConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));

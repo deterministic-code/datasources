@@ -137,7 +137,7 @@ public class MemoryTests
         await implicitCommand.ExecuteReader("");
         ds.CreateRepository<Dictionary<string, Value>>(created);
         ds.CreateRepository<Dictionary<string, Value>>();
-        Assert.Equal("memory", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" }).Provider);
+        Assert.Equal("memory", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "memory" }).Provider);
 
         var shared = new MemoryStore();
         var a = new MemoryConnection(new MemoryConnectionOptions { Store = shared, Data = new List<Dictionary<string, Value>> { new() { ["id"] = 1 } } });

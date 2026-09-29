@@ -62,7 +62,6 @@ const dotnetAdd = (names: Provider[], project: string): Proc[] => {
   const prefix = project === "." ? [] : [project];
   return [
     { command: "dotnet", args: ["add", ...prefix, "package", host.csharp.core] },
-    { command: "dotnet", args: ["add", ...prefix, "package", host.csharp.register] },
     ...names.map((name) => ({
       command: "dotnet",
       args: ["add", ...prefix, "package", catalog[name].nuget],

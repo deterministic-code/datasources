@@ -1,5 +1,6 @@
 import {
   DatasourceError,
+  DatasourceUrlParser,
   IsolationLevel,
   type DatasourceOptions,
   type ICommand,
@@ -25,7 +26,9 @@ export class JsonConnection implements IConnection {
   private readonly hasInitialData: boolean;
 
   static from = (options?: DatasourceOptions): JsonConnection =>
-    new JsonConnection({ path: options?.path ?? "" });
+    new JsonConnection({
+      path: DatasourceUrlParser.parse(options?.DATASOURCE_URL)?.datasource ?? "",
+    });
 
 
 

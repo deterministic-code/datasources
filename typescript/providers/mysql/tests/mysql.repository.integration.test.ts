@@ -54,7 +54,7 @@ describe("repository specs", () => {
     it(file.split("/").pop()!, async () => {
       const isolated = await isolate(url);
       try {
-        const connection = MysqlConnection.from({ url: isolated.url });
+        const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
         await connection.open();
         const command = new MysqlCommand(connection);
         await runRepositorySpec(

@@ -1,4 +1,3 @@
-DatasourceFactory.Register("sqlite", new MockDriver());
-Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
-Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
-var ds = DatasourceFactory.Default;
+Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "memory");
+Environment.SetEnvironmentVariable("PROVIDER", "memory");
+Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");

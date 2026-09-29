@@ -12,7 +12,7 @@ class UserStamp {
 const bytes = (value: Uint8Array | null): number[] => [...(value ?? new Uint8Array())];
 
 const open = async (): Promise<IConnection> => {
-  const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+  const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
   const connection = await ds.createConnection();
   await connection.open();
   await connection.createCommand().execute(`

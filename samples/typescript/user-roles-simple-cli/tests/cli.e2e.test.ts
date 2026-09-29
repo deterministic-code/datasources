@@ -60,11 +60,14 @@ const commands = (stderr: string): { leftover: string; sql: string[] } => {
   return { leftover: leftover.join("\n"), sql };
 };
 
+const withSchema = (url: string, schema: string) =>
+  schema ? `${url}${url.includes("?") ? "&" : "?"}schema=${schema}` : url;
+
 const cli = (url: string, schema: string, provider: string, args: string[]) => {
   const result = spawnSync(process.execPath, ["--import", "tsx", "src/main.ts", ...args], {
     cwd: sample,
     encoding: "utf8",
-    env: { ...process.env, PROVIDER: provider, DATASOURCE_URL: url, DATABASE_SCHEMA: schema, CLI_NOW: spec.now },
+    env: { ...process.env, PROVIDER: provider, DATASOURCE_URL: withSchema(url, schema), CLI_NOW: spec.now },
   });
   return { exit: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 };
@@ -72,7 +75,7 @@ const cli = (url: string, schema: string, provider: string, args: string[]) => {
 const setup = (url: string, schema = "", provider = "sqlite") => {
   writeFileSync(
     join(sample, ".env"),
-    `INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER=${provider}\nDATASOURCE_URL=${url}\nDATABASE_SCHEMA=${schema}\n`,
+    `INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER=${provider}\nDATASOURCE_URL=${withSchema(url, schema)}\n`,
   );
   execFileSync("npm", ["run", "setup", "--", "--cwd", sample, "--ecosystem", "ts", "--yes"], {
     cwd: repo,
@@ -184,10 +187,10 @@ describe.sequential("cli e2e", () => {
     try {
       const isolated = new URL(url);
       isolated.pathname = `/${name}`;
-      await transcript("mysql.log", new MysqlDriver().connection({ url: isolated.toString() }), false);
+      await transcript("mysql.log", new MysqlDriver().connection({ DATASOURCE_URL: isolated.toString() }), false);
       const procedureUrl = new URL(url);
       procedureUrl.pathname = `/${procedures}`;
-      await transcript("mysql-procedures.log", new MysqlDriver().connection({ url: procedureUrl.toString() }), true);
+      await transcript("mysql-procedures.log", new MysqlDriver().connection({ DATASOURCE_URL: procedureUrl.toString() }), true);
     } finally {
       await admin.query(`DROP DATABASE \`${name}\``);
       await admin.query(`DROP DATABASE \`${procedures}\``);
@@ -204,7 +207,7 @@ describe.sequential("cli e2e", () => {
     await admin.connect();
     await admin.query(`CREATE SCHEMA ${schema}`);
     try {
-      await transcript("postgres.log", new PostgresDriver().connection({ url, schema }), false);
+      await transcript("postgres.log", new PostgresDriver().connection({ DATASOURCE_URL: withSchema(url, schema) }), false);
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.end();

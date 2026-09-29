@@ -16,7 +16,6 @@ npm install @datasources/json
 ```csharp
 dotnet add package Datasources
 ---
-dotnet add package Datasources.Hosting
 dotnet add package Datasources.Sqlite
 dotnet add package Datasources.Sqlite.Microsoft
 dotnet add package Datasources.Mysql

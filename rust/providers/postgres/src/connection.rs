@@ -2,7 +2,9 @@ use crate::bind::isolation_sql;
 use crate::command::PostgresCommand;
 use crate::transaction::PostgresTransaction;
 use async_trait::async_trait;
-use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
+use datasources::{
+    Command, Connection, DatasourceError, DatasourceUrlParser, IsolationLevel, Result, Transaction,
+};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio_postgres::NoTls;
@@ -31,12 +33,11 @@ impl PostgresConnection {
     }
 
     pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
-        let url = options.and_then(|o| o.get("url").or_else(|| o.get("database_url")).cloned());
-        let schema = options.and_then(|o| {
-            o.get("schema")
-                .or_else(|| o.get("database_schema"))
-                .cloned()
-        });
+        let url = options.and_then(|o| o.get("DATASOURCE_URL").cloned());
+        let schema = url
+            .as_deref()
+            .and_then(DatasourceUrlParser::parse)
+            .and_then(|parsed| parsed.schema);
         Arc::new(PostgresConnection::new(url, schema))
     }
 

@@ -2,15 +2,13 @@ using Datasources;
 
 namespace Datasources.Tests;
 
+[Collection("DatasourceFactory")]
 public class DatasourceFactoryTests
 {
     static readonly string[] EnvKeys =
     [
         "INSTALLED_PROVIDERS",
         "DATASOURCE_URL",
-        "DATABASE_SCHEMA",
-        "DEFAULT_PROVIDER",
-        "DEFAULT_DATASOURCE_URL",
         "PROVIDER",
     ];
 
@@ -24,18 +22,17 @@ public class DatasourceFactoryTests
     [Fact]
     public void DefaultFromEnvironment()
     {
-        DatasourceFactory.Register("sqlite", new MockDriver());
-        Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
-        Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
-        var ds = DatasourceFactory.Default;
-        Assert.Equal("sqlite", ds.Provider);
+        Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "memory");
+        Environment.SetEnvironmentVariable("PROVIDER", "memory");
+        Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
+        Assert.Equal("memory", DatasourceFactory.Default.Provider);
     }
 
     [Fact]
     public void MissingProviderThrows()
     {
         var error = Assert.Throws<ProviderNotInstalledException>(() =>
-            DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" }));
+            DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "missing" }));
         Assert.Equal("missing", error.Provider);
     }
 }

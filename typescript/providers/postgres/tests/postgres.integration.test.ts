@@ -47,7 +47,7 @@ describe("shared sql specs", () => {
       try {
         await runSpec(file, dialect, {
           openSession: async () => {
-            const connection = PostgresConnection.from({ url, schema: isolated.schema });
+            const connection = PostgresConnection.from({ DATASOURCE_URL: `${url}${url.includes("?") ? "&" : "?"}schema=${isolated.schema}` });
             return { connection, command: new PostgresCommand(connection) };
           },
           closedCommand: () =>
@@ -64,7 +64,7 @@ describe("return and output parameters", () => {
   it("reads INOUT and function results", async () => {
     const isolated = await isolate(url);
     try {
-      const connection = PostgresConnection.from({ url, schema: isolated.schema });
+      const connection = PostgresConnection.from({ DATASOURCE_URL: `${url}${url.includes("?") ? "&" : "?"}schema=${isolated.schema}` });
       await connection.open();
       const command = new PostgresCommand(connection);
       await command.execute(`

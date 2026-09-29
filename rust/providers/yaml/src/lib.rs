@@ -19,7 +19,7 @@ mod tests {
         reset();
         register("yaml", Arc::new(YamlDriver));
         assert_eq!(
-            create(Some(&HashMap::from([("provider".into(), "yaml".into())])))
+            create(Some(&HashMap::from([("PROVIDER".into(), "yaml".into())])))
                 .unwrap()
                 .provider(),
             "yaml"

@@ -16,7 +16,7 @@ class DatasourceFactory implements IDatasourceFactory
 
 ##### default
 
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [create](#create-options).
+Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#create-options).
 
 ```typescript
 static get default(): IDatasource
@@ -55,7 +55,7 @@ Creates one datasource. `undefined` options read process env; a dictionary is us
 static create(options?: DatasourceOptions): IDatasource
 ```
 
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`
 
 **Returns** [IDatasource](./datasource.md#idatasource)
 
@@ -108,7 +108,7 @@ public sealed class DatasourceFactory : IDatasourceFactory
 
 ##### Default
 
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [Create](#create-options).
+Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [Create](#create-options).
 
 ```csharp
 public static IDatasource Default { get; }
@@ -147,7 +147,7 @@ Creates one datasource. `null` options read process `.env`; a dictionary is used
 public static IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
 ```
 
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`
 
 **Returns** [IDatasource](./datasource.md#idatasource)
 
@@ -229,13 +229,13 @@ Creates one datasource. `None` reads process env; `Some` is used as-is.
 pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datasource>>
 ```
 
-- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](./datasource.md#datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`
 
 **Returns** `Result<Arc<dyn `[Datasource](./datasource.md#datasource)`>>`
 
 ##### default()
 
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [create](#create-options).
+Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#create-options).
 
 ```rust
 pub fn default() -> Result<Arc<dyn Datasource>>
@@ -275,11 +275,11 @@ pub fn registered() -> Vec<String>
 
 ## Remarks
 
-`Default` requires `.env` `PROVIDER` and `DATASOURCE_URL`, or process `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` to override them. Missing both throws `DatasourceException` / `DatasourceError`.
+`Default` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError`.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](../writing-providers.md#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
+When `Create` is called with null / `undefined` / `None` options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. C# loads those with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust use `@datasources/register` and `datasources-register`. Each dialect implements [IDriver](../writing-providers.md#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
 
 ## Examples
 

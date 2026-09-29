@@ -100,14 +100,14 @@ mod tests {
         assert!(conn.ensure_open().is_err());
         let defaulted = MysqlConnection::new(None);
         assert_eq!(defaulted.url, "");
-        let options = HashMap::from([("database_url".into(), "mysql://db/app".into())]);
+        let options = HashMap::from([("DATASOURCE_URL".into(), "mysql://db/app".into())]);
         let from =
             downcast_connection::<MysqlConnection>(MysqlConnection::from_options(Some(&options)))
                 .expect("mysql");
         assert_eq!(from.url, "mysql://db/app");
         reset();
         register("mysql", Arc::new(With(Some("mysql://db/app".into()))));
-        let ds = create(Some(&HashMap::from([("provider".into(), "mysql".into())]))).unwrap();
+        let ds = create(Some(&HashMap::from([("PROVIDER".into(), "mysql".into())]))).unwrap();
         assert_eq!(ds.provider(), "mysql");
         let command = ds.create_command(None);
         assert!(command.execute("DELETE FROM items", None).await.is_err());

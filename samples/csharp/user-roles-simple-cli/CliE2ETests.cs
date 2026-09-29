@@ -103,17 +103,18 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     {
         var sample = SampleDir();
         var spec = LoadSpec();
+        var datasourceUrl = string.IsNullOrEmpty(schema)
+            ? url
+            : url.Contains('?') ? $"{url}&schema={schema}" : $"{url}?schema={schema}";
         await File.WriteAllTextAsync(Path.Combine(sample, ".env"), $"""
             INSTALLED_PROVIDERS=sqlite,mysql,postgres
             PROVIDER={provider}
-            DATASOURCE_URL={url}
-            DATABASE_SCHEMA={schema}
+            DATASOURCE_URL={datasourceUrl}
             """);
         var env = new Dictionary<string, string>
         {
             ["PROVIDER"] = provider,
-            ["DATASOURCE_URL"] = url,
-            ["DATABASE_SCHEMA"] = schema ?? "",
+            ["DATASOURCE_URL"] = datasourceUrl,
             ["CLI_NOW"] = spec.Now
         };
         Require(Exec("npm", $"run setup -- --cwd {sample} --ecosystem csharp --yes", RepoRoot()));

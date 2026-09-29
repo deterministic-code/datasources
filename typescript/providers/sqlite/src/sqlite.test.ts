@@ -251,10 +251,8 @@ describe("Sqlite datasource", () => {
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
     expect(new Datasource("sqlite", of()).createRepository(untyped())).toBeInstanceOf(CRUDRepository);
-    expect(Datasource.create({ provider: "sqlite" }).provider).toBe("sqlite");
-    expect(SqliteConnection.from({ filename: ":memory:" }).filename).toBe(":memory:");
-    expect(SqliteConnection.from({ url: "sqlite:///:memory:" }).filename).toBe(":memory:");
-    expect(SqliteConnection.from({ database_url: "sqlite:///:memory:" }).filename).toBe(":memory:");
+    expect(Datasource.create({ PROVIDER: "sqlite" }).provider).toBe("sqlite");
+    expect(SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" }).filename).toBe(":memory:");
     expect(SqliteConnection.from().filename).toBe(":memory:");
     const provider = new SqliteDriver();
     expect(provider.columnType("int")).toBe("INTEGER");

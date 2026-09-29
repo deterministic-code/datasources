@@ -152,7 +152,7 @@ mod tests {
         assert_eq!(defaulted.filename, ":memory:");
         reset();
         register("sqlite", Arc::new(With(Some(":memory:".into()))));
-        let ds = create(Some(&HashMap::from([("provider".into(), "sqlite".into())]))).unwrap();
+        let ds = create(Some(&HashMap::from([("PROVIDER".into(), "sqlite".into())]))).unwrap();
         assert_eq!(ds.provider(), "sqlite");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);

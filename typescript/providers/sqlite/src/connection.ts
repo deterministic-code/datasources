@@ -30,8 +30,7 @@ export class SqliteConnection implements IConnection {
 
   static from = (options?: DatasourceOptions): SqliteConnection =>
     new SqliteConnection({
-      filename: options?.filename,
-      url: options?.url ?? options?.database_url,
+      url: options?.DATASOURCE_URL,
       Database: require("better-sqlite3") as SqliteDatabaseCtor,
     });
 

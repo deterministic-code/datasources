@@ -31,7 +31,7 @@ describe("DatasourceFactory", () => {
   it("register and create", () => {
     DatasourceFactory.reset();
     DatasourceFactory.register("memory", new MemoryDriver());
-    const ds = DatasourceFactory.create({ provider: "memory" });
+    const ds = DatasourceFactory.create({ PROVIDER: "memory" });
     expect(ds.provider).toBe("memory");
   });
 });
@@ -305,7 +305,7 @@ describe("Memory datasource", () => {
     expect(ds.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(MemoryConnection.from().provider).toBe("memory");
-    const registered = Datasource.create({ provider: "memory" });
+    const registered = Datasource.create({ PROVIDER: "memory" });
     expect(registered.provider).toBe("memory");
     expect(await registered.createConnection()).toBeInstanceOf(MemoryConnection);
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);

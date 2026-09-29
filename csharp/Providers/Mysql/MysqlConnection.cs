@@ -14,8 +14,7 @@ internal sealed class MysqlConnection : IConnection
     public MysqlConnection(IReadOnlyDictionary<string, string?>? options)
         : this(new MysqlConnectionOptions
         {
-            Url = DatasourceOptions.Value(options, "url")
-                ?? DatasourceOptions.Value(options, "database_url")
+            Url = DatasourceOptions.Value(options, "DATASOURCE_URL")
         })
     {
     }

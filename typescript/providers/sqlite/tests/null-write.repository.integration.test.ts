@@ -13,7 +13,7 @@ class Item {
 const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
 
 const open = async (): Promise<IConnection> => {
-  const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+  const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
   const connection = await ds.createConnection();
   await connection.open();
   const command = connection.createCommand();

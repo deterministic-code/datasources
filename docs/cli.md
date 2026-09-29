@@ -1,6 +1,6 @@
 # Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. `Default` / `default` / `DatasourceFactory.default` reads that file for `PROVIDER` and `DATASOURCE_URL`. `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` in the process override `.env`. If neither source sets a provider or URL, create throws.
+`@datasources/cli` installs provider packages and writes a local `.env`. `Default` / `default` / `DatasourceFactory.default` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
 
 ```sh
 npx @datasources/cli setup
@@ -56,25 +56,18 @@ npx @datasources/cli remove postgres
 
 ## .env
 
-`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. `Default` uses the `DATASOURCE_URL` scheme as the default provider (`sqlite://`, `postgres://`, `mysql://`, …) unless `PROVIDER` or `DEFAULT_PROVIDER` is set.
+`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. Process env overrides the same three keys. `Create` with omitted options registers each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL`. The datasource itself is `PROVIDER`.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `INSTALLED_PROVIDERS` | scheme of `DATASOURCE_URL` | Comma-separated providers `Create` registers. |
-| `DATASOURCE_URL` | `sqlite:///:memory:` | Connection URL. The scheme is the default provider. |
-| `DATABASE_SCHEMA` | *(empty)* | Schema / search path (postgres). |
+| `PROVIDER` | | Datasource `Create` returns. |
+| `DATASOURCE_URL` | `sqlite:///:memory:` | Connection URL. Schema is the `schema` query. |
 
 ```sh
 INSTALLED_PROVIDERS=sqlite,postgres
-DATASOURCE_URL=sqlite:///:memory:
-DATABASE_SCHEMA=public
+PROVIDER=postgres
+DATASOURCE_URL=postgres://localhost/db?schema=public
 ```
-
-Process overrides (not written by `setup`):
-
-| Key | Meaning |
-| --- | --- |
-| `DEFAULT_PROVIDER` | Overrides `.env` `PROVIDER` / inferred scheme. |
-| `DEFAULT_DATASOURCE_URL` | Overrides `.env` `DATASOURCE_URL`. |
 
 SQLAlchemy-style SQLite URLs: `sqlite:///:memory:`, `sqlite:///app.db`, `sqlite:////tmp/app.db`.

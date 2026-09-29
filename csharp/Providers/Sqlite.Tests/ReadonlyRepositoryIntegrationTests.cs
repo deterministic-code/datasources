@@ -29,7 +29,7 @@ public class ReadonlyRepositoryIntegrationTests
     [Fact]
     public async Task ReadsUsersByIdAndByUsernameAndEnabled()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds, "minimal-users", """
             INSERT INTO users (id, username, is_enabled) VALUES
                 (1, 'ada', 1),
@@ -55,7 +55,7 @@ public class ReadonlyRepositoryIntegrationTests
     [Fact]
     public async Task ReadsUserByGuidUsernameAndCreated()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds, "user-account", $"""
             INSERT INTO user (id, username, is_enabled, created) VALUES
                 ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
@@ -128,7 +128,7 @@ public class UserViewEnrichmentTests
     [Fact]
     public async Task FillsUserTypeOnUsersView()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds, "user-type-lookup", $"""
             INSERT INTO user_type (id, name) VALUES
                 (1, 'admin'),
@@ -212,7 +212,7 @@ public class UsersViewRoleTests
     [Fact]
     public async Task FillsRolesWithHashset()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds, "user-roles-read", Seed());
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
@@ -263,7 +263,7 @@ public class UsersViewRoleTests
     [Fact]
     public async Task FillsRolesFromAJoin()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds, "user-roles-read", Seed());
         var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
         {
@@ -383,7 +383,7 @@ public class UserCrudTests
     [Fact]
     public async Task WritesUserFromTheType()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds, "user-pascal");
         var usersRepo = new CRUDRepository<User>(connection);
         var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
@@ -451,7 +451,7 @@ public class UsersViewCrudTests
     [Fact]
     public async Task UpdatesUsersViewWhenTheVersionMatches()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds, "user-view-version");
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>

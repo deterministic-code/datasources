@@ -6,9 +6,6 @@ fn clear_env() {
     for key in [
         "INSTALLED_PROVIDERS",
         "DATASOURCE_URL",
-        "DATABASE_SCHEMA",
-        "DEFAULT_PROVIDER",
-        "DEFAULT_DATASOURCE_URL",
         "PROVIDER",
     ] {
         std::env::remove_var(key);
@@ -17,6 +14,7 @@ fn clear_env() {
 
 #[test]
 fn default_from_environment() {
+    let _guard = super::env_lock();
     clear_env();
     register("sqlite", MockDriver::arc());
     std::env::set_var("PROVIDER", "sqlite");
@@ -27,9 +25,10 @@ fn default_from_environment() {
 
 #[test]
 fn missing_provider_throws() {
+    let _guard = super::env_lock();
     reset();
     assert!(matches!(
-        create(Some(&HashMap::from([("provider".into(), "missing".into())]))),
+        create(Some(&HashMap::from([("PROVIDER".into(), "missing".into())]))),
         Err(DatasourceError::ProviderNotInstalled(name)) if name == "missing"
     ));
 }

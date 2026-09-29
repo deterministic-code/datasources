@@ -21,9 +21,6 @@ class SelectText extends ReadonlyRepository<object> {
 const envKeys = [
   "INSTALLED_PROVIDERS",
   "DATASOURCE_URL",
-  "DATABASE_SCHEMA",
-  "DEFAULT_PROVIDER",
-  "DEFAULT_DATASOURCE_URL",
   "PROVIDER",
 ] as const;
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
@@ -54,7 +51,7 @@ describe("DatasourceFactory", () => {
   });
 
   it("missing provider throws", () => {
-    expect(() => DatasourceFactory.create({ provider: "missing" })).toThrow(
+    expect(() => DatasourceFactory.create({ PROVIDER: "missing" })).toThrow(
       ProviderNotInstalledError,
     );
   });
@@ -77,19 +74,19 @@ describe("Datasource registry", () => {
     DatasourceFactory.register("json", new MockDriver());
     DatasourceFactory.register("memory", new MockDriver());
     expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
-    const created = Datasource.create({ provider: "json", path: "x" });
+    const created = Datasource.create({ PROVIDER: "json", DATASOURCE_URL: "json://x" });
     expect(created.provider).toBe("json");
     DatasourceFactory.reset();
     expect(DatasourceFactory.registered()).toEqual([]);
-    expect(() => Datasource.create({ provider: "json" })).toThrow(ProviderNotInstalledError);
+    expect(() => Datasource.create({ PROVIDER: "json" })).toThrow(ProviderNotInstalledError);
   });
 
   it("requires consumer defaults when provider is omitted", async () => {
     expect(() => Datasource.create()).toThrow(DatasourceError);
     DatasourceFactory.register("sqlite", new MockDriver());
     const ds = Datasource.create({
-      provider: "sqlite",
-      database_url: "sqlite:///:memory:",
+      PROVIDER: "sqlite",
+      DATASOURCE_URL: "sqlite:///:memory:",
     });
     expect(ds.provider).toBe("sqlite");
     const connection = await ds.createConnection();
@@ -129,14 +126,11 @@ describe("Datasource registry", () => {
     });
     expect(withReadOpts).toBeInstanceOf(CRUDRepository);
     expect(new DatasourceFactory().create({
-      provider: "sqlite",
-      database_schema: "main",
+      PROVIDER: "sqlite",
     }).provider).toBe("sqlite");
     process.env.DATASOURCE_URL = "  ";
-    process.env.DATABASE_SCHEMA = "  ";
     expect(() => Datasource.create()).toThrow(DatasourceError);
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
-    process.env.DATABASE_SCHEMA = "main";
     expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
     bindInstall((options) => {
       if (options.INSTALLED_PROVIDERS?.includes("json"))
@@ -155,8 +149,8 @@ describe("Datasource registry", () => {
     delete process.env.DATASOURCE_URL;
     process.env.PROVIDER = "sqlite";
     expect(DatasourceFactory.default.provider).toBe("sqlite");
-    process.env.DEFAULT_PROVIDER = "memory";
-    process.env.DEFAULT_DATASOURCE_URL = "memory://";
+    process.env.PROVIDER = "memory";
+    process.env.DATASOURCE_URL = "memory://";
     expect(DatasourceFactory.default.provider).toBe("memory");
   });
 });

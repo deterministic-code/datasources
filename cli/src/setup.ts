@@ -1,6 +1,6 @@
 import { providers, type Ecosystem } from "./catalog.ts";
 import { isEcosystem } from "./detect.ts";
-import { answersFromEnv, ensureProviders, scheme, type EnvMap } from "./env.ts";
+import { answersFromEnv, ensureProviders, scheme, withSchema, type EnvMap } from "./env.ts";
 
 export type SetupAnswers = {
   ecosystem?: Ecosystem;
@@ -54,7 +54,7 @@ export const promptSetup = async (
     default:
       defaults.url || (selected.includes("sqlite") ? "sqlite:///:memory:" : ""),
   });
-  const schema = await prompt.input({ message: "DATABASE_SCHEMA", default: defaults.schema });
+  const schema = await prompt.input({ message: "schema", default: defaults.schema });
   return { ecosystem, providers: selected, url, schema };
 };
 
@@ -66,7 +66,6 @@ export const envFromAnswers = (answers: SetupAnswers): EnvMap => {
   return {
     INSTALLED_PROVIDERS: ensureProviders(answers.providers, provider).join(","),
     PROVIDER: provider,
-    DATASOURCE_URL: answers.url,
-    DATABASE_SCHEMA: answers.schema,
+    DATASOURCE_URL: withSchema(answers.url, answers.schema),
   };
 };
