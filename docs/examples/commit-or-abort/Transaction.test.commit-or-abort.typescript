@@ -2,3 +2,6 @@ const ds = Datasource.default;
 const connection = await ds.createConnection();
 await connection.open();
 const txn = await connection.startTransaction();
+const saved = true;
+if (saved) await txn.commit();
+else await txn.abort();

@@ -24,11 +24,14 @@ afterAll(() => {
 });
 
 describe("Transaction", () => {
-  it("start from default", async () => {
+  it("commit or abort", async () => {
     const ds = Datasource.default;
     const connection = await ds.createConnection();
     await connection.open();
     const txn = await connection.startTransaction();
+    const saved = true;
+    if (saved) await txn.commit();
+    else await txn.abort();
     expect(txn.isolation).toBe("serializable");
   });
 });

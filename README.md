@@ -1585,91 +1585,47 @@ Omitted isolation is `Serializable`. Memory, JSON, and SQLite throw when the con
 
 ### Examples
 
-#### Start a transaction
+#### Commit or abort
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransactionTests.cs#L24-L32)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransactionTests.cs#L24-L37)
 
 ```csharp
 var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 var txn = await connection.StartTransaction();
+var saved = true;
+if (saved)
+    await txn.Commit();
+else
+    await txn.Abort();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/transaction.rs#L19-L26)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/transaction.rs#L16-L31)
 
 ```rust
 let ds = default().expect("default");
 let connection = ds.create_connection().await.expect("connection");
 connection.open().await.expect("open");
 let txn = connection.start_transaction(None).await.expect("txn");
+let saved = true;
+if saved {
+    txn.commit().await.expect("commit");
+} else {
+    txn.abort().await.expect("abort");
+}
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Transaction.test.ts#L27-L33)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Transaction.test.ts#L27-L36)
 
 ```typescript
 const ds = Datasource.default;
 const connection = await ds.createConnection();
 await connection.open();
 const txn = await connection.startTransaction();
-```
-
-#### Commit
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L7-L15)
-
-```csharp
-var connection = new MemoryConnection();
-await connection.Open();
-var txn = await connection.StartTransaction();
-await txn.Commit();
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L82-L88)
-
-```rust
-let connection = MemoryConnection::from_options(None);
-connection.open().await.unwrap();
-let txn = connection.start_transaction(None).await.unwrap();
-txn.commit().await.unwrap();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L79-L85)
-
-```typescript
-const connection = new MemoryConnection();
-await connection.open();
-const txn = await connection.startTransaction();
-await txn.commit();
-```
-
-#### Abort
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L17-L25)
-
-```csharp
-var connection = new MemoryConnection();
-await connection.Open();
-var txn = await connection.StartTransaction();
-await txn.Abort();
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L91-L97)
-
-```rust
-let connection = MemoryConnection::from_options(None);
-connection.open().await.unwrap();
-let txn = connection.start_transaction(None).await.unwrap();
-txn.abort().await.unwrap();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L87-L93)
-
-```typescript
-const connection = new MemoryConnection();
-await connection.open();
-const txn = await connection.startTransaction();
-await txn.abort();
+const saved = true;
+if (saved) await txn.commit();
+else await txn.abort();
 ```
 
 ## Command
