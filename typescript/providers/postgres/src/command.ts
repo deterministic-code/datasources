@@ -5,7 +5,7 @@ import {
   ParameterDirection,
   ReturnStatement,
   SelectStatement,
-  responseOf,
+  Response,
   splitStatements,
   statementReader,
   type Cells,
@@ -13,7 +13,6 @@ import {
   type IReader,
   type IStatement,
   type Parameter,
-  type Response,
 } from "@datasources/core";
 import { PostgresStatementFactory } from "./PostgresStatementFactory.ts";
 import { bindParameters, toPostgres } from "./bind.ts";
@@ -62,12 +61,12 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
     const reader = await this.executeReaderStatement(statement, parameters);
     try {
-      if (!(await reader.next())) return responseOf(null, 0, parameters);
+      if (!(await reader.next())) return new Response(null, 0, parameters);
       const row = reader.current;
       /* v8 ignore next */
       if (!row) throw new DatasourceError("Reader current must be a row");
       const values = Object.values(row);
-      return responseOf(values.length === 0 ? null : values[0], 1, parameters);
+      return new Response(values.length === 0 ? null : values[0], 1, parameters);
     } finally {
       await reader.dispose();
     }
@@ -79,11 +78,11 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   ): Promise<Response> {
     return this.run(text, parameters, async (query, params) => {
       if (!query.trim())
-        return { value: responseOf(undefined, 0, params), rows: [] };
+        return { value: new Response(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
       const result = await this.runSql(query, bindParameters(params), params);
       return {
-        value: responseOf(result.result, result.rowsAffected, result.parameters ?? params),
+        value: new Response(result.result, result.rowsAffected, result.parameters ?? params),
         rows: [],
       };
     });

@@ -32,10 +32,10 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         try
         {
             if (!await reader.Next())
-                return Response.Of(Value.Null.Instance, 0, parameters);
+                return new Response(Value.Null.Instance, 0, parameters);
             var row = reader.Current ?? throw new DatasourceException("Reader current must be a row");
             var cell = row.Count == 0 ? Value.Null.Instance : row.First().Value;
-            return Response.Of(cell, 1, parameters);
+            return new Response(cell, 1, parameters);
         }
         finally
         {
@@ -48,9 +48,9 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         Run(text, parameters, async (query, paramsList) =>
         {
             if (string.IsNullOrWhiteSpace(query))
-                return (Response.Of(Value.Null.Instance, 0, paramsList), (IReadOnlyList<Row>)[]);
+                return (new Response(Value.Null.Instance, 0, paramsList), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
             var result = await Typed.Commands.Execute(query, paramsList);
-            return (Response.Of(result.Result, result.RowsAffected, result.Parameters), (IReadOnlyList<Row>)[]);
+            return (new Response(result.Result, result.RowsAffected, result.Parameters), (IReadOnlyList<Row>)[]);
         });
 }

@@ -48,7 +48,7 @@ internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
             {
                 Typed.GetCollection().Add(ToObject(new Row(obj)));
                 await Typed.Persist();
-                return (Response.Of(Value.Null.Instance, 1, paramsList), EmptyRows());
+                return (new Response(Value.Null.Instance, 1, paramsList), EmptyRows());
             }
 
             if (op == "update")
@@ -56,13 +56,15 @@ internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
                 var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
                 var filter = whereText is not null ? ParseFilter(whereText) : new Row(obj);
-                return (await ApplyUpdate(new Row(obj), filter) with { Parameters = paramsList }, EmptyRows());
+                var updated = await ApplyUpdate(new Row(obj), filter);
+                return (new Response(updated.Result, updated.RowsAffected, paramsList), EmptyRows());
             }
 
             if (op == "delete")
             {
                 var filter = new Row(obj);
-                return (await ApplyDelete(filter) with { Parameters = paramsList }, EmptyRows());
+                var deleted = await ApplyDelete(filter);
+                return (new Response(deleted.Result, deleted.RowsAffected, paramsList), EmptyRows());
             }
 
             throw new DatasourceException($"Unsupported JSON command: {query}");

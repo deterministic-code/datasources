@@ -110,7 +110,7 @@ impl Command for MysqlCommand {
                 async move {
                     if sql.trim().is_empty() {
                         return Ok((
-                            Response::of(Value::Null, 0, params.map(|list| list.to_vec())),
+                            Response::new(Value::Null, 0, params.map(|list| list.to_vec())),
                             vec![],
                         ));
                     }
@@ -118,7 +118,7 @@ impl Command for MysqlCommand {
                     let mapped = parameters_to_map(params.as_deref());
                     let result = MysqlCommand::execute_sql(&connection, &sql, &mapped).await?;
                     Ok((
-                        Response::of(
+                        Response::new(
                             result.result,
                             result.rows_affected,
                             params.map(|list| list.to_vec()),
@@ -160,7 +160,7 @@ impl MysqlCommand {
     ) -> Result<Response> {
         let reader = self.execute_reader_statement(statement, parameters).await?;
         if !reader.next().await? {
-            return Ok(Response::of(
+            return Ok(Response::new(
                 Value::Null,
                 0,
                 parameters.map(|list| list.to_vec()),
@@ -170,7 +170,7 @@ impl MysqlCommand {
             .current()
             .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
         let cell = row.into_values().next().unwrap_or(Value::Null);
-        Ok(Response::of(cell, 1, parameters.map(|list| list.to_vec())))
+        Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 

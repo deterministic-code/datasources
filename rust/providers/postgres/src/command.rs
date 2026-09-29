@@ -125,7 +125,7 @@ impl Command for PostgresCommand {
                 async move {
                     if sql.trim().is_empty() {
                         return Ok((
-                            Response::of(Value::Null, 0, params.map(|list| list.to_vec())),
+                            Response::new(Value::Null, 0, params.map(|list| list.to_vec())),
                             vec![],
                         ));
                     }
@@ -164,7 +164,7 @@ impl Command for PostgresCommand {
                                 .collect()
                         });
                         return Ok((
-                            Response::of(Value::Null, i64::from(row.is_some()), applied),
+                            Response::new(Value::Null, i64::from(row.is_some()), applied),
                             vec![],
                         ));
                     }
@@ -175,7 +175,7 @@ impl Command for PostgresCommand {
                     )
                     .await?;
                     Ok((
-                        Response::of(
+                        Response::new(
                             result.result,
                             result.rows_affected,
                             params.map(|list| list.to_vec()),
@@ -217,7 +217,7 @@ impl PostgresCommand {
     ) -> Result<Response> {
         let reader = self.execute_reader_statement(statement, parameters).await?;
         if !reader.next().await? {
-            return Ok(Response::of(
+            return Ok(Response::new(
                 Value::Null,
                 0,
                 parameters.map(|list| list.to_vec()),
@@ -227,7 +227,7 @@ impl PostgresCommand {
             .current()
             .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
         let cell = row.into_values().next().unwrap_or(Value::Null);
-        Ok(Response::of(cell, 1, parameters.map(|list| list.to_vec())))
+        Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 

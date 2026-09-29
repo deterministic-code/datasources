@@ -1,15 +1,19 @@
 namespace Datasources;
 
-public sealed record Response(
-    Value Result,
-    int RowsAffected,
-    IReadOnlyList<Parameter>? Parameters = null)
+public sealed record Response
 {
-    public static Response Of(Value result, int rowsAffected, IReadOnlyList<Parameter>? parameters = null) =>
-        new(
-            result is Value.Null
-                ? parameters?.FirstOrDefault(p => p.Direction == ParameterDirection.ReturnValue)?.Value ?? result
-                : result,
-            rowsAffected,
-            parameters);
+    public Value Result { get; }
+    public int RowsAffected { get; }
+    public IReadOnlyList<Parameter>? Parameters { get; }
+
+    public Response(Value result, int rowsAffected, IReadOnlyList<Parameter>? parameters = null)
+    {
+        Result = result switch
+        {
+            Value.Null => parameters?.FirstOrDefault(p => p.Direction == ParameterDirection.ReturnValue)?.Value ?? result,
+            _ => result
+        };
+        RowsAffected = rowsAffected;
+        Parameters = parameters;
+    }
 }

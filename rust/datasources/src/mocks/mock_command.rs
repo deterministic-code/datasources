@@ -29,7 +29,7 @@ impl MockCommand {
     pub fn new() -> Self {
         Self {
             host: CommandMiddlewareHost::new(),
-            response: Mutex::new(Response::new(Value::Null, 0)),
+            response: Mutex::new(Response::new(Value::Null, 0, None)),
             reader_rows: Mutex::new(Vec::new()),
             execute_error: Mutex::new(None),
             reader_error: Mutex::new(None),

@@ -16,7 +16,7 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
         for item in items.iter_mut() {
             result = repo.create_one(item).await?;
         }
-        Ok(Response::new(result, items.len() as i64))
+        Ok(Response::new(result, items.len() as i64, None))
     }
 
     async fn update(
@@ -32,7 +32,7 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
             result = response.result;
             rows_affected += response.rows_affected;
         }
-        Ok(Response::new(result, rows_affected))
+        Ok(Response::new(result, rows_affected, None))
     }
 
     async fn delete(
@@ -48,6 +48,6 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
             result = response.result;
             rows_affected += response.rows_affected;
         }
-        Ok(Response::new(result, rows_affected))
+        Ok(Response::new(result, rows_affected, None))
     }
 }

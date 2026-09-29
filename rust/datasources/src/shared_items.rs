@@ -75,7 +75,7 @@ impl SharedItems {
         if let Some(index) = items.iter().position(|row| row.get("id") == id.as_ref()) {
             items[index] = item.clone();
         }
-        Response::new(Value::Null, 1)
+        Response::new(Value::Null, 1, None)
     }
 
     pub fn remove(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Response {
@@ -95,7 +95,7 @@ impl SharedItems {
             let id = item.get("id").cloned();
             items.retain(|row| row.get("id") != id.as_ref());
         }
-        Response::new(Value::Null, 1)
+        Response::new(Value::Null, 1, None)
     }
 
     pub fn by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {

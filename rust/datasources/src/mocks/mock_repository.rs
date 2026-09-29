@@ -98,14 +98,14 @@ impl ICRUDRepository for MockRepository {
         if let Some(error) = &*self.update_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
-        Ok(Response::new(Value::Null, 1))
+        Ok(Response::new(Value::Null, 1, None))
     }
 
     async fn delete(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(error) = &*self.delete_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
-        Ok(Response::new(Value::Null, 1))
+        Ok(Response::new(Value::Null, 1, None))
     }
 
     async fn read_single_by_id(&self, _id: &dyn IdKey) -> Result<Option<Row>> {

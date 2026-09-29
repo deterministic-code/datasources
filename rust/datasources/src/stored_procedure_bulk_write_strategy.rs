@@ -61,7 +61,7 @@ impl BulkWriteStrategy for StoredProcedureBulkWriteStrategy {
 
 async fn call(repo: &BulkCRUDRepository, name: &str, items: &[Row]) -> Result<Response> {
     if items.is_empty() {
-        return Ok(Response::new(Value::Null, 0));
+        return Ok(Response::new(Value::Null, 0, None));
     }
     let payload = Parameter::new("payload", json(&repo.rows(items)?));
     let statement = ExecuteStoredProcedureStatement::new(name, &[payload.clone()]);

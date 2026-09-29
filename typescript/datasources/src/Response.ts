@@ -1,20 +1,15 @@
 import { ParameterDirection } from "./ParameterDirection.ts";
 import type { Parameter } from "./Parameter.ts";
 
-export interface Response {
-  result: unknown;
-  rowsAffected: number;
-  parameters?: Parameter[];
-}
+export class Response {
+  readonly result: unknown;
+  readonly rowsAffected: number;
+  readonly parameters?: Parameter[];
 
-export const responseOf = (
-  result: unknown,
-  rowsAffected: number,
-  parameters?: Parameter[],
-): Response => {
-  const ret = parameters?.find((p) => p.direction === ParameterDirection.ReturnValue)?.value;
-  const resolved = result == null && ret != null ? ret : result;
-  return parameters === undefined
-    ? { result: resolved, rowsAffected }
-    : { result: resolved, rowsAffected, parameters };
-};
+  constructor(result: unknown, rowsAffected: number, parameters?: Parameter[]) {
+    const returned = parameters?.find((parameter) => parameter.direction === ParameterDirection.ReturnValue)?.value;
+    this.result = result == null && returned != null ? returned : result;
+    this.rowsAffected = rowsAffected;
+    if (parameters !== undefined) this.parameters = parameters;
+  }
+}

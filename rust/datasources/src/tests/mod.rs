@@ -82,7 +82,7 @@ fn values_and_parameters() {
     assert_eq!(p.name, "id");
     assert_eq!(parameters_to_map::<Value>(None).len(), 0);
     assert_eq!(parameters_to_map(Some(&[p])).len(), 1);
-    let response = Response::new(Value::Null, 2);
+    let response = Response::new(Value::Null, 2, None);
     assert_eq!(response.rows_affected, 2);
 }
 
@@ -390,7 +390,7 @@ async fn console_verbose_bodies() {
     host.run(
         "DELETE FROM user",
         Some(&[Parameter::new("id", 2i64)]),
-        |_q, _p| async { Ok((Response::new(Value::Null, 1), vec![])) },
+        |_q, _p| async { Ok((Response::new(Value::Null, 1, None), vec![])) },
     )
     .await
     .unwrap();
@@ -1294,7 +1294,7 @@ fn statements_and_builders() {
         ParameterDirection::Output
     );
     assert_eq!(Parameter::output("count").value, Value::Null);
-    assert!(Response::new(1_i64, 2).parameters.is_none());
+    assert!(Response::new(1_i64, 2, None).parameters.is_none());
     assert_eq!(ReturnStatement::text("x").get_text(), "x");
 
     let query = SelectStatement::with_where("SELECT 1", WhereText::new("id = 1"));
@@ -1692,7 +1692,7 @@ async fn table_repository() {
     include_id.entity = "users".into();
     include_id.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, include_id).unwrap();
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     command
         .reader_rows
         .lock()
@@ -1724,7 +1724,7 @@ async fn table_repository() {
     options.entity = "users".into();
     options.row_converter = Some(RowTypeConverter::of::<Composite>());
     let repo = CRUDRepository::new(connection, options).unwrap();
-    *generated.response.lock().unwrap() = Response::new(Value::Null, 1);
+    *generated.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let created = repo
         .create(&mut record(&[
             ("org_id", Value::Int(1)),
@@ -1786,7 +1786,7 @@ async fn table_repository() {
     options.entity = "users".into();
     options.row_converter = Some(RowTypeConverter::of::<Cells>());
     let repo = CRUDRepository::new(connection, options).unwrap();
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let created = repo
         .create(&mut record(&[("id", Value::Int(1))]))
         .await
@@ -1918,7 +1918,7 @@ async fn table_repository_maps_flat_row_into_contacts() {
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT contact_name1, contact_name2, email, id, username FROM users"
     );
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let created = repo.create(&mut user).await.unwrap();
     assert_eq!(created["id"], Value::Int(1));
     assert_eq!(
@@ -1981,7 +1981,7 @@ async fn table_repository_crud_mapper() {
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT full_name, user_id FROM people LIMIT 1"
     );
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let mut row = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
     let created = repo.create(&mut row).await.unwrap();
     assert_eq!(created["id"], Value::Int(1));
@@ -2130,7 +2130,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
     options.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, options).unwrap();
     let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1);
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     command
         .reader_rows
         .lock()

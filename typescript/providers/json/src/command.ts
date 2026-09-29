@@ -10,7 +10,7 @@ import {
   type IReader,
   type IStatement,
   type IWhere,
-  type Response,
+  Response,
   type Parameter,
 } from "@datasources/core";
 import type { JsonConnection } from "./connection.ts";
@@ -78,7 +78,7 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
         if (op === "insert") {
           this.connection.getCollection().push(obj);
           await this.connection.persist();
-          return { value: { result: obj, rowsAffected: 1, parameters: params }, rows: [] };
+          return { value: new Response(obj, 1, params), rows: [] };
         }
         if (op === "update") {
           const whereText =
@@ -86,11 +86,13 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
           const next = { ...obj };
           delete next.$where;
           const filter = whereText ? parseFilter(whereText) : next;
-          return { value: { ...(await this.applyUpdate(next, filter)), parameters: params }, rows: [] };
+          const updated = await this.applyUpdate(next, filter);
+          return { value: new Response(updated.result, updated.rowsAffected, params), rows: [] };
         }
         if (op === "delete") {
           const filter = obj;
-          return { value: { ...(await this.applyDelete(filter)), parameters: params }, rows: [] };
+          const deleted = await this.applyDelete(filter);
+          return { value: new Response(deleted.result, deleted.rowsAffected, params), rows: [] };
         }
         throw new Error(`Unsupported JSON command: ${query}`);
     });

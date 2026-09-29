@@ -28,7 +28,7 @@ fn parents(strategy: Arc<dyn crate::BulkWriteStrategy>) -> (BulkCRUDRepository, 
 #[tokio::test]
 async fn single_command_i_bulk_write_strategy_writes_one_statement_per_row() {
     let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
-    *command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1);
+    *command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1, None);
     let mut created = [
         row(&[("label", Value::from("a"))]),
         row(&[("label", Value::from("b"))]),
