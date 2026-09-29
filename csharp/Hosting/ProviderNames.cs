@@ -8,10 +8,11 @@ public static class ProviderNames
         foreach (var name in Split(Get(options, "INSTALLED_PROVIDERS")))
             if (!names.Contains(name))
                 names.Add(name);
-        var provider = ProviderFromUrl.From(Get(options, "DATASOURCE_URL"));
-        return provider is { Length: > 0 } && !names.Contains(provider)
-            ? [..names, provider]
-            : names;
+        var url = Get(options, "DATASOURCE_URL");
+        if (url is null)
+            return names;
+        var provider = ProviderFromUrl.From(url) ?? throw new DatasourceException("DATASOURCE_URL has no provider");
+        return names.Contains(provider) ? names : [..names, provider];
     }
 
     static string? Get(IReadOnlyDictionary<string, string?> options, string key) =>

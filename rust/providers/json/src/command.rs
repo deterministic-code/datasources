@@ -129,13 +129,12 @@ impl Command for JsonCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        if statement
+        if let Some(inserted) = statement
             .as_any()
-            .downcast_ref::<datasources::InsertedIdStatement>()
-            .is_some()
+            .downcast_ref::<datasources::SelectInsertedIdStatement>()
         {
             let connection = self.connection.clone();
-            let text = statement.get_text();
+            let text = format!("{}.{}", inserted.table, inserted.column);
             return self
                 .host
                 .run(&text, parameters, move |_query, _params| {

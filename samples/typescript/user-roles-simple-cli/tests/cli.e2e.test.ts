@@ -60,19 +60,19 @@ const commands = (stderr: string): { leftover: string; sql: string[] } => {
   return { leftover: leftover.join("\n"), sql };
 };
 
-const cli = (url: string, schema: string, args: string[]) => {
+const cli = (url: string, schema: string, provider: string, args: string[]) => {
   const result = spawnSync(process.execPath, ["--import", "tsx", "src/main.ts", ...args], {
     cwd: sample,
     encoding: "utf8",
-    env: { ...process.env, DATASOURCE_URL: url, DATABASE_SCHEMA: schema, CLI_NOW: spec.now },
+    env: { ...process.env, PROVIDER: provider, DATASOURCE_URL: url, DATABASE_SCHEMA: schema, CLI_NOW: spec.now },
   });
   return { exit: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 };
 
-const setup = (url: string, schema = "") => {
+const setup = (url: string, schema = "", provider = "sqlite") => {
   writeFileSync(
     join(sample, ".env"),
-    `INSTALLED_PROVIDERS=sqlite,mysql,postgres\nDATASOURCE_URL=${url}\nDATABASE_SCHEMA=${schema}\n`,
+    `INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER=${provider}\nDATASOURCE_URL=${url}\nDATABASE_SCHEMA=${schema}\n`,
   );
   execFileSync("npm", ["run", "setup", "--", "--cwd", sample, "--ecosystem", "ts", "--yes"], {
     cwd: repo,
@@ -86,7 +86,7 @@ const verbose = () =>
 
 const script = ({ url, schema }: { url: string; schema: string }, provider: string) => {
   for (const step of spec.steps) {
-    const got = cli(url, schema, step.argv);
+    const got = cli(url, schema, provider, step.argv);
     const cmd = step.argv.join(" ");
     const { leftover, sql } = commands(got.stderr);
     const expectedSql = [...(step.expect.queries ?? []), ...(provider === "mysql" ? (step.expect.calls ?? []) : (step.expect.inserts ?? []))];
@@ -114,7 +114,7 @@ describe.sequential("cli e2e", () => {
   it("sqlite", () => {
     const dir = mkdtempSync(join(tmpdir(), "ur-"));
     try {
-      script(setup(`sqlite:///${join(dir, "app.db")}`), "sqlite");
+      script(setup(`sqlite:///${join(dir, "app.db")}`, "", "sqlite"), "sqlite");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -129,7 +129,7 @@ describe.sequential("cli e2e", () => {
     try {
       const isolated = new URL(url);
       isolated.pathname = `/${name}`;
-      script(setup(isolated.toString()), "mysql");
+      script(setup(isolated.toString(), "", "mysql"), "mysql");
     } finally {
       await admin.query(`DROP DATABASE \`${name}\``);
       await admin.end();
@@ -145,7 +145,7 @@ describe.sequential("cli e2e", () => {
     await admin.connect();
     await admin.query(`CREATE SCHEMA ${schema}`);
     try {
-      script(setup(url, schema), "postgres");
+      script(setup(url, schema, "postgres"), "postgres");
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.end();
@@ -161,13 +161,7 @@ describe.sequential("cli e2e", () => {
     await connection.open();
     try {
       const command = connection.createCommand();
-      await migrate(command, ({
-        sqlite: () => new SqliteDriver(),
-        mysql: () => new MysqlDriver(),
-        postgres: () => new PostgresDriver(),
-      }[connection.provider] ?? (() => {
-        throw new Error(connection.provider);
-      }))());
+      await migrate(command);
       const now = () => new Date(spec.now);
       const middleware = new ExpectConsoleMiddleware(expected, now, normalizeConsoleLine);
       command.addMiddleware(middleware);

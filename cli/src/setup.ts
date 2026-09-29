@@ -62,11 +62,12 @@ export const promptSetup = async (
 const ecosystemOr = (value: string): Ecosystem | undefined =>
   isEcosystem(value) ? value : undefined;
 
-export const envFromAnswers = (answers: SetupAnswers): EnvMap => ({
-  INSTALLED_PROVIDERS: ensureProviders(
-    answers.providers,
-    providerFromUrl(answers.url) ?? answers.providers[0] ?? "sqlite",
-  ).join(","),
-  DATASOURCE_URL: answers.url,
-  DATABASE_SCHEMA: answers.schema,
-});
+export const envFromAnswers = (answers: SetupAnswers): EnvMap => {
+  const provider = providerFromUrl(answers.url) ?? answers.providers[0] ?? "sqlite";
+  return {
+    INSTALLED_PROVIDERS: ensureProviders(answers.providers, provider).join(","),
+    PROVIDER: provider,
+    DATASOURCE_URL: answers.url,
+    DATABASE_SCHEMA: answers.schema,
+  };
+};

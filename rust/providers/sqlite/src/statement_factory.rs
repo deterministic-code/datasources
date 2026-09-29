@@ -1,6 +1,6 @@
 use crate::create_table_statement_renderer::SqliteCreateTableStatementRenderer;
 use datasources::{
-    CreateTableStatement, CreateTableStatementRenderer, InsertedIdStatement, SelectStatement,
+    CreateTableStatement, CreateTableStatementRenderer, SelectInsertedIdStatement, SelectStatement,
     Statement, Text,
 };
 
@@ -24,10 +24,10 @@ impl Transformed<'_> {
 
 impl SqliteStatementFactory {
     pub fn transform<'a>(&self, statement: &'a dyn Statement) -> Transformed<'a> {
-        if let Some(inserted) = statement.as_any().downcast_ref::<InsertedIdStatement>() {
-            return Transformed::Select(SelectStatement::text(InsertedIdStatement::select_sql(
-                "sqlite",
-                &inserted.column,
+        if let Some(inserted) = statement.as_any().downcast_ref::<SelectInsertedIdStatement>() {
+            return Transformed::Select(SelectStatement::text(format!(
+                "SELECT last_insert_rowid() AS {}",
+                inserted.column
             )));
         }
         match statement.as_any().downcast_ref::<CreateTableStatement>() {
@@ -82,7 +82,7 @@ mod tests {
         assert!(matches!(factory.transform(&raw), Transformed::Same(_)));
         let delete = DeleteStatement::raw("DELETE FROM users", None);
         assert!(matches!(factory.transform(&delete), Transformed::Same(_)));
-        let inserted = datasources::InsertedIdStatement::new("users", "id");
+        let inserted = datasources::SelectInsertedIdStatement::new("users", "id");
         assert_eq!(
             factory.transform(&inserted).get_text(),
             "SELECT last_insert_rowid() AS id"

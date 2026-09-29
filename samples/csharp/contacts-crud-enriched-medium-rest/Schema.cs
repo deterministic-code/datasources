@@ -9,6 +9,6 @@ public static class Schema
         ? $"`{name.Replace("`", "``")}`"
         : $"\"{name.Replace("\"", "\"\"")}\"";
 
-    public static IReadOnlyList<CreateTableStatement> Tables(string provider, IDriver driver) =>
+    public static IReadOnlyList<CreateTableStatement> Tables(string provider) =>
         SchemaSpec.Tables("contacts-rest", name => Ident(provider, name));
 }

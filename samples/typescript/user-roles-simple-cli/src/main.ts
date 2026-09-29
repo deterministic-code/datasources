@@ -1,9 +1,6 @@
-import { ConsoleCommandMiddleware, providerFromUrl, type DatasourceOptions, type IConnection } from "@datasources/core";
+import { ConsoleCommandMiddleware, DatasourceFactory } from "@datasources/core";
 import "@datasources/register";
-import { MysqlDriver } from "@datasources/mysql";
-import { PostgresDriver } from "@datasources/postgres";
-import { SqliteDriver } from "@datasources/sqlite";
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { App } from "./app.ts";
 import { migrate } from "./migrate.ts";
 import { parse } from "./parse.ts";
@@ -19,28 +16,14 @@ const env = (key: string): string => {
   return "";
 };
 
-const connect = (): { connection: IConnection; driver: SqliteDriver | MysqlDriver | PostgresDriver } => {
-  const url = env("DATASOURCE_URL");
-  const schema = env("DATABASE_SCHEMA");
-  const provider = providerFromUrl(url);
-  const options: DatasourceOptions = schema ? { url, schema } : { url };
-  const driver = ({
-    sqlite: () => new SqliteDriver(),
-    mysql: () => new MysqlDriver(),
-    postgres: () => new PostgresDriver(),
-  }[provider] ?? (() => {
-    throw new Error("DATASOURCE_URL is required");
-  }))();
-  return { connection: driver.connection(options), driver };
-};
-
 const run = async (args: string[]): Promise<number> => {
   try {
     const parsed = parse(args);
-    const { connection, driver } = connect();
+    const ds = DatasourceFactory.default;
+    const connection = await ds.createConnection();
     await connection.open();
-    const command = connection.createCommand();
-    await migrate(command, driver);
+    const command = ds.createCommand(connection);
+    await migrate(command);
     const frozen = env("CLI_NOW");
     const now = frozen ? () => new Date(frozen) : () => new Date();
     command.addMiddleware(new ConsoleCommandMiddleware((line) => console.error(line), now));

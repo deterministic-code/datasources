@@ -16,7 +16,7 @@ class DatasourceFactory implements IDatasourceFactory
 
 ##### default
 
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#create-options).
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [create](#create-options).
 
 ```typescript
 static get default(): IDatasource
@@ -108,7 +108,7 @@ public sealed class DatasourceFactory : IDatasourceFactory
 
 ##### Default
 
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [Create](#create-options).
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [Create](#create-options).
 
 ```csharp
 public static IDatasource Default { get; }
@@ -235,7 +235,7 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
 
 ##### default()
 
-Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when neither is set. Uses [create](#create-options).
+Loads `.env` `PROVIDER` / `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. Throws when `provider` is not set. Uses [create](#create-options).
 
 ```rust
 pub fn default() -> Result<Arc<dyn Datasource>>

@@ -13,7 +13,7 @@ public sealed class SchemaTests
     [InlineData("postgres")]
     public void CreatesTablesWithForeignKeys(string provider)
     {
-        var sql = string.Join("\n", Schema.Tables(provider, Driver(provider)).Select(table => table.GetText()));
+        var sql = string.Join("\n", Schema.Tables(provider).Select(table => table.GetText()));
         Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "user_id")}) REFERENCES", sql);
         Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "group_id")}) REFERENCES", sql);
         Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "bad_role_id")}) REFERENCES", sql);
@@ -24,18 +24,18 @@ public sealed class SchemaTests
     [Fact]
     public void SqliteUsesIntegerPrimaryKey()
     {
-        var users = Schema.Tables("sqlite", new SqliteDriver())[0];
+        var users = Schema.Tables("sqlite")[0];
         Assert.True(users.Columns[0].Identity);
         Assert.Contains("CONSTRAINT pk_users PRIMARY KEY", users.GetText());
     }
 
     [Fact]
     public void MysqlUsesIdentityFlag() =>
-        Assert.True(Schema.Tables("mysql", new MysqlDriver())[0].Columns[0].Identity);
+        Assert.True(Schema.Tables("mysql")[0].Columns[0].Identity);
 
     [Fact]
     public void PostgresUsesIdentityFlag() =>
-        Assert.True(Schema.Tables("postgres", new PostgresDriver())[0].Columns[0].Identity);
+        Assert.True(Schema.Tables("postgres")[0].Columns[0].Identity);
 
     [Fact]
     public void QuotesIdentifiersAndMapsColumnTypes()

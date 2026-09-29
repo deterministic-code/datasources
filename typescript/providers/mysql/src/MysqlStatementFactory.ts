@@ -1,6 +1,6 @@
 import {
   CreateTableStatement,
-  InsertedIdStatement,
+  SelectInsertedIdStatement,
   SelectStatement,
   type IStatement,
 } from "@datasources/core";
@@ -8,8 +8,8 @@ import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRe
 
 export class MysqlStatementFactory {
   transform(statement: IStatement): IStatement {
-    if (statement instanceof InsertedIdStatement)
-      return new SelectStatement(InsertedIdStatement.select("mysql", statement.column));
+    if (statement instanceof SelectInsertedIdStatement)
+      return new SelectStatement(`SELECT LAST_INSERT_ID() AS ${statement.column}`);
     return statement instanceof CreateTableStatement && statement.table != null
       ? new CreateTableStatement(new MysqlCreateTableStatementRenderer().render(statement))
       : statement;

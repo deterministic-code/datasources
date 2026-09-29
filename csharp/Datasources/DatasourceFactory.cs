@@ -26,7 +26,7 @@ public sealed class DatasourceFactory : IDatasourceFactory
             options = Merge(DotEnv.Load(), Environment.GetEnvironmentVariable);
             RegisterInstalled(options);
         }
-        var name = Get(options, "provider") ?? ProviderFromUrl.From(Get(options, "database_url"))
+        var name = Get(options, "provider")
             ?? throw new DatasourceException("Datasource defaults are not specified");
         return Factories.TryGetValue(name, out var driver)
             ? new Datasource(name, driver, options)

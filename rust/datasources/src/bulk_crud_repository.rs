@@ -166,27 +166,29 @@ impl BulkCRUDRepository {
     pub fn inserts(&self, items: &[Row]) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| {
-                Ok(command(insert_command(&self.crud, item)?))
-            })
+            .map(|item| Ok(command(insert_command(&self.crud, item)?)))
             .collect()
     }
 
-    pub fn updates(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Vec<BulkCommand>> {
+    pub fn updates(
+        &self,
+        items: &[Row],
+        by_where: Option<&dyn IWhere>,
+    ) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| {
-                Ok(command(update_command(&self.crud, item, by_where)?))
-            })
+            .map(|item| Ok(command(update_command(&self.crud, item, by_where)?)))
             .collect()
     }
 
-    pub fn deletes(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Vec<BulkCommand>> {
+    pub fn deletes(
+        &self,
+        items: &[Row],
+        by_where: Option<&dyn IWhere>,
+    ) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| {
-                Ok(command(delete_command(&self.crud, item, by_where)?))
-            })
+            .map(|item| Ok(command(delete_command(&self.crud, item, by_where)?)))
             .collect()
     }
 

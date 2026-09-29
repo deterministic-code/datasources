@@ -2,7 +2,6 @@ use crate::datasource::{BuiltDatasource, Datasource};
 use crate::datasource_error::DatasourceError;
 use crate::defaults;
 use crate::dot_env;
-use crate::provider_from_url::provider_from_url;
 use crate::registry_state::registry;
 use crate::result::Result;
 use std::collections::HashMap;
@@ -20,7 +19,6 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
     let name = get(&listed, "provider")
         .filter(|value| !value.is_empty())
         .map(str::to_string)
-        .or_else(|| get(&listed, "database_url").and_then(provider_from_url))
         .ok_or_else(|| DatasourceError::message("Datasource defaults are not specified"))?;
     let guard = registry();
     let pair = guard

@@ -1,4 +1,4 @@
-import { type CreateTableStatement, type IDriver } from "@datasources/core";
+import { type CreateTableStatement } from "@datasources/core";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +15,7 @@ export const qualified = (provider: string, name: string): string =>
 export const flag = (provider: string, value: boolean): number | boolean =>
   provider === "sqlite" ? (value ? 1 : 0) : value;
 
-export const schema = (provider: string, _driver: IDriver): CreateTableStatement[] =>
+export const schema = (provider: string): CreateTableStatement[] =>
   tables("user-roles-cli", (name) => ident(provider, name));
 
 export const mysqlProcedures = (): string[] =>

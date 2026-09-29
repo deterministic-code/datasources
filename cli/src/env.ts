@@ -2,7 +2,7 @@ import { providerFromUrl } from "./providerFromUrl.ts";
 
 export type EnvMap = Record<string, string>;
 
-export const knownEnvKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA"] as const;
+export const knownEnvKeys = ["INSTALLED_PROVIDERS", "PROVIDER", "DATASOURCE_URL", "DATABASE_SCHEMA"] as const;
 
 const droppedEnvKeys = [
   "DATABASE_URL",

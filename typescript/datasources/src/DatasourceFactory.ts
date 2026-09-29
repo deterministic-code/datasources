@@ -6,8 +6,6 @@ import { Datasource } from "./Datasource.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DotEnv } from "./dotEnv.ts";
 import { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
-import { providerFromUrl } from "./providerFromUrl.ts";
-
 const factories = new Map<string, IDriver>();
 
 type Install = (options: DatasourceOptions) => void;
@@ -48,7 +46,7 @@ const registerInstalled = (options: DatasourceOptions): void => install?.(option
 const resolve = (options?: DatasourceOptions): IDatasource => {
   const listed = options ?? merge(DotEnv.load(), process.env);
   if (options === undefined) registerInstalled(listed);
-  const name = get(listed, "provider") ?? providerFromUrl(get(listed, "database_url") ?? "")
+  const name = get(listed, "provider")
     ?? (() => { throw new DatasourceError("Datasource defaults are not specified"); })();
   const driver = factories.get(name);
   if (!driver) throw new ProviderNotInstalledError(name);

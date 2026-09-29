@@ -102,7 +102,7 @@ export {
   ReferentialAction,
   StatementEvaluator,
   ExecuteStoredProcedureStatement,
-  InsertedIdStatement,
+  SelectInsertedIdStatement,
   ReturnStatement,
   UniqueConstraint,
   UpdateStatement,

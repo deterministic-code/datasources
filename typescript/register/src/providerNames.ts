@@ -1,4 +1,4 @@
-import { providerFromUrl, type DatasourceOptions } from "@datasources/core";
+import { DatasourceError, providerFromUrl, type DatasourceOptions } from "@datasources/core";
 
 const text = (options: DatasourceOptions, key: string): string | undefined => {
   const value = options[key];
@@ -13,6 +13,9 @@ const split = (value: string | undefined): string[] =>
 
 export const providerNames = (options: DatasourceOptions): string[] => {
   const names = [...new Set(split(text(options, "INSTALLED_PROVIDERS")))];
-  const provider = providerFromUrl(text(options, "DATASOURCE_URL") ?? "");
-  return provider && !names.includes(provider) ? [...names, provider] : names;
+  const url = text(options, "DATASOURCE_URL");
+  if (!url) return names;
+  const provider = providerFromUrl(url);
+  if (!provider) throw new DatasourceError("DATASOURCE_URL has no provider");
+  return names.includes(provider) ? names : [...names, provider];
 };

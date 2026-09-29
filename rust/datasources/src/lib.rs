@@ -166,10 +166,11 @@ pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault,
     CreateIndexStatement, CreateTableStatement, CreateTableStatementRenderer, DeleteStatement,
-    ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier, InsertStatement,
-    InsertedIdStatement, Literal, NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction,
-    ReturnStatement, SelectStatementOptions, SortDirection, Statement, StatementEvaluator,
-    StatementKind, TableConstraint, Text, UniqueConstraint, UpdateStatement, Where,
+    ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier, InsertStatement, Literal,
+    NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction, ReturnStatement,
+    SelectInsertedIdStatement, SelectStatementOptions, SortDirection, Statement,
+    StatementEvaluator, StatementKind, TableConstraint, Text, UniqueConstraint, UpdateStatement,
+    Where,
 };
 pub use stored_enrichment::StoredEnrichment;
 pub use stored_procedure_bulk_write_strategy::StoredProcedureBulkWriteStrategy;

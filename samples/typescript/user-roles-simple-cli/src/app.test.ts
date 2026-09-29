@@ -103,17 +103,17 @@ const userTable = (provider: string): string => {
 describe("schema", () => {
   it("creates tables with foreign keys", () => {
     for (const provider of ["sqlite", "mysql", "postgres"]) {
-      const sql = schema(provider, driver(provider))
+      const sql = schema(provider)
         .map((table) => table.getText())
         .join("\n");
       expect(sql).toContain(`FOREIGN KEY (${ident(provider, "user_id")}) REFERENCES`);
       expect(sql).toContain(`FOREIGN KEY (${ident(provider, "bad_role_id")}) REFERENCES`);
       expect(sql).toContain("ugly_name");
     }
-    expect(schema("sqlite", driver("sqlite"))[0]!.columns[0]!.identity).toBe(true);
-    expect(schema("sqlite", driver("sqlite"))[0]!.getText()).toContain("CONSTRAINT pk_users PRIMARY KEY");
-    expect(schema("mysql", driver("mysql"))[0]!.columns[0]!.identity).toBe(true);
-    expect(schema("postgres", driver("postgres"))[0]!.columns[0]!.identity).toBe(true);
+    expect(schema("sqlite")[0]!.columns[0]!.identity).toBe(true);
+    expect(schema("sqlite")[0]!.getText()).toContain("CONSTRAINT pk_users PRIMARY KEY");
+    expect(schema("mysql")[0]!.columns[0]!.identity).toBe(true);
+    expect(schema("postgres")[0]!.columns[0]!.identity).toBe(true);
     expect(ident("sqlite", "user")).toBe('"user"');
     expect(ident("postgres", 'a"b')).toBe('"a""b"');
     expect(ident("mysql", "a`b")).toBe("`a``b`");
@@ -264,12 +264,12 @@ describe("app", () => {
     const sqlite = new MockConnection(undefined, "sqlite");
     const sqliteCmd = new MockCommand(sqlite);
     sqlite.command = sqliteCmd;
-    await migrate(sqliteCmd, new SqliteDriver());
+    await migrate(sqliteCmd);
     expect(sqliteCmd.executeCalls.every((call) => call.text.startsWith("CREATE TABLE IF NOT EXISTS"))).toBe(true);
     const mysql = new MockConnection(undefined, "mysql");
     const mysqlCmd = new MockCommand(mysql);
     mysql.command = mysqlCmd;
-    await migrate(mysqlCmd, new MysqlDriver());
+    await migrate(mysqlCmd);
     expect(mysqlCmd.executeCalls.some((call) => call.text.includes("CREATE PROCEDURE add_user"))).toBe(true);
     const { app, command } = create("sqlite");
     command.reader = new MockReader([]);

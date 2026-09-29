@@ -204,28 +204,70 @@ async fn create_update_and_delete_syncs_link_rows() {
     assert_eq!(created.get("username"), Some(&Value::from("ada")));
     assert_eq!(created.get("is_enabled"), Some(&Value::Bool(true)));
     assert_eq!(num(&created, "user_type_id"), num(&seeded.admin_type, "id"));
-    assert_eq!(contains_id(&created, "user_type", num(&seeded.admin_type, "id")), true);
-    assert_eq!(contains_id(&created, "roles", num(&seeded.admin_role, "id")), true);
-    assert_eq!(contains_id(&created, "roles", num(&seeded.editor_role, "id")), true);
-    assert_eq!(contains_id(&created, "groups", num(&seeded.engineering, "id")), true);
-    assert_eq!(ints(&created_role_links, "user_id"), vec![num(&created, "id"), num(&created, "id")]);
+    assert_eq!(
+        contains_id(&created, "user_type", num(&seeded.admin_type, "id")),
+        true
+    );
+    assert_eq!(
+        contains_id(&created, "roles", num(&seeded.admin_role, "id")),
+        true
+    );
+    assert_eq!(
+        contains_id(&created, "roles", num(&seeded.editor_role, "id")),
+        true
+    );
+    assert_eq!(
+        contains_id(&created, "groups", num(&seeded.engineering, "id")),
+        true
+    );
+    assert_eq!(
+        ints(&created_role_links, "user_id"),
+        vec![num(&created, "id"), num(&created, "id")]
+    );
     assert_eq!(
         ints(&created_role_links, "role_id"),
-        ints(&[seeded.admin_role.clone(), seeded.editor_role.clone()], "id")
+        ints(
+            &[seeded.admin_role.clone(), seeded.editor_role.clone()],
+            "id"
+        )
     );
-    assert_eq!(ints(&created_group_links, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&created_group_links, "group_id"), vec![num(&seeded.engineering, "id")]);
+    assert_eq!(
+        ints(&created_group_links, "user_id"),
+        vec![num(&created, "id")]
+    );
+    assert_eq!(
+        ints(&created_group_links, "group_id"),
+        vec![num(&seeded.engineering, "id")]
+    );
     assert_eq!(saved.rows_affected, 1);
     assert_eq!(num(&updated, "id"), num(&created, "id"));
     assert_eq!(updated.get("username"), Some(&Value::from("ada")));
     assert_eq!(updated.get("is_enabled"), Some(&Value::Bool(true)));
     assert_eq!(num(&updated, "user_type_id"), num(&seeded.admin_type, "id"));
-    assert_eq!(contains_id(&updated, "roles", num(&seeded.editor_role, "id")), true);
-    assert_eq!(contains_id(&updated, "roles", num(&seeded.admin_role, "id")), false);
-    assert_eq!(contains_id(&updated, "groups", num(&seeded.engineering, "id")), true);
-    assert_eq!(contains_id(&updated, "groups", num(&seeded.ops, "id")), true);
-    assert_eq!(ints(&updated_role_links, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&updated_role_links, "role_id"), vec![num(&seeded.editor_role, "id")]);
+    assert_eq!(
+        contains_id(&updated, "roles", num(&seeded.editor_role, "id")),
+        true
+    );
+    assert_eq!(
+        contains_id(&updated, "roles", num(&seeded.admin_role, "id")),
+        false
+    );
+    assert_eq!(
+        contains_id(&updated, "groups", num(&seeded.engineering, "id")),
+        true
+    );
+    assert_eq!(
+        contains_id(&updated, "groups", num(&seeded.ops, "id")),
+        true
+    );
+    assert_eq!(
+        ints(&updated_role_links, "user_id"),
+        vec![num(&created, "id")]
+    );
+    assert_eq!(
+        ints(&updated_role_links, "role_id"),
+        vec![num(&seeded.editor_role, "id")]
+    );
     assert_eq!(
         ints(&updated_group_links, "user_id"),
         vec![num(&created, "id"), num(&created, "id")]
@@ -236,9 +278,23 @@ async fn create_update_and_delete_syncs_link_rows() {
     );
     assert_eq!(removed.rows_affected, 1);
     assert_eq!(users.read(None, None).await.unwrap().is_empty(), true);
-    assert_eq!(seeded.user_roles.read(None, None).await.unwrap().is_empty(), true);
-    assert_eq!(seeded.user_groups.read(None, None).await.unwrap().is_empty(), true);
-    assert_eq!(names(&seeded.roles.read(None, None).await.unwrap()), vec!["admin".to_string(), "editor".to_string()]);
+    assert_eq!(
+        seeded.user_roles.read(None, None).await.unwrap().is_empty(),
+        true
+    );
+    assert_eq!(
+        seeded
+            .user_groups
+            .read(None, None)
+            .await
+            .unwrap()
+            .is_empty(),
+        true
+    );
+    assert_eq!(
+        names(&seeded.roles.read(None, None).await.unwrap()),
+        vec!["admin".to_string(), "editor".to_string()]
+    );
     assert_eq!(
         names(&seeded.groups.read(None, None).await.unwrap()),
         vec!["engineering".to_string(), "ops".to_string()]
@@ -275,14 +331,29 @@ async fn null_list_clears_that_association() {
     assert_eq!(num(&loaded, "id"), num(&created, "id"));
     assert_eq!(loaded.get("username"), Some(&Value::from("ada")));
     assert_eq!(num(&loaded, "user_type_id"), num(&seeded.admin_type, "id"));
-    assert_eq!(contains_id(&loaded, "user_type", num(&seeded.admin_type, "id")), true);
-    assert_eq!(contains_id(&loaded, "groups", num(&seeded.engineering, "id")), true);
+    assert_eq!(
+        contains_id(&loaded, "user_type", num(&seeded.admin_type, "id")),
+        true
+    );
+    assert_eq!(
+        contains_id(&loaded, "groups", num(&seeded.engineering, "id")),
+        true
+    );
     assert_eq!(loaded.get("roles"), Some(&Value::Text(String::new())));
     assert!(user_roles.is_empty());
     assert_eq!(ints(&user_groups, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&user_groups, "group_id"), vec![num(&seeded.engineering, "id")]);
-    assert_eq!(names(&seeded.roles.read(None, None).await.unwrap()), vec!["admin".to_string(), "editor".to_string()]);
-    assert_eq!(names(&seeded.groups.read(None, None).await.unwrap()), vec!["engineering".to_string(), "ops".to_string()]);
+    assert_eq!(
+        ints(&user_groups, "group_id"),
+        vec![num(&seeded.engineering, "id")]
+    );
+    assert_eq!(
+        names(&seeded.roles.read(None, None).await.unwrap()),
+        vec!["admin".to_string(), "editor".to_string()]
+    );
+    assert_eq!(
+        names(&seeded.groups.read(None, None).await.unwrap()),
+        vec!["engineering".to_string(), "ops".to_string()]
+    );
 }
 
 #[tokio::test]
@@ -312,14 +383,29 @@ async fn empty_list_clears_that_association() {
     assert_eq!(num(&loaded, "id"), num(&created, "id"));
     assert_eq!(loaded.get("username"), Some(&Value::from("ada")));
     assert_eq!(num(&loaded, "user_type_id"), num(&seeded.admin_type, "id"));
-    assert_eq!(contains_id(&loaded, "user_type", num(&seeded.admin_type, "id")), true);
+    assert_eq!(
+        contains_id(&loaded, "user_type", num(&seeded.admin_type, "id")),
+        true
+    );
     assert_eq!(loaded.get("roles"), Some(&Value::Text(String::new())));
-    assert_eq!(contains_id(&loaded, "groups", num(&seeded.engineering, "id")), true);
+    assert_eq!(
+        contains_id(&loaded, "groups", num(&seeded.engineering, "id")),
+        true
+    );
     assert!(user_roles.is_empty());
     assert_eq!(ints(&user_groups, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&user_groups, "group_id"), vec![num(&seeded.engineering, "id")]);
-    assert_eq!(names(&seeded.roles.read(None, None).await.unwrap()), vec!["admin".to_string(), "editor".to_string()]);
-    assert_eq!(names(&seeded.groups.read(None, None).await.unwrap()), vec!["engineering".to_string(), "ops".to_string()]);
+    assert_eq!(
+        ints(&user_groups, "group_id"),
+        vec![num(&seeded.engineering, "id")]
+    );
+    assert_eq!(
+        names(&seeded.roles.read(None, None).await.unwrap()),
+        vec!["admin".to_string(), "editor".to_string()]
+    );
+    assert_eq!(
+        names(&seeded.groups.read(None, None).await.unwrap()),
+        vec!["engineering".to_string(), "ops".to_string()]
+    );
 }
 
 #[tokio::test]
@@ -332,10 +418,19 @@ async fn duplicate_related_ids_insert_one_row() {
     let group_links = seeded.user_groups.read(None, None).await.unwrap();
     assert_eq!(num(&created, "id") > 0, true);
     assert_eq!(ints(&role_links, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&role_links, "role_id"), vec![num(&seeded.admin_role, "id")]);
+    assert_eq!(
+        ints(&role_links, "role_id"),
+        vec![num(&seeded.admin_role, "id")]
+    );
     assert_eq!(ints(&group_links, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&group_links, "group_id"), vec![num(&seeded.engineering, "id")]);
-    assert_eq!(names(&seeded.roles.read(None, None).await.unwrap()), vec!["admin".to_string(), "editor".to_string()]);
+    assert_eq!(
+        ints(&group_links, "group_id"),
+        vec![num(&seeded.engineering, "id")]
+    );
+    assert_eq!(
+        names(&seeded.roles.read(None, None).await.unwrap()),
+        vec!["admin".to_string(), "editor".to_string()]
+    );
 }
 
 #[tokio::test]
@@ -345,7 +440,10 @@ async fn missing_related_id_throws() {
     let error = users
         .create(&mut ada(
             &seeded,
-            encode_rows(&[record(&[("id", Value::Int(0)), ("name", Value::from("ghost"))])]),
+            encode_rows(&[record(&[
+                ("id", Value::Int(0)),
+                ("name", Value::from("ghost")),
+            ])]),
             encode_rows(&[]),
         ))
         .await
@@ -360,7 +458,10 @@ async fn missing_related_id_throws() {
 
 #[tokio::test]
 async fn lazy_write_skips_unloaded_links() {
-    let (mut users, seeded) = open(Some(Arc::new(LazyWriteEnrichmentStrategy::new(None, None, false)))).await;
+    let (mut users, seeded) = open(Some(Arc::new(LazyWriteEnrichmentStrategy::new(
+        None, None, false,
+    ))))
+    .await;
     link(&mut users, &seeded);
     let mut creating = record(&[
         ("username", Value::from("ada")),
@@ -401,24 +502,59 @@ async fn lazy_write_skips_unloaded_links() {
         .unwrap();
     assert_eq!(num(&created, "id") > 0, true);
     assert!(created_role_links.is_empty());
-    assert_eq!(ints(&created_group_links, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&created_group_links, "group_id"), vec![num(&seeded.engineering, "id")]);
+    assert_eq!(
+        ints(&created_group_links, "user_id"),
+        vec![num(&created, "id")]
+    );
+    assert_eq!(
+        ints(&created_group_links, "group_id"),
+        vec![num(&seeded.engineering, "id")]
+    );
     assert_eq!(skipped.rows_affected, 1);
     assert_eq!(num(&after_skip, "id"), num(&created, "id"));
     assert_eq!(after_skip.get("username"), Some(&Value::from("ada")));
     assert_eq!(after_skip.get("is_enabled"), Some(&Value::Bool(false)));
     assert!(skipped_role_links.is_empty());
-    assert_eq!(ints(&skipped_group_links, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&skipped_group_links, "group_id"), vec![num(&seeded.engineering, "id")]);
+    assert_eq!(
+        ints(&skipped_group_links, "user_id"),
+        vec![num(&created, "id")]
+    );
+    assert_eq!(
+        ints(&skipped_group_links, "group_id"),
+        vec![num(&seeded.engineering, "id")]
+    );
     assert_eq!(linked.rows_affected, 1);
-    assert_eq!(ints(&linked_role_links, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&linked_role_links, "role_id"), vec![num(&seeded.editor_role, "id")]);
-    assert_eq!(ints(&linked_group_links, "user_id"), vec![num(&created, "id")]);
-    assert_eq!(ints(&linked_group_links, "group_id"), vec![num(&seeded.engineering, "id")]);
-    assert_eq!(names(&seeded.roles.read(None, None).await.unwrap()), vec!["admin".to_string(), "editor".to_string()]);
-    assert_eq!(names(&seeded.groups.read(None, None).await.unwrap()), vec!["engineering".to_string(), "ops".to_string()]);
+    assert_eq!(
+        ints(&linked_role_links, "user_id"),
+        vec![num(&created, "id")]
+    );
+    assert_eq!(
+        ints(&linked_role_links, "role_id"),
+        vec![num(&seeded.editor_role, "id")]
+    );
+    assert_eq!(
+        ints(&linked_group_links, "user_id"),
+        vec![num(&created, "id")]
+    );
+    assert_eq!(
+        ints(&linked_group_links, "group_id"),
+        vec![num(&seeded.engineering, "id")]
+    );
+    assert_eq!(
+        names(&seeded.roles.read(None, None).await.unwrap()),
+        vec!["admin".to_string(), "editor".to_string()]
+    );
+    assert_eq!(
+        names(&seeded.groups.read(None, None).await.unwrap()),
+        vec!["engineering".to_string(), "ops".to_string()]
+    );
     assert_eq!(removed.rows_affected, 1);
     assert!(users.read(None, None).await.unwrap().is_empty());
     assert!(seeded.user_roles.read(None, None).await.unwrap().is_empty());
-    assert!(seeded.user_groups.read(None, None).await.unwrap().is_empty());
+    assert!(seeded
+        .user_groups
+        .read(None, None)
+        .await
+        .unwrap()
+        .is_empty());
 }

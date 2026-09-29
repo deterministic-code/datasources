@@ -3,7 +3,7 @@ use crate::mappers::Mapper;
 use crate::mappers::TransformMapper;
 use crate::parameter::Parameter;
 use crate::statements::{
-    DeleteStatement, InsertStatement, InsertedIdStatement, Text, UpdateStatement,
+    DeleteStatement, InsertStatement, SelectInsertedIdStatement, Text, UpdateStatement,
 };
 use crate::where_text::WhereText;
 use crate::{SelectStatement, SelectStatementOptions};
@@ -82,8 +82,8 @@ impl RepositoryStatements {
         )
     }
 
-    pub fn select_inserted_id(&self, column: &str) -> InsertedIdStatement {
-        InsertedIdStatement::new(&self.table, column)
+    pub fn select_inserted_id(&self, column: &str) -> SelectInsertedIdStatement {
+        SelectInsertedIdStatement::new(&self.table, column)
     }
 
     pub fn delete(&self, where_clause: &dyn IWhere) -> DeleteStatement {

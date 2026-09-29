@@ -6,6 +6,8 @@ import type { Response } from "../Response.ts";
 import { CommandMiddlewareHost } from "../CommandMiddlewareHost.ts";
 import type { Parameter } from "../Parameter.ts";
 import type { Row } from "../Row.ts";
+import type { IStatement } from "../statements/IStatement.ts";
+import { SelectInsertedIdStatement } from "../statements/SelectInsertedIdStatement.ts";
 import { MockReader } from "./mock-reader.ts";
 
 export class MockCommand extends CommandMiddlewareHost implements ICommand {
@@ -19,6 +21,17 @@ export class MockCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: IConnection) {
     super();
   }
+
+  executeReaderStatement = (
+    statement: IStatement,
+    parameters?: Parameter[],
+  ): Promise<IReader<Cells>> =>
+    this.executeReader(
+      statement instanceof SelectInsertedIdStatement
+        ? `${statement.table}.${statement.column}`
+        : statement.getText(),
+      parameters,
+    );
 
   async executeReader(
     text: string,

@@ -12,6 +12,11 @@ public sealed class MockCommand : CommandMiddlewareHost, ICommand
 
     public MockCommand(IConnection connection) => Connection = connection;
 
+    public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+        statement is SelectInsertedIdStatement inserted
+            ? ExecuteReader($"{inserted.Table}.{inserted.Column}", parameters)
+            : ExecuteReader(statement.GetText(), parameters);
+
     public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {

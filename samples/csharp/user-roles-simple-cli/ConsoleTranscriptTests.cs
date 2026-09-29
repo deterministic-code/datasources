@@ -164,13 +164,7 @@ public sealed class ConsoleTranscriptTests
         var spec = Spec();
         await connection.Open();
         var command = connection.CreateCommand();
-        await Migrate.Apply(command, connection.Provider switch
-        {
-            "sqlite" => new SqliteDriver(),
-            "mysql" => new MysqlDriver(),
-            "postgres" => new PostgresDriver(),
-            _ => throw new InvalidOperationException(connection.Provider)
-        });
+        await Migrate.Apply(command);
         var now = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
         command.AddMiddleware(middleware);
         var app = new App(command, () => now.UtcDateTime, _ => "hash", () => [1, 2, 3], procedures);

@@ -105,11 +105,13 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         var spec = LoadSpec();
         await File.WriteAllTextAsync(Path.Combine(sample, ".env"), $"""
             INSTALLED_PROVIDERS=sqlite,mysql,postgres
+            PROVIDER={provider}
             DATASOURCE_URL={url}
             DATABASE_SCHEMA={schema}
             """);
         var env = new Dictionary<string, string>
         {
+            ["PROVIDER"] = provider,
             ["DATASOURCE_URL"] = url,
             ["DATABASE_SCHEMA"] = schema ?? "",
             ["CLI_NOW"] = spec.Now

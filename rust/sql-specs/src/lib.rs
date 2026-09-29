@@ -4,7 +4,7 @@ use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
-    InsertedIdStatement, InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
+    InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
     SelectStatementOptions, Text, TransformMapper, TypeConverter, UpdateStatement, Value, Where,
 };
 use rust_decimal::Decimal;
@@ -589,7 +589,7 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
                     .ids
                     .first()
                     .and_then(|column| {
-                        let sql = InsertedIdStatement::select_sql(provider, column);
+                        let sql = inserted_id_sql(provider, column);
                         (!sql.is_empty()).then_some(sql)
                     })
                 {
@@ -599,6 +599,15 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
             out
         })
         .collect()
+}
+
+fn inserted_id_sql(provider: &str, column: &str) -> String {
+    match provider {
+        "sqlite" => format!("SELECT last_insert_rowid() AS {column}"),
+        "mysql" => format!("SELECT LAST_INSERT_ID() AS {column}"),
+        "postgres" => format!("SELECT lastval() AS {column}"),
+        _ => String::new(),
+    }
 }
 
 fn unquote_sql(text: &str) -> String {

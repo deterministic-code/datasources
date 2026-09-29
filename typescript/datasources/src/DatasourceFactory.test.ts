@@ -137,7 +137,7 @@ describe("Datasource registry", () => {
     expect(() => Datasource.create()).toThrow(DatasourceError);
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
     process.env.DATABASE_SCHEMA = "main";
-    expect(Datasource.create().provider).toBe("sqlite");
+    expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
     bindInstall((options) => {
       if (options.INSTALLED_PROVIDERS?.includes("json"))
         DatasourceFactory.register("json", new MockDriver());
@@ -151,8 +151,7 @@ describe("Datasource registry", () => {
     DatasourceFactory.register("sqlite", new MockDriver());
     DatasourceFactory.register("memory", new MockDriver());
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
-    expect(DatasourceFactory.default.provider).toBe("sqlite");
-    expect(Datasource.default.provider).toBe("sqlite");
+    expect(() => DatasourceFactory.default).toThrow("Datasource defaults are not specified");
     delete process.env.DATASOURCE_URL;
     process.env.PROVIDER = "sqlite";
     expect(DatasourceFactory.default.provider).toBe("sqlite");

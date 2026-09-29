@@ -39,6 +39,9 @@ describe("providerNames", () => {
     ).toEqual(["json", "memory"]);
     expect(providerNames({ INSTALLED_PROVIDERS: " sqlite " })).toEqual(["sqlite"]);
     expect(providerNames({})).toEqual([]);
+    expect(() => providerNames({ DATASOURCE_URL: "not-a-url" })).toThrow(
+      "DATASOURCE_URL has no provider",
+    );
   });
 });
 
@@ -64,7 +67,9 @@ describe("registerListed", () => {
       DATASOURCE_URL: "memory://",
     });
     expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
-    expect(Datasource.create({ database_url: "memory://" }).provider).toBe("memory");
+    expect(Datasource.create({ provider: "memory", database_url: "memory://" }).provider).toBe(
+      "memory",
+    );
   });
 
   it("create does not take INSTALLED_PROVIDERS", () => {
@@ -81,6 +86,7 @@ describe("registerListed", () => {
   it("create reads connection from the environment", () => {
     process.env.INSTALLED_PROVIDERS = "json,memory";
     process.env.DATASOURCE_URL = "memory://";
+    process.env.PROVIDER = "memory";
     expect(Datasource.create().provider).toBe("memory");
     expect(DatasourceFactory.default.provider).toBe("memory");
     process.env.DEFAULT_PROVIDER = "json";

@@ -1,6 +1,4 @@
 using Datasources;
-using Datasources.Mysql;
-using Datasources.Sqlite;
 
 namespace UserRolesSimpleCli.Tests;
 
@@ -89,12 +87,12 @@ public sealed class AppTests
         var sqlite = new MockConnection { Provider = "sqlite" };
         var sqliteCmd = new MockCommand(sqlite);
         sqlite.Command = sqliteCmd;
-        await Migrate.Apply(sqliteCmd, new SqliteDriver());
+        await Migrate.Apply(sqliteCmd);
         Assert.All(sqliteCmd.ExecuteCalls, call => Assert.StartsWith("CREATE TABLE IF NOT EXISTS", call.Text));
         var mysql = new MockConnection { Provider = "mysql" };
         var mysqlCmd = new MockCommand(mysql);
         mysql.Command = mysqlCmd;
-        await Migrate.Apply(mysqlCmd, new MysqlDriver());
+        await Migrate.Apply(mysqlCmd);
         Assert.Contains(mysqlCmd.ExecuteCalls, call => call.Text.Contains("CREATE PROCEDURE add_user"));
     }
 
