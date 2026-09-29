@@ -1,0 +1,3 @@
+const url = DatasourceUrlParser.parse(
+  "postgres://ds:ds@127.0.0.1:5432/datasources?schema=public&sslmode=require",
+);

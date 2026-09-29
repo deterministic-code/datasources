@@ -1,0 +1,3 @@
+var blank = DatasourceUrlParser.Parse("");
+var text = DatasourceUrlParser.Parse("not-a-url");
+var connectionString = DatasourceUrlParser.Parse("Host=db;Port=1");

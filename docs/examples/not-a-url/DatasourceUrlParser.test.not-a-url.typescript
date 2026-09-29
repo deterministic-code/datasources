@@ -1,0 +1,3 @@
+const blank = DatasourceUrlParser.parse("");
+const text = DatasourceUrlParser.parse("not-a-url");
+const connectionString = DatasourceUrlParser.parse("Host=db;Port=1");

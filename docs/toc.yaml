@@ -123,6 +123,13 @@ pages:
     title: Row Type Converter
     group: Code Reference
     parent: Type Converter
+  - path: sections/other.md
+    title: Other
+    group: Code Reference
+  - path: sections/datasource-url.md
+    title: Datasource URL
+    group: Code Reference
+    parent: Other
   - path: cli.md
     title: Setup
     group: Command Line (CLI)
