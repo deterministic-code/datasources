@@ -8,7 +8,7 @@ import {
   DatasourceFactory,
   DatasourceError,
   DeleteStatement,
-  InsertedIdStatement,
+  SelectInsertedIdStatement,
   InsertStatement,
   Operator,
   SelectStatement,
@@ -315,7 +315,7 @@ describe("Memory datasource", () => {
       "Unsupported Memory",
     );
     await command.executeStatement(new InsertStatement("people", [{ name: "name", value: "ada" }]));
-    const inserted = await command.executeReaderStatement(new InsertedIdStatement("people", "id"));
+    const inserted = await command.executeReaderStatement(new SelectInsertedIdStatement("people", "id"));
     expect(await inserted.next()).toBe(true);
     expect(inserted.current).toEqual({ id: 1 });
     const matched = await command.executeReaderStatement(
@@ -347,7 +347,7 @@ describe("Memory datasource", () => {
     await command.executeStatement(
       new UpdateStatement("people", [{ name: "name", value: "bee" }], new OpenWhere(new Operator.Equals("id", 1))),
     );
-    const missingId = await command.executeReaderStatement(new InsertedIdStatement("other", "id"));
+    const missingId = await command.executeReaderStatement(new SelectInsertedIdStatement("other", "id"));
     expect(await missingId.next()).toBe(false);
     await command.executeReaderStatement(
       new SelectStatement("SELECT id FROM missing", new Where(new Operator.Equals("id", 1))),

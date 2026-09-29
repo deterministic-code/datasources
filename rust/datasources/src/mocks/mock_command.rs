@@ -8,6 +8,8 @@ use crate::reader::Reader;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
+use crate::statements::SelectInsertedIdStatement;
 use crate::value::Value;
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
@@ -73,6 +75,21 @@ impl Command for MockCommand {
                 ))
             })
             .await
+    }
+
+    async fn execute_reader_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Box<dyn Reader>> {
+        let text = match statement
+            .as_any()
+            .downcast_ref::<SelectInsertedIdStatement>()
+        {
+            Some(inserted) => format!("{}.{}", inserted.table, inserted.column),
+            _ => statement.get_text(),
+        };
+        self.execute_reader(&text, parameters).await
     }
 
     async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {

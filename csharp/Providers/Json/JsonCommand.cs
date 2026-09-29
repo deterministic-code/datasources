@@ -20,8 +20,8 @@ internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        statement is InsertedIdStatement
-            ? Run(statement.GetText(), parameters, (_, _) =>
+        statement is SelectInsertedIdStatement inserted
+            ? Run($"{inserted.Table}.{inserted.Column}", parameters, (_, _) =>
             {
                 Typed.EnsureOpen();
                 IReadOnlyList<Row> rows = [];

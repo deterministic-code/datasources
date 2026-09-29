@@ -140,26 +140,29 @@ fn parses_commands() {
 #[test]
 fn builds_schema() {
     for provider in ["sqlite", "mysql", "postgres"] {
-        let sql = schema::tables(provider, driver(provider).as_ref())
+        let sql = schema::tables(provider)
             .unwrap()
             .iter()
             .map(Text::get_text)
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(sql.contains(&format!("FOREIGN KEY ({}) REFERENCES", schema::ident(provider, "user_id"))));
-        assert!(sql.contains(&format!("FOREIGN KEY ({}) REFERENCES", schema::ident(provider, "bad_role_id"))));
+        assert!(sql.contains(&format!(
+            "FOREIGN KEY ({}) REFERENCES",
+            schema::ident(provider, "user_id")
+        )));
+        assert!(sql.contains(&format!(
+            "FOREIGN KEY ({}) REFERENCES",
+            schema::ident(provider, "bad_role_id")
+        )));
         assert!(sql.contains("ugly_name"));
     }
-    let sqlite = schema::tables("sqlite", &datasources_sqlite::SqliteDriver).unwrap();
+    let sqlite = schema::tables("sqlite").unwrap();
     assert!(sqlite[0].columns[0].identity);
-    assert!(sqlite[0].get_text().contains("CONSTRAINT pk_users PRIMARY KEY"));
-    assert!(
-        schema::tables("mysql", &datasources_mysql::MysqlDriver).unwrap()[0].columns[0].identity
-    );
-    assert!(
-        schema::tables("postgres", &datasources_postgres::PostgresDriver).unwrap()[0].columns[0]
-            .identity
-    );
+    assert!(sqlite[0]
+        .get_text()
+        .contains("CONSTRAINT pk_users PRIMARY KEY"));
+    assert!(schema::tables("mysql").unwrap()[0].columns[0].identity);
+    assert!(schema::tables("postgres").unwrap()[0].columns[0].identity);
     assert_eq!(schema::ident("sqlite", "user"), "\"user\"");
     assert_eq!(schema::ident("postgres", "a\"b"), "\"a\"\"b\"");
     assert_eq!(schema::ident("mysql", "a`b"), "`a``b`");
@@ -420,9 +423,7 @@ async fn mysql_sql_path_inserts_and_updates() {
 #[tokio::test]
 async fn migrates_and_rejects_missing() {
     let sqlite = MockCommand::new();
-    migrate::apply(&sqlite, "sqlite", &datasources_sqlite::SqliteDriver)
-        .await
-        .unwrap();
+    migrate::apply(&sqlite, "sqlite").await.unwrap();
     assert!(sqlite
         .execute_logs
         .lock()
@@ -430,9 +431,7 @@ async fn migrates_and_rejects_missing() {
         .iter()
         .all(|(text, _)| text.starts_with("CREATE TABLE IF NOT EXISTS")));
     let mysql = MockCommand::new();
-    migrate::apply(&mysql, "mysql", &datasources_mysql::MysqlDriver)
-        .await
-        .unwrap();
+    migrate::apply(&mysql, "mysql").await.unwrap();
     assert!(mysql
         .execute_logs
         .lock()
@@ -552,13 +551,9 @@ async fn console_transcript_matches_sqlite() {
     let connection = datasources_sqlite::SqliteDriver.connection(Some(&options));
     connection.open().await.unwrap();
     let command = connection.create_command();
-    migrate::apply(
-        command.as_ref(),
-        connection.provider(),
-        &datasources_sqlite::SqliteDriver,
-    )
-    .await
-    .unwrap();
+    migrate::apply(command.as_ref(), connection.provider())
+        .await
+        .unwrap();
     let clock = spec.now.clone();
     let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::with_normalize(
         expected,

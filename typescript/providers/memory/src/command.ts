@@ -3,7 +3,7 @@ import {
   CommandMiddlewareHost,
   DeleteStatement,
   InsertStatement,
-  InsertedIdStatement,
+  SelectInsertedIdStatement,
   StatementEvaluator,
   UpdateStatement,
   Where,
@@ -46,8 +46,8 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> => {
-    if (statement instanceof InsertedIdStatement) {
-      return this.run(statement.getText(), parameters, async () => {
+    if (statement instanceof SelectInsertedIdStatement) {
+      return this.run(`${statement.table}.${statement.column}`, parameters, async () => {
         this.connection.ensureOpen();
         const id = this.connection.insertedId(statement.table);
         const rows = id === undefined ? [] : [{ [statement.column]: id }];

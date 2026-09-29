@@ -81,7 +81,11 @@ public class CRUDRepositoryOptionsTests
         Assert.Equal("UPDATE users SET name = $name RETURNING id", updated.GetText());
         Assert.Equal("name", Assert.Single(UpdateStatement.ParameterList([new Parameter("name", "a")])).Name);
         Assert.Equal("DELETE FROM users RETURNING id", statements.Delete().GetText());
-        Assert.Equal("users.id", statements.SelectInsertedId("id").GetText());
+        var inserted = statements.SelectInsertedId("id");
+        Assert.Equal("users", inserted.Table);
+        Assert.Equal("id", inserted.Column);
+        var error = Assert.Throws<InvalidOperationException>(inserted.GetText);
+        Assert.Equal("provider must implement SelectInsertIdStatement", error.Message);
     }
 
     [Fact]

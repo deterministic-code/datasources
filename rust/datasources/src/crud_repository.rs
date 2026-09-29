@@ -591,4 +591,3 @@ fn and_all(parts: Vec<Expression>) -> Expression {
             .into()
         })
 }
-

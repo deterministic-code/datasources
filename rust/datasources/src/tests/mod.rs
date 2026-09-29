@@ -542,6 +542,8 @@ fn registry() {
     assert_eq!(created.provider(), "json");
     assert!(create_default().is_err());
     std::env::set_var("DATASOURCE_URL", "json://");
+    assert!(create_default().is_err());
+    std::env::set_var("PROVIDER", "json");
     assert_eq!(create_default().unwrap().provider(), "json");
     assert_eq!(default().unwrap().provider(), "json");
     std::env::set_var("DEFAULT_PROVIDER", "json");

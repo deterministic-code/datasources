@@ -4,10 +4,10 @@ namespace UserRolesSimpleCli;
 
 public static class Migrate
 {
-    public static async Task Apply(ICommand command, IDriver driver)
+    public static async Task Apply(ICommand command)
     {
         var provider = command.Connection.Provider;
-        foreach (var table in Schema.Tables(provider, driver))
+        foreach (var table in Schema.Tables(provider))
             await (provider == "sqlite"
                 ? command.Execute(IfNotExists(table.GetText()))
                 : command.Execute(table));

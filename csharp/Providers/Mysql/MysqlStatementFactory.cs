@@ -6,7 +6,7 @@ internal sealed class MysqlStatementFactory
     {
         CreateTableStatement { Table: not null } create =>
             new CreateTableStatement(new MysqlCreateTableStatementRenderer().Render(create)),
-        InsertedIdStatement inserted => new SelectStatement(InsertedIdStatement.Select("mysql", inserted.Column)),
+        SelectInsertedIdStatement inserted => new SelectStatement($"SELECT LAST_INSERT_ID() AS {inserted.Column}"),
         _ => statement
     };
 }

@@ -1,4 +1,4 @@
-use datasources::{CreateTableStatement, Driver, Result, Value};
+use datasources::{CreateTableStatement, Result, Value};
 
 pub fn flag(provider: &str, value: bool) -> Value {
     if provider == "sqlite" {
@@ -26,7 +26,7 @@ fn quote(provider: &str, id: &str) -> String {
     }
 }
 
-pub fn tables(provider: &str, _driver: &dyn Driver) -> Result<Vec<CreateTableStatement>> {
+pub fn tables(provider: &str) -> Result<Vec<CreateTableStatement>> {
     Ok(datasources_sql_specs::schema_tables(
         "user-roles-cli",
         |id| ident(provider, id),

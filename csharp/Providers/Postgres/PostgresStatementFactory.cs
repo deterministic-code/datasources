@@ -6,7 +6,7 @@ internal sealed class PostgresStatementFactory
     {
         CreateTableStatement { Table: not null } create =>
             new CreateTableStatement(new PostgresCreateTableStatementRenderer().Render(create)),
-        InsertedIdStatement inserted => new SelectStatement(InsertedIdStatement.Select("postgres", inserted.Column)),
+        SelectInsertedIdStatement inserted => new SelectStatement($"SELECT lastval() AS {inserted.Column}"),
         _ => statement
     };
 }

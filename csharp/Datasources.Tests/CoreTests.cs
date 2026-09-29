@@ -555,7 +555,7 @@ public class CoreTests
         DatasourceFactory.Register("sqlite", new MockDriver());
         DatasourceFactory.Register("memory", new MockDriver());
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
-        Assert.Equal("sqlite", DatasourceFactory.Default.Provider);
+        Assert.Throws<DatasourceException>(() => _ = DatasourceFactory.Default);
         Environment.SetEnvironmentVariable("DATASOURCE_URL", null);
         Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
         Assert.Equal("sqlite", DatasourceFactory.Default.Provider);

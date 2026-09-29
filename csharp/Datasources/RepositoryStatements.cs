@@ -38,7 +38,7 @@ public sealed class RepositoryStatements
         Mapped(new UpdateStatement(table, fields, where), update);
     public IDeleteStatement Delete(IWhere? where = null) =>
         Mapped(new DeleteStatement(table, where), delete);
-    public InsertedIdStatement SelectInsertedId(string column) => new(table, column);
+    public SelectInsertedIdStatement SelectInsertedId(string column) => new(table, column);
 
     static T Mapped<T>(T built, IMapper<T, T>? mapper) =>
         mapper switch

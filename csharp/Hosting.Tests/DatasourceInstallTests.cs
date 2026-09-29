@@ -32,6 +32,9 @@ public class DatasourceInstallTests
             new[] { "sqlite" },
             ProviderNames.From(new Dictionary<string, string?> { ["INSTALLED_PROVIDERS"] = " sqlite " }));
         Assert.Empty(ProviderNames.From(new Dictionary<string, string?>()));
+        var error = Assert.Throws<DatasourceException>(() =>
+            ProviderNames.From(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "not-a-url" }));
+        Assert.Equal("DATASOURCE_URL has no provider", error.Message);
     }
 
     [Fact]
@@ -67,7 +70,11 @@ public class DatasourceInstallTests
         Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
         Assert.Equal(
             "memory",
-            DatasourceFactory.Create(new Dictionary<string, string?> { ["database_url"] = "memory://" }).Provider);
+            DatasourceFactory.Create(new Dictionary<string, string?>
+            {
+                ["provider"] = "memory",
+                ["database_url"] = "memory://"
+            }).Provider);
     }
 
     [Fact]
@@ -92,6 +99,7 @@ public class DatasourceInstallTests
     {
         Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "json,memory");
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
+        Environment.SetEnvironmentVariable("PROVIDER", "memory");
         try
         {
             Assert.Equal("memory", DatasourceFactory.Create().Provider);
@@ -102,6 +110,7 @@ public class DatasourceInstallTests
         {
             Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", null);
             Environment.SetEnvironmentVariable("DATASOURCE_URL", null);
+            Environment.SetEnvironmentVariable("PROVIDER", null);
         }
     }
 

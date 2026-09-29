@@ -8,7 +8,7 @@ internal sealed class SqliteStatementFactory
     {
         CreateTableStatement { Table: not null } create =>
             new CreateTableStatement(new SqliteCreateTableStatementRenderer().Render(create)),
-        InsertedIdStatement inserted => new SelectStatement(InsertedIdStatement.Select("sqlite", inserted.Column)),
+        SelectInsertedIdStatement inserted => new SelectStatement($"SELECT last_insert_rowid() AS {inserted.Column}"),
         _ => statement
     };
 }

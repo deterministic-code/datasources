@@ -9,7 +9,7 @@ fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
         .filter(|value| !value.is_empty())
 }
 
-pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
+pub fn provider_names(options: &HashMap<String, String>) -> Result<Vec<String>> {
     let mut names = Vec::new();
     if let Some(value) = get(options, "INSTALLED_PROVIDERS") {
         for name in value.split(',') {
@@ -19,13 +19,15 @@ pub fn provider_names(options: &HashMap<String, String>) -> Vec<String> {
             }
         }
     }
-    if let Some(provider) = get(options, "DATASOURCE_URL").and_then(datasources::provider_from_url)
-    {
-        if !names.iter().any(|existing| existing == &provider) {
-            names.push(provider);
-        }
+    let Some(url) = get(options, "DATASOURCE_URL") else {
+        return Ok(names);
+    };
+    let provider = datasources::provider_from_url(url)
+        .ok_or_else(|| DatasourceError::message("DATASOURCE_URL has no provider"))?;
+    if !names.iter().any(|existing| existing == &provider) {
+        names.push(provider);
     }
-    names
+    Ok(names)
 }
 
 macro_rules! register_named {
@@ -67,7 +69,7 @@ fn register_named(name: &str) -> Result<()> {
 }
 
 fn install_listed(options: &HashMap<String, String>) -> Result<()> {
-    for name in provider_names(options) {
+    for name in provider_names(options)? {
         register_named(&name)?;
     }
     Ok(())
@@ -135,21 +137,29 @@ mod tests {
             provider_names(&opts(&[
                 ("INSTALLED_PROVIDERS", "sqlite, json, sqlite"),
                 ("DATASOURCE_URL", "postgres://localhost"),
-            ])),
+            ]))
+            .unwrap(),
             vec!["sqlite", "json", "postgres"]
         );
         assert_eq!(
             provider_names(&opts(&[
                 ("INSTALLED_PROVIDERS", "json,memory"),
                 ("DATASOURCE_URL", "json://"),
-            ])),
+            ]))
+            .unwrap(),
             vec!["json", "memory"]
         );
         assert_eq!(
-            provider_names(&opts(&[("INSTALLED_PROVIDERS", " sqlite ")])),
+            provider_names(&opts(&[("INSTALLED_PROVIDERS", " sqlite ")])).unwrap(),
             vec!["sqlite"]
         );
-        assert!(provider_names(&HashMap::new()).is_empty());
+        assert!(provider_names(&HashMap::new()).unwrap().is_empty());
+        assert_eq!(
+            provider_names(&opts(&[("DATASOURCE_URL", "not-a-url")]))
+                .unwrap_err()
+                .to_string(),
+            "DATASOURCE_URL has no provider"
+        );
     }
 
     #[test]
@@ -193,9 +203,12 @@ mod tests {
             names.sort();
             assert_eq!(names, vec!["json", "memory"]);
             assert_eq!(
-                create(Some(&opts(&[("database_url", "memory://")])))
-                    .unwrap()
-                    .provider(),
+                create(Some(&opts(&[
+                    ("provider", "memory"),
+                    ("database_url", "memory://"),
+                ])))
+                .unwrap()
+                .provider(),
                 "memory"
             );
         });
@@ -207,6 +220,7 @@ mod tests {
             init();
             std::env::set_var("INSTALLED_PROVIDERS", "json,memory");
             std::env::set_var("DATASOURCE_URL", "memory://");
+            std::env::set_var("PROVIDER", "memory");
             assert_eq!(create_default().unwrap().provider(), "memory");
             assert_eq!(default().unwrap().provider(), "memory");
             std::env::set_var("DEFAULT_PROVIDER", "json");

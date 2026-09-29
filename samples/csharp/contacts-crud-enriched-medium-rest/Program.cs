@@ -2,26 +2,11 @@ using System.Net;
 using System.Text;
 using ContactsCrudEnrichedMediumRest;
 using Datasources;
-using Datasources.Mysql;
-using Datasources.Postgres;
-using Datasources.Sqlite;
 
-var url = Env("DATASOURCE_URL") ?? throw new InvalidOperationException("DATASOURCE_URL is required");
-var schema = Env("DATABASE_SCHEMA");
-var provider = ProviderFromUrl.From(url) ?? throw new InvalidOperationException("unknown provider");
-IDriver driver = provider switch
-{
-    "sqlite" => new SqliteDriver(),
-    "mysql" => new MysqlDriver(),
-    "postgres" => new PostgresDriver(),
-    _ => throw new InvalidOperationException($"unknown provider {provider}")
-};
-var options = new Dictionary<string, string?> { ["url"] = url };
-if (provider == "postgres")
-    options["schema"] = schema;
-var connection = driver.Connection(options);
+var ds = DatasourceFactory.Default;
+var connection = await ds.CreateConnection();
 await connection.Open();
-await Migrate.Apply(connection.CreateCommand(), driver);
+await Migrate.Apply(ds.CreateCommand(connection));
 var api = new Api(new ContactsRepository(connection), new LegacyContactRepository(connection));
 var port = int.TryParse(Env("PORT"), out var parsed) ? parsed : 8080;
 using var listener = new HttpListener();

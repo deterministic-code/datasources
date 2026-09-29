@@ -3,7 +3,7 @@ use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, IWhere, InsertedIdStatement, Parameter, Reader, Response, Result, Row,
+    DatasourceError, IWhere, Parameter, Reader, Response, Result, Row, SelectInsertedIdStatement,
     Statement, StatementEvaluator, StatementKind, Value, Where,
 };
 use std::sync::Arc;
@@ -121,11 +121,11 @@ impl Command for MemoryCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        if let Some(inserted) = statement.as_any().downcast_ref::<InsertedIdStatement>() {
+        if let Some(inserted) = statement.as_any().downcast_ref::<SelectInsertedIdStatement>() {
             let connection = self.connection.clone();
             let table = inserted.table.clone();
             let column = inserted.column.clone();
-            let text = statement.get_text();
+            let text = format!("{table}.{column}");
             return self
                 .host
                 .run(&text, parameters, move |_query, _params| {

@@ -3,7 +3,7 @@ import {
   CommandMiddlewareHost,
   DeleteStatement,
   InsertStatement,
-  InsertedIdStatement,
+  SelectInsertedIdStatement,
   UpdateStatement,
   type Cells,
   type ICommand,
@@ -48,8 +48,8 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> =>
-    statement instanceof InsertedIdStatement
-      ? this.run(statement.getText(), parameters, async () => {
+    statement instanceof SelectInsertedIdStatement
+      ? this.run(`${statement.table}.${statement.column}`, parameters, async () => {
           this.connection.ensureOpen();
           return { value: new ArrayReader([]), rows: [] };
         })

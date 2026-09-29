@@ -44,5 +44,5 @@ export type { ReferentialAction as ReferentialActionName } from "./ForeignKey.ts
 export { UniqueConstraint } from "./UniqueConstraint.ts";
 export { CheckConstraint } from "./CheckConstraint.ts";
 export { ExecuteStoredProcedureStatement } from "./ExecuteStoredProcedureStatement.ts";
-export { InsertedIdStatement } from "./InsertedIdStatement.ts";
+export { SelectInsertedIdStatement } from "./SelectInsertedIdStatement.ts";
 export { ReturnStatement } from "./ReturnStatement.ts";

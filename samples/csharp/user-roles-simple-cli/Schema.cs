@@ -16,7 +16,7 @@ public static class Schema
 
     public static Value Flag(string provider, bool value) => provider == "sqlite" ? value ? 1 : 0 : value;
 
-    public static IReadOnlyList<CreateTableStatement> Tables(string provider, IDriver driver) =>
+    public static IReadOnlyList<CreateTableStatement> Tables(string provider) =>
         SchemaSpec.Tables("user-roles-cli", name => Ident(provider, name));
 
     public static IReadOnlyList<string> MysqlProcedures()

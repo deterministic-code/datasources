@@ -69,11 +69,13 @@ describe("setup", () => {
       }),
     ).toEqual({
       INSTALLED_PROVIDERS: "json,sqlite",
+      PROVIDER: "sqlite",
       DATASOURCE_URL: "sqlite:///:memory:",
       DATABASE_SCHEMA: "",
     });
     expect(envFromAnswers({ providers: ["json"], url: "", schema: "" })).toEqual({
       INSTALLED_PROVIDERS: "json",
+      PROVIDER: "json",
       DATASOURCE_URL: "",
       DATABASE_SCHEMA: "",
     });

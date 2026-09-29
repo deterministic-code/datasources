@@ -47,11 +47,11 @@ fn spec() -> CliSpec {
     .expect("yaml")
 }
 
-fn write_env(url: &str, schema: &str) {
+fn write_env(url: &str, schema: &str, provider: &str) {
     fs::write(
         sample().join(".env"),
         format!(
-            "INSTALLED_PROVIDERS=sqlite,mysql,postgres\nDATASOURCE_URL={url}\nDATABASE_SCHEMA={schema}\n"
+            "INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER={provider}\nDATASOURCE_URL={url}\nDATABASE_SCHEMA={schema}\n"
         ),
     )
     .expect("env");
@@ -167,9 +167,17 @@ fn build() -> PathBuf {
         .join("debug/user-roles-simple-cli")
 }
 
-fn cli(bin: &Path, args: &[String], url: &str, schema: &str, now: &str) -> (i32, String, String) {
+fn cli(
+    bin: &Path,
+    args: &[String],
+    url: &str,
+    schema: &str,
+    provider: &str,
+    now: &str,
+) -> (i32, String, String) {
     let output = Command::new(bin)
         .args(args)
+        .env("PROVIDER", provider)
         .env("DATASOURCE_URL", url)
         .env("DATABASE_SCHEMA", schema)
         .env("CLI_NOW", now)
@@ -191,7 +199,7 @@ fn script(url: &str, schema: &str, provider: &str) {
     let spec = spec();
     let bin = build();
     for step in &spec.steps {
-        let (exit, stdout, stderr) = cli(&bin, &step.argv, url, schema, &spec.now);
+        let (exit, stdout, stderr) = cli(&bin, &step.argv, url, schema, provider, &spec.now);
         let cmd = step.argv.join(" ");
         let (leftover, sql) = commands(&stderr);
         let writes = if provider == "mysql" {
@@ -310,7 +318,7 @@ fn sqlite() {
     let dir = TempDir(std::env::temp_dir().join(format!("user-roles-{}", uuid())));
     fs::create_dir_all(&dir.0).expect("tmp");
     let url = format!("sqlite:///{}", dir.0.join("app.db").display());
-    write_env(&url, "");
+    write_env(&url, "", "sqlite");
     setup();
     script(&url, "", "sqlite");
 }
@@ -330,7 +338,7 @@ async fn mysql() {
             .expect("create");
     }
     let isolated = replace_mysql_db(&url, &name);
-    write_env(&isolated, "");
+    write_env(&isolated, "", "mysql");
     setup();
     script(&isolated, "", "mysql");
     let mut conn = pool.get_conn().await.expect("mysql");
@@ -359,7 +367,7 @@ async fn postgres() {
         .execute(&format!("CREATE SCHEMA {schema}"), &[])
         .await
         .expect("schema");
-    write_env(&url, &schema);
+    write_env(&url, &schema, "postgres");
     setup();
     script(&url, &schema, "postgres");
     client
@@ -396,13 +404,7 @@ async fn console_transcript(
         .collect();
     connection.open().await.expect("open");
     let command = connection.create_command();
-    let driver: Box<dyn datasources::Driver> = match connection.provider() {
-        "sqlite" => Box::new(datasources_sqlite::SqliteDriver),
-        "mysql" => Box::new(datasources_mysql::MysqlDriver),
-        "postgres" => Box::new(datasources_postgres::PostgresDriver),
-        name => panic!("unknown provider {name}"),
-    };
-    user_roles_simple_cli::migrate::apply(command.as_ref(), connection.provider(), driver.as_ref())
+    user_roles_simple_cli::migrate::apply(command.as_ref(), connection.provider())
         .await
         .expect("migrate");
     let clock = spec.now.clone();

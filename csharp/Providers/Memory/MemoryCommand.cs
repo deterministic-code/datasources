@@ -21,7 +21,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch
         {
-            InsertedIdStatement inserted => Run(statement.GetText(), parameters, (_, _) =>
+            SelectInsertedIdStatement inserted => Run($"{inserted.Table}.{inserted.Column}", parameters, (_, _) =>
             {
                 Typed.EnsureOpen();
                 var id = Typed.Inserted(inserted.Table);

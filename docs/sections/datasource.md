@@ -128,7 +128,7 @@ provider?: string
 
 ##### database_url
 
-Connection URL. The scheme selects the provider when `provider` is omitted.
+Connection URL. `provider` is required separately.
 
 ```typescript
 database_url?: string
@@ -249,7 +249,7 @@ Which datasource to return.
 
 ##### database_url
 
-Connection URL. The scheme selects the provider when `provider` is omitted.
+Connection URL. `provider` is required separately.
 
 ```csharp
 "database_url"
@@ -370,7 +370,7 @@ Which datasource to return.
 
 ##### database_url
 
-Connection URL. The scheme selects the provider when `provider` is omitted.
+Connection URL. `provider` is required separately.
 
 ```rust
 "database_url"
@@ -387,7 +387,7 @@ Default schema.
 
 ## Remarks
 
-`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env` `PROVIDER` and `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `provider` and `database_url` throw.
+`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env` `PROVIDER` and `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `provider` throws.
 
 Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
 

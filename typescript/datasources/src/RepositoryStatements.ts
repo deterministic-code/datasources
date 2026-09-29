@@ -5,7 +5,7 @@ import type { IUpdateStatement } from "./statements/IUpdateStatement.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import { DeleteStatement } from "./statements/DeleteStatement.ts";
 import { InsertStatement } from "./statements/InsertStatement.ts";
-import { InsertedIdStatement } from "./statements/InsertedIdStatement.ts";
+import { SelectInsertedIdStatement } from "./statements/SelectInsertedIdStatement.ts";
 import { SelectStatement } from "./statements/SelectStatement.ts";
 import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import type { Field } from "./builders/Field.ts";
@@ -17,7 +17,7 @@ export type RepositoryStatements = {
   insert: (fields: Field[]) => IInsertStatement;
   update: (fields: Field[], where?: IWhere) => IUpdateStatement;
   delete: (where?: IWhere) => IDeleteStatement;
-  selectInsertedId: (column: string) => InsertedIdStatement;
+  selectInsertedId: (column: string) => SelectInsertedIdStatement;
 };
 
 const mapped = <T>(built: T, mapper?: IMapper<T, T>): T =>
@@ -36,5 +36,5 @@ export const statementsOf = (
   insert: (fields) => mapped(new InsertStatement(table, fields), insert),
   update: (fields, where) => mapped(new UpdateStatement(table, fields, where), update),
   delete: (where) => mapped(new DeleteStatement(table, where), deleteMapper),
-  selectInsertedId: (column) => new InsertedIdStatement(table, column),
+  selectInsertedId: (column) => new SelectInsertedIdStatement(table, column),
 });
