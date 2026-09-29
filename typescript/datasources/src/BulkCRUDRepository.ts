@@ -3,7 +3,6 @@ import type { Constructable } from "./converters/Constructable.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
-import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { Response } from "./Response.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
@@ -74,20 +73,15 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
 
   constructor(type: Constructable<T>, connection: IConnection, bulk?: IBulkWriteStrategy<T>);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>, bulk?: IBulkWriteStrategy<T>);
-  constructor(built: BuiltRepository<T>, bulk?: IBulkWriteStrategy<T>);
   constructor(
-    typeOrConnectionOrBuilt:
-      | Constructable<T>
-      | IConnection
-      | BuiltRepository<T>
-      | IBulkWriteStrategy<T>,
+    typeOrConnection: Constructable<T> | IConnection,
     connectionOrOptions?: IConnection | CRUDRepositoryOptions<T> | IBulkWriteStrategy<T>,
     bulk?: IBulkWriteStrategy<T>,
   ) {
     const strategy = bulk ?? (isBulkStrategy<T>(connectionOrOptions) ? connectionOrOptions : undefined);
     const transactional = transactionOf(connectionOrOptions);
     super(
-      typeOrConnectionOrBuilt as Constructable<T> & IConnection & BuiltRepository<T>,
+      typeOrConnection as Constructable<T> & IConnection,
       (isBulkStrategy(connectionOrOptions) ? undefined : connectionOrOptions) as IConnection & CRUDRepositoryOptions<T>,
     );
     this.strategy = strategy ?? new SingleCommands<T>();

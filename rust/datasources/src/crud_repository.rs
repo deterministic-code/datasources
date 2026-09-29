@@ -66,7 +66,7 @@ impl CRUDRepository {
         Ok(repo)
     }
 
-    pub(crate) fn from_built(mut built: BuiltRepository) -> Self {
+    fn from_built(mut built: BuiltRepository) -> Self {
         let id = built.ids.clone();
         let write = built
             .write

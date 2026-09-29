@@ -15,7 +15,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(RepositoryBuilder<T>.Parts(connection, options), options.Write, options.Return) { }
 
-    protected CRUDRepository(
+    private CRUDRepository(
         BuiltRepository<T> built,
         IWriteEnrichmentStrategy<T>? write = null,
         IMapper<IReturnStatement, IReturnStatement>? returnMapper = null) : base(

@@ -1,4 +1,3 @@
-use crate::built_repository::BuiltRepository;
 use crate::bulk_command::BulkCommand;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command::Command;
@@ -54,22 +53,6 @@ impl BulkCRUDRepository {
             strategy,
             use_transaction,
         })
-    }
-
-    pub fn from_built(built: BuiltRepository) -> Self {
-        Self::from_built_with(built, Arc::new(SingleCommands))
-    }
-
-    pub fn from_built_with(built: BuiltRepository, strategy: Arc<dyn BulkWriteStrategy>) -> Self {
-        let use_transaction = built
-            .write
-            .as_ref()
-            .is_some_and(|write| write.use_transaction());
-        Self {
-            crud: CRUDRepository::from_built(built),
-            strategy,
-            use_transaction,
-        }
     }
 
     pub fn memory(items: Vec<Row>) -> Self {

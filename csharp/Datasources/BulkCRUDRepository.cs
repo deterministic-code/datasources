@@ -17,11 +17,6 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         : base(connection, options) =>
         (this.bulk, useTransaction) = (bulk, options.Write?.UseTransaction ?? false);
 
-    public BulkCRUDRepository(BuiltRepository<T> built) : this(built, new SingleCommands<T>()) { }
-
-    public BulkCRUDRepository(BuiltRepository<T> built, IBulkWriteStrategy<T> bulk) : base(built) =>
-        (this.bulk, useTransaction) = (bulk, false);
-
     public Task<Response> Create(IReadOnlyList<T> items) =>
         InTransaction(() => bulk.Create(items, this));
 

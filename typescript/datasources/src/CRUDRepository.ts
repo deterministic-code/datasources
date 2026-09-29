@@ -16,7 +16,7 @@ import type { BuiltRepository } from "./BuiltRepository.ts";
 import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
 import { parts } from "./RepositoryBuilder.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { enrichmentsOf, isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
+import { enrichmentsOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -88,23 +88,11 @@ export class CRUDRepository<T = Cells>
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>);
   constructor(
-    typeOrConnectionOrBuiltOrWrite:
-      | Constructable<T>
-      | IConnection
-      | BuiltRepository<T>,
-    connectionOrOptionsOrWrite?: IConnection | CRUDRepositoryOptions<T> | IWriteEnrichmentStrategy<T>,
+    typeOrConnection: Constructable<T> | IConnection,
+    connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
   ) {
-    if (typeof typeOrConnectionOrBuiltOrWrite !== "function" && isBuilt(typeOrConnectionOrBuiltOrWrite)) {
-      super(typeOrConnectionOrBuiltOrWrite);
-      this.ids = typeOrConnectionOrBuiltOrWrite.ids;
-      this.write =
-        (connectionOrOptionsOrWrite as IWriteEnrichmentStrategy<T> | undefined) ??
-        new DefaultWriteEnrichmentStrategy<T>();
-      this.returnMapper = undefined;
-      return;
-    }
-    const options = connectionOrOptionsOrWrite as IConnection | CRUDRepositoryOptions<T>;
-    const built = crudBuilt(typeOrConnectionOrBuiltOrWrite, options);
+    const options = connectionOrOptions as IConnection | CRUDRepositoryOptions<T>;
+    const built = crudBuilt(typeOrConnection, options);
     super(built);
     this.ids = built.ids;
     const crud = typeof options === "object" && options !== null ? (options as CRUDRepositoryOptions<T>) : undefined;
