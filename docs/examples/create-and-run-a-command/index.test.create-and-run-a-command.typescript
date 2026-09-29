@@ -1,0 +1,4 @@
+const connection = new MemoryConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.execute("insert");

@@ -108,6 +108,9 @@ impl Connection for MockConnection {
 
     async fn open(&self) -> Result<()> {
         let mut state = self.state.lock().expect("mock");
+        if state.opened {
+            return Err(DatasourceError::message("Connection is already open"));
+        }
         state.open_calls += 1;
         if let Some(error) = &state.open_error {
             return Err(DatasourceError::message(error.clone()));

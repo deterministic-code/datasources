@@ -1,3 +1,5 @@
+using Datasources;
+
 namespace Datasources.Sqlite;
 
 internal sealed class SqliteConnection : IConnection
@@ -28,7 +30,7 @@ internal sealed class SqliteConnection : IConnection
 
     public async Task Open()
     {
-        if (IsOpen) return;
+        if (IsOpen) throw new DatasourceException("Connection is already open");
         await _session.Open(Filename);
         IsOpen = true;
     }

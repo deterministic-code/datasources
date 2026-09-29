@@ -37,9 +37,7 @@ export class MemoryConnection implements IConnection {
   createCommand = (): ICommand => new MemoryCommand(this);
 
   async open(): Promise<void> {
-    if (this.isOpen) {
-      return;
-    }
+    if (this.isOpen) throw new DatasourceError("Connection is already open");
     if (this.data !== undefined) {
       this.store.seed(this.data, this.collection);
     }
@@ -50,6 +48,8 @@ export class MemoryConnection implements IConnection {
   async close(): Promise<void> {
     this.isOpen = false;
   }
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(
     isolation: IsolationLevelName = IsolationLevel.Serializable,

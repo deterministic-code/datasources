@@ -83,7 +83,6 @@ describe("bindParameters", () => {
 describe("MysqlConnection", () => {
   it("opens, runs SQL, transacts, and closes", async () => {
     const { connection, client, command } = await opened("mysql://db/app");
-    await connection.open();
     expect(await command.execute("INSERT INTO items (id) VALUES ($id)", [{ name: "id", value: 1 }]))
       .toMatchObject({ rowsAffected: 2, result: null });
     expect(await command.executeStatement(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }])))
@@ -144,7 +143,7 @@ describe("MysqlConnection", () => {
 
   it("opens, reopens, transacts, and closes", async () => {
     const { connection, client } = await opened("mysql://db/app");
-    await connection.open();
+    await expect(connection.open()).rejects.toThrow("Connection is already open");
     expect(connection.createCommand()).toBeInstanceOf(MysqlCommand);
     expect(connection.isOpen).toBe(true);
     const txn = await connection.startTransaction();
@@ -259,7 +258,6 @@ describe("Mysql datasource", () => {
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(MysqlCommand);
     expect(implicit.connection).toBeInstanceOf(MysqlConnection);
-    await implicit.connection.open();
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(untyped(), connection);

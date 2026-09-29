@@ -53,7 +53,6 @@ public class MemoryTests
             Data = new List<Dictionary<string, Value>> { new() { ["id"] = 8 } },
         });
         await conn.Open();
-        await conn.Open();
         Assert.Single(conn.GetCollection());
         await conn.Close();
         Assert.Throws<DatasourceException>(() => conn.EnsureOpen());
@@ -132,7 +131,6 @@ public class MemoryTests
         await bound.Execute("insert", [new Parameter("id", 99)]);
         await bound.ExecuteReader("");
         var implicitCommand = Assert.IsType<MemoryCommand>(ds.CreateCommand());
-        await implicitCommand.Connection.Open();
         await implicitCommand.Execute("insert", [new Parameter("id", 1)]);
         await implicitCommand.ExecuteReader("");
         ds.CreateRepository<Dictionary<string, Value>>(created);

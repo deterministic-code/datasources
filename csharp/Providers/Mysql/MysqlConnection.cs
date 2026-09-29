@@ -27,7 +27,7 @@ internal sealed class MysqlConnection : IConnection
 
     public async Task Open()
     {
-        if (IsOpen) return;
+        if (IsOpen) throw new DatasourceException("Connection is already open");
         _db = new MySqlConnection(MysqlConnectionString.ToConnectionString(Url));
         await _db.OpenAsync();
         await Exec("SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')");

@@ -44,11 +44,34 @@ describe("Connection", () => {
     expect(connection.isOpen).toBe(false);
   });
 
+  it("throws when opened twice", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    await expect(connection.open()).rejects.toThrow("Connection is already open");
+  });
+
   it("start a transaction", async () => {
     const connection = new MemoryConnection();
     await connection.open();
     const txn = await connection.startTransaction();
     expect(txn.isolation).toBe("serializable");
+  });
+
+  it("create and run a command", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    const command = connection.createCommand();
+    await command.execute("insert");
+    expect(connection.getCollection()).toEqual([{ id: 1 }]);
+  });
+
+  it("closes with using", async () => {
+    const connection = new MemoryConnection();
+    {
+      await using held = connection;
+      await held.open();
+    }
+    expect(connection.isOpen).toBe(false);
   });
 });
 
@@ -122,9 +145,8 @@ describe("MemoryStore", () => {
 });
 
 describe("MemoryConnection", () => {
-  it("opens from memory data and is idempotent", async () => {
+  it("opens from memory data", async () => {
     const connection = new MemoryConnection({ data: [{ id: 1 }] });
-    await connection.open();
     await connection.open();
     expect(connection.getCollection()).toEqual([{ id: 1 }]);
     await connection.close();
@@ -297,7 +319,6 @@ describe("Memory datasource", () => {
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(MemoryCommand);
     expect(implicit.connection).toBeInstanceOf(MemoryConnection);
-    await implicit.connection.open();
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader("");
     const repo = ds.createRepository(untyped(), connection);

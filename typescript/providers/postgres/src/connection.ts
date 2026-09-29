@@ -51,7 +51,7 @@ export class PostgresConnection implements IConnection {
   createCommand = (): ICommand => new PostgresCommand(this);
 
   async open(): Promise<void> {
-    if (this.isOpen) return;
+    if (this.isOpen) throw new DatasourceError("Connection is already open");
     if (!this.client) {
       if (!this.Client) throw new DatasourceError("Postgres driver is required");
       this.client = new this.Client({ connectionString: this.url });
@@ -66,6 +66,8 @@ export class PostgresConnection implements IConnection {
     this.client = undefined;
     this.isOpen = false;
   }
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(
     isolation: IsolationLevelName = IsolationLevel.Serializable,

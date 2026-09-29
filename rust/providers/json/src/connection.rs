@@ -130,7 +130,7 @@ impl Connection for JsonConnection {
 
     async fn open(&self) -> Result<()> {
         if *self.state.opened.lock().unwrap() {
-            return Ok(());
+            return Err(DatasourceError::message("Connection is already open"));
         }
         let collection = self.state.collection.lock().unwrap().clone();
         let next = if let Some(initial) = &self.state.initial {

@@ -101,7 +101,7 @@ describe("SqliteConnection", () => {
   it("opens, reopens, transacts, and closes", async () => {
     const connection = await opened("x.db");
     const db = FakeDatabase.latest!;
-    await connection.open();
+    await expect(connection.open()).rejects.toThrow("Connection is already open");
     expect(connection.isOpen).toBe(true);
     expect(db.filename).toBe("x.db");
     const txn = await connection.startTransaction();
@@ -244,7 +244,6 @@ describe("Sqlite datasource", () => {
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(SqliteCommand);
     expect(implicit.connection).toBeInstanceOf(SqliteConnection);
-    await implicit.connection.open();
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(untyped(), connection);

@@ -1,0 +1,4 @@
+let connection = MemoryConnection::from_options(None);
+connection.open().await.unwrap();
+let command = connection.create_command();
+let response = command.execute("insert", None).await.unwrap();

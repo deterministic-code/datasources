@@ -108,12 +108,12 @@ describe("file stores", () => {
 });
 
 describe("JsonConnection", () => {
-  it("opens from memory data and is idempotent", async () => {
+  it("opens from memory data", async () => {
     const connection = new JsonConnection({
       data: [{ id: 1 }],
     });
     await connection.open();
-    await connection.open();
+    await expect(connection.open()).rejects.toThrow("Connection is already open");
     expect(connection.getCollection()).toEqual([{ id: 1 }]);
     await connection.close();
     expect(connection.isOpen).toBe(false);
@@ -341,7 +341,6 @@ describe("Json datasource", () => {
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(JsonCommand);
     expect(implicit.connection).toBeInstanceOf(JsonConnection);
-    await implicit.connection.open();
     await implicit.execute("insert", [{ name: "id", value: 1 }]);
     await implicit.executeReader("");
     const repo = ds.createRepository(untyped(), connection);

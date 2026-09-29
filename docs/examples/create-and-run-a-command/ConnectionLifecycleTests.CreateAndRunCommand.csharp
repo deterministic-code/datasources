@@ -1,0 +1,4 @@
+var connection = new MemoryConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+var response = await command.Execute("insert");

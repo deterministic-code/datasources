@@ -1,6 +1,6 @@
 # Connection
 
-Connection represents a connection to a datasource and handles opening and closing. A new command or transaction can be created from an existing connection.
+Connection represents a connection to a datasource. You can create commands and transactions from the connection.
 
 ## Classes
 
@@ -44,7 +44,7 @@ createCommand(): ICommand
 
 ##### open()
 
-Opens the connection. A no-op if already open.
+Opens the connection. Throws if it is already open.
 
 ```typescript
 open(): Promise<void>
@@ -56,6 +56,14 @@ Closes the connection.
 
 ```typescript
 close(): Promise<void>
+```
+
+##### [Symbol.asyncDispose]()
+
+Closes the connection. `await using` calls this.
+
+```typescript
+[Symbol.asyncDispose](): Promise<void>
 ```
 
 ##### startTransaction(isolation?)
@@ -74,7 +82,7 @@ startTransaction(isolation?: IsolationLevel): Promise<ITransaction>
 #### IConnection
 
 ```csharp
-public interface IConnection
+public interface IConnection : IAsyncDisposable
 ```
 
 **Properties**
@@ -109,7 +117,7 @@ ICommand CreateCommand()
 
 ##### Open()
 
-Opens the connection. A no-op if already open.
+Opens the connection. Throws if it is already open.
 
 ```csharp
 Task Open()
@@ -122,6 +130,16 @@ Closes the connection.
 ```csharp
 Task Close()
 ```
+
+##### DisposeAsync()
+
+Closes the connection. `await using` calls this.
+
+```csharp
+ValueTask DisposeAsync()
+```
+
+**Returns** `ValueTask`
 
 ##### StartTransaction(isolation)
 
@@ -176,7 +194,7 @@ fn create_command(&self) -> Arc<dyn Command>
 
 ##### open()
 
-Opens the connection. A no-op if already open.
+Opens the connection. Throws if it is already open.
 
 ```rust
 async fn open(&self) -> Result<()>
@@ -209,7 +227,9 @@ async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<A
 
 ## Remarks
 
-`CreateConnection` / `createConnection` / `create_connection` is async and returns a closed connection. The caller opens it. `Open` / `open` is a no-op if already open. Do not open during process bootstrap.
+`CreateConnection` / `createConnection` / `create_connection` returns a closed connection. It is not open until `Open` / `open`. Calling `Open` / `open` on an open connection throws.
+
+C# and TypeScript close the connection at the end of an `await using` block. Otherwise call `Close` / `close`. Rust has no `using`; call `close().await`.
 
 `StartTransaction` requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
 
@@ -236,6 +256,30 @@ Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / 
 ```rust rust/providers/memory/src/lib.rs#open_and_close
 ```
 ```typescript typescript/providers/memory/src/index.test.ts#open-and-close
+```
+:::
+
+### Create and run a command
+
+::: example
+```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#CreateAndRunCommand
+```
+```rust rust/providers/memory/src/lib.rs#create_and_run_a_command
+```
+```typescript typescript/providers/memory/src/index.test.ts#create-and-run-a-command
+```
+:::
+
+### Close with using
+
+Rust has no `using`. Call `close`.
+
+::: example
+```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#CloseWithUsing
+```
+```rust rust/providers/memory/src/lib.rs#open_and_close
+```
+```typescript typescript/providers/memory/src/index.test.ts#closes-with-using
 ```
 :::
 

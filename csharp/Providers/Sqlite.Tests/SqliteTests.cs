@@ -17,7 +17,6 @@ public class SqliteTests
         var conn = new SqliteConnection();
         Assert.Equal(":memory:", conn.Filename);
         await conn.Open();
-        await conn.Open();
         var command = new SqliteCommand(conn);
         await command.Execute("");
         await command.ExecuteReader("SELECT 1");

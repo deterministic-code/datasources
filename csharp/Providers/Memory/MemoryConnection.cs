@@ -29,7 +29,7 @@ internal sealed class MemoryConnection : IConnection
 
     public Task Open()
     {
-        if (IsOpen) return Task.CompletedTask;
+        if (IsOpen) throw new DatasourceException("Connection is already open");
         if (_data is not null) Store.Seed(_data, Collection);
         Store.GetCollection(Collection);
         IsOpen = true;

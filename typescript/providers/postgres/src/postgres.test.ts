@@ -75,7 +75,7 @@ describe("PostgresConnection", () => {
       Client: FakeClient,
     });
     await connection.open();
-    await connection.open();
+    await expect(connection.open()).rejects.toThrow("Connection is already open");
     const client = FakeClient.latest;
     expect(client.connected).toBe(true);
     const command = new PostgresCommand(connection);
@@ -157,7 +157,6 @@ describe("PostgresConnection", () => {
       schema: "s",
       Client: FakeClient,
     });
-    await connection.open();
     await connection.open();
     expect(connection.createCommand()).toBeInstanceOf(PostgresCommand);
     expect(connection.isOpen).toBe(true);
@@ -269,7 +268,6 @@ describe("Postgres datasource", () => {
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(PostgresCommand);
     expect(implicit.connection).toBeInstanceOf(PostgresConnection);
-    await implicit.connection.open();
     await implicit.execute("DELETE FROM items");
     await implicit.executeReader("SELECT 1");
     const repo = ds.createRepository(untyped(), connection);
