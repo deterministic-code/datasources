@@ -1,6 +1,6 @@
 # Datasource
 
-One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `default()` loads the provider from the environment. `Create` is on [DatasourceFactory](./datasource-factory.md).
+Use Datasource to create repositories, commands, and connections for a datasource provider. After setup has written an `.env`, `Datasource.Default` / `Datasource.default` / `default()` returns that provider. The connection is closed by default.
 
 ## Classes
 
@@ -72,7 +72,7 @@ readonly provider: string
 
 ##### createConnection()
 
-Creates a closed connection. The caller opens it.
+Creates a connection.
 
 ```typescript
 createConnection(): Promise<IConnection>
@@ -82,40 +82,40 @@ createConnection(): Promise<IConnection>
 
 ##### createCommand(connection?)
 
-Creates a command bound to an optional open connection.
+Creates a command.
 
 ```typescript
 createCommand(connection?: IConnection): ICommand
 ```
 
-- `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
 
 **Returns** [ICommand](./command.md)
 
 ##### createRepository(type, connection?, options?)
 
-Creates a CRUD repository for a class, bound to an optional open connection. Columns, id, and entity come from that class. The driver's row type converters replace `rowTypeConverters`.
+Creates a CRUD repository.
 
 ```typescript
 createRepository<T>(type: Constructable<T>, connection?: IConnection, options?: CRUDRepositoryOptions<T>): ICRUDRepository<T>
 ```
 
 - `type` — class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity
-- `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
 - `options` — optional [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
 ##### createReadonlyRepository(type, connection?, options?)
 
-Creates a read-only repository for a class, bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The driver's row type converters replace `rowTypeConverters`.
+Creates a read-only repository.
 
 ```typescript
 createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, options?: ReadonlyRepositoryOptions<T>): IReadonlyRepository<T>
 ```
 
 - `type` — class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity
-- `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
 - `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
@@ -199,7 +199,7 @@ string Provider { get; }
 
 ##### CreateConnection()
 
-Creates a closed connection. The caller opens it.
+Creates a connection.
 
 ```csharp
 Task<IConnection> CreateConnection()
@@ -209,38 +209,38 @@ Task<IConnection> CreateConnection()
 
 ##### CreateCommand(connection)
 
-Creates a command bound to an optional open connection.
+Creates a command.
 
 ```csharp
 ICommand CreateCommand(IConnection? connection = null)
 ```
 
-- `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
 
 **Returns** [ICommand](./command.md)
 
 ##### CreateRepository(connection, options)
 
-Creates a CRUD repository bound to an optional open connection. The driver's row type converters replace `RowTypeConverters`.
+Creates a CRUD repository.
 
 ```csharp
 ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null, CRUDRepositoryOptions<T>? options = null)
 ```
 
-- `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
 - `options` — optional [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
 ##### CreateReadonlyRepository(connection, options)
 
-Creates a read-only repository bound to an optional open connection. `Datasource` returns a `ReadonlyRepository`. The interface default still forwards to `CreateRepository` when a type does not override the method. The driver's row type converters replace `RowTypeConverters`.
+Creates a read-only repository.
 
 ```csharp
 IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null, ReadonlyRepositoryOptions<T>? options = null)
 ```
 
-- `connection` — optional open [IConnection](./connection.md); omitted constructs one
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
 - `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
@@ -330,7 +330,7 @@ fn provider(&self) -> &str
 
 ##### create_connection()
 
-Creates a closed connection. The caller opens it.
+Creates a connection.
 
 ```rust
 async fn create_connection(&self) -> Result<Arc<dyn Connection>>
@@ -340,38 +340,38 @@ async fn create_connection(&self) -> Result<Arc<dyn Connection>>
 
 ##### create_command(connection)
 
-Creates a command bound to an optional open connection.
+Creates a command.
 
 ```rust
 fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command>
 ```
 
-- `connection` — optional open [Connection](./connection.md); omitted constructs one
+- `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
 
 **Returns** `Arc<dyn `[Command](./command.md)`>`
 
 ##### create_repository(connection, options)
 
-Creates a CRUD repository for `T`, bound to an optional open connection. The driver's row type converters replace `row_type_converters`.
+Creates a CRUD repository.
 
 ```rust
 fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<CRUDRepositoryOptions>) -> Arc<dyn ICRUDRepository>
 ```
 
-- `connection` — optional open [Connection](./connection.md); omitted constructs one
+- `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
 - `options` — optional [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults
 
 **Returns** `Arc<dyn `[CRUDRepository](./crud-repository.md)`>`
 
 ##### create_readonly_repository(connection, options)
 
-Creates a read-only repository for `T`, bound to an optional open connection. `BuiltDatasource` returns a `ReadonlyRepository`. The driver's row type converters replace `row_type_converters`.
+Creates a read-only repository.
 
 ```rust
 fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryOptions>) -> Arc<dyn IReadonlyRepository>
 ```
 
-- `connection` — optional open [Connection](./connection.md); omitted constructs one
+- `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
 - `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults
 
 **Returns** `Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>`
@@ -415,21 +415,18 @@ See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [
 
 ## Examples
 
-### Create from environment
+### Create default from .env settings
 
-::: dialects
-```csharp
-var ds = Datasource.Default;
+::: example
+```csharp csharp/Datasources.Tests/DatasourceTests.cs#CreateDefaultFromEnvSettings
 ```
-```rust
-let ds = default()?;
+```rust rust/datasources/src/tests/datasource.rs#create_default_from_env_settings
 ```
-```typescript
-const ds = Datasource.default;
+```typescript typescript/datasources/src/Datasource.test.ts#create-default-from-env-settings
 ```
 :::
 
-### Default from environment
+### Default using environment variables
 
 ::: example
 ```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#DefaultFromEnvironment
@@ -437,5 +434,16 @@ const ds = Datasource.default;
 ```rust rust/datasources/src/tests/datasource_factory.rs#default_from_environment
 ```
 ```typescript typescript/datasources/src/DatasourceFactory.test.ts#default-from-environment
+```
+:::
+
+### Create from a driver
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/CreateFromDriverTests.cs#CreateFromDriver
+```
+```rust rust/providers/sqlite/tests/create_from_driver.rs#create_from_driver
+```
+```typescript typescript/providers/sqlite/src/createFromDriver.test.ts#create-from-a-driver
 ```
 :::

@@ -1,0 +1,2 @@
+const ds = Datasource.default;
+const command = ds.createCommand();

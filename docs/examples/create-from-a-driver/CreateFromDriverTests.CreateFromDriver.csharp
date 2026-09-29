@@ -1,0 +1,3 @@
+var driver = new SqliteDriver();
+var ds = new Datasource("sqlite", driver, new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var repo = ds.CreateRepository<Item>();
