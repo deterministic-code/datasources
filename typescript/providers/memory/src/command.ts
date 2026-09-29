@@ -12,7 +12,7 @@ import {
   type IReader,
   type IStatement,
   type IWhere,
-  type Response,
+  Response,
   type Parameter,
   type Scalar,
 } from "@datasources/core";
@@ -101,7 +101,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
           row.id = id;
           this.connection.getCollection().push(row);
           this.connection.rememberInserted(this.connection.collection, id);
-          return { value: { result: id, rowsAffected: 1, parameters: params }, rows: [] };
+          return { value: new Response(id, 1, params), rows: [] };
         }
         if (op === "update") {
           const whereText =
@@ -109,11 +109,13 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
           const next = { ...obj };
           delete next.$where;
           const filter = whereText ? parseFilter(whereText) : next;
-          return { value: { ...this.applyUpdate(this.connection.getCollection(), next, filter), parameters: params }, rows: [] };
+          const updated = this.applyUpdate(this.connection.getCollection(), next, filter);
+          return { value: new Response(updated.result, updated.rowsAffected, params), rows: [] };
         }
         if (op === "delete") {
           const filter = obj;
-          return { value: { ...this.applyDelete(this.connection.getCollection(), filter), parameters: params }, rows: [] };
+          const deleted = this.applyDelete(this.connection.getCollection(), filter);
+          return { value: new Response(deleted.result, deleted.rowsAffected, params), rows: [] };
         }
         throw new Error(`Unsupported Memory command: ${query}`);
     });
@@ -136,12 +138,14 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         row.id = id;
         rows.push(row);
         this.connection.rememberInserted(table ?? this.connection.collection, id);
-        return { value: { result: id, rowsAffected: 1, parameters: params }, rows: [] };
+        return { value: new Response(id, 1, params), rows: [] };
       }
       if (op === "update") {
-        return { value: { ...this.applyChanged(rows, obj, where, params), parameters: params }, rows: [] };
+        const updated = this.applyChanged(rows, obj, where, params);
+        return { value: new Response(updated.result, updated.rowsAffected, params), rows: [] };
       }
-      return { value: { ...this.removeMatched(rows, obj, where), parameters: params }, rows: [] };
+      const deleted = this.removeMatched(rows, obj, where);
+      return { value: new Response(deleted.result, deleted.rowsAffected, params), rows: [] };
     });
 
   private applyChanged = (

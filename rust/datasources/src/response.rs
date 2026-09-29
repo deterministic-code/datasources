@@ -10,15 +10,7 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn new(result: impl Into<Value>, rows_affected: i64) -> Self {
-        Self {
-            result: result.into(),
-            rows_affected,
-            parameters: None,
-        }
-    }
-
-    pub fn of(
+    pub fn new(
         result: impl Into<Value>,
         rows_affected: i64,
         parameters: Option<Vec<Parameter>>,

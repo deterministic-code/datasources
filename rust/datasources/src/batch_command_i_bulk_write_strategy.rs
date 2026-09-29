@@ -38,7 +38,7 @@ impl BulkWriteStrategy for BatchCommandIBulkWriteStrategy {
 
 async fn send(repo: &BulkCRUDRepository, commands: &[BulkCommand]) -> Result<Response> {
     if commands.is_empty() {
-        return Ok(Response::new(Value::Null, 0));
+        return Ok(Response::new(Value::Null, 0, None));
     }
     let renamed: Vec<BulkCommand> = commands
         .iter()

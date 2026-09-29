@@ -77,7 +77,7 @@ impl Command for JsonCommand {
                             connection
                                 .collection_mut(|items| items.push(JsonValue::Object(obj.clone())));
                             connection.persist()?;
-                            Ok((Response::new(Value::Null, 1), vec![]))
+                            Ok((Response::new(Value::Null, 1, None), vec![]))
                         }
                         "update" => {
                             let where_text = obj
@@ -103,7 +103,7 @@ impl Command for JsonCommand {
                                 count
                             });
                             connection.persist()?;
-                            Ok((Response::new(Value::Null, affected), vec![]))
+                            Ok((Response::new(Value::Null, affected, None), vec![]))
                         }
                         "delete" => {
                             let filter = obj.clone();
@@ -113,7 +113,7 @@ impl Command for JsonCommand {
                                 (before - items.len()) as i64
                             });
                             connection.persist()?;
-                            Ok((Response::new(Value::Null, affected), vec![]))
+                            Ok((Response::new(Value::Null, affected, None), vec![]))
                         }
                         _ => Err(DatasourceError::message(format!(
                             "Unsupported JSON command: {op}"

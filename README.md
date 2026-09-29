@@ -1912,8 +1912,14 @@ const ParameterDirection
 ##### Response {#typescript-response}
 
 ```typescript
-interface Response
+class Response
 ```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Response(result, rowsAffected, parameters?)](#typescript-response-response-result-rowsaffected-parameters) | Builds a [Response](#typescript-response). Copies a [returnValue](#typescript-parameterdirection) onto [result](#typescript-response-result) when `result` is null. |
 
 **Properties**
 
@@ -1923,11 +1929,27 @@ interface Response
 | rowsAffected | Rows inserted, updated, or deleted. |
 | parameters | Bound [Parameter](#typescript-parameter) list after [execute](#typescript-icommand-execute-text-parameters). Holds filled [output](#typescript-parameterdirection) / [returnValue](#typescript-parameterdirection) values. |
 
-##### responseOf(result, rowsAffected, parameters?) {#typescript-responseof-result-rowsaffected-parameters}
+###### Response(result, rowsAffected, parameters?) {#typescript-response-response-result-rowsaffected-parameters}
+
+Builds a [Response](#typescript-response). Copies a [returnValue](#typescript-parameterdirection) onto [result](#typescript-response-result) when `result` is null.
+
+**Definition**
 
 ```typescript
-function responseOf(result: unknown, rowsAffected: number, parameters?: Parameter[]): Response
+constructor(result: unknown, rowsAffected: number, parameters?: Parameter[])
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `result` | scalar or row result |
+| `rowsAffected` | rows inserted, updated, or deleted |
+| `parameters` | bound [Parameter](#typescript-parameter) list |
+
+**Returns**
+
+[Response](#typescript-response)
 
 ##### IReader {#reader} {#typescript-ireader-reader}
 
@@ -2219,8 +2241,14 @@ public enum ParameterDirection
 ##### Response {#csharp-response}
 
 ```csharp
-public sealed record Response(Value Result, int RowsAffected, IReadOnlyList<Parameter>? Parameters = null)
+public sealed record Response
 ```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Response(result, rowsAffected, parameters?)](#csharp-response-response-result-rowsaffected-parameters) | Builds a [Response](#csharp-response). Copies a [ReturnValue](#csharp-parameterdirection) onto [Result](#csharp-response-result) when `result` is `Value.Null`. |
 
 **Properties**
 
@@ -2230,20 +2258,14 @@ public sealed record Response(Value Result, int RowsAffected, IReadOnlyList<Para
 | RowsAffected | Rows inserted, updated, or deleted. |
 | Parameters | Bound [Parameter](#csharp-parameter) list after [Execute](#csharp-icommand-execute-text-parameters). Holds filled [Output](#csharp-parameterdirection) / [ReturnValue](#csharp-parameterdirection) values. |
 
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Of(result, rowsAffected, parameters)](#csharp-response-of-result-rowsaffected-parameters) | Builds a [Response](#csharp-response). Copies a [ReturnValue](#csharp-parameterdirection) onto [Result](#csharp-response-result) when `result` is `Value.Null`. |
-
-###### Of(result, rowsAffected, parameters) {#csharp-response-of-result-rowsaffected-parameters}
+###### Response(result, rowsAffected, parameters?) {#csharp-response-response-result-rowsaffected-parameters}
 
 Builds a [Response](#csharp-response). Copies a [ReturnValue](#csharp-parameterdirection) onto [Result](#csharp-response-result) when `result` is `Value.Null`.
 
 **Definition**
 
 ```csharp
-public static Response Of(Value result, int rowsAffected, IReadOnlyList<Parameter>? parameters = null)
+public Response(Value result, int rowsAffected, IReadOnlyList<Parameter>? parameters = null)
 ```
 
 **Parameters**
@@ -2599,6 +2621,12 @@ pub enum ParameterDirection
 pub struct Response
 ```
 
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(result, rows_affected, parameters)](#rust-response-new-result-rows_affected-parameters) | Builds a [Response](#rust-response). Copies a [ReturnValue](#rust-parameterdirection) onto [result](#rust-response-result) when `result` is `Value::Null`. |
+
 **Properties**
 
 | Name | Description |
@@ -2607,42 +2635,14 @@ pub struct Response
 | rows_affected | Rows inserted, updated, or deleted. |
 | parameters | Bound [Parameter](#rust-parameter) list after [execute](#rust-command-execute-text-parameters). Holds filled [Output](#rust-parameterdirection) / [ReturnValue](#rust-parameterdirection) values. |
 
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [new(result, rows_affected)](#rust-response-new-result-rows_affected) | Builds a [Response](#rust-response) with no [parameters](#rust-response-parameters). |
-| [of(result, rows_affected, parameters)](#rust-response-of-result-rows_affected-parameters) | Builds a [Response](#rust-response). Copies a [ReturnValue](#rust-parameterdirection) onto [result](#rust-response-result) when `result` is `Value::Null`. |
-
-###### new(result, rows_affected) {#rust-response-new-result-rows_affected}
-
-Builds a [Response](#rust-response) with no [parameters](#rust-response-parameters).
-
-**Definition**
-
-```rust
-pub fn new(result: impl Into<Value>, rows_affected: i64) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `result` | scalar or row result |
-| `rows_affected` | rows inserted, updated, or deleted |
-
-**Returns**
-
-[Response](#rust-response)
-
-###### of(result, rows_affected, parameters) {#rust-response-of-result-rows_affected-parameters}
+###### new(result, rows_affected, parameters) {#rust-response-new-result-rows_affected-parameters}
 
 Builds a [Response](#rust-response). Copies a [ReturnValue](#rust-parameterdirection) onto [result](#rust-response-result) when `result` is `Value::Null`.
 
 **Definition**
 
 ```rust
-pub fn of(result: impl Into<Value>, rows_affected: i64, parameters: Option<Vec<Parameter>>) -> Self
+pub fn new(result: impl Into<Value>, rows_affected: i64, parameters: Option<Vec<Parameter>>) -> Self
 ```
 
 **Parameters**

@@ -173,8 +173,24 @@ const ParameterDirection
 #### Response
 
 ```typescript
-interface Response
+class Response
 ```
+
+**Constructor**
+
+##### Response(result, rowsAffected, parameters?)
+
+Builds a [Response](#response). Copies a [returnValue](#parameterdirection) onto [result](#response-result) when `result` is null.
+
+```typescript
+constructor(result: unknown, rowsAffected: number, parameters?: Parameter[])
+```
+
+- `result` — scalar or row result
+- `rowsAffected` — rows inserted, updated, or deleted
+- `parameters` — bound [Parameter](#parameter) list
+
+**Returns** [Response](#response)
 
 **Properties**
 
@@ -201,20 +217,6 @@ Bound [Parameter](#parameter) list after [execute](#icommand-execute-text-parame
 ```typescript
 parameters?: Parameter[]
 ```
-
-#### responseOf(result, rowsAffected, parameters?)
-
-Builds a [Response](#response). Copies a [returnValue](#parameterdirection) onto [result](#response-result) when `result` is null.
-
-```typescript
-function responseOf(result: unknown, rowsAffected: number, parameters?: Parameter[]): Response
-```
-
-- `result` — scalar or row result
-- `rowsAffected` — rows inserted, updated, or deleted
-- `parameters` — bound [Parameter](#parameter) list
-
-**Returns** [Response](#response)
 
 #### IReader {#reader}
 
@@ -445,8 +447,24 @@ public enum ParameterDirection
 #### Response
 
 ```csharp
-public sealed record Response(Value Result, int RowsAffected, IReadOnlyList<Parameter>? Parameters = null)
+public sealed record Response
 ```
+
+**Constructor**
+
+##### Response(result, rowsAffected, parameters?)
+
+Builds a [Response](#response). Copies a [ReturnValue](#parameterdirection) onto [Result](#response-result) when `result` is `Value.Null`.
+
+```csharp
+public Response(Value result, int rowsAffected, IReadOnlyList<Parameter>? parameters = null)
+```
+
+- `result` — scalar or row result
+- `rowsAffected` — rows inserted, updated, or deleted
+- `parameters` — bound [Parameter](#parameter) list
+
+**Returns** [Response](#response)
 
 **Properties**
 
@@ -473,22 +491,6 @@ Bound [Parameter](#parameter) list after [Execute](#icommand-execute-text-parame
 ```csharp
 IReadOnlyList<Parameter>? Parameters { get; }
 ```
-
-**Methods**
-
-##### Of(result, rowsAffected, parameters)
-
-Builds a [Response](#response). Copies a [ReturnValue](#parameterdirection) onto [Result](#response-result) when `result` is `Value.Null`.
-
-```csharp
-public static Response Of(Value result, int rowsAffected, IReadOnlyList<Parameter>? parameters = null)
-```
-
-- `result` — scalar or row result
-- `rowsAffected` — rows inserted, updated, or deleted
-- `parameters` — bound [Parameter](#parameter) list
-
-**Returns** [Response](#response)
 
 #### IReader {#reader}
 
@@ -742,6 +744,22 @@ pub enum ParameterDirection
 pub struct Response
 ```
 
+**Constructor**
+
+##### new(result, rows_affected, parameters)
+
+Builds a [Response](#response). Copies a [ReturnValue](#parameterdirection) onto [result](#response-result) when `result` is `Value::Null`.
+
+```rust
+pub fn new(result: impl Into<Value>, rows_affected: i64, parameters: Option<Vec<Parameter>>) -> Self
+```
+
+- `result` — scalar or row result
+- `rows_affected` — rows inserted, updated, or deleted
+- `parameters` — bound [Parameter](#parameter) list
+
+**Returns** [Response](#response)
+
 **Properties**
 
 ##### result
@@ -767,35 +785,6 @@ Bound [Parameter](#parameter) list after [execute](#command-execute-text-paramet
 ```rust
 pub parameters: Option<Vec<Parameter>>
 ```
-
-**Methods**
-
-##### new(result, rows_affected)
-
-Builds a [Response](#response) with no [parameters](#response-parameters).
-
-```rust
-pub fn new(result: impl Into<Value>, rows_affected: i64) -> Self
-```
-
-- `result` — scalar or row result
-- `rows_affected` — rows inserted, updated, or deleted
-
-**Returns** [Response](#response)
-
-##### of(result, rows_affected, parameters)
-
-Builds a [Response](#response). Copies a [ReturnValue](#parameterdirection) onto [result](#response-result) when `result` is `Value::Null`.
-
-```rust
-pub fn of(result: impl Into<Value>, rows_affected: i64, parameters: Option<Vec<Parameter>>) -> Self
-```
-
-- `result` — scalar or row result
-- `rows_affected` — rows inserted, updated, or deleted
-- `parameters` — bound [Parameter](#parameter) list
-
-**Returns** [Response](#response)
 
 #### Reader {#reader}
 

@@ -97,7 +97,7 @@ impl Command for SqliteCommand {
                 async move {
                     if sql.trim().is_empty() {
                         return Ok((
-                            Response::of(Value::Null, 0, params.map(|list| list.to_vec())),
+                            Response::new(Value::Null, 0, params.map(|list| list.to_vec())),
                             vec![],
                         ));
                     }
@@ -108,7 +108,7 @@ impl Command for SqliteCommand {
                         &parameters_to_map(params.as_deref()),
                     )?;
                     Ok((
-                        Response::of(
+                        Response::new(
                             result.result,
                             result.rows_affected,
                             params.map(|list| list.to_vec()),
@@ -150,7 +150,7 @@ impl SqliteCommand {
     ) -> Result<Response> {
         let reader = self.execute_reader_statement(statement, parameters).await?;
         if !reader.next().await? {
-            return Ok(Response::of(
+            return Ok(Response::new(
                 Value::Null,
                 0,
                 parameters.map(|list| list.to_vec()),
@@ -160,7 +160,7 @@ impl SqliteCommand {
             .current()
             .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
         let cell = row.into_values().next().unwrap_or(Value::Null);
-        Ok(Response::of(cell, 1, parameters.map(|list| list.to_vec())))
+        Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 

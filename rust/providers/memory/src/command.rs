@@ -73,7 +73,7 @@ impl Command for MemoryCommand {
                             row.insert("id".into(), id.clone());
                             connection.collection(|items| items.push(row));
                             connection.remember_inserted(&connection.collection_name(), id.clone());
-                            Ok((Response::new(id, 1), vec![]))
+                            Ok((Response::new(id, 1, None), vec![]))
                         }
                         "update" => {
                             let mut obj = params.clone();
@@ -96,7 +96,7 @@ impl Command for MemoryCommand {
                                 }
                                 count
                             });
-                            Ok((Response::new(Value::Null, affected), vec![]))
+                            Ok((Response::new(Value::Null, affected, None), vec![]))
                         }
                         "delete" => {
                             let filter = params.clone();
@@ -105,7 +105,7 @@ impl Command for MemoryCommand {
                                 items.retain(|row| !matches(row, &filter));
                                 (before - items.len()) as i64
                             });
-                            Ok((Response::new(Value::Null, affected), vec![]))
+                            Ok((Response::new(Value::Null, affected, None), vec![]))
                         }
                         _ => Err(DatasourceError::message(format!(
                             "Unsupported Memory command: {op}"
@@ -314,7 +314,7 @@ impl MemoryCommand {
                             .clone()
                             .unwrap_or_else(|| connection.collection_name());
                         connection.remember_inserted(&stored, id.clone());
-                        return Ok((Response::new(id, 1), vec![]));
+                        return Ok((Response::new(id, 1, None), vec![]));
                     }
                     if op == "update" {
                         let affected = connection.with_rows(table.as_deref(), false, |items| {
@@ -326,7 +326,7 @@ impl MemoryCommand {
                                 &where_names,
                             )
                         });
-                        return Ok((Response::new(Value::Null, affected), vec![]));
+                        return Ok((Response::new(Value::Null, affected, None), vec![]));
                     }
                     let affected = connection.with_rows(table.as_deref(), false, |items| {
                         apply_delete(
@@ -336,7 +336,7 @@ impl MemoryCommand {
                             condition.as_ref(),
                         )
                     });
-                    Ok((Response::new(Value::Null, affected), vec![]))
+                    Ok((Response::new(Value::Null, affected, None), vec![]))
                 }
             })
             .await

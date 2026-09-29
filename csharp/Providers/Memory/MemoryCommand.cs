@@ -67,7 +67,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
                 obj["id"] = id;
                 Typed.GetCollection().Add(new Row(obj));
                 Typed.RememberInserted(Typed.Collection, id);
-                return Task.FromResult((Response.Of(id, 1, paramsList), EmptyRows()));
+                return Task.FromResult((new Response(id, 1, paramsList), EmptyRows()));
             }
 
             if (op == "update")
@@ -75,11 +75,15 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
                 var whereText = obj.TryGetValue("$where", out var where) && where is Value.Text text ? text.Item : null;
                 obj.Remove("$where");
                 var filter = whereText is not null ? ParseFilter(whereText) : new Row(obj);
-                return Task.FromResult((ApplyUpdate(Typed.GetCollection(), new Row(obj), filter) with { Parameters = paramsList }, EmptyRows()));
+                var updated = ApplyUpdate(Typed.GetCollection(), new Row(obj), filter);
+                return Task.FromResult((new Response(updated.Result, updated.RowsAffected, paramsList), EmptyRows()));
             }
 
             if (op == "delete")
-                return Task.FromResult((ApplyDelete(Typed.GetCollection(), new Row(obj)) with { Parameters = paramsList }, EmptyRows()));
+            {
+                var deleted = ApplyDelete(Typed.GetCollection(), new Row(obj));
+                return Task.FromResult((new Response(deleted.Result, deleted.RowsAffected, paramsList), EmptyRows()));
+            }
 
             throw new DatasourceException($"Unsupported Memory command: {query}");
         });
@@ -114,7 +118,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
                 obj["id"] = id;
                 rows.Add(new Row(obj));
                 Typed.RememberInserted(table ?? Typed.Collection, id);
-                return Task.FromResult((Response.Of(id, 1, paramsList), EmptyRows()));
+                return Task.FromResult((new Response(id, 1, paramsList), EmptyRows()));
             }
 
             if (op == "update")
@@ -142,7 +146,8 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
 
         obj.Remove("$where");
         var filter = LooksJson(where?.GetText()) ? ParseFilter(where!.GetText()) : new Row(obj);
-        return ApplyUpdate(rows, new Row(obj), filter) with { Parameters = parameters };
+        var updated = ApplyUpdate(rows, new Row(obj), filter);
+        return new Response(updated.Result, updated.RowsAffected, parameters);
     }
 
     Response RemoveMatched(List<Row> rows, Dictionary<string, Value> obj, IWhere? where, IReadOnlyList<Parameter>? parameters)
@@ -155,7 +160,8 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         }
 
         var filter = LooksJson(where?.GetText()) ? ParseFilter(where!.GetText()) : new Row(obj);
-        return ApplyDelete(rows, filter) with { Parameters = parameters };
+        var deleted = ApplyDelete(rows, filter);
+        return new Response(deleted.Result, deleted.RowsAffected, parameters);
     }
 
     List<Row> Rows(string? table, bool create) =>

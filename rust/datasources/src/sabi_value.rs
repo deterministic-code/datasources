@@ -219,11 +219,11 @@ pub fn encode_response(response: &Response) -> SabiResponse {
 }
 
 pub fn decode_response(response: &SabiResponse) -> Response {
-    Response {
-        result: decode_value(&response.result),
-        rows_affected: response.rows_affected,
-        parameters: decode_parameters(&response.parameters),
-    }
+    Response::new(
+        decode_value(&response.result),
+        response.rows_affected,
+        decode_parameters(&response.parameters),
+    )
 }
 
 pub fn isolation_tag(level: IsolationLevel) -> u8 {

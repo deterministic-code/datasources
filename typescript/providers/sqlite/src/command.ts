@@ -5,7 +5,7 @@ import {
   ReturnStatement,
   SelectStatement,
   parametersToRecord,
-  responseOf,
+  Response,
   splitStatements,
   StreamingReader,
   type Cell,
@@ -15,7 +15,6 @@ import {
   type IReader,
   type IStatement,
   type Parameter,
-  type Response,
 } from "@datasources/core";
 import { SqliteStatementFactory } from "./SqliteStatementFactory.ts";
 import type { SqliteConnection } from "./connection.ts";
@@ -85,12 +84,12 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
     const reader = await this.executeReaderStatement(statement, parameters);
     try {
-      if (!(await reader.next())) return responseOf(null, 0, parameters);
+      if (!(await reader.next())) return new Response(null, 0, parameters);
       const row = reader.current;
       /* v8 ignore next */
       if (!row) throw new DatasourceError("Reader current must be a row");
       const values = Object.values(row);
-      return responseOf(values.length === 0 ? null : values[0], 1, parameters);
+      return new Response(values.length === 0 ? null : values[0], 1, parameters);
     } finally {
       await reader.dispose();
     }
@@ -98,10 +97,10 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
 
   async execute(text: string, parameters?: Parameter[]): Promise<Response> {
     return this.run(text, parameters, async (query, params) => {
-      if (!query.trim()) return { value: responseOf(undefined, 0, params), rows: [] };
+      if (!query.trim()) return { value: new Response(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
       const info = this.connection.require().prepare(query).run(bound(params));
-      return { value: responseOf(null, info.changes, params), rows: [] };
+      return { value: new Response(null, info.changes, params), rows: [] };
     });
   }
 
