@@ -1,0 +1,5 @@
+impl ConvertSchema for Item {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("id", "INTEGER"), ("name", "TEXT")]
+    }
+}

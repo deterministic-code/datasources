@@ -17,5 +17,6 @@ describe("ArrayReader", () => {
     expect(reader.current).toBeUndefined();
     expect(await reader.nextResult()).toBe(false);
     await reader.dispose();
+    await reader[Symbol.asyncDispose]();
   });
 });

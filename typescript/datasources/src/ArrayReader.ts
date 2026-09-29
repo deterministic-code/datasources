@@ -22,4 +22,6 @@ export class ArrayReader<T = unknown> implements IReader<T> {
   }
 
   async dispose(): Promise<void> {}
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.dispose();
 }

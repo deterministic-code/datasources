@@ -1,0 +1,28 @@
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute("CREATE TABLE settings (name TEXT, value TEXT)", None)
+    .await
+    .unwrap();
+let parameters = [
+    Parameter::new("name", "theme"),
+    Parameter::new("value", "dark"),
+];
+command
+    .execute(
+        "INSERT INTO settings (name, value) VALUES ($name, $value)",
+        Some(&parameters),
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT name, value FROM settings", None)
+    .await
+    .unwrap();
+let converter = RowTypeConverter::of::<NameValue>();
+let mut items = Vec::new();
+while reader.next().await.unwrap() {
+    items.push(converter.convert(&reader.current().unwrap()).unwrap());
+}

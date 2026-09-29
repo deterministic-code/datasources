@@ -1,0 +1,16 @@
+function userContactsMapper() {
+  return new TransformMapper<User, User>(
+    (row) => {
+      row.contacts = [
+        Object.assign(new Contact(), { name: row.contact_name1 }),
+        Object.assign(new Contact(), { name: row.contact_name2 }),
+      ];
+      return row;
+    },
+    (user) => {
+      user.contact_name1 = user.contacts[0]?.name ?? "";
+      user.contact_name2 = user.contacts[1]?.name ?? "";
+      return user;
+    },
+  );
+}

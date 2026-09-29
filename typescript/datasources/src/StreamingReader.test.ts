@@ -72,6 +72,7 @@ describe("StreamingReader", () => {
       async () => false,
     );
     await plain.dispose();
+    await plain[Symbol.asyncDispose]();
     await plain.dispose();
   });
 

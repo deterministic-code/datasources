@@ -15,4 +15,6 @@ export class StubReader<T = unknown> implements IReader<T> {
   }
 
   async dispose(): Promise<void> {}
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.dispose();
 }

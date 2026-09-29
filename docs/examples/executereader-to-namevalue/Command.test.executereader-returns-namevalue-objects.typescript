@@ -1,8 +1,0 @@
-const command = new MockCommand(new MockConnection());
-command.reader = new MockReader([{ name: "theme", value: "dark" }]);
-const reader = await command.executeReader("SELECT name, value FROM settings");
-const converter = new RowTypeConverter<NameValue>();
-const items: NameValue[] = [];
-while (await reader.next()) {
-  items.push(converter.convert(reader.current!, NameValue));
-}

@@ -1,0 +1,21 @@
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute(
+        "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT id, name FROM items", None)
+    .await
+    .unwrap();
+assert!(reader.next().await.unwrap());
+let row = reader.current().unwrap();

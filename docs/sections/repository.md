@@ -1,4 +1,4 @@
-# Repository
+# Repositories
 
 Typed item marker and instance registry. {{Type|type|entity_type}} is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
 

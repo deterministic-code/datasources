@@ -1,6 +1,6 @@
 # Command
 
-Named command bound to an optional open [connection](./connection.md). {{CreateCommand|createCommand|create_command}} is sync. The caller executes it.
+Executes a command against the datasource and returns a result or a streaming [Reader](./reader.md).
 
 ## Classes
 
@@ -47,7 +47,7 @@ executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>>
 - `text` — SQL or dialect command text
 - `parameters` — optional [Parameter](#parameter) list
 
-**Returns** `Promise<[IReader](#reader)<Cells>>`
+**Returns** `Promise<[IReader](./reader.md)<Cells>>`
 
 ##### execute(text, parameters?)
 
@@ -88,7 +88,7 @@ function executeReader(command: ICommand, statement: IStatement, parameters?: Pa
 - `statement` — [IStatement](./statements.md#istatement)
 - `parameters` — optional [Parameter](#parameter) list
 
-**Returns** `Promise<[IReader](#reader)<Cells>>`
+**Returns** `Promise<[IReader](./reader.md)<Cells>>`
 
 #### ICommandMiddleware
 
@@ -218,54 +218,6 @@ Bound [Parameter](#parameter) list after [execute](#icommand-execute-text-parame
 parameters?: Parameter[]
 ```
 
-#### IReader {#reader}
-
-```typescript
-interface IReader<T>
-```
-
-**Properties**
-
-##### current
-
-The row from the last successful [next](#ireader-next).
-
-```typescript
-readonly current: T | undefined
-```
-
-**Methods**
-
-##### next()
-
-Advances to the next row.
-
-```typescript
-next(): Promise<boolean>
-```
-
-**Returns** `Promise<boolean>`
-
-##### nextResult()
-
-Moves to the next result set and clears [current](#ireader-current). Returns false when there is no further set. [next](#ireader-next) then reads that set. Calling only [next](#ireader-next) leaves later sets unread.
-
-```typescript
-nextResult(): Promise<boolean>
-```
-
-**Returns** `Promise<boolean>`
-
-##### dispose()
-
-Releases the reader.
-
-```typescript
-dispose(): Promise<void>
-```
-
-**Returns** `Promise<void>`
-
 ### csharp
 #### ICommand
 
@@ -308,7 +260,7 @@ Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? paramete
 - `text` — SQL or dialect command text
 - `parameters` — optional [Parameter](#parameter) list
 
-**Returns** `Task<[IReader](#reader)<Row>>`
+**Returns** `Task<[IReader](./reader.md)<Row>>`
 
 ##### Execute(text, parameters)
 
@@ -334,7 +286,7 @@ Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>?
 - `statement` — [IStatement](./statements.md#istatement)
 - `parameters` — optional [Parameter](#parameter) list
 
-**Returns** `Task<[IReader](#reader)<Row>>`
+**Returns** `Task<[IReader](./reader.md)<Row>>`
 
 ##### Execute(statement, parameters)
 
@@ -492,44 +444,6 @@ Bound [Parameter](#parameter) list after [Execute](#icommand-execute-text-parame
 IReadOnlyList<Parameter>? Parameters { get; }
 ```
 
-#### IReader {#reader}
-
-```csharp
-public interface IReader<out T>
-```
-
-**Properties**
-
-##### Current
-
-The row from the last successful [Next](#ireader-next).
-
-```csharp
-T? Current { get; }
-```
-
-**Methods**
-
-##### Next()
-
-Advances to the next row.
-
-```csharp
-Task<bool> Next()
-```
-
-**Returns** `Task<bool>`
-
-##### NextResult()
-
-Moves to the next result set and clears [Current](#ireader-current). Returns false when there is no further set. [Next](#ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#ireader-next) leaves later sets unread.
-
-```csharp
-Task<bool> NextResult()
-```
-
-**Returns** `Task<bool>`
-
 ### rust
 #### Command
 
@@ -560,7 +474,7 @@ async fn execute_reader(&self, text: &str, parameters: Option<&[Parameter]>) -> 
 - `text` — SQL or dialect command text
 - `parameters` — optional [Parameter](#parameter) slice
 
-**Returns** `Result<Box<dyn `[Reader](#reader)`>>`
+**Returns** `Result<Box<dyn `[Reader](./reader.md)`>>`
 
 ##### execute(text, parameters)
 
@@ -586,7 +500,7 @@ async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: 
 - `statement` — [Statement](./statements.md#statement)
 - `parameters` — optional [Parameter](#parameter) slice
 
-**Returns** `Result<Box<dyn `[Reader](#reader)`>>`
+**Returns** `Result<Box<dyn `[Reader](./reader.md)`>>`
 
 ##### execute_statement(statement, parameters)
 
@@ -786,119 +700,164 @@ Bound [Parameter](#parameter) list after [execute](#command-execute-text-paramet
 pub parameters: Option<Vec<Parameter>>
 ```
 
-#### Reader {#reader}
-
-```rust
-pub trait Reader<T = Row>: Send + Sync
-```
-
-**Methods**
-
-##### current()
-
-The row from the last successful [next](#reader-next).
-
-```rust
-fn current(&self) -> Option<T>
-```
-
-**Returns** `Option<T>`
-
-##### next()
-
-Advances to the next row.
-
-```rust
-async fn next(&self) -> Result<bool>
-```
-
-**Returns** `Result<bool>`
-
-##### next_result()
-
-Moves to the next result set and clears [current](#reader-current). Returns false when there is no further set. [next](#reader-next) then reads that set. The default returns false. Calling only [next](#reader-next) leaves later sets unread.
-
-```rust
-async fn next_result(&self) -> Result<bool>
-```
-
-**Returns** `Result<bool>`
 :::
 
 ## Remarks
 
 The connection must be open before {{Execute|execute|execute}} or {{ExecuteReader|executeReader|execute_reader}}.
 
-{{AddMiddleware|addMiddleware|add_middleware}} runs {{BeforeCommand|beforeCommand|before_command}}, then the command, then {{AfterCommand|afterCommand|after_command}}. A {{BeforeCommand|beforeCommand|before_command}} error skips the command. A command error still runs {{AfterCommand|afterCommand|after_command}} with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console. Verbose logs use {{AfterCommand|afterCommand|after_command}} for the result body.
+Use {{AddMiddleware|addMiddleware|add_middleware}} to add low-level diagnostics. It runs {{BeforeCommand|beforeCommand|before_command}}, then the command, then {{AfterCommand|afterCommand|after_command}}. A before error skips the command. A command error still runs after, with the error and elapsed time set.
 
-Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
-
-SQLite, MySQL, and Postgres map statement {{Execute|execute|execute}} and {{ExecuteReader|executeReader|execute_reader}} through a provider statement factory. A compiled create table is rendered by that dialect's `CreateTableStatementRenderer`, which overrides column type, default, and identity, then the command executes that text. The factory stays separate from the renderer. Wrapped create-table text and every other statement pass through. Other dialects send {{GetText()|getText()|get_text()}}.
+`json` and `memory` treat `text` as insert, update, or delete. SQLite, MySQL, and Postgres treat `text` as SQL.
 
 ::: prose
 ### rust
 The `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection.
 :::
 
-{{ExecuteReader|executeReader|execute_reader}} returns a reader for the first result set. {{Next|next|next}} reads that set. {{NextResult|nextResult|next_result}} advances to the next set. Rows stay unread until {{Next|next|next}}. SQL {{AfterCommand|afterCommand|after_command}} for {{ExecuteReader|executeReader|execute_reader}} receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
+{{ExecuteReader|executeReader|execute_reader}} returns a [Reader](./reader.md) for the first result set. Convert with [RowTypeConverter](./row-type-converter.md), then map with a [Mapper](./mappers.md).
 
-{{ExecuteReader|executeReader|execute_reader}} returns rows. Convert with [RowTypeConverter](./row-type-converter.md), then map with a [Mapper](./mappers.md).
-
-[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection) / [InputOutput](#parameterdirection) / [ReturnValue](#parameterdirection) values are filled on [Response.Parameters](#response-parameters) after {{Execute|execute|execute}}. A [ReturnValue](#parameterdirection) copies onto [Response.Result](#response-result) when `Result` would otherwise be null. {{Execute|execute|execute}} on `SELECT` text reads the first scalar into `Result`.
+[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection), [InputOutput](#parameterdirection), and [ReturnValue](#parameterdirection) are filled on [Response.Parameters](#response-parameters) after {{Execute|execute|execute}}. A [ReturnValue](#parameterdirection) is copied onto [Response.Result](#response-result) when `Result` would otherwise be null.
 
 ## Examples
 
-### ExecuteReader to NameValue
+### Run raw SQL
 
 ::: example
-```csharp csharp/Datasources.Tests/CommandTests.cs#ExecuteReaderReturnsNameValueObjects
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunRawSql
 ```
-```rust rust/datasources/src/tests/command.rs#execute_reader_returns_name_value_objects
+```rust rust/providers/sqlite/tests/command.rs#run_raw_sql
 ```
-```typescript typescript/datasources/src/Command.test.ts#executereader-returns-namevalue-objects
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#runs-raw-sql
+```
+
+```output [Row]
+{
+  id: 1,
+  name: 'ada'
+}
 ```
 :::
 
-### Read the next result set
+### Run ExecuteReader and return NameValue
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#NextResultReadsTheNextStatement
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#NameValue
 ```
-```rust rust/providers/sqlite/src/lib.rs#sqlite_command_and_repository
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderAndReturnNameValue
 ```
-```typescript typescript/providers/sqlite/src/sqlite.test.ts#executes-sql-on-the-open-database
+```rust rust/providers/sqlite/tests/command.rs#ConvertSchemaForNameValue
+```
+```rust rust/providers/sqlite/tests/command.rs#run_execute_reader_and_return_name_value
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#NameValue
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#runs-executereader-and-returns-namevalue
+```
+
+```output [NameValue]
+{
+  name: 'theme',
+  value: 'dark'
+}
 ```
 :::
 
 ### Execute insert, update, and delete
 
 ::: example
-```csharp csharp/Datasources.Tests/CommandTests.cs#ExecuteInsertUpdateDelete
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#Item
 ```
-```rust rust/datasources/src/tests/command.rs#execute_insert_update_delete
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ExecuteInsertUpdateAndDelete
 ```
-```typescript typescript/datasources/src/Command.test.ts#execute-insert-update-and-delete
+```rust rust/providers/sqlite/tests/command.rs#ConvertSchemaForItem
+```
+```rust rust/providers/sqlite/tests/command.rs#execute_insert_update_and_delete
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#Item
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#executes-insert-update-and-delete
+```
+
+```output [After: update]
+{
+  id: 1,
+  name: 'A'
+}
+```
+
+```output [After: delete]
+null
+```
+```output:typescript [After: delete]
+undefined
+```
+```output:rust [After: delete]
+None
 ```
 :::
 
 ### Map flat contacts
 
 ::: example
-```csharp csharp/Datasources.Tests/CommandTests.cs#ExecuteReaderMapsFlatContacts
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#User
 ```
-```rust rust/datasources/src/tests/command.rs#execute_reader_maps_flat_contacts
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#UserContactsMapper
 ```
-```typescript typescript/datasources/src/Command.test.ts#executereader-maps-flat-contacts
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ExecuteReaderMapsFlatContacts
+```
+```rust rust/providers/sqlite/tests/command.rs#user_contacts_mapper
+```
+```rust rust/providers/sqlite/tests/command.rs#execute_reader_maps_flat_contacts
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#Contact
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#User
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#userContactsMapper
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#maps-flat-contacts
+```
+
+```output [User]
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
 ```
 :::
 
-### Parameter direction and Response.Parameters
+### Fill an output parameter
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#FillOutputParameter
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/providers/mysql/tests/integration.rs#fill_output_parameter
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/providers/mysql/tests/mysql.integration.test.ts#fillOutputParameter
+```
+
+```output [Parameters]
+result: 5
+```
+:::
+
+### Read a return value
+
+::: example
+```csharp csharp/Providers/Postgres.Tests/PostgresCommandIntegrationTests.cs#ReadReturnValue
+```
+```rust rust/providers/postgres/tests/integration.rs#read_return_value
+```
+```typescript typescript/providers/postgres/tests/postgres.integration.test.ts#readReturnValue
+```
+
+```output [Result]
+5
 ```
 :::

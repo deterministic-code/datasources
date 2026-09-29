@@ -1,0 +1,49 @@
+fn text_of(row: &Row, key: &str) -> String {
+    match row.get(key) {
+        Some(Value::Text(text)) => text.clone(),
+        _ => String::new(),
+    }
+}
+TransformMapper::new(
+    |row| {
+        let contact_name1 = text_of(&row, "contact_name1");
+        let contact_name2 = text_of(&row, "contact_name2");
+        User {
+            id: match row.get("id") {
+                Some(Value::Int(id)) => *id,
+                _ => 0,
+            },
+            username: text_of(&row, "username"),
+            email: text_of(&row, "email"),
+            contacts: vec![
+                Contact {
+                    name: contact_name1.clone(),
+                },
+                Contact {
+                    name: contact_name2.clone(),
+                },
+            ],
+            contact_name1,
+            contact_name2,
+        }
+    },
+    |mut user| {
+        user.contact_name1 = user
+            .contacts
+            .first()
+            .map(|contact| contact.name.clone())
+            .unwrap_or_default();
+        user.contact_name2 = user
+            .contacts
+            .get(1)
+            .map(|contact| contact.name.clone())
+            .unwrap_or_default();
+        let mut row = Row::new();
+        row.insert("id".into(), Value::Int(user.id));
+        row.insert("username".into(), Value::from(user.username));
+        row.insert("email".into(), Value::from(user.email));
+        row.insert("contact_name1".into(), Value::from(user.contact_name1));
+        row.insert("contact_name2".into(), Value::from(user.contact_name2));
+        row
+    },
+)

@@ -1,4 +1,0 @@
-    [{ name: "id", type: "INTEGER" }],
-    [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)],
-  ).getText(),
-).toBe(

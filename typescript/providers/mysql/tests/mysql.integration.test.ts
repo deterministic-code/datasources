@@ -21,6 +21,22 @@ const url = (process.env.MYSQL_URL ??=
 
 beforeAll(() => ensureCompose("mysql"), 120_000);
 
+async function fillOutputParameter(command: MysqlCommand) {
+  await command.execute(`
+    CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
+    BEGIN
+      SET result = start_n + 1;
+    END
+  `);
+  const start = { name: "start_n", value: 4 };
+  const result = { name: "result", direction: ParameterDirection.Output };
+  const call = await command.executeStatement(
+    new ExecuteStoredProcedureStatement("bump", [start, result]),
+    [start, result],
+  );
+  expect(call.parameters?.[1]?.value).toBe(5);
+}
+
 const replaceDatabase = (base: string, name: string): string => {
   const parsed = new URL(base);
   parsed.pathname = `/${name}`;
@@ -77,23 +93,11 @@ describe("return and output parameters", () => {
       const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
       await connection.open();
       const command = new MysqlCommand(connection);
-      await command.execute(`
-        CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
-        BEGIN
-          SET result = start_n + 1;
-        END
-      `);
+      await fillOutputParameter(command);
       await command.execute(`
         CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC
         RETURN n + 1
       `);
-      const start = { name: "start_n", value: 4 };
-      const result = { name: "result", direction: ParameterDirection.Output };
-      const call = await command.executeStatement(
-        new ExecuteStoredProcedureStatement("bump", [start, result]),
-        [start, result],
-      );
-      expect(call.parameters?.[1]?.value).toBe(5);
       const n = { name: "n", value: 4 };
       const ret = await command.executeStatement(
         new ReturnStatement("add_one", [n]),

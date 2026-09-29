@@ -109,7 +109,7 @@ await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 :::
 
-See [Repository](./sections/repository.md) for readonly, CRUD, and bulk.
+See [Repositories](./sections/repository.md) for readonly, CRUD, and bulk.
 
 ## Mappers
 
@@ -141,9 +141,9 @@ const back = mapper.reverseMap(flat);
 ```
 :::
 
-See [Mapper](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`, and [ReadonlyRepositoryOptions.RowsMapper](./sections/readonly-repository.md#rowsmapper).
+See [Mappers](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`, and [ReadonlyRepositoryOptions.RowsMapper](./sections/readonly-repository.md#rowsmapper).
 
-## Type Converter
+## Type Converters
 
 `TypeConverter` is only {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}}. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
 
@@ -192,4 +192,4 @@ const item = rows.convert(row);
 ```
 :::
 
-See [TypeConverter](./sections/type-converters.md).
+See [Type Converters](./sections/type-converters.md).

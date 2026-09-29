@@ -38,17 +38,10 @@ public class PostgresCommandIntegrationTests
                 END;
                 $$
                 """);
-            await command.Execute("""
-                CREATE FUNCTION add_one(n INT) RETURNS INT
-                LANGUAGE sql
-                AS $$ SELECT n + 1 $$
-                """);
             var result = new Parameter("result", 4, ParameterDirection.InputOutput);
             var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [result]), [result]);
             Assert.Equal(new Value.Int(5), call.Parameters![0].Value);
-            var n = new Parameter("n", 4);
-            var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
-            Assert.Equal(new Value.Int(5), ret.Result);
+            await ReadReturnValue(command);
         }
         finally
         {
@@ -58,6 +51,18 @@ public class PostgresCommandIntegrationTests
             cmd.CommandText = $"DROP SCHEMA {schema} CASCADE";
             await cmd.ExecuteNonQueryAsync();
         }
+    }
+
+    static async Task ReadReturnValue(ICommand command)
+    {
+        await command.Execute("""
+            CREATE FUNCTION add_one(n INT) RETURNS INT
+            LANGUAGE sql
+            AS $$ SELECT n + 1 $$
+            """);
+        var n = new Parameter("n", 4);
+        var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
+        Assert.Equal(new Value.Int(5), ret.Result);
     }
 
     [Fact]

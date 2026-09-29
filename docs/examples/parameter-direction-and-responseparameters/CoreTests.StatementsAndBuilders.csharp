@@ -1,4 +1,0 @@
-        "t",
-        [new Column("id", "INTEGER")],
-        [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)]).GetText());
-Assert.Throws<InvalidOperationException>(() =>

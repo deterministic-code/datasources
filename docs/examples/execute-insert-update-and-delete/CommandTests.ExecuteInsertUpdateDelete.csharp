@@ -1,4 +1,0 @@
-var command = new MockCommand(new MockConnection());
-await command.Execute("insert", [new Parameter("id", 1), new Parameter("name", "a")]);
-await command.Execute("update", [new Parameter("id", 1), new Parameter("name", "A")]);
-await command.Execute("delete", [new Parameter("id", 1)]);

@@ -343,6 +343,56 @@ fn uuid_name() -> String {
     )
 }
 
+async fn fill_output_parameter(command: &dyn Command) {
+    use datasources::{ExecuteStoredProcedureStatement, Parameter};
+    command
+        .execute(
+            "CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END",
+            None,
+        )
+        .await
+        .unwrap();
+    let parameters = [
+        Parameter::new("start_n", 4_i64),
+        Parameter::output("result"),
+    ];
+    let call = command
+        .execute_statement(
+            &ExecuteStoredProcedureStatement::new("bump", &parameters),
+            Some(&parameters),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        call.parameters.as_ref().unwrap()[1].value,
+        Value::Int(5)
+    );
+}
+
+#[tokio::test]
+async fn output_parameter() {
+    let Ok(base) = std::env::var("MYSQL_URL") else {
+        return;
+    };
+    let name = format!("ds_{}", uuid_name());
+    let mut admin = Conn::from_url(base.clone()).await.unwrap();
+    admin
+        .query_drop(format!("CREATE DATABASE `{name}`"))
+        .await
+        .unwrap();
+    drop(admin);
+    let url = replace_db(&base, &name);
+    let conn = Arc::new(MysqlConnection::new(Some(url)));
+    conn.open().await.unwrap();
+    let command = MysqlCommand::new(conn);
+    fill_output_parameter(&command).await;
+    let mut admin = Conn::from_url(base).await.unwrap();
+    admin
+        .query_drop(format!("DROP DATABASE `{name}`"))
+        .await
+        .ok();
+}
+
 #[tokio::test]
 async fn return_statement_selects_scalar() {
     use datasources::ReturnStatement;

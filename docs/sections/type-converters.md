@@ -1,4 +1,4 @@
-# TypeConverter
+# Type Converters
 
 `TypeConverter` is only {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}}. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
@@ -139,7 +139,7 @@ fn reverse_convert(&self, to: &To) -> Result<From>
 
 ## Remarks
 
-Repository read is convert, then map. See [TransformMapper](./transform-mapper.md) and [Repository](./repository.md).
+Repository read is convert, then map. See [TransformMapper](./transform-mapper.md) and [Repositories](./repository.md).
 
 ## See also
 

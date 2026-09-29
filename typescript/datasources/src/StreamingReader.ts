@@ -26,6 +26,8 @@ export class StreamingReader implements IReader<Cells> {
     this.closed = true;
     await this.close();
   }
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.dispose();
 }
 
 export const statementReader = (

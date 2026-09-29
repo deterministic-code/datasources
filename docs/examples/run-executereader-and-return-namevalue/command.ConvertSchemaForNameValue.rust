@@ -1,0 +1,5 @@
+impl ConvertSchema for NameValue {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("name", "TEXT"), ("value", "TEXT")]
+    }
+}
