@@ -3235,7 +3235,7 @@ while (await reader.next()) {
 Assert.Throws<InvalidOperationException>(() =>
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1116-L1126)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1117-L1127)
 
 ```rust
 let max_n = Aggregate::max("n", None);
@@ -4596,7 +4596,7 @@ var byId = new WhereText("id = 1");
 var withWhere = new SelectStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1189-L1192)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1190-L1193)
 
 ```rust
     .not_null(NotNull::new(Some("nn_id"))),
@@ -4627,7 +4627,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L928-L935)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L936)
 
 ```rust
     Where::new(Operator::Equals {
@@ -4681,7 +4681,7 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L979-L993)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L994)
 
 ```rust
 .get_text()
@@ -4734,7 +4734,7 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L998-L1001)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L999-L1002)
 
 ```rust
     left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -4775,7 +4775,7 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1003-L1006)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1007)
 
 ```rust
 
@@ -4813,7 +4813,7 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1008-L1011)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1009-L1012)
 
 ```rust
     .get_text(),
@@ -4854,7 +4854,7 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1016-L1019)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1017-L1020)
 
 ```rust
     .parameters()
@@ -5144,7 +5144,7 @@ Join.Left("payments", "orders.id", "payments.order_id"),
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L987-L991)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L988-L992)
 
 ```rust
     )))),
@@ -5472,7 +5472,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L982-L987)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L983-L988)
 
 ```rust
 left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
@@ -5807,7 +5807,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L991-L996)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L992-L997)
 
 ```rust
 assert!(Where::new(Operator::Equals {
@@ -6781,7 +6781,7 @@ GroupBy = ["status"],
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L997-L1005)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L998-L1006)
 
 ```rust
 assert!(Where::new(Operator::In {
@@ -6830,7 +6830,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1010-L1033)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1011-L1034)
 
 ```rust
 );
@@ -7111,7 +7111,7 @@ new CreateTableStatement(
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1078-L1085)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1079-L1086)
 
 ```rust
         ..SelectStatementOptions::new("users", &["users.id"])
@@ -7156,7 +7156,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1087-L1089)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1088-L1090)
 
 ```rust
 })
@@ -7433,7 +7433,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1091-L1092)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1092-L1093)
 
 ```rust
 let count = Aggregate::count("*", Some("n"));
@@ -7709,7 +7709,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1097-L1098)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1098-L1099)
 
 ```rust
 "customers",
@@ -8320,7 +8320,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L652-L656)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L653-L657)
 
 ```rust
 assert!(txn.commit().await.is_err());
@@ -8388,7 +8388,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2102-L2108)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2103-L2109)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -8445,7 +8445,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L931-L937)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L932-L938)
 
 ```rust
     })
@@ -8953,7 +8953,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L745-L760)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L746-L761)
 
 ```rust
 
@@ -8991,7 +8991,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2102-L2108)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2103-L2109)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -9158,7 +9158,7 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 var ret = new ReturnStatement("add", fields);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1168-L1172)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1169-L1173)
 
 ```rust
     &[],
@@ -11236,7 +11236,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1440-L1456)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1441-L1457)
 
 ```rust
         &row
@@ -11295,7 +11295,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1477-L1483)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1478-L1484)
 
 ```rust
 
@@ -14079,7 +14079,7 @@ var response = await Repo(parentsRepo, childrenRepo).Create(
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1899-L1913)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1900-L1914)
 
 ```rust
 let command = Arc::new(MockCommand::new());
@@ -17176,6 +17176,280 @@ const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
 const dest = converter.convert({ flag: 1, name: "a" });
 ```
 
+## Other
+
+Types that sit beside a connection, command, or repository. A provider may use them. Nothing here is required to open a connection.
+
+- [Datasource URL](#datasource-url) — `DatasourceUrlParser` reads a connection URL into a `DatasourceUrl`
+
+## Datasource URL
+
+A connection URL split into provider, host, credentials, datasource, schema, and options. A provider may parse `url` or `database_url` with `DatasourceUrlParser`. The call is optional.
+
+### Classes
+
+##### TypeScript
+
+##### DatasourceUrlParser {#typescript-datasourceurlparser}
+
+```typescript
+class DatasourceUrlParser
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [parse(url?)](#typescript-datasourceurlparser-parse-url) | Parses a connection URL. A blank string or a string that is not a URL returns `undefined`. |
+
+###### parse(url?) {#typescript-datasourceurlparser-parse-url}
+
+Parses a connection URL. A blank string or a string that is not a URL returns `undefined`.
+
+**Definition**
+
+```typescript
+static parse(url?: string): DatasourceUrl | undefined
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `url` | connection URL, such as `postgres://ds:ds@127.0.0.1:5432/datasources?schema=public` |
+
+**Returns**
+
+[DatasourceUrl](#typescript-datasourceurl) or `undefined`
+
+##### DatasourceUrl {#typescript-datasourceurl}
+
+```typescript
+class DatasourceUrl
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| provider | URL scheme, lowercased and unchanged. |
+| username | User from the authority. Absent when the URL has no user. |
+| password | Password from the authority, percent-decoded. Absent when the URL has no password. Split from the user on the first `:`. |
+| host | Authority host. Absent when the URL has no host. |
+| port | Authority port. Absent when the URL omits it. |
+| path | Path after the authority, including a leading `/`. An opaque URL uses the remainder after the scheme. |
+| datasource | `path` with one leading `/` removed. Absent when that leaves nothing. |
+| schema | The `schema` query parameter, percent-decoded. Absent when that parameter is missing. Not copied into `options`. |
+| options | The other query parameters. A flag with no `=` has an empty value. A repeated key keeps the last value. |
+
+##### C#
+
+##### DatasourceUrlParser {#csharp-datasourceurlparser}
+
+```csharp
+public static class DatasourceUrlParser
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Parse(url)](#csharp-datasourceurlparser-parse-url) | Parses a connection URL. A blank string or a string that is not a URL returns null. |
+
+###### Parse(url) {#csharp-datasourceurlparser-parse-url}
+
+Parses a connection URL. A blank string or a string that is not a URL returns null.
+
+**Definition**
+
+```csharp
+public static DatasourceUrl? Parse(string? url)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `url` | connection URL, such as `postgres://ds:ds@127.0.0.1:5432/datasources?schema=public` |
+
+**Returns**
+
+[DatasourceUrl](#csharp-datasourceurl) or null
+
+##### DatasourceUrl {#csharp-datasourceurl}
+
+```csharp
+public sealed record DatasourceUrl(string Provider, string? Username, string? Password, string? Host, int? Port, string Path, string? Schema, IReadOnlyDictionary<string, string> Options)
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Provider | URL scheme, lowercased and unchanged. |
+| Username | User from the authority. Absent when the URL has no user. |
+| Password | Password from the authority, percent-decoded. Absent when the URL has no password. Split from the user on the first `:`. |
+| Host | Authority host. Absent when the URL has no host. |
+| Port | Authority port. Absent when the URL omits it. |
+| Path | Path after the authority, including a leading `/`. An opaque URL uses the remainder after the scheme. |
+| Datasource | `Path` with one leading `/` removed. Absent when that leaves nothing. |
+| Schema | The `schema` query parameter, percent-decoded. Absent when that parameter is missing. Not copied into `Options`. |
+| Options | The other query parameters. A flag with no `=` has an empty value. A repeated key keeps the last value. |
+
+##### Rust
+
+##### DatasourceUrlParser {#rust-datasourceurlparser}
+
+```rust
+pub struct DatasourceUrlParser
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [parse(url)](#rust-datasourceurlparser-parse-url) | Parses a connection URL. A blank string or a string that is not a URL returns `None`. |
+
+###### parse(url) {#rust-datasourceurlparser-parse-url}
+
+Parses a connection URL. A blank string or a string that is not a URL returns `None`.
+
+**Definition**
+
+```rust
+pub fn parse(url: &str) -> Option<DatasourceUrl>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `url` | connection URL, such as `postgres://ds:ds@127.0.0.1:5432/datasources?schema=public` |
+
+**Returns**
+
+`Option<`[DatasourceUrl](#rust-datasourceurl)`>`
+
+##### DatasourceUrl {#rust-datasourceurl}
+
+```rust
+pub struct DatasourceUrl
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| provider | URL scheme, lowercased and unchanged. |
+| username | User from the authority. Absent when the URL has no user. |
+| password | Password from the authority, percent-decoded. Absent when the URL has no password. Split from the user on the first `:`. |
+| host | Authority host. Absent when the URL has no host. |
+| port | Authority port. Absent when the URL omits it. |
+| path | Path after the authority, including a leading `/`. An opaque URL uses the remainder after the scheme. |
+| schema | The `schema` query parameter, percent-decoded. Absent when that parameter is missing. Not copied into `options`. |
+| options | The other query parameters. A flag with no `=` has an empty value. A repeated key keeps the last value. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [datasource()](#rust-datasourceurl-datasource) | `path` with one leading `/` removed. Absent when that leaves nothing. |
+
+###### datasource() {#rust-datasourceurl-datasource}
+
+`path` with one leading `/` removed. Absent when that leaves nothing.
+
+**Definition**
+
+```rust
+pub fn datasource(&self) -> Option<&str>
+```
+
+**Returns**
+
+`Option<&str>`
+
+### Remarks
+
+The provider is the scheme as written, lowercased. `postgres://` stays `postgres`. The parser does not rewrite a scheme to another name.
+
+`sqlite:////tmp/app.db` keeps the extra slash: `path` is `//tmp/app.db` and `datasource` is `/tmp/app.db`. `sqlite://:memory:` (no third slash) is a host of `:memory:`, so `datasource` is absent. SQLite still applies its own filename default.
+
+A raw connection string such as `Host=db;Port=1` is not a URL. `Parse` returns null and the provider can keep that string.
+
+### Examples
+
+#### Postgres URL
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceUrlParserTests.cs#L5-L19)
+
+```csharp
+var url = DatasourceUrlParser.Parse("postgres://ds:ds@127.0.0.1:5432/datasources?schema=public&sslmode=require");
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_url_parser.rs#L3-L18)
+
+```rust
+let url = DatasourceUrlParser::parse(
+    "postgres://ds:ds@127.0.0.1:5432/datasources?schema=public&sslmode=require",
+)
+.unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceUrlParser.test.ts#L5-L18)
+
+```typescript
+const url = DatasourceUrlParser.parse(
+  "postgres://ds:ds@127.0.0.1:5432/datasources?schema=public&sslmode=require",
+);
+```
+
+#### SQLite file
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceUrlParserTests.cs#L91-L100)
+
+```csharp
+var url = DatasourceUrlParser.Parse("sqlite:///app.db");
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_url_parser.rs#L79-L86)
+
+```rust
+let url = DatasourceUrlParser::parse("sqlite:///app.db").unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceUrlParser.test.ts#L71-L77)
+
+```typescript
+const url = DatasourceUrlParser.parse("sqlite:///app.db");
+```
+
+#### Not a URL
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceUrlParserTests.cs#L221-L230)
+
+```csharp
+var blank = DatasourceUrlParser.Parse("");
+var text = DatasourceUrlParser.Parse("not-a-url");
+var connectionString = DatasourceUrlParser.Parse("Host=db;Port=1");
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_url_parser.rs#L181-L189)
+
+```rust
+let blank = DatasourceUrlParser::parse("");
+let text = DatasourceUrlParser::parse("not-a-url");
+let connection_string = DatasourceUrlParser::parse("Host=db;Port=1");
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceUrlParser.test.ts#L165-L172)
+
+```typescript
+const blank = DatasourceUrlParser.parse("");
+const text = DatasourceUrlParser.parse("not-a-url");
+const connectionString = DatasourceUrlParser.parse("Host=db;Port=1");
+```
+
 ## Command Line (CLI)
 
 `@datasources/cli` installs provider packages and writes a local `.env`. `Default` / `default` / `DatasourceFactory.default` reads that file for `PROVIDER` and `DATASOURCE_URL`. `DEFAULT_PROVIDER` and `DEFAULT_DATASOURCE_URL` in the process override `.env`. If neither source sets a provider or URL, create throws.
@@ -17606,7 +17880,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 ### Remarks
 
-`connection` receives the options bag (`url`, `filename`, `host`, `database`, `schema`, …). `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
+`connection` receives the options bag (`url`, `filename`, `host`, `database`, `schema`, …). A provider may parse `url` / `database_url` with [DatasourceUrlParser](#datasource-url). That call is optional. `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
 
 `rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 

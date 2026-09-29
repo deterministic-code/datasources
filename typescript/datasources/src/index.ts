@@ -127,6 +127,8 @@ export {
 } from "./ConsoleCommandMiddleware.ts";
 export { ExpectConsoleMiddleware } from "./ExpectConsoleMiddleware.ts";
 export { Datasource } from "./Datasource.ts";
+export { DatasourceUrl } from "./DatasourceUrl.ts";
+export { DatasourceUrlParser } from "./DatasourceUrlParser.ts";
 import { Datasource } from "./Datasource.ts";
 import { DatasourceFactory } from "./DatasourceFactory.ts";
 Datasource.create = DatasourceFactory.create;
