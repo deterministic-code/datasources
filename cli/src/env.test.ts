@@ -7,7 +7,6 @@ import {
   splitProviders,
   updateEnvProviders,
 } from "./env.ts";
-import { providerFromUrl } from "./providerFromUrl.ts";
 
 describe("env", () => {
   it("parses, skips comments, and serializes known keys first", () => {
@@ -49,9 +48,13 @@ describe("env", () => {
     expect(answersFromEnv({ SQLITE_FILENAME: "app.db" }).url).toBe("sqlite:///app.db");
     expect(answersFromEnv({ SQLITE_FILENAME: ":memory:" }).url).toBe("sqlite:///:memory:");
     expect(answersFromEnv({ SQLITE_FILENAME: ":memory" }).url).toBe("sqlite:///:memory:");
-    expect(providerFromUrl("postgresql://localhost/db")).toBe("postgresql");
-    expect(providerFromUrl("postgres://localhost/db")).toBe("postgres");
-    expect(providerFromUrl("sqlite:///:memory:")).toBe("sqlite");
+    expect(answersFromEnv({ DATASOURCE_URL: "postgresql://localhost/db" }).providers).toEqual([
+      "postgresql",
+    ]);
+    expect(answersFromEnv({ DATASOURCE_URL: "postgres://localhost/db" }).providers).toEqual([
+      "postgres",
+    ]);
+    expect(answersFromEnv({ DATASOURCE_URL: "sqlite:///:memory:" }).providers).toEqual(["sqlite"]);
   });
 
   it("updates provider lists on add and remove", () => {

@@ -1,7 +1,6 @@
 import { providers, type Ecosystem } from "./catalog.ts";
 import { isEcosystem } from "./detect.ts";
-import { answersFromEnv, ensureProviders, type EnvMap } from "./env.ts";
-import { providerFromUrl } from "./providerFromUrl.ts";
+import { answersFromEnv, ensureProviders, scheme, type EnvMap } from "./env.ts";
 
 export type SetupAnswers = {
   ecosystem?: Ecosystem;
@@ -41,7 +40,7 @@ export const promptSetup = async (
             choices: found.map((value) => ({ name: value, value })),
             default: found[0]!,
           })));
-  const fromUrl = providerFromUrl(defaults.url);
+  const fromUrl = scheme(defaults.url);
   const selected = await prompt.checkbox({
     message: "Providers",
     choices: providers.map((value) => ({
@@ -63,7 +62,7 @@ const ecosystemOr = (value: string): Ecosystem | undefined =>
   isEcosystem(value) ? value : undefined;
 
 export const envFromAnswers = (answers: SetupAnswers): EnvMap => {
-  const provider = providerFromUrl(answers.url) ?? answers.providers[0] ?? "sqlite";
+  const provider = scheme(answers.url) ?? answers.providers[0] ?? "sqlite";
   return {
     INSTALLED_PROVIDERS: ensureProviders(answers.providers, provider).join(","),
     PROVIDER: provider,

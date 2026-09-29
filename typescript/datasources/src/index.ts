@@ -130,7 +130,6 @@ export { Datasource } from "./Datasource.ts";
 import { Datasource } from "./Datasource.ts";
 import { DatasourceFactory } from "./DatasourceFactory.ts";
 Datasource.create = DatasourceFactory.create;
-export { providerFromUrl } from "./providerFromUrl.ts";
 export { DatasourceError } from "./DatasourceError.ts";
 export type { Cell, Cells } from "./converters/Cell.ts";
 export type { Constructable } from "./converters/Constructable.ts";
