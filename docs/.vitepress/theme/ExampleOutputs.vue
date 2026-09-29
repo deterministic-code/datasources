@@ -37,7 +37,7 @@ const rows = (value) => Math.max(1, value.split("\n").length);
 }
 
 .example-output-title {
-  font-size: 13px;
+  font-size: 0.8125em;
   font-weight: 600;
   color: var(--vp-c-text-2);
 }
@@ -48,7 +48,7 @@ const rows = (value) => Math.max(1, value.split("\n").length);
   resize: none;
   overflow: auto;
   font-family: var(--vp-font-family-mono);
-  font-size: 13px;
+  font-size: var(--docs-sample-size);
   line-height: 1.6;
   padding: 10px 12px;
   border: 1px solid var(--vp-c-divider);
