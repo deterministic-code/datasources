@@ -92,7 +92,7 @@ public class UserViewCRUDRepositoryTests
             Entity = entity,
             EntityMapper = Snake,
             ColumnMappings = Snake,
-            Ids = CreateRepositoryOptions.FromType<T>().Ids,
+            Ids = CreateCRUDRepositoryOptions.FromType<T>().Ids,
             Write = write,
         });
 

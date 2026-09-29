@@ -2,7 +2,7 @@ import type { IConnection } from "./IConnection.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
+import { createCRUDRepositoryOptions, defaultId, fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -61,7 +61,7 @@ export class RepositoryBuilder<T = Cells> {
     connectionOrOptions: IConnection | ReadonlyRepositoryOptions<T>,
   ): RepositoryBuilder<T> {
     return typeof typeOrConnection === "function"
-      ? new RepositoryBuilder(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnection))
+      ? new RepositoryBuilder(connectionOrOptions as IConnection, createCRUDRepositoryOptions(typeOrConnection))
       : new RepositoryBuilder(typeOrConnection, connectionOrOptions as ReadonlyRepositoryOptions<T>);
   }
 

@@ -63,7 +63,7 @@ export { CRUDRepository } from "./CRUDRepository.ts";
 export { RepositoryBuilder, parts } from "./RepositoryBuilder.ts";
 export type { BuiltRepository } from "./BuiltRepository.ts";
 export type { RepositoryStatements } from "./RepositoryStatements.ts";
-export { createRepositoryOptions } from "./createRepositoryOptions.ts";
+export { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 export type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 export type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 export type { Response } from "./Response.ts";

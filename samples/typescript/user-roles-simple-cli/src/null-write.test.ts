@@ -1,4 +1,4 @@
-import { CRUDRepository, Datasource, createRepositoryOptions, type IConnection } from "@datasources/core";
+import { CRUDRepository, Datasource, createCRUDRepositoryOptions, type IConnection } from "@datasources/core";
 import { SqliteDriver } from "@datasources/sqlite";
 import { describe, expect, it } from "vitest";
 
@@ -29,7 +29,7 @@ const open = async (): Promise<IConnection> => {
 describe("null write", () => {
   it("omits null created and updated", async () => {
     const connection = await open();
-    const repo = new CRUDRepository(connection, { ...createRepositoryOptions(UserStamp), entity: "users" });
+    const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(UserStamp), entity: "users" });
     const omitted = Object.assign(new UserStamp(), { username: "ada" });
     await repo.create(omitted);
     const stored = await repo.readSingleById(omitted.id);

@@ -10,7 +10,7 @@ import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
-import { createRepositoryOptions } from "./createRepositoryOptions.ts";
+import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 
 export class Datasource implements IDatasource {
   private connection?: IConnection;
@@ -34,7 +34,7 @@ export class Datasource implements IDatasource {
     type: Constructable<T>,
     options?: ReadonlyRepositoryOptions<T>,
   ): CRUDRepositoryOptions<T> => {
-    const built = createRepositoryOptions(type, this.driver.rowTypeConverters);
+    const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
     return options === undefined
       ? { ...built, rowTypeConverters: types }

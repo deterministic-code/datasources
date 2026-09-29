@@ -10903,7 +10903,7 @@ let connection = open(
     ",
 )
 .await;
-let mut options = create_repository_options::<User>();
+let mut options = create_crud_repository_options::<User>();
 options.entity_mapper = Box::new(PluralizerMapper::new());
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let by_id = repo
@@ -11075,7 +11075,7 @@ let connection = open(
     ),
 )
 .await;
-let mut options = create_repository_options::<UserAccount>();
+let mut options = create_crud_repository_options::<UserAccount>();
 options.entity = "user".into();
 options.column_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
@@ -11445,7 +11445,7 @@ let connection = open(
     ),
 )
 .await;
-let mut users_options = create_repository_options::<UserAccount>();
+let mut users_options = create_crud_repository_options::<UserAccount>();
 users_options.entity = "user".into();
 users_options.column_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
@@ -11454,7 +11454,7 @@ users_options.column_mappings = Box::new(DictionaryMapper::new([
     ("Opened".to_string(), "created".to_string()),
     ("UserTypeId".to_string(), "user_type_id".to_string()),
 ]));
-let mut type_options = create_repository_options::<UserType>();
+let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
@@ -13016,7 +13016,7 @@ let built = datasource();
 let ds: &dyn Datasource = &*built;
 let connection = open(ds, "user-view-version", "")
 .await;
-let mut users_options = create_repository_options::<UsersView>();
+let mut users_options = create_crud_repository_options::<UsersView>();
 users_options.ids = vec!["Key".into()];
 users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
@@ -13032,12 +13032,12 @@ users_options.column_mappings = Box::new(DictionaryMapper::new([
 ]));
 users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-let mut type_options = create_repository_options::<UserType>();
+let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 type_options.column_mappings = Box::new(casing);
 type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
-let mut role_options = create_repository_options::<UserRole>();
+let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 role_options.column_mappings =
@@ -13274,7 +13274,7 @@ const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" }
 const connection = await open(ds, "user-view-version");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
-  ...createRepositoryOptions(UsersView),
+  ...createCRUDRepositoryOptions(UsersView),
   ids: ["Key"],
   readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
   entityMapper: new DictionaryMapper([["UsersView", "user"]]),
@@ -13288,12 +13288,12 @@ const usersRepo = new CRUDRepository(connection, {
   ]),
 });
 const userTypesRepo = new CRUDRepository(connection, {
-  ...createRepositoryOptions(UserType),
+  ...createCRUDRepositoryOptions(UserType),
   entityMapper: casing,
   columnMappings: casing,
 });
 const userRolesRepo = new CRUDRepository(connection, {
-  ...createRepositoryOptions(UserRole),
+  ...createCRUDRepositoryOptions(UserRole),
   entityMapper: casing,
   columnMappings: casing,
 });
@@ -13636,7 +13636,7 @@ let updated = repo.update(&omitted, None).await.unwrap();
 
 ```typescript
 const connection = await open();
-const repo = new CRUDRepository(connection, { ...createRepositoryOptions(Item), entity: "item" });
+const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(Item), entity: "item" });
 const omitted = await repo.create(Object.assign(new Item(), { name: "ada" }));
 ```
 

@@ -2,7 +2,7 @@ import type { ICommandMiddleware } from "../../ICommandMiddleware.ts";
 import type { IConnection } from "../../IConnection.ts";
 import { CRUDRepository } from "../../CRUDRepository.ts";
 import type { Constructable } from "../../converters/Constructable.ts";
-import { fieldNamesOf } from "../../createRepositoryOptions.ts";
+import { fieldNamesOf } from "../../createCRUDRepositoryOptions.ts";
 import { Address } from "./Address.ts";
 import { AddressType } from "./AddressType.ts";
 import { Contact } from "./Contact.ts";

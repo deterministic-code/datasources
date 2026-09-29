@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Datasources;
 
-public static class CreateRepositoryOptions
+public static class CreateCRUDRepositoryOptions
 {
     public static CRUDRepositoryOptions<T> FromType<T>(
         IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null)

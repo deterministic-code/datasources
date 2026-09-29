@@ -16,7 +16,7 @@ mod connection;
 mod console_command_middleware;
 pub mod converters;
 mod create;
-mod create_repository_options;
+mod create_crud_repository_options;
 mod crud_repository;
 mod crud_repository_options;
 mod datasource;
@@ -105,7 +105,7 @@ pub use converters::{
     ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter,
 };
 pub use create::{create, create_default, default};
-pub use create_repository_options::create_repository_options;
+pub use create_crud_repository_options::create_crud_repository_options;
 pub use crud_repository::CRUDRepository;
 pub use crud_repository_options::CRUDRepositoryOptions;
 pub use datasource::{BuiltDatasource, Datasource};

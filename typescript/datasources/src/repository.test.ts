@@ -9,7 +9,7 @@ import {
   Where,
   Operator,
   RepositoryBuilder,
-  createRepositoryOptions,
+  createCRUDRepositoryOptions,
   parts,
   InsertStatement,
   UpdateStatement,
@@ -395,11 +395,11 @@ describe("CRUDRepository", () => {
 
   it("builds repository options from a type", () => {
     const connection = new MockConnection();
-    const fromId = createRepositoryOptions(asType(Item));
+    const fromId = createCRUDRepositoryOptions(asType(Item));
     expect(fromId.ids).toEqual(["id"]);
     expect(fromId.entity).toBe("Item");
-    expect(createRepositoryOptions(asType(Label)).ids).toEqual([]);
-    expect(createRepositoryOptions(asType(PascalId)).ids).toEqual(["Id"]);
+    expect(createCRUDRepositoryOptions(asType(Label)).ids).toEqual([]);
+    expect(createCRUDRepositoryOptions(asType(PascalId)).ids).toEqual(["Id"]);
     expect(new CRUDRepository(connection, fromId)).toBeInstanceOf(CRUDRepository);
     expect(new CRUDRepository(asType(Item), connection)).toBeInstanceOf(CRUDRepository);
     expect(RepositoryBuilder.from(connection, fromId).parts().connection).toBe(connection);

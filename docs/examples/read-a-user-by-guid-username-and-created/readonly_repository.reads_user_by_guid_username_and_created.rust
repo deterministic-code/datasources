@@ -13,7 +13,7 @@ let connection = open(
     ),
 )
 .await;
-let mut options = create_repository_options::<UserAccount>();
+let mut options = create_crud_repository_options::<UserAccount>();
 options.entity = "user".into();
 options.column_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),

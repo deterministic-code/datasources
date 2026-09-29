@@ -13,7 +13,7 @@ export const fieldNamesOf = <T>(type: Constructable<T>): string[] => {
 export const defaultId = (fields: string[]): string[] =>
   fields.includes("id") ? ["id"] : fields.includes("Id") ? ["Id"] : [];
 
-export const createRepositoryOptions = <T>(
+export const createCRUDRepositoryOptions = <T>(
   type: Constructable<T>,
   rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>,
 ): CRUDRepositoryOptions<T> => ({

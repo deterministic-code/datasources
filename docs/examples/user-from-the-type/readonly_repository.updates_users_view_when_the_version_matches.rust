@@ -2,7 +2,7 @@ let built = datasource();
 let ds: &dyn Datasource = &*built;
 let connection = open(ds, "user-view-version", "")
 .await;
-let mut users_options = create_repository_options::<UsersView>();
+let mut users_options = create_crud_repository_options::<UsersView>();
 users_options.ids = vec!["Key".into()];
 users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
@@ -18,12 +18,12 @@ users_options.column_mappings = Box::new(DictionaryMapper::new([
 ]));
 users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-let mut type_options = create_repository_options::<UserType>();
+let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 type_options.column_mappings = Box::new(casing);
 type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
-let mut role_options = create_repository_options::<UserRole>();
+let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 role_options.column_mappings =

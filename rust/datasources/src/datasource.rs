@@ -1,7 +1,7 @@
 use crate::command::Command;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter, TypeConverter};
-use crate::create_repository_options::create_repository_options;
+use crate::create_crud_repository_options::create_crud_repository_options;
 use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::driver::Driver;
@@ -52,7 +52,7 @@ impl dyn Datasource {
     ) -> Arc<dyn IReadonlyRepository> {
         let custom = options.map(|read| CRUDRepositoryOptions {
             read,
-            ..create_repository_options::<T>()
+            ..create_crud_repository_options::<T>()
         });
         let bound = self.bind_connection(connection);
         self.readonly_repository_from(bound, repository_options::<T>(self, custom).read)
@@ -63,7 +63,7 @@ fn repository_options<T: ConvertSchema + 'static>(
     datasource: &dyn Datasource,
     custom: Option<CRUDRepositoryOptions>,
 ) -> CRUDRepositoryOptions {
-    let built = create_repository_options::<T>();
+    let built = create_crud_repository_options::<T>();
     let types = datasource.row_type_converters();
     match custom {
         None => {
