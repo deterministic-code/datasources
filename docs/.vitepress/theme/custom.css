@@ -53,6 +53,70 @@
   border-top: 1px solid var(--vp-c-divider);
 }
 
+:root {
+  --docs-sample-size: 13px;
+  --docs-text-size: 16px;
+}
+
+.vp-doc {
+  font-size: var(--docs-text-size);
+}
+
+.vp-doc h1 {
+  font-size: calc(var(--docs-text-size) * 1.75);
+  line-height: 1.25;
+}
+
+@media (min-width: 768px) {
+  .vp-doc h1 {
+    font-size: calc(var(--docs-text-size) * 2);
+  }
+}
+
+.vp-doc h2 {
+  font-size: calc(var(--docs-text-size) * 1.5);
+  line-height: 1.35;
+}
+
+.vp-doc h3 {
+  font-size: calc(var(--docs-text-size) * 1.25);
+  line-height: 1.4;
+}
+
+.vp-doc h4 {
+  font-size: calc(var(--docs-text-size) * 1.125);
+  line-height: 1.35;
+}
+
+.vp-doc h5,
+.vp-doc h6 {
+  font-size: var(--docs-text-size);
+  line-height: 1.4;
+}
+
+.vp-doc p {
+  line-height: 1.75;
+}
+
+.vp-doc blockquote > p {
+  font-size: var(--docs-text-size);
+}
+
+.vp-doc .custom-block {
+  font-size: calc(var(--docs-text-size) * 0.875);
+  line-height: 1.7;
+}
+
+.vp-doc th,
+.vp-doc td {
+  font-size: calc(var(--docs-text-size) * 0.875);
+}
+
+.vp-doc div[class*="language-"] code,
+.vp-doc .line-numbers-wrapper {
+  font-size: var(--docs-sample-size);
+}
+
 .example-source {
   position: relative;
 }

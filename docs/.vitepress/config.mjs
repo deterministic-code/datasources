@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
 import { dialectsVitePlugin, transformDialects } from "../../scripts/dialects.mjs";
 import { nestSidebar, parseToc, sidebarTitle } from "../../scripts/toc.mjs";
+import { fontSizeBoot } from "./theme/fontSize.js";
 
 const configPath = fileURLToPath(import.meta.url);
 const docsDir = join(dirname(configPath), "..");
@@ -62,6 +63,7 @@ export default defineConfig({
   title: "Datasources",
   description: "Data-access and object-relational mapper with parity across languages and providers.",
   cleanUrls: true,
+  head: [["script", {}, fontSizeBoot]],
   rewrites: {
     "introduction.md": "index.md",
   },
