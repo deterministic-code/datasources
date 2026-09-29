@@ -38,6 +38,7 @@ describe("providerNames", () => {
       }),
     ).toEqual(["json", "memory"]);
     expect(providerNames({ INSTALLED_PROVIDERS: " sqlite " })).toEqual(["sqlite"]);
+    expect(providerNames({ DATASOURCE_URL: "postgresql://localhost/db" })).toEqual(["postgresql"]);
     expect(providerNames({})).toEqual([]);
     expect(() => providerNames({ DATASOURCE_URL: "not-a-url" })).toThrow(
       "DATASOURCE_URL has no provider",

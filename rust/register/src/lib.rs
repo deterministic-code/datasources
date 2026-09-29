@@ -9,6 +9,15 @@ fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
         .filter(|value| !value.is_empty())
 }
 
+fn scheme(url: &str) -> Option<String> {
+    let name = url.split_once(':')?.0.to_ascii_lowercase();
+    if name.is_empty() {
+        None
+    } else {
+        Some(name)
+    }
+}
+
 pub fn provider_names(options: &HashMap<String, String>) -> Result<Vec<String>> {
     let mut names = Vec::new();
     if let Some(value) = get(options, "INSTALLED_PROVIDERS") {
@@ -22,8 +31,8 @@ pub fn provider_names(options: &HashMap<String, String>) -> Result<Vec<String>> 
     let Some(url) = get(options, "DATASOURCE_URL") else {
         return Ok(names);
     };
-    let provider = datasources::provider_from_url(url)
-        .ok_or_else(|| DatasourceError::message("DATASOURCE_URL has no provider"))?;
+    let provider =
+        scheme(url).ok_or_else(|| DatasourceError::message("DATASOURCE_URL has no provider"))?;
     if !names.iter().any(|existing| existing == &provider) {
         names.push(provider);
     }
@@ -152,6 +161,10 @@ mod tests {
         assert_eq!(
             provider_names(&opts(&[("INSTALLED_PROVIDERS", " sqlite ")])).unwrap(),
             vec!["sqlite"]
+        );
+        assert_eq!(
+            provider_names(&opts(&[("DATASOURCE_URL", "postgresql://localhost/db")])).unwrap(),
+            vec!["postgresql"]
         );
         assert!(provider_names(&HashMap::new()).unwrap().is_empty());
         assert_eq!(

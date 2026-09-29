@@ -1,6 +1,7 @@
-import { providerFromUrl } from "./providerFromUrl.ts";
-
 export type EnvMap = Record<string, string>;
+
+export const scheme = (url: string): string | undefined =>
+  url.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/)?.[1]?.toLowerCase();
 
 export const knownEnvKeys = ["INSTALLED_PROVIDERS", "PROVIDER", "DATASOURCE_URL", "DATABASE_SCHEMA"] as const;
 
@@ -17,7 +18,7 @@ const urlOf = (env: EnvMap) => env.DATASOURCE_URL || env.DATABASE_URL || "";
 const installedOf = (env: EnvMap) =>
   env.INSTALLED_PROVIDERS ||
   env.DATASOURCE_PROVIDERS ||
-  providerFromUrl(urlOf(env)) ||
+  scheme(urlOf(env)) ||
   env.DEFAULT_PROVIDER ||
   env.DATASOURCE_PROVIDER ||
   "";
@@ -67,7 +68,7 @@ export const updateEnvProviders = (
     ...current.filter((name) => !remove.includes(name)),
     ...add.filter((name) => !current.includes(name)),
   ];
-  const fallback = providerFromUrl(urlOf(env)) ?? next[0] ?? "sqlite";
+  const fallback = scheme(urlOf(env)) ?? next[0] ?? "sqlite";
   const {
     DATABASE_URL: _u,
     DEFAULT_PROVIDER: _d,
@@ -91,7 +92,7 @@ export const answersFromEnv = (env: EnvMap) => {
     (env.SQLITE_FILENAME ? sqliteUrl(env.SQLITE_FILENAME) : "") ||
     (installedOf(env).includes("sqlite") || !installedOf(env) ? "sqlite:///:memory:" : "");
   return {
-    providers: splitProviders(installedOf(env) || providerFromUrl(url) || "sqlite"),
+    providers: splitProviders(installedOf(env) || scheme(url) || "sqlite"),
     url,
     schema: env.DATABASE_SCHEMA ?? "",
   };

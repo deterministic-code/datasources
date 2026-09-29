@@ -31,6 +31,9 @@ public class DatasourceInstallTests
         Assert.Equal(
             new[] { "sqlite" },
             ProviderNames.From(new Dictionary<string, string?> { ["INSTALLED_PROVIDERS"] = " sqlite " }));
+        Assert.Equal(
+            new[] { "postgresql" },
+            ProviderNames.From(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "postgresql://localhost/db" }));
         Assert.Empty(ProviderNames.From(new Dictionary<string, string?>()));
         var error = Assert.Throws<DatasourceException>(() =>
             ProviderNames.From(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "not-a-url" }));
