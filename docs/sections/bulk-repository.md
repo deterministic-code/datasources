@@ -239,7 +239,14 @@ pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) ->
 
 ## Remarks
 
-C# exposes list overloads (`Create(IReadOnlyList<T>)`) and `Bulk*` aliases. TypeScript and Rust use `createBulk` / `create_bulk` only.
+::: prose
+### csharp
+List overloads are `Create(IReadOnlyList<T>)`, with `Bulk*` aliases.
+### typescript
+Bulk writes use `createBulk` only.
+### rust
+Bulk writes use `create_bulk` only.
+:::
 
 Each item still runs the same deep persist as [CRUDRepository](./crud-repository.md). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
 

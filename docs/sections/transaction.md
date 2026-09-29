@@ -253,11 +253,20 @@ Serializable
 
 ## Remarks
 
-`StartTransaction` / `startTransaction` / `start_transaction` requires an open [connection](./connection.md). It returns a transaction that is not committed.
+{{StartTransaction|startTransaction|start_transaction}} requires an open [connection](./connection.md). It returns a transaction that is not committed.
 
-`Commit` / `commit` persists work. `Abort` / `abort` rolls it back.
+{{Commit|commit|commit}} persists work. {{Abort|abort|abort}} rolls it back.
 
-Omitted isolation is `Serializable` (TypeScript omits the argument, C# defaults, Rust uses `None`). Memory, JSON, and SQLite throw when the connection is closed.
+Omitted isolation is `Serializable`. Memory, JSON, and SQLite throw when the connection is closed.
+
+::: prose
+### typescript
+Omit the argument.
+### csharp
+The parameter defaults to `Serializable`.
+### rust
+Pass `None`.
+:::
 
 ## Examples
 

@@ -1,6 +1,6 @@
 # RowTypeConverter
 
-TypeConverter for a row. Holds `Types` / `types` and `Fields` / `fields`. Convert uses `Fields[name]`. `Types` is the provider catalog merge and is unused at convert time.
+TypeConverter for a row. Holds {{Types|types|types}} and {{Fields|fields|fields}}. {{Convert|convert|convert}} uses {{Fields[name]|fields[name]|fields[name]}}. {{Types|types|types}} is the provider catalog merge and is unused at convert time.
 
 ## Classes
 
@@ -236,7 +236,7 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 ## Remarks
 
-`Types` / `types` is the provider catalog merge. Convert and reverse-convert only consult `Fields` / `fields`.
+{{Types|types|types}} is the provider catalog merge. {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}} only consult {{Fields|fields|fields}}.
 
 Repository read is convert, then map. See [TransformMapper](./transform-mapper.md) and [CRUD repository](./crud-repository.md).
 

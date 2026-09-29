@@ -66,6 +66,21 @@ Rules:
 
 VitePress uses one page-level dialect selector for classes and examples. README expands each panel under `#### TypeScript` / `#### C#` / `#### Rust`.
 
+## Dialect names
+
+A summary or remark names an API once per sentence. The marker has three slots, in order C#, TypeScript, Rust. Repeat a slot when two dialects share a spelling. The site shows the slot for the selected language. README keeps all three in the sentence.
+
+A `::: prose` block is for a sentence that is not the same fact under another name. Use `### typescript`, `### csharp`, and `### rust`. Omit a heading when that dialect has nothing to say. Shared sentences stay outside the block. README quotes that sentence under the dialect name so the following remarks stay shared.
+
+~~~~markdown
+The connection must be open before {{Execute|execute|execute}} or {{ExecuteReader|executeReader|execute_reader}}.
+
+::: prose
+### rust
+The `Command` trait has no connection getter.
+:::
+~~~~
+
 ## Examples
 
 When present, one `###` heading per sample, optional prose, then `::: example`. Each fence points at a test or type by name (`path#Name`), not a line range. `npm run docs:examples` writes the usage sample — not the test method wrapper or equality asserts — into `docs/examples/<heading>/<File>.<Name>.<lang>`. The test path and line range live in `docs/examples/lines`. The transform renders the sample file. Do not paste a second fictional fence. A source icon links to the recorded line range on GitHub. On a reference page those fences follow the page-level selector; they do not get their own tabs.
@@ -121,7 +136,7 @@ Optional `output` fences after the sample fences become titled textboxes under t
 ## Checklist
 
 - [ ] Title is the major class name
-- [ ] Summary is dialect-neutral
+- [ ] Summary keeps one sentence; dialect API names use the three-slot marker
 - [ ] `## Classes` wraps one `::: reference` with all three panels
 - [ ] Each member has a description; Constructor and Methods also have a definition and parameters (Properties render as a table only)
 - [ ] Associated types and page-local argument/return types are extra `####` headings, not a second page

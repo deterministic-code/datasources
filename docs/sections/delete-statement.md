@@ -207,7 +207,7 @@ fn where_clause(&self) -> Option<&dyn IWhere>
 
 ## Remarks
 
-Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](./where-clause.md#iwhere) is present. `Raw` / `raw` wraps command text without compiling. Keep the [Where](./where-clause.md) when the caller needs bound parameters.
+Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](./where-clause.md#iwhere) is present. {{Raw|raw|raw}} wraps command text without compiling. Keep the [Where](./where-clause.md) when the caller needs bound parameters.
 
 ## Examples
 

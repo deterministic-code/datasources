@@ -1,6 +1,6 @@
 # Statements
 
-Command text. [Command](./command.md) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only.
+Command text. [Command](./command.md) {{Execute|execute|execute}} and {{ExecuteReader|executeReader|execute_reader}} overloads take any statement and use {{GetText()|getText()|get_text()}} only.
 
 ## Classes
 
@@ -119,7 +119,7 @@ fn get_text(&self) -> String
 
 ## Remarks
 
-Bound values live on [Where](./where-clause.md). [IStatement](#istatement) is not an [IExpression](./expressions.md#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](./where-clause.md#iwhere) is a clause ([IExpression](./expressions.md#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
+Bound values live on [Where](./where-clause.md). [IStatement](#istatement) is not an [IExpression](./expressions.md#iexpression); [IText](#itext) is the shared {{GetText()|getText()|get_text()}} surface. [IWhere](./where-clause.md#iwhere) is a clause ([IExpression](./expressions.md#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
 
 ## See also
 

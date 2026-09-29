@@ -19,6 +19,9 @@ const DIALECT_BLOCK = /^::: dialects\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const EXAMPLE_BLOCK = /^::: example\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const REFERENCE_BLOCK = /^::: reference\r?\n([\s\S]*?)^:::[ \t]*$/gm;
+const PROSE_BLOCK = /^::: prose\r?\n([\s\S]*?)^:::[ \t]*$/gm;
+const CODE_FENCE = /(^```[\s\S]*?^```)/m;
+const NAME_MARKER = /\{\{([^{}|]+)\|([^{}|]+)\|([^{}|]+)\}\}/g;
 const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
 const EXAMPLE_FENCE = /^```([a-zA-Z0-9_+-]+)[ \t]+(\S+#\S+)\s*\r?\n([\s\S]*?)^```\s*$/gm;
 const OUTPUT_FENCE = /^```output(?::([a-zA-Z0-9_+-]+))?[ \t]+\[([^\]]+)\]\s*\r?\n([\s\S]*?)^```\s*$/gm;
@@ -179,7 +182,58 @@ export const toReadmeReference = (body) =>
     .map(({ lang, content }) => `#### ${labelFor(lang)}\n\n${renderClassReference(content, lang)}`)
     .join("\n\n");
 
-const hasReference = (markdown) => /^::: reference\r?\n/m.test(markdown);
+export const toVitePressProse = (body) =>
+  orderedPanels(body)
+    .map(({ lang, content }) => toPanel(lang, content))
+    .join("\n\n");
+
+export const toReadmeProse = (body) =>
+  orderedPanels(body)
+    .map(({ lang, content }) => {
+      const quoted = content
+        .split("\n")
+        .map((line) => (line.length ? `> ${line}` : ">"))
+        .join("\n");
+      return `> **${labelFor(lang)}**\n>\n${quoted}`;
+    })
+    .join("\n\n");
+
+const applyNames = (text, style) => {
+  NAME_MARKER.lastIndex = 0;
+  return text.replace(NAME_MARKER, (_, csharp, typescript, rust) => {
+    const slots = [csharp, typescript, rust].map((slot) => slot.trim());
+    return style === "vitepress"
+      ? `<DialectName csharp="${escapeAttr(slots[0])}" typescript="${escapeAttr(slots[1])}" rust="${escapeAttr(slots[2])}"></DialectName>`
+      : slots.map((slot) => `\`${slot}\``).join(" / ");
+  });
+};
+
+const transformOutsideCodeFences = (markdown, fn) =>
+  markdown.split(CODE_FENCE).map((chunk) => (chunk.startsWith("```") ? chunk : fn(chunk))).join("");
+
+const outsideFences = (markdown) =>
+  markdown
+    .split(DOC_FENCE)
+    .filter((chunk) => !chunk.startsWith("~~~~"))
+    .join("\n")
+    .split(CODE_FENCE)
+    .filter((chunk) => !chunk.startsWith("```"))
+    .join("\n");
+
+const hasReference = (markdown) => /^::: reference\r?\n/m.test(outsideFences(markdown));
+const hasProse = (markdown) => /^::: prose\r?\n/m.test(outsideFences(markdown));
+const hasNames = (markdown) => {
+  NAME_MARKER.lastIndex = 0;
+  return NAME_MARKER.test(outsideFences(markdown));
+};
+
+const withSelector = (markdown) =>
+  transformOutsideDocFences(markdown, (chunk) => {
+    if (chunk.includes("<DialectSelector")) return chunk;
+    if (/^## Classes/m.test(chunk))
+      return chunk.replace(/^## Classes/m, "<DialectSelector />\n\n## Classes");
+    return chunk.replace(/^(# [^\n]+)\r?\n/, "$1\n\n<DialectSelector />\n");
+  });
 
 const readmeOutput = (outputs) =>
   outputs.map(({ title, value }) => `**${title}**\n\n\`\`\`\n${value}\n\`\`\``).join("\n\n");
@@ -222,18 +276,22 @@ export const transformDialects = (markdown, style, files) => {
     style === "vitepress" ? (page ? toVitePressExamplePanels : toVitePressExamples) : toReadmeExamples;
   const packages = style === "vitepress" ? toVitePressPackages : toReadmePackages;
   const reference = style === "vitepress" ? toVitePressReference : toReadmeReference;
+  const prose = style === "vitepress" ? toVitePressProse : toReadmeProse;
+  const showSelector = page || hasProse(markdown) || hasNames(markdown);
   const next = transformOutsideDocFences(markdown, (chunk) =>
-    chunk
-      .replace(EXAMPLE_BLOCK, (match, body, offset, text) =>
-        examples(body, lastHeading(text.slice(0, offset)), files),
-      )
-      .replace(DIALECT_BLOCK, (_, body) => dialects(body))
-      .replace(PACKAGES_BLOCK, (_, body) => packages(body))
-      .replace(REFERENCE_BLOCK, (_, body) => reference(body)),
+    transformOutsideCodeFences(
+      chunk
+        .replace(PROSE_BLOCK, (_, body) => prose(body))
+        .replace(EXAMPLE_BLOCK, (match, body, offset, text) =>
+          examples(body, lastHeading(text.slice(0, offset)), files),
+        )
+        .replace(DIALECT_BLOCK, (_, body) => dialects(body))
+        .replace(PACKAGES_BLOCK, (_, body) => packages(body))
+        .replace(REFERENCE_BLOCK, (_, body) => reference(body)),
+      (text) => applyNames(text, style),
+    ),
   );
-  return style === "vitepress" && page
-    ? next.replace(/^## Classes/m, "<DialectSelector />\n\n## Classes")
-    : next;
+  return style === "vitepress" && showSelector ? withSelector(next) : next;
 };
 
 export const dialectsVitePlugin = () => ({

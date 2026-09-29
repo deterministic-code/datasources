@@ -44,7 +44,7 @@ static create(provider?: string, options?: DatasourceOptions): IDatasource
 
 ## Remarks
 
-`Default` reads `INSTALLED_PROVIDERS` and `DATASOURCE_URL` when defaults are unset.
+{{Default|default|default}} reads `INSTALLED_PROVIDERS` and `DATASOURCE_URL` when defaults are unset.
 
 ## Examples
 
@@ -66,6 +66,7 @@ static create(provider?: string, options?: DatasourceOptions): IDatasource
 - Use `**Constructor**` / `**Properties**` / `**Methods**`.
 - Rust may use `#### datasources` for free functions.
 - Omit `bindInstall` / `bind_install`.
-- The page-level selector switches both the class list and `::: example` samples.
+- The page-level selector switches the class list, `::: example` samples, and dialect names in prose.
+- Name an API with `{{C#|TypeScript|Rust}}`. Repeat a slot when two dialects share a spelling. Use `::: prose` only for a sentence that is not the same fact under another name, and omit a dialect heading that has nothing to say.
 - Under `## Examples`, use `::: example` pointing at a test or type by name (`path#Name`) in all three languages. `npm run docs:examples` writes the usage sample into `docs/examples/` and the test path plus line range into `docs/examples/lines`. The transform renders that sample; do not paste fictional fences.
 - Optional `output [Title]` fences in `::: example` render as titled textboxes under the sample. Use `output:typescript` / `output:csharp` / `output:rust` when the printed value differs by dialect.

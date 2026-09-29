@@ -1,6 +1,6 @@
 # Command
 
-Named command bound to an optional open [connection](./connection.md). `CreateCommand` / `createCommand` / `create_command` is sync. The caller executes it.
+Named command bound to an optional open [connection](./connection.md). {{CreateCommand|createCommand|create_command}} is sync. The caller executes it.
 
 ## Classes
 
@@ -838,21 +838,24 @@ async fn next_result(&self) -> Result<bool>
 
 ## Remarks
 
-The connection must be open before `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader`.
+The connection must be open before {{Execute|execute|execute}} or {{ExecuteReader|executeReader|execute_reader}}.
 
-`AddMiddleware` / `addMiddleware` / `add_middleware` runs `BeforeCommand` / `beforeCommand` / `before_command` then the command, then `AfterCommand` / `afterCommand` / `after_command`. A `beforeCommand` error skips the command. A command error still runs `afterCommand` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console. Verbose logs use AfterCommand for the result body.
+{{AddMiddleware|addMiddleware|add_middleware}} runs {{BeforeCommand|beforeCommand|before_command}}, then the command, then {{AfterCommand|afterCommand|after_command}}. A {{BeforeCommand|beforeCommand|before_command}} error skips the command. A command error still runs {{AfterCommand|afterCommand|after_command}} with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console. Verbose logs use {{AfterCommand|afterCommand|after_command}} for the result body.
 
 Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
 
-SQLite, MySQL, and Postgres map statement `Execute` / `ExecuteReader` through a provider statement factory. A compiled create table is rendered by that dialect's `CreateTableStatementRenderer`, which overrides column type, default, and identity, then the command executes that text. The factory stays separate from the renderer. Wrapped create-table text and every other statement pass through. Other dialects send `GetText()` / `getText()` / `get_text()`.
+SQLite, MySQL, and Postgres map statement {{Execute|execute|execute}} and {{ExecuteReader|executeReader|execute_reader}} through a provider statement factory. A compiled create table is rendered by that dialect's `CreateTableStatementRenderer`, which overrides column type, default, and identity, then the command executes that text. The factory stays separate from the renderer. Wrapped create-table text and every other statement pass through. Other dialects send {{GetText()|getText()|get_text()}}.
 
-The Rust `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection today.
+::: prose
+### rust
+The `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection.
+:::
 
-`ExecuteReader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next`. SQL `AfterCommand` for `ExecuteReader` receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
+{{ExecuteReader|executeReader|execute_reader}} returns a reader for the first result set. {{Next|next|next}} reads that set. {{NextResult|nextResult|next_result}} advances to the next set. Rows stay unread until {{Next|next|next}}. SQL {{AfterCommand|afterCommand|after_command}} for {{ExecuteReader|executeReader|execute_reader}} receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
 
-`ExecuteReader` returns rows. Convert with [RowTypeConverter](./row-type-converter.md), then map with a [Mapper](./mappers.md).
+{{ExecuteReader|executeReader|execute_reader}} returns rows. Convert with [RowTypeConverter](./row-type-converter.md), then map with a [Mapper](./mappers.md).
 
-[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection) / [InputOutput](#parameterdirection) / [ReturnValue](#parameterdirection) values are filled on [Response.Parameters](#response-parameters) after `Execute`. A [ReturnValue](#parameterdirection) copies onto [Response.Result](#response-result) when `Result` would otherwise be null. `Execute` on `SELECT` text reads the first scalar into `Result`.
+[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection) / [InputOutput](#parameterdirection) / [ReturnValue](#parameterdirection) values are filled on [Response.Parameters](#response-parameters) after {{Execute|execute|execute}}. A [ReturnValue](#parameterdirection) copies onto [Response.Result](#response-result) when `Result` would otherwise be null. {{Execute|execute|execute}} on `SELECT` text reads the first scalar into `Result`.
 
 ## Examples
 

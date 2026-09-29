@@ -182,7 +182,7 @@ See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and [Readonly
 
 ### Type Converter
 
-`TypeConverter` is only `Convert` / `ReverseConvert`. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
+`TypeConverter` is only `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert`. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
 
 ##### C#
 
@@ -810,11 +810,23 @@ HashMap<String, String>
 
 ### Remarks
 
-`Datasource.Default` / `Datasource.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `DatasourceFactory.Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
+`Datasource.Default` / `Datasource.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `DatasourceFactory.Create(null)` / `DatasourceFactory.create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
 
-Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalog`. C# loads the assembly, TypeScript loads the package, and Rust loads the provider cdylib.
+Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalog`.
 
-`Reset` / `reset` clears the registry. Use it in tests.
+> **TypeScript**
+>
+> Load the provider package.
+
+> **C#**
+>
+> Load the assembly.
+
+> **Rust**
+>
+> Load the provider cdylib.
+
+`Reset` / `reset` / `reset` clears the registry. Use it in tests.
 
 See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
 
@@ -1203,13 +1215,23 @@ async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<A
 
 ### Remarks
 
-`CreateConnection` / `createConnection` / `create_connection` returns a closed connection. It is not open until `Open` / `open`. Calling `Open` / `open` on an open connection throws.
+`CreateConnection` / `createConnection` / `create_connection` returns a closed connection. It is not open until `Open` / `open` / `open`. Calling `Open` / `open` / `open` on an open connection throws.
 
-C# and TypeScript close the connection at the end of an `await using` block. Otherwise call `Close` / `close`. Rust has no `using`; call `close().await`.
+> **TypeScript**
+>
+> Close the connection at the end of an `await using` block, or call `close`.
 
-`StartTransaction` requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
+> **C#**
+>
+> Close the connection at the end of an `await using` block, or call `Close`.
 
-Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / `FileStore`, `MemoryStore`). SQLite, MySQL, and Postgres open the database client on the connection. Stub dialects throw not-implemented on open, close, and start-transaction.
+> **Rust**
+>
+> There is no `using`. Call `close().await`.
+
+`StartTransaction` / `startTransaction` / `start_transaction` requires an open connection. Memory, JSON, and SQLite throw when the connection is closed.
+
+Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / `IFileStore` / `FileStore`, `MemoryStore`). SQLite, MySQL, and Postgres open the database client on the connection. Stub dialects throw not-implemented on open, close, and start-transaction.
 
 ### Examples
 
@@ -1293,7 +1315,9 @@ await command.execute("insert");
 
 #### Close with using
 
-Rust has no `using`. Call `close`.
+> **Rust**
+>
+> There is no `using`. Call `close`.
 
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L45-L50)
 
@@ -1543,9 +1567,21 @@ pub enum IsolationLevel
 
 `StartTransaction` / `startTransaction` / `start_transaction` requires an open [connection](#connection). It returns a transaction that is not committed.
 
-`Commit` / `commit` persists work. `Abort` / `abort` rolls it back.
+`Commit` / `commit` / `commit` persists work. `Abort` / `abort` / `abort` rolls it back.
 
-Omitted isolation is `Serializable` (TypeScript omits the argument, C# defaults, Rust uses `None`). Memory, JSON, and SQLite throw when the connection is closed.
+Omitted isolation is `Serializable`. Memory, JSON, and SQLite throw when the connection is closed.
+
+> **TypeScript**
+>
+> Omit the argument.
+
+> **C#**
+>
+> The parameter defaults to `Serializable`.
+
+> **Rust**
+>
+> Pass `None`.
 
 ### Examples
 
@@ -2650,19 +2686,21 @@ async fn next_result(&self) -> Result<bool>
 
 The connection must be open before `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader`.
 
-`AddMiddleware` / `addMiddleware` / `add_middleware` runs `BeforeCommand` / `beforeCommand` / `before_command` then the command, then `AfterCommand` / `afterCommand` / `after_command`. A `beforeCommand` error skips the command. A command error still runs `afterCommand` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console. Verbose logs use AfterCommand for the result body.
+`AddMiddleware` / `addMiddleware` / `add_middleware` runs `BeforeCommand` / `beforeCommand` / `before_command`, then the command, then `AfterCommand` / `afterCommand` / `after_command`. A `BeforeCommand` / `beforeCommand` / `before_command` error skips the command. A command error still runs `AfterCommand` / `afterCommand` / `after_command` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console. Verbose logs use `AfterCommand` / `afterCommand` / `after_command` for the result body.
 
 Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
 
-SQLite, MySQL, and Postgres map statement `Execute` / `ExecuteReader` through a provider statement factory. A compiled create table is rendered by that dialect's `CreateTableStatementRenderer`, which overrides column type, default, and identity, then the command executes that text. The factory stays separate from the renderer. Wrapped create-table text and every other statement pass through. Other dialects send `GetText()` / `getText()` / `get_text()`.
+SQLite, MySQL, and Postgres map statement `Execute` / `execute` / `execute` and `ExecuteReader` / `executeReader` / `execute_reader` through a provider statement factory. A compiled create table is rendered by that dialect's `CreateTableStatementRenderer`, which overrides column type, default, and identity, then the command executes that text. The factory stays separate from the renderer. Wrapped create-table text and every other statement pass through. Other dialects send `GetText()` / `getText()` / `get_text()`.
 
-The Rust `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection today.
+> **Rust**
+>
+> The `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection.
 
-`ExecuteReader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next`. SQL `AfterCommand` for `ExecuteReader` receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
+`ExecuteReader` / `executeReader` / `execute_reader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next` / `next` / `next`. SQL `AfterCommand` / `afterCommand` / `after_command` for `ExecuteReader` / `executeReader` / `execute_reader` receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
 
-`ExecuteReader` returns rows. Convert with [RowTypeConverter](#row-type-converter), then map with a [Mapper](#mapper).
+`ExecuteReader` / `executeReader` / `execute_reader` returns rows. Convert with [RowTypeConverter](#row-type-converter), then map with a [Mapper](#mapper).
 
-[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection) / [InputOutput](#parameterdirection) / [ReturnValue](#parameterdirection) values are filled on [Response.Parameters](#response-parameters) after `Execute`. A [ReturnValue](#parameterdirection) copies onto [Response.Result](#response-result) when `Result` would otherwise be null. `Execute` on `SELECT` text reads the first scalar into `Result`.
+[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection) / [InputOutput](#parameterdirection) / [ReturnValue](#parameterdirection) values are filled on [Response.Parameters](#response-parameters) after `Execute` / `execute` / `execute`. A [ReturnValue](#parameterdirection) copies onto [Response.Result](#response-result) when `Result` would otherwise be null. `Execute` / `execute` / `execute` on `SELECT` text reads the first scalar into `Result`.
 
 ### Examples
 
@@ -2916,7 +2954,7 @@ let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fi
 
 ## Statements
 
-Command text. [Command](#command) `Execute` / `ExecuteReader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only.
+Command text. [Command](#command) `Execute` / `execute` / `execute` and `ExecuteReader` / `executeReader` / `execute_reader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only.
 
 ### Classes
 
@@ -5449,7 +5487,7 @@ fn where_clause(&self) -> Option<&dyn IWhere>
 
 ### Remarks
 
-Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is present. `Raw` / `raw` wraps command text without compiling. Keep the [Where](#where) when the caller needs bound parameters.
+Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is present. `Raw` / `raw` / `raw` wraps command text without compiling. Keep the [Where](#where) when the caller needs bound parameters.
 
 ### Examples
 
@@ -6424,7 +6462,7 @@ pub enum ReferentialAction
 
 ### Remarks
 
-A compiled statement stores the table, columns, and constraints. `GetText()` / `getText()` / `get_text()` renders `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTRAINT n NOT NULL], …, CONSTRAINT name …)`. Table and column names are interpolated as given. Default and check values are raw SQL fragments. Wrapped text has no table. Indexes use [CreateIndexStatement](#create-index-statement). `GetText()` uses `CreateTableStatementRenderer`. A provider subclasses that renderer and can replace `Render` or override type, default, and identity. SQLite, MySQL, and Postgres override type so canonical names become engine types. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. Identity renders `AUTO_INCREMENT` or `GENERATED BY DEFAULT AS IDENTITY`. SQLite leaves identity empty. `GetText()` leaves those changes off. Other commands use the rendered text.
+A compiled statement stores the table, columns, and constraints. `GetText()` / `getText()` / `get_text()` renders `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTRAINT n NOT NULL], …, CONSTRAINT name …)`. Table and column names are interpolated as given. Default and check values are raw SQL fragments. Wrapped text has no table. Indexes use [CreateIndexStatement](#create-index-statement). `GetText()` / `getText()` / `get_text()` uses `CreateTableStatementRenderer`. A provider subclasses that renderer and can replace `Render` / `render` / `render` or override type, default, and identity. SQLite, MySQL, and Postgres override type so canonical names become engine types. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. Identity renders `AUTO_INCREMENT` or `GENERATED BY DEFAULT AS IDENTITY`. SQLite leaves identity empty. `GetText()` / `getText()` / `get_text()` leaves those changes off. Other commands use the rendered text.
 
 ### Examples
 
@@ -9438,9 +9476,19 @@ pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
 
 SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
 
-A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception) / [RepositoryNotRegisteredError](#repositorynotregisterederror) / `DatasourceError`.
+> **TypeScript**
+>
+> A missing repository throws [RepositoryNotRegisteredError](#repositorynotregisterederror).
 
-See [Datasource](#datasource) for `CreateRepository` / `createRepository`.
+> **C#**
+>
+> A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception).
+
+> **Rust**
+>
+> A missing repository throws `DatasourceError`.
+
+See [Datasource](#datasource) for `CreateRepository` / `createRepository` / `create_repository`.
 
 ### Examples
 
@@ -9481,9 +9529,9 @@ const created = factory.create(Item);
 
 ## Readonly repository
 
-Read-only typed read over a connection. `ReadSingle` / `readSingle` / `read_single` returns the first row or none. `Read` / `read` yields every row.
+Read-only typed read over a connection. `ReadSingle` / `readSingle` / `read_single` returns the first row or none. `Read` / `read` / `read` yields every row.
 
-Construct it with a connection, then register each fill with `AddEnriched` / `addEnriched` / `add_enriched`. That fill runs after convert-then-map. Lookups use `ReadSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read`. Missing lookups leave the destination default. This type does not write. Writes are [CRUDRepository](#crud-repository).
+Construct it with a connection, then register each fill with `AddEnriched` / `addEnriched` / `add_enriched`. That fill runs after convert-then-map. Lookups use `ReadSingle` / `readSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read` / `read`. Missing lookups leave the destination default. This type does not write. Writes are [CRUDRepository](#crud-repository).
 
 ### Classes
 
@@ -10491,7 +10539,7 @@ async fn enrich(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()>
 
 ### Remarks
 
-`AddEnriched` / `addEnriched` / `add_enriched` registers a read fill. With no enrichments, `Read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
+`AddEnriched` / `addEnriched` / `add_enriched` registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 
@@ -13722,7 +13770,17 @@ pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) ->
 
 ### Remarks
 
-C# exposes list overloads (`Create(IReadOnlyList<T>)`) and `Bulk*` aliases. TypeScript and Rust use `createBulk` / `create_bulk` only.
+> **TypeScript**
+>
+> Bulk writes use `createBulk` only.
+
+> **C#**
+>
+> List overloads are `Create(IReadOnlyList<T>)`, with `Bulk*` aliases.
+
+> **Rust**
+>
+> Bulk writes use `create_bulk` only.
 
 Each item still runs the same deep persist as [CRUDRepository](#crud-repository). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
 
@@ -13772,7 +13830,7 @@ const response = await relate(parentsRepo, childrenRepo).createBulk([
 
 ## Mapper
 
-Bidirectional `Map` / `ReverseMap`. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
+Bidirectional `Map` / `map` / `map` and `ReverseMap` / `reverseMap` / `reverse_map`. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
 
 ### Classes
 
@@ -14642,7 +14700,7 @@ fn reverse_map(&self, value: String) -> String
 
 ### Remarks
 
-Use this as [EntityMapper](#entitymapper) when the type name is singular and the table name is a lowercase plural. Setting `Entity` / `entity` skips the mapper.
+Use this as [EntityMapper](#entitymapper) when the type name is singular and the table name is a lowercase plural. Setting `Entity` / `entity` / `entity` skips the mapper.
 
 ### Examples
 
@@ -15854,7 +15912,19 @@ pub type MappedRow = HashMap<String, MappedValue>
 
 ### Remarks
 
-C# and Rust map to a [MappedValue](#mappedvalue) graph. TypeScript maps to generic `T`. Nested group fields on a collection are omitted.
+> **TypeScript**
+>
+> Map to generic `T`.
+
+> **C#**
+>
+> Map to a [MappedValue](#mappedvalue) graph.
+
+> **Rust**
+>
+> Map to a [MappedValue](#mappedvalue) graph.
+
+Nested group fields on a collection are omitted.
 
 This is a collapse mapper, not enrichment. Related fills after read use [Readonly repository](#ienriched).
 
@@ -16217,7 +16287,7 @@ const flat = mapper.reverseMap(nested);
 
 ## TypeConverter
 
-`TypeConverter` is only `Convert` / `ReverseConvert`. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
+`TypeConverter` is only `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert`. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
 ### Classes
 
@@ -16449,7 +16519,7 @@ Repository read is convert, then map. See [TransformMapper](#transform-mapper) a
 
 ## RowTypeConverter
 
-TypeConverter for a row. Holds `Types` / `types` and `Fields` / `fields`. Convert uses `Fields[name]`. `Types` is the provider catalog merge and is unused at convert time.
+TypeConverter for a row. Holds `Types` / `types` / `types` and `Fields` / `fields` / `fields`. `Convert` / `convert` / `convert` uses `Fields[name]` / `fields[name]` / `fields[name]`. `Types` / `types` / `types` is the provider catalog merge and is unused at convert time.
 
 ### Classes
 
@@ -16771,7 +16841,7 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 ### Remarks
 
-`Types` / `types` is the provider catalog merge. Convert and reverse-convert only consult `Fields` / `fields`.
+`Types` / `types` / `types` is the provider catalog merge. `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert` only consult `Fields` / `fields` / `fields`.
 
 Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [CRUD repository](#crud-repository).
 
@@ -16842,7 +16912,7 @@ const dest = converter.convert({ flag: 1, name: "a" });
 
 Supporting types for building a datasource and reading a connection URL.
 
-- [Datasource Factory](#datasource-factory) — `Create` / `create` registers providers and builds a datasource from options
+- [Datasource Factory](#datasource-factory) — `Create` / `create` / `create` registers providers and builds a datasource from options
 - [Datasource URL](#datasource-url) — `DatasourceUrlParser` reads a connection URL into a `DatasourceUrl`
 
 ## DatasourceFactory
@@ -17206,11 +17276,11 @@ pub fn registered() -> Vec<String>
 
 ### Remarks
 
-`Create(null)` / `create()` / `create(None)` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError`. [Datasource.Default](#datasource) uses that path.
+`Create(null)` / `create()` / `create(None)` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError` / `DatasourceError`. [Datasource.Default](#datasource) uses that path.
 
-A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
+A missing factory throws `ProviderNotInstalledException` / `ProviderNotInstalledError` / `DatasourceError::ProviderNotInstalled`.
 
-When `Create` is called with null / `undefined` / `None` options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. Every dialect loads those with `DriverLoader` and `ProviderCatalog`. Each dialect implements [IDriver](#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
+When `Create` / `create` / `create` is called with `null` / `undefined` / `None` options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. Every dialect loads those with `DriverLoader` and `ProviderCatalog`. Each dialect implements [IDriver](#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `Register` / `register` / `register` stores.
 
 ### Examples
 
@@ -17583,7 +17653,7 @@ npx @datasources/cli remove postgres
 
 ### .env
 
-`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. Process env overrides the same three keys. `Create` with omitted options registers each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL`. The datasource itself is `PROVIDER`.
+`setup` writes these keys. `add` / `remove` update the provider list. Other keys already in the file are kept. Process env overrides the same three keys. `Create` / `create` / `create` with omitted options registers each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL`. The datasource itself is `PROVIDER`.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
@@ -17601,7 +17671,7 @@ SQLAlchemy-style SQLite URLs: `sqlite:///:memory:`, `sqlite:///app.db`, `sqlite:
 
 ## Writing Providers
 
-A provider package implements `IDriver` / `Driver` and exports only that type. `DatasourceFactory.Register` / `register` stores it by name. The driver builds the connection, command, and transaction, and supplies row cell converters when native values are not already canonical cells.
+A provider package implements `IDriver` / `IDriver` / `Driver` and exports only that type. `DatasourceFactory.Register` / `DatasourceFactory.register` / `register` stores it by name. The driver builds the connection, command, and transaction, and supplies row cell converters when native values are not already canonical cells.
 
 Every provider names the type `*Driver` (`JsonDriver`, `SqliteDriver`).
 
@@ -17948,21 +18018,41 @@ fn column_type(&self, name: &str) -> Result<String>
 
 ### Remarks
 
-`connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](#datasource-url). `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
+`Connection` / `connection` / `connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](#datasource-url). `Command` / `command` / `command` delegates to the connection's `CreateCommand` / `createCommand` / `create_command`. `Transaction` / `transaction` / `transaction` builds the dialect transaction. Isolation defaults to serializable.
 
-`rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
+`RowTypeConverters` / `rowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
-The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. The statement's own `GetText` throws until a provider formats it.
+The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. The statement's own `GetText` / `getText` / `get_text` throws until a provider formats it.
 
-`columnType` / `ColumnType` / `column_type` maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. TypeScript drivers assign the exported `columnType` function; C# and Rust inherit the default method. MySQL, Postgres, and SQLite override it and throw on an unknown name.
+`ColumnType` / `columnType` / `column_type` maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. MySQL, Postgres, and SQLite override it and throw on an unknown name.
+
+> **TypeScript**
+>
+> Assign the exported `columnType` function.
+
+> **C#**
+>
+> Inherit the default method.
+
+> **Rust**
+>
+> Inherit the default method.
 
 SQLite, MySQL, and Postgres each keep create-table rendering on their own `CreateTableStatementRenderer`. The statement factory does not subclass that renderer. It maps a compiled create table to the rendered text and maps `SelectInsertedIdStatement` to `SELECT last_insert_rowid()`, `SELECT LAST_INSERT_ID()`, or `SELECT lastval()`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call the factory before the string execute. The renderer overrides column type. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
 
 The package exports only the driver type.
 
-- C#: that class is `public`. Connection, command, transaction, options, and converters are `internal`. `InternalsVisibleTo` opens them to the test project and to an engine assembly such as `Datasources.Sqlite.Microsoft`. `GetExportedTypes()` is exactly the driver. The engine assembly exports nothing.
-- TypeScript: `src/index.ts` is one line, `export { SqliteDriver } from "./SqliteDriver.ts"`. `package.json` `exports` points only at that file.
-- Rust: `lib.rs` declares private modules and one `pub use` of the driver. `pub` items inside those modules stay crate-private.
+> **TypeScript**
+>
+> `src/index.ts` is one line, `export { SqliteDriver } from "./SqliteDriver.ts"`. `package.json` `exports` points only at that file.
+
+> **C#**
+>
+> That class is `public`. Connection, command, transaction, options, and converters are `internal`. `InternalsVisibleTo` opens them to the test project and to an engine assembly such as `Datasources.Sqlite.Microsoft`. `GetExportedTypes()` is exactly the driver. The engine assembly exports nothing.
+
+> **Rust**
+>
+> `lib.rs` declares private modules and one `pub use` of the driver. `pub` items inside those modules stay crate-private.
 
 `PublicSurfaceTests` in each C# provider test project, the `exports only the provider` test in `typescript/datasources`, and `providers_export_only_their_provider` in `datasources` reject a second export.
 

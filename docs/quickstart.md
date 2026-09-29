@@ -145,7 +145,7 @@ See [Mapper](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`,
 
 ## Type Converter
 
-`TypeConverter` is only `Convert` / `ReverseConvert`. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
+`TypeConverter` is only {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}}. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
 
 ::: dialects
 ```csharp

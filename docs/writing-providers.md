@@ -1,6 +1,6 @@
 # Writing Providers
 
-A provider package implements `IDriver` / `Driver` and exports only that type. `DatasourceFactory.Register` / `register` stores it by name. The driver builds the connection, command, and transaction, and supplies row cell converters when native values are not already canonical cells.
+A provider package implements {{IDriver|IDriver|Driver}} and exports only that type. {{DatasourceFactory.Register|DatasourceFactory.register|register}} stores it by name. The driver builds the connection, command, and transaction, and supplies row cell converters when native values are not already canonical cells.
 
 Every provider names the type `*Driver` (`JsonDriver`, `SqliteDriver`).
 
@@ -214,21 +214,35 @@ fn column_type(&self, name: &str) -> Result<String>
 
 ## Remarks
 
-`connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](./sections/datasource-url.md). `command` delegates to the connection's `createCommand` / `CreateCommand` / `create_command`. `transaction` builds the dialect transaction. Isolation defaults to serializable.
+{{Connection|connection|connection}} receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](./sections/datasource-url.md). {{Command|command|command}} delegates to the connection's {{CreateCommand|createCommand|create_command}}. {{Transaction|transaction|transaction}} builds the dialect transaction. Isolation defaults to serializable.
 
-`rowTypeConverters` / `RowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](./sections/type-converters.md). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
+{{RowTypeConverters|rowTypeConverters|row_type_converters}} maps a canonical type name to a [TypeConverter](./sections/type-converters.md). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
-The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. The statement's own `GetText` throws until a provider formats it.
+The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. The statement's own {{GetText|getText|get_text}} throws until a provider formats it.
 
-`columnType` / `ColumnType` / `column_type` maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. TypeScript drivers assign the exported `columnType` function; C# and Rust inherit the default method. MySQL, Postgres, and SQLite override it and throw on an unknown name.
+{{ColumnType|columnType|column_type}} maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
-SQLite, MySQL, and Postgres each keep create-table rendering on their own `CreateTableStatementRenderer`. The statement factory does not subclass that renderer. It maps a compiled create table to the rendered text and maps `SelectInsertedIdStatement` to `SELECT last_insert_rowid()`, `SELECT LAST_INSERT_ID()`, or `SELECT lastval()`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call the factory before the string execute. The renderer overrides column type. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
+::: prose
+### typescript
+Assign the exported `columnType` function.
+### csharp
+Inherit the default method.
+### rust
+Inherit the default method.
+:::
+
+SQLite, MySQL, and Postgres each keep create-table rendering on their own `CreateTableStatementRenderer`. The statement factory does not subclass that renderer. It maps a compiled create table to the rendered text and maps `SelectInsertedIdStatement` to `SELECT last_insert_rowid()`, `SELECT LAST_INSERT_ID()`, or `SELECT lastval()`. Statement {{Execute|executeStatement|execute_statement}} and the reader overloads call the factory before the string execute. The renderer overrides column type. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
 
 The package exports only the driver type.
 
-- C#: that class is `public`. Connection, command, transaction, options, and converters are `internal`. `InternalsVisibleTo` opens them to the test project and to an engine assembly such as `Datasources.Sqlite.Microsoft`. `GetExportedTypes()` is exactly the driver. The engine assembly exports nothing.
-- TypeScript: `src/index.ts` is one line, `export { SqliteDriver } from "./SqliteDriver.ts"`. `package.json` `exports` points only at that file.
-- Rust: `lib.rs` declares private modules and one `pub use` of the driver. `pub` items inside those modules stay crate-private.
+::: prose
+### csharp
+That class is `public`. Connection, command, transaction, options, and converters are `internal`. `InternalsVisibleTo` opens them to the test project and to an engine assembly such as `Datasources.Sqlite.Microsoft`. `GetExportedTypes()` is exactly the driver. The engine assembly exports nothing.
+### typescript
+`src/index.ts` is one line, `export { SqliteDriver } from "./SqliteDriver.ts"`. `package.json` `exports` points only at that file.
+### rust
+`lib.rs` declares private modules and one `pub use` of the driver. `pub` items inside those modules stay crate-private.
+:::
 
 `PublicSurfaceTests` in each C# provider test project, the `exports only the provider` test in `typescript/datasources`, and `providers_export_only_their_provider` in `datasources` reject a second export.
 
