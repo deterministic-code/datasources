@@ -1,4 +1,4 @@
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
 const connection = await ds.createConnection();
 await connection.open();
 const txn = await connection.startTransaction();

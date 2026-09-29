@@ -1,6 +1,6 @@
 # Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. `Default` / `default` / `DatasourceFactory.default` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
+`@datasources/cli` installs provider packages and writes a local `.env`. `Datasource.Default` / `Datasource.default` / `default()` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
 
 ```sh
 npx @datasources/cli setup

@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DatasourceFactory, MockDriver } from "./index.ts";
+import { Datasource, DatasourceFactory, MockDriver } from "./index.ts";
 
 const envKeys = [
   "INSTALLED_PROVIDERS",
@@ -26,7 +26,7 @@ afterAll(() => {
 
 describe("Transaction", () => {
   it("start from default", async () => {
-    const ds = DatasourceFactory.default;
+    const ds = Datasource.default;
     const connection = await ds.createConnection();
     await connection.open();
     const txn = await connection.startTransaction();

@@ -1,4 +1,4 @@
-import { ConsoleCommandMiddleware, DatasourceFactory } from "@datasources/core";
+import { ConsoleCommandMiddleware, Datasource } from "@datasources/core";
 import "@datasources/register";
 import { existsSync, readFileSync } from "node:fs";
 import { App } from "./app.ts";
@@ -19,7 +19,7 @@ const env = (key: string): string => {
 const run = async (args: string[]): Promise<number> => {
   try {
     const parsed = parse(args);
-    const ds = DatasourceFactory.default;
+    const ds = Datasource.default;
     const connection = await ds.createConnection();
     await connection.open();
     const command = ds.createCommand(connection);

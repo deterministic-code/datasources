@@ -5,6 +5,7 @@ public sealed class Datasource(
     IDriver driver,
     IReadOnlyDictionary<string, string?>? options = null) : IDatasource
 {
+    public static IDatasource Default => DatasourceFactory.Create();
     IConnection? _connection;
     public string Provider { get; } = provider;
     IConnection DefaultConnection() => _connection ??= driver.Connection(options);

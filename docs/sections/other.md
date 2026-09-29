@@ -1,5 +1,6 @@
 # Other
 
-Types that sit beside a connection, command, or repository. A provider may use them. Nothing here is required to open a connection.
+Supporting types for building a datasource and reading a connection URL.
 
+- [Datasource Factory](./datasource-factory.md) — `Create` / `create` registers providers and builds a datasource from options
 - [Datasource URL](./datasource-url.md) — `DatasourceUrlParser` reads a connection URL into a `DatasourceUrl`

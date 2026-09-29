@@ -552,17 +552,17 @@ public class CoreTests
         DatasourceFactory.Reset();
         var error = Assert.Throws<DatasourceException>(() => DatasourceFactory.Create());
         Assert.Equal("Datasource defaults are not specified", error.Message);
-        Assert.Throws<DatasourceException>(() => _ = DatasourceFactory.Default);
+        Assert.Throws<DatasourceException>(() => _ = Datasource.Default);
         DatasourceFactory.Register("sqlite", new MockDriver());
         DatasourceFactory.Register("memory", new MockDriver());
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
-        Assert.Throws<DatasourceException>(() => _ = DatasourceFactory.Default);
+        Assert.Throws<DatasourceException>(() => _ = Datasource.Default);
         Environment.SetEnvironmentVariable("DATASOURCE_URL", null);
         Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
-        Assert.Equal("sqlite", DatasourceFactory.Default.Provider);
+        Assert.Equal("sqlite", Datasource.Default.Provider);
         Environment.SetEnvironmentVariable("PROVIDER", "memory");
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
-        Assert.Equal("memory", DatasourceFactory.Default.Provider);
+        Assert.Equal("memory", Datasource.Default.Provider);
     }
 
     [Fact]

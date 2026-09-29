@@ -1,6 +1,6 @@
 # Datasource
 
-One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `Create` is on [DatasourceFactory](./datasource-factory.md).
+One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `default()` loads the provider from the environment. `Create` is on [DatasourceFactory](./datasource-factory.md).
 
 ## Classes
 
@@ -25,6 +25,18 @@ constructor(provider: string, driver: IDriver, options?: DatasourceOptions)
 - `provider` — registered provider name
 - `driver` — [IDriver](../writing-providers.md#idriver) that builds connections, commands, transactions, and row converters
 - `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.connection`
+
+**Properties**
+
+##### default
+
+Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [create](#create-options) with no options.
+
+```typescript
+static get default(): IDatasource
+```
+
+**Returns** [IDatasource](#idatasource)
 
 **Methods**
 
@@ -155,6 +167,18 @@ public Datasource(string provider, IDriver driver, IReadOnlyDictionary<string, s
 - `driver` — [IDriver](../writing-providers.md#idriver) that builds connections, commands, transactions, and row converters
 - `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.Connection`
 
+**Properties**
+
+##### Default
+
+Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [DatasourceFactory.Create](./datasource-factory.md#create-options) with no options.
+
+```csharp
+public static IDatasource Default { get; }
+```
+
+**Returns** [IDatasource](#idatasource)
+
 #### IDatasource
 
 ```csharp
@@ -268,6 +292,24 @@ pub fn new(provider: impl Into<String>, driver: Arc<dyn Driver>, options: Option
 - `driver` — [Driver](../writing-providers.md#driver) that builds connections, commands, transactions, and row converters
 - `options` — [DatasourceOptions](#datasourceoptions) passed to `driver.connection`
 
+#### datasources
+
+```rust
+// datasources
+```
+
+**Methods**
+
+##### default()
+
+Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [create](./datasource-factory.md#create-options) with no options.
+
+```rust
+pub fn default() -> Result<Arc<dyn Datasource>>
+```
+
+**Returns** `Result<Arc<dyn `[Datasource](#datasource)`>>`
+
 #### Datasource
 
 ```rust
@@ -363,7 +405,7 @@ Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`
 
 ## Remarks
 
-`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
+`Datasource.Default` / `Datasource.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `DatasourceFactory.Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
 
 C# loads each installed provider with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust register those names through `@datasources/register` and `datasources-register` when that package is present.
 
@@ -377,12 +419,23 @@ See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [
 
 ::: dialects
 ```csharp
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 ```
 ```rust
 let ds = default()?;
 ```
 ```typescript
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
+```
+:::
+
+### Default from environment
+
+::: example
+```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#DefaultFromEnvironment
+```
+```rust rust/datasources/src/tests/datasource_factory.rs#default_from_environment
+```
+```typescript typescript/datasources/src/DatasourceFactory.test.ts#default-from-environment
 ```
 :::

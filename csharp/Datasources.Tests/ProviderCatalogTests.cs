@@ -89,7 +89,7 @@ public class ProviderCatalogTests
         try
         {
             Assert.Equal("memory", DatasourceFactory.Create().Provider);
-            Assert.Equal("memory", DatasourceFactory.Default.Provider);
+            Assert.Equal("memory", Datasource.Default.Provider);
             Assert.Equal(["json", "memory"], DatasourceFactory.Registered());
         }
         finally
@@ -108,7 +108,7 @@ public class ProviderCatalogTests
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "json://");
         try
         {
-            Assert.Equal("json", DatasourceFactory.Default.Provider);
+            Assert.Equal("json", Datasource.Default.Provider);
         }
         finally
         {

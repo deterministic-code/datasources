@@ -34,10 +34,6 @@ pub fn default() -> Result<Arc<dyn Datasource>> {
     create(None)
 }
 
-pub fn create_default() -> Result<Arc<dyn Datasource>> {
-    default()
-}
-
 fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
     options
         .get(key)

@@ -4,8 +4,6 @@ public sealed class DatasourceFactory : IDatasourceFactory
 {
     static readonly Dictionary<string, IDriver> Factories = new();
 
-    public static IDatasource Default => Create();
-
     public static void Defaults(IReadOnlyDictionary<string, string?> options) => RegisterInstalled(options);
 
     public static void Register(string provider, IDriver driver) =>

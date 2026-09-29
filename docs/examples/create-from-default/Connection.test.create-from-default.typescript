@@ -1,2 +1,2 @@
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
 const connection = await ds.createConnection();

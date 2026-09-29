@@ -3,7 +3,7 @@ using System.Text;
 using ContactsCrudEnrichedMediumRest;
 using Datasources;
 
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 await Migrate.Apply(ds.CreateCommand(connection));

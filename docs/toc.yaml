@@ -8,9 +8,6 @@ pages:
     title: Feature Matrix
   - path: examples.md
     title: Examples
-  - path: sections/datasource-factory.md
-    title: Datasource Factory
-    group: Code Reference
   - path: sections/datasource.md
     title: Datasource
     group: Code Reference
@@ -126,6 +123,10 @@ pages:
   - path: sections/other.md
     title: Other
     group: Code Reference
+  - path: sections/datasource-factory.md
+    title: Datasource Factory
+    group: Code Reference
+    parent: Other
   - path: sections/datasource-url.md
     title: Datasource URL
     group: Code Reference

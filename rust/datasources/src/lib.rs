@@ -104,7 +104,7 @@ pub use converters::{
     Casing, ChangeCasingConverter, ConvertSchema, PluralizerConverter, RegexConverter,
     ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter,
 };
-pub use create::{create, create_default, default};
+pub use create::{create, default};
 pub use create_crud_repository_options::create_crud_repository_options;
 pub use crud_repository::CRUDRepository;
 pub use crud_repository_options::CRUDRepositoryOptions;

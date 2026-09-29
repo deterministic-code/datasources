@@ -1,2 +1,2 @@
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 var connection = await ds.CreateConnection();

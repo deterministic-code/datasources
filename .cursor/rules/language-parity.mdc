@@ -11,10 +11,10 @@ A remark that says one language does it differently is a bug. Fix the code. Do n
 
 Call-site shape must match (names follow each language’s convention only: `Read` / `read` / `read`). One parameter that is query-or-where in C# is one parameter everywhere — not `read` plus `read_where`.
 
-`Defaults` / `Create` / `Register` / `Default` mean the same thing everywhere. If env already has `INSTALLED_PROVIDERS` and `DATASOURCE_URL`, `Default` / `default` / `DatasourceFactory.default` applies those defaults and registers the listed factories.
+`Defaults` / `Create` / `Register` / `Default` mean the same thing everywhere. If env already has `INSTALLED_PROVIDERS` and `DATASOURCE_URL`, `Datasource.Default` / `Datasource.default` / `default()` applies those defaults and registers the listed factories.
 
 ```csharp
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 await repo.Read(new Where(new Operator.Equals("id", 9)));
 ```
 
@@ -24,6 +24,6 @@ repo.read_single_where(&Where::new(Operator::equals("id", 9))).await?;
 ```
 
 ```typescript
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
 for await (const row of repo.read(new Where(new Operator.Equals("id", 9)))) { }
 ```
