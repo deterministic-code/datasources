@@ -1804,9 +1804,9 @@ async fn table_repository() {
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
 
-    let from_id = create_repository_options::<Item>();
+    let from_id = create_crud_repository_options::<Item>();
     assert_eq!(from_id.ids, vec!["id".to_string()]);
-    assert!(create_repository_options::<Label>().ids.is_empty());
+    assert!(create_crud_repository_options::<Label>().ids.is_empty());
     CRUDRepository::new(MockConnection::new(), from_id).unwrap();
     CRUDRepository::from_type::<Item>(MockConnection::new()).unwrap();
 }
@@ -1820,7 +1820,7 @@ fn repository_entity_type() {
         TypeId::of::<Item>()
     );
     let untyped =
-        CRUDRepository::new(MockConnection::new(), create_repository_options::<Item>()).unwrap();
+        CRUDRepository::new(MockConnection::new(), create_crud_repository_options::<Item>()).unwrap();
     assert_eq!(untyped.entity_type(), TypeId::of::<Row>());
     assert_eq!(
         StubRepository::new("memory").entity_type(),

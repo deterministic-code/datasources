@@ -393,10 +393,10 @@ public class RepositoryTests
     public void FromTypeBuildsOptions()
     {
         var connection = new MockConnection();
-        var fromId = CreateRepositoryOptions.FromType<Item>(typeof(Item));
+        var fromId = CreateCRUDRepositoryOptions.FromType<Item>(typeof(Item));
         Assert.Equal(new[] { "Id" }, fromId.Ids);
         Assert.Equal(nameof(Item), fromId.Entity);
-        Assert.Empty(CreateRepositoryOptions.FromType<Label>().Ids);
+        Assert.Empty(CreateCRUDRepositoryOptions.FromType<Label>().Ids);
         Assert.NotNull(new CRUDRepository<Item>(connection, fromId));
         Assert.NotNull(new CRUDRepository<Item>(connection));
         Assert.NotNull(new ReadonlyRepository<Item>(connection, fromId));

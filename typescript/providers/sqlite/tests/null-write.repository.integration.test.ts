@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CRUDRepository, Datasource, createRepositoryOptions, execute, type IConnection } from "@datasources/core";
+import { CRUDRepository, Datasource, createCRUDRepositoryOptions, execute, type IConnection } from "@datasources/core";
 import { tables } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
@@ -27,7 +27,7 @@ const bytes = (value: Uint8Array | null): number[] => [...(value ?? new Uint8Arr
 describe("null write", () => {
   it("omits null datetime and version", async () => {
     const connection = await open();
-    const repo = new CRUDRepository(connection, { ...createRepositoryOptions(Item), entity: "item" });
+    const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(Item), entity: "item" });
     const omitted = await repo.create(Object.assign(new Item(), { name: "ada" }));
     expect(omitted.id).toBeGreaterThan(0);
     const stored = await repo.readSingleById(omitted.id);

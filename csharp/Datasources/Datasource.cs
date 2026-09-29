@@ -23,7 +23,7 @@ public sealed class Datasource(
 
     CRUDRepositoryOptions<T> Apply<T>(ReadonlyRepositoryOptions<T>? options) where T : new()
     {
-        var built = CreateRepositoryOptions.FromType<T>(driver.RowTypeConverters);
+        var built = CreateCRUDRepositoryOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
         return options switch
         {

@@ -2,7 +2,7 @@ const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" }
 const connection = await open(ds, "user-view-version");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
-  ...createRepositoryOptions(UsersView),
+  ...createCRUDRepositoryOptions(UsersView),
   ids: ["Key"],
   readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
   entityMapper: new DictionaryMapper([["UsersView", "user"]]),
@@ -16,12 +16,12 @@ const usersRepo = new CRUDRepository(connection, {
   ]),
 });
 const userTypesRepo = new CRUDRepository(connection, {
-  ...createRepositoryOptions(UserType),
+  ...createCRUDRepositoryOptions(UserType),
   entityMapper: casing,
   columnMappings: casing,
 });
 const userRolesRepo = new CRUDRepository(connection, {
-  ...createRepositoryOptions(UserRole),
+  ...createCRUDRepositoryOptions(UserRole),
   entityMapper: casing,
   columnMappings: casing,
 });

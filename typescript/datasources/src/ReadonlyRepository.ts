@@ -15,7 +15,7 @@ import type { Constructable } from "./converters/Constructable.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { SelectStatement } from "./statements/SelectStatement.ts";
 import { Where } from "./statements/Where.ts";
-import { createRepositoryOptions } from "./createRepositoryOptions.ts";
+import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { parts } from "./RepositoryBuilder.ts";
@@ -53,7 +53,7 @@ export const builtOf = <T>(
   typeof typeOrConnectionOrBuilt === "function"
     ? connectionOrOptions === undefined
       ? undefined
-      : parts(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnectionOrBuilt))
+      : parts(connectionOrOptions as IConnection, createCRUDRepositoryOptions(typeOrConnectionOrBuilt))
     : isBuilt(typeOrConnectionOrBuilt)
       ? typeOrConnectionOrBuilt
       : parts(typeOrConnectionOrBuilt, connectionOrOptions as ReadonlyRepositoryOptions<T>);

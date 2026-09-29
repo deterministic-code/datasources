@@ -1,7 +1,7 @@
 use crate::converters::ConvertSchema;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 
-pub fn create_repository_options<T: ConvertSchema>() -> CRUDRepositoryOptions {
+pub fn create_crud_repository_options<T: ConvertSchema>() -> CRUDRepositoryOptions {
     let mut options = CRUDRepositoryOptions::default();
     options.ids = default_id::<T>();
     options.entity = std::any::type_name::<T>()

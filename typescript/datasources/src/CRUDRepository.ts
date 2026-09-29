@@ -13,7 +13,7 @@ import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
-import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
+import { createCRUDRepositoryOptions, defaultId, fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
 import { parts } from "./RepositoryBuilder.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { enrichmentsOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
@@ -63,7 +63,7 @@ const crudBuilt = <T>(
   connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
 ): BuiltRepository<T> =>
   typeof typeOrConnection === "function"
-    ? parts(connectionOrOptions as IConnection, createRepositoryOptions(typeOrConnection))
+    ? parts(connectionOrOptions as IConnection, createCRUDRepositoryOptions(typeOrConnection))
     : parts(typeOrConnection, withIds(connectionOrOptions as CRUDRepositoryOptions<T>));
 
 const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T> =>

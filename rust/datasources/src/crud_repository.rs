@@ -2,7 +2,7 @@ use crate::built_repository::BuiltRepository;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
-use crate::create_repository_options::create_repository_options;
+use crate::create_crud_repository_options::create_crud_repository_options;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
@@ -52,7 +52,7 @@ impl RepositoryBuilder {
 
 impl CRUDRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = create_repository_options::<T>();
+        let mut options = create_crud_repository_options::<T>();
         options.row_converter = Some(RowTypeConverter::of::<T>());
         let mut repo = Self::new(connection, options)?;
         repo.readonly.entity_type = TypeId::of::<T>();

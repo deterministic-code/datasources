@@ -1,6 +1,6 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
-    create_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
+    create_crud_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
     DictionaryMapper, PluralizerMapper, Value, Where,
 };
 use std::collections::HashMap;
@@ -58,7 +58,7 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
         ",
     )
     .await;
-    let mut options = create_repository_options::<User>();
+    let mut options = create_crud_repository_options::<User>();
     options.entity_mapper = Box::new(PluralizerMapper::new());
     let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
     let by_id = repo
@@ -97,7 +97,7 @@ async fn reads_user_by_guid_username_and_created() {
         ),
     )
     .await;
-    let mut options = create_repository_options::<UserAccount>();
+    let mut options = create_crud_repository_options::<UserAccount>();
     options.entity = "user".into();
     options.column_mappings = Box::new(DictionaryMapper::new([
         ("Key".to_string(), "id".to_string()),
@@ -166,7 +166,7 @@ async fn open(ds: &dyn Datasource, schema: &str, sql: &str) -> Arc<dyn Connectio
 mod user_view {
     use super::{datasource, open, ADA, GRACE, LIN};
     use datasources::{
-        create_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_crud_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Value, Where,
     };
     use uuid::Uuid;
@@ -214,7 +214,7 @@ mod user_view {
             ),
         )
         .await;
-        let mut users_options = create_repository_options::<UserAccount>();
+        let mut users_options = create_crud_repository_options::<UserAccount>();
         users_options.entity = "user".into();
         users_options.column_mappings = Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
@@ -223,7 +223,7 @@ mod user_view {
             ("Opened".to_string(), "created".to_string()),
             ("UserTypeId".to_string(), "user_type_id".to_string()),
         ]));
-        let mut type_options = create_repository_options::<UserType>();
+        let mut type_options = create_crud_repository_options::<UserType>();
         type_options.entity = "UserType".into();
         type_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
@@ -270,7 +270,7 @@ mod user_view {
 mod users_view_roles {
     use super::{datasource, open, ADA, GRACE, LIN};
     use datasources::{
-        create_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_crud_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
         NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryOptions,
         SelectStatement, SelectStatementOptions, TransformMapper, TypeMap, TypeMapField,
@@ -357,7 +357,7 @@ mod users_view_roles {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
         let connection = open(ds, "user-roles-read", &seed()).await;
-        let mut users_options = create_repository_options::<UsersView>();
+        let mut users_options = create_crud_repository_options::<UsersView>();
         users_options.entity_mapper = Box::new(DictionaryMapper::new([(
             "UsersView".to_string(),
             "user".to_string(),
@@ -369,12 +369,12 @@ mod users_view_roles {
             ("Opened".to_string(), "created".to_string()),
             ("UserType".to_string(), "user_type_id".to_string()),
         ]));
-        let mut type_options = create_repository_options::<UserType>();
+        let mut type_options = create_crud_repository_options::<UserType>();
         type_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         type_options.column_mappings =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        let mut role_options = create_repository_options::<UserRole>();
+        let mut role_options = create_crud_repository_options::<UserRole>();
         role_options.entity = "user_roles".into();
         role_options.column_mappings = Box::new(DictionaryMapper::new([
             ("UserId".to_string(), "user_id".to_string()),
@@ -499,7 +499,7 @@ mod users_view_roles {
 mod user_crud {
     use super::{datasource, open, User};
     use datasources::{
-        create_repository_options, encode_rows, eq, CRUDRepository, Casing, ChangeCasingMapper,
+        create_crud_repository_options, encode_rows, eq, CRUDRepository, Casing, ChangeCasingMapper,
         ConvertSchema, Datasource, DictionaryMapper, ICRUDRepository, IReadonlyRepository,
         RowTypeConverter, Value, Where,
     };
@@ -605,7 +605,7 @@ mod user_crud {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
         let connection = open(ds, "user-view-version", "").await;
-        let mut users_options = create_repository_options::<UsersView>();
+        let mut users_options = create_crud_repository_options::<UsersView>();
         users_options.ids = vec!["Key".into()];
         users_options.entity_mapper = Box::new(DictionaryMapper::new([(
             "UsersView".to_string(),
@@ -621,12 +621,12 @@ mod user_crud {
         ]));
         users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
         let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-        let mut type_options = create_repository_options::<UserType>();
+        let mut type_options = create_crud_repository_options::<UserType>();
         type_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         type_options.column_mappings = Box::new(casing);
         type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
-        let mut role_options = create_repository_options::<UserRole>();
+        let mut role_options = create_crud_repository_options::<UserRole>();
         role_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         role_options.column_mappings =

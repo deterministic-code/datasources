@@ -10,7 +10,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     readonly IMapper<IReturnStatement, IReturnStatement>? returnMapper;
 
     public CRUDRepository(IConnection connection) :
-        this(connection, CreateRepositoryOptions.FromType<T>()) { }
+        this(connection, CreateCRUDRepositoryOptions.FromType<T>()) { }
 
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(RepositoryBuilder<T>.Parts(connection, options), options.Write, options.Return) { }

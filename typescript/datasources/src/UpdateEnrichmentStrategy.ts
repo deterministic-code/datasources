@@ -2,7 +2,7 @@ import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Scalar } from "./builders/Scalar.ts";
-import { defaultId } from "./createRepositoryOptions.ts";
+import { defaultId } from "./createCRUDRepositoryOptions.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { Operator, Where } from "./statements/index.ts";
 

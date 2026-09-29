@@ -10,7 +10,7 @@ let connection = open(
     ",
 )
 .await;
-let mut options = create_repository_options::<User>();
+let mut options = create_crud_repository_options::<User>();
 options.entity_mapper = Box::new(PluralizerMapper::new());
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let by_id = repo

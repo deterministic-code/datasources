@@ -6,7 +6,7 @@ import {
   PluralizerMapper,
   ReadonlyRepository,
   Where,
-  createRepositoryOptions,
+  createCRUDRepositoryOptions,
   eq,
   execute,
   gt,
@@ -209,7 +209,7 @@ describe("users view crud", () => {
     const connection = await open(ds, "user-view-version");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const usersRepo = new CRUDRepository(connection, {
-      ...createRepositoryOptions(UsersView),
+      ...createCRUDRepositoryOptions(UsersView),
       ids: ["Key"],
       readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
       entityMapper: new DictionaryMapper([["UsersView", "user"]]),
@@ -223,12 +223,12 @@ describe("users view crud", () => {
       ]),
     });
     const userTypesRepo = new CRUDRepository(connection, {
-      ...createRepositoryOptions(UserType),
+      ...createCRUDRepositoryOptions(UserType),
       entityMapper: casing,
       columnMappings: casing,
     });
     const userRolesRepo = new CRUDRepository(connection, {
-      ...createRepositoryOptions(UserRole),
+      ...createCRUDRepositoryOptions(UserRole),
       entityMapper: casing,
       columnMappings: casing,
     });
