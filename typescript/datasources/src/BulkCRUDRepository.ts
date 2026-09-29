@@ -23,9 +23,10 @@ const fieldsOf = (
   include: (col: string) => boolean,
   column: (property: string) => string,
   cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
+  enrichmentInto: (name: string) => boolean,
 ): Field[] =>
   Object.entries(record)
-    .filter(([key, value]) => include(key) && value !== null && value !== undefined)
+    .filter(([key, value]) => include(key) && !enrichmentInto(key) && value !== null && value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name: column(name), value: cell(name, value, true) as Scalar }));
 
@@ -108,30 +109,34 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
 
   deleteOne = (item: T, byWhere?: IWhere): Promise<Response> => this.delete(item, byWhere);
 
-  inserts = (items: T[]): BulkCommand[] => items.map((item) => this.insertCommand(this.stripped(item)));
+  inserts = (items: T[]): BulkCommand[] => items.map((item) => this.insertCommand(item));
 
   updates = (items: T[], byWhere?: IWhere): BulkCommand[] =>
-    items.map((item) => this.updateCommand(this.stripped(item), byWhere));
+    items.map((item) => this.updateCommand(item, byWhere));
 
   deletes = (items: T[], byWhere?: IWhere): BulkCommand[] =>
-    items.map((item) => this.deleteCommand(this.stripped(item), byWhere));
+    items.map((item) => this.deleteCommand(item, byWhere));
 
   rows = (items: T[]): Cells[] => items.map((item) => this.rowOf(item));
 
   private idOf = (item: T): Scalar | undefined =>
     this.ids.length === 1 ? scalarOf((item as Record<string, Scalar | object>)[this.ids[0]!]) : undefined;
 
-  private stripped = (item: T): T => (this.enriched ? this.stripEnriched(item) : item);
-
-  private insertCommand = (stored: T): BulkCommand => {
-    const fields = fieldsOf(this.reverse(stored), (col) => !this.ids.includes(col), this.column, this.cell);
+  private insertCommand = (item: T): BulkCommand => {
+    const fields = fieldsOf(
+      this.reverse(item),
+      (col) => !this.ids.includes(col),
+      this.column,
+      this.cell,
+      this.enrichmentInto,
+    );
     return { text: this.statements!.insert(fields).getText(), parameters: fields };
   };
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
     const where = byWhere ? this.map(byWhere, false) : this.map(this.idsWhere(record), true);
-    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
+    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell, this.enrichmentInto);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     return { text: this.statements!.update(fields, where).getText(), parameters: UpdateStatement.parameterList(fields, where) };
   };
@@ -144,16 +149,16 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     const parameters: Parameter[] = listed.length
       ? listed
       : statement.getText().includes("$")
-        ? fieldsOf(record, () => true, this.column, this.cell)
+        ? fieldsOf(record, () => true, this.column, this.cell, this.enrichmentInto)
         : [];
     return { text: statement.getText(), parameters };
   };
 
   private rowOf = (item: T): Cells => {
-    const stored = this.reverse(this.stripped(item));
+    const stored = this.reverse(item);
     const row: Cells = {};
     for (const name of this.statements?.columns ?? []) {
-      const match = Object.entries(stored).find(([key]) => this.column(key) === name);
+      const match = Object.entries(stored).find(([key]) => this.column(key) === name && !this.enrichmentInto(key));
       row[name] = match?.[1] ?? null;
     }
     return row;

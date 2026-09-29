@@ -45,8 +45,7 @@ public static class RepositoryTestsSpec
     static async Task Run<T>(Spec spec, Session session, RowTypeConverter<T> mapping, List<string> logs, Func<string, string> quote)
         where T : new()
     {
-        var built = RepositoryBuilder<T>.Parts(session.Connection, OptionsOf(spec.Type, mapping, quote));
-        var repo = new CRUDRepository<T>(built).AddMiddleware(new ConsoleCommandMiddleware(line =>
+        var repo = new CRUDRepository<T>(session.Connection, OptionsOf(spec.Type, mapping, quote)).AddMiddleware(new ConsoleCommandMiddleware(line =>
         {
             logs.Add(line);
             if (Verbose()) Console.WriteLine(line);

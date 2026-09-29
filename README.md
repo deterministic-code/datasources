@@ -11953,7 +11953,6 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | --- | --- |
 | [CRUDRepository(type, connection)](#typescript-crudrepository-crudrepository-type-connection) | Builds a table repository from a type and [IConnection](#connection). |
 | [CRUDRepository(connection, options)](#typescript-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#typescript-crudrepositoryoptions). |
-| [CRUDRepository(built)](#typescript-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#typescript-builtrepository). |
 | [CRUDRepository(inner, strategy?)](#typescript-crudrepository-crudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#typescript-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default. |
 
 **Properties**
@@ -12008,22 +12007,6 @@ constructor(connection: IConnection, options: CRUDRepositoryOptions<T>)
 | --- | --- |
 | `connection` | open [IConnection](#connection) |
 | `options` | [CRUDRepositoryOptions](#typescript-crudrepositoryoptions) |
-
-###### CRUDRepository(built) {#typescript-crudrepository-crudrepository-built}
-
-Builds a table repository from [BuiltRepository](#typescript-builtrepository).
-
-**Definition**
-
-```typescript
-constructor(built: BuiltRepository<T>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `built` | [BuiltRepository](#typescript-builtrepository) |
 
 ###### CRUDRepository(inner, strategy?) {#typescript-crudrepository-crudrepository-inner-strategy}
 
@@ -12374,7 +12357,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
 | --- | --- |
 | [CRUDRepository(connection)](#csharp-crudrepository-crudrepository-connection) | Builds a table repository from an [IConnection](#connection). |
 | [CRUDRepository(connection, options)](#csharp-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#csharp-crudrepositoryoptions). |
-| [CRUDRepository(built)](#csharp-crudrepository-crudrepository-built) | Builds a table repository from [BuiltRepository](#csharp-builtrepository). |
 | [CRUDRepository(inner, strategy)](#csharp-crudrepository-crudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#csharp-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default. |
 
 **Properties**
@@ -12429,22 +12411,6 @@ public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options)
 | --- | --- |
 | `connection` | open [IConnection](#connection) |
 | `options` | [CRUDRepositoryOptions](#csharp-crudrepositoryoptions) |
-
-###### CRUDRepository(built) {#csharp-crudrepository-crudrepository-built}
-
-Builds a table repository from [BuiltRepository](#csharp-builtrepository).
-
-**Definition**
-
-```csharp
-public Repository(BuiltRepository<T> built)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `built` | [BuiltRepository](#csharp-builtrepository) |
 
 ###### CRUDRepository(inner, strategy) {#csharp-crudrepository-crudrepository-inner-strategy}
 
@@ -12793,7 +12759,6 @@ pub struct CRUDRepository
 | --- | --- |
 | [from_type(connection)](#rust-crudrepository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
 | [new(connection, options)](#rust-crudrepository-new-connection-options) | Builds a table repository from a [Connection](#connection) and [CRUDRepositoryOptions](#rust-crudrepositoryoptions). |
-| [from_built(built)](#rust-crudrepository-from_built-built) | Builds a table repository from [BuiltRepository](#rust-builtrepository). |
 | [from_repository(inner)](#rust-crudrepository-from_repository-inner) | Wraps an inner [ICRUDRepository](#rust-icrudrepository). Parent writes delegate to `inner`. |
 
 **Methods**
@@ -12845,26 +12810,6 @@ pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> R
 **Returns**
 
 `Result<`[CRUDRepository](#rust-crudrepository)`>`
-
-###### from_built(built) {#rust-crudrepository-from_built-built}
-
-Builds a table repository from [BuiltRepository](#rust-builtrepository).
-
-**Definition**
-
-```rust
-pub fn from_built(built: BuiltRepository) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `built` | [BuiltRepository](#rust-builtrepository) |
-
-**Returns**
-
-[CRUDRepository](#rust-crudrepository)
 
 ###### from_repository(inner) {#rust-crudrepository-from_repository-inner}
 
