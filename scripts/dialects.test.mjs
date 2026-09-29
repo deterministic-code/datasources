@@ -55,6 +55,34 @@ test("a page with only names gets the selector after the title", () => {
   assert.match(page, /csharp="Default" typescript="default" rust="default\(\)"/);
 });
 
+test("a type and its usage render as one sample", () => {
+  const source = `# Command
+
+## Classes
+
+::: reference
+### typescript
+#### ICommand
+:::
+
+### Run ExecuteReader and return NameValue
+
+::: example
+\`\`\`csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#NameValue
+\`\`\`
+\`\`\`csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderAndReturnNameValue
+\`\`\`
+:::
+`;
+  const page = transformDialects(source, "vitepress");
+  assert.equal(page.match(/<DialectPanel name="csharp">/g).length, 1);
+  const sample = page.slice(page.indexOf("sealed class NameValue"), page.indexOf("Datasource.Default"));
+  assert.match(sample, /public string value/);
+  const readme = transformDialects(source, "readme");
+  assert.equal(readme.match(/#### C#/g).length, 1);
+  assert.match(readme, /sealed class NameValue[\s\S]*Datasource\.Default/);
+});
+
 test("an example after a one-dialect note keeps its sample heading", () => {
   const source = `# Connection
 

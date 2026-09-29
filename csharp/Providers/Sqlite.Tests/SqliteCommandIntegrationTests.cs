@@ -1,7 +1,6 @@
 using Datasources;
 using Datasources.Sqlite;
 using Datasources.SqlSpecs;
-using static Datasources.Cmp;
 
 namespace Datasources.Sqlite.Tests;
 
@@ -122,10 +121,24 @@ public class SqliteCommandIntegrationTests
         await command.Execute(
             "UPDATE items SET name = $name WHERE id = $id",
             [new Parameter("id", 1), new Parameter("name", "A")]);
-        var itemsRepo = new ReadonlyRepository<Item>(connection, new ReadonlyRepositoryOptions<Item> { Entity = "items" });
-        var updated = await itemsRepo.ReadSingle(new Where("id", eq, 1));
+        var converter = new RowTypeConverter<Item>();
+        Item? updated = null;
+        {
+            await using var reader = await command.ExecuteReader(
+                "SELECT id, name FROM items WHERE id = $id",
+                [new Parameter("id", 1)]);
+            if (await reader.Next())
+                updated = converter.Convert(reader.Current!);
+        }
         await command.Execute("DELETE FROM items WHERE id = $id", [new Parameter("id", 1)]);
-        var gone = await itemsRepo.ReadSingle(new Where("id", eq, 1));
+        Item? gone = null;
+        {
+            await using var reader = await command.ExecuteReader(
+                "SELECT id, name FROM items WHERE id = $id",
+                [new Parameter("id", 1)]);
+            if (await reader.Next())
+                gone = converter.Convert(reader.Current!);
+        }
         Assert.Equal(1, updated!.id);
         Assert.Equal("A", updated.name);
         Assert.Null(gone);

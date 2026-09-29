@@ -1,8 +1,5 @@
-use std::sync::Arc;
-
 use datasources::{
-    create_crud_repository_options, default, eq, ConvertSchema, IReadonlyRepository, Mapper,
-    Parameter, ReadonlyRepository, Row, RowTypeConverter, TransformMapper, Value, Where,
+    default, ConvertSchema, Mapper, Parameter, Row, RowTypeConverter, TransformMapper, Value,
 };
 
 struct NameValue;
@@ -190,15 +187,22 @@ async fn execute_insert_update_and_delete() {
         )
         .await
         .unwrap();
-    let mut options = create_crud_repository_options::<Item>();
-    options.entity = "items".into();
-    options.row_converter = Some(RowTypeConverter::of::<Item>());
-    let items_repo = ReadonlyRepository::new(Arc::clone(&connection), options.read).unwrap();
-    let updated = items_repo
-        .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
-        .await
-        .unwrap()
-        .unwrap();
+    let converter = RowTypeConverter::of::<Item>();
+    let updated = {
+        let reader = command
+            .execute_reader(
+                "SELECT id, name FROM items WHERE id = $id",
+                Some(&[Parameter::new("id", 1_i64)]),
+            )
+            .await
+            .unwrap();
+        let row = if reader.next().await.unwrap() {
+            Some(converter.convert(&reader.current().unwrap()).unwrap())
+        } else {
+            None
+        };
+        row
+    };
     command
         .execute(
             "DELETE FROM items WHERE id = $id",
@@ -206,10 +210,22 @@ async fn execute_insert_update_and_delete() {
         )
         .await
         .unwrap();
-    let gone = items_repo
-        .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
-        .await
-        .unwrap();
+    let gone = {
+        let reader = command
+            .execute_reader(
+                "SELECT id, name FROM items WHERE id = $id",
+                Some(&[Parameter::new("id", 1_i64)]),
+            )
+            .await
+            .unwrap();
+        let row = if reader.next().await.unwrap() {
+            Some(converter.convert(&reader.current().unwrap()).unwrap())
+        } else {
+            None
+        };
+        row
+    };
+    let updated = updated.unwrap();
     assert_eq!(updated.get("id"), Some(&Value::Int(1)));
     assert_eq!(updated.get("name"), Some(&Value::from("A")));
     assert!(gone.is_none());
