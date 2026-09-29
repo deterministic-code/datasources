@@ -2568,7 +2568,7 @@ Use `AddMiddleware` / `addMiddleware` / `add_middleware` to add low-level diagno
 
 #### Run raw SQL
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L74-L89)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L73-L88)
 
 ```csharp
 var ds = Datasource.Default;
@@ -2592,7 +2592,7 @@ if (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L101-L128)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L98-L125)
 
 ```rust
 let ds = default().unwrap();
@@ -2627,7 +2627,7 @@ let row = reader.current().unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L91-L102)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L87-L98)
 
 ```typescript
 const ds = Datasource.default;
@@ -2650,7 +2650,7 @@ await using reader = await command.executeReader("SELECT id, name FROM items");
 
 #### Run ExecuteReader and return NameValue
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L18-L22)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L90-L108)
 
 ```csharp
 sealed class NameValue
@@ -2658,20 +2658,7 @@ sealed class NameValue
     public string name { get; set; } = "";
     public string value { get; set; } = "";
 }
-```
 
-**NameValue**
-
-```
-{
-  name: 'theme',
-  value: 'dark'
-}
-```
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L91-L109)
-
-```csharp
 var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
@@ -2696,7 +2683,7 @@ while (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L10-L14)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L7-L11) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L127-L160)
 
 ```rust
 impl ConvertSchema for NameValue {
@@ -2704,20 +2691,7 @@ impl ConvertSchema for NameValue {
         vec![("name", "TEXT"), ("value", "TEXT")]
     }
 }
-```
 
-**NameValue**
-
-```
-{
-  name: 'theme',
-  value: 'dark'
-}
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L130-L163)
-
-```rust
 let ds = default().unwrap();
 let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
@@ -2757,27 +2731,14 @@ while reader.next().await.unwrap() {
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L25-L28)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L21-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L100-L116)
 
 ```typescript
 class NameValue {
   name = "";
   value = "";
 }
-```
 
-**NameValue**
-
-```
-{
-  name: 'theme',
-  value: 'dark'
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L104-L120)
-
-```typescript
 const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
@@ -2804,7 +2765,7 @@ while (await reader.next()) items.push(converter.convert(reader.current!, NameVa
 
 #### Execute insert, update, and delete
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L24-L28)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L23-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L110-L145)
 
 ```csharp
 sealed class Item
@@ -2812,26 +2773,7 @@ sealed class Item
     public int id { get; set; }
     public string name { get; set; } = "";
 }
-```
 
-**After: update**
-
-```
-{
-  id: 1,
-  name: 'A'
-}
-```
-
-**After: delete**
-
-```
-null
-```
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L111-L132)
-
-```csharp
 var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
@@ -2843,10 +2785,24 @@ await command.Execute(
 await command.Execute(
     "UPDATE items SET name = $name WHERE id = $id",
     [new Parameter("id", 1), new Parameter("name", "A")]);
-var itemsRepo = new ReadonlyRepository<Item>(connection, new ReadonlyRepositoryOptions<Item> { Entity = "items" });
-var updated = await itemsRepo.ReadSingle(new Where("id", eq, 1));
+var converter = new RowTypeConverter<Item>();
+Item? updated = null;
+{
+    await using var reader = await command.ExecuteReader(
+        "SELECT id, name FROM items WHERE id = $id",
+        [new Parameter("id", 1)]);
+    if (await reader.Next())
+        updated = converter.Convert(reader.Current!);
+}
 await command.Execute("DELETE FROM items WHERE id = $id", [new Parameter("id", 1)]);
-var gone = await itemsRepo.ReadSingle(new Where("id", eq, 1));
+Item? gone = null;
+{
+    await using var reader = await command.ExecuteReader(
+        "SELECT id, name FROM items WHERE id = $id",
+        [new Parameter("id", 1)]);
+    if (await reader.Next())
+        gone = converter.Convert(reader.Current!);
+}
 ```
 
 **After: update**
@@ -2864,7 +2820,7 @@ var gone = await itemsRepo.ReadSingle(new Where("id", eq, 1));
 null
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L18-L22)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L15-L19) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L162-L232)
 
 ```rust
 impl ConvertSchema for Item {
@@ -2872,26 +2828,7 @@ impl ConvertSchema for Item {
         vec![("id", "INTEGER"), ("name", "TEXT")]
     }
 }
-```
 
-**After: update**
-
-```
-{
-  id: 1,
-  name: 'A'
-}
-```
-
-**After: delete**
-
-```
-None
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L165-L216)
-
-```rust
 let ds = default().unwrap();
 let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
@@ -2917,15 +2854,22 @@ command
     )
     .await
     .unwrap();
-let mut options = create_crud_repository_options::<Item>();
-options.entity = "items".into();
-options.row_converter = Some(RowTypeConverter::of::<Item>());
-let items_repo = ReadonlyRepository::new(Arc::clone(&connection), options.read).unwrap();
-let updated = items_repo
-    .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
-    .await
-    .unwrap()
-    .unwrap();
+let converter = RowTypeConverter::of::<Item>();
+let updated = {
+    let reader = command
+        .execute_reader(
+            "SELECT id, name FROM items WHERE id = $id",
+            Some(&[Parameter::new("id", 1_i64)]),
+        )
+        .await
+        .unwrap();
+    let row = if reader.next().await.unwrap() {
+        Some(converter.convert(&reader.current().unwrap()).unwrap())
+    } else {
+        None
+    };
+    row
+};
 command
     .execute(
         "DELETE FROM items WHERE id = $id",
@@ -2933,10 +2877,22 @@ command
     )
     .await
     .unwrap();
-let gone = items_repo
-    .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
-    .await
-    .unwrap();
+let gone = {
+    let reader = command
+        .execute_reader(
+            "SELECT id, name FROM items WHERE id = $id",
+            Some(&[Parameter::new("id", 1_i64)]),
+        )
+        .await
+        .unwrap();
+    let row = if reader.next().await.unwrap() {
+        Some(converter.convert(&reader.current().unwrap()).unwrap())
+    } else {
+        None
+    };
+    row
+};
+let updated = updated.unwrap();
 ```
 
 **After: update**
@@ -2954,33 +2910,14 @@ let gone = items_repo
 None
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L30-L33)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L26-L29) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L118-L151)
 
 ```typescript
 class Item {
   id = 0;
   name = "";
 }
-```
 
-**After: update**
-
-```
-{
-  id: 1,
-  name: 'A'
-}
-```
-
-**After: delete**
-
-```
-undefined
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L122-L145)
-
-```typescript
 const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
@@ -2994,14 +2931,22 @@ await command.execute("UPDATE items SET name = $name WHERE id = $id", [
   { name: "id", value: 1 },
   { name: "name", value: "A" },
 ]);
-const itemsRepo = new ReadonlyRepository(connection, {
-  ...createCRUDRepositoryOptions(Item),
-  entity: "items",
-});
-const updated = await itemsRepo.readSingle(new Where("id", eq, 1));
+const converter = new RowTypeConverter<Item>();
+let updated: Item | undefined;
+{
+  await using reader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+    { name: "id", value: 1 },
+  ]);
+  if (await reader.next()) updated = converter.convert(reader.current!, Item);
+}
 await command.execute("DELETE FROM items WHERE id = $id", [{ name: "id", value: 1 }]);
-const gone = await itemsRepo.readSingle(new Where("id", eq, 1));
-expect(updated).toMatchObject({ id: 1, name: "A" });
+let gone: Item | undefined;
+{
+  await using reader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+    { name: "id", value: 1 },
+  ]);
+  if (await reader.next()) gone = converter.convert(reader.current!, Item);
+}
 ```
 
 **After: update**
@@ -3021,7 +2966,7 @@ undefined
 
 #### Map flat contacts
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L30-L43)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L44-L54) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L147-L175)
 
 ```csharp
 sealed class User
@@ -3038,25 +2983,7 @@ sealed class User
         public string name { get; set; } = "";
     }
 }
-```
 
-**User**
-
-```
-{
-  id: 1,
-  username: 'bobby',
-  email: 'bob@asdf.com',
-  contacts: [
-    { name: 'bob' },
-    { name: 'roberta' }
-  ]
-}
-```
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L45-L55)
-
-```csharp
 static TransformMapper<User, User> UserContactsMapper() =>
     new(
         row =>
@@ -3068,25 +2995,7 @@ static TransformMapper<User, User> UserContactsMapper() =>
             ];
             return row;
         },
-```
 
-**User**
-
-```
-{
-  id: 1,
-  username: 'bobby',
-  email: 'bob@asdf.com',
-  contacts: [
-    { name: 'bob' },
-    { name: 'roberta' }
-  ]
-}
-```
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L134-L162)
-
-```csharp
 var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
@@ -3125,7 +3034,7 @@ while (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L49-L99)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L46-L96) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L234-L285)
 
 ```rust
 fn text_of(row: &Row, key: &str) -> String {
@@ -3177,25 +3086,7 @@ TransformMapper::new(
         row
     },
 )
-```
 
-**User**
-
-```
-{
-  id: 1,
-  username: 'bobby',
-  email: 'bob@asdf.com',
-  contacts: [
-    { name: 'bob' },
-    { name: 'roberta' }
-  ]
-}
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L218-L269)
-
-```rust
 let ds = default().unwrap();
 let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
@@ -3251,31 +3142,13 @@ let user = user.unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L31-L33) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L44-L59) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L153-L178)
 
 ```typescript
 class Contact {
   name = "";
 }
-```
 
-**User**
-
-```
-{
-  id: 1,
-  username: 'bobby',
-  email: 'bob@asdf.com',
-  contacts: [
-    { name: 'bob' },
-    { name: 'roberta' }
-  ]
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46)
-
-```typescript
 class User {
   id = 0;
   username = "";
@@ -3284,25 +3157,7 @@ class User {
   contact_name2 = "";
   contacts: Contact[] = [];
 }
-```
 
-**User**
-
-```
-{
-  id: 1,
-  username: 'bobby',
-  email: 'bob@asdf.com',
-  contacts: [
-    { name: 'bob' },
-    { name: 'roberta' }
-  ]
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L48-L63)
-
-```typescript
 function userContactsMapper() {
   return new TransformMapper<User, User>(
     (row) => {
@@ -3319,25 +3174,7 @@ function userContactsMapper() {
     },
   );
 }
-```
 
-**User**
-
-```
-{
-  id: 1,
-  username: 'bobby',
-  email: 'bob@asdf.com',
-  contacts: [
-    { name: 'bob' },
-    { name: 'roberta' }
-  ]
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L147-L172)
-
-```typescript
 const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
@@ -3734,7 +3571,7 @@ Dispose the reader with `await using`. Rust drops it.
 
 #### Read multiple results returned in a single command
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L164-L184)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L177-L197)
 
 ```csharp
 var ds = Datasource.Default;
@@ -3768,7 +3605,7 @@ var again = await reader.NextResult();
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L271-L296)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L287-L312)
 
 ```rust
 let ds = default().unwrap();
@@ -3809,7 +3646,7 @@ assert!(!again);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L174-L190)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L180-L196)
 
 ```typescript
 const ds = Datasource.default;

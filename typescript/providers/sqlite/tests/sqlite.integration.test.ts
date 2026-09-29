@@ -2,13 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   Datasource,
   DatasourceFactory,
-  ReadonlyRepository,
   ReturnStatement,
   RowTypeConverter,
   TransformMapper,
-  Where,
-  createCRUDRepositoryOptions,
-  eq,
 } from "@datasources/core";
 import {
   loadDialect,
@@ -133,14 +129,24 @@ describe("command", () => {
       { name: "id", value: 1 },
       { name: "name", value: "A" },
     ]);
-    const itemsRepo = new ReadonlyRepository(connection, {
-      ...createCRUDRepositoryOptions(Item),
-      entity: "items",
-    });
-    const updated = await itemsRepo.readSingle(new Where("id", eq, 1));
+    const converter = new RowTypeConverter<Item>();
+    let updated: Item | undefined;
+    {
+      await using reader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+        { name: "id", value: 1 },
+      ]);
+      if (await reader.next()) updated = converter.convert(reader.current!, Item);
+    }
     await command.execute("DELETE FROM items WHERE id = $id", [{ name: "id", value: 1 }]);
-    const gone = await itemsRepo.readSingle(new Where("id", eq, 1));
-    expect(updated).toMatchObject({ id: 1, name: "A" });
+    let gone: Item | undefined;
+    {
+      await using reader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+        { name: "id", value: 1 },
+      ]);
+      if (await reader.next()) gone = converter.convert(reader.current!, Item);
+    }
+    expect(updated?.id).toBe(1);
+    expect(updated?.name).toBe("A");
     expect(gone).toBeUndefined();
   });
 

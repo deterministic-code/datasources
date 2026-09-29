@@ -96,6 +96,19 @@ const resolveExamples = (body, heading, files) =>
 
 const sourceLink = (href) => `<ExampleSource href="${href}" />`;
 
+const groupedExamples = (resolved) => {
+  const groups = [];
+  for (const item of resolved) {
+    const lang = slotName(item.lang);
+    const last = groups.at(-1);
+    if (last?.lang === lang) {
+      last.code = `${last.code}\n\n${item.code}`;
+      last.hrefs.push(item.href);
+    } else groups.push({ lang, code: item.code, hrefs: [item.href] });
+  }
+  return groups;
+};
+
 const transformOutsideDocFences = (markdown, fn) =>
   markdown.split(DOC_FENCE).map((chunk) => (chunk.startsWith("~~~~") ? chunk : fn(chunk))).join("");
 
@@ -240,31 +253,33 @@ const readmeOutput = (outputs) =>
 
 const toReadmeExamples = (body, heading, files) => {
   const outputs = parseExampleOutputs(body);
-  return resolveExamples(body, heading, files)
-    .map(({ lang, code, href }) => {
-      const boxes = readmeOutput(outputsFor(outputs, slotName(lang)));
-      return `#### ${labelFor(lang)} [${SOURCE_ICON}](${href})\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`;
+  return groupedExamples(resolveExamples(body, heading, files))
+    .map(({ lang, code, hrefs }) => {
+      const boxes = readmeOutput(outputsFor(outputs, lang));
+      const links = hrefs.map((href) => `[${SOURCE_ICON}](${href})`).join(" ");
+      return `#### ${labelFor(lang)} ${links}\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`;
     })
     .join("\n\n");
 };
 
 const toVitePressExamplePanels = (body, heading, files) => {
   const outputs = parseExampleOutputs(body);
-  return resolveExamples(body, heading, files)
-    .map(({ lang, code, href }) => {
-      const boxes = renderOutputs(outputsFor(outputs, slotName(lang)));
-      return toPanel(slotName(lang), `${sourceLink(href)}\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`);
+  return groupedExamples(resolveExamples(body, heading, files))
+    .map(({ lang, code, hrefs }) => {
+      const boxes = renderOutputs(outputsFor(outputs, lang));
+      const links = hrefs.map(sourceLink).join("\n");
+      return toPanel(lang, `${links}\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`);
     })
     .join("\n\n");
 };
 
 const toVitePressExamples = (body, heading, files) => {
-  const resolved = resolveExamples(body, heading, files);
+  const resolved = groupedExamples(resolveExamples(body, heading, files));
   const boxes = renderOutputs(labeledOutputs(parseExampleOutputs(body)));
   const group = resolved
     .map(({ lang, code }) => `\`\`\`${lang} [${labelFor(lang)}]\n${code}\n\`\`\``)
     .join("\n\n");
-  const links = resolved.map(({ href }) => sourceLink(href)).join("\n");
+  const links = resolved.flatMap(({ hrefs }) => hrefs.map(sourceLink)).join("\n");
   return `${links}\n\n::: code-group\n\n${group}\n\n:::${boxes ? `\n\n${boxes}` : ""}`;
 };
 
