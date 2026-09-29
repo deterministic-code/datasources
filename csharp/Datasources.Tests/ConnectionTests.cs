@@ -24,7 +24,7 @@ public class ConnectionTests
     [Fact]
     public async Task CreateFromDefault()
     {
-        var ds = DatasourceFactory.Default;
+        var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
         Assert.False(connection.IsOpen);
     }

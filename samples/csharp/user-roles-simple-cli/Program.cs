@@ -8,7 +8,7 @@ static async Task<int> Run(string[] args)
     try
     {
         var parsed = Parse.Args(args);
-        var ds = DatasourceFactory.Default;
+        var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = ds.CreateCommand(connection);

@@ -46,7 +46,7 @@ describe("DatasourceFactory", () => {
     DatasourceFactory.register("sqlite", new MockDriver());
     process.env.PROVIDER = "sqlite";
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
-    const ds = DatasourceFactory.default;
+    const ds = Datasource.default;
     expect(ds.provider).toBe("sqlite");
   });
 
@@ -141,16 +141,16 @@ describe("Datasource registry", () => {
     DatasourceFactory.reset();
     for (const key of envKeys) delete process.env[key];
     expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
-    expect(() => DatasourceFactory.default).toThrow("Datasource defaults are not specified");
+    expect(() => Datasource.default).toThrow("Datasource defaults are not specified");
     DatasourceFactory.register("sqlite", new MockDriver());
     DatasourceFactory.register("memory", new MockDriver());
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
-    expect(() => DatasourceFactory.default).toThrow("Datasource defaults are not specified");
+    expect(() => Datasource.default).toThrow("Datasource defaults are not specified");
     delete process.env.DATASOURCE_URL;
     process.env.PROVIDER = "sqlite";
-    expect(DatasourceFactory.default.provider).toBe("sqlite");
+    expect(Datasource.default.provider).toBe("sqlite");
     process.env.PROVIDER = "memory";
     process.env.DATASOURCE_URL = "memory://";
-    expect(DatasourceFactory.default.provider).toBe("memory");
+    expect(Datasource.default.provider).toBe("memory");
   });
 });

@@ -24,7 +24,7 @@ public class TransactionTests
     [Fact]
     public async Task StartFromDefault()
     {
-        var ds = DatasourceFactory.Default;
+        var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
         await connection.Open();
         var txn = await connection.StartTransaction();

@@ -45,10 +45,6 @@ const resolve = (options?: DatasourceOptions): IDatasource => {
 };
 
 export class DatasourceFactory implements IDatasourceFactory {
-  static get default(): IDatasource {
-    return resolve();
-  }
-
   static defaults = (options: DatasourceOptions): void => registerInstalled(options);
 
   static register = (provider: string, driver: IDriver): void => {

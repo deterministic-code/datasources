@@ -89,10 +89,10 @@ describe("registerListed", () => {
     process.env.DATASOURCE_URL = "memory://";
     process.env.PROVIDER = "memory";
     expect(Datasource.create().provider).toBe("memory");
-    expect(DatasourceFactory.default.provider).toBe("memory");
+    expect(Datasource.default.provider).toBe("memory");
     process.env.PROVIDER = "json";
     process.env.DATASOURCE_URL = "json://";
-    expect(DatasourceFactory.default.provider).toBe("json");
+    expect(Datasource.default.provider).toBe("json");
     expect(DatasourceFactory.registered()).toEqual(["json", "memory"]);
   });
 

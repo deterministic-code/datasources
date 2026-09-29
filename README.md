@@ -54,7 +54,7 @@ Start with `createCommand` and `executeReader`. The connection must be open.
 ##### C#
 
 ```csharp
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 
@@ -87,9 +87,9 @@ while reader.next().await? {
 ##### TypeScript
 
 ```typescript
-import { DatasourceFactory } from "@datasources/core";
+import { Datasource } from "@datasources/core";
 
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
 const connection = await ds.createConnection();
 await connection.open();
 
@@ -301,491 +301,9 @@ TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See
 
 TODO: `RowTypeConverter` convert / reverse-convert, or attach a field converter. See [RowTypeConverter](#row-type-converter).
 
-## DatasourceFactory
-
-Creates a [Datasource](#datasource) for a provider and `DATASOURCE_URL`. After [setup](#setup), use `Default` / `default` / `DatasourceFactory.default` to build that datasource from `.env`.
-
-### Classes
-
-##### TypeScript
-
-##### DatasourceFactory {#typescript-datasourcefactory}
-
-```typescript
-class DatasourceFactory implements IDatasourceFactory
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| default | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#typescript-create-options). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [defaults(options)](#typescript-datasourcefactory-defaults-options) | Registers listed provider packages. Does not apply to a non-null `create` bag. |
-| [register(provider, driver)](#typescript-datasourcefactory-register-provider-driver) | Registers a provider [IDriver](#typescript-idriver) by name. |
-| [create(options?)](#typescript-datasourcefactory-create-options) | Creates one datasource. `undefined` options read process env; a dictionary is used as-is. |
-| [reset()](#typescript-datasourcefactory-reset) | Clears the registry. Use in tests. |
-| [registered()](#typescript-datasourcefactory-registered) | Lists registered provider names. |
-
-###### defaults(options) {#typescript-datasourcefactory-defaults-options}
-
-Registers listed provider packages. Does not apply to a non-null `create` bag.
-
-**Definition**
-
-```typescript
-static defaults(options: DatasourceOptions): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#typescript-datasourceoptions) |
-
-###### register(provider, driver) {#typescript-datasourcefactory-register-provider-driver}
-
-Registers a provider [IDriver](#typescript-idriver) by name.
-
-**Definition**
-
-```typescript
-static register(provider: string, driver: IDriver): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `provider` | registry key (`sqlite`, `mysql`, …) |
-| `driver` | [IDriver](#typescript-idriver) that builds connections, commands, transactions, and row converters |
-
-###### create(options?) {#typescript-datasourcefactory-create-options}
-
-Creates one datasource. `undefined` options read process env; a dictionary is used as-is.
-
-**Definition**
-
-```typescript
-static create(options?: DatasourceOptions): IDatasource
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
-
-**Returns**
-
-[IDatasource](#typescript-idatasource)
-
-###### reset() {#typescript-datasourcefactory-reset}
-
-Clears the registry. Use in tests.
-
-**Definition**
-
-```typescript
-static reset(): void
-```
-
-###### registered() {#typescript-datasourcefactory-registered}
-
-Lists registered provider names.
-
-**Definition**
-
-```typescript
-static registered(): string[]
-```
-
-**Returns**
-
-`string[]`
-
-##### IDatasourceFactory {#typescript-idatasourcefactory}
-
-```typescript
-interface IDatasourceFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [create(options?)](#typescript-idatasourcefactory-create-options) | Creates one datasource from a string dictionary. |
-
-###### create(options?) {#typescript-idatasourcefactory-create-options}
-
-Creates one datasource from a string dictionary.
-
-**Definition**
-
-```typescript
-create(options?: DatasourceOptions): IDatasource
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | [DatasourceOptions](#typescript-datasourceoptions) |
-
-**Returns**
-
-[IDatasource](#typescript-idatasource)
-
-##### C#
-
-##### DatasourceFactory {#csharp-datasourcefactory}
-
-```csharp
-public sealed class DatasourceFactory : IDatasourceFactory
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Default | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [Create](#csharp-create-options). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Defaults(options)](#csharp-datasourcefactory-defaults-options) | Registers listed provider packages. Does not apply to a non-null `Create` bag. |
-| [Register(provider, driver)](#csharp-datasourcefactory-register-provider-driver) | Registers a provider [IDriver](#csharp-idriver) by name. |
-| [Create(options)](#csharp-datasourcefactory-create-options) | Creates one datasource. `null` options read process `.env`; a dictionary is used as-is. |
-| [Reset()](#csharp-datasourcefactory-reset) | Clears the registry. Use in tests. |
-| [Registered()](#csharp-datasourcefactory-registered) | Lists registered provider names. |
-
-###### Defaults(options) {#csharp-datasourcefactory-defaults-options}
-
-Registers listed provider packages. Does not apply to a non-null `Create` bag.
-
-**Definition**
-
-```csharp
-public static void Defaults(IReadOnlyDictionary<string, string?> options)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#csharp-datasourceoptions) |
-
-###### Register(provider, driver) {#csharp-datasourcefactory-register-provider-driver}
-
-Registers a provider [IDriver](#csharp-idriver) by name.
-
-**Definition**
-
-```csharp
-public static void Register(string provider, IDriver driver)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `provider` | registry key (`sqlite`, `mysql`, …) |
-| `driver` | [IDriver](#csharp-idriver) that builds connections, commands, transactions, and row converters |
-
-###### Create(options) {#csharp-datasourcefactory-create-options}
-
-Creates one datasource. `null` options read process `.env`; a dictionary is used as-is.
-
-**Definition**
-
-```csharp
-public static IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | [DatasourceOptions](#csharp-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
-
-**Returns**
-
-[IDatasource](#csharp-idatasource)
-
-###### Reset() {#csharp-datasourcefactory-reset}
-
-Clears the registry. Use in tests.
-
-**Definition**
-
-```csharp
-public static void Reset()
-```
-
-###### Registered() {#csharp-datasourcefactory-registered}
-
-Lists registered provider names.
-
-**Definition**
-
-```csharp
-public static IReadOnlyList<string> Registered()
-```
-
-**Returns**
-
-`IReadOnlyList<string>`
-
-##### IDatasourceFactory {#csharp-idatasourcefactory}
-
-```csharp
-public interface IDatasourceFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Create(options)](#csharp-idatasourcefactory-create-options) | Creates one datasource from a string dictionary. |
-
-###### Create(options) {#csharp-idatasourcefactory-create-options}
-
-Creates one datasource from a string dictionary.
-
-**Definition**
-
-```csharp
-IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | [DatasourceOptions](#csharp-datasourceoptions) |
-
-**Returns**
-
-[IDatasource](#csharp-idatasource)
-
-##### Rust
-
-##### datasources {#rust-datasources}
-
-```rust
-// datasources
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [defaults(options)](#rust-datasources-defaults-options) | Registers listed provider packages. Does not apply to a `Some` `create` bag. |
-| [register(provider, driver)](#rust-datasources-register-provider-driver) | Registers a provider [Driver](#rust-driver) by name. |
-| [create(options)](#rust-datasources-create-options) | Creates one datasource. `None` reads process env; `Some` is used as-is. |
-| [default()](#rust-datasources-default) | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#rust-create-options). |
-| [create_default()](#rust-datasources-create_default) | `default()`. |
-| [reset()](#rust-datasources-reset) | Clears the registry. Use in tests. |
-| [registered()](#rust-datasources-registered) | Lists registered provider names. |
-
-###### defaults(options) {#rust-datasources-defaults-options}
-
-Registers listed provider packages. Does not apply to a `Some` `create` bag.
-
-**Definition**
-
-```rust
-pub fn defaults(options: HashMap<String, String>) -> Result<()>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#rust-datasourceoptions) |
-
-**Returns**
-
-`Result<()>`
-
-###### register(provider, driver) {#rust-datasources-register-provider-driver}
-
-Registers a provider [Driver](#rust-driver) by name.
-
-**Definition**
-
-```rust
-pub fn register(provider: impl Into<String>, driver: Arc<dyn Driver>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `provider` | registry key (`sqlite`, `mysql`, …) |
-| `driver` | [Driver](#rust-driver) that builds connections, commands, transactions, and row converters |
-
-###### create(options) {#rust-datasources-create-options}
-
-Creates one datasource. `None` reads process env; `Some` is used as-is.
-
-**Definition**
-
-```rust
-pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datasource>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `options` | [DatasourceOptions](#rust-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
-
-**Returns**
-
-`Result<Arc<dyn `[Datasource](#rust-datasource)`>>`
-
-###### default() {#rust-datasources-default}
-
-Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#rust-create-options).
-
-**Definition**
-
-```rust
-pub fn default() -> Result<Arc<dyn Datasource>>
-```
-
-**Returns**
-
-`Result<Arc<dyn `[Datasource](#rust-datasource)`>>`
-
-###### create_default() {#rust-datasources-create_default}
-
-`default()`.
-
-**Definition**
-
-```rust
-pub fn create_default() -> Result<Arc<dyn Datasource>>
-```
-
-**Returns**
-
-`Result<Arc<dyn `[Datasource](#rust-datasource)`>>`
-
-###### reset() {#rust-datasources-reset}
-
-Clears the registry. Use in tests.
-
-**Definition**
-
-```rust
-pub fn reset()
-```
-
-###### registered() {#rust-datasources-registered}
-
-Lists registered provider names.
-
-**Definition**
-
-```rust
-pub fn registered() -> Vec<String>
-```
-
-**Returns**
-
-`Vec<String>`
-
-### Remarks
-
-`Default` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError`.
-
-A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
-
-When `Create` is called with null / `undefined` / `None` options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. C# loads those with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust use `@datasources/register` and `datasources-register`. Each dialect implements [IDriver](#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
-
-### Examples
-
-#### Default from environment
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L23-L30)
-
-```csharp
-Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "memory");
-Environment.SetEnvironmentVariable("PROVIDER", "memory");
-Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L19-L24)
-
-```rust
-register("sqlite", MockDriver::arc());
-std::env::set_var("PROVIDER", "sqlite");
-std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
-let ds = default().expect("default");
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L46-L52)
-
-```typescript
-DatasourceFactory.register("sqlite", new MockDriver());
-process.env.PROVIDER = "sqlite";
-process.env.DATASOURCE_URL = "sqlite:///:memory:";
-const ds = DatasourceFactory.default;
-```
-
-#### Register and Create
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
-
-```csharp
-DatasourceFactory.Register("memory", new MemoryDriver());
-var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L39-L44)
-
-```rust
-register("memory", Arc::new(MemoryDriver));
-let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L31-L36)
-
-```typescript
-DatasourceFactory.register("memory", new MemoryDriver());
-const ds = DatasourceFactory.create({ provider: "memory" });
-```
-
-#### Missing provider
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L32-L38)
-
-```csharp
-DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" });
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L26-L33)
-
-```rust
-create(Some(&HashMap::from([("provider".into(), "missing".into())])));
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L54-L58)
-
-```typescript
-DatasourceFactory.create({ provider: "missing" });
-```
-
 ## Datasource
 
-One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `Create` is on [DatasourceFactory](#datasource-factory).
+One configured datasource: provider name plus factories for connections, commands, and repositories. `Default` / `default` / `default()` loads the provider from the environment. `Create` is on [DatasourceFactory](#datasource-factory).
 
 ### Classes
 
@@ -802,6 +320,12 @@ class Datasource implements IDatasource
 | Name | Description |
 | --- | --- |
 | [Datasource(provider, driver, options?)](#typescript-datasource-datasource-provider-driver-options) | Builds a datasource from a provider [IDriver](#typescript-idriver). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| default | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [create](#typescript-create-options) with no options. |
 
 **Methods**
 
@@ -973,6 +497,12 @@ public sealed class Datasource : IDatasource
 | --- | --- |
 | [Datasource(provider, driver, options)](#csharp-datasource-datasource-provider-driver-options) | Builds a datasource from a provider [IDriver](#csharp-idriver). |
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Default | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [DatasourceFactory.Create](#csharp-create-options) with no options. |
+
 ###### Datasource(provider, driver, options) {#csharp-datasource-datasource-provider-driver-options}
 
 Builds a datasource from a provider [IDriver](#csharp-idriver).
@@ -1133,6 +663,32 @@ pub fn new(provider: impl Into<String>, driver: Arc<dyn Driver>, options: Option
 | `driver` | [Driver](#rust-driver) that builds connections, commands, transactions, and row converters |
 | `options` | [DatasourceOptions](#rust-datasourceoptions) passed to `driver.connection` |
 
+##### datasources {#rust-datasources}
+
+```rust
+// datasources
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [default()](#rust-datasources-default) | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [create](#rust-create-options) with no options. |
+
+###### default() {#rust-datasources-default}
+
+Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [create](#rust-create-options) with no options.
+
+**Definition**
+
+```rust
+pub fn default() -> Result<Arc<dyn Datasource>>
+```
+
+**Returns**
+
+`Result<Arc<dyn `[Datasource](#rust-datasource)`>>`
+
 ##### Datasource {#rust-datasource}
 
 ```rust
@@ -1254,7 +810,7 @@ HashMap<String, String>
 
 ### Remarks
 
-`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
+`Datasource.Default` / `Datasource.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `DatasourceFactory.Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
 
 C# loads each installed provider with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust register those names through `@datasources/register` and `datasources-register` when that package is present.
 
@@ -1269,7 +825,7 @@ See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI]
 ##### C#
 
 ```csharp
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 ```
 
 ##### Rust
@@ -1281,7 +837,35 @@ let ds = default()?;
 ##### TypeScript
 
 ```typescript
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
+```
+
+#### Default from environment
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L23-L30)
+
+```csharp
+Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "memory");
+Environment.SetEnvironmentVariable("PROVIDER", "memory");
+Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L19-L24)
+
+```rust
+register("sqlite", MockDriver::arc());
+std::env::set_var("PROVIDER", "sqlite");
+std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
+let ds = default().expect("default");
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L46-L52)
+
+```typescript
+DatasourceFactory.register("sqlite", new MockDriver());
+process.env.PROVIDER = "sqlite";
+process.env.DATASOURCE_URL = "sqlite:///:memory:";
+const ds = Datasource.default;
 ```
 
 ## Connection
@@ -1567,10 +1151,10 @@ Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / 
 
 #### Create from Default
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ConnectionTests.cs#L25-L31)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ConnectionTests.cs#L24-L30)
 
 ```csharp
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 ```
 
@@ -1581,10 +1165,10 @@ let ds = default().expect("default");
 let connection = ds.create_connection().await.expect("connection");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Connection.test.ts#L29-L33)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Connection.test.ts#L28-L32)
 
 ```typescript
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
 const connection = await ds.createConnection();
 ```
 
@@ -1845,10 +1429,10 @@ Omitted isolation is `Serializable` (TypeScript omits the argument, C# defaults,
 
 #### Start a transaction
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransactionTests.cs#L25-L33)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransactionTests.cs#L24-L32)
 
 ```csharp
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 var txn = await connection.StartTransaction();
@@ -1863,10 +1447,10 @@ connection.open().await.expect("open");
 let txn = connection.start_transaction(None).await.expect("txn");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Transaction.test.ts#L29-L35)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Transaction.test.ts#L28-L34)
 
 ```typescript
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
 const connection = await ds.createConnection();
 await connection.open();
 const txn = await connection.startTransaction();
@@ -3191,7 +2775,7 @@ while (await reader.next()) {
 Assert.Throws<InvalidOperationException>(() =>
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1117-L1127)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1115-L1125)
 
 ```rust
 let max_n = Aggregate::max("n", None);
@@ -4552,7 +4136,7 @@ var byId = new WhereText("id = 1");
 var withWhere = new SelectStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1190-L1193)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1188-L1191)
 
 ```rust
     .not_null(NotNull::new(Some("nn_id"))),
@@ -4583,7 +4167,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L936)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L927-L934)
 
 ```rust
     Where::new(Operator::Equals {
@@ -4637,7 +4221,7 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L994)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L978-L992)
 
 ```rust
 .get_text()
@@ -4690,7 +4274,7 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L999-L1002)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L997-L1000)
 
 ```rust
     left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -4731,7 +4315,7 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1007)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1002-L1005)
 
 ```rust
 
@@ -4769,7 +4353,7 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1009-L1012)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1007-L1010)
 
 ```rust
     .get_text(),
@@ -4810,7 +4394,7 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1017-L1020)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1015-L1018)
 
 ```rust
     .parameters()
@@ -5100,7 +4684,7 @@ Join.Left("payments", "orders.id", "payments.order_id"),
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L988-L992)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L986-L990)
 
 ```rust
     )))),
@@ -5428,7 +5012,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L983-L988)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L981-L986)
 
 ```rust
 left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
@@ -5763,7 +5347,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L992-L997)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L990-L995)
 
 ```rust
 assert!(Where::new(Operator::Equals {
@@ -6737,7 +6321,7 @@ GroupBy = ["status"],
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L998-L1006)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L996-L1004)
 
 ```rust
 assert!(Where::new(Operator::In {
@@ -6786,7 +6370,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1011-L1034)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1009-L1032)
 
 ```rust
 );
@@ -7067,7 +6651,7 @@ new CreateTableStatement(
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1079-L1086)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1077-L1084)
 
 ```rust
         ..SelectStatementOptions::new("users", &["users.id"])
@@ -7112,7 +6696,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1088-L1090)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1086-L1088)
 
 ```rust
 })
@@ -7389,7 +6973,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1092-L1093)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1090-L1091)
 
 ```rust
 let count = Aggregate::count("*", Some("n"));
@@ -7665,7 +7249,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1098-L1099)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1096-L1097)
 
 ```rust
 "customers",
@@ -8276,7 +7860,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L653-L657)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L651-L655)
 
 ```rust
 assert!(txn.commit().await.is_err());
@@ -8344,7 +7928,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2103-L2109)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2101-L2107)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -8401,7 +7985,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L932-L938)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L930-L936)
 
 ```rust
     })
@@ -8909,7 +8493,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L746-L761)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L744-L759)
 
 ```rust
 
@@ -8947,7 +8531,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2103-L2109)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2101-L2107)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -9114,7 +8698,7 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 var ret = new ReturnStatement("add", fields);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1169-L1173)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1167-L1171)
 
 ```rust
     &[],
@@ -11192,7 +10776,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1441-L1457)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1439-L1455)
 
 ```rust
         &row
@@ -11251,7 +10835,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1478-L1484)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1476-L1482)
 
 ```rust
 
@@ -14035,7 +13619,7 @@ var response = await Repo(parentsRepo, childrenRepo).Create(
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1900-L1914)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1898-L1912)
 
 ```rust
 let command = Arc::new(MockCommand::new());
@@ -17134,9 +16718,422 @@ const dest = converter.convert({ flag: 1, name: "a" });
 
 ## Other
 
-Types that sit beside a connection, command, or repository. A provider may use them. Nothing here is required to open a connection.
+Supporting types for building a datasource and reading a connection URL.
 
+- [Datasource Factory](#datasource-factory) — `Create` / `create` registers providers and builds a datasource from options
 - [Datasource URL](#datasource-url) — `DatasourceUrlParser` reads a connection URL into a `DatasourceUrl`
+
+## DatasourceFactory
+
+Creates a [Datasource](#datasource) for a provider and `DATASOURCE_URL`. After [setup](#setup), [Datasource.Default](#datasource) builds that datasource from `.env`.
+
+### Classes
+
+##### TypeScript
+
+##### DatasourceFactory {#typescript-datasourcefactory}
+
+```typescript
+class DatasourceFactory implements IDatasourceFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [defaults(options)](#typescript-datasourcefactory-defaults-options) | Registers listed provider packages. Does not apply to a non-null `create` bag. |
+| [register(provider, driver)](#typescript-datasourcefactory-register-provider-driver) | Registers a provider [IDriver](#typescript-idriver) by name. |
+| [create(options?)](#typescript-datasourcefactory-create-options) | Creates one datasource. `undefined` options read process env; a dictionary is used as-is. |
+| [reset()](#typescript-datasourcefactory-reset) | Clears the registry. Use in tests. |
+| [registered()](#typescript-datasourcefactory-registered) | Lists registered provider names. |
+
+###### defaults(options) {#typescript-datasourcefactory-defaults-options}
+
+Registers listed provider packages. Does not apply to a non-null `create` bag.
+
+**Definition**
+
+```typescript
+static defaults(options: DatasourceOptions): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#typescript-datasourceoptions) |
+
+###### register(provider, driver) {#typescript-datasourcefactory-register-provider-driver}
+
+Registers a provider [IDriver](#typescript-idriver) by name.
+
+**Definition**
+
+```typescript
+static register(provider: string, driver: IDriver): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `provider` | registry key (`sqlite`, `mysql`, …) |
+| `driver` | [IDriver](#typescript-idriver) that builds connections, commands, transactions, and row converters |
+
+###### create(options?) {#typescript-datasourcefactory-create-options}
+
+Creates one datasource. `undefined` options read process env; a dictionary is used as-is.
+
+**Definition**
+
+```typescript
+static create(options?: DatasourceOptions): IDatasource
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
+
+**Returns**
+
+[IDatasource](#typescript-idatasource)
+
+###### reset() {#typescript-datasourcefactory-reset}
+
+Clears the registry. Use in tests.
+
+**Definition**
+
+```typescript
+static reset(): void
+```
+
+###### registered() {#typescript-datasourcefactory-registered}
+
+Lists registered provider names.
+
+**Definition**
+
+```typescript
+static registered(): string[]
+```
+
+**Returns**
+
+`string[]`
+
+##### IDatasourceFactory {#typescript-idatasourcefactory}
+
+```typescript
+interface IDatasourceFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(options?)](#typescript-idatasourcefactory-create-options) | Creates one datasource from a string dictionary. |
+
+###### create(options?) {#typescript-idatasourcefactory-create-options}
+
+Creates one datasource from a string dictionary.
+
+**Definition**
+
+```typescript
+create(options?: DatasourceOptions): IDatasource
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#typescript-datasourceoptions) |
+
+**Returns**
+
+[IDatasource](#typescript-idatasource)
+
+##### C#
+
+##### DatasourceFactory {#csharp-datasourcefactory}
+
+```csharp
+public sealed class DatasourceFactory : IDatasourceFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Defaults(options)](#csharp-datasourcefactory-defaults-options) | Registers listed provider packages. Does not apply to a non-null `Create` bag. |
+| [Register(provider, driver)](#csharp-datasourcefactory-register-provider-driver) | Registers a provider [IDriver](#csharp-idriver) by name. |
+| [Create(options)](#csharp-datasourcefactory-create-options) | Creates one datasource. `null` options read process `.env`; a dictionary is used as-is. |
+| [Reset()](#csharp-datasourcefactory-reset) | Clears the registry. Use in tests. |
+| [Registered()](#csharp-datasourcefactory-registered) | Lists registered provider names. |
+
+###### Defaults(options) {#csharp-datasourcefactory-defaults-options}
+
+Registers listed provider packages. Does not apply to a non-null `Create` bag.
+
+**Definition**
+
+```csharp
+public static void Defaults(IReadOnlyDictionary<string, string?> options)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#csharp-datasourceoptions) |
+
+###### Register(provider, driver) {#csharp-datasourcefactory-register-provider-driver}
+
+Registers a provider [IDriver](#csharp-idriver) by name.
+
+**Definition**
+
+```csharp
+public static void Register(string provider, IDriver driver)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `provider` | registry key (`sqlite`, `mysql`, …) |
+| `driver` | [IDriver](#csharp-idriver) that builds connections, commands, transactions, and row converters |
+
+###### Create(options) {#csharp-datasourcefactory-create-options}
+
+Creates one datasource. `null` options read process `.env`; a dictionary is used as-is.
+
+**Definition**
+
+```csharp
+public static IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
+
+**Returns**
+
+[IDatasource](#csharp-idatasource)
+
+###### Reset() {#csharp-datasourcefactory-reset}
+
+Clears the registry. Use in tests.
+
+**Definition**
+
+```csharp
+public static void Reset()
+```
+
+###### Registered() {#csharp-datasourcefactory-registered}
+
+Lists registered provider names.
+
+**Definition**
+
+```csharp
+public static IReadOnlyList<string> Registered()
+```
+
+**Returns**
+
+`IReadOnlyList<string>`
+
+##### IDatasourceFactory {#csharp-idatasourcefactory}
+
+```csharp
+public interface IDatasourceFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(options)](#csharp-idatasourcefactory-create-options) | Creates one datasource from a string dictionary. |
+
+###### Create(options) {#csharp-idatasourcefactory-create-options}
+
+Creates one datasource from a string dictionary.
+
+**Definition**
+
+```csharp
+IDatasource Create(IReadOnlyDictionary<string, string?>? options = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#csharp-datasourceoptions) |
+
+**Returns**
+
+[IDatasource](#csharp-idatasource)
+
+##### Rust
+
+##### datasources {#rust-datasources}
+
+```rust
+// datasources
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [defaults(options)](#rust-datasources-defaults-options) | Registers listed provider packages. Does not apply to a `Some` `create` bag. |
+| [register(provider, driver)](#rust-datasources-register-provider-driver) | Registers a provider [Driver](#rust-driver) by name. |
+| [create(options)](#rust-datasources-create-options) | Creates one datasource. `None` reads process env; `Some` is used as-is. |
+| [reset()](#rust-datasources-reset) | Clears the registry. Use in tests. |
+| [registered()](#rust-datasources-registered) | Lists registered provider names. |
+
+###### defaults(options) {#rust-datasources-defaults-options}
+
+Registers listed provider packages. Does not apply to a `Some` `create` bag.
+
+**Definition**
+
+```rust
+pub fn defaults(options: HashMap<String, String>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | install keys such as `INSTALLED_PROVIDERS`; not [Create options](#rust-datasourceoptions) |
+
+**Returns**
+
+`Result<()>`
+
+###### register(provider, driver) {#rust-datasources-register-provider-driver}
+
+Registers a provider [Driver](#rust-driver) by name.
+
+**Definition**
+
+```rust
+pub fn register(provider: impl Into<String>, driver: Arc<dyn Driver>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `provider` | registry key (`sqlite`, `mysql`, …) |
+| `driver` | [Driver](#rust-driver) that builds connections, commands, transactions, and row converters |
+
+###### create(options) {#rust-datasources-create-options}
+
+Creates one datasource. `None` reads process env; `Some` is used as-is.
+
+**Definition**
+
+```rust
+pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datasource>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `options` | [DatasourceOptions](#rust-datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL` |
+
+**Returns**
+
+`Result<Arc<dyn `[Datasource](#rust-datasource)`>>`
+
+###### reset() {#rust-datasources-reset}
+
+Clears the registry. Use in tests.
+
+**Definition**
+
+```rust
+pub fn reset()
+```
+
+###### registered() {#rust-datasources-registered}
+
+Lists registered provider names.
+
+**Definition**
+
+```rust
+pub fn registered() -> Vec<String>
+```
+
+**Returns**
+
+`Vec<String>`
+
+### Remarks
+
+`Create(null)` / `create()` / `create(None)` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError`. [Datasource.Default](#datasource) uses that path.
+
+A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
+
+When `Create` is called with null / `undefined` / `None` options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. C# loads those with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust use `@datasources/register` and `datasources-register`. Each dialect implements [IDriver](#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
+
+### Examples
+
+#### Register and Create
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
+
+```csharp
+DatasourceFactory.Register("memory", new MemoryDriver());
+var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L39-L44)
+
+```rust
+register("memory", Arc::new(MemoryDriver));
+let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L31-L36)
+
+```typescript
+DatasourceFactory.register("memory", new MemoryDriver());
+const ds = DatasourceFactory.create({ provider: "memory" });
+```
+
+#### Missing provider
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceFactoryTests.cs#L32-L38)
+
+```csharp
+DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource_factory.rs#L26-L33)
+
+```rust
+create(Some(&HashMap::from([("provider".into(), "missing".into())])));
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L54-L58)
+
+```typescript
+DatasourceFactory.create({ provider: "missing" });
+```
 
 ## Datasource URL
 
@@ -17408,7 +17405,7 @@ const connectionString = DatasourceUrlParser.parse("Host=db;Port=1");
 
 ## Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. `Default` / `default` / `DatasourceFactory.default` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
+`@datasources/cli` installs provider packages and writes a local `.env`. `Datasource.Default` / `Datasource.default` / `default()` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
 
 ```sh
 npx @datasources/cli setup

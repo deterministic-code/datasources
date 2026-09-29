@@ -25,7 +25,7 @@ public class DatasourceFactoryTests
         Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "memory");
         Environment.SetEnvironmentVariable("PROVIDER", "memory");
         Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
-        Assert.Equal("memory", DatasourceFactory.Default.Provider);
+        Assert.Equal("memory", Datasource.Default.Provider);
     }
 
     [Fact]

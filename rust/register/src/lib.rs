@@ -99,7 +99,7 @@ static INIT: unsafe extern "C" fn() = {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use datasources::{create, create_default, default, registered, reset};
+    use datasources::{create, default, registered, reset};
     use std::sync::Mutex;
 
     static ENV: Mutex<()> = Mutex::new(());
@@ -217,13 +217,12 @@ mod tests {
     }
 
     #[test]
-    fn create_default_reads_env() {
+    fn default_reads_env() {
         isolated(|| {
             init();
             std::env::set_var("INSTALLED_PROVIDERS", "json,memory");
             std::env::set_var("DATASOURCE_URL", "memory://");
             std::env::set_var("PROVIDER", "memory");
-            assert_eq!(create_default().unwrap().provider(), "memory");
             assert_eq!(default().unwrap().provider(), "memory");
             std::env::set_var("PROVIDER", "json");
             std::env::set_var("DATASOURCE_URL", "json://");

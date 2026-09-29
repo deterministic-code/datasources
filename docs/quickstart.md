@@ -34,7 +34,7 @@ Start with `createCommand` and `executeReader`. The connection must be open.
 
 ::: dialects
 ```csharp
-var ds = DatasourceFactory.Default;
+var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 
@@ -61,9 +61,9 @@ while reader.next().await? {
 }
 ```
 ```typescript
-import { DatasourceFactory } from "@datasources/core";
+import { Datasource } from "@datasources/core";
 
-const ds = DatasourceFactory.default;
+const ds = Datasource.default;
 const connection = await ds.createConnection();
 await connection.open();
 

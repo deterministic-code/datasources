@@ -1,6 +1,6 @@
 # DatasourceFactory
 
-Creates a [Datasource](./datasource.md) for a provider and `DATASOURCE_URL`. After [setup](../cli.md#setup), use `Default` / `default` / `DatasourceFactory.default` to build that datasource from `.env`.
+Creates a [Datasource](./datasource.md) for a provider and `DATASOURCE_URL`. After [setup](../cli.md#setup), [Datasource.Default](./datasource.md) builds that datasource from `.env`.
 
 ## Classes
 
@@ -11,18 +11,6 @@ Creates a [Datasource](./datasource.md) for a provider and `DATASOURCE_URL`. Aft
 ```typescript
 class DatasourceFactory implements IDatasourceFactory
 ```
-
-**Properties**
-
-##### default
-
-Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#create-options).
-
-```typescript
-static get default(): IDatasource
-```
-
-**Returns** [IDatasource](./datasource.md#idatasource)
 
 **Methods**
 
@@ -103,18 +91,6 @@ create(options?: DatasourceOptions): IDatasource
 ```csharp
 public sealed class DatasourceFactory : IDatasourceFactory
 ```
-
-**Properties**
-
-##### Default
-
-Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [Create](#create-options).
-
-```csharp
-public static IDatasource Default { get; }
-```
-
-**Returns** [IDatasource](./datasource.md#idatasource)
 
 **Methods**
 
@@ -233,26 +209,6 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
 
 **Returns** `Result<Arc<dyn `[Datasource](./datasource.md#datasource)`>>`
 
-##### default()
-
-Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Uses [create](#create-options).
-
-```rust
-pub fn default() -> Result<Arc<dyn Datasource>>
-```
-
-**Returns** `Result<Arc<dyn `[Datasource](./datasource.md#datasource)`>>`
-
-##### create_default()
-
-`default()`.
-
-```rust
-pub fn create_default() -> Result<Arc<dyn Datasource>>
-```
-
-**Returns** `Result<Arc<dyn `[Datasource](./datasource.md#datasource)`>>`
-
 ##### reset()
 
 Clears the registry. Use in tests.
@@ -275,24 +231,13 @@ pub fn registered() -> Vec<String>
 
 ## Remarks
 
-`Default` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError`.
+`Create(null)` / `create()` / `create(None)` reads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Missing `PROVIDER` throws `DatasourceException` / `DatasourceError`. [Datasource.Default](./datasource.md) uses that path.
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
 When `Create` is called with null / `undefined` / `None` options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. C# loads those with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust use `@datasources/register` and `datasources-register`. Each dialect implements [IDriver](../writing-providers.md#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
 
 ## Examples
-
-### Default from environment
-
-::: example
-```csharp csharp/Datasources.Tests/DatasourceFactoryTests.cs#DefaultFromEnvironment
-```
-```rust rust/datasources/src/tests/datasource_factory.rs#default_from_environment
-```
-```typescript typescript/datasources/src/DatasourceFactory.test.ts#default-from-environment
-```
-:::
 
 ### Register and Create
 

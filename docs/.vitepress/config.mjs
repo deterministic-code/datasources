@@ -1,5 +1,5 @@
 import { readFileSync, utimesSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
 import { dialectsVitePlugin, transformDialects } from "../../scripts/dialects.mjs";
@@ -42,9 +42,10 @@ const watchToc = () => ({
   name: "watch-toc",
   configureServer(server) {
     server.watcher.add(tocPath);
-    server.watcher.on("change", (file) => {
-      if (file === tocPath || file.endsWith("toc.yaml"))
-        utimesSync(configPath, new Date(), new Date());
+    server.watcher.on("all", (event, file) => {
+      if (event !== "change" && event !== "add") return;
+      if (resolve(file) !== resolve(tocPath)) return;
+      utimesSync(configPath, new Date(), new Date());
     });
     server.middlewares.use((req, res, next) => {
       const path = req.url?.split("?")[0]?.replace(/\/$/, "") ?? "";

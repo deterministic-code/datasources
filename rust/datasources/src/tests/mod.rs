@@ -544,18 +544,16 @@ fn registry() {
     assert_eq!(registered(), vec!["json".to_string()]);
     let created = create(Some(&HashMap::from([("PROVIDER".into(), "json".into())]))).unwrap();
     assert_eq!(created.provider(), "json");
-    assert!(create_default().is_err());
+    assert!(default().is_err());
     std::env::set_var("DATASOURCE_URL", "json://");
-    assert!(create_default().is_err());
+    assert!(default().is_err());
     std::env::set_var("PROVIDER", "json");
-    assert_eq!(create_default().unwrap().provider(), "json");
     assert_eq!(default().unwrap().provider(), "json");
     std::env::set_var("DATASOURCE_URL", "json://extra");
     assert_eq!(default().unwrap().provider(), "json");
     std::env::remove_var("DATASOURCE_URL");
     reset();
     assert!(create(Some(&HashMap::from([("PROVIDER".into(), "json".into())]))).is_err());
-    assert!(create_default().is_err());
     assert!(default().is_err());
 }
 
