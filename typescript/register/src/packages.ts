@@ -2,7 +2,6 @@ export const packages: Record<string, string> = {
   json: "@datasources/json",
   memory: "@datasources/memory",
   sqlite: "@datasources/sqlite",
-  text: "@datasources/text",
   xml: "@datasources/xml",
   yaml: "@datasources/yaml",
   mysql: "@datasources/mysql",

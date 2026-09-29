@@ -10,7 +10,6 @@ default = ["json", "memory"]
 json = ["dep:datasources-json"]
 memory = ["dep:datasources-memory"]
 sqlite = ["dep:datasources-sqlite"]
-text = ["dep:datasources-text"]
 xml = ["dep:datasources-xml"]
 yaml = ["dep:datasources-yaml"]
 mysql = ["dep:datasources-mysql"]
@@ -25,7 +24,6 @@ datasources = { workspace = true }
 datasources-json = { path = "../providers/json", optional = true }
 datasources-memory = { path = "../providers/memory", optional = true }
 datasources-sqlite = { path = "../providers/sqlite", optional = true }
-datasources-text = { path = "../providers/text", optional = true }
 datasources-xml = { path = "../providers/xml", optional = true }
 datasources-yaml = { path = "../providers/yaml", optional = true }
 datasources-mysql = { path = "../providers/mysql", optional = true }
