@@ -5,33 +5,12 @@
 ::: dialects
 ```typescript
 npm install @datasources/core
----
-npm install @datasources/register
-npm install @datasources/sqlite
-npm install @datasources/mysql
-npm install @datasources/postgres
-npm install @datasources/memory
-npm install @datasources/json
 ```
 ```csharp
 dotnet add package Datasources
----
-dotnet add package Datasources.Sqlite
-dotnet add package Datasources.Sqlite.Microsoft
-dotnet add package Datasources.Mysql
-dotnet add package Datasources.Postgres
-dotnet add package Datasources.Memory
-dotnet add package Datasources.Json
 ```
 ```rust
 cargo add datasources
----
-cargo add datasources-register --features sqlite
-cargo add datasources-sqlite
-cargo add datasources-mysql
-cargo add datasources-postgres
-cargo add datasources-memory
-cargo add datasources-json
 ```
 :::
 
