@@ -30,6 +30,6 @@ describe("sqlserver", () => {
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());
     ds.createReadonlyRepository(untyped(), connection);
-    expect(new SqlServerDriver().transaction(connection).isolation).toBe("serializable");
+    expect(new SqlServerDriver().transaction(connection).isolation).toBe("readCommitted");
   });
 });

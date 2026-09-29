@@ -74,7 +74,7 @@ Begins a transaction. The connection must be open.
 startTransaction(isolation?: IsolationLevel): Promise<ITransaction>
 ```
 
-- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); omitted uses serializable
+- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); omitted uses read committed
 
 **Returns** `Promise<[ITransaction](./transaction.md)>`
 
@@ -146,10 +146,10 @@ ValueTask DisposeAsync()
 Begins a transaction. The connection must be open.
 
 ```csharp
-Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
 ```
 
-- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); default is serializable
+- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); default is read committed
 
 **Returns** `Task<[ITransaction](./transaction.md)>`
 
@@ -220,7 +220,7 @@ Begins a transaction. The connection must be open.
 async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<Arc<dyn Transaction>>
 ```
 
-- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); `None` uses serializable
+- `isolation` — [IsolationLevel](./transaction.md#isolationlevel); `None` uses read committed
 
 **Returns** `Result<Arc<dyn `[Transaction](./transaction.md)`>>`
 :::

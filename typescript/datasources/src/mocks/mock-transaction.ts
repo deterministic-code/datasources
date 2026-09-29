@@ -9,7 +9,7 @@ export class MockTransaction implements ITransaction {
   abortError?: unknown;
   committed = false;
   aborted = false;
-  isolation: IsolationLevel = IsolationLevel.Serializable;
+  isolation: IsolationLevel = IsolationLevel.ReadCommitted;
 
   constructor(readonly connection: IConnection) {}
 

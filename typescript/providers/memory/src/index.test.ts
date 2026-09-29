@@ -54,7 +54,7 @@ describe("Connection", () => {
     const connection = new MemoryConnection();
     await connection.open();
     const txn = await connection.startTransaction();
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
   });
 
   it("create and run a command", async () => {
@@ -81,7 +81,7 @@ describe("Transaction", () => {
     await connection.open();
     const txn = await connection.startTransaction();
     await txn.commit();
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
   });
 
   it("abort", async () => {
@@ -89,7 +89,22 @@ describe("Transaction", () => {
     await connection.open();
     const txn = await connection.startTransaction();
     await txn.abort();
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
+  });
+
+  it("two commands running together", async () => {
+    const connection = new MemoryConnection();
+    await connection.open();
+    const txn = await connection.startTransaction();
+    const command = connection.createCommand();
+    const fields = [{ name: "name", value: "ada" }];
+    await command.executeStatement(new InsertStatement("people", fields), fields);
+    const reader = await command.executeReaderStatement(new SelectInsertedIdStatement("people", "id"));
+    const moved = await reader.next();
+    const id = reader.current;
+    await txn.commit();
+    expect(moved).toBe(true);
+    expect(id).toEqual({ id: 1 });
   });
 });
 
@@ -331,7 +346,7 @@ describe("Memory datasource", () => {
     expect(await registered.createConnection()).toBeInstanceOf(MemoryConnection);
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     const provider = new MemoryDriver();
-    expect(provider.transaction(connection).isolation).toBe("serializable");
+    expect(provider.transaction(connection).isolation).toBe("readCommitted");
     await expect(command.executeStatement(new SelectStatement("nope"))).rejects.toThrow(
       "Unsupported Memory",
     );

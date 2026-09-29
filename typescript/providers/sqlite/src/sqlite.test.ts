@@ -117,7 +117,7 @@ describe("SqliteConnection", () => {
       "BEGIN",
       "ROLLBACK",
     ]);
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
     await connection.close();
     expect(db.closed).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);
@@ -226,7 +226,7 @@ describe("Sqlite datasource", () => {
     const of = (): IDriver => ({
       connection: () => new SqliteConnection({ Database: FakeDatabase }),
       command: (c) => c.createCommand(),
-      transaction: (c, isolation = "serializable") =>
+      transaction: (c, isolation = "readCommitted") =>
         new SqliteTransaction(c as SqliteConnection, isolation),
       rowTypeConverters: SqliteRowTypeConverters,
       columnType,
@@ -264,6 +264,6 @@ describe("Sqlite datasource", () => {
     expect(provider.columnType("binary")).toBe("BLOB");
     expect(() => provider.columnType("xml")).toThrow(DatasourceError);
     expect(provider.command(connection)).toBeInstanceOf(SqliteCommand);
-    expect(provider.transaction(connection as SqliteConnection).isolation).toBe("serializable");
+    expect(provider.transaction(connection as SqliteConnection).isolation).toBe("readCommitted");
   });
 });

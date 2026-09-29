@@ -18,7 +18,7 @@ pub struct MockTransaction {
 impl MockTransaction {
     pub fn new_unbound() -> Self {
         Self {
-            isolation: Mutex::new(IsolationLevel::Serializable),
+            isolation: Mutex::new(IsolationLevel::ReadCommitted),
             commit_calls: Mutex::new(0),
             abort_calls: Mutex::new(0),
             commit_error: Mutex::new(None),

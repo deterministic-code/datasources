@@ -149,7 +149,7 @@ public class MemoryTests
     {
         public IConnection Connection(IReadOnlyDictionary<string, string?>? _) => connection();
         public ICommand Command(IConnection c) => c.CreateCommand();
-        public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.Serializable) =>
+        public ITransaction Transaction(IConnection c, IsolationLevel isolation = IsolationLevel.ReadCommitted) =>
             new MemoryTransaction((MemoryConnection)c, isolation);
         public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; } =
             new Dictionary<string, TypeConverter<Value, Value>>();

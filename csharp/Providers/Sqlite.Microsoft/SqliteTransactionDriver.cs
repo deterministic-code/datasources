@@ -4,7 +4,7 @@ namespace Datasources.Sqlite;
 
 internal sealed class SqliteTransactionDriver(SqliteCommandDriver commands) : ISqliteTransactions
 {
-    public async Task Begin(IsolationLevel isolation = IsolationLevel.Serializable)
+    public async Task Begin(IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         await commands.Exec(isolation == IsolationLevel.ReadUncommitted
             ? "PRAGMA read_uncommitted = 1"

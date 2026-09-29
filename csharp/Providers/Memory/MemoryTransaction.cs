@@ -4,7 +4,7 @@ namespace Datasources.Memory;
 
 internal sealed class MemoryTransaction : ITransaction
 {
-    public MemoryTransaction(MemoryConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+    public MemoryTransaction(MemoryConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         Connection = connection;
         Isolation = isolation;

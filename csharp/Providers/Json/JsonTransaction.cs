@@ -4,7 +4,7 @@ namespace Datasources.Json;
 
 internal sealed class JsonTransaction : ITransaction
 {
-    public JsonTransaction(JsonConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+    public JsonTransaction(JsonConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         Connection = connection;
         Isolation = isolation;

@@ -2,7 +2,7 @@ namespace Datasources.Sqlite;
 
 internal sealed class SqliteTransaction : ITransaction
 {
-    public SqliteTransaction(SqliteConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+    public SqliteTransaction(SqliteConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         Connection = connection;
         Isolation = isolation;

@@ -1,0 +1,10 @@
+const connection = new MemoryConnection();
+await connection.open();
+const txn = await connection.startTransaction();
+const command = connection.createCommand();
+const fields = [{ name: "name", value: "ada" }];
+await command.executeStatement(new InsertStatement("people", fields), fields);
+const reader = await command.executeReaderStatement(new SelectInsertedIdStatement("people", "id"));
+const moved = await reader.next();
+const id = reader.current;
+await txn.commit();

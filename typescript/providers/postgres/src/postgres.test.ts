@@ -104,6 +104,7 @@ describe("PostgresConnection", () => {
     await connection.startTransaction(IsolationLevel.ReadUncommitted);
     await connection.startTransaction(IsolationLevel.ReadCommitted);
     await connection.startTransaction(IsolationLevel.RepeatableRead);
+    await connection.startTransaction(IsolationLevel.Serializable);
     await new PostgresTransaction(connection).commit();
     await new PostgresTransaction(connection).abort();
     expect(client.queries.map((q) => q.text)).toEqual([
@@ -114,10 +115,11 @@ describe("PostgresConnection", () => {
       "SELECT * FROM items",
       "CREATE TABLE users (id INTEGER)",
       "SELECT 1",
-      "BEGIN ISOLATION LEVEL SERIALIZABLE",
+      "BEGIN ISOLATION LEVEL READ COMMITTED",
       "BEGIN ISOLATION LEVEL READ UNCOMMITTED",
       "BEGIN ISOLATION LEVEL READ COMMITTED",
       "BEGIN ISOLATION LEVEL REPEATABLE READ",
+      "BEGIN ISOLATION LEVEL SERIALIZABLE",
       "COMMIT",
       "ROLLBACK",
     ]);
@@ -166,7 +168,7 @@ describe("PostgresConnection", () => {
     const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);
     expect(txn2.isolation).toBe(IsolationLevel.ReadUncommitted);
     await txn2.abort();
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
     await connection.close();
     expect(FakeClient.latest.ended).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);
@@ -251,7 +253,7 @@ describe("Postgres datasource", () => {
     const of = (): IDriver => ({
       connection: () => new PostgresConnection({ Client: FakeClient }),
       command: (c) => c.createCommand(),
-      transaction: (c, isolation = "serializable") =>
+      transaction: (c, isolation = "readCommitted") =>
         new PostgresTransaction(c as PostgresConnection, isolation),
       rowTypeConverters: PostgresRowTypeConverters,
       columnType,
@@ -294,6 +296,6 @@ describe("Postgres datasource", () => {
     expect(provider.columnType("binary")).toBe("BYTEA");
     expect(() => provider.columnType("xml")).toThrow('Unknown postgres type "xml"');
     expect(provider.command(connection)).toBeInstanceOf(PostgresCommand);
-    expect(provider.transaction(connection as PostgresConnection).isolation).toBe("serializable");
+    expect(provider.transaction(connection as PostgresConnection).isolation).toBe("readCommitted");
   });
 });

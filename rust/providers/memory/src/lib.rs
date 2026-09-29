@@ -16,8 +16,9 @@ mod tests {
     use crate::store::{MemoryData, MemoryStore};
     use datasources::{
         converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
-        Connection, DatasourceError, ICRUDRepository, IReadonlyRepository, IsolationLevel, Parameter, Row,
-        SelectStatement, Value, WhereText,
+        Connection, DatasourceError, ICRUDRepository, IReadonlyRepository, InsertStatement,
+        IsolationLevel, Parameter, Row, SelectInsertedIdStatement, SelectStatement, Value,
+        WhereText,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -76,7 +77,7 @@ mod tests {
         let connection = MemoryConnection::from_options(None);
         connection.open().await.unwrap();
         let txn = connection.start_transaction(None).await.unwrap();
-        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+        assert_eq!(txn.isolation(), IsolationLevel::ReadCommitted);
     }
 
     #[tokio::test]
@@ -85,7 +86,7 @@ mod tests {
         connection.open().await.unwrap();
         let txn = connection.start_transaction(None).await.unwrap();
         txn.commit().await.unwrap();
-        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+        assert_eq!(txn.isolation(), IsolationLevel::ReadCommitted);
     }
 
     #[tokio::test]
@@ -94,7 +95,32 @@ mod tests {
         connection.open().await.unwrap();
         let txn = connection.start_transaction(None).await.unwrap();
         txn.abort().await.unwrap();
-        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+        assert_eq!(txn.isolation(), IsolationLevel::ReadCommitted);
+    }
+
+    #[tokio::test]
+    async fn two_commands_running_together() {
+        let connection = MemoryConnection::from_options(None);
+        connection.open().await.unwrap();
+        let txn = connection.start_transaction(None).await.unwrap();
+        let command = connection.create_command();
+        let fields = vec![Parameter::new("name", "ada")];
+        command
+            .execute_statement(&InsertStatement::new("people", &fields), Some(&fields))
+            .await
+            .unwrap();
+        let reader = command
+            .execute_reader_statement(&SelectInsertedIdStatement::new("people", "id"), None)
+            .await
+            .unwrap();
+        let moved = reader.next().await.unwrap();
+        let id = reader.current();
+        txn.commit().await.unwrap();
+        assert_eq!(moved, true);
+        assert_eq!(
+            id.as_ref().and_then(|row| row.get("id")),
+            Some(&Value::Int(1))
+        );
     }
 
     #[tokio::test]

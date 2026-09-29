@@ -2,7 +2,7 @@ namespace Datasources.Mysql;
 
 internal sealed class MysqlTransaction : ITransaction
 {
-    public MysqlTransaction(MysqlConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+    public MysqlTransaction(MysqlConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         Connection = connection;
         Isolation = isolation;

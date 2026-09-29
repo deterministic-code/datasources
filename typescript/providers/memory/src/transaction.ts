@@ -8,7 +8,7 @@ import type { MemoryConnection } from "./connection.ts";
 export class MemoryTransaction implements ITransaction {
   constructor(
     readonly connection: MemoryConnection,
-    readonly isolation: IsolationLevelName = IsolationLevel.Serializable,
+    readonly isolation: IsolationLevelName = IsolationLevel.ReadCommitted,
   ) {}
 
   async commit(): Promise<void> {

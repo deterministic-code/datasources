@@ -1,2 +1,2 @@
 DatasourceFactory.register("memory", new MemoryDriver());
-const ds = DatasourceFactory.create({ provider: "memory" });
+const ds = DatasourceFactory.create({ PROVIDER: "memory" });

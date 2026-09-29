@@ -30,6 +30,6 @@ describe("mongodb", () => {
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());
     ds.createReadonlyRepository(untyped(), connection);
-    expect(new MongoDbDriver().transaction(connection).isolation).toBe("serializable");
+    expect(new MongoDbDriver().transaction(connection).isolation).toBe("readCommitted");
   });
 });

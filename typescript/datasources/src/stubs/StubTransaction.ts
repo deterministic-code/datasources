@@ -4,7 +4,7 @@ import { IsolationLevel } from "../IsolationLevel.ts";
 import { notImplemented } from "./notImplemented.ts";
 
 export class StubTransaction implements ITransaction {
-  readonly isolation = IsolationLevel.Serializable;
+  readonly isolation = IsolationLevel.ReadCommitted;
 
   constructor(
     readonly provider: string,

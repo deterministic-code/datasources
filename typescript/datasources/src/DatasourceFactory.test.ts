@@ -58,7 +58,7 @@ describe("DatasourceFactory", () => {
     expect(driver.rowTypeConverters).toEqual({});
     const connection = driver.connection();
     expect(driver.command(connection)).toBeInstanceOf(MockCommand);
-    expect(driver.transaction(connection).isolation).toBe("serializable");
+    expect(driver.transaction(connection).isolation).toBe("readCommitted");
     expect(driver.transaction(connection, "readCommitted").isolation).toBe(
       "readCommitted",
     );

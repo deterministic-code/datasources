@@ -8,7 +8,7 @@ import type { JsonConnection } from "./connection.ts";
 export class JsonTransaction implements ITransaction {
   constructor(
     readonly connection: JsonConnection,
-    readonly isolation: IsolationLevelName = IsolationLevel.Serializable,
+    readonly isolation: IsolationLevelName = IsolationLevel.ReadCommitted,
   ) {}
 
   async commit(): Promise<void> {

@@ -1,2 +1,2 @@
 register("memory", Arc::new(MemoryDriver));
-let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();

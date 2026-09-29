@@ -1,6 +1,6 @@
 # Transaction
 
-Transaction represents a unit of work on an open connection and handles commit and abort. IsolationLevel selects the isolation for a new transaction.
+A transaction is a single unit of work. It lets you run multiple commands and ensure they succeed together.
 
 ## Classes
 
@@ -66,7 +66,7 @@ ReadUncommitted: "readUncommitted"
 
 ##### ReadCommitted
 
-Committed data only.
+Committed data only. The default for [startTransaction](./connection.md#iconnection-starttransaction-isolation).
 
 ```typescript
 ReadCommitted: "readCommitted"
@@ -82,7 +82,7 @@ RepeatableRead: "repeatableRead"
 
 ##### Serializable
 
-Full isolation. The default for [startTransaction](./connection.md#iconnection-starttransaction-isolation).
+Full isolation.
 
 ```typescript
 Serializable: "serializable"
@@ -149,7 +149,7 @@ ReadUncommitted
 
 ##### ReadCommitted
 
-Committed data only.
+Committed data only. The default for [StartTransaction](./connection.md#iconnection-starttransaction-isolation).
 
 ```csharp
 ReadCommitted
@@ -165,7 +165,7 @@ RepeatableRead
 
 ##### Serializable
 
-Full isolation. The default for [StartTransaction](./connection.md#iconnection-starttransaction-isolation).
+Full isolation.
 
 ```csharp
 Serializable
@@ -228,7 +228,7 @@ ReadUncommitted
 
 ##### ReadCommitted
 
-Committed data only.
+Committed data only. The default for [start_transaction](./connection.md#connection-start_transaction-isolation).
 
 ```rust
 ReadCommitted
@@ -244,7 +244,7 @@ RepeatableRead
 
 ##### Serializable
 
-Full isolation. The default for [start_transaction](./connection.md#connection-start_transaction-isolation).
+Full isolation.
 
 ```rust
 Serializable
@@ -257,13 +257,11 @@ Serializable
 
 {{Commit|commit|commit}} persists work. {{Abort|abort|abort}} rolls it back.
 
-Omitted isolation is `Serializable`. Memory, JSON, and SQLite throw when the connection is closed.
-
 ::: prose
 ### typescript
 Omit the argument.
 ### csharp
-The parameter defaults to `Serializable`.
+The parameter defaults to `ReadCommitted`.
 ### rust
 Pass `None`.
 :::
@@ -278,5 +276,22 @@ Pass `None`.
 ```rust rust/datasources/src/tests/transaction.rs#commit_or_abort
 ```
 ```typescript typescript/datasources/src/Transaction.test.ts#commit-or-abort
+```
+:::
+
+### Two commands running together
+
+::: example
+```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#TwoCommandsRunningTogether
+```
+```rust rust/providers/memory/src/lib.rs#two_commands_running_together
+```
+```typescript typescript/providers/memory/src/index.test.ts#two-commands-running-together
+```
+
+```output [Created id]
+{
+  id: 1
+}
 ```
 :::
