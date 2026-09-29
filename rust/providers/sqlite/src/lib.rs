@@ -12,6 +12,21 @@ mod transaction;
 pub use driver::SqliteDriver;
 
 #[cfg(test)]
+pub(crate) fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    std::env::remove_var("INSTALLED_PROVIDERS");
+    std::env::remove_var("DATASOURCE_URL");
+    std::env::set_var("PROVIDER", "sqlite");
+    datasources::reset();
+    datasources::register("sqlite", std::sync::Arc::new(crate::SqliteDriver));
+    guard
+}
+
+#[cfg(test)]
+#[path = "../tests/command.rs"]
+mod command_tests;
+#[cfg(test)]
 #[path = "../tests/contacts.rs"]
 mod contacts;
 #[cfg(test)]

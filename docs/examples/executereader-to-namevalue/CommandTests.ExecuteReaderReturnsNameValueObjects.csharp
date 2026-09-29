@@ -1,9 +1,0 @@
-var command = new MockCommand(new MockConnection())
-{
-    Reader = new MockReader<Row>([new Row { ["Name"] = "theme", ["Value"] = "dark" }])
-};
-var reader = await command.ExecuteReader("SELECT Name, Value FROM settings");
-var converter = new RowTypeConverter<NameValue>();
-var items = new List<NameValue>();
-while (await reader.Next())
-    items.Add(converter.Convert(reader.Current!));

@@ -1,0 +1,4 @@
+class NameValue {
+  name = "";
+  value = "";
+}

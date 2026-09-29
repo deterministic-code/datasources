@@ -9,6 +9,7 @@ describe("MockReader", () => {
     expect(await reader.next()).toBe(false);
     expect(await reader.nextResult()).toBe(false);
     await reader.dispose();
+    await reader[Symbol.asyncDispose]();
     reader.nextError = new Error("next");
     await expect(reader.next()).rejects.toThrow("next");
   });

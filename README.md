@@ -140,7 +140,7 @@ const loaded = await contacts.readSingle(new Where(new Operator.Equals("id", 10)
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
 ```
 
-See [Repository](#repository) for readonly, CRUD, and bulk.
+See [Repositories](#repositories) for readonly, CRUD, and bulk.
 
 ### Mappers
 
@@ -178,9 +178,9 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [Mapper](#mapper) for `TransformMapper`, `FlatToNestedMapper`, and [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper).
+See [Mappers](#mappers) for `TransformMapper`, `FlatToNestedMapper`, and [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper).
 
-### Type Converter
+### Type Converters
 
 `TypeConverter` is only `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert`. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
 
@@ -235,7 +235,7 @@ const rows = new RowTypeConverter({}, { flag: new FlagConverter() });
 const item = rows.convert(row);
 ```
 
-See [TypeConverter](#type-converter).
+See [Type Converters](#type-converters).
 
 ## Feature Matrix
 
@@ -247,14 +247,14 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | --- | :---: | :---: | :---: |
 | [Datasource Factory](#datasource-factory) | ✅ | ✅ | ✅ |
 | [Datasource](#datasource) | ✅ | ✅ | ✅ |
-| [Mapper](#mapper) | ✅ | ✅ | ✅ |
-| [Type Converter](#type-converter) | ✅ | ✅ | ✅ |
+| [Mappers](#mappers) | ✅ | ✅ | ✅ |
+| [Type Converters](#type-converters) | ✅ | ✅ | ✅ |
 | [Connection](#connection) | ✅ | ✅ | ✅ |
 | [Transaction](#transaction) | ✅ | ✅ | ✅ |
 | [Command](#command) | ✅ | ✅ | ✅ |
 | [Reader](#reader) | ✅ | ✅ | ✅ |
 | [Statements](#statements) | ✅ | ✅ | ✅ |
-| [Repository](#repository) | ✅ | ✅ | ✅ |
+| [Repositories](#repositories) | ✅ | ✅ | ✅ |
 | [Readonly Repository](#readonly-repository) | ✅ | ✅ | ✅ |
 | [CRUD Repository](#crud-repository) | ✅ | ✅ | ✅ |
 | [Bulk Repository](#bulk-repository) | ✅ | ✅ | ✅ |
@@ -295,7 +295,7 @@ TODO: `startTransaction`, work, then `commit` or `abort`. See [Transaction](#tra
 
 ### Map a row
 
-TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [Mapper](#mapper).
+TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [Mappers](#mappers).
 
 ### Convert a row
 
@@ -1705,7 +1705,7 @@ await txn.commit();
 
 ## Command
 
-Named command bound to an optional open [connection](#connection). `CreateCommand` / `createCommand` / `create_command` is sync. The caller executes it.
+Executes a command against the datasource and returns a result or a streaming [Reader](#reader).
 
 ### Classes
 
@@ -1772,7 +1772,7 @@ executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>>
 
 **Returns**
 
-`Promise<[IReader](#typescript-reader)<Cells>>`
+`Promise<[IReader](#reader)<Cells>>`
 
 ###### execute(text, parameters?) {#typescript-icommand-execute-text-parameters}
 
@@ -1837,7 +1837,7 @@ function executeReader(command: ICommand, statement: IStatement, parameters?: Pa
 
 **Returns**
 
-`Promise<[IReader](#typescript-reader)<Cells>>`
+`Promise<[IReader](#reader)<Cells>>`
 
 ##### ICommandMiddleware {#typescript-icommandmiddleware}
 
@@ -1951,68 +1951,6 @@ constructor(result: unknown, rowsAffected: number, parameters?: Parameter[])
 
 [Response](#typescript-response)
 
-##### IReader {#reader} {#typescript-ireader-reader}
-
-```typescript
-interface IReader<T>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| current | The row from the last successful [next](#typescript-ireader-next). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [next()](#typescript-ireader-reader-next) | Advances to the next row. |
-| [nextResult()](#typescript-ireader-reader-nextresult) | Moves to the next result set and clears [current](#typescript-ireader-current). Returns false when there is no further set. [next](#typescript-ireader-next) then reads that set. Calling only [next](#typescript-ireader-next) leaves later sets unread. |
-| [dispose()](#typescript-ireader-reader-dispose) | Releases the reader. |
-
-###### next() {#typescript-ireader-reader-next}
-
-Advances to the next row.
-
-**Definition**
-
-```typescript
-next(): Promise<boolean>
-```
-
-**Returns**
-
-`Promise<boolean>`
-
-###### nextResult() {#typescript-ireader-reader-nextresult}
-
-Moves to the next result set and clears [current](#typescript-ireader-current). Returns false when there is no further set. [next](#typescript-ireader-next) then reads that set. Calling only [next](#typescript-ireader-next) leaves later sets unread.
-
-**Definition**
-
-```typescript
-nextResult(): Promise<boolean>
-```
-
-**Returns**
-
-`Promise<boolean>`
-
-###### dispose() {#typescript-ireader-reader-dispose}
-
-Releases the reader.
-
-**Definition**
-
-```typescript
-dispose(): Promise<void>
-```
-
-**Returns**
-
-`Promise<void>`
-
 ##### C#
 
 ##### ICommand {#csharp-icommand}
@@ -2076,7 +2014,7 @@ Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? paramete
 
 **Returns**
 
-`Task<[IReader](#csharp-reader)<Row>>`
+`Task<[IReader](#reader)<Row>>`
 
 ###### Execute(text, parameters) {#csharp-icommand-execute-text-parameters}
 
@@ -2118,7 +2056,7 @@ Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>?
 
 **Returns**
 
-`Task<[IReader](#csharp-reader)<Row>>`
+`Task<[IReader](#reader)<Row>>`
 
 ###### Execute(statement, parameters) {#csharp-icommand-execute-statement-parameters}
 
@@ -2280,53 +2218,6 @@ public Response(Value result, int rowsAffected, IReadOnlyList<Parameter>? parame
 
 [Response](#csharp-response)
 
-##### IReader {#reader} {#csharp-ireader-reader}
-
-```csharp
-public interface IReader<out T>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Current | The row from the last successful [Next](#csharp-ireader-next). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Next()](#csharp-ireader-reader-next) | Advances to the next row. |
-| [NextResult()](#csharp-ireader-reader-nextresult) | Moves to the next result set and clears [Current](#csharp-ireader-current). Returns false when there is no further set. [Next](#csharp-ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#csharp-ireader-next) leaves later sets unread. |
-
-###### Next() {#csharp-ireader-reader-next}
-
-Advances to the next row.
-
-**Definition**
-
-```csharp
-Task<bool> Next()
-```
-
-**Returns**
-
-`Task<bool>`
-
-###### NextResult() {#csharp-ireader-reader-nextresult}
-
-Moves to the next result set and clears [Current](#csharp-ireader-current). Returns false when there is no further set. [Next](#csharp-ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#csharp-ireader-next) leaves later sets unread.
-
-**Definition**
-
-```csharp
-Task<bool> NextResult()
-```
-
-**Returns**
-
-`Task<bool>`
-
 ##### Rust
 
 ##### Command {#rust-command}
@@ -2380,7 +2271,7 @@ async fn execute_reader(&self, text: &str, parameters: Option<&[Parameter]>) -> 
 
 **Returns**
 
-`Result<Box<dyn `[Reader](#rust-reader)`>>`
+`Result<Box<dyn `[Reader](#reader)`>>`
 
 ###### execute(text, parameters) {#rust-command-execute-text-parameters}
 
@@ -2422,7 +2313,7 @@ async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: 
 
 **Returns**
 
-`Result<Box<dyn `[Reader](#rust-reader)`>>`
+`Result<Box<dyn `[Reader](#reader)`>>`
 
 ###### execute_statement(statement, parameters) {#rust-command-execute_statement-statement-parameters}
 
@@ -2657,7 +2548,1127 @@ pub fn new(result: impl Into<Value>, rows_affected: i64, parameters: Option<Vec<
 
 [Response](#rust-response)
 
-##### Reader {#reader} {#rust-reader-reader}
+### Remarks
+
+The connection must be open before `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader`.
+
+Use `AddMiddleware` / `addMiddleware` / `add_middleware` to add low-level diagnostics. It runs `BeforeCommand` / `beforeCommand` / `before_command`, then the command, then `AfterCommand` / `afterCommand` / `after_command`. A before error skips the command. A command error still runs after, with the error and elapsed time set.
+
+`json` and `memory` treat `text` as insert, update, or delete. SQLite, MySQL, and Postgres treat `text` as SQL.
+
+> **Rust**
+>
+> The `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection.
+
+`ExecuteReader` / `executeReader` / `execute_reader` returns a [Reader](#reader) for the first result set. Convert with [RowTypeConverter](#row-type-converter), then map with a [Mapper](#mappers).
+
+[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection), [InputOutput](#parameterdirection), and [ReturnValue](#parameterdirection) are filled on [Response.Parameters](#response-parameters) after `Execute` / `execute` / `execute`. A [ReturnValue](#parameterdirection) is copied onto [Response.Result](#response-result) when `Result` would otherwise be null.
+
+### Examples
+
+#### Run raw SQL
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L74-L89)
+
+```csharp
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
+await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
+Row? row = null;
+if (await reader.Next())
+    row = reader.Current;
+```
+
+**Row**
+
+```
+{
+  id: 1,
+  name: 'ada'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L101-L128)
+
+```rust
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute(
+        "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT id, name FROM items", None)
+    .await
+    .unwrap();
+assert!(reader.next().await.unwrap());
+let row = reader.current().unwrap();
+```
+
+**Row**
+
+```
+{
+  id: 1,
+  name: 'ada'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L91-L102)
+
+```typescript
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
+await using reader = await command.executeReader("SELECT id, name FROM items");
+```
+
+**Row**
+
+```
+{
+  id: 1,
+  name: 'ada'
+}
+```
+
+#### Run ExecuteReader and return NameValue
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L18-L22)
+
+```csharp
+sealed class NameValue
+{
+    public string name { get; set; } = "";
+    public string value { get; set; } = "";
+}
+```
+
+**NameValue**
+
+```
+{
+  name: 'theme',
+  value: 'dark'
+}
+```
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L91-L109)
+
+```csharp
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute("CREATE TABLE settings (name TEXT, value TEXT)");
+await command.Execute(
+    "INSERT INTO settings (name, value) VALUES ($name, $value)",
+    [new Parameter("name", "theme"), new Parameter("value", "dark")]);
+await using var reader = await command.ExecuteReader("SELECT name, value FROM settings");
+var converter = new RowTypeConverter<NameValue>();
+var items = new List<NameValue>();
+while (await reader.Next())
+    items.Add(converter.Convert(reader.Current!));
+```
+
+**NameValue**
+
+```
+{
+  name: 'theme',
+  value: 'dark'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L10-L14)
+
+```rust
+impl ConvertSchema for NameValue {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("name", "TEXT"), ("value", "TEXT")]
+    }
+}
+```
+
+**NameValue**
+
+```
+{
+  name: 'theme',
+  value: 'dark'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L130-L163)
+
+```rust
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute("CREATE TABLE settings (name TEXT, value TEXT)", None)
+    .await
+    .unwrap();
+let parameters = [
+    Parameter::new("name", "theme"),
+    Parameter::new("value", "dark"),
+];
+command
+    .execute(
+        "INSERT INTO settings (name, value) VALUES ($name, $value)",
+        Some(&parameters),
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT name, value FROM settings", None)
+    .await
+    .unwrap();
+let converter = RowTypeConverter::of::<NameValue>();
+let mut items = Vec::new();
+while reader.next().await.unwrap() {
+    items.push(converter.convert(&reader.current().unwrap()).unwrap());
+}
+```
+
+**NameValue**
+
+```
+{
+  name: 'theme',
+  value: 'dark'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L25-L28)
+
+```typescript
+class NameValue {
+  name = "";
+  value = "";
+}
+```
+
+**NameValue**
+
+```
+{
+  name: 'theme',
+  value: 'dark'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L104-L120)
+
+```typescript
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.execute("CREATE TABLE settings (name TEXT, value TEXT)");
+await command.execute("INSERT INTO settings (name, value) VALUES ($name, $value)", [
+  { name: "name", value: "theme" },
+  { name: "value", value: "dark" },
+]);
+await using reader = await command.executeReader("SELECT name, value FROM settings");
+const converter = new RowTypeConverter<NameValue>();
+const items: NameValue[] = [];
+while (await reader.next()) items.push(converter.convert(reader.current!, NameValue));
+```
+
+**NameValue**
+
+```
+{
+  name: 'theme',
+  value: 'dark'
+}
+```
+
+#### Execute insert, update, and delete
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L24-L28)
+
+```csharp
+sealed class Item
+{
+    public int id { get; set; }
+    public string name { get; set; } = "";
+}
+```
+
+**After: update**
+
+```
+{
+  id: 1,
+  name: 'A'
+}
+```
+
+**After: delete**
+
+```
+null
+```
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L111-L132)
+
+```csharp
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.Execute(
+    "INSERT INTO items (id, name) VALUES ($id, $name)",
+    [new Parameter("id", 1), new Parameter("name", "a")]);
+await command.Execute(
+    "UPDATE items SET name = $name WHERE id = $id",
+    [new Parameter("id", 1), new Parameter("name", "A")]);
+var itemsRepo = new ReadonlyRepository<Item>(connection, new ReadonlyRepositoryOptions<Item> { Entity = "items" });
+var updated = await itemsRepo.ReadSingle(new Where("id", eq, 1));
+await command.Execute("DELETE FROM items WHERE id = $id", [new Parameter("id", 1)]);
+var gone = await itemsRepo.ReadSingle(new Where("id", eq, 1));
+```
+
+**After: update**
+
+```
+{
+  id: 1,
+  name: 'A'
+}
+```
+
+**After: delete**
+
+```
+null
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L18-L22)
+
+```rust
+impl ConvertSchema for Item {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("id", "INTEGER"), ("name", "TEXT")]
+    }
+}
+```
+
+**After: update**
+
+```
+{
+  id: 1,
+  name: 'A'
+}
+```
+
+**After: delete**
+
+```
+None
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L165-L216)
+
+```rust
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute(
+        "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO items (id, name) VALUES ($id, $name)",
+        Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "a")]),
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "UPDATE items SET name = $name WHERE id = $id",
+        Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "A")]),
+    )
+    .await
+    .unwrap();
+let mut options = create_crud_repository_options::<Item>();
+options.entity = "items".into();
+options.row_converter = Some(RowTypeConverter::of::<Item>());
+let items_repo = ReadonlyRepository::new(Arc::clone(&connection), options.read).unwrap();
+let updated = items_repo
+    .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
+    .await
+    .unwrap()
+    .unwrap();
+command
+    .execute(
+        "DELETE FROM items WHERE id = $id",
+        Some(&[Parameter::new("id", 1_i64)]),
+    )
+    .await
+    .unwrap();
+let gone = items_repo
+    .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
+    .await
+    .unwrap();
+```
+
+**After: update**
+
+```
+{
+  id: 1,
+  name: 'A'
+}
+```
+
+**After: delete**
+
+```
+None
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L30-L33)
+
+```typescript
+class Item {
+  id = 0;
+  name = "";
+}
+```
+
+**After: update**
+
+```
+{
+  id: 1,
+  name: 'A'
+}
+```
+
+**After: delete**
+
+```
+undefined
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L122-L145)
+
+```typescript
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.execute("INSERT INTO items (id, name) VALUES ($id, $name)", [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+]);
+await command.execute("UPDATE items SET name = $name WHERE id = $id", [
+  { name: "id", value: 1 },
+  { name: "name", value: "A" },
+]);
+const itemsRepo = new ReadonlyRepository(connection, {
+  ...createCRUDRepositoryOptions(Item),
+  entity: "items",
+});
+const updated = await itemsRepo.readSingle(new Where("id", eq, 1));
+await command.execute("DELETE FROM items WHERE id = $id", [{ name: "id", value: 1 }]);
+const gone = await itemsRepo.readSingle(new Where("id", eq, 1));
+expect(updated).toMatchObject({ id: 1, name: "A" });
+```
+
+**After: update**
+
+```
+{
+  id: 1,
+  name: 'A'
+}
+```
+
+**After: delete**
+
+```
+undefined
+```
+
+#### Map flat contacts
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L30-L43)
+
+```csharp
+sealed class User
+{
+    public int id { get; set; }
+    public string username { get; set; } = "";
+    public string email { get; set; } = "";
+    public string contact_name1 { get; set; } = "";
+    public string contact_name2 { get; set; } = "";
+    public List<Contact> contacts { get; set; } = [];
+
+    public sealed class Contact
+    {
+        public string name { get; set; } = "";
+    }
+}
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L45-L55)
+
+```csharp
+static TransformMapper<User, User> UserContactsMapper() =>
+    new(
+        row =>
+        {
+            row.contacts =
+            [
+                new User.Contact { name = row.contact_name1 },
+                new User.Contact { name = row.contact_name2 }
+            ];
+            return row;
+        },
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L134-L162)
+
+```csharp
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute("""
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        username TEXT,
+        email TEXT,
+        contact_name1 TEXT,
+        contact_name2 TEXT
+    )
+    """);
+await command.Execute(
+    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
+await using var reader = await command.ExecuteReader(
+    "SELECT contact_name1, contact_name2, email, id, username FROM users");
+var converter = new RowTypeConverter<User>();
+var mapper = UserContactsMapper();
+User? user = null;
+while (await reader.Next())
+    user = mapper.Map(converter.Convert(reader.Current!));
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L49-L99)
+
+```rust
+fn text_of(row: &Row, key: &str) -> String {
+    match row.get(key) {
+        Some(Value::Text(text)) => text.clone(),
+        _ => String::new(),
+    }
+}
+TransformMapper::new(
+    |row| {
+        let contact_name1 = text_of(&row, "contact_name1");
+        let contact_name2 = text_of(&row, "contact_name2");
+        User {
+            id: match row.get("id") {
+                Some(Value::Int(id)) => *id,
+                _ => 0,
+            },
+            username: text_of(&row, "username"),
+            email: text_of(&row, "email"),
+            contacts: vec![
+                Contact {
+                    name: contact_name1.clone(),
+                },
+                Contact {
+                    name: contact_name2.clone(),
+                },
+            ],
+            contact_name1,
+            contact_name2,
+        }
+    },
+    |mut user| {
+        user.contact_name1 = user
+            .contacts
+            .first()
+            .map(|contact| contact.name.clone())
+            .unwrap_or_default();
+        user.contact_name2 = user
+            .contacts
+            .get(1)
+            .map(|contact| contact.name.clone())
+            .unwrap_or_default();
+        let mut row = Row::new();
+        row.insert("id".into(), Value::Int(user.id));
+        row.insert("username".into(), Value::from(user.username));
+        row.insert("email".into(), Value::from(user.email));
+        row.insert("contact_name1".into(), Value::from(user.contact_name1));
+        row.insert("contact_name2".into(), Value::from(user.contact_name2));
+        row
+    },
+)
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L218-L269)
+
+```rust
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute(
+        "CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            username TEXT,
+            email TEXT,
+            contact_name1 TEXT,
+            contact_name2 TEXT
+        )",
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO users (id, username, email, contact_name1, contact_name2)
+         VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+        None,
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader(
+        "SELECT contact_name1, contact_name2, email, id, username FROM users",
+        None,
+    )
+    .await
+    .unwrap();
+let converter = RowTypeConverter::of::<User>();
+let mapper = user_contacts_mapper();
+let mut user = None;
+while reader.next().await.unwrap() {
+    user = Some(mapper.map(converter.convert(&reader.current().unwrap()).unwrap()));
+}
+let user = user.unwrap();
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37)
+
+```typescript
+class Contact {
+  name = "";
+}
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46)
+
+```typescript
+class User {
+  id = 0;
+  username = "";
+  email = "";
+  contact_name1 = "";
+  contact_name2 = "";
+  contacts: Contact[] = [];
+}
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L48-L63)
+
+```typescript
+function userContactsMapper() {
+  return new TransformMapper<User, User>(
+    (row) => {
+      row.contacts = [
+        Object.assign(new Contact(), { name: row.contact_name1 }),
+        Object.assign(new Contact(), { name: row.contact_name2 }),
+      ];
+      return row;
+    },
+    (user) => {
+      user.contact_name1 = user.contacts[0]?.name ?? "";
+      user.contact_name2 = user.contacts[1]?.name ?? "";
+      return user;
+    },
+  );
+}
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L147-L172)
+
+```typescript
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.execute(`CREATE TABLE users (
+  id INTEGER PRIMARY KEY,
+  username TEXT,
+  email TEXT,
+  contact_name1 TEXT,
+  contact_name2 TEXT
+)`);
+await command.execute(
+  "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+);
+await using reader = await command.executeReader(
+  "SELECT contact_name1, contact_name2, email, id, username FROM users",
+);
+const converter = new RowTypeConverter<User>();
+const mapper = userContactsMapper();
+let user: User | undefined;
+while (await reader.next()) user = mapper.map(converter.convert(reader.current!, User));
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+#### Fill an output parameter
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L66-L78)
+
+```csharp
+await command.Execute("""
+    CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
+    BEGIN
+      SET result = start_n + 1;
+    END
+    """);
+var start = new Parameter("start_n", 4);
+var result = new Parameter("result", ParameterDirection.Output);
+var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [start, result]), [start, result]);
+```
+
+**Parameters**
+
+```
+result: 5
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L346-L370)
+
+```rust
+use datasources::{ExecuteStoredProcedureStatement, Parameter};
+command
+    .execute(
+        "CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END",
+        None,
+    )
+    .await
+    .unwrap();
+let parameters = [
+    Parameter::new("start_n", 4_i64),
+    Parameter::output("result"),
+];
+let call = command
+    .execute_statement(
+        &ExecuteStoredProcedureStatement::new("bump", &parameters),
+        Some(&parameters),
+    )
+    .await
+    .unwrap();
+```
+
+**Parameters**
+
+```
+result: 5
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L24-L38)
+
+```typescript
+async function fillOutputParameter(command: MysqlCommand) {
+  await command.execute(`
+    CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
+    BEGIN
+      SET result = start_n + 1;
+    END
+  `);
+  const start = { name: "start_n", value: 4 };
+  const result = { name: "result", direction: ParameterDirection.Output };
+  const call = await command.executeStatement(
+    new ExecuteStoredProcedureStatement("bump", [start, result]),
+    [start, result],
+  );
+```
+
+**Parameters**
+
+```
+result: 5
+```
+
+#### Read a return value
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Postgres.Tests/PostgresCommandIntegrationTests.cs#L56-L66)
+
+```csharp
+await command.Execute("""
+    CREATE FUNCTION add_one(n INT) RETURNS INT
+    LANGUAGE sql
+    AS $$ SELECT n + 1 $$
+    """);
+var n = new Parameter("n", 4);
+var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
+```
+
+**Result**
+
+```
+5
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L333-L351)
+
+```rust
+use datasources::{Parameter, ReturnStatement};
+command
+    .execute(
+        "CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$",
+        None,
+    )
+    .await
+    .unwrap();
+let parameters = [Parameter::new("n", 4_i64)];
+let ret = command
+    .execute_statement(
+        &ReturnStatement::new("add_one", &parameters),
+        Some(&parameters),
+    )
+    .await
+    .unwrap();
+```
+
+**Result**
+
+```
+5
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/postgres/tests/postgres.integration.test.ts#L24-L33)
+
+```typescript
+async function readReturnValue(command: PostgresCommand) {
+  await command.execute(`
+    CREATE FUNCTION add_one(n INT) RETURNS INT
+    LANGUAGE sql
+    AS $$ SELECT n + 1 $$
+  `);
+  const n = { name: "n", value: 4 };
+  const ret = await command.executeStatement(new ReturnStatement("add_one", [n]), [n]);
+```
+
+**Result**
+
+```
+5
+```
+
+## Reader
+
+Streams rows from [Command](#command) `ExecuteReader` / `executeReader` / `execute_reader`.
+
+### Classes
+
+##### TypeScript
+
+##### IReader {#typescript-ireader}
+
+```typescript
+interface IReader<T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| current | The row from the last successful [next](#typescript-ireader-next). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [next()](#typescript-ireader-next) | Advances to the next row. |
+| [nextResult()](#typescript-ireader-nextresult) | Moves to the next result set and clears [current](#typescript-ireader-current). Returns false when there is no further set. [next](#typescript-ireader-next) then reads that set. Calling only [next](#typescript-ireader-next) leaves later sets unread. |
+| [dispose()](#typescript-ireader-dispose) | Releases the reader. |
+| [[Symbol.asyncDispose]()](#typescript-ireader-symbol-asyncdispose) | `await using` calls [dispose](#typescript-ireader-dispose). |
+
+###### next() {#typescript-ireader-next}
+
+Advances to the next row.
+
+**Definition**
+
+```typescript
+next(): Promise<boolean>
+```
+
+**Returns**
+
+`Promise<boolean>`
+
+###### nextResult() {#typescript-ireader-nextresult}
+
+Moves to the next result set and clears [current](#typescript-ireader-current). Returns false when there is no further set. [next](#typescript-ireader-next) then reads that set. Calling only [next](#typescript-ireader-next) leaves later sets unread.
+
+**Definition**
+
+```typescript
+nextResult(): Promise<boolean>
+```
+
+**Returns**
+
+`Promise<boolean>`
+
+###### dispose() {#typescript-ireader-dispose}
+
+Releases the reader.
+
+**Definition**
+
+```typescript
+dispose(): Promise<void>
+```
+
+**Returns**
+
+`Promise<void>`
+
+###### [Symbol.asyncDispose]() {#typescript-ireader-symbol-asyncdispose}
+
+`await using` calls [dispose](#typescript-ireader-dispose).
+
+**Definition**
+
+```typescript
+[Symbol.asyncDispose](): Promise<void>
+```
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### IReader {#csharp-ireader}
+
+```csharp
+public interface IReader<out T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Current | The row from the last successful [Next](#csharp-ireader-next). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Next()](#csharp-ireader-next) | Advances to the next row. |
+| [NextResult()](#csharp-ireader-nextresult) | Moves to the next result set and clears [Current](#csharp-ireader-current). Returns false when there is no further set. [Next](#csharp-ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#csharp-ireader-next) leaves later sets unread. |
+| [DisposeAsync()](#csharp-ireader-disposeasync) | Releases the reader. `await using` calls this. |
+
+###### Next() {#csharp-ireader-next}
+
+Advances to the next row.
+
+**Definition**
+
+```csharp
+Task<bool> Next()
+```
+
+**Returns**
+
+`Task<bool>`
+
+###### NextResult() {#csharp-ireader-nextresult}
+
+Moves to the next result set and clears [Current](#csharp-ireader-current). Returns false when there is no further set. [Next](#csharp-ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#csharp-ireader-next) leaves later sets unread.
+
+**Definition**
+
+```csharp
+Task<bool> NextResult()
+```
+
+**Returns**
+
+`Task<bool>`
+
+###### DisposeAsync() {#csharp-ireader-disposeasync}
+
+Releases the reader. `await using` calls this.
+
+**Definition**
+
+```csharp
+ValueTask DisposeAsync()
+```
+
+**Returns**
+
+`ValueTask`
+
+##### Rust
+
+##### Reader {#rust-reader}
 
 ```rust
 pub trait Reader<T = Row>: Send + Sync
@@ -2667,11 +3678,11 @@ pub trait Reader<T = Row>: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [current()](#rust-reader-reader-current) | The row from the last successful [next](#rust-reader-next). |
-| [next()](#rust-reader-reader-next) | Advances to the next row. |
-| [next_result()](#rust-reader-reader-next_result) | Moves to the next result set and clears [current](#rust-reader-current). Returns false when there is no further set. [next](#rust-reader-next) then reads that set. The default returns false. Calling only [next](#rust-reader-next) leaves later sets unread. |
+| [current()](#rust-reader-current) | The row from the last successful [next](#rust-reader-next). |
+| [next()](#rust-reader-next) | Advances to the next row. |
+| [next_result()](#rust-reader-next_result) | Moves to the next result set and clears [current](#rust-reader-current). Returns false when there is no further set. [next](#rust-reader-next) then reads that set. The default returns false. Calling only [next](#rust-reader-next) leaves later sets unread. |
 
-###### current() {#rust-reader-reader-current}
+###### current() {#rust-reader-current}
 
 The row from the last successful [next](#rust-reader-next).
 
@@ -2685,7 +3696,7 @@ fn current(&self) -> Option<T>
 
 `Option<T>`
 
-###### next() {#rust-reader-reader-next}
+###### next() {#rust-reader-next}
 
 Advances to the next row.
 
@@ -2699,7 +3710,7 @@ async fn next(&self) -> Result<bool>
 
 `Result<bool>`
 
-###### next_result() {#rust-reader-reader-next_result}
+###### next_result() {#rust-reader-next_result}
 
 Moves to the next result set and clears [current](#rust-reader-current). Returns false when there is no further set. [next](#rust-reader-next) then reads that set. The default returns false. Calling only [next](#rust-reader-next) leaves later sets unread.
 
@@ -2715,83 +3726,22 @@ async fn next_result(&self) -> Result<bool>
 
 ### Remarks
 
-The connection must be open before `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader`.
+`ExecuteReader` / `executeReader` / `execute_reader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next` / `next` / `next`. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
 
-`AddMiddleware` / `addMiddleware` / `add_middleware` runs `BeforeCommand` / `beforeCommand` / `before_command`, then the command, then `AfterCommand` / `afterCommand` / `after_command`. A `BeforeCommand` / `beforeCommand` / `before_command` error skips the command. A command error still runs `AfterCommand` / `afterCommand` / `after_command` with `error` and elapsed time set. `ConsoleCommandMiddleware` logs Start/Finish lines to the console. Verbose logs use `AfterCommand` / `afterCommand` / `after_command` for the result body.
-
-Working dialects (`json`, `memory`) treat `text` as `insert` / `update` / `delete`. `sqlite` treats `text` as SQL. Stub dialects throw or return not-implemented on execute and execute-reader.
-
-SQLite, MySQL, and Postgres map statement `Execute` / `execute` / `execute` and `ExecuteReader` / `executeReader` / `execute_reader` through a provider statement factory. A compiled create table is rendered by that dialect's `CreateTableStatementRenderer`, which overrides column type, default, and identity, then the command executes that text. The factory stays separate from the renderer. Wrapped create-table text and every other statement pass through. Other dialects send `GetText()` / `getText()` / `get_text()`.
-
-> **Rust**
->
-> The `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection.
-
-`ExecuteReader` / `executeReader` / `execute_reader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next` / `next` / `next`. SQL `AfterCommand` / `afterCommand` / `after_command` for `ExecuteReader` / `executeReader` / `execute_reader` receives an empty row list. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
-
-`ExecuteReader` / `executeReader` / `execute_reader` returns rows. Convert with [RowTypeConverter](#row-type-converter), then map with a [Mapper](#mapper).
-
-[Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection) / [InputOutput](#parameterdirection) / [ReturnValue](#parameterdirection) values are filled on [Response.Parameters](#response-parameters) after `Execute` / `execute` / `execute`. A [ReturnValue](#parameterdirection) copies onto [Response.Result](#response-result) when `Result` would otherwise be null. `Execute` / `execute` / `execute` on `SELECT` text reads the first scalar into `Result`.
+Dispose the reader with `await using`. Rust drops it.
 
 ### Examples
 
-#### ExecuteReader to NameValue
+#### Read multiple results returned in a single command
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CommandTests.cs#L46-L60)
-
-```csharp
-var command = new MockCommand(new MockConnection())
-{
-    Reader = new MockReader<Row>([new Row { ["Name"] = "theme", ["Value"] = "dark" }])
-};
-var reader = await command.ExecuteReader("SELECT Name, Value FROM settings");
-var converter = new RowTypeConverter<NameValue>();
-var items = new List<NameValue>();
-while (await reader.Next())
-    items.Add(converter.Convert(reader.Current!));
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L60-L78)
-
-```rust
-let command = MockCommand::new();
-command.reader_rows.lock().unwrap().push(row(&[
-    ("name", Value::from("theme")),
-    ("value", Value::from("dark")),
-]));
-let reader = command
-    .execute_reader("SELECT name, value FROM settings", None)
-    .await
-    .unwrap();
-let converter = RowTypeConverter::of::<NameValue>();
-let mut items = Vec::new();
-while reader.next().await.unwrap() {
-    items.push(converter.convert(&reader.current().unwrap()).unwrap());
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Command.test.ts#L45-L56)
-
-```typescript
-const command = new MockCommand(new MockConnection());
-command.reader = new MockReader([{ name: "theme", value: "dark" }]);
-const reader = await command.executeReader("SELECT name, value FROM settings");
-const converter = new RowTypeConverter<NameValue>();
-const items: NameValue[] = [];
-while (await reader.next()) {
-  items.push(converter.convert(reader.current!, NameValue));
-}
-```
-
-#### Read the next result set
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L20-L42)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L164-L184)
 
 ```csharp
-var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
-await conn.Open();
-var command = new SqliteCommand(conn);
-var reader = await command.ExecuteReader("SELECT 1 AS id; SELECT 2 AS id");
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await using var reader = await command.ExecuteReader("SELECT 1 AS id; SELECT 2 AS id");
 var first = new List<Row>();
 while (await reader.Next())
     first.Add(reader.Current!);
@@ -2800,188 +3750,100 @@ var second = new List<Row>();
 while (await reader.Next())
     second.Add(reader.Current!);
 var again = await reader.NextResult();
-if (reader is IAsyncDisposable disposable)
-    await disposable.DisposeAsync();
-await conn.Close();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/src/lib.rs#L94-L106)
+**First result**
+
+```
+{
+  id: 1
+}
+```
+
+**Second result**
+
+```
+{
+  id: 2
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L271-L296)
 
 ```rust
-let sets = command
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+let reader = command
     .execute_reader("SELECT 1 AS id; SELECT 2 AS id", None)
     .await
     .unwrap();
 let mut first = Vec::new();
-while sets.next().await.unwrap() {
-    first.push(sets.current());
-}
-let moved = sets.next_result().await.unwrap();
-let mut second = Vec::new();
-while sets.next().await.unwrap() {
-    second.push(sets.current());
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/src/sqlite.test.ts#L172-L178)
-
-```typescript
-
-```
-
-#### Execute insert, update, and delete
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CommandTests.cs#L62-L71)
-
-```csharp
-var command = new MockCommand(new MockConnection());
-await command.Execute("insert", [new Parameter("id", 1), new Parameter("name", "a")]);
-await command.Execute("update", [new Parameter("id", 1), new Parameter("name", "A")]);
-await command.Execute("delete", [new Parameter("id", 1)]);
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L84-L112)
-
-```rust
-    .execute(
-        "insert",
-        Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "a")]),
-    )
-    .await
-    .unwrap();
-command
-    .execute(
-        "update",
-        Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "A")]),
-    )
-    .await
-    .unwrap();
-command
-    .execute("delete", Some(&[Parameter::new("id", 1_i64)]))
-    .await
-    .unwrap();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Command.test.ts#L58-L78)
-
-```typescript
-const command = new MockCommand(new MockConnection());
-await command.execute("insert", [
-  { name: "id", value: 1 },
-  { name: "name", value: "a" },
-]);
-await command.execute("update", [
-  { name: "id", value: 1 },
-  { name: "name", value: "A" },
-]);
-await command.execute("delete", [{ name: "id", value: 1 }]);
-```
-
-#### Map flat contacts
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CommandTests.cs#L73-L97)
-
-```csharp
-var command = new MockCommand(new MockConnection())
-{
-    Reader = new MockReader<Row>([new Row
-    {
-        ["id"] = 1,
-        ["username"] = "bobby",
-        ["email"] = "bob@asdf.com",
-        ["contact_name1"] = "bob",
-        ["contact_name2"] = "roberta"
-    }])
-};
-var reader = await command.ExecuteReader(
-    "SELECT contact_name1, contact_name2, email, id, username FROM users");
-var converter = new RowTypeConverter<User>();
-var mapper = UserContactsMapper();
-User? user = null;
-while (await reader.Next())
-    user = mapper.Map(converter.Convert(reader.Current!));
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/command.rs#L115-L146)
-
-```rust
-let command = MockCommand::new();
-command.reader_rows.lock().unwrap().push(row(&[
-    ("id", Value::Int(1)),
-    ("username", Value::from("bobby")),
-    ("email", Value::from("bob@asdf.com")),
-    ("contact_name1", Value::from("bob")),
-    ("contact_name2", Value::from("roberta")),
-]));
-let reader = command
-    .execute_reader(
-        "SELECT contact_name1, contact_name2, email, id, username FROM users",
-        None,
-    )
-    .await
-    .unwrap();
-let converter = RowTypeConverter::of::<UserRow>();
-let mapper = user_contacts_mapper();
-let mut user = None;
 while reader.next().await.unwrap() {
-    user = Some(Mapper::map(
-        &mapper,
-        converter.convert(&reader.current().unwrap()).unwrap(),
-    ));
+    first.push(reader.current());
+}
+let moved = reader.next_result().await.unwrap();
+let mut second = Vec::new();
+while reader.next().await.unwrap() {
+    second.push(reader.current());
+}
+let again = reader.next_result().await.unwrap();
+assert!(moved);
+assert!(!again);
+```
+
+**First result**
+
+```
+{
+  id: 1
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Command.test.ts#L80-L103)
+**Second result**
 
-```typescript
-const command = new MockCommand(new MockConnection());
-command.reader = new MockReader([
-  {
-    id: 1,
-    username: "bobby",
-    email: "bob@asdf.com",
-    contact_name1: "bob",
-    contact_name2: "roberta",
-  },
-]);
-const reader = await command.executeReader(
-  "SELECT contact_name1, contact_name2, email, id, username FROM users",
-);
-const converter = new RowTypeConverter<User>();
-const mapper = userContactsMapper();
-let user: User | undefined;
-while (await reader.next()) {
-  user = mapper.map(converter.convert(reader.current!, User));
+```
+{
+  id: 2
 }
 ```
 
-#### Parameter direction and Response.Parameters
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L226-L229)
-
-```csharp
-        "t",
-        [new Column("id", "INTEGER")],
-        [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)]).GetText());
-Assert.Throws<InvalidOperationException>(() =>
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1114-L1124)
-
-```rust
-let max_n = Aggregate::max("n", None);
-let bound_fields = [min_n.as_str(), max_n.as_str()];
-let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L331-L334)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L174-L190)
 
 ```typescript
-    [{ name: "id", type: "INTEGER" }],
-    [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)],
-  ).getText(),
-).toBe(
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await using reader = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
+const first: { id: number }[] = [];
+while (await reader.next()) first.push(reader.current as { id: number });
+const moved = await reader.nextResult();
+const second: { id: number }[] = [];
+while (await reader.next()) second.push(reader.current as { id: number });
+const again = await reader.nextResult();
 ```
+
+**First result**
+
+```
+{
+  id: 1
+}
+```
+
+**Second result**
+
+```
+{
+  id: 2
+}
+```
+
+> **Rust**
+>
+> There is no `using`. The reader is dropped at the end of the scope.
 
 ## Statements
 
@@ -8902,7 +9764,7 @@ var ret = new ReturnStatement("add", fields);
 
 ```
 
-## Repository
+## Repositories
 
 Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
 
@@ -9735,7 +10597,7 @@ type ReadonlyRepositoryOptions<T = Cells>
 | columnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
 | query | Rewrites the finished select. Omitted leaves the statement unchanged. |
 | rowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
-| rowConverter | Row [TypeConverter](#type-converter). |
+| rowConverter | Row [TypeConverter](#type-converters). |
 | type | Item constructor. Supplies the default entity name and column list. |
 | rowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | readColumns | SELECT column names. When omitted, public fields of `type` are used. |
@@ -10070,7 +10932,7 @@ public class ReadonlyRepositoryOptions<T> where T : new()
 | ColumnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
 | Query | Rewrites the finished select. Omitted leaves the statement unchanged. |
 | RowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
-| RowConverter | Row [TypeConverter](#type-converter). |
+| RowConverter | Row [TypeConverter](#type-converters). |
 | RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
 
@@ -10579,7 +11441,7 @@ childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRe
 parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
 ```
 
-Repository read is convert, then map. See [TypeConverter](#type-converter) and [Mapper](#mapper).
+Repository read is convert, then map. See [Type Converters](#type-converters) and [Mappers](#mappers).
 
 `read` and `read_single` accept a query, a where, or an [ExecuteStoredProcedureStatement](#execute-stored-procedure-statement). Result rows still convert, then map. Procedure argument names are not rewritten as columns.
 
@@ -11959,8 +12821,8 @@ type BuiltRepository<T = Cells>
 | Name | Description |
 | --- | --- |
 | connection | Open [IConnection](#connection). |
-| rowConverter | Row [TypeConverter](#type-converter). |
-| rowsMapper | Read-row [Mapper](#mapper). |
+| rowConverter | Row [TypeConverter](#type-converters). |
+| rowsMapper | Read-row [Mapper](#mappers). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 | type | Item constructor. |
@@ -12383,8 +13245,8 @@ public sealed record BuiltRepository<T> where T : new()
 | Name | Description |
 | --- | --- |
 | Connection | Open [IConnection](#connection). |
-| RowConverter | Row [TypeConverter](#type-converter). |
-| RowsMapper | Read-row [Mapper](#mapper). |
+| RowConverter | Row [TypeConverter](#type-converters). |
+| RowsMapper | Read-row [Mapper](#mappers). |
 | Statements | SQL fragments. |
 | Ids | Id column names. |
 
@@ -12681,7 +13543,7 @@ pub struct BuiltRepository
 | --- | --- |
 | connection | [Connection](#connection). |
 | row_converter | [RowTypeConverter](#row-type-converter). |
-| rows_mapper | Read-row [Mapper](#mapper). |
+| rows_mapper | Read-row [Mapper](#mappers). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 
@@ -13859,7 +14721,7 @@ const response = await relate(parentsRepo, childrenRepo).createBulk([
   Object.assign(new Parent(), {
 ```
 
-## Mapper
+## Mappers
 
 Bidirectional `Map` / `map` / `map` and `ReverseMap` / `reverseMap` / `reverse_map`. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
 
@@ -15627,7 +16489,7 @@ IReadOnlyList<Row> ReverseMap(IReadOnlyList<Dictionary<string, MappedValue>> val
 
 **Returns**
 
-`IReadOnlyList<`[Row](#repository)`>`
+`IReadOnlyList<`[Row](#repositories)`>`
 
 ##### TypeMap {#csharp-typemap}
 
@@ -16316,7 +17178,7 @@ const flat = mapper.reverseMap(nested);
 ]
 ```
 
-## TypeConverter
+## Type Converters
 
 `TypeConverter` is only `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert`. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
 
@@ -16542,7 +17404,7 @@ fn reverse_convert(&self, to: &To) -> Result<From>
 
 ### Remarks
 
-Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [Repository](#repository).
+Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [Repositories](#repositories).
 
 ### See also
 
@@ -18051,7 +18913,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 `Connection` / `connection` / `connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](#datasource-url). `Command` / `command` / `command` delegates to the connection's `CreateCommand` / `createCommand` / `create_command`. `Transaction` / `transaction` / `transaction` builds the dialect transaction. Isolation defaults to read committed.
 
-`RowTypeConverters` / `rowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
+`RowTypeConverters` / `rowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converters). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
 The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. The statement's own `GetText` / `getText` / `get_text` throws until a provider formats it.
 

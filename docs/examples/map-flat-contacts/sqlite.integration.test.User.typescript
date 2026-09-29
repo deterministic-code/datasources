@@ -1,0 +1,8 @@
+class User {
+  id = 0;
+  username = "";
+  email = "";
+  contact_name1 = "";
+  contact_name2 = "";
+  contacts: Contact[] = [];
+}

@@ -10,7 +10,7 @@ Follow [docs/formats/code-reference.md](docs/formats/code-reference.md). MSDN-st
 
 Required order: `# Title`, summary, `## Classes` + `::: reference`, `## Remarks`, optional `## Examples`.
 
-Sidebar groups use `parent` in `docs/toc.yaml` (for example `Mapper`, `Repository`). The parent is a real page.
+Sidebar groups use `parent` in `docs/toc.yaml` (for example `Mappers`, `Repositories`). The parent is a real page.
 
 ~~~~markdown
 # Datasource

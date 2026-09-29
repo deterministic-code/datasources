@@ -19,6 +19,9 @@ describe("readerToAsyncIterable", () => {
         return false;
       },
       async dispose() {},
+      async [Symbol.asyncDispose]() {
+        await this.dispose();
+      },
       async next() {
         if (this.current === undefined && (this as { once?: boolean }).once) {
           return false;

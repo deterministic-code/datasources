@@ -20,10 +20,9 @@ pages:
   - path: sections/command.md
     title: Command
     group: Code Reference
-  - path: sections/command.md
+  - path: sections/reader.md
     title: Reader
     group: Code Reference
-    hash: reader
   - path: sections/statements.md
     title: Statements
     group: Code Reference
@@ -72,54 +71,54 @@ pages:
     group: Code Reference
     parent: Statements
   - path: sections/repository.md
-    title: Repository
+    title: Repositories
     group: Code Reference
   - path: sections/readonly-repository.md
     title: Readonly Repository
     group: Code Reference
-    parent: Repository
+    parent: Repositories
   - path: sections/crud-repository.md
     title: CRUD Repository
     group: Code Reference
-    parent: Repository
+    parent: Repositories
   - path: sections/bulk-repository.md
     title: Bulk Repository
     group: Code Reference
-    parent: Repository
+    parent: Repositories
   - path: sections/mappers.md
-    title: Mapper
+    title: Mappers
     group: Code Reference
   - path: sections/identity-mapper.md
     title: Identity Mapper
     group: Code Reference
-    parent: Mapper
+    parent: Mappers
   - path: sections/dictionary-mapper.md
     title: Dictionary Mapper
     group: Code Reference
-    parent: Mapper
+    parent: Mappers
   - path: sections/pluralizer-mapper.md
     title: Pluralizer Mapper
     group: Code Reference
-    parent: Mapper
+    parent: Mappers
   - path: sections/change-casing-mapper.md
     title: Change Casing Mapper
     group: Code Reference
-    parent: Mapper
+    parent: Mappers
   - path: sections/transform-mapper.md
     title: Transform Mapper
     group: Code Reference
-    parent: Mapper
+    parent: Mappers
   - path: sections/flat-to-nested-mapper.md
     title: Flat To Nested Mapper
     group: Code Reference
-    parent: Mapper
+    parent: Mappers
   - path: sections/type-converters.md
-    title: Type Converter
+    title: Type Converters
     group: Code Reference
   - path: sections/row-type-converter.md
     title: Row Type Converter
     group: Code Reference
-    parent: Type Converter
+    parent: Type Converters
   - path: sections/other.md
     title: Other
     group: Code Reference

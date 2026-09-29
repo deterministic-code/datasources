@@ -1,0 +1,20 @@
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+let reader = command
+    .execute_reader("SELECT 1 AS id; SELECT 2 AS id", None)
+    .await
+    .unwrap();
+let mut first = Vec::new();
+while reader.next().await.unwrap() {
+    first.push(reader.current());
+}
+let moved = reader.next_result().await.unwrap();
+let mut second = Vec::new();
+while reader.next().await.unwrap() {
+    second.push(reader.current());
+}
+let again = reader.next_result().await.unwrap();
+assert!(moved);
+assert!(!again);

@@ -21,6 +21,17 @@ const url = (process.env.POSTGRES_URL ??=
 
 beforeAll(() => ensureCompose("postgres"), 120_000);
 
+async function readReturnValue(command: PostgresCommand) {
+  await command.execute(`
+    CREATE FUNCTION add_one(n INT) RETURNS INT
+    LANGUAGE sql
+    AS $$ SELECT n + 1 $$
+  `);
+  const n = { name: "n", value: 4 };
+  const ret = await command.executeStatement(new ReturnStatement("add_one", [n]), [n]);
+  expect(ret.result).toBe(5);
+}
+
 const isolate = async (base: string) => {
   const pg = (await import("pg")) as PgModule;
   const Client = pg.default?.Client ?? pg.Client;
@@ -76,11 +87,6 @@ describe("return and output parameters", () => {
         END;
         $$
       `);
-      await command.execute(`
-        CREATE FUNCTION add_one(n INT) RETURNS INT
-        LANGUAGE sql
-        AS $$ SELECT n + 1 $$
-      `);
       const result = {
         name: "result",
         value: 4,
@@ -91,12 +97,7 @@ describe("return and output parameters", () => {
         [result],
       );
       expect(call.parameters?.[0]?.value).toBe(5);
-      const n = { name: "n", value: 4 };
-      const ret = await command.executeStatement(
-        new ReturnStatement("add_one", [n]),
-        [n],
-      );
-      expect(ret.result).toBe(5);
+      await readReturnValue(command);
     } finally {
       await isolated.cleanup();
     }

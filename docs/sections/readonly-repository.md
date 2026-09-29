@@ -1086,7 +1086,7 @@ childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRe
 parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
 ```
 
-Repository read is convert, then map. See [TypeConverter](./type-converters.md) and [Mapper](./mappers.md).
+Repository read is convert, then map. See [Type Converters](./type-converters.md) and [Mappers](./mappers.md).
 
 `read` and `read_single` accept a query, a where, or an [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md). Result rows still convert, then map. Procedure argument names are not rewritten as columns.
 

@@ -1,4 +1,4 @@
-# Mapper
+# Mappers
 
 Bidirectional {{Map|map|map}} and {{ReverseMap|reverseMap|reverse_map}}. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
 

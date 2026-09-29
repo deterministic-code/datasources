@@ -1,0 +1,11 @@
+static TransformMapper<User, User> UserContactsMapper() =>
+    new(
+        row =>
+        {
+            row.contacts =
+            [
+                new User.Contact { name = row.contact_name1 },
+                new User.Contact { name = row.contact_name2 }
+            ];
+            return row;
+        },

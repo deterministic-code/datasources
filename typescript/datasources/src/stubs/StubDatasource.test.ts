@@ -79,6 +79,7 @@ describe("StubDatasource", () => {
     await expect(reader.next()).rejects.toThrow(ProviderNotImplementedError);
     await expect(reader.nextResult()).rejects.toThrow(ProviderNotImplementedError);
     await reader.dispose();
+    await reader[Symbol.asyncDispose]();
 
     const named = new StubDatasource("yaml");
     expect(named.createCommand().connection).toBeInstanceOf(StubConnection);

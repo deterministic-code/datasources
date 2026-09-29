@@ -8,14 +8,14 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | --- | :---: | :---: | :---: |
 | [Datasource Factory](./sections/datasource-factory.md) | ✅ | ✅ | ✅ |
 | [Datasource](./sections/datasource.md) | ✅ | ✅ | ✅ |
-| [Mapper](./sections/mappers.md) | ✅ | ✅ | ✅ |
-| [Type Converter](./sections/type-converters.md) | ✅ | ✅ | ✅ |
+| [Mappers](./sections/mappers.md) | ✅ | ✅ | ✅ |
+| [Type Converters](./sections/type-converters.md) | ✅ | ✅ | ✅ |
 | [Connection](./sections/connection.md) | ✅ | ✅ | ✅ |
 | [Transaction](./sections/transaction.md) | ✅ | ✅ | ✅ |
 | [Command](./sections/command.md) | ✅ | ✅ | ✅ |
-| [Reader](./sections/command.md#reader) | ✅ | ✅ | ✅ |
+| [Reader](./sections/reader.md) | ✅ | ✅ | ✅ |
 | [Statements](./sections/statements.md) | ✅ | ✅ | ✅ |
-| [Repository](./sections/repository.md) | ✅ | ✅ | ✅ |
+| [Repositories](./sections/repository.md) | ✅ | ✅ | ✅ |
 | [Readonly Repository](./sections/readonly-repository.md) | ✅ | ✅ | ✅ |
 | [CRUD Repository](./sections/crud-repository.md) | ✅ | ✅ | ✅ |
 | [Bulk Repository](./sections/bulk-repository.md) | ✅ | ✅ | ✅ |

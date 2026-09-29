@@ -3,4 +3,5 @@ export interface IReader<T = unknown> {
   next(): Promise<boolean>;
   nextResult(): Promise<boolean>;
   dispose(): Promise<void>;
+  [Symbol.asyncDispose](): Promise<void>;
 }

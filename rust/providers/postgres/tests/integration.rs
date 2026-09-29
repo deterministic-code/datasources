@@ -330,9 +330,29 @@ async fn shared_specs() {
     }
 }
 
+async fn read_return_value(command: &dyn Command) {
+    use datasources::{Parameter, ReturnStatement};
+    command
+        .execute(
+            "CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$",
+            None,
+        )
+        .await
+        .unwrap();
+    let parameters = [Parameter::new("n", 4_i64)];
+    let ret = command
+        .execute_statement(
+            &ReturnStatement::new("add_one", &parameters),
+            Some(&parameters),
+        )
+        .await
+        .unwrap();
+    assert_eq!(ret.result, Value::Int(5));
+}
+
 #[tokio::test]
 async fn return_and_output_parameters() {
-    use datasources::{ExecuteStoredProcedureStatement, ParameterDirection, ReturnStatement};
+    use datasources::{ExecuteStoredProcedureStatement, ParameterDirection};
     let Ok(url) = std::env::var("POSTGRES_URL") else {
         return;
     };
@@ -364,13 +384,6 @@ async fn return_and_output_parameters() {
         )
         .await
         .unwrap();
-    command
-        .execute(
-            "CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$",
-            None,
-        )
-        .await
-        .unwrap();
     let result = [Parameter::with_direction(
         "result",
         4_i64,
@@ -384,15 +397,7 @@ async fn return_and_output_parameters() {
         .await
         .unwrap();
     assert_eq!(call.parameters.as_ref().unwrap()[0].value, Value::Int(5));
-    let parameters = [Parameter::new("n", 4_i64)];
-    let ret = command
-        .execute_statement(
-            &ReturnStatement::new("add_one", &parameters),
-            Some(&parameters),
-        )
-        .await
-        .unwrap();
-    assert_eq!(ret.result, Value::Int(5));
+    read_return_value(&command).await;
     client
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .await

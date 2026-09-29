@@ -1,0 +1,8 @@
+async function readReturnValue(command: PostgresCommand) {
+  await command.execute(`
+    CREATE FUNCTION add_one(n INT) RETURNS INT
+    LANGUAGE sql
+    AS $$ SELECT n + 1 $$
+  `);
+  const n = { name: "n", value: 4 };
+  const ret = await command.executeStatement(new ReturnStatement("add_one", [n]), [n]);
