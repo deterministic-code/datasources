@@ -1295,14 +1295,11 @@ await command.execute("insert");
 
 Rust has no `using`. Call `close`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L45-L54)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L45-L50)
 
 ```csharp
-var connection = new MemoryConnection();
-await using (connection)
-{
-    await connection.Open();
-}
+await using var connection = new MemoryConnection();
+await connection.Open();
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L47-L53)

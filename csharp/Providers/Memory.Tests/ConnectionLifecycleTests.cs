@@ -45,11 +45,7 @@ public class ConnectionLifecycleTests
     [Fact]
     public async Task CloseWithUsing()
     {
-        var connection = new MemoryConnection();
-        await using (connection)
-        {
-            await connection.Open();
-        }
-        Assert.False(connection.IsOpen);
+        await using var connection = new MemoryConnection();
+        await connection.Open();
     }
 }

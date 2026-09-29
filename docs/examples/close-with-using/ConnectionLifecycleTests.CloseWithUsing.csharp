@@ -1,5 +1,2 @@
-var connection = new MemoryConnection();
-await using (connection)
-{
-    await connection.Open();
-}
+await using var connection = new MemoryConnection();
+await connection.Open();
