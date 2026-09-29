@@ -4,8 +4,8 @@ using Datasources.SqlServer;
 public partial class RegisterCreateTests
 {
     const string Provider = "sqlserver";
-    static readonly IDriver Driver = new SqlServerProvider();
-    static IDatasource Ds() => new Datasource(Provider, new SqlServerProvider());
+    static readonly IDriver Driver = new SqlServerDriver();
+    static IDatasource Ds() => new Datasource(Provider, new SqlServerDriver());
 
     [Fact]
     public async Task CreatesConnection()
@@ -36,5 +36,5 @@ public class PublicSurfaceTests
 {
     [Fact]
     public void ExportsOnlyTheProvider() =>
-        Assert.Equal(typeof(SqlServerProvider), Assert.Single(typeof(SqlServerProvider).Assembly.GetExportedTypes()));
+        Assert.Equal(typeof(SqlServerDriver), Assert.Single(typeof(SqlServerDriver).Assembly.GetExportedTypes()));
 }

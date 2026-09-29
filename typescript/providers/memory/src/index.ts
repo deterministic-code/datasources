@@ -1,1 +1,1 @@
-export { MemoryProvider } from "./MemoryProvider.ts";
+export { MemoryDriver } from "./MemoryDriver.ts";

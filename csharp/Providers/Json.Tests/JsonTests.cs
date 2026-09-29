@@ -9,7 +9,7 @@ public class JsonTests
     public JsonTests()
     {
         DatasourceFactory.Reset();
-        DatasourceFactory.Register("json", new JsonProvider());
+        DatasourceFactory.Register("json", new JsonDriver());
     }
 
     [Fact]

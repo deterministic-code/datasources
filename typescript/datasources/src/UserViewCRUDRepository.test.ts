@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryProvider } from "@datasources/memory";
+import { MemoryDriver } from "@datasources/memory";
 import { collectAsync } from "./collectAsync.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
@@ -55,7 +55,7 @@ type Graph = {
 };
 
 const setup = async (): Promise<IConnection> => {
-  const connection = new MemoryProvider().connection();
+  const connection = new MemoryDriver().connection();
   await connection.open();
   return connection;
 };

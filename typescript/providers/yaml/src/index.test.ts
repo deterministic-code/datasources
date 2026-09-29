@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
 import { YamlConnection } from "./connection.ts";
-import { YamlProvider } from "./YamlProvider.ts";
+import { YamlDriver } from "./YamlDriver.ts";
 
 afterEach(() => DatasourceFactory.reset());
 
 describe("yaml", () => {
   it("creates", () => {
-    DatasourceFactory.register("yaml", new YamlProvider());
+    DatasourceFactory.register("yaml", new YamlDriver());
     expect(YamlConnection.from()).toBeInstanceOf(YamlConnection);
     expect(Datasource.create({ provider: "yaml" }).provider).toBe("yaml");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new Datasource("yaml", new YamlProvider());
+    const ds = new Datasource("yaml", new YamlDriver());
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(YamlConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
@@ -30,6 +30,6 @@ describe("yaml", () => {
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());
     ds.createReadonlyRepository(untyped(), connection);
-    expect(new YamlProvider().transaction(connection).isolation).toBe("serializable");
+    expect(new YamlDriver().transaction(connection).isolation).toBe("serializable");
   });
 });

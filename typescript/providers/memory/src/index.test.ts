@@ -19,18 +19,18 @@ import {
 import { MemoryCommand } from "./command.ts";
 import { MemoryConnection } from "./connection.ts";
 import { asRecord, matches, parametersToObject, parseFilter } from "./filter.ts";
-import { MemoryProvider } from "./MemoryProvider.ts";
+import { MemoryDriver } from "./MemoryDriver.ts";
 import { MemoryStore } from "./store.ts";
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("memory", new MemoryProvider());
+  DatasourceFactory.register("memory", new MemoryDriver());
 });
 
 describe("DatasourceFactory", () => {
   it("register and create", () => {
     DatasourceFactory.reset();
-    DatasourceFactory.register("memory", new MemoryProvider());
+    DatasourceFactory.register("memory", new MemoryDriver());
     const ds = DatasourceFactory.create({ provider: "memory" });
     expect(ds.provider).toBe("memory");
   });
@@ -282,7 +282,7 @@ describe("Memory datasource", () => {
   it("registers and constructs children", async () => {
     const ds = new Datasource(
       "memory",
-      new MemoryProvider(),
+      new MemoryDriver(),
       { data: [{ id: 1 }] },
     );
     expect(ds.provider).toBe("memory");
@@ -309,7 +309,7 @@ describe("Memory datasource", () => {
     expect(registered.provider).toBe("memory");
     expect(await registered.createConnection()).toBeInstanceOf(MemoryConnection);
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
-    const provider = new MemoryProvider();
+    const provider = new MemoryDriver();
     expect(provider.transaction(connection).isolation).toBe("serializable");
     await expect(command.executeStatement(new SelectStatement("nope"))).rejects.toThrow(
       "Unsupported Memory",

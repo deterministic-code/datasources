@@ -1,6 +1,5 @@
 import {
   columnType as identityColumnType,
-  StubTransaction,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -10,16 +9,18 @@ import {
   type IsolationLevel,
   type TypeConverter,
 } from "@datasources/core";
-import { OracleConnection } from "./connection.ts";
+import { JsonConnection } from "./connection.ts";
+import { JsonTransaction } from "./transaction.ts";
 
-export class OracleProvider implements IDriver {
+export class JsonDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
-    OracleConnection.from(options);
+    JsonConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,
-    _isolation?: IsolationLevel,
-  ): ITransaction => new StubTransaction(connection.provider, connection);
+    isolation: IsolationLevel = "serializable",
+  ): ITransaction =>
+    new JsonTransaction(connection as JsonConnection, isolation);
 }

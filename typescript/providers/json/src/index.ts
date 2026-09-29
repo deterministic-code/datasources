@@ -1,1 +1,1 @@
-export { JsonProvider } from "./JsonProvider.ts";
+export { JsonDriver } from "./JsonDriver.ts";

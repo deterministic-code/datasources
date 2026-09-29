@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.MongoDb;
 
-public sealed class MongoDbProvider : IDriver
+public sealed class MongoDbDriver : IDriver
 {
     public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new MongoDbConnection(options);
     public ICommand Command(IConnection connection) => connection.CreateCommand();

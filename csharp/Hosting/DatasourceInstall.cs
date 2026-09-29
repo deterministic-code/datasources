@@ -6,17 +6,17 @@ public static class DatasourceInstall
 {
     static readonly Dictionary<string, (string Assembly, string Type)> Packages = new()
     {
-        ["json"] = ("Datasources.Json", "Datasources.Json.JsonProvider"),
-        ["memory"] = ("Datasources.Memory", "Datasources.Memory.MemoryProvider"),
+        ["json"] = ("Datasources.Json", "Datasources.Json.JsonDriver"),
+        ["memory"] = ("Datasources.Memory", "Datasources.Memory.MemoryDriver"),
         ["sqlite"] = ("Datasources.Sqlite", "Datasources.Sqlite.SqliteDriver"),
-        ["xml"] = ("Datasources.Xml", "Datasources.Xml.XmlProvider"),
-        ["yaml"] = ("Datasources.Yaml", "Datasources.Yaml.YamlProvider"),
+        ["xml"] = ("Datasources.Xml", "Datasources.Xml.XmlDriver"),
+        ["yaml"] = ("Datasources.Yaml", "Datasources.Yaml.YamlDriver"),
         ["mysql"] = ("Datasources.Mysql", "Datasources.Mysql.MysqlDriver"),
-        ["sqlserver"] = ("Datasources.SqlServer", "Datasources.SqlServer.SqlServerProvider"),
+        ["sqlserver"] = ("Datasources.SqlServer", "Datasources.SqlServer.SqlServerDriver"),
         ["postgres"] = ("Datasources.Postgres", "Datasources.Postgres.PostgresDriver"),
-        ["oracle"] = ("Datasources.Oracle", "Datasources.Oracle.OracleProvider"),
-        ["mongodb"] = ("Datasources.MongoDb", "Datasources.MongoDb.MongoDbProvider"),
-        ["dynamodb"] = ("Datasources.DynamoDb", "Datasources.DynamoDb.DynamoDbProvider")
+        ["oracle"] = ("Datasources.Oracle", "Datasources.Oracle.OracleDriver"),
+        ["mongodb"] = ("Datasources.MongoDb", "Datasources.MongoDb.MongoDbDriver"),
+        ["dynamodb"] = ("Datasources.DynamoDb", "Datasources.DynamoDb.DynamoDbDriver")
     };
 
     public static void From(IReadOnlyDictionary<string, string?> options) =>

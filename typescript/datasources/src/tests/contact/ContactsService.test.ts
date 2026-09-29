@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryProvider } from "@datasources/memory";
+import { MemoryDriver } from "@datasources/memory";
 import { collectAsync } from "../../collectAsync.ts";
 import { CRUDRepository } from "../../CRUDRepository.ts";
 import { ReadonlyRepository } from "../../ReadonlyRepository.ts";
@@ -82,7 +82,7 @@ describe("ContactsService", () => {
 });
 
 const setup = async (rows: Record<string, Scalar>[] = []): Promise<IConnection> => {
-  const connection = new MemoryProvider().connection();
+  const connection = new MemoryDriver().connection();
   await connection.open();
   for (const row of rows) {
     const response = await connection.createCommand().execute(

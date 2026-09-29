@@ -10,13 +10,13 @@ import {
   type IsolationLevel,
   type TypeConverter,
 } from "@datasources/core";
-import { YamlConnection } from "./connection.ts";
+import { MongoDbConnection } from "./connection.ts";
 
-export class YamlProvider implements IDriver {
+export class MongoDbDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
-    YamlConnection.from(options);
+    MongoDbConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,

@@ -4,8 +4,8 @@ using Datasources.Yaml;
 public partial class RegisterCreateTests
 {
     const string Provider = "yaml";
-    static readonly IDriver Driver = new YamlProvider();
-    static IDatasource Ds() => new Datasource(Provider, new YamlProvider());
+    static readonly IDriver Driver = new YamlDriver();
+    static IDatasource Ds() => new Datasource(Provider, new YamlDriver());
 
     [Fact]
     public async Task CreatesConnection()
@@ -36,5 +36,5 @@ public class PublicSurfaceTests
 {
     [Fact]
     public void ExportsOnlyTheProvider() =>
-        Assert.Equal(typeof(YamlProvider), Assert.Single(typeof(YamlProvider).Assembly.GetExportedTypes()));
+        Assert.Equal(typeof(YamlDriver), Assert.Single(typeof(YamlDriver).Assembly.GetExportedTypes()));
 }

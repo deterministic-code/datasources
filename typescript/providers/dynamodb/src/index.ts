@@ -1,1 +1,1 @@
-export { DynamoDbProvider } from "./DynamoDbProvider.ts";
+export { DynamoDbDriver } from "./DynamoDbDriver.ts";

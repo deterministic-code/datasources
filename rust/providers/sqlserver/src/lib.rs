@@ -1,7 +1,7 @@
 mod command;
 mod connection;
 
-pub use connection::SqlServerProvider;
+pub use connection::SqlServerDriver;
 
 #[cfg(test)]
 mod tests {
@@ -11,13 +11,13 @@ mod tests {
     use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new("sqlserver", Arc::new(SqlServerProvider), None)
+        BuiltDatasource::new("sqlserver", Arc::new(SqlServerDriver), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register("sqlserver", Arc::new(SqlServerProvider));
+        register("sqlserver", Arc::new(SqlServerDriver));
         assert_eq!(
             create(Some(&HashMap::from([(
                 "provider".into(),

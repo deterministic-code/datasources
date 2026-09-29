@@ -4,8 +4,8 @@ using Datasources.Xml;
 public partial class RegisterCreateTests
 {
     const string Provider = "xml";
-    static readonly IDriver Driver = new XmlProvider();
-    static IDatasource Ds() => new Datasource(Provider, new XmlProvider());
+    static readonly IDriver Driver = new XmlDriver();
+    static IDatasource Ds() => new Datasource(Provider, new XmlDriver());
 
     [Fact]
     public async Task CreatesConnection()
@@ -36,5 +36,5 @@ public class PublicSurfaceTests
 {
     [Fact]
     public void ExportsOnlyTheProvider() =>
-        Assert.Equal(typeof(XmlProvider), Assert.Single(typeof(XmlProvider).Assembly.GetExportedTypes()));
+        Assert.Equal(typeof(XmlDriver), Assert.Single(typeof(XmlDriver).Assembly.GetExportedTypes()));
 }

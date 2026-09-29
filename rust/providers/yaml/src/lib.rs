@@ -1,7 +1,7 @@
 mod command;
 mod connection;
 
-pub use connection::YamlProvider;
+pub use connection::YamlDriver;
 
 #[cfg(test)]
 mod tests {
@@ -11,13 +11,13 @@ mod tests {
     use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new("yaml", Arc::new(YamlProvider), None)
+        BuiltDatasource::new("yaml", Arc::new(YamlDriver), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register("yaml", Arc::new(YamlProvider));
+        register("yaml", Arc::new(YamlDriver));
         assert_eq!(
             create(Some(&HashMap::from([("provider".into(), "yaml".into())])))
                 .unwrap()

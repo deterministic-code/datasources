@@ -1,1 +1,1 @@
-export { MongoDbProvider } from "./MongoDbProvider.ts";
+export { MongoDbDriver } from "./MongoDbDriver.ts";

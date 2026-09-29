@@ -5,8 +5,8 @@ import {
   type DatasourceOptions,
   type IDriver,
 } from "@datasources/core";
-import { JsonProvider } from "@datasources/json";
-import { MemoryProvider } from "@datasources/memory";
+import { JsonDriver } from "@datasources/json";
+import { MemoryDriver } from "@datasources/memory";
 import { MysqlDriver } from "@datasources/mysql";
 import { PostgresDriver } from "@datasources/postgres";
 import { SqliteDriver } from "@datasources/sqlite";
@@ -14,8 +14,8 @@ import { packages } from "./packages.ts";
 import { providerNames } from "./providerNames.ts";
 
 const listed: Record<string, new () => IDriver> = {
-  json: JsonProvider,
-  memory: MemoryProvider,
+  json: JsonDriver,
+  memory: MemoryDriver,
   sqlite: SqliteDriver,
   mysql: MysqlDriver,
   postgres: PostgresDriver,

@@ -1,11 +1,11 @@
 mod command;
 mod connection;
 mod filter;
-mod provider;
+mod driver;
 mod store;
 mod transaction;
 
-pub use provider::MemoryProvider;
+pub use driver::MemoryDriver;
 
 #[cfg(test)]
 mod tests {
@@ -39,7 +39,7 @@ mod tests {
     #[test]
     fn register_and_create() {
         reset();
-        register("memory", Arc::new(MemoryProvider));
+        register("memory", Arc::new(MemoryDriver));
         let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
     }
@@ -206,7 +206,7 @@ mod tests {
             .unwrap();
 
         reset();
-        register("memory", Arc::new(MemoryProvider));
+        register("memory", Arc::new(MemoryDriver));
         let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
         ds.create_connection().await.unwrap();

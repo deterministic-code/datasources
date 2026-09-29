@@ -1,1 +1,1 @@
-export { SqlServerProvider } from "./SqlServerProvider.ts";
+export { SqlServerDriver } from "./SqlServerDriver.ts";

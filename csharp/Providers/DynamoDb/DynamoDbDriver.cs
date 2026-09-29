@@ -1,10 +1,10 @@
 using Datasources;
 
-namespace Datasources.Oracle;
+namespace Datasources.DynamoDb;
 
-public sealed class OracleProvider : IDriver
+public sealed class DynamoDbDriver : IDriver
 {
-    public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new OracleConnection(options);
+    public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new DynamoDbConnection(options);
     public ICommand Command(IConnection connection) => connection.CreateCommand();
     public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
         new StubTransaction(connection.Provider, connection);

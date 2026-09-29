@@ -2,10 +2,10 @@ mod command;
 mod connection;
 mod file_store;
 mod filter;
-mod provider;
+mod driver;
 mod transaction;
 
-pub use provider::JsonProvider;
+pub use driver::JsonDriver;
 
 #[cfg(test)]
 mod tests {
@@ -141,7 +141,7 @@ mod tests {
         txn.commit().await.unwrap();
 
         reset();
-        register("json", Arc::new(JsonProvider));
+        register("json", Arc::new(JsonDriver));
         let ds = create(Some(&HashMap::from([("provider".into(), "json".into())]))).unwrap();
         assert_eq!(ds.provider(), "json");
         ds.create_connection().await.unwrap();

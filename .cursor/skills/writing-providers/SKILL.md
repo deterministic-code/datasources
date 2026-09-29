@@ -22,7 +22,7 @@ Read `docs/writing-providers.md` for the interface. Implement these members:
 
 The package exports only the driver type.
 
-- `mysql`, `postgres`, and `sqlite` name it `*Driver`. Every other provider names it `*Provider`.
+- Every provider names it `*Driver`.
 - C#: that class is `public`. Connection, command, transaction, options, and converters are `internal`. `InternalsVisibleTo` opens them to the test project. `GetExportedTypes()` is exactly the driver. An engine assembly such as `Datasources.Sqlite.Microsoft` exports nothing.
 - TypeScript: `src/index.ts` is one line, `export { Name } from "./Name.ts"`. `package.json` `exports` points only at that file.
 - Rust: `lib.rs` has private `mod` items and one `pub use` of the driver. `pub` items inside those modules stay crate-private.

@@ -1,6 +1,5 @@
 import {
   columnType as identityColumnType,
-  StubTransaction,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -10,16 +9,18 @@ import {
   type IsolationLevel,
   type TypeConverter,
 } from "@datasources/core";
-import { DynamoDbConnection } from "./connection.ts";
+import { MemoryConnection } from "./connection.ts";
+import { MemoryTransaction } from "./transaction.ts";
 
-export class DynamoDbProvider implements IDriver {
+export class MemoryDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
-    DynamoDbConnection.from(options);
+    MemoryConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,
-    _isolation?: IsolationLevel,
-  ): ITransaction => new StubTransaction(connection.provider, connection);
+    isolation: IsolationLevel = "serializable",
+  ): ITransaction =>
+    new MemoryTransaction(connection as MemoryConnection, isolation);
 }

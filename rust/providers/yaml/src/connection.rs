@@ -1,3 +1,3 @@
 use datasources::named_stub_connection;
 
-named_stub_connection!(YamlConnection, YamlProvider, "yaml");
+named_stub_connection!(YamlConnection, YamlDriver, "yaml");

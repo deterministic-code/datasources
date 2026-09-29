@@ -1,7 +1,7 @@
 mod command;
 mod connection;
 
-pub use connection::MongoDbProvider;
+pub use connection::MongoDbDriver;
 
 #[cfg(test)]
 mod tests {
@@ -11,13 +11,13 @@ mod tests {
     use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new("mongodb", Arc::new(MongoDbProvider), None)
+        BuiltDatasource::new("mongodb", Arc::new(MongoDbDriver), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register("mongodb", Arc::new(MongoDbProvider));
+        register("mongodb", Arc::new(MongoDbDriver));
         assert_eq!(
             create(Some(&HashMap::from([(
                 "provider".into(),

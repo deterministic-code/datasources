@@ -8,7 +8,7 @@ public class MemoryTests
     public MemoryTests()
     {
         DatasourceFactory.Reset();
-        DatasourceFactory.Register("memory", new MemoryProvider());
+        DatasourceFactory.Register("memory", new MemoryDriver());
     }
 
     [Fact]

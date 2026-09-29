@@ -17,12 +17,7 @@ describe("provider public surface", () => {
         /^export \{ ([A-Za-z0-9]+) \} from "\.\/\1\.ts";\n$/,
       );
       expect(match, name).not.toBeNull();
-      expect(
-        match?.[1]?.endsWith(
-          name === "mysql" || name === "postgres" || name === "sqlite" ? "Driver" : "Provider",
-        ),
-        name,
-      ).toBe(true);
+      expect(match?.[1]?.endsWith("Driver"), name).toBe(true);
     }
   });
 });

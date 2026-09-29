@@ -1,7 +1,7 @@
 mod command;
 mod connection;
 
-pub use connection::XmlProvider;
+pub use connection::XmlDriver;
 
 #[cfg(test)]
 mod tests {
@@ -11,13 +11,13 @@ mod tests {
     use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new("xml", Arc::new(XmlProvider), None)
+        BuiltDatasource::new("xml", Arc::new(XmlDriver), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register("xml", Arc::new(XmlProvider));
+        register("xml", Arc::new(XmlDriver));
         assert_eq!(
             create(Some(&HashMap::from([("provider".into(), "xml".into())])))
                 .unwrap()

@@ -10,13 +10,13 @@ import {
   type IsolationLevel,
   type TypeConverter,
 } from "@datasources/core";
-import { MongoDbConnection } from "./connection.ts";
+import { XmlConnection } from "./connection.ts";
 
-export class MongoDbProvider implements IDriver {
+export class XmlDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
-    MongoDbConnection.from(options);
+    XmlConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,
