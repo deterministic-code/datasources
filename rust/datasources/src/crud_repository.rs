@@ -66,7 +66,7 @@ impl CRUDRepository {
         Ok(repo)
     }
 
-    pub fn from_built(mut built: BuiltRepository) -> Self {
+    fn from_built(mut built: BuiltRepository) -> Self {
         let id = built.ids.clone();
         let write = built
             .write
@@ -177,18 +177,13 @@ impl CRUDRepository {
         if !self.enriched() {
             return self.inserted(item).await;
         }
-        let mut stored = {
-            let entries = self.readonly.enrichments.lock().expect("enrichments");
-            strip_enriched(item, &entries)
-        };
-        if self.readonly.memory_items().is_some() {
-            let created = {
-                let memory = self.readonly.memory_items().expect("memory");
-                memory.insert(&mut stored)
-            };
+        if let Some(memory) = self.readonly.memory_items().cloned() {
+            let mut stored = self.without_enrichment(item);
+            let created = memory.insert(&mut stored);
             let id = self.id_value(&created);
             self.write_id(item, &id)?;
         } else {
+            let stored = item.clone();
             self.execute_insert(&stored, item).await?;
         }
         self.write
@@ -209,13 +204,7 @@ impl CRUDRepository {
     }
 
     async fn update_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let stored = if self.enriched() {
-            let entries = self.readonly.enrichments.lock().expect("enrichments");
-            strip_enriched(item, &entries)
-        } else {
-            item.clone()
-        };
-        let response = self.save(&stored, by_where).await?;
+        let response = self.save(item, by_where).await?;
         if self.enriched() {
             let mut parent = item.clone();
             self.write
@@ -244,13 +233,17 @@ impl CRUDRepository {
     }
 
     fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
+        let entries = self.readonly.enrichments.lock().expect("enrichments");
         let mut pairs: Vec<_> = record
             .iter()
             .filter(|(key, value)| {
-                (include_ids || !self.ids.contains(*key)) && !matches!(value, Value::Null)
+                (include_ids || !self.ids.contains(*key))
+                    && !entries.iter().any(|entry| entry.enrichment.into == **key)
+                    && !matches!(value, Value::Null)
             })
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
+        drop(entries);
         pairs.sort_by(|left, right| left.0.cmp(&right.0));
         pairs
             .into_iter()
@@ -358,9 +351,27 @@ impl CRUDRepository {
         Ok(())
     }
 
+    fn without_enrichment(&self, item: &Row) -> Row {
+        let entries = self.readonly.enrichments.lock().expect("enrichments");
+        item.iter()
+            .filter(|(key, _)| !entries.iter().any(|entry| entry.enrichment.into == **key))
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect()
+    }
+
+    pub(crate) fn enrichment_into(&self, name: &str) -> bool {
+        self.readonly
+            .enrichments
+            .lock()
+            .expect("enrichments")
+            .iter()
+            .any(|entry| entry.enrichment.into == name)
+    }
+
     async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        if let Some(memory) = self.readonly.memory_items() {
-            return Ok(memory.save(item));
+        if self.readonly.memory_items().is_some() {
+            let stored = self.without_enrichment(item);
+            return Ok(self.readonly.memory_items().expect("memory").save(&stored));
         }
         let record = self.readonly.reverse_convert(item)?;
         let fields = self.params(&record, false)?;
@@ -581,10 +592,3 @@ fn and_all(parts: Vec<Expression>) -> Expression {
         })
 }
 
-pub(crate) fn strip_enriched(item: &Row, entries: &[StoredEnrichment]) -> Row {
-    let mut row = item.clone();
-    for entry in entries {
-        row.remove(&entry.enrichment.into);
-    }
-    row
-}

@@ -16,7 +16,7 @@ import type { BuiltRepository } from "./BuiltRepository.ts";
 import { createRepositoryOptions, defaultId, fieldNamesOf } from "./createRepositoryOptions.ts";
 import { parts } from "./RepositoryBuilder.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { enrichmentsOf, isBuilt, ReadonlyRepository } from "./ReadonlyRepository.ts";
+import { enrichmentsOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -35,9 +35,10 @@ const fieldsOf = (
   include: (col: string) => boolean,
   column: (property: string) => string,
   cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
+  enrichmentInto: (name: string) => boolean,
 ): Field[] =>
   Object.entries(record)
-    .filter(([key, value]) => include(key) && value !== null && value !== undefined)
+    .filter(([key, value]) => include(key) && !enrichmentInto(key) && value !== null && value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name: column(name), value: cell(name, value, true) as Scalar }));
 
@@ -86,25 +87,12 @@ export class CRUDRepository<T = Cells>
 
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>);
-  constructor(built: BuiltRepository<T>, write?: IWriteEnrichmentStrategy<T>);
   constructor(
-    typeOrConnectionOrBuiltOrWrite:
-      | Constructable<T>
-      | IConnection
-      | BuiltRepository<T>,
-    connectionOrOptionsOrWrite?: IConnection | CRUDRepositoryOptions<T> | IWriteEnrichmentStrategy<T>,
+    typeOrConnection: Constructable<T> | IConnection,
+    connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
   ) {
-    if (typeof typeOrConnectionOrBuiltOrWrite !== "function" && isBuilt(typeOrConnectionOrBuiltOrWrite)) {
-      super(typeOrConnectionOrBuiltOrWrite);
-      this.ids = typeOrConnectionOrBuiltOrWrite.ids;
-      this.write =
-        (connectionOrOptionsOrWrite as IWriteEnrichmentStrategy<T> | undefined) ??
-        new DefaultWriteEnrichmentStrategy<T>();
-      this.returnMapper = undefined;
-      return;
-    }
-    const options = connectionOrOptionsOrWrite as IConnection | CRUDRepositoryOptions<T>;
-    const built = crudBuilt(typeOrConnectionOrBuiltOrWrite, options);
+    const options = connectionOrOptions as IConnection | CRUDRepositoryOptions<T>;
+    const built = crudBuilt(typeOrConnection, options);
     super(built);
     this.ids = built.ids;
     const crud = typeof options === "object" && options !== null ? (options as CRUDRepositoryOptions<T>) : undefined;
@@ -161,8 +149,7 @@ export class CRUDRepository<T = Cells>
   };
 
   private createCore = async (item: T): Promise<T> => {
-    const stored = this.enriched ? this.stripEnriched(item) : item;
-    await this.insert(stored, item);
+    await this.insert(item);
     if (!this.enriched) return item;
     await this.write.persist(this.tree, [item], "create");
     if (this.ids.length !== 1) return item;
@@ -171,8 +158,7 @@ export class CRUDRepository<T = Cells>
   };
 
   private updateCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    const stored = this.enriched ? this.stripEnriched(item) : item;
-    const response = await this.save(stored, byWhere);
+    const response = await this.save(item, byWhere);
     if (this.enriched) await this.write.persist(this.tree, [item], "update");
     return response;
   };
@@ -185,10 +171,16 @@ export class CRUDRepository<T = Cells>
   readSingleById = async (id: Scalar | Cells): Promise<T | undefined> =>
     this.readSingle(this.byId(id));
 
-  private insert = async (stored: T, target: T): Promise<Response> => {
-    const fields = fieldsOf(this.reverseConvert(stored), (col) => !this.ids.includes(col), this.column, this.cell);
+  private insert = async (item: T): Promise<Response> => {
+    const fields = fieldsOf(
+      this.reverseConvert(item),
+      (col) => !this.ids.includes(col),
+      this.column,
+      this.cell,
+      this.enrichmentInto,
+    );
     const response = await execute(this.command(), this.statements!.insert(fields), fields);
-    if (this.ids.length === 1) await this.copyInsertedId(target, fields);
+    if (this.ids.length === 1) await this.copyInsertedId(item, fields);
     return response;
   };
 
@@ -239,7 +231,7 @@ export class CRUDRepository<T = Cells>
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
-    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell);
+    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell, this.enrichmentInto);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     return execute(this.command(), this.statements!.update(fields, where), UpdateStatement.parameterList(fields, where));
   };
@@ -252,7 +244,7 @@ export class CRUDRepository<T = Cells>
     const parameters = listed.length
       ? listed
       : statement.getText().includes("$")
-        ? fieldsOf(record, () => true, this.column, this.cell)
+        ? fieldsOf(record, () => true, this.column, this.cell, this.enrichmentInto)
         : [];
     return execute(this.command(), statement, parameters);
   };
@@ -286,13 +278,8 @@ export class CRUDRepository<T = Cells>
     );
   };
 
-  protected stripEnriched = (item: T): T => {
-    const entries = enrichmentsOf(this);
-    if (!entries) return item;
-    const copy = { ...item } as Props;
-    for (const entry of entries) delete copy[entry.enrichment.into];
-    return copy as T;
-  };
+  protected enrichmentInto = (name: string): boolean =>
+    enrichmentsOf(this)?.some((entry) => entry.enrichment.into === name) ?? false;
 }
 
 const writerOf = <TRelated extends object>(

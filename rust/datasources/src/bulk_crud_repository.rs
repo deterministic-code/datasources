@@ -1,9 +1,8 @@
-use crate::built_repository::BuiltRepository;
 use crate::bulk_command::BulkCommand;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::crud_repository::{strip_enriched, CRUDRepository};
+use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
 use crate::enrichment_via::EnrichmentVia;
@@ -54,22 +53,6 @@ impl BulkCRUDRepository {
             strategy,
             use_transaction,
         })
-    }
-
-    pub fn from_built(built: BuiltRepository) -> Self {
-        Self::from_built_with(built, Arc::new(SingleCommands))
-    }
-
-    pub fn from_built_with(built: BuiltRepository, strategy: Arc<dyn BulkWriteStrategy>) -> Self {
-        let use_transaction = built
-            .write
-            .as_ref()
-            .is_some_and(|write| write.use_transaction());
-        Self {
-            crud: CRUDRepository::from_built(built),
-            strategy,
-            use_transaction,
-        }
     }
 
     pub fn memory(items: Vec<Row>) -> Self {
@@ -180,10 +163,7 @@ impl BulkCRUDRepository {
         items
             .iter()
             .map(|item| {
-                Ok(command(insert_command(
-                    &self.crud,
-                    &stored(&self.crud, item),
-                )?))
+                Ok(command(insert_command(&self.crud, item)?))
             })
             .collect()
     }
@@ -192,11 +172,7 @@ impl BulkCRUDRepository {
         items
             .iter()
             .map(|item| {
-                Ok(command(update_command(
-                    &self.crud,
-                    &stored(&self.crud, item),
-                    by_where,
-                )?))
+                Ok(command(update_command(&self.crud, item, by_where)?))
             })
             .collect()
     }
@@ -205,11 +181,7 @@ impl BulkCRUDRepository {
         items
             .iter()
             .map(|item| {
-                Ok(command(delete_command(
-                    &self.crud,
-                    &stored(&self.crud, item),
-                    by_where,
-                )?))
+                Ok(command(delete_command(&self.crud, item, by_where)?))
             })
             .collect()
     }
@@ -236,16 +208,6 @@ fn id_of(repo: &CRUDRepository, item: &Row) -> Value {
         return Value::Null;
     }
     item.get(&ids[0]).cloned().unwrap_or(Value::Null)
-}
-
-fn stored(repo: &CRUDRepository, item: &Row) -> Row {
-    let readonly = stored_repo(repo);
-    if readonly.enriched() {
-        let entries = readonly.enrichments.lock().expect("enrichments");
-        strip_enriched(item, &entries)
-    } else {
-        item.clone()
-    }
 }
 
 fn insert_command(repo: &CRUDRepository, item: &Row) -> Result<(String, Vec<Parameter>)> {
@@ -305,12 +267,12 @@ fn delete_command(
 
 fn stored_row(repo: &CRUDRepository, item: &Row) -> Result<Row> {
     let readonly = stored_repo(repo);
-    let record = readonly.reverse_convert(&stored(repo, item))?;
+    let record = readonly.reverse_convert(item)?;
     let mut row = Row::new();
     for name in readonly.statements.columns() {
         let value = record
             .iter()
-            .find(|(key, _)| readonly.column(key) == *name)
+            .find(|(key, _)| readonly.column(key) == *name && !repo.enrichment_into(key))
             .map(|(_, value)| value.clone())
             .unwrap_or(Value::Null);
         row.insert(name.clone(), value);
@@ -323,7 +285,9 @@ fn params(repo: &CRUDRepository, record: &Row, include_ids: bool) -> Result<Vec<
     let mut pairs: Vec<_> = record
         .iter()
         .filter(|(key, value)| {
-            (include_ids || !ids.iter().any(|id| id == *key)) && !matches!(value, Value::Null)
+            (include_ids || !ids.iter().any(|id| id == *key))
+                && !repo.enrichment_into(key)
+                && !matches!(value, Value::Null)
         })
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();

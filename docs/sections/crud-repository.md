@@ -96,16 +96,6 @@ constructor(connection: IConnection, options: CRUDRepositoryOptions<T>)
 - `connection` — open [IConnection](./connection.md)
 - `options` — [CRUDRepositoryOptions](#crudrepositoryoptions)
 
-##### CRUDRepository(built)
-
-Builds a table repository from [BuiltRepository](#builtrepository).
-
-```typescript
-constructor(built: BuiltRepository<T>)
-```
-
-- `built` — [BuiltRepository](#builtrepository)
-
 ##### CRUDRepository(inner, strategy?)
 
 Wraps an inner [ICRUDRepository](#icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
@@ -440,16 +430,6 @@ public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options)
 - `connection` — open [IConnection](./connection.md)
 - `options` — [CRUDRepositoryOptions](#crudrepositoryoptions)
 
-##### CRUDRepository(built)
-
-Builds a table repository from [BuiltRepository](#builtrepository).
-
-```csharp
-public Repository(BuiltRepository<T> built)
-```
-
-- `built` — [BuiltRepository](#builtrepository)
-
 ##### CRUDRepository(inner, strategy)
 
 Wraps an inner [ICRUDRepository](#icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
@@ -779,18 +759,6 @@ pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> R
 - `options` — [CRUDRepositoryOptions](#crudrepositoryoptions)
 
 **Returns** `Result<`[CRUDRepository](#crudrepository)`>`
-
-##### from_built(built)
-
-Builds a table repository from [BuiltRepository](#builtrepository).
-
-```rust
-pub fn from_built(built: BuiltRepository) -> Self
-```
-
-- `built` — [BuiltRepository](#builtrepository)
-
-**Returns** [CRUDRepository](#crudrepository)
 
 ##### from_repository(inner)
 

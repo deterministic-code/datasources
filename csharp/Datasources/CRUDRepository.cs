@@ -15,7 +15,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(RepositoryBuilder<T>.Parts(connection, options), options.Write, options.Return) { }
 
-    public CRUDRepository(
+    private CRUDRepository(
         BuiltRepository<T> built,
         IWriteEnrichmentStrategy<T>? write = null,
         IMapper<IReturnStatement, IReturnStatement>? returnMapper = null) : base(
@@ -89,8 +89,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<T> CreateCore(T item)
     {
-        var stored = Enriched ? StripEnriched(item) : item;
-        await Insert(stored, item);
+        await Insert(item);
         if (!Enriched) return item;
         await write.Persist(Tree, [item!], WriteMode.Create);
         if (ids.Count != 1) return item;
@@ -100,8 +99,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> UpdateCore(T item, IWhere? byWhere = null)
     {
-        var stored = Enriched ? StripEnriched(item) : item;
-        var response = await Save(stored, byWhere);
+        var response = await Save(item, byWhere);
         if (Enriched)
             await write.Persist(Tree, [item!], WriteMode.Update);
         return response;
@@ -124,12 +122,12 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return await ReadSingle(IdWhere(key));
     }
 
-    async Task<Response> Insert(T stored, T target)
+    async Task<Response> Insert(T item)
     {
-        var fields = Params(ReverseConvert(stored), col => !ids.Contains(col));
+        var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
         var response = await Command().Execute(Statements.Insert(fields), fields);
         if (ids.Count == 1)
-            await CopyInsertedId(target, fields);
+            await CopyInsertedId(item, fields);
         return response;
     }
 
@@ -211,8 +209,12 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
          .Aggregate((left, right) => new Operator.And(left, right)));
 
     IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include) =>
-        [.. record.Where(pair => include(pair.Key) && pair.Value is not Value.Null).OrderBy(pair => pair.Key)
+        [.. record.Where(pair => include(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)
+            .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(Column(pair.Key), Cell(pair.Key, pair.Value, fieldsApplied: true)))];
+
+    protected bool EnrichmentInto(string name) =>
+        ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.Into == name);
 
     Row ReverseConvert(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));
 
@@ -240,30 +242,5 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return typeof(T).GetProperty(name)?.GetValue(item) is { } value
             ? Value.From(value)
             : Value.Null.Instance;
-    }
-
-    protected T StripEnriched(T item)
-    {
-        var skip = ((IEnrichmentHost)this).Enrichments.Select(entry => entry.Enrichment.Into).ToHashSet();
-        if (item is IDictionary<string, Value> row)
-        {
-            var copy = new Row(row);
-            foreach (var name in skip)
-                copy.Remove(name);
-            return (T)(object)copy;
-        }
-        var dest = Activator.CreateInstance(item!.GetType())!;
-        foreach (var prop in item.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(prop => prop is { CanRead: true, CanWrite: true } && prop.GetIndexParameters().Length == 0))
-        {
-            if (skip.Contains(prop.Name))
-            {
-                if (!prop.PropertyType.IsValueType)
-                    prop.SetValue(dest, null);
-                continue;
-            }
-            prop.SetValue(dest, prop.GetValue(item));
-        }
-        return (T)dest;
     }
 }

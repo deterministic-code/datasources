@@ -17,11 +17,6 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         : base(connection, options) =>
         (this.bulk, useTransaction) = (bulk, options.Write?.UseTransaction ?? false);
 
-    public BulkCRUDRepository(BuiltRepository<T> built) : this(built, new SingleCommands<T>()) { }
-
-    public BulkCRUDRepository(BuiltRepository<T> built, IBulkWriteStrategy<T> bulk) : base(built) =>
-        (this.bulk, useTransaction) = (bulk, false);
-
     public Task<Response> Create(IReadOnlyList<T> items) =>
         InTransaction(() => bulk.Create(items, this));
 
@@ -66,13 +61,13 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
     public Task<Response> DeleteOne(T item, IWhere? byWhere) => Delete(item, byWhere);
 
     public IReadOnlyList<BulkCommand> Inserts(IReadOnlyList<T> items) =>
-        [.. items.Select(item => Insert(Stored(item)))];
+        [.. items.Select(Insert)];
 
     public IReadOnlyList<BulkCommand> Updates(IReadOnlyList<T> items, IWhere? byWhere) =>
-        [.. items.Select(item => UpdateCommand(Stored(item), byWhere))];
+        [.. items.Select(item => UpdateCommand(item, byWhere))];
 
     public IReadOnlyList<BulkCommand> Deletes(IReadOnlyList<T> items, IWhere? byWhere) =>
-        [.. items.Select(item => DeleteCommand(Stored(item), byWhere))];
+        [.. items.Select(item => DeleteCommand(item, byWhere))];
 
     public IReadOnlyList<Row> Rows(IReadOnlyList<T> items) =>
         [.. items.Select(RowOf)];
@@ -88,11 +83,9 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
             : Value.Null.Instance;
     }
 
-    T Stored(T item) => Enriched ? StripEnriched(item) : item;
-
-    BulkCommand Insert(T stored)
+    BulkCommand Insert(T item)
     {
-        var fields = Fields(Reverse(stored), col => !Ids.Contains(col));
+        var fields = Fields(Reverse(item), col => !Ids.Contains(col));
         return new(Statements.Insert(fields).GetText(), fields);
     }
 
@@ -119,11 +112,11 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 
     Row RowOf(T item)
     {
-        var stored = Reverse(Stored(item));
+        var stored = Reverse(item);
         var row = new Row();
         foreach (var name in Statements.ReadColumns)
         {
-            var match = stored.FirstOrDefault(pair => Column(pair.Key) == name);
+            var match = stored.FirstOrDefault(pair => Column(pair.Key) == name && !EnrichmentInto(pair.Key));
             row[name] = match.Key is null ? Value.Null.Instance : match.Value;
         }
         return row;
@@ -132,7 +125,8 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
     Row Reverse(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));
 
     IReadOnlyList<Parameter> Fields(Row record, Func<string, bool> include) =>
-        [.. record.Where(pair => include(pair.Key) && pair.Value is not Value.Null).OrderBy(pair => pair.Key)
+        [.. record.Where(pair => include(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)
+            .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(Column(pair.Key), Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
     IWhere Map(IWhere where, bool fieldsApplied) =>

@@ -402,7 +402,6 @@ describe("CRUDRepository", () => {
     expect(createRepositoryOptions(asType(PascalId)).ids).toEqual(["Id"]);
     expect(new CRUDRepository(connection, fromId)).toBeInstanceOf(CRUDRepository);
     expect(new CRUDRepository(asType(Item), connection)).toBeInstanceOf(CRUDRepository);
-    expect(new CRUDRepository(parts(connection, fromId))).toBeInstanceOf(CRUDRepository);
     expect(RepositoryBuilder.from(connection, fromId).parts().connection).toBe(connection);
     expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
     expect(parts(connection, {}).statements.query().getText()).toBe("SELECT * FROM ");
