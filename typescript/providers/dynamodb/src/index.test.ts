@@ -30,6 +30,6 @@ describe("dynamodb", () => {
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());
     ds.createReadonlyRepository(untyped(), connection);
-    expect(new DynamoDbDriver().transaction(connection).isolation).toBe("serializable");
+    expect(new DynamoDbDriver().transaction(connection).isolation).toBe("readCommitted");
   });
 });

@@ -2,7 +2,7 @@ namespace Datasources.Postgres;
 
 internal sealed class PostgresTransaction : ITransaction
 {
-    public PostgresTransaction(PostgresConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+    public PostgresTransaction(PostgresConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         Connection = connection;
         Isolation = isolation;

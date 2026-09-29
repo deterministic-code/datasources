@@ -1,9 +1,9 @@
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum IsolationLevel {
     ReadUncommitted,
+    #[default]
     ReadCommitted,
     RepeatableRead,
-    #[default]
     Serializable,
 }
 

@@ -30,6 +30,6 @@ describe("yaml", () => {
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());
     ds.createReadonlyRepository(untyped(), connection);
-    expect(new YamlDriver().transaction(connection).isolation).toBe("serializable");
+    expect(new YamlDriver().transaction(connection).isolation).toBe("readCommitted");
   });
 });

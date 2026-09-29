@@ -49,7 +49,7 @@ transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
 ```
 
 - `connection` — open or closed [IConnection](./sections/connection.md)
-- `isolation` — defaults to `serializable`
+- `isolation` — defaults to `readCommitted`
 
 **Returns** [ITransaction](./sections/transaction.md)
 
@@ -113,11 +113,11 @@ ICommand Command(IConnection connection)
 Builds an [ITransaction](./sections/transaction.md) for the connection.
 
 ```csharp
-ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted)
 ```
 
 - `connection` — open or closed [IConnection](./sections/connection.md)
-- `isolation` — defaults to `Serializable`
+- `isolation` — defaults to `ReadCommitted`
 
 **Returns** [ITransaction](./sections/transaction.md)
 
@@ -185,7 +185,7 @@ fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel
 ```
 
 - `connection` — open or closed [Connection](./sections/connection.md)
-- `isolation` — defaults to `Serializable` at the call site
+- `isolation` — defaults to `ReadCommitted` at the call site
 
 **Returns** `Arc<dyn `[Transaction](./sections/transaction.md)`>`
 
@@ -214,7 +214,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 ## Remarks
 
-{{Connection|connection|connection}} receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](./sections/datasource-url.md). {{Command|command|command}} delegates to the connection's {{CreateCommand|createCommand|create_command}}. {{Transaction|transaction|transaction}} builds the dialect transaction. Isolation defaults to serializable.
+{{Connection|connection|connection}} receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](./sections/datasource-url.md). {{Command|command|command}} delegates to the connection's {{CreateCommand|createCommand|create_command}}. {{Transaction|transaction|transaction}} builds the dialect transaction. Isolation defaults to read committed.
 
 {{RowTypeConverters|rowTypeConverters|row_type_converters}} maps a canonical type name to a [TypeConverter](./sections/type-converters.md). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 

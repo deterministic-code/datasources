@@ -1005,7 +1005,7 @@ startTransaction(isolation?: IsolationLevel): Promise<ITransaction>
 
 | Name | Description |
 | --- | --- |
-| `isolation` | [IsolationLevel](#typescript-isolationlevel); omitted uses serializable |
+| `isolation` | [IsolationLevel](#typescript-isolationlevel); omitted uses read committed |
 
 **Returns**
 
@@ -1091,14 +1091,14 @@ Begins a transaction. The connection must be open.
 **Definition**
 
 ```csharp
-Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `isolation` | [IsolationLevel](#csharp-isolationlevel); default is serializable |
+| `isolation` | [IsolationLevel](#csharp-isolationlevel); default is read committed |
 
 **Returns**
 
@@ -1207,7 +1207,7 @@ async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<A
 
 | Name | Description |
 | --- | --- |
-| `isolation` | [IsolationLevel](#rust-isolationlevel); `None` uses serializable |
+| `isolation` | [IsolationLevel](#rust-isolationlevel); `None` uses read committed |
 
 **Returns**
 
@@ -1268,7 +1268,7 @@ await connection.Open();
 await connection.Close();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L47-L52)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L48-L53)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1295,7 +1295,7 @@ var command = connection.CreateCommand();
 var response = await command.Execute("insert");
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L65-L72)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L66-L73)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1326,7 +1326,7 @@ await using var connection = new MemoryConnection();
 await connection.Open();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L47-L53)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L48-L54)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1372,7 +1372,7 @@ const txn = await connection.startTransaction();
 
 ## Transaction
 
-Transaction represents a unit of work on an open connection and handles commit and abort. IsolationLevel selects the isolation for a new transaction.
+A transaction is a single unit of work. It lets you run multiple commands and ensure they succeed together.
 
 ### Classes
 
@@ -1429,9 +1429,9 @@ const IsolationLevel
 | Name | Description |
 | --- | --- |
 | ReadUncommitted | Dirty reads are allowed. |
-| ReadCommitted | Committed data only. |
+| ReadCommitted | Committed data only. The default for [startTransaction](#typescript-iconnection-starttransaction-isolation). |
 | RepeatableRead | Repeatable reads within the transaction. |
-| Serializable | Full isolation. The default for [startTransaction](#typescript-iconnection-starttransaction-isolation). |
+| Serializable | Full isolation. |
 
 ##### C#
 
@@ -1486,9 +1486,9 @@ public enum IsolationLevel
 | Name | Description |
 | --- | --- |
 | ReadUncommitted | Dirty reads are allowed. |
-| ReadCommitted | Committed data only. |
+| ReadCommitted | Committed data only. The default for [StartTransaction](#csharp-iconnection-starttransaction-isolation). |
 | RepeatableRead | Repeatable reads within the transaction. |
-| Serializable | Full isolation. The default for [StartTransaction](#csharp-iconnection-starttransaction-isolation). |
+| Serializable | Full isolation. |
 
 ##### Rust
 
@@ -1559,9 +1559,9 @@ pub enum IsolationLevel
 | Name | Description |
 | --- | --- |
 | ReadUncommitted | Dirty reads are allowed. |
-| ReadCommitted | Committed data only. |
+| ReadCommitted | Committed data only. The default for [start_transaction](#rust-connection-start_transaction-isolation). |
 | RepeatableRead | Repeatable reads within the transaction. |
-| Serializable | Full isolation. The default for [start_transaction](#rust-connection-start_transaction-isolation). |
+| Serializable | Full isolation. |
 
 ### Remarks
 
@@ -1569,15 +1569,13 @@ pub enum IsolationLevel
 
 `Commit` / `commit` / `commit` persists work. `Abort` / `abort` / `abort` rolls it back.
 
-Omitted isolation is `Serializable`. Memory, JSON, and SQLite throw when the connection is closed.
-
 > **TypeScript**
 >
 > Omit the argument.
 
 > **C#**
 >
-> The parameter defaults to `Serializable`.
+> The parameter defaults to `ReadCommitted`.
 
 > **Rust**
 >
@@ -1626,6 +1624,83 @@ const txn = await connection.startTransaction();
 const saved = true;
 if (saved) await txn.commit();
 else await txn.abort();
+```
+
+#### Two commands running together
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L28-L43)
+
+```csharp
+var connection = new MemoryConnection();
+await connection.Open();
+var txn = await connection.StartTransaction();
+var command = connection.CreateCommand();
+var fields = new Parameter[] { new("name", "ada") };
+await command.Execute(new InsertStatement("people", fields), fields);
+var reader = await command.ExecuteReader(new SelectInsertedIdStatement("people", "id"));
+var moved = await reader.Next();
+var id = reader.Current!["id"];
+await txn.Commit();
+```
+
+**Created id**
+
+```
+{
+  id: 1
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L101-L124)
+
+```rust
+let connection = MemoryConnection::from_options(None);
+connection.open().await.unwrap();
+let txn = connection.start_transaction(None).await.unwrap();
+let command = connection.create_command();
+let fields = vec![Parameter::new("name", "ada")];
+command
+    .execute_statement(&InsertStatement::new("people", &fields), Some(&fields))
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader_statement(&SelectInsertedIdStatement::new("people", "id"), None)
+    .await
+    .unwrap();
+let moved = reader.next().await.unwrap();
+let id = reader.current();
+txn.commit().await.unwrap();
+```
+
+**Created id**
+
+```
+{
+  id: 1
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L95-L108)
+
+```typescript
+const connection = new MemoryConnection();
+await connection.open();
+const txn = await connection.startTransaction();
+const command = connection.createCommand();
+const fields = [{ name: "name", value: "ada" }];
+await command.executeStatement(new InsertStatement("people", fields), fields);
+const reader = await command.executeReaderStatement(new SelectInsertedIdStatement("people", "id"));
+const moved = await reader.next();
+const id = reader.current;
+await txn.commit();
+```
+
+**Created id**
+
+```
+{
+  id: 1
+}
 ```
 
 ## Command
@@ -2730,7 +2805,7 @@ if (reader is IAsyncDisposable disposable)
 await conn.Close();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/src/lib.rs#L95-L107)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/src/lib.rs#L94-L106)
 
 ```rust
 let sets = command
@@ -17249,18 +17324,18 @@ DatasourceFactory.Register("memory", new MemoryDriver());
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L39-L44)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L40-L45)
 
 ```rust
 register("memory", Arc::new(MemoryDriver));
-let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L31-L36)
 
 ```typescript
 DatasourceFactory.register("memory", new MemoryDriver());
-const ds = DatasourceFactory.create({ provider: "memory" });
+const ds = DatasourceFactory.create({ PROVIDER: "memory" });
 ```
 
 #### Missing provider
@@ -17706,7 +17781,7 @@ transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
 | Name | Description |
 | --- | --- |
 | `connection` | open or closed [IConnection](#connection) |
-| `isolation` | defaults to `serializable` |
+| `isolation` | defaults to `readCommitted` |
 
 **Returns**
 
@@ -17811,7 +17886,7 @@ Builds an [ITransaction](#transaction) for the connection.
 **Definition**
 
 ```csharp
-ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable)
+ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted)
 ```
 
 **Parameters**
@@ -17819,7 +17894,7 @@ ITransaction Transaction(IConnection connection, IsolationLevel isolation = Isol
 | Name | Description |
 | --- | --- |
 | `connection` | open or closed [IConnection](#connection) |
-| `isolation` | defaults to `Serializable` |
+| `isolation` | defaults to `ReadCommitted` |
 
 **Returns**
 
@@ -17932,7 +18007,7 @@ fn transaction(&self, connection: Arc<dyn Connection>, isolation: IsolationLevel
 | Name | Description |
 | --- | --- |
 | `connection` | open or closed [Connection](#connection) |
-| `isolation` | defaults to `Serializable` at the call site |
+| `isolation` | defaults to `ReadCommitted` at the call site |
 
 **Returns**
 
@@ -17974,7 +18049,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 ### Remarks
 
-`Connection` / `connection` / `connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](#datasource-url). `Command` / `command` / `command` delegates to the connection's `CreateCommand` / `createCommand` / `create_command`. `Transaction` / `transaction` / `transaction` builds the dialect transaction. Isolation defaults to serializable.
+`Connection` / `connection` / `connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](#datasource-url). `Command` / `command` / `command` delegates to the connection's `CreateCommand` / `createCommand` / `create_command`. `Transaction` / `transaction` / `transaction` builds the dialect transaction. Isolation defaults to read committed.
 
 `RowTypeConverters` / `rowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converter). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
@@ -18023,18 +18098,18 @@ DatasourceFactory.Register("memory", new MemoryDriver());
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L39-L44)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L40-L45)
 
 ```rust
 register("memory", Arc::new(MemoryDriver));
-let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L31-L36)
 
 ```typescript
 DatasourceFactory.register("memory", new MemoryDriver());
-const ds = DatasourceFactory.create({ provider: "memory" });
+const ds = DatasourceFactory.create({ PROVIDER: "memory" });
 ```
 
 #### Mock driver
@@ -18046,7 +18121,7 @@ public sealed class MockDriver : IDriver
 {
     public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new MockConnection();
     public ICommand Command(IConnection connection) => new MockCommand(connection);
-    public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
+    public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted) =>
         new MockTransaction(connection) { Isolation = isolation };
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; } =
         new Dictionary<string, TypeConverter<Value, Value>>();
@@ -18081,7 +18156,7 @@ impl Driver for MockDriver {
         HashMap::new()
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mocks/mock-driver.ts#L14-L28)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mocks/mock-driver.ts#L14-L27)
 
 ```typescript
 export class MockDriver implements IDriver {
@@ -18091,7 +18166,7 @@ export class MockDriver implements IDriver {
   command = (connection: IConnection): ICommand => new MockCommand(connection);
   transaction = (
     connection: IConnection,
-    isolation: IsolationLevel = "serializable",
+    isolation: IsolationLevel = "readCommitted",
   ): ITransaction => {
     const txn = new MockTransaction(connection);
     txn.isolation = isolation;

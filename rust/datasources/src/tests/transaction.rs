@@ -27,5 +27,5 @@ async fn commit_or_abort() {
     } else {
         txn.abort().await.expect("abort");
     }
-    assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+    assert_eq!(txn.isolation(), IsolationLevel::ReadCommitted);
 }

@@ -20,7 +20,7 @@ export class MemoryDriver implements IDriver {
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,
-    isolation: IsolationLevel = "serializable",
+    isolation: IsolationLevel = "readCommitted",
   ): ITransaction =>
     new MemoryTransaction(connection as MemoryConnection, isolation);
 }

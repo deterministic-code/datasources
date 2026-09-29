@@ -18,7 +18,7 @@ export class MockDriver implements IDriver {
   command = (connection: IConnection): ICommand => new MockCommand(connection);
   transaction = (
     connection: IConnection,
-    isolation: IsolationLevel = "serializable",
+    isolation: IsolationLevel = "readCommitted",
   ): ITransaction => {
     const txn = new MockTransaction(connection);
     txn.isolation = isolation;

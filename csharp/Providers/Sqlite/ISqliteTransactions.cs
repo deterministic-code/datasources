@@ -2,7 +2,7 @@ namespace Datasources.Sqlite;
 
 internal interface ISqliteTransactions
 {
-    Task Begin(IsolationLevel isolation = IsolationLevel.Serializable);
+    Task Begin(IsolationLevel isolation = IsolationLevel.ReadCommitted);
     Task Commit();
     Task Rollback();
 }

@@ -9,6 +9,6 @@ public class StubConnection : IConnection
     public StubConnection(string provider) => _provider = provider;
     public Task Open() => throw new ProviderNotImplementedException(_provider);
     public Task Close() => throw new ProviderNotImplementedException(_provider);
-    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted) =>
         throw new ProviderNotImplementedException(_provider);
 }

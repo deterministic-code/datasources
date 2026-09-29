@@ -1,0 +1,10 @@
+var connection = new MemoryConnection();
+await connection.Open();
+var txn = await connection.StartTransaction();
+var command = connection.CreateCommand();
+var fields = new Parameter[] { new("name", "ada") };
+await command.Execute(new InsertStatement("people", fields), fields);
+var reader = await command.ExecuteReader(new SelectInsertedIdStatement("people", "id"));
+var moved = await reader.Next();
+var id = reader.Current!["id"];
+await txn.Commit();

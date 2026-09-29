@@ -112,7 +112,7 @@ describe("MysqlConnection", () => {
       "CREATE TABLE users (id INTEGER)",
       "SELECT 1",
       "SELECT * FROM items",
-      "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
+      "SET TRANSACTION ISOLATION LEVEL READ COMMITTED",
       "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED",
       "SET TRANSACTION ISOLATION LEVEL READ COMMITTED",
       "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
@@ -151,7 +151,7 @@ describe("MysqlConnection", () => {
     const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);
     expect(txn2.isolation).toBe(IsolationLevel.ReadUncommitted);
     await txn2.abort();
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
     await connection.close();
     expect(client.ended).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);
@@ -241,7 +241,7 @@ describe("Mysql datasource", () => {
     const of = (): IDriver => ({
       connection: () => new MysqlConnection({ connect: async () => new FakeClient() }),
       command: (c) => c.createCommand(),
-      transaction: (c, isolation = "serializable") =>
+      transaction: (c, isolation = "readCommitted") =>
         new MysqlTransaction(c as MysqlConnection, isolation),
       rowTypeConverters: MysqlRowTypeConverters,
       columnType,
@@ -279,6 +279,6 @@ describe("Mysql datasource", () => {
     expect(provider.columnType("binary")).toBe("BLOB");
     expect(() => provider.columnType("xml")).toThrow('Unknown mysql type "xml"');
     expect(provider.command(connection)).toBeInstanceOf(MysqlCommand);
-    expect(provider.transaction(connection as MysqlConnection).isolation).toBe("serializable");
+    expect(provider.transaction(connection as MysqlConnection).isolation).toBe("readCommitted");
   });
 });

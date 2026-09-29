@@ -8,7 +8,7 @@ import type { SqliteConnection } from "./connection.ts";
 export class SqliteTransaction implements ITransaction {
   constructor(
     readonly connection: SqliteConnection,
-    readonly isolation: IsolationLevelName = IsolationLevel.Serializable,
+    readonly isolation: IsolationLevelName = IsolationLevel.ReadCommitted,
   ) {}
 
   async commit(): Promise<void> {

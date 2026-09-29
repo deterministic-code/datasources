@@ -19,7 +19,7 @@ impl StubTransaction {
 #[async_trait]
 impl Transaction for StubTransaction {
     fn isolation(&self) -> IsolationLevel {
-        IsolationLevel::Serializable
+        IsolationLevel::ReadCommitted
     }
 
     async fn commit(&self) -> Result<()> {

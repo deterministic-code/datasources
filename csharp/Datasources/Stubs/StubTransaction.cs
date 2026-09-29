@@ -10,7 +10,7 @@ public sealed class StubTransaction : ITransaction
     }
 
     public IConnection Connection { get; }
-    public IsolationLevel Isolation { get; } = IsolationLevel.Serializable;
+    public IsolationLevel Isolation { get; } = IsolationLevel.ReadCommitted;
     public Task Commit() => throw new ProviderNotImplementedException(_provider);
     public Task Abort() => throw new ProviderNotImplementedException(_provider);
 }

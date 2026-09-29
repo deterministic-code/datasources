@@ -354,7 +354,7 @@ describe("Json datasource", () => {
     expect(await registered.createConnection()).toBeInstanceOf(JsonConnection);
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     const provider = new JsonDriver();
-    expect(provider.transaction(connection).isolation).toBe("serializable");
+    expect(provider.transaction(connection).isolation).toBe("readCommitted");
     await expect(command.executeStatement(new SelectStatement("nope"))).rejects.toThrow(
       "Unsupported JSON",
     );

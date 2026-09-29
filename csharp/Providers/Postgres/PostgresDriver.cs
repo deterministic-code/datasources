@@ -6,7 +6,7 @@ public sealed class PostgresDriver : IDriver
 {
     public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new PostgresConnection(options);
     public ICommand Command(IConnection connection) => connection.CreateCommand();
-    public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
+    public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted) =>
         new PostgresTransaction((PostgresConnection)connection, isolation);
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => PostgresRowTypeConverters.All;
 
