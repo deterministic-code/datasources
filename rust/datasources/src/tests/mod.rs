@@ -3,6 +3,7 @@ mod bulk_write_strategy;
 mod command;
 mod connection;
 mod contact;
+mod datasource;
 mod datasource_factory;
 mod datasource_url_parser;
 mod statement_parser;

@@ -205,7 +205,12 @@ const unwrapThrows = (body) => {
 
 const stripHarness = (body) => {
   const lines = body.replace(/^\n+/, "").split("\n");
-  while (lines[0] && /^(?:(?:DatasourceFactory\.)?reset|clear_env)\(\);$/.test(lines[0].trim()))
+  while (
+    lines[0] &&
+    /^(?:(?:DatasourceFactory\.)?reset|clear_env|arrange)\(\);$|^let _guard = super::env_lock\(\);$/.test(
+      lines[0].trim(),
+    )
+  )
     lines.shift();
   return lines.join("\n");
 };

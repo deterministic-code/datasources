@@ -15,6 +15,9 @@ pub use driver::SqliteDriver;
 #[path = "../tests/contacts.rs"]
 mod contacts;
 #[cfg(test)]
+#[path = "../tests/create_from_driver.rs"]
+mod create_from_driver;
+#[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]

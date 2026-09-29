@@ -1,0 +1,3 @@
+const driver = new SqliteDriver();
+const ds = new Datasource("sqlite", driver, { DATASOURCE_URL: "sqlite:///:memory:" });
+const repo = ds.createRepository(Item);

@@ -91,6 +91,22 @@ test("keeps source lines apart from the usage sample", () => {
   assert.equal(exampleCode(record.raw), "var ds = DatasourceFactory.Default;");
 });
 
+test("drops a leading env lock and arrange", () => {
+  const raw = [
+    "fn create_default_from_env_settings() {",
+    "    let _guard = super::env_lock();",
+    "    arrange();",
+    "    let ds = default().expect(\"default\");",
+    "    let command = ds.create_command(None);",
+    "    assert_eq!(Datasource::provider(&*ds), \"sqlite\");",
+    "}",
+  ].join("\n");
+  assert.equal(
+    exampleCode(raw),
+    "let ds = default().expect(\"default\");\nlet command = ds.create_command(None);",
+  );
+});
+
 test("drops a truncated tokio test wrapper", () => {
   const raw = [
     "#[tokio::test]",

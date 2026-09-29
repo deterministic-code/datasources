@@ -1,0 +1,2 @@
+var ds = Datasource.Default;
+var command = ds.CreateCommand();
