@@ -118,7 +118,7 @@ describe("run", () => {
     });
     const io = deps(fs);
     expect(
-      await run(["add", "text", "--cwd", cwd, "--dry-run"], io),
+      await run(["add", "xml", "--cwd", cwd, "--dry-run"], io),
     ).toBe(0);
     expect(io.ran).toEqual([]);
     expect(io.logs.some((line) => line.includes("dotnet add"))).toBe(true);

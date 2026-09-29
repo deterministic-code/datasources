@@ -591,7 +591,6 @@ dependencies = [
  "datasources-postgres",
  "datasources-sqlite",
  "datasources-sqlserver",
- "datasources-text",
  "datasources-xml",
  "datasources-yaml",
 ]
@@ -628,15 +627,6 @@ dependencies = [
 
 [[package]]
 name = "datasources-sqlserver"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "datasources",
- "tokio",
-]
-
-[[package]]
-name = "datasources-text"
 version = "0.1.0"
 dependencies = [
  "async-trait",

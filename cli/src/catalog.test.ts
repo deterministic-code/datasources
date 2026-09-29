@@ -3,7 +3,7 @@ import { catalog, isProvider, providers, requireProviders } from "./catalog.ts";
 
 describe("catalog", () => {
   it("lists every dialect with npm, cargo, and nuget ids", () => {
-    expect(providers).toHaveLength(12);
+    expect(providers).toHaveLength(11);
     for (const name of providers) {
       expect(catalog[name].npm).toBe(`@datasources/${name}`);
       expect(catalog[name].cargo).toMatch(/^datasources-/);

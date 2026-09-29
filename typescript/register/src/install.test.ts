@@ -95,7 +95,7 @@ describe("registerListed", () => {
   });
 
   it("throws when the package is missing or the name is unknown", () => {
-    expect(() => registerListed({ INSTALLED_PROVIDERS: "text" })).toThrow(
+    expect(() => registerListed({ INSTALLED_PROVIDERS: "xml" })).toThrow(
       ProviderNotInstalledError,
     );
     expect(() => registerListed({ INSTALLED_PROVIDERS: "nope" })).toThrow(

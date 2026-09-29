@@ -9,7 +9,6 @@ public static class DatasourceInstall
         ["json"] = ("Datasources.Json", "Datasources.Json.JsonProvider"),
         ["memory"] = ("Datasources.Memory", "Datasources.Memory.MemoryProvider"),
         ["sqlite"] = ("Datasources.Sqlite", "Datasources.Sqlite.SqliteDriver"),
-        ["text"] = ("Datasources.Text", "Datasources.Text.TextProvider"),
         ["xml"] = ("Datasources.Xml", "Datasources.Xml.XmlProvider"),
         ["yaml"] = ("Datasources.Yaml", "Datasources.Yaml.YamlProvider"),
         ["mysql"] = ("Datasources.Mysql", "Datasources.Mysql.MysqlDriver"),

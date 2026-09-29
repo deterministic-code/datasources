@@ -10,7 +10,7 @@ describe("provider public surface", () => {
     const names = readdirSync(providers, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && entry.name !== "node_modules")
       .map((entry) => entry.name);
-    expect(names.length).toBeGreaterThanOrEqual(12);
+    expect(names.length).toBeGreaterThanOrEqual(11);
     for (const name of names) {
       const source = readFileSync(join(providers, name, "src/index.ts"), "utf8");
       const match = source.match(

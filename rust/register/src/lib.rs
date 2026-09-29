@@ -55,7 +55,6 @@ fn register_named(name: &str) -> Result<()> {
         "json" => datasources_json::JsonProvider,
         "memory" => datasources_memory::MemoryProvider,
         "sqlite" => datasources_sqlite::SqliteDriver,
-        "text" => datasources_text::TextProvider,
         "xml" => datasources_xml::XmlProvider,
         "yaml" => datasources_yaml::YamlProvider,
         "mysql" => datasources_mysql::MysqlDriver,
@@ -265,6 +264,6 @@ mod tests {
                 path.display()
             );
         }
-        assert!(found >= 12, "expected every provider crate, found {found}");
+        assert!(found >= 11, "expected every provider crate, found {found}");
     }
 }

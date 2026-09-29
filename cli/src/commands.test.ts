@@ -14,11 +14,11 @@ describe("commands", () => {
         ],
       },
     ]);
-    expect(addCommands("ts", ["text"], ["package.json"])[0]?.args).toEqual([
+    expect(addCommands("ts", ["xml"], ["package.json"])[0]?.args).toEqual([
       "install",
       "@datasources/core",
       "@datasources/register",
-      "@datasources/text",
+      "@datasources/xml",
     ]);
   });
 

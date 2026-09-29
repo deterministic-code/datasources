@@ -23,8 +23,6 @@
     <Project Path="Providers/Sqlite.Tests/Datasources.Sqlite.Tests.csproj" />
     <Project Path="Providers/SqlServer/Datasources.SqlServer.csproj" />
     <Project Path="Providers/SqlServer.Tests/Datasources.SqlServer.Tests.csproj" />
-    <Project Path="Providers/Text/Datasources.Text.csproj" />
-    <Project Path="Providers/Text.Tests/Datasources.Text.Tests.csproj" />
     <Project Path="Providers/Xml/Datasources.Xml.csproj" />
     <Project Path="Providers/Xml.Tests/Datasources.Xml.Tests.csproj" />
     <Project Path="Providers/Yaml/Datasources.Yaml.csproj" />
