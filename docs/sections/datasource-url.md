@@ -1,6 +1,6 @@
 # Datasource URL
 
-A connection URL split into provider, host, credentials, datasource, schema, and options. A provider may parse `url` or `database_url` with `DatasourceUrlParser`. The call is optional.
+A connection URL split into provider, host, credentials, datasource, schema, and options. A provider parses `DATASOURCE_URL` with `DatasourceUrlParser`. Schema is the `schema` query.
 
 ## Classes
 

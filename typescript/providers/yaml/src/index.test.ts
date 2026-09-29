@@ -9,7 +9,7 @@ describe("yaml", () => {
   it("creates", () => {
     DatasourceFactory.register("yaml", new YamlDriver());
     expect(YamlConnection.from()).toBeInstanceOf(YamlConnection);
-    expect(Datasource.create({ provider: "yaml" }).provider).toBe("yaml");
+    expect(Datasource.create({ PROVIDER: "yaml" }).provider).toBe("yaml");
   });
 
   it("creates a named connection that throws on open", async () => {

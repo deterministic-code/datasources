@@ -104,20 +104,20 @@ mod tests {
         assert!(conn.ensure_open().is_err());
         let defaulted = PostgresConnection::new(None, None);
         assert_eq!(defaulted.url, "");
-        let options = HashMap::from([
-            ("database_url".into(), "postgres://db/app".into()),
-            ("database_schema".into(), "s".into()),
-        ]);
+        let options = HashMap::from([(
+            "DATASOURCE_URL".into(),
+            "postgres://db/app?schema=s".into(),
+        )]);
         let from = downcast_connection::<PostgresConnection>(PostgresConnection::from_options(
             Some(&options),
         ))
         .expect("postgres");
-        assert_eq!(from.url, "postgres://db/app");
+        assert_eq!(from.url, "postgres://db/app?schema=s");
         assert_eq!(from.schema.as_deref(), Some("s"));
         reset();
         register("postgres", Arc::new(With(Some("postgres://db/app".into()))));
         let ds = create(Some(&HashMap::from([(
-            "provider".into(),
+            "PROVIDER".into(),
             "postgres".into(),
         )])))
         .unwrap();

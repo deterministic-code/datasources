@@ -4,9 +4,6 @@ import { DatasourceFactory, MockDriver } from "./index.ts";
 const envKeys = [
   "INSTALLED_PROVIDERS",
   "DATASOURCE_URL",
-  "DATABASE_SCHEMA",
-  "DEFAULT_PROVIDER",
-  "DEFAULT_DATASOURCE_URL",
   "PROVIDER",
 ] as const;
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));

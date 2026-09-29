@@ -16,7 +16,7 @@ const dialect: RepositoryDialect = { quote };
 describe("repository specs", () => {
   for (const file of repositorySpecFiles()) {
     it(file.split("/").pop()!, async () => {
-      const connection = SqliteConnection.from({ filename: ":memory:" });
+      const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
       await connection.open();
       const command = new SqliteCommand(connection);
       await runRepositorySpec(file, connection, (statement) => execute(command, statement), dialect, SqliteRowTypeConverters);

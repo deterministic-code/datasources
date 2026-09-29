@@ -16,7 +16,7 @@ pub fn create(options: Option<&HashMap<String, String>>) -> Result<Arc<dyn Datas
             listed
         }
     };
-    let name = get(&listed, "provider")
+    let name = get(&listed, "PROVIDER")
         .filter(|value| !value.is_empty())
         .map(str::to_string)
         .ok_or_else(|| DatasourceError::message("Datasource defaults are not specified"))?;
@@ -57,31 +57,10 @@ fn merge(
     env: fn(&str) -> Option<String>,
 ) -> HashMap<String, String> {
     let mut options = file.clone();
-    for key in [
-        "INSTALLED_PROVIDERS",
-        "DATASOURCE_URL",
-        "DATABASE_SCHEMA",
-        "PROVIDER",
-        "provider",
-    ] {
+    for key in ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] {
         if let Some(value) = env(key) {
             options.insert(key.into(), value);
         }
-    }
-    let url = env("DEFAULT_DATASOURCE_URL")
-        .or_else(|| get(&options, "DATASOURCE_URL").map(str::to_string));
-    let provider = env("DEFAULT_PROVIDER")
-        .or_else(|| get(&options, "PROVIDER").map(str::to_string))
-        .or_else(|| get(&options, "provider").map(str::to_string));
-    if let Some(url) = url {
-        options.insert("DATASOURCE_URL".into(), url.clone());
-        options.insert("database_url".into(), url);
-    }
-    if let Some(provider) = provider {
-        options.insert("provider".into(), provider);
-    }
-    if let Some(schema) = get(&options, "DATABASE_SCHEMA").map(str::to_string) {
-        options.insert("database_schema".into(), schema);
     }
     options
 }

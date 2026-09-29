@@ -35,7 +35,7 @@ class UserAccount {
 
 describe("readonly repository", () => {
   it("reads users by id and by username and enabled", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds, "minimal-users", `
       INSERT INTO users (id, username, is_enabled) VALUES
         (1, 'ada', 1),
@@ -56,7 +56,7 @@ describe("readonly repository", () => {
   });
 
   it("reads user by guid username and created", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds, "user-account", `
       INSERT INTO user (id, username, is_enabled, created) VALUES
         ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
@@ -106,7 +106,7 @@ describe("user view", () => {
   }
 
   it("fills user type on a user view", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds, "user-type-lookup", `
       INSERT INTO user_type (id, name) VALUES
         (1, 'admin'),
@@ -158,7 +158,7 @@ const open = async (ds: IDatasource, schema: string, sql = ""): Promise<IConnect
 
 describe("user crud", () => {
   it("writes a user from the type", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds, "user-pascal");
     const usersRepo = new CRUDRepository(User, connection);
     const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
@@ -205,7 +205,7 @@ describe("users view crud", () => {
   }
 
   it("updates a user view when the version matches", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds, "user-view-version");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const usersRepo = new CRUDRepository(connection, {

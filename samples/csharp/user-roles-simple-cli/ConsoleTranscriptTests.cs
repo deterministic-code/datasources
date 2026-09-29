@@ -84,8 +84,8 @@ public sealed class ConsoleTranscriptTests
                 create.CommandText = $"CREATE DATABASE `{procedures}`";
                 await create.ExecuteNonQueryAsync();
             }
-            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["url"] = ReplaceMysqlDb(url, name) }), false, "mysql.log");
-            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["url"] = ReplaceMysqlDb(url, procedures) }), true, "mysql-procedures.log");
+            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = ReplaceMysqlDb(url, name) }), false, "mysql.log");
+            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = ReplaceMysqlDb(url, procedures) }), true, "mysql-procedures.log");
         }
         finally
         {
@@ -123,7 +123,7 @@ public sealed class ConsoleTranscriptTests
                 create.CommandText = $"CREATE SCHEMA {schema}";
                 await create.ExecuteNonQueryAsync();
             }
-            await Match(() => new PostgresDriver().Connection(new Dictionary<string, string?> { ["url"] = url, ["schema"] = schema }), false, "postgres.log");
+            await Match(() => new PostgresDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url.Contains('?') ? $"{url}&schema={schema}" : $"{url}?schema={schema}" }), false, "postgres.log");
         }
         finally
         {
@@ -226,12 +226,13 @@ public sealed class ConsoleTranscriptTests
 
     static IConnection Connection(string provider) => provider switch
     {
-        "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["filename"] = ":memory:" }),
-        "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["url"] = Environment.GetEnvironmentVariable("MYSQL_URL") ?? "mysql://ds:ds@127.0.0.1:3306/datasources" }),
+        "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" }),
+        "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = Environment.GetEnvironmentVariable("MYSQL_URL") ?? "mysql://ds:ds@127.0.0.1:3306/datasources" }),
         "postgres" => new PostgresDriver().Connection(new Dictionary<string, string?>
         {
-            ["url"] = Environment.GetEnvironmentVariable("POSTGRES_URL") ?? "postgres://ds:ds@127.0.0.1:5432/datasources",
-            ["schema"] = Environment.GetEnvironmentVariable("DATABASE_SCHEMA")
+            ["DATASOURCE_URL"] = Environment.GetEnvironmentVariable("DATASOURCE_URL")
+                ?? Environment.GetEnvironmentVariable("POSTGRES_URL")
+                ?? "postgres://ds:ds@127.0.0.1:5432/datasources"
         }),
         _ => throw new InvalidOperationException(provider)
     };

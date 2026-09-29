@@ -50,7 +50,7 @@ Creates a datasource from the registry.
 static create(options?: DatasourceOptions): IDatasource
 ```
 
-- `options` — [DatasourceOptions](#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](#datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`
 
 **Returns** `IDatasource`
 :::

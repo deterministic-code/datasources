@@ -14,9 +14,7 @@ internal sealed class SqliteConnection : IConnection
     public SqliteConnection(IReadOnlyDictionary<string, string?>? options)
         : this(new SqliteConnectionOptions
         {
-            Filename = DatasourceOptions.Value(options, "filename"),
-            Url = DatasourceOptions.Value(options, "url")
-                ?? DatasourceOptions.Value(options, "database_url")
+            Url = DatasourceOptions.Value(options, "DATASOURCE_URL")
         })
     {
     }

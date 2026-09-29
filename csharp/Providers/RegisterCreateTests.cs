@@ -10,6 +10,6 @@ public partial class RegisterCreateTests
         DatasourceFactory.Register(Provider, Driver);
         Assert.Equal(
             Provider,
-            DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = Provider }).Provider);
+            DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = Provider }).Provider);
     }
 }

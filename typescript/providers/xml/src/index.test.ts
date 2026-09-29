@@ -9,7 +9,7 @@ describe("xml", () => {
   it("creates", () => {
     DatasourceFactory.register("xml", new XmlDriver());
     expect(XmlConnection.from()).toBeInstanceOf(XmlConnection);
-    expect(Datasource.create({ provider: "xml" }).provider).toBe("xml");
+    expect(Datasource.create({ PROVIDER: "xml" }).provider).toBe("xml");
   });
 
   it("creates a named connection that throws on open", async () => {

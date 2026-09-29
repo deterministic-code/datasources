@@ -3,25 +3,41 @@ export type EnvMap = Record<string, string>;
 export const scheme = (url: string): string | undefined =>
   url.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/)?.[1]?.toLowerCase();
 
-export const knownEnvKeys = ["INSTALLED_PROVIDERS", "PROVIDER", "DATASOURCE_URL", "DATABASE_SCHEMA"] as const;
+export const knownEnvKeys = ["INSTALLED_PROVIDERS", "PROVIDER", "DATASOURCE_URL"] as const;
 
 const droppedEnvKeys = [
   "DATABASE_URL",
+  "DATABASE_SCHEMA",
   "DEFAULT_PROVIDER",
+  "DEFAULT_DATASOURCE_URL",
   "DATASOURCE_PROVIDER",
   "DATASOURCE_PROVIDERS",
   "SQLITE_FILENAME",
 ] as const;
 
-const urlOf = (env: EnvMap) => env.DATASOURCE_URL || env.DATABASE_URL || "";
+export const schemaOf = (url: string): string => {
+  const query = url.split("#")[0]?.split("?")[1] ?? "";
+  for (const part of query.split("&")) {
+    if (!part) continue;
+    const eq = part.indexOf("=");
+    const key = decodeURIComponent(eq < 0 ? part : part.slice(0, eq));
+    if (key !== "schema") continue;
+    return decodeURIComponent(eq < 0 ? "" : part.slice(eq + 1));
+  }
+  return "";
+};
 
-const installedOf = (env: EnvMap) =>
-  env.INSTALLED_PROVIDERS ||
-  env.DATASOURCE_PROVIDERS ||
-  scheme(urlOf(env)) ||
-  env.DEFAULT_PROVIDER ||
-  env.DATASOURCE_PROVIDER ||
-  "";
+export const withSchema = (url: string, schema: string): string => {
+  if (!url || !schema || schemaOf(url)) return url;
+  const hash = url.indexOf("#");
+  const base = hash < 0 ? url : url.slice(0, hash);
+  const fragment = hash < 0 ? "" : url.slice(hash);
+  return `${base}${base.includes("?") ? "&" : "?"}schema=${encodeURIComponent(schema)}${fragment}`;
+};
+
+const urlOf = (env: EnvMap) => env.DATASOURCE_URL || "";
+
+const installedOf = (env: EnvMap) => env.INSTALLED_PROVIDERS || scheme(urlOf(env)) || "";
 
 export const parseEnv = (text: string): EnvMap =>
   Object.fromEntries(
@@ -71,29 +87,29 @@ export const updateEnvProviders = (
   const fallback = scheme(urlOf(env)) ?? next[0] ?? "sqlite";
   const {
     DATABASE_URL: _u,
+    DATABASE_SCHEMA: _s,
     DEFAULT_PROVIDER: _d,
+    DEFAULT_DATASOURCE_URL: _du,
     DATASOURCE_PROVIDER: _p,
     DATASOURCE_PROVIDERS: _ps,
+    SQLITE_FILENAME: _f,
     ...rest
   } = env;
+  const url = urlOf(env);
   return {
     ...rest,
-    ...(urlOf(env) ? { DATASOURCE_URL: urlOf(env) } : {}),
+    ...(url ? { DATASOURCE_URL: url } : {}),
     INSTALLED_PROVIDERS: (next.length ? next : [fallback]).join(","),
   };
 };
 
-export const sqliteUrl = (filename: string): string =>
-  filename === ":memory:" || filename === ":memory" ? "sqlite:///:memory:" : `sqlite:///${filename}`;
-
 export const answersFromEnv = (env: EnvMap) => {
   const url =
     urlOf(env) ||
-    (env.SQLITE_FILENAME ? sqliteUrl(env.SQLITE_FILENAME) : "") ||
     (installedOf(env).includes("sqlite") || !installedOf(env) ? "sqlite:///:memory:" : "");
   return {
     providers: splitProviders(installedOf(env) || scheme(url) || "sqlite"),
     url,
-    schema: env.DATABASE_SCHEMA ?? "",
+    schema: schemaOf(url),
   };
 };

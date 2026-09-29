@@ -38,7 +38,6 @@ describe("commands", () => {
     const cmds = addCommands("csharp", ["sqlite"], ["App.csproj"]);
     expect(cmds.map((c) => c.args)).toEqual([
       ["add", "App.csproj", "package", "Datasources"],
-      ["add", "App.csproj", "package", "Datasources.Hosting"],
       ["add", "App.csproj", "package", "Datasources.Sqlite"],
     ]);
     expect(addCommands("csharp", ["json"], [])[0]?.args).toEqual([

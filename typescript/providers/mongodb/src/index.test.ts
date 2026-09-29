@@ -9,7 +9,7 @@ describe("mongodb", () => {
   it("creates", () => {
     DatasourceFactory.register("mongodb", new MongoDbDriver());
     expect(MongoDbConnection.from()).toBeInstanceOf(MongoDbConnection);
-    expect(Datasource.create({ provider: "mongodb" }).provider).toBe("mongodb");
+    expect(Datasource.create({ PROVIDER: "mongodb" }).provider).toBe("mongodb");
   });
 
   it("creates a named connection that throws on open", async () => {

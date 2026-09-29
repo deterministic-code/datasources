@@ -150,7 +150,7 @@ public sealed class ApiTests
 
     static async Task<Api> Open(ICommandMiddleware? middleware = null)
     {
-        var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         await connection.Open();
         await Migrate.Apply(connection.CreateCommand());
         var contacts = new ContactsRepository(connection);

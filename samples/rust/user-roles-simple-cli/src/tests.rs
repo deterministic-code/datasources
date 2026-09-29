@@ -547,7 +547,7 @@ async fn console_transcript_matches_sqlite() {
         .map(crate::console_log::normalize_console_line)
         .collect();
     let mut options = std::collections::HashMap::new();
-    options.insert("filename".into(), ":memory:".into());
+    options.insert("DATASOURCE_URL".into(), "sqlite:///:memory:".into());
     let connection = datasources_sqlite::SqliteDriver.connection(Some(&options));
     connection.open().await.unwrap();
     let command = connection.create_command();
@@ -585,7 +585,7 @@ async fn omits_null_created_and_updated() {
     use std::collections::HashMap;
 
     let mut options = HashMap::new();
-    options.insert("filename".into(), ":memory:".into());
+    options.insert("DATASOURCE_URL".into(), "sqlite:///:memory:".into());
     let connection = datasources_sqlite::SqliteDriver.connection(Some(&options));
     connection.open().await.unwrap();
     connection

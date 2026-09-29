@@ -52,7 +52,7 @@ describe("console transcript", () => {
       steps: { argv: string[] }[];
     };
     const expected = readFileSync(join(shared, "sqlite.log"), "utf8").split("\n").filter((line) => line.length > 0).map(normalizeConsoleLine);
-    const connection = new SqliteDriver().connection({ filename: ":memory:" });
+    const connection = new SqliteDriver().connection({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = connection.createCommand();
     await migrate(command);

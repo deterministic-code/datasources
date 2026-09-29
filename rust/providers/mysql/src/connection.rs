@@ -30,7 +30,7 @@ impl MysqlConnection {
     }
 
     pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
-        let url = options.and_then(|o| o.get("url").or_else(|| o.get("database_url")).cloned());
+        let url = options.and_then(|o| o.get("DATASOURCE_URL").cloned());
         Arc::new(MysqlConnection::new(url))
     }
 

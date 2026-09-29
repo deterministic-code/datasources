@@ -40,7 +40,7 @@ mod tests {
     fn register_and_create() {
         reset();
         register("memory", Arc::new(MemoryDriver));
-        let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+        let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
     }
 
@@ -207,7 +207,7 @@ mod tests {
 
         reset();
         register("memory", Arc::new(MemoryDriver));
-        let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
+        let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
@@ -219,7 +219,7 @@ mod tests {
         ds.create_repository::<Cells>(None, None);
         ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()), None);
         assert_eq!(
-            create(Some(&HashMap::from([("provider".into(), "memory".into())])))
+            create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())])))
                 .unwrap()
                 .provider(),
             "memory"

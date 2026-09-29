@@ -11,7 +11,7 @@ public class RegisterAndCreateTests
     public void RegisterAndCreate()
     {
         DatasourceFactory.Register("memory", new MemoryDriver());
-        var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
+        var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "memory" });
         Assert.Equal("memory", ds.Provider);
     }
 }

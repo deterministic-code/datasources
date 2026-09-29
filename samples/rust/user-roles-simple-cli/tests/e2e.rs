@@ -47,11 +47,22 @@ fn spec() -> CliSpec {
     .expect("yaml")
 }
 
+fn with_schema(url: &str, schema: &str) -> String {
+    if schema.is_empty() {
+        url.to_string()
+    } else if url.contains('?') {
+        format!("{url}&schema={schema}")
+    } else {
+        format!("{url}?schema={schema}")
+    }
+}
+
 fn write_env(url: &str, schema: &str, provider: &str) {
+    let url = with_schema(url, schema);
     fs::write(
         sample().join(".env"),
         format!(
-            "INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER={provider}\nDATASOURCE_URL={url}\nDATABASE_SCHEMA={schema}\n"
+            "INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER={provider}\nDATASOURCE_URL={url}\n"
         ),
     )
     .expect("env");
@@ -178,8 +189,7 @@ fn cli(
     let output = Command::new(bin)
         .args(args)
         .env("PROVIDER", provider)
-        .env("DATASOURCE_URL", url)
-        .env("DATABASE_SCHEMA", schema)
+        .env("DATASOURCE_URL", with_schema(url, schema))
         .env("CLI_NOW", now)
         .current_dir(sample())
         .output()
@@ -453,7 +463,7 @@ async fn console_transcript_mysql() {
         .expect("procedures");
     }
     let mut options = std::collections::HashMap::new();
-    options.insert("url".into(), replace_mysql_db(&url, &name));
+    options.insert("DATASOURCE_URL".into(), replace_mysql_db(&url, &name));
     console_transcript(
         "mysql.log",
         false,
@@ -461,7 +471,7 @@ async fn console_transcript_mysql() {
     )
     .await;
     let mut procedure_options = std::collections::HashMap::new();
-    procedure_options.insert("url".into(), replace_mysql_db(&url, &procedures));
+    procedure_options.insert("DATASOURCE_URL".into(), replace_mysql_db(&url, &procedures));
     console_transcript(
         "mysql-procedures.log",
         true,
@@ -499,8 +509,7 @@ async fn console_transcript_postgres() {
         .await
         .expect("schema");
     let mut options = std::collections::HashMap::new();
-    options.insert("url".into(), url);
-    options.insert("schema".into(), schema.clone());
+    options.insert("DATASOURCE_URL".into(), with_schema(&url, &schema));
     console_transcript(
         "postgres.log",
         false,

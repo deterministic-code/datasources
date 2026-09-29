@@ -20,7 +20,7 @@ mod tests {
         register("mongodb", Arc::new(MongoDbDriver));
         assert_eq!(
             create(Some(&HashMap::from([(
-                "provider".into(),
+                "PROVIDER".into(),
                 "mongodb".into()
             )])))
             .unwrap()

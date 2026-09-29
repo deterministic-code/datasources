@@ -56,7 +56,7 @@ public class SqliteTests
         await bound.ExecuteReader("SELECT 1");
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
             ds.CreateRepository<Dictionary<string, Value>>(provided));
-        Assert.Equal("sqlite", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "sqlite" }).Provider);
+        Assert.Equal("sqlite", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "sqlite" }).Provider);
 
         var closed = new SqliteConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).Execute("x"));

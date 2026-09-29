@@ -54,7 +54,7 @@ describe("contacts readonly repository", () => {
   it("matches enriched ContactsService to FlatToNestedMapper on the same seed", async () => {
     const isolated = await isolate(url);
     try {
-      const connection = PostgresConnection.from({ url, schema: isolated.schema });
+      const connection = PostgresConnection.from({ DATASOURCE_URL: `${url}${url.includes("?") ? "&" : "?"}schema=${isolated.schema}` });
       await connection.open();
       const command = new PostgresCommand(connection);
       for (const statement of tables("contacts", quote))

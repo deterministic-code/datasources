@@ -17,7 +17,7 @@ public sealed class NullWriteTests
     [Fact]
     public async Task OmitsNullCreatedUpdatedAndVersion()
     {
-        var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["filename"] = ":memory:" });
+        var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         await connection.Open();
         await connection.CreateCommand().Execute("""
             CREATE TABLE contact (

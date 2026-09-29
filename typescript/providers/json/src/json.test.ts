@@ -349,8 +349,8 @@ describe("Json datasource", () => {
     expect(ds.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(JsonConnection.from().path).toBe("");
-    expect(JsonConnection.from({ path: "db.json" }).path).toBe("db.json");
-    const registered = Datasource.create({ provider: "json" });
+    expect(JsonConnection.from({ DATASOURCE_URL: "json://db.json" }).path).toBe("db.json");
+    const registered = Datasource.create({ PROVIDER: "json" });
     expect(registered.provider).toBe("json");
     expect(await registered.createConnection()).toBeInstanceOf(JsonConnection);
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);

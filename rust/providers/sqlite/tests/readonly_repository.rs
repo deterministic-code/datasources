@@ -40,7 +40,7 @@ fn datasource() -> Arc<BuiltDatasource> {
     Arc::new(BuiltDatasource::new(
         "sqlite",
         Arc::new(crate::SqliteDriver),
-        Some(HashMap::from([("filename".into(), ":memory:".into())])),
+        Some(HashMap::from([("DATASOURCE_URL".into(), "sqlite:///:memory:".into())])),
     ))
 }
 

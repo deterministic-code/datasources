@@ -5,9 +5,6 @@ fn clear_env() {
     for key in [
         "INSTALLED_PROVIDERS",
         "DATASOURCE_URL",
-        "DATABASE_SCHEMA",
-        "DEFAULT_PROVIDER",
-        "DEFAULT_DATASOURCE_URL",
         "PROVIDER",
     ] {
         std::env::remove_var(key);
@@ -19,8 +16,11 @@ fn clear_env() {
 
 #[tokio::test]
 async fn create_from_default() {
-    clear_env();
-    let ds = default().expect("default");
+    let ds = {
+        let _guard = super::env_lock();
+        clear_env();
+        default().expect("default")
+    };
     let connection = ds.create_connection().await.expect("connection");
     assert_eq!(connection.is_open(), false);
 }

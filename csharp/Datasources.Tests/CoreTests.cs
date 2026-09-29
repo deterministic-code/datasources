@@ -7,9 +7,10 @@ sealed class ReplacedRenderer : CreateTableStatementRenderer
     public override string Render(CreateTableStatement statement) => "CREATE TABLE replaced";
 }
 
+[Collection("DatasourceFactory")]
 public class CoreTests
 {
-    static readonly string[] EnvKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "DATABASE_SCHEMA", "DEFAULT_PROVIDER", "DEFAULT_DATASOURCE_URL", "PROVIDER"];
+    static readonly string[] EnvKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"];
 
     public CoreTests()
     {
@@ -526,10 +527,10 @@ public class CoreTests
         DatasourceFactory.Register("json", new MockDriver());
         DatasourceFactory.Register("memory", new MockDriver());
         Assert.Equal(new[] { "json", "memory" }, DatasourceFactory.Registered());
-        Assert.Equal("json", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "json" }).Provider);
+        Assert.Equal("json", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "json" }).Provider);
         DatasourceFactory.Reset();
         Assert.Throws<ProviderNotInstalledException>(() =>
-            DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "json" }));
+            DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "json" }));
     }
 
     [Fact]
@@ -539,8 +540,8 @@ public class CoreTests
         DatasourceFactory.Register("sqlite", new MockDriver());
         var ds = DatasourceFactory.Create(new Dictionary<string, string?>
         {
-            ["provider"] = "sqlite",
-            ["database_url"] = "sqlite:///:memory:"
+            ["PROVIDER"] = "sqlite",
+            ["DATASOURCE_URL"] = "sqlite:///:memory:"
         });
         Assert.Equal("sqlite", ds.Provider);
         var connection = await ds.CreateConnection();
@@ -554,13 +555,13 @@ public class CoreTests
         Assert.Throws<DatasourceException>(() => _ = DatasourceFactory.Default);
         DatasourceFactory.Register("sqlite", new MockDriver());
         DatasourceFactory.Register("memory", new MockDriver());
-        Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
+        Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
         Assert.Throws<DatasourceException>(() => _ = DatasourceFactory.Default);
         Environment.SetEnvironmentVariable("DATASOURCE_URL", null);
         Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
         Assert.Equal("sqlite", DatasourceFactory.Default.Provider);
-        Environment.SetEnvironmentVariable("DEFAULT_PROVIDER", "memory");
-        Environment.SetEnvironmentVariable("DEFAULT_DATASOURCE_URL", "memory://");
+        Environment.SetEnvironmentVariable("PROVIDER", "memory");
+        Environment.SetEnvironmentVariable("DATASOURCE_URL", "memory://");
         Assert.Equal("memory", DatasourceFactory.Default.Provider);
     }
 

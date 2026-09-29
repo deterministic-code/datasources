@@ -12,7 +12,7 @@ C# is the reference. Rust and TypeScript match it.
 
 Read `docs/writing-providers.md` for the interface. Implement these members:
 
-- `connection` — build the connection from the options bag. A provider may parse `url` / `database_url` with `DatasourceUrlParser`. That call is optional.
+- `connection` — build the connection from the options bag. A provider parses `DATASOURCE_URL` with `DatasourceUrlParser`.
 - `command` — build a command for that connection; delegate to the connection's `createCommand`
 - `transaction` — build a transaction; isolation defaults to serializable
 - `rowTypeConverters` — canonical cell converters (`bool`, `datetime`, `uuid`, `decimal`, `binary`). Empty when cells are already canonical

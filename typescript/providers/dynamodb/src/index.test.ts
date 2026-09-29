@@ -9,7 +9,7 @@ describe("dynamodb", () => {
   it("creates", () => {
     DatasourceFactory.register("dynamodb", new DynamoDbDriver());
     expect(DynamoDbConnection.from()).toBeInstanceOf(DynamoDbConnection);
-    expect(Datasource.create({ provider: "dynamodb" }).provider).toBe("dynamodb");
+    expect(Datasource.create({ PROVIDER: "dynamodb" }).provider).toBe("dynamodb");
   });
 
   it("creates a named connection that throws on open", async () => {

@@ -132,7 +132,7 @@ public class JsonTests
         await implicitCommand.ExecuteReader("");
         ds.CreateRepository<Dictionary<string, Value>>(created);
         ds.CreateRepository<Dictionary<string, Value>>();
-        Assert.Equal("json", DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "json" }).Provider);
+        Assert.Equal("json", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "json" }).Provider);
 
         var fromFile = new JsonConnection(new JsonConnectionOptions
         {

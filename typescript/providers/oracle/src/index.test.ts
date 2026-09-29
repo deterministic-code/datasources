@@ -9,7 +9,7 @@ describe("oracle", () => {
   it("creates", () => {
     DatasourceFactory.register("oracle", new OracleDriver());
     expect(OracleConnection.from()).toBeInstanceOf(OracleConnection);
-    expect(Datasource.create({ provider: "oracle" }).provider).toBe("oracle");
+    expect(Datasource.create({ PROVIDER: "oracle" }).provider).toBe("oracle");
   });
 
   it("creates a named connection that throws on open", async () => {

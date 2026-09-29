@@ -31,7 +31,7 @@ const statementsOf = (sql: string) =>
 
 describe("contacts readonly repository", () => {
   it("matches enriched ContactsService to FlatToNestedMapper on the same seed", async () => {
-    const connection = SqliteConnection.from({ filename: ":memory:" });
+    const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
     for (const statement of tables("contacts", quote))
@@ -65,7 +65,7 @@ describe("contacts readonly repository", () => {
   });
 
   it("maps join rows to nested contacts", async () => {
-    const connection = SqliteConnection.from({ filename: ":memory:" });
+    const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
     for (const statement of tables("contacts", quote))

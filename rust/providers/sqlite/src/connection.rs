@@ -30,11 +30,8 @@ impl SqliteConnection {
 
     pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
         let filename = options.and_then(|o| {
-            o.get("filename").cloned().or_else(|| {
-                o.get("url")
-                    .or_else(|| o.get("database_url"))
-                    .and_then(|url| sqlite_filename(url))
-            })
+            o.get("DATASOURCE_URL")
+                .and_then(|url| sqlite_filename(url))
         });
         Arc::new(SqliteConnection::new(filename))
     }

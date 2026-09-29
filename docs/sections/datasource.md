@@ -36,7 +36,7 @@ Alias of [DatasourceFactory.create](./datasource-factory.md). `undefined` option
 static create(options?: DatasourceOptions): IDatasource
 ```
 
-- `options` — [DatasourceOptions](#datasourceoptions); omitted uses `.env` then `DATASOURCE_URL` / `DATABASE_SCHEMA`
+- `options` — [DatasourceOptions](#datasourceoptions); omitted loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`
 
 **Returns** [IDatasource](#idatasource)
 
@@ -118,28 +118,20 @@ Well-known keys for `DatasourceFactory.create`. Other keys are passed through. `
 
 **Properties**
 
-##### provider
+##### PROVIDER
 
 Which datasource to return.
 
 ```typescript
-provider?: string
+PROVIDER?: string
 ```
 
-##### database_url
+##### DATASOURCE_URL
 
-Connection URL. `provider` is required separately.
-
-```typescript
-database_url?: string
-```
-
-##### database_schema
-
-Default schema.
+Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`).
 
 ```typescript
-database_schema?: string
+DATASOURCE_URL?: string
 ```
 
 ### csharp
@@ -239,28 +231,20 @@ Well-known keys for `DatasourceFactory.Create`. Other keys are passed through. `
 
 **Properties**
 
-##### provider
+##### PROVIDER
 
 Which datasource to return.
 
 ```csharp
-"provider"
+"PROVIDER"
 ```
 
-##### database_url
+##### DATASOURCE_URL
 
-Connection URL. `provider` is required separately.
-
-```csharp
-"database_url"
-```
-
-##### database_schema
-
-Default schema.
+Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`).
 
 ```csharp
-"database_schema"
+"DATASOURCE_URL"
 ```
 
 ### rust
@@ -360,36 +344,28 @@ Well-known keys for `create`. Other keys are passed through. `INSTALLED_PROVIDER
 
 **Properties**
 
-##### provider
+##### PROVIDER
 
 Which datasource to return.
 
 ```rust
-"provider"
+"PROVIDER"
 ```
 
-##### database_url
+##### DATASOURCE_URL
 
-Connection URL. `provider` is required separately.
-
-```rust
-"database_url"
-```
-
-##### database_schema
-
-Default schema.
+Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`).
 
 ```rust
-"database_schema"
+"DATASOURCE_URL"
 ```
 :::
 
 ## Remarks
 
-`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env` `PROVIDER` and `DATASOURCE_URL`, then `DEFAULT_PROVIDER` / `DEFAULT_DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `provider` throws.
+`DatasourceFactory.Default` / `DatasourceFactory.default` / `default()` loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. `Create(null)` / `create()` / `create(None)` uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
 
-Listed factories are registered through `Datasources.Hosting`, `@datasources/register`, or `datasources-register` when that package is present.
+C# loads each installed provider with `DriverLoader` and `ProviderCatalog`. TypeScript and Rust register those names through `@datasources/register` and `datasources-register` when that package is present.
 
 `Reset` / `reset` clears the registry. Use it in tests.
 

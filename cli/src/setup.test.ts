@@ -71,13 +71,18 @@ describe("setup", () => {
       INSTALLED_PROVIDERS: "json,sqlite",
       PROVIDER: "sqlite",
       DATASOURCE_URL: "sqlite:///:memory:",
-      DATABASE_SCHEMA: "",
     });
     expect(envFromAnswers({ providers: ["json"], url: "", schema: "" })).toEqual({
       INSTALLED_PROVIDERS: "json",
       PROVIDER: "json",
       DATASOURCE_URL: "",
-      DATABASE_SCHEMA: "",
+    });
+    expect(
+      envFromAnswers({ providers: ["postgres"], url: "postgres://localhost/db", schema: "public" }),
+    ).toEqual({
+      INSTALLED_PROVIDERS: "postgres",
+      PROVIDER: "postgres",
+      DATASOURCE_URL: "postgres://localhost/db?schema=public",
     });
     expect(envFromAnswers({ providers: [], url: "", schema: "" }).INSTALLED_PROVIDERS).toBe("sqlite");
   });

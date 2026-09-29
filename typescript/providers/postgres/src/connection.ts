@@ -1,5 +1,6 @@
 import {
   DatasourceError,
+  DatasourceUrlParser,
   IsolationLevel,
   type DatasourceOptions,
   type ICommand,
@@ -32,12 +33,14 @@ export class PostgresConnection implements IConnection {
   private client?: IPgClient;
   private readonly Client?: PgClientCtor;
 
-  static from = (options?: DatasourceOptions): PostgresConnection =>
-    new PostgresConnection({
-      url: options?.url ?? options?.database_url ?? "",
-      schema: options?.schema ?? options?.database_schema,
+  static from = (options?: DatasourceOptions): PostgresConnection => {
+    const url = options?.DATASOURCE_URL ?? "";
+    return new PostgresConnection({
+      url,
+      schema: DatasourceUrlParser.parse(url)?.schema,
       Client: pgClient(require("pg") as PgModule),
     });
+  };
 
   constructor(options: PostgresConnectionOptions = {}) {
     this.url = options.url ?? "";

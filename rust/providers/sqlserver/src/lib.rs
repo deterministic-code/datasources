@@ -20,7 +20,7 @@ mod tests {
         register("sqlserver", Arc::new(SqlServerDriver));
         assert_eq!(
             create(Some(&HashMap::from([(
-                "provider".into(),
+                "PROVIDER".into(),
                 "sqlserver".into()
             )])))
             .unwrap()

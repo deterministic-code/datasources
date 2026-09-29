@@ -19,13 +19,11 @@ internal sealed class PostgresConnection : IConnection
 
     static PostgresConnectionOptions Options(IReadOnlyDictionary<string, string?>? options)
     {
-        var schema = DatasourceOptions.Value(options, "schema")
-            ?? DatasourceOptions.Value(options, "database_schema");
+        var url = DatasourceOptions.Value(options, "DATASOURCE_URL");
         return new PostgresConnectionOptions
         {
-            Url = DatasourceOptions.Value(options, "url")
-                ?? DatasourceOptions.Value(options, "database_url"),
-            Schema = schema
+            Url = url,
+            Schema = DatasourceUrlParser.Parse(url)?.Schema
         };
     }
 
