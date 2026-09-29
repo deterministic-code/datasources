@@ -14,7 +14,7 @@ import type { Parameter } from "./Parameter.ts";
 import type { BulkCommand } from "./BulkCommand.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { SingleCommands } from "./SingleCommands.ts";
+import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 
 const fieldsOf = (
@@ -84,7 +84,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
       typeOrConnection as Constructable<T> & IConnection,
       (isBulkStrategy(connectionOrOptions) ? undefined : connectionOrOptions) as IConnection & CRUDRepositoryOptions<T>,
     );
-    this.strategy = strategy ?? new SingleCommands<T>();
+    this.strategy = strategy ?? new SingleCommandIBulkWriteStrategy<T>();
     this.transactional = transactional;
   }
 

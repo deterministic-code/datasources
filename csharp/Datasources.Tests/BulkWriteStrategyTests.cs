@@ -23,9 +23,9 @@ public class BulkWriteStrategyTests
     }
 
     [Fact]
-    public async Task SingleCommandsWritesOneStatementPerRow()
+    public async Task SingleCommandIBulkWriteStrategyWritesOneStatementPerRow()
     {
-        var (repo, command) = Repo(new SingleCommands<Parent>());
+        var (repo, command) = Repo(new SingleCommandIBulkWriteStrategy<Parent>());
         command.Response = new Response(new Value.Int(9), 1);
         await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
         await repo.Update([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
@@ -121,7 +121,7 @@ public class BulkWriteStrategyTests
     [Fact]
     public async Task EmptyListDoesNotExecute()
     {
-        await AssertEmpty(new SingleCommands<Parent>());
+        await AssertEmpty(new SingleCommandIBulkWriteStrategy<Parent>());
         await AssertEmpty(new BatchCommandIBulkWriteStrategy<Parent>());
         await AssertEmpty(new StoredProcedureBulkWriteStrategy<Parent>("create_parent", "update_parent", "delete_parent"));
     }

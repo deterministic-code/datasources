@@ -17,7 +17,7 @@ const fold = async <T>(
   return { result, rowsAffected };
 };
 
-export class SingleCommands<T extends object> implements IBulkWriteStrategy<T> {
+export class SingleCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T> {
   create = async (items: T[], repo: BulkCRUDRepository<T>): Promise<Response> => {
     let result: Response["result"] = null;
     for (const item of items) {

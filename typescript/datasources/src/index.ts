@@ -54,7 +54,7 @@ export { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStra
 export { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 export type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 export type { BulkCommand } from "./BulkCommand.ts";
-export { SingleCommands } from "./SingleCommands.ts";
+export { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
 export { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy.ts";
 export { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStrategy.ts";
 export { RepositoryTree } from "./RepositoryTree.ts";

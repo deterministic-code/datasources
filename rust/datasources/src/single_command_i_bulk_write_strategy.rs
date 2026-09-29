@@ -7,10 +7,10 @@ use crate::row::Row;
 use crate::value::Value;
 use async_trait::async_trait;
 
-pub struct SingleCommands;
+pub struct SingleCommandIBulkWriteStrategy;
 
 #[async_trait]
-impl BulkWriteStrategy for SingleCommands {
+impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
     async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response> {
         let mut result = Value::Null;
         for item in items.iter_mut() {

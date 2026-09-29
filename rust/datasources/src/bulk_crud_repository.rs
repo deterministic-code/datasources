@@ -18,7 +18,7 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::single_commands::SingleCommands;
+use crate::single_command_i_bulk_write_strategy::SingleCommandIBulkWriteStrategy;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
@@ -36,7 +36,11 @@ pub struct BulkCRUDRepository {
 
 impl BulkCRUDRepository {
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
-        Self::with_strategy(connection, options, Arc::new(SingleCommands))
+        Self::with_strategy(
+            connection,
+            options,
+            Arc::new(SingleCommandIBulkWriteStrategy),
+        )
     }
 
     pub fn with_strategy(
@@ -63,7 +67,7 @@ impl BulkCRUDRepository {
         let use_transaction = write.as_ref().is_some_and(|write| write.use_transaction());
         Self {
             crud: CRUDRepository::memory_with(items, write),
-            strategy: Arc::new(SingleCommands),
+            strategy: Arc::new(SingleCommandIBulkWriteStrategy),
             use_transaction,
         }
     }
