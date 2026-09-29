@@ -4,16 +4,13 @@ import type { IDriver } from "./IDriver.ts";
 import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import { Datasource } from "./Datasource.ts";
 import { DatasourceError } from "./DatasourceError.ts";
+import { DatasourceUrlParser } from "./DatasourceUrlParser.ts";
+import { DriverLoader } from "./DriverLoader.ts";
 import { DotEnv } from "./dotEnv.ts";
+import { ProviderCatalog } from "./ProviderCatalog.ts";
 import { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
+
 const factories = new Map<string, IDriver>();
-
-type Install = (options: DatasourceOptions) => void;
-let install: Install | undefined;
-
-export const bindInstall = (fn?: Install): void => {
-  install = fn;
-};
 
 const get = (options: DatasourceOptions | undefined, key: string): string | undefined => {
   const value = options?.[key];
@@ -32,7 +29,33 @@ const merge = (file: DatasourceOptions, env: Record<string, string | undefined>)
   return options;
 };
 
-const registerInstalled = (options: DatasourceOptions): void => install?.(options);
+const split = (value: string | undefined): string[] =>
+  (value ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+
+function* installed(options: DatasourceOptions): Generator<string> {
+  const names = new Set<string>();
+  for (const name of split(get(options, "INSTALLED_PROVIDERS"))) {
+    if (names.has(name)) continue;
+    names.add(name);
+    yield name;
+  }
+  const url = get(options, "DATASOURCE_URL");
+  if (!url) return;
+  const provider = DatasourceUrlParser.parse(url)?.provider;
+  if (!provider) throw new DatasourceError("DATASOURCE_URL has no provider");
+  if (!names.has(provider)) yield provider;
+}
+
+const registerInstalled = (options: DatasourceOptions): void => {
+  for (const name of installed(options)) {
+    const catalog = ProviderCatalog.default[name];
+    if (!catalog) throw new ProviderNotInstalledError(name);
+    DatasourceFactory.register(name, DriverLoader.load(catalog));
+  }
+};
 
 const resolve = (options?: DatasourceOptions): IDatasource => {
   const listed = options ?? merge(DotEnv.load(), process.env);

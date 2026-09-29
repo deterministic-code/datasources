@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cargoProviders, csharpProviders, npmProviders, withRegisterFeatures } from "./installed.ts";
+import { cargoProviders, csharpProviders, npmProviders } from "./installed.ts";
 
 describe("installed", () => {
   it("reads npm workspace packages", () => {
@@ -12,13 +12,13 @@ describe("installed", () => {
     expect(npmProviders({})).toEqual([]);
   });
 
-  it("reads cargo crates and register features", () => {
+  it("reads cargo crates", () => {
     expect(
       cargoProviders(`
-datasources-register = { version = "0.1.0", features = ["json", "memory"] }
+datasources-json = { version = "0.1.0" }
 datasources-sqlite = { path = "../sqlite" }
 `),
-    ).toEqual(["json", "memory", "sqlite"]);
+    ).toEqual(["json", "sqlite"]);
     expect(cargoProviders(`datasources-json = "0.1.0"`)).toEqual(["json"]);
     expect(cargoProviders(`foo = { package = "datasources-json" }`)).toEqual(["json"]);
     expect(cargoProviders("")).toEqual([]);
@@ -32,15 +32,5 @@ datasources-sqlite = { path = "../sqlite" }
 `),
     ).toEqual(["json", "sqlite"]);
     expect(csharpProviders("")).toEqual([]);
-  });
-
-  it("rewrites datasources-register features", () => {
-    const toml = `datasources-register = { version = "0.1.0", features = ["json", "memory"] }`;
-    expect(withRegisterFeatures(toml, ["sqlite"])).toBe(
-      `datasources-register = { version = "0.1.0", features = ["sqlite"] }`,
-    );
-    expect(withRegisterFeatures("datasources = \"0.1.0\"", ["json"])).toBe(
-      `datasources = "0.1.0"`,
-    );
   });
 });

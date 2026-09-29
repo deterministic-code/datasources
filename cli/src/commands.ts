@@ -13,24 +13,19 @@ export const addCommands = (ecosystem: Ecosystem, names: Provider[], entries: st
 export const removeCommands = (
   ecosystem: Ecosystem,
   names: Provider[],
-  remaining: Provider[],
+  _remaining: Provider[],
   entries: string[],
 ): Proc[] =>
   ({
     ts: () => npmUninstall(names),
-    rust: () => cargoRemove(names, remaining),
+    rust: () => cargoRemove(names),
     csharp: () => dotnetRemove(names, csharpTarget(entries)),
   })[ecosystem]();
 
 const npmInstall = (names: Provider[]): Proc[] => [
   {
     command: "npm",
-    args: [
-      "install",
-      host.ts.core,
-      host.ts.register,
-      ...names.map((name) => catalog[name].npm),
-    ],
+    args: ["install", host.ts.core, ...names.map((name) => catalog[name].npm)],
   },
 ];
 
@@ -41,22 +36,14 @@ const npmUninstall = (names: Provider[]): Proc[] => {
 
 const cargoAdd = (names: Provider[]): Proc[] => [
   { command: "cargo", args: ["add", host.rust.core] },
-  {
-    command: "cargo",
-    args: ["add", host.rust.register, "--features", names.join(",")],
-  },
   ...names.map((name) => ({
     command: "cargo",
     args: ["add", catalog[name].cargo],
   })),
 ];
 
-const cargoRemove = (names: Provider[], remaining: Provider[]): Proc[] => [
-  ...names.map((name) => ({ command: "cargo", args: ["remove", catalog[name].cargo] })),
-  ...(remaining.length
-    ? [{ command: "cargo", args: ["add", host.rust.register, "--features", remaining.join(",")] }]
-    : []),
-];
+const cargoRemove = (names: Provider[]): Proc[] =>
+  names.map((name) => ({ command: "cargo", args: ["remove", catalog[name].cargo] }));
 
 const dotnetAdd = (names: Provider[], project: string): Proc[] => {
   const prefix = project === "." ? [] : [project];

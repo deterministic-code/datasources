@@ -1,6 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  bindInstall,
   CRUDRepository,
   Datasource,
   DatasourceError,
@@ -31,7 +30,6 @@ beforeEach(() => {
 
 afterEach(() => {
   DatasourceFactory.reset();
-  bindInstall();
 });
 
 afterAll(() => {
@@ -45,7 +43,6 @@ describe("DatasourceFactory", () => {
   it("default from environment", () => {
     DatasourceFactory.register("sqlite", new MockDriver());
     process.env.PROVIDER = "sqlite";
-    process.env.DATASOURCE_URL = "sqlite:///:memory:";
     const ds = Datasource.default;
     expect(ds.provider).toBe("sqlite");
   });
@@ -131,11 +128,7 @@ describe("Datasource registry", () => {
     process.env.DATASOURCE_URL = "  ";
     expect(() => Datasource.create()).toThrow(DatasourceError);
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
-    expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
-    bindInstall((options) => {
-      if (options.INSTALLED_PROVIDERS?.includes("json"))
-        DatasourceFactory.register("json", new MockDriver());
-    });
+    expect(() => Datasource.create()).toThrow(ProviderNotInstalledError);
     DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "json" });
     expect(DatasourceFactory.registered()).toEqual(["json", "sqlite"]);
     DatasourceFactory.reset();
@@ -145,7 +138,7 @@ describe("Datasource registry", () => {
     DatasourceFactory.register("sqlite", new MockDriver());
     DatasourceFactory.register("memory", new MockDriver());
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
-    expect(() => Datasource.default).toThrow("Datasource defaults are not specified");
+    expect(() => Datasource.default).toThrow(ProviderNotInstalledError);
     delete process.env.DATASOURCE_URL;
     process.env.PROVIDER = "sqlite";
     expect(Datasource.default.provider).toBe("sqlite");

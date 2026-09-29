@@ -18,7 +18,6 @@ async fn main() {
 
 async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     let parsed = parse::args(&args)?;
-    datasources_register::init();
     let ds = datasources::default()?;
     let connection = ds.create_connection().await?;
     connection.open().await?;

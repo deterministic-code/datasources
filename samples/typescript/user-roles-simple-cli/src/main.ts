@@ -1,5 +1,4 @@
 import { ConsoleCommandMiddleware, Datasource } from "@datasources/core";
-import "@datasources/register";
 import { existsSync, readFileSync } from "node:fs";
 import { App } from "./app.ts";
 import { migrate } from "./migrate.ts";

@@ -33,3 +33,5 @@ impl Driver for MemoryDriver {
         HashMap::new()
     }
 }
+
+datasources::export_driver!(datasources_memory_driver, MemoryDriver);

@@ -6,29 +6,22 @@ describe("commands", () => {
     expect(addCommands("ts", ["sqlite"], ["package.json"])).toEqual([
       {
         command: "npm",
-        args: [
-          "install",
-          "@datasources/core",
-          "@datasources/register",
-          "@datasources/sqlite",
-        ],
+        args: ["install", "@datasources/core", "@datasources/sqlite"],
       },
     ]);
     expect(addCommands("ts", ["xml"], ["package.json"])[0]?.args).toEqual([
       "install",
       "@datasources/core",
-      "@datasources/register",
       "@datasources/xml",
     ]);
   });
 
-  it("adds cargo crates and register features", () => {
+  it("adds cargo crates", () => {
     expect(addCommands("rust", ["sqlite"], ["Cargo.toml"])).toEqual([
       { command: "cargo", args: ["add", "datasources"] },
-      { command: "cargo", args: ["add", "datasources-register", "--features", "sqlite"] },
       { command: "cargo", args: ["add", "datasources-sqlite"] },
     ]);
-    expect(addCommands("rust", ["json"], ["Cargo.toml"])[2]?.args).toEqual([
+    expect(addCommands("rust", ["json"], ["Cargo.toml"])[1]?.args).toEqual([
       "add",
       "datasources-json",
     ]);
@@ -54,7 +47,6 @@ describe("commands", () => {
     expect(removeCommands("ts", [], ["sqlite"], [])).toEqual([]);
     expect(removeCommands("rust", ["sqlite"], ["json"], [])).toEqual([
       { command: "cargo", args: ["remove", "datasources-sqlite"] },
-      { command: "cargo", args: ["add", "datasources-register", "--features", "json"] },
     ]);
     expect(removeCommands("rust", ["json"], [], [])).toEqual([
       { command: "cargo", args: ["remove", "datasources-json"] },

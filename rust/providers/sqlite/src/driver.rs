@@ -52,6 +52,8 @@ impl Driver for SqliteDriver {
     }
 }
 
+datasources::export_driver!(datasources_sqlite_driver, SqliteDriver);
+
 #[cfg(test)]
 mod tests {
     use super::SqliteDriver;

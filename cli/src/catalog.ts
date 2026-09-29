@@ -53,8 +53,8 @@ export const catalog: Record<Provider, ProviderPackages> = {
 };
 
 export const host = {
-  ts: { core: "@datasources/core", register: "@datasources/register" },
-  rust: { core: "datasources", register: "datasources-register" },
+  ts: { core: "@datasources/core" },
+  rust: { core: "datasources" },
   csharp: { core: "Datasources" },
 } as const;
 

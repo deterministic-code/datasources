@@ -11,7 +11,6 @@ fn clear_env() {
     }
     register("sqlite", MockDriver::arc());
     std::env::set_var("PROVIDER", "sqlite");
-    std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
 }
 
 #[tokio::test]

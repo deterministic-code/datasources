@@ -54,6 +54,8 @@ impl Driver for MysqlDriver {
     }
 }
 
+datasources::export_driver!(datasources_mysql_driver, MysqlDriver);
+
 #[cfg(test)]
 mod tests {
     use super::MysqlDriver;

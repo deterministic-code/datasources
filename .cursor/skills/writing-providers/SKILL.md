@@ -30,5 +30,5 @@ The package exports only the driver type.
 ## Check
 
 - C#: `PublicSurfaceTests.ExportsOnlyTheProvider` in the provider test project
-- TypeScript: `exports only the provider` in `typescript/register`
-- Rust: `providers_export_only_their_provider` in `rust/register`
+- TypeScript: `exports only the provider` in `typescript/datasources`
+- Rust: `providers_export_only_their_provider` in `rust/datasources`

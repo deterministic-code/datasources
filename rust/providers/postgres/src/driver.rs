@@ -55,6 +55,8 @@ impl Driver for PostgresDriver {
     }
 }
 
+datasources::export_driver!(datasources_postgres_driver, PostgresDriver);
+
 #[cfg(test)]
 mod tests {
     use super::PostgresDriver;

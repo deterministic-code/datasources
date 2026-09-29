@@ -1,5 +1,6 @@
+import { access, copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
+import { catalog, requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
 import { addCommands, removeCommands, type Proc } from "./commands.ts";
 import { csharpTarget, detect, resolveEcosystem } from "./detect.ts";
 import {
@@ -15,7 +16,6 @@ import {
   cargoProviders,
   csharpProviders,
   npmProviders,
-  withRegisterFeatures,
   type NpmManifest,
 } from "./installed.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
@@ -114,9 +114,16 @@ const applyPackages = async (
     deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
     if (!flags.dryRun) await deps.run(proc.command, proc.args, flags.cwd);
   }
-  if (ecosystem === "rust" && (add.length || remove.length)) {
-    deps.log(`update datasources-register features: ${remaining.join(",") || "(none)"}`);
-    if (!flags.dryRun) await patchRegisterFeatures(deps.fs, flags.cwd, remaining);
+  if (ecosystem === "rust") {
+    for (const name of add) {
+      const proc = { command: "cargo", args: ["build", "-p", catalog[name].cargo] };
+      deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
+      if (!flags.dryRun) {
+        await deps.run(proc.command, proc.args, flags.cwd);
+        const copied = await copyPlugin(flags.cwd, catalog[name].cargo);
+        if (copied) deps.log(`copy ${copied}`);
+      }
+    }
   }
 };
 
@@ -165,8 +172,35 @@ const optional = async (fs: Fs, path: string): Promise<string | undefined> => {
   }
 };
 
-const patchRegisterFeatures = async (fs: Fs, cwd: string, features: Provider[]): Promise<void> => {
-  const path = join(cwd, "Cargo.toml");
-  const text = await optional(fs, path);
-  if (text) await fs.writeFile(path, withRegisterFeatures(text, features));
+const pluginFileName = (cargoName: string): string => {
+  const stem = cargoName.replaceAll("-", "_");
+  return process.platform === "win32"
+    ? `${stem}.dll`
+    : process.platform === "darwin"
+      ? `lib${stem}.dylib`
+      : `lib${stem}.so`;
+};
+
+const copyPlugin = async (cwd: string, cargoName: string): Promise<string | undefined> => {
+  const file = pluginFileName(cargoName);
+  const source = await firstFile(
+    [0, 1, 2].map((up) => join(cwd, ...Array.from({ length: up }, () => ".."), "target", "debug", file)),
+  );
+  if (!source) return undefined;
+  const dest = join(cwd, "plugins", file);
+  await mkdir(join(cwd, "plugins"), { recursive: true });
+  await copyFile(source, dest);
+  return dest;
+};
+
+const firstFile = async (paths: string[]): Promise<string | undefined> => {
+  for (const path of paths) {
+    try {
+      await access(path);
+      return path;
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
 };
