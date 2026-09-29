@@ -4,8 +4,8 @@ using Datasources.Oracle;
 public partial class RegisterCreateTests
 {
     const string Provider = "oracle";
-    static readonly IDriver Driver = new OracleProvider();
-    static IDatasource Ds() => new Datasource(Provider, new OracleProvider());
+    static readonly IDriver Driver = new OracleDriver();
+    static IDatasource Ds() => new Datasource(Provider, new OracleDriver());
 
     [Fact]
     public async Task CreatesConnection()
@@ -36,5 +36,5 @@ public class PublicSurfaceTests
 {
     [Fact]
     public void ExportsOnlyTheProvider() =>
-        Assert.Equal(typeof(OracleProvider), Assert.Single(typeof(OracleProvider).Assembly.GetExportedTypes()));
+        Assert.Equal(typeof(OracleDriver), Assert.Single(typeof(OracleDriver).Assembly.GetExportedTypes()));
 }

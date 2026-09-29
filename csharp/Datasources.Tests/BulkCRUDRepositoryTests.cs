@@ -172,7 +172,7 @@ public class BulkCRUDRepositoryTests
 
     static async Task<IConnection> Setup()
     {
-        var connection = new MemoryProvider().Connection(null);
+        var connection = new MemoryDriver().Connection(null);
         await connection.Open();
         return connection;
     }

@@ -1,7 +1,7 @@
 mod command;
 mod connection;
 
-pub use connection::OracleProvider;
+pub use connection::OracleDriver;
 
 #[cfg(test)]
 mod tests {
@@ -11,13 +11,13 @@ mod tests {
     use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new("oracle", Arc::new(OracleProvider), None)
+        BuiltDatasource::new("oracle", Arc::new(OracleDriver), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register("oracle", Arc::new(OracleProvider));
+        register("oracle", Arc::new(OracleDriver));
         assert_eq!(
             create(Some(&HashMap::from([("provider".into(), "oracle".into())])))
                 .unwrap()

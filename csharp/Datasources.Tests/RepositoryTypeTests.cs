@@ -21,7 +21,7 @@ public class RepositoryTypeTests
     [Fact]
     public void CRUDRepositoryReportsSameTypeAsInner()
     {
-        var repo = new CRUDRepository<Item>(new MemoryProvider().Connection(null));
+        var repo = new CRUDRepository<Item>(new MemoryDriver().Connection(null));
         Assert.Equal(typeof(Item), repo.Type);
     }
 

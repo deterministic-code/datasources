@@ -4,8 +4,8 @@ using Datasources.DynamoDb;
 public partial class RegisterCreateTests
 {
     const string Provider = "dynamodb";
-    static readonly IDriver Driver = new DynamoDbProvider();
-    static IDatasource Ds() => new Datasource(Provider, new DynamoDbProvider());
+    static readonly IDriver Driver = new DynamoDbDriver();
+    static IDatasource Ds() => new Datasource(Provider, new DynamoDbDriver());
 
     [Fact]
     public async Task CreatesConnection()
@@ -36,5 +36,5 @@ public class PublicSurfaceTests
 {
     [Fact]
     public void ExportsOnlyTheProvider() =>
-        Assert.Equal(typeof(DynamoDbProvider), Assert.Single(typeof(DynamoDbProvider).Assembly.GetExportedTypes()));
+        Assert.Equal(typeof(DynamoDbDriver), Assert.Single(typeof(DynamoDbDriver).Assembly.GetExportedTypes()));
 }

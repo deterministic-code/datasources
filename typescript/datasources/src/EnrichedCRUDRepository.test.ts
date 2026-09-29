@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryProvider } from "@datasources/memory";
+import { MemoryDriver } from "@datasources/memory";
 import { collectAsync } from "./collectAsync.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
@@ -67,7 +67,7 @@ class SkipDelete<T extends object> extends DeleteEnrichmentStrategy<T> {
 type Seed = Record<string, Scalar>;
 
 const setup = async (rows: Seed[] = []): Promise<IConnection> => {
-  const connection = new MemoryProvider().connection();
+  const connection = new MemoryDriver().connection();
   await connection.open();
   for (const row of rows) {
     const response = await connection.createCommand().execute(

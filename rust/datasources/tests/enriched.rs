@@ -1,5 +1,5 @@
 use datasources::*;
-use datasources_memory::MemoryProvider;
+use datasources_memory::MemoryDriver;
 use std::sync::Arc;
 
 fn record(pairs: &[(&str, Value)]) -> Row {
@@ -10,7 +10,7 @@ fn record(pairs: &[(&str, Value)]) -> Row {
 }
 
 async fn setup(rows: &mut [Row]) -> Arc<dyn Connection> {
-    let connection = MemoryProvider.connection(None);
+    let connection = MemoryDriver.connection(None);
     connection.open().await.unwrap();
     let command = connection.create_command();
     for row in rows.iter_mut() {

@@ -1,5 +1,6 @@
 import {
   columnType as identityColumnType,
+  StubTransaction,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -9,18 +10,16 @@ import {
   type IsolationLevel,
   type TypeConverter,
 } from "@datasources/core";
-import { JsonConnection } from "./connection.ts";
-import { JsonTransaction } from "./transaction.ts";
+import { SqlServerConnection } from "./connection.ts";
 
-export class JsonProvider implements IDriver {
+export class SqlServerDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
-    JsonConnection.from(options);
+    SqlServerConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,
-    isolation: IsolationLevel = "serializable",
-  ): ITransaction =>
-    new JsonTransaction(connection as JsonConnection, isolation);
+    _isolation?: IsolationLevel,
+  ): ITransaction => new StubTransaction(connection.provider, connection);
 }

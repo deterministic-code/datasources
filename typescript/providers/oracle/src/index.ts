@@ -1,1 +1,1 @@
-export { OracleProvider } from "./OracleProvider.ts";
+export { OracleDriver } from "./OracleDriver.ts";

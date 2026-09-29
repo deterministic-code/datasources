@@ -1,7 +1,7 @@
 mod command;
 mod connection;
 
-pub use connection::DynamoDbProvider;
+pub use connection::DynamoDbDriver;
 
 #[cfg(test)]
 mod tests {
@@ -11,13 +11,13 @@ mod tests {
     use std::sync::Arc;
 
     fn ds() -> BuiltDatasource {
-        BuiltDatasource::new("dynamodb", Arc::new(DynamoDbProvider), None)
+        BuiltDatasource::new("dynamodb", Arc::new(DynamoDbDriver), None)
     }
 
     #[test]
     fn creates() {
         reset();
-        register("dynamodb", Arc::new(DynamoDbProvider));
+        register("dynamodb", Arc::new(DynamoDbDriver));
         assert_eq!(
             create(Some(&HashMap::from([(
                 "provider".into(),

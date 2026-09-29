@@ -212,7 +212,7 @@ public class ReadonlyRepositoryTests
 
     static async Task<IConnection> Setup(params Row[] rows)
     {
-        var connection = new MemoryProvider().Connection(null);
+        var connection = new MemoryDriver().Connection(null);
         await connection.Open();
         foreach (var row in rows)
         {

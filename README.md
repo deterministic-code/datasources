@@ -748,7 +748,7 @@ pub fn registered() -> Vec<String>
 
 A missing factory throws `ProviderNotInstalledError` / `ProviderNotInstalledException` / `DatasourceError::ProviderNotInstalled`.
 
-`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryProvider`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
+`Datasources.Hosting`, `@datasources/register`, and `datasources-register` register each name in `INSTALLED_PROVIDERS` (and the provider inferred from `DATASOURCE_URL`) when `Create` is called with null / `undefined` / `None` options. Each dialect implements [IDriver](#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what `register` stores.
 
 ### Examples
 
@@ -786,21 +786,21 @@ const ds = DatasourceFactory.default;
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
 
 ```csharp
-DatasourceFactory.Register("memory", new MemoryProvider());
+DatasourceFactory.Register("memory", new MemoryDriver());
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L39-L44)
 
 ```rust
-register("memory", Arc::new(MemoryProvider));
+register("memory", Arc::new(MemoryDriver));
 let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L31-L36)
 
 ```typescript
-DatasourceFactory.register("memory", new MemoryProvider());
+DatasourceFactory.register("memory", new MemoryDriver());
 const ds = DatasourceFactory.create({ provider: "memory" });
 ```
 
@@ -17535,7 +17535,7 @@ SQLAlchemy-style SQLite URLs: `sqlite:///:memory:`, `sqlite:///app.db`, `sqlite:
 
 A provider package implements `IDriver` / `Driver` and exports only that type. `DatasourceFactory.Register` / `register` stores it by name. The driver builds the connection, command, and transaction, and supplies row cell converters when native values are not already canonical cells.
 
-`mysql`, `postgres`, and `sqlite` name the type `*Driver` (`SqliteDriver`). Every other package names it `*Provider` (`MemoryProvider`).
+Every provider names the type `*Driver` (`JsonDriver`, `SqliteDriver`).
 
 ### Classes
 
@@ -17905,21 +17905,21 @@ The package exports only the driver type.
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
 
 ```csharp
-DatasourceFactory.Register("memory", new MemoryProvider());
+DatasourceFactory.Register("memory", new MemoryDriver());
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "memory" });
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L39-L44)
 
 ```rust
-register("memory", Arc::new(MemoryProvider));
+register("memory", Arc::new(MemoryDriver));
 let ds = create(Some(&HashMap::from([("provider".into(), "memory".into())]))).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L31-L36)
 
 ```typescript
-DatasourceFactory.register("memory", new MemoryProvider());
+DatasourceFactory.register("memory", new MemoryDriver());
 const ds = DatasourceFactory.create({ provider: "memory" });
 ```
 

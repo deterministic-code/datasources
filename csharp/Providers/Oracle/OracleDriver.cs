@@ -1,10 +1,10 @@
 using Datasources;
 
-namespace Datasources.Xml;
+namespace Datasources.Oracle;
 
-public sealed class XmlProvider : IDriver
+public sealed class OracleDriver : IDriver
 {
-    public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new XmlConnection(options);
+    public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new OracleConnection(options);
     public ICommand Command(IConnection connection) => connection.CreateCommand();
     public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
         new StubTransaction(connection.Provider, connection);

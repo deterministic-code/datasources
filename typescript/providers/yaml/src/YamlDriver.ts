@@ -10,13 +10,13 @@ import {
   type IsolationLevel,
   type TypeConverter,
 } from "@datasources/core";
-import { XmlConnection } from "./connection.ts";
+import { YamlConnection } from "./connection.ts";
 
-export class XmlProvider implements IDriver {
+export class YamlDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
-    XmlConnection.from(options);
+    YamlConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,

@@ -2,7 +2,7 @@
 
 A provider package implements `IDriver` / `Driver` and exports only that type. `DatasourceFactory.Register` / `register` stores it by name. The driver builds the connection, command, and transaction, and supplies row cell converters when native values are not already canonical cells.
 
-`mysql`, `postgres`, and `sqlite` name the type `*Driver` (`SqliteDriver`). Every other package names it `*Provider` (`MemoryProvider`).
+Every provider names the type `*Driver` (`JsonDriver`, `SqliteDriver`).
 
 ## Classes
 

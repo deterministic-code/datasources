@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
 import { DynamoDbConnection } from "./connection.ts";
-import { DynamoDbProvider } from "./DynamoDbProvider.ts";
+import { DynamoDbDriver } from "./DynamoDbDriver.ts";
 
 afterEach(() => DatasourceFactory.reset());
 
 describe("dynamodb", () => {
   it("creates", () => {
-    DatasourceFactory.register("dynamodb", new DynamoDbProvider());
+    DatasourceFactory.register("dynamodb", new DynamoDbDriver());
     expect(DynamoDbConnection.from()).toBeInstanceOf(DynamoDbConnection);
     expect(Datasource.create({ provider: "dynamodb" }).provider).toBe("dynamodb");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new Datasource("dynamodb", new DynamoDbProvider());
+    const ds = new Datasource("dynamodb", new DynamoDbDriver());
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(DynamoDbConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
@@ -30,6 +30,6 @@ describe("dynamodb", () => {
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());
     ds.createReadonlyRepository(untyped(), connection);
-    expect(new DynamoDbProvider().transaction(connection).isolation).toBe("serializable");
+    expect(new DynamoDbDriver().transaction(connection).isolation).toBe("serializable");
   });
 });

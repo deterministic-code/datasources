@@ -1,5 +1,5 @@
 use datasources::*;
-use datasources_memory::MemoryProvider;
+use datasources_memory::MemoryDriver;
 use std::sync::Arc;
 
 struct Seed {
@@ -57,7 +57,7 @@ fn contains_id(row: &Row, into: &str, id: i64) -> bool {
 }
 
 async fn open(write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> (CRUDRepository, Seed) {
-    let connection = MemoryProvider.connection(None);
+    let connection = MemoryDriver.connection(None);
     connection.open().await.unwrap();
     let mut users_options = CRUDRepositoryOptions::default();
     users_options.entity = "users".into();

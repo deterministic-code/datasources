@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryProvider } from "@datasources/memory";
+import { MemoryDriver } from "@datasources/memory";
 import { collectAsync } from "./collectAsync.ts";
 import { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
@@ -19,7 +19,7 @@ class Child {
 }
 
 const setup = async (): Promise<IConnection> => {
-  const connection = new MemoryProvider().connection();
+  const connection = new MemoryDriver().connection();
   await connection.open();
   return connection;
 };

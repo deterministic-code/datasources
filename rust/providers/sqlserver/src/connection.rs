@@ -1,3 +1,3 @@
 use datasources::named_stub_connection;
 
-named_stub_connection!(SqlServerConnection, SqlServerProvider, "sqlserver");
+named_stub_connection!(SqlServerConnection, SqlServerDriver, "sqlserver");

@@ -1,1 +1,1 @@
-export { XmlProvider } from "./XmlProvider.ts";
+export { XmlDriver } from "./XmlDriver.ts";

@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
 import { OracleConnection } from "./connection.ts";
-import { OracleProvider } from "./OracleProvider.ts";
+import { OracleDriver } from "./OracleDriver.ts";
 
 afterEach(() => DatasourceFactory.reset());
 
 describe("oracle", () => {
   it("creates", () => {
-    DatasourceFactory.register("oracle", new OracleProvider());
+    DatasourceFactory.register("oracle", new OracleDriver());
     expect(OracleConnection.from()).toBeInstanceOf(OracleConnection);
     expect(Datasource.create({ provider: "oracle" }).provider).toBe("oracle");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new Datasource("oracle", new OracleProvider());
+    const ds = new Datasource("oracle", new OracleDriver());
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(OracleConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
@@ -30,6 +30,6 @@ describe("oracle", () => {
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());
     ds.createReadonlyRepository(untyped(), connection);
-    expect(new OracleProvider().transaction(connection).isolation).toBe("serializable");
+    expect(new OracleDriver().transaction(connection).isolation).toBe("serializable");
   });
 });

@@ -26,13 +26,13 @@ import { JsonCommand } from "./command.ts";
 import { JsonConnection } from "./connection.ts";
 import { asRecord, matches, parametersToObject, parseFilter } from "./filter.ts";
 import type { FileSystemApi } from "./i-file-store.ts";
-import { JsonProvider } from "./JsonProvider.ts";
+import { JsonDriver } from "./JsonDriver.ts";
 import { MemoryFileStore } from "./memory-file-store.ts";
 import { NodeFileStore } from "./node-file-store.ts";
 
 afterEach(() => {
   DatasourceFactory.reset();
-  DatasourceFactory.register("json", new JsonProvider());
+  DatasourceFactory.register("json", new JsonDriver());
 });
 
 describe("filter helpers", () => {
@@ -326,7 +326,7 @@ describe("Json datasource", () => {
   it("registers and constructs children", async () => {
     const ds = new Datasource(
       "json",
-      new JsonProvider(),
+      new JsonDriver(),
       { data: [{ id: 1 }] },
     );
     expect(ds.provider).toBe("json");
@@ -354,7 +354,7 @@ describe("Json datasource", () => {
     expect(registered.provider).toBe("json");
     expect(await registered.createConnection()).toBeInstanceOf(JsonConnection);
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
-    const provider = new JsonProvider();
+    const provider = new JsonDriver();
     expect(provider.transaction(connection).isolation).toBe("serializable");
     await expect(command.executeStatement(new SelectStatement("nope"))).rejects.toThrow(
       "Unsupported JSON",

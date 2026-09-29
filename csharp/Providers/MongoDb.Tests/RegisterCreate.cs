@@ -4,8 +4,8 @@ using Datasources.MongoDb;
 public partial class RegisterCreateTests
 {
     const string Provider = "mongodb";
-    static readonly IDriver Driver = new MongoDbProvider();
-    static IDatasource Ds() => new Datasource(Provider, new MongoDbProvider());
+    static readonly IDriver Driver = new MongoDbDriver();
+    static IDatasource Ds() => new Datasource(Provider, new MongoDbDriver());
 
     [Fact]
     public async Task CreatesConnection()
@@ -36,5 +36,5 @@ public class PublicSurfaceTests
 {
     [Fact]
     public void ExportsOnlyTheProvider() =>
-        Assert.Equal(typeof(MongoDbProvider), Assert.Single(typeof(MongoDbProvider).Assembly.GetExportedTypes()));
+        Assert.Equal(typeof(MongoDbDriver), Assert.Single(typeof(MongoDbDriver).Assembly.GetExportedTypes()));
 }

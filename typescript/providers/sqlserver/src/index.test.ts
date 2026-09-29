@@ -1,19 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Datasource, DatasourceFactory, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
 import { SqlServerConnection } from "./connection.ts";
-import { SqlServerProvider } from "./SqlServerProvider.ts";
+import { SqlServerDriver } from "./SqlServerDriver.ts";
 
 afterEach(() => DatasourceFactory.reset());
 
 describe("sqlserver", () => {
   it("creates", () => {
-    DatasourceFactory.register("sqlserver", new SqlServerProvider());
+    DatasourceFactory.register("sqlserver", new SqlServerDriver());
     expect(SqlServerConnection.from()).toBeInstanceOf(SqlServerConnection);
     expect(Datasource.create({ provider: "sqlserver" }).provider).toBe("sqlserver");
   });
 
   it("creates a named connection that throws on open", async () => {
-    const ds = new Datasource("sqlserver", new SqlServerProvider());
+    const ds = new Datasource("sqlserver", new SqlServerDriver());
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(SqlServerConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
@@ -30,6 +30,6 @@ describe("sqlserver", () => {
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());
     ds.createReadonlyRepository(untyped(), connection);
-    expect(new SqlServerProvider().transaction(connection).isolation).toBe("serializable");
+    expect(new SqlServerDriver().transaction(connection).isolation).toBe("serializable");
   });
 });

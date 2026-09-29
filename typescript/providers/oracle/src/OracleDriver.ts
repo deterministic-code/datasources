@@ -1,5 +1,6 @@
 import {
   columnType as identityColumnType,
+  StubTransaction,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -9,18 +10,16 @@ import {
   type IsolationLevel,
   type TypeConverter,
 } from "@datasources/core";
-import { MemoryConnection } from "./connection.ts";
-import { MemoryTransaction } from "./transaction.ts";
+import { OracleConnection } from "./connection.ts";
 
-export class MemoryProvider implements IDriver {
+export class OracleDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
-    MemoryConnection.from(options);
+    OracleConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,
-    isolation: IsolationLevel = "serializable",
-  ): ITransaction =>
-    new MemoryTransaction(connection as MemoryConnection, isolation);
+    _isolation?: IsolationLevel,
+  ): ITransaction => new StubTransaction(connection.provider, connection);
 }

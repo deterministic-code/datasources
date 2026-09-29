@@ -1,7 +1,4 @@
-import { DatasourceError, type DatasourceOptions } from "@datasources/core";
-
-const scheme = (url: string): string | undefined =>
-  url.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/)?.[1]?.toLowerCase();
+import { DatasourceError, DatasourceUrlParser, type DatasourceOptions } from "@datasources/core";
 
 const text = (options: DatasourceOptions, key: string): string | undefined => {
   const value = options[key];
@@ -18,7 +15,7 @@ export const providerNames = (options: DatasourceOptions): string[] => {
   const names = [...new Set(split(text(options, "INSTALLED_PROVIDERS")))];
   const url = text(options, "DATASOURCE_URL");
   if (!url) return names;
-  const provider = scheme(url);
+  const provider = DatasourceUrlParser.parse(url)?.provider;
   if (!provider) throw new DatasourceError("DATASOURCE_URL has no provider");
   return names.includes(provider) ? names : [...names, provider];
 };

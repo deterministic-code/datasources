@@ -1,4 +1,4 @@
-use datasources::{bind_install, defaults, register, DatasourceError, Result};
+use datasources::{bind_install, defaults, register, DatasourceError, DatasourceUrlParser, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -7,15 +7,6 @@ fn get<'a>(options: &'a HashMap<String, String>, key: &str) -> Option<&'a str> {
         .get(key)
         .map(|value| value.trim())
         .filter(|value| !value.is_empty())
-}
-
-fn scheme(url: &str) -> Option<String> {
-    let name = url.split_once(':')?.0.to_ascii_lowercase();
-    if name.is_empty() {
-        None
-    } else {
-        Some(name)
-    }
 }
 
 pub fn provider_names(options: &HashMap<String, String>) -> Result<Vec<String>> {
@@ -31,8 +22,9 @@ pub fn provider_names(options: &HashMap<String, String>) -> Result<Vec<String>> 
     let Some(url) = get(options, "DATASOURCE_URL") else {
         return Ok(names);
     };
-    let provider =
-        scheme(url).ok_or_else(|| DatasourceError::message("DATASOURCE_URL has no provider"))?;
+    let provider = DatasourceUrlParser::parse(url)
+        .map(|parsed| parsed.provider)
+        .ok_or_else(|| DatasourceError::message("DATASOURCE_URL has no provider"))?;
     if !names.iter().any(|existing| existing == &provider) {
         names.push(provider);
     }
@@ -63,17 +55,17 @@ macro_rules! register_named {
 fn register_named(name: &str) -> Result<()> {
     register_named!(
         name,
-        "json" => datasources_json::JsonProvider,
-        "memory" => datasources_memory::MemoryProvider,
+        "json" => datasources_json::JsonDriver,
+        "memory" => datasources_memory::MemoryDriver,
         "sqlite" => datasources_sqlite::SqliteDriver,
-        "xml" => datasources_xml::XmlProvider,
-        "yaml" => datasources_yaml::YamlProvider,
+        "xml" => datasources_xml::XmlDriver,
+        "yaml" => datasources_yaml::YamlDriver,
         "mysql" => datasources_mysql::MysqlDriver,
-        "sqlserver" => datasources_sqlserver::SqlServerProvider,
+        "sqlserver" => datasources_sqlserver::SqlServerDriver,
         "postgres" => datasources_postgres::PostgresDriver,
-        "oracle" => datasources_oracle::OracleProvider,
-        "mongodb" => datasources_mongodb::MongoDbProvider,
-        "dynamodb" => datasources_dynamodb::DynamoDbProvider,
+        "oracle" => datasources_oracle::OracleDriver,
+        "mongodb" => datasources_mongodb::MongoDbDriver,
+        "dynamodb" => datasources_dynamodb::DynamoDbDriver,
     )
 }
 
@@ -280,13 +272,8 @@ mod tests {
                 .collect();
             assert_eq!(public.len(), 1, "{}: {public:?}", path.display());
             let line = public[0].trim_end_matches(';');
-            let driver = path.components().any(|c| {
-                let name = c.as_os_str();
-                name == "mysql" || name == "postgres" || name == "sqlite"
-            });
-            let suffix = if driver { "Driver" } else { "Provider" };
             assert!(
-                line.starts_with("pub use ") && line.ends_with(suffix),
+                line.starts_with("pub use ") && line.ends_with("Driver"),
                 "{}: {line}",
                 path.display()
             );

@@ -10,13 +10,13 @@ import {
   type IsolationLevel,
   type TypeConverter,
 } from "@datasources/core";
-import { SqlServerConnection } from "./connection.ts";
+import { DynamoDbConnection } from "./connection.ts";
 
-export class SqlServerProvider implements IDriver {
+export class DynamoDbDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
-    SqlServerConnection.from(options);
+    DynamoDbConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();
   transaction = (
     connection: IConnection,

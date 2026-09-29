@@ -1,13 +1,13 @@
 using Datasources;
 
-namespace Datasources.SqlServer;
+namespace Datasources.Json;
 
-public sealed class SqlServerProvider : IDriver
+public sealed class JsonDriver : IDriver
 {
-    public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new SqlServerConnection(options);
+    public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new JsonConnection(options);
     public ICommand Command(IConnection connection) => connection.CreateCommand();
     public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.Serializable) =>
-        new StubTransaction(connection.Provider, connection);
+        new JsonTransaction((JsonConnection)connection, isolation);
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; } =
         new Dictionary<string, TypeConverter<Value, Value>>();
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryProvider } from "@datasources/memory";
+import { MemoryDriver } from "@datasources/memory";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
@@ -16,7 +16,7 @@ describe("repository type", () => {
   });
 
   it("crud repository reports item type", () => {
-    const repo = new CRUDRepository(Item, new MemoryProvider().connection());
+    const repo = new CRUDRepository(Item, new MemoryDriver().connection());
     expect(repo.type).toBe(Item);
   });
 

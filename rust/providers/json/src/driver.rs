@@ -1,5 +1,5 @@
-use crate::connection::MemoryConnection;
-use crate::transaction::MemoryTransaction;
+use crate::connection::JsonConnection;
+use crate::transaction::JsonTransaction;
 use datasources::{
     downcast_connection, Command, Connection, Driver, IsolationLevel, Transaction, TypeConverter,
     Value,
@@ -7,11 +7,11 @@ use datasources::{
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub struct MemoryProvider;
+pub struct JsonDriver;
 
-impl Driver for MemoryProvider {
+impl Driver for JsonDriver {
     fn connection(&self, options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
-        MemoryConnection::from_options(options)
+        JsonConnection::from_options(options)
     }
 
     fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
@@ -23,8 +23,8 @@ impl Driver for MemoryProvider {
         connection: Arc<dyn Connection>,
         isolation: IsolationLevel,
     ) -> Arc<dyn Transaction> {
-        let conn = downcast_connection::<MemoryConnection>(connection).expect("memory");
-        Arc::new(MemoryTransaction::new(conn.state.clone(), isolation))
+        let conn = downcast_connection::<JsonConnection>(connection).expect("json");
+        Arc::new(JsonTransaction::new(conn.state.clone(), isolation))
     }
 
     fn row_type_converters(

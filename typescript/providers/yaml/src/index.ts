@@ -1,1 +1,1 @@
-export { YamlProvider } from "./YamlProvider.ts";
+export { YamlDriver } from "./YamlDriver.ts";
