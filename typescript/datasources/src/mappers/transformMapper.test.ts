@@ -10,6 +10,8 @@ type Flat = {
   contactEmail: string;
   contactPhone: string;
 };
+type Contact = { name: string; email: string };
+type ContactRow = { contactName: string; contactEmail: string };
 
 describe("TransformMapper", () => {
   it("flattens and unflattens user and contacts", () => {
@@ -37,5 +39,28 @@ describe("TransformMapper", () => {
       contactPhone: "555",
     });
     expect(mapper.reverseMap(flat)).toEqual(nested);
+  });
+
+  it("prefixes a contact field", () => {
+    const mapper = new TransformMapper<string, string>(
+      (name) => `contact_${name}`,
+      (name) => name.slice("contact_".length),
+    );
+    const mapped = mapper.map("email");
+    const reversed = mapper.reverseMap(mapped);
+    expect(mapped).toBe("contact_email");
+    expect(reversed).toBe("email");
+  });
+
+  it("maps a contact name and email", () => {
+    const contact: Contact = { name: "Ada", email: "ada@x.dev" };
+    const mapper = new TransformMapper<Contact, ContactRow>(
+      (item) => ({ contactName: item.name, contactEmail: item.email }),
+      (row) => ({ name: row.contactName, email: row.contactEmail }),
+    );
+    const mapped = mapper.map(contact);
+    const reversed = mapper.reverseMap(mapped);
+    expect(mapped).toEqual({ contactName: "Ada", contactEmail: "ada@x.dev" });
+    expect(reversed).toEqual(contact);
   });
 });

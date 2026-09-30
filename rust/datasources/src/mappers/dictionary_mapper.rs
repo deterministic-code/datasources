@@ -51,13 +51,26 @@ mod tests {
     #[test]
     fn maps_known_names_and_passes_through_the_rest() {
         let mapper = DictionaryMapper::new([
-            ("Key".to_string(), "id".to_string()),
-            ("Login".to_string(), "username".to_string()),
+            ("FirstName".to_string(), "given_name".to_string()),
+            ("LastName".to_string(), "family_name".to_string()),
+            ("Email".to_string(), "email_address".to_string()),
         ]);
-        assert_eq!(mapper.map("Key".into()), "id");
-        assert_eq!(mapper.reverse_map("id".into()), "Key");
-        assert_eq!(mapper.map("other".into()), "other");
-        assert_eq!(mapper.reverse_map("other".into()), "other");
+        let first_name = mapper.map("FirstName".into());
+        let last_name = mapper.map("LastName".into());
+        let email = mapper.map("Email".into());
+        let phone = mapper.map("Phone".into());
+        let from_first = mapper.reverse_map("given_name".into());
+        let from_last = mapper.reverse_map("family_name".into());
+        let from_email = mapper.reverse_map("email_address".into());
+        let from_phone = mapper.reverse_map("Phone".into());
+        assert_eq!(first_name, "given_name");
+        assert_eq!(last_name, "family_name");
+        assert_eq!(email, "email_address");
+        assert_eq!(phone, "Phone");
+        assert_eq!(from_first, "FirstName");
+        assert_eq!(from_last, "LastName");
+        assert_eq!(from_email, "Email");
+        assert_eq!(from_phone, "Phone");
     }
 
     struct Account;

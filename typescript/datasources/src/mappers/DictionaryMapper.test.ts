@@ -13,13 +13,26 @@ class Account {
 describe("DictionaryMapper", () => {
   it("maps known names and passes through the rest", () => {
     const mapper = new DictionaryMapper([
-      ["Key", "id"],
-      ["Login", "username"],
+      ["FirstName", "given_name"],
+      ["LastName", "family_name"],
+      ["Email", "email_address"],
     ]);
-    expect(mapper.map("Key")).toBe("id");
-    expect(mapper.reverseMap("id")).toBe("Key");
-    expect(mapper.map("other")).toBe("other");
-    expect(mapper.reverseMap("other")).toBe("other");
+    const firstName = mapper.map("FirstName");
+    const lastName = mapper.map("LastName");
+    const email = mapper.map("Email");
+    const phone = mapper.map("Phone");
+    const fromFirst = mapper.reverseMap("given_name");
+    const fromLast = mapper.reverseMap("family_name");
+    const fromEmail = mapper.reverseMap("email_address");
+    const fromPhone = mapper.reverseMap("Phone");
+    expect(firstName).toBe("given_name");
+    expect(lastName).toBe("family_name");
+    expect(email).toBe("email_address");
+    expect(phone).toBe("Phone");
+    expect(fromFirst).toBe("FirstName");
+    expect(fromLast).toBe("LastName");
+    expect(fromEmail).toBe("Email");
+    expect(fromPhone).toBe("Phone");
   });
 
   it("read reverse-maps column names", async () => {

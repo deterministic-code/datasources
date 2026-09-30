@@ -123,13 +123,34 @@ Use this as [EntityMapper](./readonly-repository.md#entitymapper) when the type 
 
 ## Examples
 
-### Pluralize and lowercase
+### Map contacts
 
 ::: example
-```csharp csharp/Datasources.Tests/PluralizerMapperTests.cs#PluralizesAndLowercasesTheTableName
+```csharp csharp/Datasources.Tests/PluralizerMapperTests.cs#MapsContacts
 ```
-```rust rust/datasources/src/mappers/pluralizer_mapper.rs#pluralizes_and_lowercases_the_table_name
+```rust rust/datasources/src/mappers/pluralizer_mapper.rs#maps_contacts
 ```
-```typescript typescript/datasources/src/mappers/PluralizerMapper.test.ts#pluralizes-and-lowercases-the-table-name
+```typescript typescript/datasources/src/mappers/PluralizerMapper.test.ts#maps-contacts
+```
+
+```output [Map]
+contacts
+addresses
+```
+:::
+
+### Reverse map contacts
+
+::: example
+```csharp csharp/Datasources.Tests/PluralizerMapperTests.cs#ReverseMapsContacts
+```
+```rust rust/datasources/src/mappers/pluralizer_mapper.rs#reverse_maps_contacts
+```
+```typescript typescript/datasources/src/mappers/PluralizerMapper.test.ts#reverse-maps-contacts
+```
+
+```output [Reverse map]
+contact
+address
 ```
 :::

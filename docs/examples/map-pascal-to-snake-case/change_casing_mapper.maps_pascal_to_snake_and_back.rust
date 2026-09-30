@@ -1,1 +1,0 @@
-let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);

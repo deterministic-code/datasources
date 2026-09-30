@@ -1,0 +1,7 @@
+const contact: Contact = { name: "Ada", email: "ada@x.dev" };
+const mapper = new TransformMapper<Contact, ContactRow>(
+  (item) => ({ contactName: item.name, contactEmail: item.email }),
+  (row) => ({ name: row.contactName, email: row.contactEmail }),
+);
+const mapped = mapper.map(contact);
+const reversed = mapper.reverseMap(mapped);

@@ -1,4 +1,13 @@
 const mapper = new DictionaryMapper([
-  ["Key", "id"],
-  ["Login", "username"],
+  ["FirstName", "given_name"],
+  ["LastName", "family_name"],
+  ["Email", "email_address"],
 ]);
+const firstName = mapper.map("FirstName");
+const lastName = mapper.map("LastName");
+const email = mapper.map("Email");
+const phone = mapper.map("Phone");
+const fromFirst = mapper.reverseMap("given_name");
+const fromLast = mapper.reverseMap("family_name");
+const fromEmail = mapper.reverseMap("email_address");
+const fromPhone = mapper.reverseMap("Phone");

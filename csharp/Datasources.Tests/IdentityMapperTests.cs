@@ -8,7 +8,9 @@ public class IdentityMapperTests
     public void MapsAndReversesTheSameValue()
     {
         var mapper = new IdentityMapper<string>();
-        Assert.Equal("ada", mapper.Map("ada"));
-        Assert.Equal("ada", mapper.ReverseMap("ada"));
+        var mapped = mapper.Map("contact");
+        var reversed = mapper.ReverseMap("contact");
+        Assert.Equal("contact", mapped);
+        Assert.Equal("contact", reversed);
     }
 }

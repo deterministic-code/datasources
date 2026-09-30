@@ -1,5 +1,14 @@
 var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
 {
-    ["Key"] = "id",
-    ["Login"] = "username",
+    ["FirstName"] = "given_name",
+    ["LastName"] = "family_name",
+    ["Email"] = "email_address",
 });
+var firstName = mapper.Map("FirstName");
+var lastName = mapper.Map("LastName");
+var email = mapper.Map("Email");
+var phone = mapper.Map("Phone");
+var fromFirst = mapper.ReverseMap("given_name");
+var fromLast = mapper.ReverseMap("family_name");
+var fromEmail = mapper.ReverseMap("email_address");
+var fromPhone = mapper.ReverseMap("Phone");

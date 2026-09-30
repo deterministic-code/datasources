@@ -121,11 +121,21 @@ fn reverse_map(&self, value: T) -> T
 
 ### Map and reverse map
 
+{{Map|map|map}} and {{ReverseMap|reverseMap|reverse_map}} return the value unchanged.
+
 ::: example
 ```csharp csharp/Datasources.Tests/IdentityMapperTests.cs#MapsAndReversesTheSameValue
 ```
 ```rust rust/datasources/src/mappers/identity_mapper.rs#maps_and_reverses_the_same_value
 ```
 ```typescript typescript/datasources/src/mappers/IdentityMapper.test.ts#maps-and-reverses-the-same-value
+```
+
+```output [Map]
+contact
+```
+
+```output [Reverse map]
+contact
 ```
 :::

@@ -1,1 +1,3 @@
 let mapper = IdentityMapper::<String>::new();
+let mapped = mapper.map("contact".into());
+let reversed = mapper.reverse_map("contact".into());

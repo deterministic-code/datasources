@@ -1,4 +1,13 @@
 let mapper = DictionaryMapper::new([
-    ("Key".to_string(), "id".to_string()),
-    ("Login".to_string(), "username".to_string()),
+    ("FirstName".to_string(), "given_name".to_string()),
+    ("LastName".to_string(), "family_name".to_string()),
+    ("Email".to_string(), "email_address".to_string()),
 ]);
+let first_name = mapper.map("FirstName".into());
+let last_name = mapper.map("LastName".into());
+let email = mapper.map("Email".into());
+let phone = mapper.map("Phone".into());
+let from_first = mapper.reverse_map("given_name".into());
+let from_last = mapper.reverse_map("family_name".into());
+let from_email = mapper.reverse_map("email_address".into());
+let from_phone = mapper.reverse_map("Phone".into());

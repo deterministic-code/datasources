@@ -37,7 +37,9 @@ mod tests {
     #[test]
     fn maps_and_reverses_the_same_value() {
         let mapper = IdentityMapper::<String>::new();
-        assert_eq!(mapper.map("ada".into()), "ada");
-        assert_eq!(mapper.reverse_map("ada".into()), "ada");
+        let mapped = mapper.map("contact".into());
+        let reversed = mapper.reverse_map("contact".into());
+        assert_eq!(mapped, "contact");
+        assert_eq!(reversed, "contact");
     }
 }
