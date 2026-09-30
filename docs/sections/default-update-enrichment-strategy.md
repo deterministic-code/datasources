@@ -150,10 +150,10 @@ This is the update strategy [DefaultWriteEnrichmentStrategy](./default-write-enr
 ### Replace-sync children
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#UpdateReplaceSyncsChildren
+```csharp csharp/Datasources.Tests/CRUDRepositoryTests.cs#UpdateReplaceSyncsChildren
 ```
 ```rust rust/datasources/tests/enriched.rs#deep_update_replace_syncs_children
 ```
-```typescript typescript/datasources/src/EnrichedCRUDRepository.test.ts#update-replace-syncs-children
+```typescript typescript/datasources/src/CRUDRepository.test.ts#update-replace-syncs-children
 ```
 :::

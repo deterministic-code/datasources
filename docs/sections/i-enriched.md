@@ -91,10 +91,10 @@ Rust has no separate trait. {{AddEnriched|addEnriched|add_enriched}} is a method
 ### Register a fill
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#ReadFillsLookupSelectAndLeavesMissingDefault
+```csharp csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#ReadFillsLookupSelectAndLeavesMissingDefault
 ```
 ```rust rust/datasources/tests/enriched.rs#enriched_fills_lookup_select_and_leaves_missing_default
 ```
-```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#fills-lookup-select-and-leaves-missing-default
+```typescript typescript/datasources/src/ReadonlyRepository.test.ts#fills-lookup-select-and-leaves-missing-default
 ```
 :::

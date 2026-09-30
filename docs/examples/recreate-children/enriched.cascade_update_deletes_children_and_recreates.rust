@@ -1,62 +1,62 @@
 let connection = setup(&mut []).await;
-let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
     DefaultWriteEnrichmentStrategy::new(
         None,
         Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
         false,
     ),
 ));
-let mut children_repo = crud(connection.clone(), "Child");
-let notes = Arc::new(crud(connection, "Note"));
+let mut children_repo = mapped_crud(connection.clone(), "Child");
+let notes = Arc::new(mapped_crud(connection, "Note"));
 let parent = parents
-    .create(&mut record(&[("label", Value::from("p"))]))
+    .create(&mut record(&[("Label", Value::from("p"))]))
     .await
     .unwrap();
-assert!(num(&parent, "id") > 0);
-let parent_id = parent.get("id").unwrap().clone();
+assert!(num(&parent, "Id") > 0);
+let parent_id = parent.get("Id").unwrap().clone();
 let child = children_repo
     .create(&mut record(&[
-        ("parent_id", parent_id.clone()),
-        ("label", Value::from("a")),
+        ("ParentId", parent_id.clone()),
+        ("Label", Value::from("a")),
     ]))
     .await
     .unwrap();
-assert!(num(&child, "id") > 0);
+assert!(num(&child, "Id") > 0);
 let other = children_repo
-    .create(&mut record(&[("label", Value::from("other"))]))
+    .create(&mut record(&[("Label", Value::from("other"))]))
     .await
     .unwrap();
-assert!(num(&other, "id") > 0);
-let child_id = child.get("id").unwrap().clone();
+assert!(num(&other, "Id") > 0);
+let child_id = child.get("Id").unwrap().clone();
 let note = notes
     .create(&mut record(&[
-        ("child_id", child_id.clone()),
-        ("text", Value::from("n")),
+        ("ChildId", child_id.clone()),
+        ("Text", Value::from("n")),
     ]))
     .await
     .unwrap();
-assert!(num(&note, "id") > 0);
+assert!(num(&note, "Id") > 0);
 children_repo.add_enriched(
-    Enrichment::new("notes", "id", "child_id", None, true),
+    Enrichment::new("Notes", "Id", "ChildId", None, true),
     notes.clone(),
     None,
 );
 let children = Arc::new(children_repo);
 parents.add_enriched(
-    Enrichment::new("children", "id", "parent_id", None, true),
+    Enrichment::new("Children", "Id", "ParentId", None, true),
     children.clone(),
     None,
 );
 let updated = parents
     .update(
         &record(&[
-            ("id", parent_id.clone()),
-            ("label", Value::from("p")),
+            ("Id", parent_id.clone()),
+            ("Label", Value::from("p")),
             (
-                "children",
+                "Children",
                 encode_rows(&[record(&[
-                    ("id", child_id.clone()),
-                    ("label", Value::from("fresh")),
+                    ("Id", child_id.clone()),
+                    ("Label", Value::from("fresh")),
                 ])]),
             ),
         ]),

@@ -1,0 +1,3 @@
+var connection = await Setup();
+var childrenRepo = Open<Child>(connection);
+var parent = await parentsRepo.Create(new Parent());

@@ -111,10 +111,10 @@ Pass it as the strategy on [IEnriched](./i-enriched.md). Linked fills stay on [D
 ### Fill with one query
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#HashsetFillsLookupSelectAndLeavesMissingDefault
+```csharp csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#HashsetFillsLookupSelectAndLeavesMissingDefault
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#fills_roles_with_a_hashset
 ```
-```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#hashset-fills-lookup-select-and-leaves-missing-default
+```typescript typescript/datasources/src/ReadonlyRepository.test.ts#hashset-fills-lookup-select-and-leaves-missing-default
 ```
 :::

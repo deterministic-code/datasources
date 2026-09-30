@@ -23,6 +23,9 @@ describe("MockConnection", () => {
     const customTxn = new MockTransaction(connection);
     const withTxn = new MockConnection(customTxn);
     expect(withTxn.transaction).toBe(customTxn);
+    const opened = new MockConnection();
+    await opened.open();
+    await expect(opened.open()).rejects.toThrow("already open");
   });
 
   it("creates a command when none is assigned", () => {

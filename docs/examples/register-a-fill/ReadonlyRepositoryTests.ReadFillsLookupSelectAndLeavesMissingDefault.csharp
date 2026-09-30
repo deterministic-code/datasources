@@ -5,10 +5,7 @@ await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gon
 var connection = await Setup(
     new Row { ["type_id"] = person["id"] },
     new Row { ["type_id"] = gone["id"] });
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
-parentsRepo.AddEnriched(
-    new("type_name", "type_id", "id", "name"),
-    typesRepo,
-    new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
+var parentsRepo = Open<Parent>(connection);
+var typesRepo = Open<UserType>(typesConnection);
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var items = await parentsRepo.Read().ToListAsync();

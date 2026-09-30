@@ -1,0 +1,5 @@
+var connection = await Setup();
+var parentsRepo = Open<Parent>(connection);
+var childrenRepo = Open<Child>(connection);
+var notesRepo = Open<Note>(connection);
+var parent = await parentsRepo.Create(new Parent());

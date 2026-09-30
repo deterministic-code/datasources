@@ -40,7 +40,8 @@ const renameToken = (text: string, name: string, alias: string): string => {
   while (text.indexOf(token, index) >= 0) {
     const at = text.indexOf(token, index);
     const end = at + token.length;
-    const boundary = end >= text.length || !/[0-9A-Za-z_]/.test(text[end] ?? "");
+    const nextChar = text[end];
+    const boundary = nextChar === undefined || !/[0-9A-Za-z_]/.test(nextChar);
     result += text.slice(index, at) + (boundary ? next : token);
     index = end;
   }

@@ -62,13 +62,13 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     }
 
     public virtual IAsyncEnumerable<T> Read(IWhere where) =>
-        Read(Compiled(Stored(where)));
+        Read(Compiled(statementMappings.Apply(where, (name, cell) => Cell(name, cell, false)) ?? where));
 
     public virtual Task<T?> ReadSingle(IWhere where) =>
-        ReadSingle(Compiled(Stored(where)));
+        ReadSingle(Compiled(statementMappings.Apply(where, (name, cell) => Cell(name, cell, false)) ?? where));
 
     public virtual IAsyncEnumerable<T> Read(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
-        Items(ReadTracked(Mapped(query), parameters));
+        Items(ReadTracked(statementMappings.Apply(query, (name, cell) => Cell(name, cell, false)), parameters));
 
     public virtual async Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
         await Read(query, parameters).FirstOrDefaultAsync() ?? default;
@@ -99,25 +99,20 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         objectConverter is MetaDataRowTypeConverter<T> typed && typed.Fields.TryGetValue(property, out var field) ? field
         : null;
 
-    private IWhere Stored(IWhere where, bool fieldsApplied = false) =>
-        statementMappings.Apply(where, (name, cell) => Cell(name, cell, fieldsApplied)) ?? where;
-
-    private IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
-        ReadTracked(Compiled(Stored(where)));
-
     private IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(
         IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
         Apply(ReadItems(query, parameters ?? (query as ISelectStatement)?.Where?.Parameters));
-
-    private IStatement? Mapped(IStatement? query) =>
-        statementMappings.Apply(query, (name, cell) => Cell(name, cell, false));
 
     private IAsyncEnumerable<(T Item, Row? Source)> Apply(IAsyncEnumerable<(T Item, Row? Source)> pairs) =>
         Enriched ? Sourced(pairs) : pairs;
 
     private async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
-        var reader = await Command().ExecuteReader(query ?? Own(Statements.Select()), parameters);
+        var reader = await Command().ExecuteReader(
+            query ?? (Statements.Select() is SelectStatement typed
+                ? statementMappings.Apply(typed, (name, cell) => Cell(name, cell, false))!
+                : Statements.Select()),
+            parameters);
         try
         {
             while (await reader.Next())
@@ -167,14 +162,9 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
             yield return item;
     }
 
-    private IStatement Own(ISelectStatement select) =>
-        select is SelectStatement typed ? Mapped(typed)! : select;
-
     private ISelectStatement Compiled(IWhere where) =>
         statements is { } sql ? sql.Select(where) : new SelectStatement(where.GetText(), where);
 
     private Row Renamed(Row row) =>
-        new(row.Select(pair => KeyValuePair.Create(Property(pair.Key), pair.Value)));
-
-    private string Property(string key) => statementMappings.Property(key);
+        new(row.Select(pair => KeyValuePair.Create(statementMappings.Property(pair.Key), pair.Value)));
 }

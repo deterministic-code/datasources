@@ -2,17 +2,22 @@ use super::statement::Statement;
 use super::text::Text;
 use crate::i_where::IWhere;
 use crate::parameter::Parameter;
+use crate::where_text::boxed;
 use std::collections::HashMap;
 
 pub struct UpdateStatement {
-    text: String,
+    text: Option<String>,
+    table: Option<String>,
+    fields: Vec<Parameter>,
     where_clause: Option<Box<dyn IWhere>>,
 }
 
 impl UpdateStatement {
     pub fn text(text: impl Into<String>, where_clause: Option<Box<dyn IWhere>>) -> Self {
         Self {
-            text: text.into(),
+            text: Some(text.into()),
+            table: None,
+            fields: Vec::new(),
             where_clause,
         }
     }
@@ -29,26 +34,31 @@ impl UpdateStatement {
         fields: &[Parameter],
         where_clause: Option<&dyn IWhere>,
     ) -> Self {
-        let sql = format!(
-            "UPDATE {} SET {}",
-            table.as_ref(),
-            fields
-                .iter()
-                .map(|field| format!("{} = ${}", field.name, field.name))
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
-        let (text, _) = compose(&sql, where_clause, fields);
         Self {
-            text,
-            where_clause: where_clause.map(|predicate| {
-                Box::new(crate::where_text::WhereText::new(predicate.get_text())) as Box<dyn IWhere>
-            }),
+            text: None,
+            table: Some(table.as_ref().to_string()),
+            fields: fields.to_vec(),
+            where_clause: boxed(where_clause),
         }
+    }
+
+    pub fn table(&self) -> Option<&str> {
+        self.table.as_deref()
+    }
+
+    pub fn fields(&self) -> &[Parameter] {
+        &self.fields
     }
 
     pub fn where_clause(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
+    }
+
+    pub fn parameters(&self) -> Vec<Parameter> {
+        match self.table {
+            Some(_) => compose("", self.where_clause.as_deref(), &self.fields).1,
+            None => Vec::new(),
+        }
     }
 }
 
@@ -105,7 +115,18 @@ fn rename(text: &str, name: &str, alias: &str) -> String {
 
 impl Text for UpdateStatement {
     fn get_text(&self) -> String {
-        self.text.clone()
+        let Some(table) = &self.table else {
+            return self.text.clone().unwrap_or_default();
+        };
+        let sql = format!(
+            "UPDATE {table} SET {}",
+            self.fields
+                .iter()
+                .map(|field| format!("{} = ${}", field.name, field.name))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        compose(&sql, self.where_clause.as_deref(), &self.fields).0
     }
 }
 

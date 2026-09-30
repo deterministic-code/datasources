@@ -9,8 +9,8 @@ pub struct BuiltRepository {
     pub connection: Arc<dyn Connection>,
     pub row_converter: Option<RowTypeConverter>,
     pub object_converter: Box<dyn TypeConverter<Row, Row> + Send + Sync>,
-    pub property_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
-    pub entity_mapper: Box<dyn Mapper<String, String> + Send + Sync>,
+    pub property_mappings: Arc<dyn Mapper<String, String> + Send + Sync>,
+    pub entity_mapper: Arc<dyn Mapper<String, String> + Send + Sync>,
     pub statements: ReadonlyRepositoryStatements,
     pub ids: Vec<String>,
 }

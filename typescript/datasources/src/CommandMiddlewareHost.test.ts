@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 import { CommandMiddlewareHost } from "./index.ts";
 
 describe("CommandMiddlewareHost", () => {
+  it("base execute methods require a driver", () => {
+    const host = new CommandMiddlewareHost();
+    expect(() => host.execute("SELECT id FROM users")).toThrow("executeNative");
+    expect(() => host.execute("  ")).toThrow("executeNative");
+    expect(() => host.executeReader("SELECT id FROM users")).toThrow("executeReaderNative");
+    expect(() => host.executeReader("")).toThrow("executeReaderNative");
+  });
+
   it("rewrites the text and runs afterCommand", async () => {
     const host = new CommandMiddlewareHost();
     const seen: string[] = [];

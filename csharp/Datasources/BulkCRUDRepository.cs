@@ -87,26 +87,25 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 
     BulkCommand Insert(T item)
     {
-        var fields = Fields(Reverse(item), col => !Ids.Contains(col));
-        return new(Writes.Insert(fields).GetText(), fields);
+        var statement = Writes.Insert(Fields(Reverse(item), col => !Ids.Contains(col)));
+        return new(statement.GetText(), statement.Fields);
     }
 
     BulkCommand UpdateCommand(T item, IWhere? byWhere)
     {
         var record = Reverse(item);
-        var where = byWhere is null ? Map(IdWhere(record), fieldsApplied: true) : Map(byWhere, fieldsApplied: false);
         var fields = Fields(record, col => !Ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
-        return new(Writes.Update(fields, where).GetText(), UpdateStatement.ParameterList(fields, where));
+        var statement = Writes.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
+        return new(statement.GetText(), statement.Parameters);
     }
 
     BulkCommand DeleteCommand(T item, IWhere? byWhere)
     {
         var record = Reverse(item);
-        var where = byWhere is null ? Map(IdWhere(record), fieldsApplied: true) : Map(byWhere, fieldsApplied: false);
-        var statement = Writes.Delete(where);
-        var parameters = where.Parameters is { Count: > 0 } listed
+        var statement = Writes.Delete(byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
+        var parameters = statement.Where?.Parameters is { Count: > 0 } listed
             ? listed
             : statement.GetText().Contains('$') ? Fields(record, _ => true) : [];
         return new(statement.GetText(), parameters);
@@ -133,12 +132,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
     IReadOnlyList<Parameter> Fields(Row record, Func<string, bool> include) =>
         [.. record.Where(pair => include(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)
             .OrderBy(pair => pair.Key)
-            .Select(pair => new Parameter(Column(pair.Key), Cell(pair.Key, pair.Value, fieldsApplied: true)))];
-
-    IWhere Map(IWhere where, bool fieldsApplied) =>
-        where is Where clause
-            ? clause.Map(Column, (name, cell) => Cell(name, cell, fieldsApplied))
-            : where;
+            .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
     IWhere IdWhere(Row record) =>
         new Where(Ids.Select(col =>

@@ -6,7 +6,7 @@ import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
 import { Literal } from "./statements/Literal.ts";
-import { Operator, UpdateStatement, Where } from "./statements/index.ts";
+import { Operator, Where } from "./statements/index.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -33,14 +33,13 @@ type Props = Record<string, Scalar | object>;
 const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
-  column: (property: string) => string,
   cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
   enrichmentInto: (name: string) => boolean,
 ): Field[] =>
   Object.entries(record)
     .filter(([key, value]) => include(key) && !enrichmentInto(key) && value !== null && value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([name, value]) => ({ name: column(name), value: cell(name, value, true) as Scalar }));
+    .map(([name, value]) => ({ name, value: cell(name, value, true) as Scalar }));
 
 const isCells = (id: Scalar | Cells): id is Cells => typeof id === "object" && id !== null;
 
@@ -182,11 +181,11 @@ export class CRUDRepository<T = Cells>
     const fields = fieldsOf(
       this.reverseConvert(item),
       (col) => !this.ids.includes(col),
-      this.column,
       this.cell,
       this.enrichmentInto,
     );
-    const response = await execute(this.command(), writesOf(this.statements!).insert(fields), fields);
+    const statement = writesOf(this.statements!).insert(fields);
+    const response = await execute(this.command(), statement, statement.fields);
     if (this.ids.length === 1) await this.copyInsertedId(item, fields);
     return response;
   };
@@ -194,8 +193,8 @@ export class CRUDRepository<T = Cells>
   private copyInsertedId = async (target: T, fields: Field[]): Promise<void> => {
     void fields;
     const column = this.ids[0]!;
-    const sqlColumn = this.column(column);
-    const statement = writesOf(this.statements!).selectInsertedId(sqlColumn);
+    const statement = writesOf(this.statements!).selectInsertedId(column);
+    const sqlColumn = statement.column;
     const reader = await executeReader(this.command(), statement);
     try {
       if (!(await reader.next())) return;
@@ -219,29 +218,30 @@ export class CRUDRepository<T = Cells>
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
-    const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
-    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell, this.enrichmentInto);
+    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.cell, this.enrichmentInto);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    return execute(this.command(), writesOf(this.statements!).update(fields, where), UpdateStatement.parameterList(fields, where));
+    const statement = writesOf(this.statements!).update(
+      fields,
+      byWhere ?? this.idWhere(record),
+      (name, value) => this.cell(name, value, byWhere === undefined),
+    );
+    return execute(this.command(), statement, statement.parameters);
   };
 
   private remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
-    const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
-    const statement = writesOf(this.statements!).delete(where);
-    const listed = where.parameters ?? [];
+    const statement = writesOf(this.statements!).delete(
+      byWhere ?? this.idWhere(record),
+      (name, value) => this.cell(name, value, byWhere === undefined),
+    );
+    const listed = statement.where?.parameters ?? [];
     const parameters = listed.length
       ? listed
       : statement.getText().includes("$")
-        ? fieldsOf(record, () => true, this.column, this.cell, this.enrichmentInto)
+        ? fieldsOf(record, () => true, this.cell, this.enrichmentInto)
         : [];
     return execute(this.command(), statement, parameters);
   };
-
-  private mapped = (where: IWhere, fieldsApplied: boolean): IWhere =>
-    where instanceof Where
-      ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied))
-      : where;
 
   private byId = (id: Scalar | Cells): IWhere => {
     if (this.ids.length === 0) throw new DatasourceError("ReadSingleById requires an Id column");

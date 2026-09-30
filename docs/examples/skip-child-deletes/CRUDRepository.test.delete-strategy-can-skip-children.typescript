@@ -1,0 +1,4 @@
+const connection = await setup();
+const childrenRepo = repo(Child, connection);
+const parentsRepo = repo(Parent, connection, new DefaultWriteEnrichmentStrategy(new SkipDelete()));
+const parent = await parentsRepo.create(new Parent());

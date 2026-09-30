@@ -3,16 +3,22 @@ import type { Constructable } from "./converters/Constructable.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
+import type { IMapper } from "./mappers/IMapper.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
 
 export class ReadonlyRepositoryBuilder<T = object> {
+  protected entityMapper: IMapper<string, string> = new IdentityMapper();
+  protected propertyMapper: IMapper<string, string> = new IdentityMapper();
+
   parts = (connection: IConnection, options: ReadonlyRepositoryOptions<T>): BuiltRepository<T> => {
     const rowConverter = options.rowConverter;
     const objectConverter = options.objectConverter ?? new MetaDataRowTypeConverter<T>();
     const entityMapper = options.entityMapper ?? new IdentityMapper<string>();
     const propertyMappings = options.propertyMappings ?? new IdentityMapper<string>();
+    this.entityMapper = entityMapper;
+    this.propertyMapper = propertyMappings;
     const entity = entityMapper.map(options.entity ?? options.type?.name ?? "");
     const names = options.readProperties ?? (options.type ? fieldNamesOf(options.type) : []);
     if (objectConverter instanceof MetaDataRowTypeConverter && options.type) {

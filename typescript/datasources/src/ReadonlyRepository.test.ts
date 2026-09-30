@@ -6,52 +6,57 @@ import { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStra
 import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
+import { ChangeCasingMapper } from "./mappers/ChangeCasingMapper.ts";
 import { DictionaryMapper } from "./mappers/DictionaryMapper.ts";
+import type { IMapper } from "./mappers/IMapper.ts";
+import { TransformMapper } from "./mappers/TransformMapper.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { Operator, Where } from "./statements/index.ts";
 import { WhereText } from "./statements/WhereText.ts";
 
-class Parent {
-  id = 0;
-  type_id = 0;
-  type_name = "";
-  type?: TypeRow;
-  children: Child[] = [];
-  child?: Child | string;
-}
-
-class TypeRow {
-  id = 0;
-  name = "";
+class UserType {
+  Id = 0;
+  Name = "";
 }
 
 class Child {
-  parent_id = 0;
-  type_id = 0;
-  label = "";
-  type_name = "";
+  Id = 0;
+  ParentId = 0;
+  Type = new UserType();
+  TypeName = "";
+  Label = "";
+}
+
+class Parent {
+  Id = 0;
+  Type = new UserType();
+  TypeName = "";
+  Children: Child[] = [];
+  Child?: Child | string;
 }
 
 class View {
   UserType = "";
 }
 
-class Sparse {
-  type_id: number | null = null;
-  type_name = "";
-  id?: number;
-  children?: Child[];
-}
-
-class OptionalType {
-  id = 0;
-  type_id?: number;
-  type_name = "";
-  children: Child[] = [];
-}
-
 type Seed = Record<string, Scalar>;
+
+const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
+const references = new DictionaryMapper<string>([["Type", "type_id"]]);
+const columns: IMapper<string, string> = new TransformMapper(
+  (name) => {
+    const mapped = references.map(name);
+    return mapped !== name ? mapped : snake.map(name);
+  },
+  (name) => {
+    const from = references.reverseMap(name);
+    return from !== name ? from : snake.reverseMap(name);
+  },
+);
+
+const repo = <T>(type: new () => T, connection: IConnection) =>
+  new ReadonlyRepository(connection, { type, propertyMappings: columns });
 
 const setup = async (rows: Seed[] = []): Promise<IConnection> => {
   const connection = new MemoryDriver().connection();
@@ -74,11 +79,11 @@ describe("ReadonlyRepository", () => {
     const first: Seed = {};
     const second: Seed = {};
     const connection = await setup([first, second]);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const byClause = await collectAsync(parentsRepo.read(new Where(new Operator.Equals("id", first.id))));
+    const parentsRepo = repo(Parent, connection);
+    const byClause = await collectAsync(parentsRepo.read(new Where(new Operator.Equals("Id", first.id))));
     const byWhere = await collectAsync(parentsRepo.read(new WhereText(JSON.stringify({ id: first.id }))));
-    expect(byClause.map((item) => item.id)).toEqual([first.id]);
-    expect(byWhere.map((item) => item.id)).toEqual([first.id]);
+    expect(byClause.map((item) => item.Id)).toEqual([first.id]);
+    expect(byWhere.map((item) => item.Id)).toEqual([first.id]);
   });
 
   it("fills lookup select and leaves missing default", async () => {
@@ -87,12 +92,12 @@ describe("ReadonlyRepository", () => {
     const typesConnection = await setup([person, gone]);
     await remove(typesConnection, gone);
     const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
+    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
     const items = await collectAsync(parentsRepo.read());
-    expect(items[0]?.type_name).toBe("person");
-    expect(items[1]?.type_name).toBe("");
+    expect(items[0]?.TypeName).toBe("person");
+    expect(items[1]?.TypeName).toBe("");
   });
 
   it("hashset fills lookup select and leaves missing default", async () => {
@@ -101,16 +106,16 @@ describe("ReadonlyRepository", () => {
     const typesConnection = await setup([person, gone]);
     await remove(typesConnection, gone);
     const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
     parentsRepo.addEnriched(
-      { into: "type_name", from: "type_id", by: "id", select: "name" },
+      { into: "TypeName", from: "Type", by: "Id", select: "Name" },
       typesRepo,
       new HashsetOptimizedReadonlyEnrichmentStrategy(),
     );
     const items = await collectAsync(parentsRepo.read());
-    expect(items[0]?.type_name).toBe("person");
-    expect(items[1]?.type_name).toBe("");
+    expect(items[0]?.TypeName).toBe("person");
+    expect(items[1]?.TypeName).toBe("");
   });
 
   it("fills lists and readSingle is enriched", async () => {
@@ -120,19 +125,19 @@ describe("ReadonlyRepository", () => {
     const other: Seed = { type_id: org.id };
     const connection = await setup([parent, other]);
     await remove(connection, other);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
     const childrenConnection = await setup([
       { parent_id: parent.id, label: "a" },
       { parent_id: parent.id, label: "b" },
       { parent_id: other.id, label: "x" },
     ]);
-    const childrenRepo = new ReadonlyRepository(Child, childrenConnection);
-    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
-    parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
+    const childrenRepo = repo(Child, childrenConnection);
+    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
+    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
     const item = await parentsRepo.readSingle();
-    expect(item?.type_name).toBe("org");
-    expect(item?.children.map((child) => child.label)).toEqual(["a", "b"]);
+    expect(item?.TypeName).toBe("org");
+    expect(item?.Children.map((child) => child.Label)).toEqual(["a", "b"]);
   });
 
   it("hashset fills lists and readSingle is enriched", async () => {
@@ -142,20 +147,20 @@ describe("ReadonlyRepository", () => {
     const other: Seed = { type_id: org.id };
     const connection = await setup([parent, other]);
     await remove(connection, other);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
     const childrenConnection = await setup([
       { parent_id: parent.id, label: "a" },
       { parent_id: parent.id, label: "b" },
       { parent_id: other.id, label: "x" },
     ]);
-    const childrenRepo = new ReadonlyRepository(Child, childrenConnection);
+    const childrenRepo = repo(Child, childrenConnection);
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo, strategy);
-    parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo, strategy);
+    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo, strategy);
+    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo, strategy);
     const item = await parentsRepo.readSingle();
-    expect(item?.type_name).toBe("org");
-    expect(item?.children.map((child) => child.label)).toEqual(["a", "b"]);
+    expect(item?.TypeName).toBe("org");
+    expect(item?.Children.map((child) => child.Label)).toEqual(["a", "b"]);
   });
 
   it("nests list lookup and keeps root sibling", async () => {
@@ -167,21 +172,21 @@ describe("ReadonlyRepository", () => {
     await remove(childTypesConnection, gone);
     const parent: Seed = { type_id: org.id };
     const connection = await setup([parent]);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-    const childTypesRepo = new ReadonlyRepository(TypeRow, childTypesConnection);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
+    const childTypesRepo = repo(UserType, childTypesConnection);
     const childrenConnection = await setup([
       { parent_id: parent.id, type_id: home.id, label: "a" },
       { parent_id: parent.id, type_id: gone.id, label: "b" },
     ]);
-    const childrenRepo = new ReadonlyRepository(Child, childrenConnection);
-    childrenRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, childTypesRepo);
-    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
-    parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
+    const childrenRepo = repo(Child, childrenConnection);
+    childrenRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, childTypesRepo);
+    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
+    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
     const item = await parentsRepo.readSingle();
-    expect(item?.type_name).toBe("org");
-    expect(item?.children[0]?.type_name).toBe("home");
-    expect(item?.children[1]?.type_name).toBe("");
+    expect(item?.TypeName).toBe("org");
+    expect(item?.Children[0]?.TypeName).toBe("home");
+    expect(item?.Children[1]?.TypeName).toBe("");
   });
 
   it("hashset nests list lookup and keeps root sibling", async () => {
@@ -193,38 +198,39 @@ describe("ReadonlyRepository", () => {
     await remove(childTypesConnection, gone);
     const parent: Seed = { type_id: org.id };
     const connection = await setup([parent]);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-    const childTypesRepo = new ReadonlyRepository(TypeRow, childTypesConnection);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
+    const childTypesRepo = repo(UserType, childTypesConnection);
     const childrenConnection = await setup([
       { parent_id: parent.id, type_id: home.id, label: "a" },
       { parent_id: parent.id, type_id: gone.id, label: "b" },
     ]);
-    const childrenRepo = new ReadonlyRepository(Child, childrenConnection);
+    const childrenRepo = repo(Child, childrenConnection);
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-    childrenRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, childTypesRepo);
-    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo, strategy);
-    parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo, strategy);
+    childrenRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, childTypesRepo);
+    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo, strategy);
+    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo, strategy);
     const item = await parentsRepo.readSingle();
-    expect(item?.type_name).toBe("org");
-    expect(item?.children[0]?.type_name).toBe("home");
-    expect(item?.children[1]?.type_name).toBe("");
+    expect(item?.TypeName).toBe("org");
+    expect(item?.Children[0]?.TypeName).toBe("home");
+    expect(item?.Children[1]?.TypeName).toBe("");
   });
 
   it("skips missing enrichment keys", async () => {
-    const connection = await setup([{ type_id: null, type_name: "" }, { type_name: "" }]);
-    const parentsRepo = new ReadonlyRepository(Sparse, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, await setup([{ name: "person" }]));
-    const childrenRepo = new ReadonlyRepository(Child, await setup([{ label: "a" }]));
-    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
-    parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
+    const connection = await setup([{ type_id: -1 }, { type_id: -1 }]);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, await setup([{ name: "person" }]));
+    const childrenRepo = repo(Child, await setup([{ label: "a" }]));
+    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
+    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
     const items = await collectAsync(parentsRepo.read());
-    expect(items[0]?.type_name).toBe("");
-    expect(items[1]?.children).toBeUndefined();
+    expect(items[0]?.TypeName).toBe("");
+    expect(items[1]?.TypeName).toBe("");
+    expect(items[1]?.Children).toEqual([]);
   });
 
   it("readSingle is undefined when empty", async () => {
-    const parentsRepo = new ReadonlyRepository(Parent, await setup());
+    const parentsRepo = repo(Parent, await setup());
     expect(await parentsRepo.readSingle()).toBeUndefined();
   });
 
@@ -232,26 +238,26 @@ describe("ReadonlyRepository", () => {
     const kept: Seed = { child: "skip" };
     const nested: Seed = {};
     const connection = await setup([kept, nested]);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
+    const parentsRepo = repo(Parent, connection);
     const home: Seed = { name: "home" };
-    const childTypesRepo = new ReadonlyRepository(TypeRow, await setup([home]));
-    const childrenRepo = new ReadonlyRepository(Child, await setup([
+    const childTypesRepo = repo(UserType, await setup([home]));
+    const childrenRepo = repo(Child, await setup([
       { parent_id: nested.id, type_id: home.id, label: "only" },
     ]));
-    childrenRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, childTypesRepo);
-    parentsRepo.addEnriched({ into: "child", from: "id", by: "parent_id" }, childrenRepo);
+    childrenRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, childTypesRepo);
+    parentsRepo.addEnriched({ into: "Child", from: "Id", by: "ParentId" }, childrenRepo);
     const items = await collectAsync(parentsRepo.read());
-    expect(items[0]?.child).toBe("skip");
-    expect(items[1]?.child && typeof items[1].child === "object" ? items[1].child.type_name : undefined).toBe("home");
+    expect(items[0]?.Child).toBe("skip");
+    expect(items[1]?.Child && typeof items[1].Child === "object" ? items[1].Child.TypeName : undefined).toBe("home");
   });
 
   it("throws when an enrichment key is an object", async () => {
-    const typesRepo = new ReadonlyRepository(TypeRow, await setup());
+    const typesRepo = repo(UserType, await setup());
     await expect(
       new DefaultReadonlyEnrichmentStrategy<Parent>().apply(
         typesRepo,
-        { into: "type_name", from: "type_id", by: "id", select: "name" },
-        [Object.assign(new Parent(), { id: 1, type_id: { x: 1 } })],
+        { into: "TypeName", from: "Type", by: "Id", select: "Name" },
+        [Object.assign(new Parent(), { Id: 1 })],
       ),
     ).rejects.toThrow(/scalar/);
   });
@@ -260,71 +266,71 @@ describe("ReadonlyRepository", () => {
     const person: Seed = { name: "person" };
     const typesConnection = await setup([person]);
     const connection = await setup([{ type_id: person.id }]);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
     parentsRepo.addEnriched(
-      { into: "type", from: "type_id", by: "id" },
+      { into: "Type", from: "Type", by: "Id" },
       typesRepo,
       new HashsetOptimizedReadonlyEnrichmentStrategy(),
     );
     const items = await collectAsync(parentsRepo.read());
-    expect(items[0]?.type).toMatchObject({ name: "person" });
+    expect(items[0]?.Type).toMatchObject({ Name: "person" });
   });
 
   it("hashset skips missing keys and unmatched rows", async () => {
     const person: Seed = { name: "person" };
     const typesConnection = await setup([person]);
-    const gone: Seed = { name: "gone" };
-    await setup([gone]);
     const matched: Seed = { type_id: person.id };
-    const missing: Seed = { type_id: gone.id };
-    const blank: Seed = {};
+    const missing: Seed = { type_id: Number(person.id) + 1 };
+    const blank: Seed = { type_id: -1 };
     const connection = await setup([matched, missing, blank]);
-    const parentsRepo = new ReadonlyRepository(OptionalType, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
     const childrenConnection = await setup([
       { label: "orphan" },
       { parent_id: matched.id, label: "a" },
       { parent_id: matched.id, label: "b" },
     ]);
-    const childrenRepo = new ReadonlyRepository(Child, childrenConnection);
-    const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<OptionalType>();
-    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo, strategy);
-    parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo, strategy);
+    const childrenRepo = repo(Child, childrenConnection);
+    const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
+    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo, strategy);
+    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo, strategy);
     const items = await collectAsync(parentsRepo.read());
-    expect(items[0]?.type_name).toBe("person");
-    expect(items[0]?.children.map((child) => child.label)).toEqual(["a", "b"]);
-    expect(items[1]?.type_name).toBe("");
-    expect(items[1]?.children).toEqual([]);
-    expect(items[2]?.children).toEqual([]);
+    expect(items[0]?.TypeName).toBe("person");
+    expect(items[0]?.Children.map((child) => child.Label)).toEqual(["a", "b"]);
+    expect(items[1]?.TypeName).toBe("");
+    expect(items[1]?.Children).toEqual([]);
+    expect(items[2]?.Children).toEqual([]);
     expect(new RepositoryTreeNode({}, "").value).toEqual({});
   });
 
   it("collapses join rows", async () => {
-    const person: Seed = { type_name: "person" };
-    const org: Seed = { type_name: "org" };
+    const person: Seed = { TypeName: "person" };
+    const org: Seed = { TypeName: "org" };
     const connection = await setup([person, org]);
+    person.Id = person.id;
+    org.Id = org.id;
     const parents: object[] = [];
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
+    const parentsRepo = repo(Parent, connection);
     await new NestedToObjectEnrichmentStrategy<Parent>({
-      key: "id",
-      fields: { id: "id", type_name: "type_name" },
-    }).apply(parentsRepo, { into: "type_name", from: "id", by: "id" }, parents, [person, org]);
+      key: "Id",
+      fields: { Id: "Id", TypeName: "TypeName" },
+    }).apply(parentsRepo, { into: "TypeName", from: "Id", by: "Id" }, parents, [person, org]);
     const items = parents as Parent[];
-    expect(items.map((item) => item.id)).toEqual([person.id, org.id]);
-    expect(items.map((item) => item.type_name)).toEqual(["person", "org"]);
+    expect(items.map((item) => item.Id)).toEqual([person.id, org.id]);
+    expect(items.map((item) => item.TypeName)).toEqual(["person", "org"]);
   });
 
   it("lookup key comes from renamed row", async () => {
     const admin: Seed = { name: "admin" };
     const typesConnection = await setup([admin]);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+    const typesRepo = repo(UserType, typesConnection);
     const usersConnection = await setup([{ user_type_id: admin.id }]);
     const usersRepo = new ReadonlyRepository(usersConnection, {
       type: View,
       propertyMappings: new DictionaryMapper([["UserType", "user_type_id"]]),
     });
-    usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "id", select: "name" }, typesRepo);
+    usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
     const item = await usersRepo.readSingle();
     expect(item?.UserType).toBe("admin");
   });
@@ -333,15 +339,16 @@ describe("ReadonlyRepository", () => {
     const person: Seed = { name: "person" };
     const typesConnection = await setup([person]);
     const connection = await setup([{ type_id: person.id }]);
-    const parentsRepo = new ReadonlyRepository(Parent, connection);
-    const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-    parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
+    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
     const items = await collectAsync(parentsRepo.read());
-    expect(items[0]?.type_name).toBe("person");
+    expect(items[0]?.TypeName).toBe("person");
     await new DefaultReadonlyEnrichmentStrategy<Parent>().apply(
       typesRepo,
-      { into: "type_name", from: "type_id", by: "id", select: "name" },
+      { into: "TypeName", from: "Type", by: "Id", select: "Name" },
       items,
+      [{ Type: person.id }],
     );
   });
 });

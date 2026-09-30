@@ -1,5 +1,16 @@
 use crate::i_where::IWhere;
 use crate::statements::text::Text;
+use crate::Where;
+
+pub(crate) fn boxed(where_clause: Option<&dyn IWhere>) -> Option<Box<dyn IWhere>> {
+    match where_clause {
+        None => None,
+        Some(predicate) => match predicate.as_any().downcast_ref::<Where>() {
+            Some(clause) => Some(Box::new(clause.clone())),
+            None => Some(Box::new(WhereText::new(predicate.get_text()))),
+        },
+    }
+}
 
 pub struct WhereText {
     text: String,

@@ -47,6 +47,12 @@ describe("DatasourceFactory", () => {
     expect(ds.provider).toBe("sqlite");
   });
 
+  it("skips a repeated installed provider", () => {
+    expect(() => DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "nope,nope" })).toThrow(
+      ProviderNotInstalledError,
+    );
+  });
+
   it("missing provider throws", () => {
     expect(() => DatasourceFactory.create({ PROVIDER: "missing" })).toThrow(
       ProviderNotInstalledError,

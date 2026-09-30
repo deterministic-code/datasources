@@ -6,7 +6,7 @@ public sealed class CRUDRepositoryBuilder<T> : ReadonlyRepositoryBuilder<T> wher
         options is CRUDRepositoryOptions<T> crud ? crud.Ids : [];
 
     protected override ReadonlyRepositoryStatements Statements(string table, IReadOnlyList<string> columns) =>
-        new CRUDRepositoryStatements(table, columns);
+        new CRUDRepositoryStatements(table, columns, EntityMappers, PropertyMappers);
 
     public CRUDRepository<T> Build(IConnection connection, CRUDRepositoryOptions<T> options) =>
         new(connection, options);

@@ -1,0 +1,9 @@
+const person: Seed = { name: "person" };
+const gone: Seed = { name: "gone" };
+const typesConnection = await setup([person, gone]);
+await remove(typesConnection, gone);
+const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
+const parentsRepo = repo(Parent, connection);
+const typesRepo = repo(UserType, typesConnection);
+parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
+const items = await collectAsync(parentsRepo.read());

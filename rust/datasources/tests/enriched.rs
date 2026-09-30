@@ -24,9 +24,11 @@ async fn setup(rows: &mut [Row]) -> Arc<dyn Connection> {
     connection
 }
 
-fn crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository {
+fn mapped_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
+    options.ids = vec!["Id".into()];
+    options.property_mappings = Box::new(columns());
     CRUDRepository::new(connection, options).unwrap()
 }
 
@@ -38,9 +40,35 @@ fn create_lookup_repo(connection: Arc<dyn Connection>, entity: &str) -> Readonly
     ReadonlyRepository::new(connection, options).unwrap()
 }
 
-fn readonly(connection: Arc<dyn Connection>, entity: &str) -> ReadonlyRepository {
+fn columns() -> TransformMapper<String, String> {
+    TransformMapper::new(
+        |name: String| {
+            let references = DictionaryMapper::new([("Type".to_string(), "type_id".to_string())]);
+            let snake = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+            let mapped = references.map(name.clone());
+            if mapped != name {
+                mapped
+            } else {
+                snake.map(name)
+            }
+        },
+        |name: String| {
+            let references = DictionaryMapper::new([("Type".to_string(), "type_id".to_string())]);
+            let snake = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+            let from = references.reverse_map(name.clone());
+            if from != name {
+                from
+            } else {
+                snake.reverse_map(name)
+            }
+        },
+    )
+}
+
+fn mapped(connection: Arc<dyn Connection>, entity: &str) -> ReadonlyRepository {
     let mut options = ReadonlyRepositoryOptions::default();
     options.entity = entity.into();
+    options.property_mappings = Box::new(columns());
     ReadonlyRepository::new(connection, options).unwrap()
 }
 
@@ -120,63 +148,63 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
         record(&[("type_id", gone.get("id").unwrap().clone())]),
     ];
     let connection = setup(&mut parents).await;
-    let mut parents_repo = readonly(connection, "Parent");
-    let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+    let mut parents_repo = mapped(connection, "Parent");
+    let types_repo = Arc::new(mapped(types_connection, "UserType"));
     parents_repo.add_enriched(
-        Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), false),
         types_repo,
         None,
     );
     let items = parents_repo.read(None, None).await.unwrap();
-    assert_eq!(items[0]["type_name"], Value::from("person"));
-    assert!(!items[1].contains_key("type_name") || items[1]["type_name"] == Value::from(""));
+    assert_eq!(items[0]["TypeName"], Value::from("person"));
+    assert!(!items[1].contains_key("TypeName") || items[1]["TypeName"] == Value::from(""));
 }
 
 #[tokio::test]
 async fn deep_create_writes_children_stamps_fk() {
     let connection = setup(&mut []).await;
-    let mut parents = crud(connection.clone(), "Parent");
-    let types = Arc::new(crud(connection.clone(), "TypeRow"));
-    let children = Arc::new(crud(connection, "Child"));
+    let mut parents = mapped_crud(connection.clone(), "Parent");
+    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let children = Arc::new(mapped_crud(connection, "Child"));
     let kind = types
-        .create(&mut record(&[("name", Value::from("person"))]))
+        .create(&mut record(&[("Name", Value::from("person"))]))
         .await
         .unwrap();
-    assert!(num(&kind, "id") > 0);
+    assert!(num(&kind, "Id") > 0);
     parents
         .add_enriched(
-            Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+            Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), false),
             types.clone(),
             None,
         )
         .add_enriched(
-            Enrichment::new("children", "id", "parent_id", None, true),
+            Enrichment::new("Children", "Id", "ParentId", None, true),
             children.clone(),
             None,
         );
     let created = parents
         .create(&mut record(&[
-            ("type_id", kind.get("id").unwrap().clone()),
-            ("label", Value::from("p")),
+            ("Type", kind.get("Id").unwrap().clone()),
+            ("Label", Value::from("p")),
             (
-                "children",
+                "Children",
                 encode_rows(&[
-                    record(&[("label", Value::from("a"))]),
-                    record(&[("label", Value::from("b"))]),
+                    record(&[("Label", Value::from("a"))]),
+                    record(&[("Label", Value::from("b"))]),
                 ]),
             ),
         ]))
         .await
         .unwrap();
-    assert!(num(&created, "id") > 0);
+    assert!(num(&created, "Id") > 0);
     let stored_parents = parents.read(None, None).await.unwrap();
     let stored = children.read(None, None).await.unwrap();
-    assert_eq!(stored_parents[0]["id"], created["id"]);
+    assert_eq!(stored_parents[0]["Id"], created["Id"]);
     assert_eq!(stored.len(), 2);
-    assert_eq!(stored[0]["parent_id"], stored_parents[0]["id"]);
-    assert_eq!(stored[1]["parent_id"], stored_parents[0]["id"]);
+    assert_eq!(stored[0]["ParentId"], stored_parents[0]["Id"]);
+    assert_eq!(stored[1]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(
-        types.read(None, None).await.unwrap()[0]["name"],
+        types.read(None, None).await.unwrap()[0]["Name"],
         Value::from("person")
     );
 }
@@ -335,48 +363,48 @@ fn contact_columns() -> TransformMapper<String, String> {
 #[tokio::test]
 async fn deep_update_replace_syncs_children() {
     let connection = setup(&mut []).await;
-    let mut parents = crud(connection.clone(), "Parent");
-    let children = Arc::new(crud(connection, "Child"));
+    let mut parents = mapped_crud(connection.clone(), "Parent");
+    let children = Arc::new(mapped_crud(connection, "Child"));
     let parent = parents
-        .create(&mut record(&[("label", Value::from("p"))]))
+        .create(&mut record(&[("Label", Value::from("p"))]))
         .await
         .unwrap();
-    assert!(num(&parent, "id") > 0);
-    let parent_id = parent.get("id").unwrap().clone();
+    assert!(num(&parent, "Id") > 0);
+    let parent_id = parent.get("Id").unwrap().clone();
     let kept = children
         .create(&mut record(&[
-            ("parent_id", parent_id.clone()),
-            ("label", Value::from("a")),
+            ("ParentId", parent_id.clone()),
+            ("Label", Value::from("a")),
         ]))
         .await
         .unwrap();
-    assert!(num(&kept, "id") > 0);
+    assert!(num(&kept, "Id") > 0);
     let dropped = children
         .create(&mut record(&[
-            ("parent_id", parent_id.clone()),
-            ("label", Value::from("b")),
+            ("ParentId", parent_id.clone()),
+            ("Label", Value::from("b")),
         ]))
         .await
         .unwrap();
-    assert!(num(&dropped, "id") > 0);
+    assert!(num(&dropped, "Id") > 0);
     parents.add_enriched(
-        Enrichment::new("children", "id", "parent_id", None, true),
+        Enrichment::new("Children", "Id", "ParentId", None, true),
         children.clone(),
         None,
     );
     let updated = parents
         .update(
             &record(&[
-                ("id", parent_id.clone()),
-                ("label", Value::from("p")),
+                ("Id", parent_id.clone()),
+                ("Label", Value::from("p")),
                 (
-                    "children",
+                    "Children",
                     encode_rows(&[
                         record(&[
-                            ("id", kept.get("id").unwrap().clone()),
-                            ("label", Value::from("aa")),
+                            ("Id", kept.get("Id").unwrap().clone()),
+                            ("Label", Value::from("aa")),
                         ]),
-                        record(&[("label", Value::from("c"))]),
+                        record(&[("Label", Value::from("c"))]),
                     ]),
                 ),
             ]),
@@ -390,80 +418,83 @@ async fn deep_update_replace_syncs_children() {
     assert_eq!(
         stored
             .iter()
-            .find(|row| row.get("id") == kept.get("id"))
-            .unwrap()["label"],
+            .find(|row| row.get("Id") == kept.get("Id"))
+            .unwrap()["Label"],
         Value::from("aa")
     );
     assert_eq!(
         stored
             .iter()
-            .find(|row| row.get("id") != kept.get("id"))
-            .unwrap()["label"],
+            .find(|row| row.get("Id") != kept.get("Id"))
+            .unwrap()["Label"],
         Value::from("c")
     );
+    assert!(stored
+        .iter()
+        .all(|row| row.get("ParentId") == Some(&parent_id)));
 }
 
 #[tokio::test]
 async fn cascade_update_deletes_children_and_recreates() {
     let connection = setup(&mut []).await;
-    let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+    let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
         DefaultWriteEnrichmentStrategy::new(
             None,
             Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
             false,
         ),
     ));
-    let mut children_repo = crud(connection.clone(), "Child");
-    let notes = Arc::new(crud(connection, "Note"));
+    let mut children_repo = mapped_crud(connection.clone(), "Child");
+    let notes = Arc::new(mapped_crud(connection, "Note"));
     let parent = parents
-        .create(&mut record(&[("label", Value::from("p"))]))
+        .create(&mut record(&[("Label", Value::from("p"))]))
         .await
         .unwrap();
-    assert!(num(&parent, "id") > 0);
-    let parent_id = parent.get("id").unwrap().clone();
+    assert!(num(&parent, "Id") > 0);
+    let parent_id = parent.get("Id").unwrap().clone();
     let child = children_repo
         .create(&mut record(&[
-            ("parent_id", parent_id.clone()),
-            ("label", Value::from("a")),
+            ("ParentId", parent_id.clone()),
+            ("Label", Value::from("a")),
         ]))
         .await
         .unwrap();
-    assert!(num(&child, "id") > 0);
+    assert!(num(&child, "Id") > 0);
     let other = children_repo
-        .create(&mut record(&[("label", Value::from("other"))]))
+        .create(&mut record(&[("Label", Value::from("other"))]))
         .await
         .unwrap();
-    assert!(num(&other, "id") > 0);
-    let child_id = child.get("id").unwrap().clone();
+    assert!(num(&other, "Id") > 0);
+    let child_id = child.get("Id").unwrap().clone();
     let note = notes
         .create(&mut record(&[
-            ("child_id", child_id.clone()),
-            ("text", Value::from("n")),
+            ("ChildId", child_id.clone()),
+            ("Text", Value::from("n")),
         ]))
         .await
         .unwrap();
-    assert!(num(&note, "id") > 0);
+    assert!(num(&note, "Id") > 0);
     children_repo.add_enriched(
-        Enrichment::new("notes", "id", "child_id", None, true),
+        Enrichment::new("Notes", "Id", "ChildId", None, true),
         notes.clone(),
         None,
     );
     let children = Arc::new(children_repo);
     parents.add_enriched(
-        Enrichment::new("children", "id", "parent_id", None, true),
+        Enrichment::new("Children", "Id", "ParentId", None, true),
         children.clone(),
         None,
     );
     let updated = parents
         .update(
             &record(&[
-                ("id", parent_id.clone()),
-                ("label", Value::from("p")),
+                ("Id", parent_id.clone()),
+                ("Label", Value::from("p")),
                 (
-                    "children",
+                    "Children",
                     encode_rows(&[record(&[
-                        ("id", child_id.clone()),
-                        ("label", Value::from("fresh")),
+                        ("Id", child_id.clone()),
+                        ("Label", Value::from("fresh")),
                     ])]),
                 ),
             ]),
@@ -475,70 +506,70 @@ async fn cascade_update_deletes_children_and_recreates() {
     let stored = children.read(None, None).await.unwrap();
     let created = stored
         .iter()
-        .find(|row| row.get("label") == Some(&Value::from("fresh")))
+        .find(|row| row.get("Label") == Some(&Value::from("fresh")))
         .unwrap();
     assert_eq!(stored.len(), 2);
-    assert_ne!(created.get("id"), Some(&child_id));
-    assert_eq!(created.get("label"), Some(&Value::from("fresh")));
-    assert_eq!(created.get("parent_id"), Some(&parent_id));
+    assert_ne!(created.get("Id"), Some(&child_id));
+    assert_eq!(created.get("Label"), Some(&Value::from("fresh")));
+    assert_eq!(created.get("ParentId"), Some(&parent_id));
     assert!(notes.read(None, None).await.unwrap().is_empty());
 }
 
 #[tokio::test]
 async fn cascade_update_replaces_links_and_keeps_related() {
     let connection = setup(&mut []).await;
-    let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+    let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
         DefaultWriteEnrichmentStrategy::new(
             None,
             Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
             false,
         ),
     ));
-    let tags = Arc::new(crud(connection.clone(), "Tag"));
-    let links = Arc::new(crud(connection, "ParentTag"));
+    let tags = Arc::new(mapped_crud(connection.clone(), "Tag"));
+    let links = Arc::new(mapped_crud(connection, "ParentTag"));
     let parent = parents
-        .create(&mut record(&[("label", Value::from("p"))]))
+        .create(&mut record(&[("Label", Value::from("p"))]))
         .await
         .unwrap();
-    assert!(num(&parent, "id") > 0);
-    let parent_id = parent.get("id").unwrap().clone();
+    assert!(num(&parent, "Id") > 0);
+    let parent_id = parent.get("Id").unwrap().clone();
     let keep = tags
-        .create(&mut record(&[("name", Value::from("keep"))]))
+        .create(&mut record(&[("Name", Value::from("keep"))]))
         .await
         .unwrap();
-    assert!(num(&keep, "id") > 0);
+    assert!(num(&keep, "Id") > 0);
     let drop = tags
-        .create(&mut record(&[("name", Value::from("drop"))]))
+        .create(&mut record(&[("Name", Value::from("drop"))]))
         .await
         .unwrap();
-    assert!(num(&drop, "id") > 0);
-    let keep_id = keep.get("id").unwrap().clone();
-    let drop_id = drop.get("id").unwrap().clone();
+    assert!(num(&drop, "Id") > 0);
+    let keep_id = keep.get("Id").unwrap().clone();
+    let drop_id = drop.get("Id").unwrap().clone();
     let old_link = links
         .create(&mut record(&[
-            ("parent_id", parent_id.clone()),
-            ("tag_id", keep_id.clone()),
+            ("ParentId", parent_id.clone()),
+            ("TagId", keep_id.clone()),
         ]))
         .await
         .unwrap();
-    assert!(num(&old_link, "id") > 0);
+    assert!(num(&old_link, "Id") > 0);
     let dropped_link = links
         .create(&mut record(&[
-            ("parent_id", parent_id.clone()),
-            ("tag_id", drop_id),
+            ("ParentId", parent_id.clone()),
+            ("TagId", drop_id),
         ]))
         .await
         .unwrap();
-    assert!(num(&dropped_link, "id") > 0);
+    assert!(num(&dropped_link, "Id") > 0);
     let leftover = links
-        .create(&mut record(&[("tag_id", keep_id.clone())]))
+        .create(&mut record(&[("TagId", keep_id.clone())]))
         .await
         .unwrap();
-    assert!(num(&leftover, "id") > 0);
-    let old_link_id = old_link.get("id").unwrap().clone();
+    assert!(num(&leftover, "Id") > 0);
+    let old_link_id = old_link.get("Id").unwrap().clone();
     parents.add_linked(
-        Enrichment::new("tags", "id", "id", None, true)
-            .linked(Association::new("parent_id", "tag_id")),
+        Enrichment::new("Tags", "Id", "Id", None, true)
+            .linked(Association::new("ParentId", "TagId")),
         tags.clone(),
         links.clone(),
         None,
@@ -546,9 +577,9 @@ async fn cascade_update_replaces_links_and_keeps_related() {
     let updated = parents
         .update(
             &record(&[
-                ("id", parent_id.clone()),
-                ("label", Value::from("p")),
-                ("tags", encode_rows(&[record(&[("id", keep_id.clone())])])),
+                ("Id", parent_id.clone()),
+                ("Label", Value::from("p")),
+                ("Tags", encode_rows(&[record(&[("Id", keep_id.clone())])])),
             ]),
             None,
         )
@@ -560,12 +591,12 @@ async fn cascade_update_replaces_links_and_keeps_related() {
         .await
         .unwrap()
         .into_iter()
-        .filter(|row| row.get("parent_id") == Some(&parent_id))
+        .filter(|row| row.get("ParentId") == Some(&parent_id))
         .collect();
     assert_eq!(stored_links.len(), 1);
-    assert_eq!(stored_links[0].get("tag_id"), Some(&keep_id));
-    assert_eq!(stored_links[0].get("parent_id"), Some(&parent_id));
-    assert_ne!(stored_links[0].get("id"), Some(&old_link_id));
+    assert_eq!(stored_links[0].get("TagId"), Some(&keep_id));
+    assert_eq!(stored_links[0].get("ParentId"), Some(&parent_id));
+    assert_ne!(stored_links[0].get("Id"), Some(&old_link_id));
     assert_eq!(tags.read(None, None).await.unwrap().len(), 2);
 }
 
@@ -667,61 +698,61 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
 #[tokio::test]
 async fn deep_delete_cascades_children_then_parent() {
     let connection = setup(&mut []).await;
-    let parents = crud(connection.clone(), "Parent");
-    let mut children_repo = crud(connection.clone(), "Child");
-    let notes = Arc::new(crud(connection, "Note"));
+    let parents = mapped_crud(connection.clone(), "Parent");
+    let mut children_repo = mapped_crud(connection.clone(), "Child");
+    let notes = Arc::new(mapped_crud(connection, "Note"));
     let parent = parents
-        .create(&mut record(&[("label", Value::from("p"))]))
+        .create(&mut record(&[("Label", Value::from("p"))]))
         .await
         .unwrap();
-    assert!(num(&parent, "id") > 0);
-    let parent_id = parent.get("id").unwrap().clone();
+    assert!(num(&parent, "Id") > 0);
+    let parent_id = parent.get("Id").unwrap().clone();
     let child = children_repo
         .create(&mut record(&[
-            ("parent_id", parent_id.clone()),
-            ("label", Value::from("a")),
+            ("ParentId", parent_id.clone()),
+            ("Label", Value::from("a")),
         ]))
         .await
         .unwrap();
-    assert!(num(&child, "id") > 0);
-    let child_id = child.get("id").unwrap().clone();
+    assert!(num(&child, "Id") > 0);
+    let child_id = child.get("Id").unwrap().clone();
     let note = notes
         .create(&mut record(&[
-            ("child_id", child_id),
-            ("text", Value::from("n")),
+            ("ChildId", child_id),
+            ("Text", Value::from("n")),
         ]))
         .await
         .unwrap();
-    assert!(num(&note, "id") > 0);
+    assert!(num(&note, "Id") > 0);
     let other = notes
         .create(&mut record(&[
-            ("text", Value::from("other")),
-            ("label", Value::from("keep")),
+            ("Text", Value::from("other")),
+            ("Label", Value::from("keep")),
         ]))
         .await
         .unwrap();
-    assert!(num(&other, "id") > 0);
+    assert!(num(&other, "Id") > 0);
     children_repo.add_enriched(
-        Enrichment::new("notes", "id", "child_id", None, true),
+        Enrichment::new("Notes", "Id", "ChildId", None, true),
         notes.clone(),
         None,
     );
     let children = Arc::new(children_repo);
     let mut parents = parents;
     parents.add_enriched(
-        Enrichment::new("children", "id", "parent_id", None, true),
+        Enrichment::new("Children", "Id", "ParentId", None, true),
         children.clone(),
         None,
     );
     let removed = parents
-        .delete(&record(&[("id", parent_id)]), None)
+        .delete(&record(&[("Id", parent_id)]), None)
         .await
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
     assert!(parents.read(None, None).await.unwrap().is_empty());
     assert!(children.read(None, None).await.unwrap().is_empty());
     assert_eq!(
-        notes.read(None, None).await.unwrap()[0]["text"],
+        notes.read(None, None).await.unwrap()[0]["Text"],
         Value::from("other")
     );
 }
@@ -729,20 +760,20 @@ async fn deep_delete_cascades_children_then_parent() {
 #[tokio::test]
 async fn deep_many_readonly_via_throws() {
     let connection = setup(&mut []).await;
-    let mut parents = crud(connection.clone(), "Parent");
+    let mut parents = mapped_crud(connection.clone(), "Parent");
     parents.add_enriched(
-        Enrichment::new("children", "id", "parent_id", None, true),
-        Arc::new(readonly(connection, "Child")),
+        Enrichment::new("Children", "Id", "ParentId", None, true),
+        Arc::new(mapped(connection, "Child")),
         None,
     );
     let error = parents
         .create(&mut record(&[(
-            "children",
-            encode_rows(&[record(&[("label", Value::from("a"))])]),
+            "Children",
+            encode_rows(&[record(&[("Label", Value::from("a"))])]),
         )]))
         .await
         .unwrap_err();
-    assert!(error.to_string().contains("children"));
+    assert!(error.to_string().contains("Children"));
 }
 
 #[tokio::test]

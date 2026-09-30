@@ -1,0 +1,9 @@
+const connection = await setup();
+const parentsRepo = repo(
+  Parent,
+  connection,
+  new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
+);
+const childrenRepo = repo(Child, connection);
+const notesRepo = repo(Note, connection);
+const parent = await parentsRepo.create(new Parent());

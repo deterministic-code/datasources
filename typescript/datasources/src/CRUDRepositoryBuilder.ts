@@ -17,7 +17,7 @@ export class CRUDRepositoryBuilder<T = object> extends ReadonlyRepositoryBuilder
       : [];
 
   protected override statements = (table: string, columns: string[]): ReadonlyRepositoryStatements =>
-    new CRUDRepositoryStatements(table, columns);
+    new CRUDRepositoryStatements(table, columns, this.entityMapper, this.propertyMapper);
 
   build = (connection: IConnection, options: CRUDRepositoryOptions<T>): CRUDRepository<T> =>
     new CRUDRepository(connection, options);

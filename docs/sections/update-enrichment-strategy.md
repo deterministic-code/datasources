@@ -273,10 +273,10 @@ Create uses the same child and link inserts as an update of a new parent. A subc
 ### Replace children
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#CascadeUpdateDeletesChildrenAndRecreates
+```csharp csharp/Datasources.Tests/CRUDRepositoryTests.cs#CascadeUpdateDeletesChildrenAndRecreates
 ```
 ```rust rust/datasources/tests/enriched.rs#cascade_update_deletes_children_and_recreates
 ```
-```typescript typescript/datasources/src/EnrichedCRUDRepository.test.ts#cascade-update-deletes-children-and-recreates
+```typescript typescript/datasources/src/CRUDRepository.test.ts#cascade-update-deletes-children-and-recreates
 ```
 :::

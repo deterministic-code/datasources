@@ -1,7 +1,0 @@
-var connection = await Setup();
-var childrenRepo = new CRUDRepository<Child>(connection);
-var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
-{
-    Write = new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()),
-});
-var parent = await parentsRepo.Create(new Parent());

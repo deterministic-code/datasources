@@ -121,18 +121,20 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task<Response> Insert(T item)
     {
         var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
-        var response = await Command().Execute(Writes.Insert(fields), fields);
+        var statement = Writes.Insert(fields);
+        var response = await Command().Execute(statement, statement.Fields);
         if (ids.Count == 1)
-            await CopyInsertedId(item, fields);
+            await CopyInsertedId(item, statement.Fields);
         return response;
     }
 
     async Task CopyInsertedId(T target, IReadOnlyList<Parameter> fields)
     {
         var column = ids[0];
-        var sqlColumn = Column(column);
-        IStatement statement = Writes.SelectInsertedId(sqlColumn);
-        var reader = await Command().ExecuteReader(statement, statement is IReturnStatement ? fields : null);
+        var statement = Writes.SelectInsertedId(column);
+        var sqlColumn = statement.Column;
+        IStatement read = statement;
+        var reader = await Command().ExecuteReader(read, read is IReturnStatement ? fields : null);
         try
         {
             if (!await reader.Next()) return;
@@ -166,20 +168,18 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task<Response> Save(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
-        var where = byWhere is null ? Mapped(IdWhere(record), fieldsApplied: true) : Mapped(byWhere, fieldsApplied: false);
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
-        var statement = Writes.Update(fields, where);
-        return await Command().Execute(statement, UpdateStatement.ParameterList(fields, where));
+        var statement = Writes.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
+        return await Command().Execute(statement, statement.Parameters);
     }
 
     async Task<Response> Remove(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
-        var where = byWhere is null ? Mapped(IdWhere(record), fieldsApplied: true) : Mapped(byWhere, fieldsApplied: false);
-        var statement = Writes.Delete(where);
-        var parameters = where.Parameters is { Count: > 0 } listed
+        var statement = Writes.Delete(byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
+        var parameters = statement.Where?.Parameters is { Count: > 0 } listed
             ? listed
             : statement.GetText().Contains('$') ? Params(record, _ => true) : [];
         return await Command().Execute(statement, parameters);
@@ -193,11 +193,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             _ => throw new DatasourceException("Composite id requires a row keyed by each Id column")
         };
 
-    IWhere Mapped(IWhere where, bool fieldsApplied) =>
-        where is Where clause
-            ? clause.Map(Column, (name, cell) => Cell(name, cell, fieldsApplied))
-            : where;
-
     IWhere IdWhere(Row record) =>
         new Where(ids.Select(col =>
             record.TryGetValue(col, out var value)
@@ -209,7 +204,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include) =>
         [.. record.Where(pair => include(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)
             .OrderBy(pair => pair.Key)
-            .Select(pair => new Parameter(Column(pair.Key), Cell(pair.Key, pair.Value, fieldsApplied: true)))];
+            .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
     protected bool EnrichmentInto(string name) =>
         ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.Into == name);

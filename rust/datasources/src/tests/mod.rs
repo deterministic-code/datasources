@@ -6,6 +6,7 @@ mod contact;
 mod datasource;
 mod datasource_factory;
 mod datasource_url_parser;
+mod statement_mappings;
 mod statement_parser;
 mod transaction;
 mod unit_of_work_transaction;

@@ -8,7 +8,7 @@ import type { Response } from "./Response.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
-import { Literal, Operator, UpdateStatement, Where } from "./statements/index.ts";
+import { Literal, Operator, Where } from "./statements/index.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import type { ICommand } from "./ICommand.ts";
 import type { Parameter } from "./Parameter.ts";
@@ -21,14 +21,13 @@ import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
-  column: (property: string) => string,
   cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
   enrichmentInto: (name: string) => boolean,
 ): Field[] =>
   Object.entries(record)
     .filter(([key, value]) => include(key) && !enrichmentInto(key) && value !== null && value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([name, value]) => ({ name: column(name), value: cell(name, value, true) as Scalar }));
+    .map(([name, value]) => ({ name, value: cell(name, value, true) as Scalar }));
 
 const isBulkStrategy = <T extends object>(value: unknown): value is IBulkWriteStrategy<T> =>
   typeof value === "object" &&
@@ -118,33 +117,35 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     this.ids.length === 1 ? scalarOf((item as Record<string, Scalar | object>)[this.ids[0]!]) : undefined;
 
   private insertCommand = (item: T): BulkCommand => {
-    const fields = fieldsOf(
-      this.reverse(item),
-      (col) => !this.ids.includes(col),
-      this.column,
-      this.cell,
-      this.enrichmentInto,
+    const statement = (this.statements as CRUDRepositoryStatements).insert(
+      fieldsOf(this.reverse(item), (col) => !this.ids.includes(col), this.cell, this.enrichmentInto),
     );
-    return { text: (this.statements as CRUDRepositoryStatements).insert(fields).getText(), parameters: fields };
+    return { text: statement.getText(), parameters: statement.fields };
   };
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
-    const where = byWhere ? this.map(byWhere, false) : this.map(this.idsWhere(record), true);
-    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell, this.enrichmentInto);
+    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.cell, this.enrichmentInto);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    return { text: (this.statements as CRUDRepositoryStatements).update(fields, where).getText(), parameters: UpdateStatement.parameterList(fields, where) };
+    const statement = (this.statements as CRUDRepositoryStatements).update(
+      fields,
+      byWhere ?? this.idsWhere(record),
+      (name, value) => this.cell(name, value, byWhere === undefined),
+    );
+    return { text: statement.getText(), parameters: statement.parameters };
   };
 
   private deleteCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
-    const where = byWhere ? this.map(byWhere, false) : this.map(this.idsWhere(record), true);
-    const statement = (this.statements as CRUDRepositoryStatements).delete(where);
-    const listed = where.parameters ?? [];
+    const statement = (this.statements as CRUDRepositoryStatements).delete(
+      byWhere ?? this.idsWhere(record),
+      (name, value) => this.cell(name, value, byWhere === undefined),
+    );
+    const listed = statement.where?.parameters ?? [];
     const parameters: Parameter[] = listed.length
       ? listed
       : statement.getText().includes("$")
-        ? fieldsOf(record, () => true, this.column, this.cell, this.enrichmentInto)
+        ? fieldsOf(record, () => true, this.cell, this.enrichmentInto)
         : [];
     return { text: statement.getText(), parameters };
   };
@@ -163,9 +164,6 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     const row = this.objectConverter!.reverseConvert(item);
     return this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
   };
-
-  private map = (where: IWhere, fieldsApplied: boolean): IWhere =>
-    where instanceof Where ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied)) : where;
 
   private idsWhere = (record: Cells): IWhere => {
     const parts: IExpression[] = this.ids.map((col) => {
