@@ -5422,54 +5422,62 @@ type Enrichment
 ##### IReadonlyEnrichmentStrategy {#typescript-ireadonlyenrichmentstrategy}
 
 ```typescript
-interface IReadonlyEnrichmentStrategy<T extends object> extends IReadonlyEnrichmentBinder
+interface IReadonlyEnrichmentStrategy<T extends object>
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [read(inner, tree, query?)](#typescript-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
-| [enrich(tree, items)](#typescript-ireadonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
+| [apply(via, enrichment, parents, sources?)](#typescript-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. |
+| [applyLinked(via, link, enrichment, parents, sources?)](#typescript-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
 
-###### read(inner, tree, query?) {#typescript-ireadonlyenrichmentstrategy-read-inner-tree-query}
+###### apply(via, enrichment, parents, sources?) {#typescript-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
 
-Reads through `inner`, then enriches.
+Fills each parent from the related repository.
 
 **Definition**
 
 ```typescript
-read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `inner` | [IReadonlyRepository](#readonly-repository) |
-| `tree` | [IRepositoryTree](#typescript-irepositorytree) |
-| `query` | optional query, where, or stored procedure |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#typescript-enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
 
 **Returns**
 
-`AsyncIterable<T>`
+`Promise<void>`
 
-###### enrich(tree, items) {#typescript-ireadonlyenrichmentstrategy-enrich-tree-items}
+###### applyLinked(via, link, enrichment, parents, sources?) {#typescript-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources}
 
-Fills `items` from the tree.
+Fills each parent by reading the link table, then the related repository.
 
 **Definition**
 
 ```typescript
-enrich(tree: IRepositoryTree, items: T[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `tree` | [IRepositoryTree](#typescript-irepositorytree) |
-| `items` | parents to fill |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#typescript-enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Promise<void>`
 
 ##### C#
 
@@ -5756,55 +5764,62 @@ public sealed record Enrichment
 ##### IReadonlyEnrichmentStrategy {#csharp-ireadonlyenrichmentstrategy}
 
 ```csharp
-public interface IReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentBinder
+public interface IReadonlyEnrichmentStrategy<T>
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Read(inner, tree, query)](#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
-| [Enrich(tree, items, sources)](#csharp-ireadonlyenrichmentstrategy-enrich-tree-items-sources) | Fills `items` from the tree. `sources` supplies the unread columns for each parent. |
+| [Apply(via, enrichment, parents, sources)](#csharp-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. |
+| [ApplyLinked(via, link, enrichment, parents, sources)](#csharp-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
 
-###### Read(inner, tree, query) {#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query}
+###### Apply(via, enrichment, parents, sources) {#csharp-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
 
-Reads through `inner`, then enriches.
+Fills each parent from the related repository.
 
 **Definition**
 
 ```csharp
-IAsyncEnumerable<T> Read(IReadonlyRepository<T> inner, IRepositoryTree tree, IStatement? query)
+Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `inner` | [IReadonlyRepository](#readonly-repository) |
-| `tree` | [IRepositoryTree](#csharp-irepositorytree) |
-| `query` | optional statement or where |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#csharp-enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
 
 **Returns**
 
-`IAsyncEnumerable<T>`
+`Task`
 
-###### Enrich(tree, items, sources) {#csharp-ireadonlyenrichmentstrategy-enrich-tree-items-sources}
+###### ApplyLinked(via, link, enrichment, parents, sources) {#csharp-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources}
 
-Fills `items` from the tree. `sources` supplies the unread columns for each parent.
+Fills each parent by reading the link table, then the related repository.
 
 **Definition**
 
 ```csharp
-Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null)
+Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `tree` | [IRepositoryTree](#csharp-irepositorytree) |
-| `items` | parents to fill |
-| `sources` | optional source rows aligned with `items` |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#csharp-enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Task`
 
 ##### Rust
 
@@ -6075,47 +6090,51 @@ pub trait ReadonlyEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [read(inner, tree, query)](#rust-readonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
-| [enrich(tree, items)](#rust-readonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
+| [apply(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. |
+| [apply_linked(via, link, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
 
-###### read(inner, tree, query) {#rust-readonlyenrichmentstrategy-read-inner-tree-query}
+###### apply(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
 
-Reads through `inner`, then enriches.
+Fills each parent from the related repository.
 
 **Definition**
 
 ```rust
-async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
+async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `inner` | [ReadonlyRepository](#readonly-repository) |
-| `tree` | [RepositoryTree](#rust-repositorytree) |
-| `query` | optional query, where, or stored procedure |
+| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository) |
+| `enrichment` | [Enrichment](#rust-enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
 
 **Returns**
 
-`Result<Vec<Row>>`
+`Result<()>`
 
-###### enrich(tree, items) {#rust-readonlyenrichmentstrategy-enrich-tree-items}
+###### apply_linked(via, link, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources}
 
-Fills `items` from the tree.
+Fills each parent by reading the link table, then the related repository.
 
 **Definition**
 
 ```rust
-async fn enrich(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()>
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `tree` | [RepositoryTree](#rust-repositorytree) |
-| `items` | parents to fill |
+| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#rust-enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
 
 **Returns**
 
