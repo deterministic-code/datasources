@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 pub struct MetaDataRowTypeConverter {
     columns: Vec<String>,
-    pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     references: Vec<String>,
     reference_columns: Box<dyn Mapper<String, String> + Send + Sync>,
@@ -27,7 +26,6 @@ impl MetaDataRowTypeConverter {
     pub fn new(columns: Vec<String>) -> Self {
         Self {
             columns,
-            types: HashMap::new(),
             fields: HashMap::new(),
             references: Vec::new(),
             reference_columns: Box::new(IdentityMapper::new()),
@@ -41,14 +39,6 @@ impl MetaDataRowTypeConverter {
     ) -> Self {
         self.references = references;
         self.reference_columns = columns;
-        self
-    }
-
-    pub fn with_types(
-        mut self,
-        types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
-    ) -> Self {
-        self.types.extend(types);
         self
     }
 

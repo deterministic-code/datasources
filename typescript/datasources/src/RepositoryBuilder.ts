@@ -21,11 +21,8 @@ export const parts = <T>(
   connection: IConnection,
   options: ReadonlyRepositoryOptions<T>,
 ): BuiltRepository<T> => {
-  const types = { ...options.rowTypeConverters };
   const rowConverter = options.rowConverter;
-  const objectConverter = options.objectConverter ?? new MetaDataRowTypeConverter<T>(types);
-  if (objectConverter instanceof MetaDataRowTypeConverter && Object.keys(objectConverter.types).length === 0)
-    Object.assign(objectConverter.types, types);
+  const objectConverter = options.objectConverter ?? new MetaDataRowTypeConverter<T>();
   const entityMapper = options.entityMapper ?? new IdentityMapper<string>();
   const columnMappings = options.columnMappings ?? new IdentityMapper<string>();
   const rowsMapper = options.rowsMapper ?? new IdentityMapper<T>();

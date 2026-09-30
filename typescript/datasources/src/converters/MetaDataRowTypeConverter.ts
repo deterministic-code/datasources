@@ -12,17 +12,12 @@ const scalarId = (value: Cell | object | undefined): Cell | undefined => {
 };
 
 export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells> {
-  types: Record<string, TypeConverter<Cell, Cell>>;
   fields: Record<string, TypeConverter<Cell, Cell>>;
   references = new Set<string>();
   referenceColumns: IMapper<string, string> = new IdentityMapper<string>();
 
-  constructor(
-    types: Record<string, TypeConverter<Cell, Cell>> = {},
-    fields: Record<string, TypeConverter<Cell, Cell>> = {},
-  ) {
+  constructor(fields: Record<string, TypeConverter<Cell, Cell>> = {}) {
     super();
-    this.types = { ...types };
     this.fields = { ...fields };
   }
 

@@ -231,7 +231,7 @@ class FlagConverter extends TypeConverter {
   reverseConvert = (value: Cell): Cell => value;
 }
 
-const rows = new MetaDataRowTypeConverter({}, { flag: new FlagConverter() });
+const rows = new MetaDataRowTypeConverter({ flag: new FlagConverter() });
 const item = rows.convert(row);
 ```
 
@@ -14274,7 +14274,7 @@ Default object converter. Read order is the renamed row, then `RowConverter` / `
 
 `RowConverter` / `rowConverter` / `row_converter` is the `Row` to `Row` cell step. Omitted, that step is skipped and the renamed row is passed through. This converter still runs. It assigns the row onto `T`. A handwritten object converter assigns each column and does not reflect.
 
-`Types` / `types` / `types` is the provider catalog. `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert` use `Fields` / `fields` / `fields`.
+`Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert` use `Fields` / `fields` / `fields`.
 
 ### Classes
 
@@ -14290,13 +14290,12 @@ class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
 
 | Name | Description |
 | --- | --- |
-| [MetaDataRowTypeConverter(types, fields)](#typescript-metadatarowtypeconverter-metadatarowtypeconverter-types-fields) | Builds the default object converter. Convert uses [fields](#typescript-metadatarowtypeconverter-fields), not [types](#typescript-metadatarowtypeconverter-types). |
+| [MetaDataRowTypeConverter(fields)](#typescript-metadatarowtypeconverter-metadatarowtypeconverter-fields) | Builds the default object converter. Convert uses [fields](#typescript-metadatarowtypeconverter-fields). |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| types | Provider type catalog. Convert does not read this map. |
 | fields | Per-column converters. Convert uses `fields[name]`. |
 
 **Methods**
@@ -14306,21 +14305,20 @@ class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
 | [convert(row, type?)](#typescript-metadatarowtypeconverter-convert-row-type) | Assigns cells onto `T`. Optional `type` constructs the destination. A field converter replaces that cell. |
 | [reverseConvert(row)](#typescript-metadatarowtypeconverter-reverseconvert-row) | Reverse-converts each cell through [fields](#typescript-metadatarowtypeconverter-fields). Skips array values. |
 
-###### MetaDataRowTypeConverter(types, fields) {#typescript-metadatarowtypeconverter-metadatarowtypeconverter-types-fields}
+###### MetaDataRowTypeConverter(fields) {#typescript-metadatarowtypeconverter-metadatarowtypeconverter-fields}
 
-Builds the default object converter. Convert uses [fields](#typescript-metadatarowtypeconverter-fields), not [types](#typescript-metadatarowtypeconverter-types).
+Builds the default object converter. Convert uses [fields](#typescript-metadatarowtypeconverter-fields).
 
 **Definition**
 
 ```typescript
-constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<string, TypeConverter<Cell, Cell>>)
+constructor(fields?: Record<string, TypeConverter<Cell, Cell>>)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `types` | provider catalog; unused at convert time |
 | `fields` | per-column TypeConverter |
 
 ###### convert(row, type?) {#typescript-metadatarowtypeconverter-convert-row-type}
@@ -14376,13 +14374,12 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
 
 | Name | Description |
 | --- | --- |
-| [MetaDataRowTypeConverter(types, fields)](#csharp-metadatarowtypeconverter-metadatarowtypeconverter-types-fields) | Builds the default object converter. Convert assigns public scalar properties, or every key when `T` is a dictionary. |
+| [MetaDataRowTypeConverter(fields)](#csharp-metadatarowtypeconverter-metadatarowtypeconverter-fields) | Builds the default object converter. Convert assigns public scalar properties, or every key when `T` is a dictionary. |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| Types | Provider type catalog. Convert does not read this map. |
 | Fields | Per-column converters. Convert uses `Fields[name]`. |
 
 **Methods**
@@ -14392,21 +14389,20 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
 | [Convert(from)](#csharp-metadatarowtypeconverter-convert-from) | Assigns each cell onto a new `T`. A property is set only when the cell is already that type. |
 | [ReverseConvert(to)](#csharp-metadatarowtypeconverter-reverseconvert-to) | Writes public scalar properties back to a row through [Fields](#csharp-metadatarowtypeconverter-fields). |
 
-###### MetaDataRowTypeConverter(types, fields) {#csharp-metadatarowtypeconverter-metadatarowtypeconverter-types-fields}
+###### MetaDataRowTypeConverter(fields) {#csharp-metadatarowtypeconverter-metadatarowtypeconverter-fields}
 
 Builds the default object converter. Convert assigns public scalar properties, or every key when `T` is a dictionary.
 
 **Definition**
 
 ```csharp
-public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
+public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `types` | provider catalog; unused at convert time |
 | `fields` | per-column TypeConverter |
 
 ###### Convert(from) {#csharp-metadatarowtypeconverter-convert-from}
@@ -14468,14 +14464,12 @@ pub struct MetaDataRowTypeConverter
 
 | Name | Description |
 | --- | --- |
-| types | Provider type catalog. Convert does not read this map. |
 | fields | Per-column converters. Convert uses `fields[name]`. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [with_types(types)](#rust-metadatarowtypeconverter-with_types-types) | Merges a provider catalog into [types](#rust-metadatarowtypeconverter-types). |
 | [with_fields(fields)](#rust-metadatarowtypeconverter-with_fields-fields) | Merges per-column converters into [fields](#rust-metadatarowtypeconverter-fields). |
 | [convert(row)](#rust-metadatarowtypeconverter-convert-row) | Copies schema columns, or every cell when the column list is empty. A field converter replaces that cell. |
 | [reverse_convert(row)](#rust-metadatarowtypeconverter-reverse_convert-row) | Reverse-converts the same columns through [fields](#rust-metadatarowtypeconverter-fields). |
@@ -14509,26 +14503,6 @@ Builds a converter from `T: ConvertSchema`. Convert copies those columns.
 ```rust
 pub fn of<T: ConvertSchema>() -> Self
 ```
-
-**Returns**
-
-[MetaDataRowTypeConverter](#rust-metadatarowtypeconverter)
-
-###### with_types(types) {#rust-metadatarowtypeconverter-with_types-types}
-
-Merges a provider catalog into [types](#rust-metadatarowtypeconverter-types).
-
-**Definition**
-
-```rust
-pub fn with_types(self, types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `types` | provider catalog; unused at convert time |
 
 **Returns**
 
@@ -14616,7 +14590,7 @@ var user = converter.Convert(new Row
 });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L125-L138)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L115-L128)
 
 ```rust
 let converter = MetaDataRowTypeConverter::of::<User>();
@@ -14641,7 +14615,7 @@ const row = converter.reverseConvert(item);
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L103-L114)
 
 ```csharp
-var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
+var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dictionary<string, TypeConverter<Value, Value>>
 {
     ["flag"] = new OnlyOne()
 });
@@ -14662,7 +14636,7 @@ let row = record(&[("is_enabled", Value::Int(2))]);
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L21-L26)
 
 ```typescript
-const converter = new MetaDataRowTypeConverter({}, { flag: new OnlyOne() });
+const converter = new MetaDataRowTypeConverter({ flag: new OnlyOne() });
 const dest = converter.convert({ flag: 1, name: "a" });
 ```
 

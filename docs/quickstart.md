@@ -187,7 +187,7 @@ class FlagConverter extends TypeConverter {
   reverseConvert = (value: Cell): Cell => value;
 }
 
-const rows = new MetaDataRowTypeConverter({}, { flag: new FlagConverter() });
+const rows = new MetaDataRowTypeConverter({ flag: new FlagConverter() });
 const item = rows.convert(row);
 ```
 :::

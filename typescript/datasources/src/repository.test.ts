@@ -480,7 +480,7 @@ describe("CRUDRepository", () => {
     const repo = new CRUDRepository<Row>(connection, {
       type: Row,
       entity: "rows",
-      objectConverter: new MetaDataRowTypeConverter<Row>({}, { on: new Flag() }),
+      objectConverter: new MetaDataRowTypeConverter<Row>({ on: new Flag() }),
     });
     command.response = { result: undefined, rowsAffected: 1 };
     const created = await repo.create(Object.assign(new Row(), { id: 1, on: true }));

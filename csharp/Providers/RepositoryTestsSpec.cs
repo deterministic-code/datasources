@@ -33,9 +33,9 @@ public static class RepositoryTestsSpec
         if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");
         var logs = new List<string>();
         if (spec.Type.Mappings.Count == 0)
-            await Run(spec, session, new MetaDataRowTypeConverter<SpecUser>(types, fields), logs, quote);
+            await Run(spec, session, new MetaDataRowTypeConverter<SpecUser>(fields), logs, quote);
         else
-            await Run(spec, session, new MetaDataRowTypeConverter<MappedUser>(types, fields), logs, quote);
+            await Run(spec, session, new MetaDataRowTypeConverter<MappedUser>(fields), logs, quote);
         SqlSpec.AssertConsoleLogs(
             spec.Name,
             Queries(spec, session.Connection.Provider),

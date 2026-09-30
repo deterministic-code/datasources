@@ -4,7 +4,7 @@ Default object converter. Read order is the renamed row, then {{RowConverter|row
 
 {{RowConverter|rowConverter|row_converter}} is the `Row` to `Row` cell step. Omitted, that step is skipped and the renamed row is passed through. This converter still runs. It assigns the row onto `T`. A handwritten object converter assigns each column and does not reflect.
 
-{{Types|types|types}} is the provider catalog. {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}} use {{Fields|fields|fields}}.
+{{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}} use {{Fields|fields|fields}}.
 
 ## Classes
 
@@ -18,26 +18,17 @@ class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
 
 **Constructor**
 
-##### MetaDataRowTypeConverter(types, fields)
+##### MetaDataRowTypeConverter(fields)
 
-Builds the default object converter. Convert uses [fields](#metadatarowtypeconverter-fields), not [types](#metadatarowtypeconverter-types).
+Builds the default object converter. Convert uses [fields](#metadatarowtypeconverter-fields).
 
 ```typescript
-constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<string, TypeConverter<Cell, Cell>>)
+constructor(fields?: Record<string, TypeConverter<Cell, Cell>>)
 ```
 
-- `types` — provider catalog; unused at convert time
 - `fields` — per-column TypeConverter
 
 **Properties**
-
-##### types
-
-Provider type catalog. Convert does not read this map.
-
-```typescript
-types: Record<string, TypeConverter<Cell, Cell>>
-```
 
 ##### fields
 
@@ -83,26 +74,17 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
 
 **Constructor**
 
-##### MetaDataRowTypeConverter(types, fields)
+##### MetaDataRowTypeConverter(fields)
 
 Builds the default object converter. Convert assigns public scalar properties, or every key when `T` is a dictionary.
 
 ```csharp
-public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
+public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
 ```
 
-- `types` — provider catalog; unused at convert time
 - `fields` — per-column TypeConverter
 
 **Properties**
-
-##### Types
-
-Provider type catalog. Convert does not read this map.
-
-```csharp
-public Dictionary<string, TypeConverter<Value, Value>> Types { get; set; }
-```
 
 ##### Fields
 
@@ -171,14 +153,6 @@ pub fn of<T: ConvertSchema>() -> Self
 
 **Properties**
 
-##### types
-
-Provider type catalog. Convert does not read this map.
-
-```rust
-pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
-```
-
 ##### fields
 
 Per-column converters. Convert uses `fields[name]`.
@@ -188,18 +162,6 @@ pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
 ```
 
 **Methods**
-
-##### with_types(types)
-
-Merges a provider catalog into [types](#metadatarowtypeconverter-types).
-
-```rust
-pub fn with_types(self, types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
-```
-
-- `types` — provider catalog; unused at convert time
-
-**Returns** [MetaDataRowTypeConverter](#metadatarowtypeconverter)
 
 ##### with_fields(fields)
 

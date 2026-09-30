@@ -245,8 +245,7 @@ export const runRepositorySpec = async (
     : undefined;
   for (const statement of tables(spec.schema, dialect.quote, rename))
     await execute(statement);
-  const catalog = types;
-  const mapping = new MetaDataRowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
+  const mapping = new MetaDataRowTypeConverter<SpecRow>(fieldsOf(spec.type, types));
   const repo = new CRUDRepository<SpecRow>(connection, {
     ids: spec.type.ids,
     type: typeOf(spec.type),
