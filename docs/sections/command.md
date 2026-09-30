@@ -909,7 +909,7 @@ Use {{AddMiddleware|addMiddleware|add_middleware}} to add low-level diagnostics.
 The `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection.
 :::
 
-{{ExecuteReader|executeReader|execute_reader}} returns a [Reader](./reader.md) for the first result set. Convert with [RowTypeConverter](./row-type-converter.md), then map with a [Mapper](./mappers.md).
+{{ExecuteReader|executeReader|execute_reader}} returns a [Reader](./reader.md) for the first result set. Convert with [MetaDataRowTypeConverter](./metadata-row-type-converter.md), then map with a [Mapper](./mappers.md).
 
 [Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection), [InputOutput](#parameterdirection), and [ReturnValue](#parameterdirection) are filled on [Response.Parameters](#response-parameters) after {{Execute|execute|execute}}. A [ReturnValue](#parameterdirection) is copied onto [Response.Result](#response-result) when `Result` would otherwise be null.
 

@@ -292,10 +292,18 @@ connection: IConnection
 
 ##### rowConverter
 
-Row [TypeConverter](./type-converters.md).
+`Cells` to `Cells`. Omitted leaves each cell unchanged.
 
 ```typescript
-rowConverter: TypeConverter<T, Cells>
+rowConverter?: TypeConverter<Cells, Cells>
+```
+
+##### objectConverter
+
+`Cells` to `T`, after `rowConverter`. Default is [MetaDataRowTypeConverter](./metadata-row-type-converter.md).
+
+```typescript
+objectConverter: TypeConverter<T, Cells>
 ```
 
 ##### rowsMapper
@@ -903,10 +911,18 @@ pub connection: Arc<dyn Connection>
 
 ##### row_converter
 
-[RowTypeConverter](./row-type-converter.md).
+`Row` to `Row` cell step. `None` leaves each cell unchanged.
 
 ```rust
-pub row_converter: RowTypeConverter
+pub row_converter: Option<RowTypeConverter>
+```
+
+##### object_converter
+
+`Row` to `Row`, after `row_converter`. Default is [MetaDataRowTypeConverter](./metadata-row-type-converter.md).
+
+```rust
+pub object_converter: MetaDataRowTypeConverter
 ```
 
 ##### rows_mapper

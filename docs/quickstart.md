@@ -145,7 +145,7 @@ See [Mappers](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`
 
 ## Type Converters
 
-`TypeConverter` is only {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}}. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
+`TypeConverter` is only {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}}. Attach field converters on `MetaDataRowTypeConverter` when the native provider cannot map the type.
 
 ::: dialects
 ```csharp
@@ -155,7 +155,7 @@ sealed class FlagConverter : TypeConverter<Value, Value>
     public override Value ReverseConvert(Value to) => to;
 }
 
-var rows = new RowTypeConverter<Item>(fields: new Dictionary<string, TypeConverter<Value, Value>>
+var rows = new MetaDataRowTypeConverter<Item>(fields: new Dictionary<string, TypeConverter<Value, Value>>
 {
     ["flag"] = new FlagConverter()
 });
@@ -175,7 +175,7 @@ impl TypeConverter<Value, Value> for FlagConverter {
     }
 }
 
-let rows = RowTypeConverter::new(vec!["flag".into()]).with_fields(HashMap::from([(
+let rows = MetaDataRowTypeConverter::new(vec!["flag".into()]).with_fields(HashMap::from([(
     "flag".into(),
     Arc::new(FlagConverter) as Arc<dyn TypeConverter<Value, Value>>,
 )]));
@@ -187,7 +187,7 @@ class FlagConverter extends TypeConverter {
   reverseConvert = (value: Cell): Cell => value;
 }
 
-const rows = new RowTypeConverter({}, { flag: new FlagConverter() });
+const rows = new MetaDataRowTypeConverter({}, { flag: new FlagConverter() });
 const item = rows.convert(row);
 ```
 :::

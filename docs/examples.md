@@ -20,4 +20,4 @@ TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See
 
 ## Convert a row
 
-TODO: `RowTypeConverter` convert / reverse-convert, or attach a field converter. See [RowTypeConverter](./sections/row-type-converter.md).
+TODO: `MetaDataRowTypeConverter` convert / reverse-convert, or attach a field converter. See [MetaDataRowTypeConverter](./sections/metadata-row-type-converter.md).

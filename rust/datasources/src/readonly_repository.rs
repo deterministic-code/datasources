@@ -2,7 +2,7 @@ use crate::built_repository::BuiltRepository;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
-use crate::converters::{ConvertSchema, RowTypeConverter};
+use crate::converters::{ConvertSchema, MetaDataRowTypeConverter, RowTypeConverter};
 use crate::create_crud_repository_options::create_crud_repository_options;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
@@ -36,6 +36,7 @@ pub struct ReadonlyRepository {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: Option<RowTypeConverter>,
+    pub(crate) object_converter: MetaDataRowTypeConverter,
     pub(crate) rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
     pub(crate) column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
     pub(crate) statements: RepositoryStatements,
@@ -69,6 +70,7 @@ impl ReadonlyRepository {
             connection: built.connection,
             middlewares: Vec::new(),
             row_converter: built.row_converter,
+            object_converter: built.object_converter,
             rows_mapper: built.rows_mapper,
             column_mappings: built.column_mappings,
             statements: built.statements,
@@ -89,6 +91,7 @@ impl ReadonlyRepository {
             connection: Arc::new(StubConnection::new("memory")),
             middlewares: Vec::new(),
             row_converter: None,
+            object_converter: MetaDataRowTypeConverter::new(Vec::new()),
             rows_mapper: Box::new(IdentityMapper::<Row>::new()),
             column_mappings: Box::new(IdentityMapper::<String>::new()),
             statements: RepositoryStatements::new("", Vec::new()),
@@ -158,7 +161,8 @@ impl ReadonlyRepository {
     }
 
     pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        let row = Mapper::reverse_map(&self.rows_mapper, item.clone());
+        let mapped = Mapper::reverse_map(&self.rows_mapper, item.clone());
+        let row = self.object_converter.reverse_convert(&mapped)?;
         match &self.row_converter {
             Some(converter) => converter.reverse_convert(&row),
             None => Ok(row),
@@ -205,12 +209,15 @@ impl ReadonlyRepository {
         value: &Value,
         fields_applied: bool,
     ) -> Result<Value> {
-        match &self.row_converter {
-            Some(converter) => match converter.fields.get(property) {
-                Some(field) if !fields_applied => field.reverse_convert(value),
-                _ => Ok(value.clone()),
+        match self.object_converter.fields.get(property) {
+            Some(field) if !fields_applied => field.reverse_convert(value),
+            _ => match &self.row_converter {
+                Some(converter) => match converter.fields.get(property) {
+                    Some(field) if !fields_applied => field.reverse_convert(value),
+                    _ => Ok(value.clone()),
+                },
+                None => Ok(value.clone()),
             },
-            None => Ok(value.clone()),
         }
     }
 
@@ -286,11 +293,11 @@ impl ReadonlyRepository {
         }
         let mut pairs = Vec::new();
         for renamed in self.read_sources(query, parameters).await? {
-            let converted = match &self.row_converter {
+            let cells = match &self.row_converter {
                 Some(converter) => converter.convert(&renamed)?,
                 None => renamed.clone(),
             };
-            let item = Mapper::map(&self.rows_mapper, converted);
+            let item = Mapper::map(&self.rows_mapper, self.object_converter.convert(&cells)?);
             pairs.push((item, Some(renamed)));
         }
         Ok(pairs)

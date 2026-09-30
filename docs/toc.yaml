@@ -72,8 +72,8 @@ pages:
   - path: sections/type-converters.md
     title: Type Converters
     group: Code Reference
-  - path: sections/row-type-converter.md
-    title: Row Type Converter
+  - path: sections/metadata-row-type-converter.md
+    title: Metadata Row Type Converter
     group: Code Reference
     parent: Type Converters
   - path: sections/statements.md

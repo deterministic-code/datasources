@@ -321,12 +321,13 @@ impl CRUDRepository {
             .current()
             .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
         let row = identified(named(current, &column, &sql_column), &column);
+        let cells = match &self.readonly.row_converter {
+            Some(converter) => converter.convert(&row)?,
+            None => row,
+        };
         let mapped = Mapper::map(
             &self.readonly.rows_mapper,
-            match &self.readonly.row_converter {
-                Some(converter) => converter.convert(&row)?,
-                None => row,
-            },
+            self.readonly.object_converter.convert(&cells)?,
         );
         self.write_id(item, &self.id_value(&mapped))
     }
@@ -345,10 +346,11 @@ impl CRUDRepository {
         let name = self.ids[0].clone();
         let mut patch = Row::new();
         patch.insert(name.clone(), id.clone());
-        let converted = match &self.readonly.row_converter {
+        let cells = match &self.readonly.row_converter {
             Some(converter) => converter.convert(&patch)?,
             None => patch,
         };
+        let converted = self.readonly.object_converter.convert(&cells)?;
         if let Some(value) = converted.get(&name) {
             if *value != Value::Null {
                 item.insert(name, value.clone());
