@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   CRUDRepository,
   ChangeCasingMapper, Datasource,
+  DatasourceFactory,
   DictionaryMapper,
   PluralizerMapper,
   ReadonlyRepository,
@@ -207,8 +208,16 @@ const executeSql = async (connection: IConnection, sql: string): Promise<void> =
 };
 
 describe("user crud", () => {
+  beforeEach(() => {
+    DatasourceFactory.reset();
+    DatasourceFactory.register("sqlite", new SqliteDriver());
+    delete process.env.INSTALLED_PROVIDERS;
+    delete process.env.DATASOURCE_URL;
+    process.env.PROVIDER = "sqlite";
+  });
+
   it("writes a user from the type", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+    const ds = Datasource.default;
     const connection = await open(ds);
     await applySchema(connection, "user-pascal");
     const usersRepo = new CRUDRepository(User, connection);

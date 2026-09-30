@@ -7,6 +7,7 @@ use datasources_sql_specs::apply_schema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
+use crate::env_lock;
 
 const ADA: &str = "11111111-1111-1111-1111-111111111111";
 const GRACE: &str = "22222222-2222-2222-2222-222222222222";
@@ -564,7 +565,7 @@ mod users_view_roles {
 mod user_crud {
     use super::{apply_schema, datasource, execute_sql, open, User};
     use datasources::{
-        create_crud_repository_options, encode_rows, eq, CRUDRepository, Casing,
+        create_crud_repository_options, default, encode_rows, eq, CRUDRepository, Casing,
         ChangeCasingMapper, ConvertSchema, Datasource, DictionaryMapper, ICRUDRepository,
         IReadonlyRepository, RowTypeConverter, Value, Where,
     };
@@ -616,9 +617,9 @@ mod user_crud {
 
     #[tokio::test]
     async fn writes_user_from_the_type() {
-        let built = datasource();
-        let ds: &dyn Datasource = &*built;
-        let connection = open(ds).await;
+        let _guard = super::env_lock();
+        let ds = default().unwrap();
+        let connection = open(ds.as_ref()).await;
         apply_schema(connection.as_ref(), "user-pascal").await.unwrap();
         let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
         let mut created = datasources::Row::new();
