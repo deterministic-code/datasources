@@ -56,8 +56,8 @@ fn assemble(
         row_type_converters,
     } = options;
     let row_converter = row_converter.map(|mapping| mapping.with_types(row_type_converters));
-    let object_converter =
-        object_converter.unwrap_or_else(|| MetaDataRowTypeConverter::new(Vec::new()));
+    let object_converter = object_converter
+        .unwrap_or_else(|| Box::new(MetaDataRowTypeConverter::new(Vec::new())));
     let mut names: Vec<String> = row_converter
         .as_ref()
         .map(|converter| {

@@ -4614,7 +4614,7 @@ let disabled = repo
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L38-L57)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L62-L81)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -4645,7 +4645,7 @@ var usersRepo = new CRUDRepository<User>(connection);
 var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L558-L607)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L612-L661)
 
 ```rust
 let built = datasource();
@@ -4658,7 +4658,7 @@ created.insert("is_enabled".into(), Value::Bool(true));
 let mut created = users_repo.create(&mut created).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L161-L183)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L204-L226)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -4709,7 +4709,7 @@ usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
 var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L609-L725)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L663-L779)
 
 ```rust
 let built = datasource();
@@ -4767,7 +4767,7 @@ admin.insert("Name".into(), Value::from("admin"));
 let admin = user_types_repo.create(&mut admin).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L208-L273)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L251-L316)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -5431,7 +5431,7 @@ pub struct ReadonlyRepositoryOptions
 | select | Rewrites finished select SQL. `None` leaves the statement unchanged. |
 | rows_mapper | Maps each converted row. Default is [IdentityMapper](#identity-mapper). |
 | row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
-| object_converter | `Row` to `Row`, after `row_converter`. Omitted copies every cell. `of::<T>()` copies the `ConvertSchema` columns. |
+| object_converter | `Row` to `Row`, after `row_converter`. Omitted copies every cell. A handwritten converter assigns each column. |
 | row_type_converters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 
 ##### RepositoryTree {#rust-repositorytree}
@@ -5607,7 +5607,7 @@ let disabled = repo
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L38-L57)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L62-L81)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -5645,6 +5645,161 @@ for await (const row of repo.read(new Where("username", eq, "grace").and("is_ena
     is_enabled: 0
   }
 ]
+```
+
+#### Map an object explicitly
+
+A handwritten object converter assigns each column. `ObjectConverter` / `objectConverter` / `object_converter` replaces [MetaDataRowTypeConverter](#metadata-row-type-converter), so the read does not reflect.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L55-L70) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L72-L94)
+
+```csharp
+sealed class UserConverter : TypeConverter<User, Row>
+{
+    public override User Convert(Row from) => new()
+    {
+        id = (int)(long)from["id"].ToObject()!,
+        username = (string)from["username"].ToObject()!,
+        is_enabled = (long)from["is_enabled"].ToObject()! != 0
+    };
+
+    public override Row ReverseConvert(User to) => new()
+    {
+        ["id"] = to.id,
+        ["username"] = to.username,
+        ["is_enabled"] = to.is_enabled
+    };
+}
+
+var driver = new SqliteDriver();
+var ds = new Datasource("sqlite", driver, new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var connection = await Open(ds, "minimal-users", """
+    INSERT INTO users (id, username, is_enabled) VALUES
+        (1, 'ada', 1),
+        (2, 'grace', 0);
+    """);
+var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+{
+    EntityMapper = new PluralizerMapper(),
+    ReadProperties = ["id", "username", "is_enabled"],
+    ObjectConverter = new UserConverter()
+});
+
+var user = await usersRepo.ReadSingle(new Where("id", eq, 1));
+```
+
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L88-L110) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L112-L138)
+
+```rust
+impl TypeConverter<Row, Row> for UserConverter {
+    fn convert(&self, from: &Row) -> Result<Row> {
+        let mut row = from.clone();
+        let enabled = match row.get("is_enabled") {
+            Some(Value::Int(flag)) => Value::Bool(*flag != 0),
+            Some(value) => value.clone(),
+            None => Value::Null,
+        };
+        row.insert("is_enabled".into(), enabled);
+        Ok(row)
+    }
+
+    fn reverse_convert(&self, to: &Row) -> Result<Row> {
+        let mut row = to.clone();
+        let enabled = match row.get("is_enabled") {
+            Some(Value::Bool(flag)) => Value::Int(if *flag { 1 } else { 0 }),
+            Some(value) => value.clone(),
+            None => Value::Null,
+        };
+        row.insert("is_enabled".into(), enabled);
+        Ok(row)
+    }
+}
+
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    "minimal-users",
+    "
+    INSERT INTO users (id, username, is_enabled) VALUES
+        (1, 'ada', 1),
+        (2, 'grace', 0);
+    ",
+)
+.await;
+let mut options = create_crud_repository_options::<User>();
+options.entity_mapper = Box::new(PluralizerMapper::new());
+options.object_converter = Some(Box::new(UserConverter));
+let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+let user = users_repo
+    .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
+    .await
+    .unwrap()
+    .unwrap();
+```
+
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L38-L52) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L83-L100)
+
+```typescript
+class UserConverter extends TypeConverter<MappedUser, Cells> {
+  convert = (from: Cells): MappedUser => {
+    const user = new MappedUser();
+    user.id = from.id as number;
+    user.username = from.username as string;
+    user.is_enabled = from.is_enabled === 1;
+    return user;
+  };
+
+  reverseConvert = (to: MappedUser): Cells => ({
+    id: to.id,
+    username: to.username,
+    is_enabled: to.is_enabled ? 1 : 0,
+  });
+}
+
+const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+const connection = await open(ds, "minimal-users", `
+  INSERT INTO users (id, username, is_enabled) VALUES
+    (1, 'ada', 1),
+    (2, 'grace', 0);
+`);
+const usersRepo = ds.createReadonlyRepository(MappedUser, connection, {
+  entity: "User",
+  entityMapper: new PluralizerMapper(),
+  readProperties: ["id", "username", "is_enabled"],
+  objectConverter: new UserConverter(),
+});
+const user = await usersRepo.readSingle(new Where("id", eq, 1));
+```
+
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
 ```
 
 #### Enriched readonly
@@ -5699,7 +5854,7 @@ var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L202-L273)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L256-L327)
 
 ```rust
 let built = datasource();
@@ -5775,7 +5930,7 @@ users_view.remove("UserTypeId");
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L109-L144)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L152-L187)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -5891,7 +6046,7 @@ await foreach (var row in repo.Read(new Where("Active", eq, true).And("Opened", 
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L86-L146)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L140-L200)
 
 ```rust
 let built = datasource();
@@ -5980,7 +6135,7 @@ let later = repo
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L59-L92)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L102-L135)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -6314,7 +6469,7 @@ var lin = Assert.Single(items, item => item.Login == "lin");
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L441-L502)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L495-L556)
 
 ```rust
             "user.is_enabled AS Active",
@@ -7601,7 +7756,7 @@ pub struct BuiltRepository
 | --- | --- |
 | connection | [Connection](#connection). |
 | row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. |
-| object_converter | `Row` to `Row`, after `row_converter`. Default is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
+| object_converter | `Row` to `Row`, after `row_converter`. Default is [MetaDataRowTypeConverter](#metadata-row-type-converter). A handwritten converter assigns each column. |
 | rows_mapper | Read-row [Mapper](#mappers). |
 | statements | SQL fragments. |
 | ids | Id column names. |
@@ -7671,7 +7826,7 @@ ada-v2
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L558-L607)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L612-L661)
 
 ```rust
 let built = datasource();
@@ -7718,7 +7873,7 @@ ada-v2
 no row
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L161-L183)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L204-L226)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -8008,7 +8163,7 @@ ada-v2
 grace
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L739-L782)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L793-L836)
 
 ```rust
 let built = datasource();
@@ -8059,7 +8214,7 @@ ada-v2
 grace
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L283-L309)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L326-L352)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -8522,7 +8677,7 @@ var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L609-L725)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L663-L779)
 
 ```rust
 let built = datasource();
@@ -8622,7 +8777,7 @@ let admin = user_types_repo.create(&mut admin).await.unwrap();
 no row
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L208-L273)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L251-L316)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -14012,7 +14167,7 @@ var user = converter.Convert(new Row
 });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L95-L108)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L105-L118)
 
 ```rust
 let converter = MetaDataRowTypeConverter::of::<User>();
@@ -21883,7 +22038,7 @@ parentsRepo.AddEnriched(
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L361-L423)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L415-L477)
 
 ```rust
 let built = datasource();
@@ -22176,7 +22331,7 @@ await new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
 var items = parents.Cast<Parent>();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L425-L502)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L479-L556)
 
 ```rust
 let built = datasource();

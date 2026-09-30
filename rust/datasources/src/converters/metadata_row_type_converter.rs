@@ -46,11 +46,11 @@ impl MetaDataRowTypeConverter {
     }
 
     pub fn convert(&self, row: &Row) -> Result<Row> {
-        self.apply(row, false)
+        TypeConverter::convert(self, row)
     }
 
     pub fn reverse_convert(&self, row: &Row) -> Result<Row> {
-        self.apply(row, true)
+        TypeConverter::reverse_convert(self, row)
     }
 
     fn apply(&self, row: &Row, reverse: bool) -> Result<Row> {
@@ -70,6 +70,16 @@ impl MetaDataRowTypeConverter {
                 Ok((key, cell))
             })
             .collect()
+    }
+}
+
+impl TypeConverter<Row, Row> for MetaDataRowTypeConverter {
+    fn convert(&self, from: &Row) -> Result<Row> {
+        self.apply(from, false)
+    }
+
+    fn reverse_convert(&self, to: &Row) -> Result<Row> {
+        self.apply(to, true)
     }
 }
 

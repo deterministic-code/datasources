@@ -1,4 +1,4 @@
-use crate::converters::{MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
+use crate::converters::{RowTypeConverter, TypeConverter};
 use crate::mappers::{IdentityMapper, Mapper};
 use crate::row::Row;
 use crate::value::Value;
@@ -12,7 +12,7 @@ pub struct ReadonlyRepositoryOptions {
     pub select: Option<Arc<crate::mappers::TransformMapper<String, String>>>,
     pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
     pub row_converter: Option<RowTypeConverter>,
-    pub object_converter: Option<MetaDataRowTypeConverter>,
+    pub object_converter: Option<Box<dyn TypeConverter<Row, Row> + Send + Sync>>,
     pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
 

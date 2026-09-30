@@ -1,0 +1,16 @@
+sealed class UserConverter : TypeConverter<User, Row>
+{
+    public override User Convert(Row from) => new()
+    {
+        id = (int)(long)from["id"].ToObject()!,
+        username = (string)from["username"].ToObject()!,
+        is_enabled = (long)from["is_enabled"].ToObject()! != 0
+    };
+
+    public override Row ReverseConvert(User to) => new()
+    {
+        ["id"] = to.id,
+        ["username"] = to.username,
+        ["is_enabled"] = to.is_enabled
+    };
+}
