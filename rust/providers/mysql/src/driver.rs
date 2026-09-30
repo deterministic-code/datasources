@@ -80,17 +80,19 @@ mod tests {
     }
 
     #[test]
-    fn row_converter_maps_uuid_and_boolean_and_leaves_unknown_text() {
+    fn maps_property_targets() {
+        use datasources::converters::RowTypeConverter;
         use datasources::Value;
         use std::collections::HashMap;
 
         let driver = MysqlDriver;
         let columns = HashMap::from([
             ("Key".into(), "uuid".into()),
-            ("Active".into(), "TINYINT".into()),
-            ("Login".into(), "XML".into()),
+            ("Active".into(), "bool".into()),
+            ("Login".into(), "string".into()),
+            ("Created".into(), "datetime".into()),
         ]);
-        let converter = driver.row_converter(&columns);
+        let converter = RowTypeConverter::from(|| driver.row_type_converters(), &columns);
         let row = HashMap::from([
             (
                 "Key".into(),
@@ -98,11 +100,13 @@ mod tests {
             ),
             ("Active".into(), Value::Int(1)),
             ("Login".into(), Value::from("ada")),
+            ("Created".into(), Value::from("2020-01-02T03:04:05.000Z")),
         ]);
         let converted = converter.convert(&row).unwrap();
         assert!(matches!(converted.get("Key"), Some(Value::Uuid(_))));
         assert_eq!(converted.get("Active"), Some(&Value::Bool(true)));
         assert_eq!(converted.get("Login"), Some(&Value::from("ada")));
+        assert!(matches!(converted.get("Created"), Some(Value::DateTime(_))));
         let stored = converter.reverse_convert(&converted).unwrap();
         assert_eq!(
             stored.get("Key"),
@@ -110,5 +114,9 @@ mod tests {
         );
         assert_eq!(stored.get("Active"), Some(&Value::Int(1)));
         assert_eq!(stored.get("Login"), Some(&Value::from("ada")));
+        assert_eq!(
+            stored.get("Created"),
+            Some(&Value::from("2020-01-02T03:04:05.000Z"))
+        );
     }
 }

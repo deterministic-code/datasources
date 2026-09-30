@@ -257,9 +257,6 @@ describe("Postgres datasource", () => {
         new PostgresTransaction(c as PostgresConnection, isolation),
       rowTypeConverters: PostgresRowTypeConverters,
       columnType,
-      rowConverter(columns) {
-        return RowTypeConverter.from(this, columns);
-      },
     });
     const ds = new Datasource("postgres", of());
     expect(ds.provider).toBe("postgres");
@@ -302,23 +299,32 @@ describe("Postgres datasource", () => {
     expect(provider.transaction(connection as PostgresConnection).isolation).toBe("readCommitted");
   });
 
-  it("maps uuid and boolean and leaves text", () => {
+  it("maps property targets", () => {
     const provider = new PostgresDriver();
-    const converter = provider.rowConverter({ Key: "UUID", Active: "BOOLEAN", Login: "TEXT" });
+    const created = "2020-01-02T03:04:05.000Z";
+    const converter = RowTypeConverter.from(provider.rowTypeConverters, {
+      Key: "uuid",
+      Active: "bool",
+      Login: "string",
+      Created: "datetime",
+    });
     const row = converter.convert({
       Key: "11111111-1111-1111-1111-111111111111",
       Active: 1,
       Login: "ada",
+      Created: created,
     });
     expect(row).toEqual({
       Key: "11111111-1111-1111-1111-111111111111",
       Active: true,
       Login: "ada",
+      Created: new Date(created),
     });
     expect(converter.reverseConvert(row)).toEqual({
       Key: "11111111-1111-1111-1111-111111111111",
       Active: true,
       Login: "ada",
+      Created: new Date(created),
     });
   });
 });

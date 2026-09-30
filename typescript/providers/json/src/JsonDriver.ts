@@ -1,6 +1,5 @@
 import {
   columnType as identityColumnType,
-  RowTypeConverter,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -16,7 +15,6 @@ import { JsonTransaction } from "./transaction.ts";
 export class JsonDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
-  rowConverter = (columns: Record<string, string>) => RowTypeConverter.from(this, columns);
   connection = (options?: DatasourceOptions): IConnection =>
     JsonConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

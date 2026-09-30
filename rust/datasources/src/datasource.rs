@@ -23,7 +23,9 @@ pub trait Datasource: Send + Sync {
     fn row_type_converters(
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>;
-    fn row_converter(&self, columns: &HashMap<String, String>) -> RowTypeConverter;
+    fn row_converter(&self, columns: &HashMap<String, String>) -> RowTypeConverter {
+        RowTypeConverter::from(|| self.row_type_converters(), columns)
+    }
     fn repository_from(
         &self,
         connection: Arc<dyn Connection>,
@@ -142,10 +144,6 @@ impl Datasource for BuiltDatasource {
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
         self.driver.row_type_converters()
-    }
-
-    fn row_converter(&self, columns: &HashMap<String, String>) -> RowTypeConverter {
-        self.driver.row_converter(columns)
     }
 
     fn repository_from(

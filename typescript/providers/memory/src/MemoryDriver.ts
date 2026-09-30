@@ -1,6 +1,5 @@
 import {
   columnType as identityColumnType,
-  RowTypeConverter,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -16,7 +15,6 @@ import { MemoryTransaction } from "./transaction.ts";
 export class MemoryDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
-  rowConverter = (columns: Record<string, string>) => RowTypeConverter.from(this, columns);
   connection = (options?: DatasourceOptions): IConnection =>
     MemoryConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

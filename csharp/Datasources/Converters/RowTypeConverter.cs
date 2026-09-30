@@ -7,12 +7,13 @@ public sealed class RowTypeConverter : TypeConverter<Row, Row>
     public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>> fields) =>
         this.fields = fields;
 
-    public static RowTypeConverter From(IDriver driver, IReadOnlyDictionary<string, string> columns)
+    public static RowTypeConverter From(
+        IReadOnlyDictionary<string, TypeConverter<Value, Value>> converters,
+        IReadOnlyDictionary<string, string> columns)
     {
-        var native = Native(driver);
         var fields = new Dictionary<string, TypeConverter<Value, Value>>();
         foreach (var (name, type) in columns)
-            if (driver.RowTypeConverters.TryGetValue(type, out var converter) || native.TryGetValue(type, out converter))
+            if (converters.TryGetValue(type, out var converter))
                 fields[name] = converter;
         return new(fields);
     }
@@ -27,10 +28,4 @@ public sealed class RowTypeConverter : TypeConverter<Row, Row>
             fields.TryGetValue(pair.Key, out var converter)
                 ? reverse ? converter.ReverseConvert(pair.Value) : converter.Convert(pair.Value)
                 : pair.Value)));
-
-    static Dictionary<string, TypeConverter<Value, Value>> Native(IDriver driver) =>
-        driver.RowTypeConverters
-            .GroupBy(pair => driver.ColumnType(pair.Key), StringComparer.OrdinalIgnoreCase)
-            .Where(group => group.Count() == 1)
-            .ToDictionary(group => group.Key, group => group.First().Value, StringComparer.OrdinalIgnoreCase);
 }

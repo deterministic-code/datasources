@@ -232,9 +232,6 @@ describe("Sqlite datasource", () => {
         new SqliteTransaction(c as SqliteConnection, isolation),
       rowTypeConverters: SqliteRowTypeConverters,
       columnType,
-      rowConverter(columns) {
-        return RowTypeConverter.from(this, columns);
-      },
     });
     const ds = new Datasource("sqlite", of());
     expect(ds.provider).toBe("sqlite");
@@ -272,23 +269,32 @@ describe("Sqlite datasource", () => {
     expect(provider.transaction(connection as SqliteConnection).isolation).toBe("readCommitted");
   });
 
-  it("maps uuid and boolean and leaves shared text", () => {
+  it("maps property targets", () => {
     const provider = new SqliteDriver();
-    const converter = provider.rowConverter({ Key: "uuid", Active: "BOOLEAN", Login: "TEXT" });
+    const created = "2020-01-02T03:04:05.000Z";
+    const converter = RowTypeConverter.from(provider.rowTypeConverters, {
+      Key: "uuid",
+      Active: "bool",
+      Login: "string",
+      Created: "datetime",
+    });
     const row = converter.convert({
       Key: "11111111-1111-1111-1111-111111111111",
       Active: 1,
       Login: "ada",
+      Created: created,
     });
     expect(row).toEqual({
       Key: "11111111-1111-1111-1111-111111111111",
       Active: true,
       Login: "ada",
+      Created: new Date(created),
     });
     expect(converter.reverseConvert(row)).toEqual({
       Key: "11111111-1111-1111-1111-111111111111",
       Active: 1,
       Login: "ada",
+      Created: created,
     });
   });
 });

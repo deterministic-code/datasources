@@ -2,7 +2,7 @@ use super::stub_connection::StubConnection;
 use super::stub_repository::StubRepository;
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::converters::{RowTypeConverter, TypeConverter};
+use crate::converters::TypeConverter;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource::Datasource;
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
@@ -53,10 +53,6 @@ impl Datasource for StubDatasource {
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
         HashMap::new()
-    }
-
-    fn row_converter(&self, columns: &HashMap<String, String>) -> RowTypeConverter {
-        RowTypeConverter::new(columns.keys().cloned().collect())
     }
 
     fn repository_from(
