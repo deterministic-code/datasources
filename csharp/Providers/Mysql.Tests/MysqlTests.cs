@@ -46,8 +46,8 @@ public class MysqlTests
         Assert.Equal("mysql", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "mysql" }).Provider);
 
         var closed = new MysqlConnection();
-        await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute("x"));
-        await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).ExecuteReader("x"));
+        await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).Execute(Native.N("x")));
+        await Assert.ThrowsAsync<DatasourceException>(() => new MysqlCommand(closed).ExecuteReader(Native.N("x")));
     }
 
     [Fact]

@@ -12,6 +12,16 @@ public class CommandMiddlewareHost
         return (ICommand)this;
     }
 
+    public virtual Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+        string.IsNullOrWhiteSpace(text)
+            ? ((ICommand)this).ExecuteReader(new Native(text), parameters)
+            : ((ICommand)this).ExecuteReader(StatementParser.Parse(text), parameters);
+
+    public virtual Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
+        string.IsNullOrWhiteSpace(text)
+            ? ((ICommand)this).Execute(new Native(text), parameters)
+            : ((ICommand)this).Execute(StatementParser.Parse(text), parameters);
+
     public async Task<T> Run<T>(
         string text,
         IReadOnlyList<Parameter>? parameters,

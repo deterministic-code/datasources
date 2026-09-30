@@ -574,7 +574,7 @@ async fn stubs_throw() {
     let command = ds.create_command(None);
     assert!(command.execute("", None).await.is_err());
     assert!(command
-        .execute_reader("select", Some(&[Parameter::new("id", 1_i64)]))
+        .execute_reader_native(&Native::new("select"), Some(&[Parameter::new("id", 1_i64)]))
         .await
         .is_err());
     let ds: &dyn Datasource = &*ds;
@@ -652,7 +652,7 @@ async fn published_mocks() {
     assert!(txn.abort().await.is_err());
 
     let command = MockCommand::new();
-    command.execute("insert", None).await.unwrap();
+    command.execute_native(&crate::Native::new("insert"), None).await.unwrap();
     command
         .execute_reader("", Some(&[Parameter::new("id", 1_i64)]))
         .await
@@ -762,7 +762,7 @@ async fn published_mocks() {
             })
         },
     }));
-    command.execute("insert", None).await.unwrap();
+    command.execute_native(&crate::Native::new("insert"), None).await.unwrap();
     assert_eq!(
         *seen.lock().unwrap(),
         vec!["b:insert".to_string(), "a:insert".to_string()]

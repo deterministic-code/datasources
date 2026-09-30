@@ -1,6 +1,6 @@
 # Statements
 
-Command text. [Command](./command.md) {{Execute|execute|execute}} and {{ExecuteReader|executeReader|execute_reader}} overloads take any statement and use {{GetText()|getText()|get_text()}} only.
+Command text. A string passed to [Command](./command.md) {{Execute|execute|execute}} or {{ExecuteReader|executeReader|execute_reader}} is parsed with {{StatementParser.Parse|StatementParser.parse|StatementParser::parse}}. {{Native|Native|Native}} and {{N|n|n}} send that text to the provider engine. A statement overload renders with {{GetText()|getText()|get_text()}} after the provider transforms it, then runs {{Native|Native|Native}}.
 
 ## Classes
 

@@ -11,7 +11,7 @@ import { contactsServiceOf } from "../../../datasources/src/tests/contact/contac
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { execute } from "@datasources/core";
+import { execute, Native } from "@datasources/core";
 import { tables } from "../../../schema-spec.ts";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";
@@ -60,7 +60,7 @@ describe("contacts readonly repository", () => {
       for (const statement of tables("contacts", quote))
         await execute(command, statement);
       for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql(seedContactCount, "'\\x'")])
-        await command.execute(sql);
+        await command.executeNative(new Native(sql));
 
       const { eager, enriched } = await contactsParity(connection, specVerbose());
       const mapped = contactWith(eager, 2, 1);

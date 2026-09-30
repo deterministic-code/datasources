@@ -3,6 +3,7 @@ import {
   execute,
   executeReader,
   ExecuteStoredProcedureStatement,
+  Native,
   MockCommand,
   MockConnection,
   MockReader,
@@ -14,7 +15,7 @@ describe("MockCommand", () => {
     const command = new MockCommand(connection);
     command.response = { result: 1, rowsAffected: 2 };
     command.reader = new MockReader([{ id: 1 }]);
-    expect(await command.execute("insert", [{ name: "id", value: 1 }])).toEqual({
+    expect(await command.executeNative(new Native("insert"), [{ name: "id", value: 1 }])).toEqual({
       result: 1,
       rowsAffected: 2,
     });
@@ -28,12 +29,12 @@ describe("MockCommand", () => {
       nextResult: async () => false,
       dispose: async () => {},
     };
-    expect(await command.executeReader("plain")).toBe(command.reader);
+    expect(await command.executeReaderNative(new Native("plain"))).toBe(command.reader);
 
     command.executeError = new Error("exec");
     await expect(command.execute("")).rejects.toThrow("exec");
     command.executeReaderError = new Error("read");
-    await expect(command.executeReader("x")).rejects.toThrow("read");
+    await expect(command.executeReaderNative(new Native("x"))).rejects.toThrow("read");
 
     command.executeError = undefined;
     command.executeReaderError = undefined;
@@ -63,7 +64,7 @@ describe("MockCommand", () => {
         seen.push(`after:${text}`);
       },
     });
-    await command.execute("insert");
+    await command.executeNative(new Native("insert"));
     expect(seen).toEqual(["before:insert", "after:insert"]);
   });
 });

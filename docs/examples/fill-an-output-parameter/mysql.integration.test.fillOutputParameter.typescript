@@ -1,10 +1,10 @@
 async function fillOutputParameter(command: MysqlCommand) {
-  await command.execute(`
+  await command.executeNative(new Native(`
     CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
     BEGIN
       SET result = start_n + 1;
     END
-  `);
+  `));
   const start = { name: "start_n", value: 4 };
   const result = { name: "result", direction: ParameterDirection.Output };
   const call = await command.executeStatement(

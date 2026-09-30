@@ -2,6 +2,7 @@ use crate::bulk_command::BulkCommand;
 use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::i_where::IWhere;
+use crate::native::Native;
 use crate::parameter::Parameter;
 use crate::response::Response;
 use crate::result::Result;
@@ -54,7 +55,9 @@ async fn send(repo: &BulkCRUDRepository, commands: &[BulkCommand]) -> Result<Res
         .iter()
         .flat_map(|command| command.parameters.clone())
         .collect();
-    repo.command().execute(&text, Some(&parameters)).await
+    repo.command()
+        .execute_native(&Native::new(text), Some(&parameters))
+        .await
 }
 
 fn rename(command: &BulkCommand, index: usize) -> BulkCommand {

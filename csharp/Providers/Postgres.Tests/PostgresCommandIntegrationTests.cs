@@ -29,7 +29,7 @@ public class PostgresCommandIntegrationTests
             });
             await conn.Open();
             var command = new PostgresCommand(conn);
-            await command.Execute("""
+            await command.Execute(Native.N("""
                 CREATE PROCEDURE bump(INOUT result INT)
                 LANGUAGE plpgsql
                 AS $$
@@ -37,7 +37,7 @@ public class PostgresCommandIntegrationTests
                   result := result + 1;
                 END;
                 $$
-                """);
+                """));
             var result = new Parameter("result", 4, ParameterDirection.InputOutput);
             var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [result]), [result]);
             Assert.Equal(new Value.Int(5), call.Parameters![0].Value);
@@ -55,11 +55,11 @@ public class PostgresCommandIntegrationTests
 
     static async Task ReadReturnValue(ICommand command)
     {
-        await command.Execute("""
+        await command.Execute(Native.N("""
             CREATE FUNCTION add_one(n INT) RETURNS INT
             LANGUAGE sql
             AS $$ SELECT n + 1 $$
-            """);
+            """));
         var n = new Parameter("n", 4);
         var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
         Assert.Equal(new Value.Int(5), ret.Result);

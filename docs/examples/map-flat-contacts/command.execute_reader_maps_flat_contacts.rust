@@ -3,14 +3,14 @@ let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
 command
-    .execute(
-        "CREATE TABLE users (
+    .execute_native(
+        &Native::new("CREATE TABLE users (
             id INTEGER PRIMARY KEY,
             username TEXT,
             email TEXT,
             contact_name1 TEXT,
             contact_name2 TEXT
-        )",
+        )"),
         None,
     )
     .await

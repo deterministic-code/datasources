@@ -19,7 +19,7 @@ public class SqliteTests
         await conn.Open();
         var command = new SqliteCommand(conn);
         await command.Execute("");
-        await command.ExecuteReader("SELECT 1");
+        await command.ExecuteReader(Native.N("SELECT 1"));
         await command.ExecuteReader("");
 
         var txn = await conn.StartTransaction();
@@ -52,14 +52,14 @@ public class SqliteTests
         var bound = Assert.IsType<SqliteCommand>(ds.CreateCommand(provided));
         Assert.Same(provided, bound.Connection);
         await bound.Execute("");
-        await bound.ExecuteReader("SELECT 1");
+        await bound.ExecuteReader(Native.N("SELECT 1"));
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
             ds.CreateRepository<Dictionary<string, Value>>(provided));
         Assert.Equal("sqlite", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "sqlite" }).Provider);
 
         var closed = new SqliteConnection();
-        await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).Execute("x"));
-        await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).ExecuteReader("x"));
+        await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).Execute(Native.N("x")));
+        await Assert.ThrowsAsync<DatasourceException>(() => new SqliteCommand(closed).ExecuteReader(Native.N("x")));
     }
 
     [Fact]

@@ -252,7 +252,7 @@ impl crate::sabi_driver::SabiCommand for PluginCommand {
         let command = self.command();
         lift(wait(async move {
             command
-                .execute(&query, params.as_deref())
+                .execute_native(&crate::native::Native::new(query), params.as_deref())
                 .await
                 .map(|response| encode_response(&response))
         }))
@@ -269,7 +269,7 @@ impl crate::sabi_driver::SabiCommand for PluginCommand {
         let slots = Arc::clone(&self.keep.slots);
         lift(wait(async move {
             command
-                .execute_reader(&query, params.as_deref())
+                .execute_reader_native(&crate::native::Native::new(query), params.as_deref())
                 .await
                 .map(|reader| store_reader(&slots, reader))
         }))

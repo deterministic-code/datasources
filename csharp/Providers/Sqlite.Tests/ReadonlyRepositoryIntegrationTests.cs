@@ -99,7 +99,7 @@ public class ReadonlyRepositoryIntegrationTests
         foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            await command.Execute(statement);
+            await command.Execute(new Native(statement));
         return connection;
     }
 }
@@ -176,7 +176,7 @@ public class UserViewEnrichmentTests
         foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            await command.Execute(statement);
+            await command.Execute(new Native(statement));
         return connection;
     }
 }
@@ -366,7 +366,7 @@ public class UsersViewRoleTests
         foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            await command.Execute(statement);
+            await command.Execute(new Native(statement));
         return connection;
     }
 }
@@ -417,7 +417,7 @@ public class UserCrudTests
         foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            await command.Execute(statement);
+            await command.Execute(new Native(statement));
         return connection;
     }
 }
@@ -530,7 +530,7 @@ public class UsersViewCrudTests
         foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
             await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            await command.Execute(statement);
+            await command.Execute(new Native(statement));
         return connection;
     }
 }

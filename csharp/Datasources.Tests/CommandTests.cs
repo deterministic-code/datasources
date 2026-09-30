@@ -63,9 +63,9 @@ public class CommandTests
     public async Task ExecuteInsertUpdateDelete()
     {
         var command = new MockCommand(new MockConnection());
-        await command.Execute("insert", [new Parameter("id", 1), new Parameter("name", "a")]);
-        await command.Execute("update", [new Parameter("id", 1), new Parameter("name", "A")]);
-        await command.Execute("delete", [new Parameter("id", 1)]);
+        await command.Execute(Native.N("insert"), [new Parameter("id", 1), new Parameter("name", "a")]);
+        await command.Execute(Native.N("update"), [new Parameter("id", 1), new Parameter("name", "A")]);
+        await command.Execute(Native.N("delete"), [new Parameter("id", 1)]);
         Assert.Equal(["insert", "update", "delete"], command.ExecuteCalls.Select(call => call.Text));
         Assert.Equal(["id", "name"], command.ExecuteCalls[0].Parameters!.Select(parameter => parameter.Name));
     }

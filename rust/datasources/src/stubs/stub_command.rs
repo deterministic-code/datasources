@@ -2,6 +2,7 @@ use super::not_implemented::fail;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::command_middleware_host::CommandMiddlewareHost;
+use crate::native::Native;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
 use crate::response::Response;
@@ -29,21 +30,25 @@ impl Command for StubCommand {
         self.host.add_middleware(middleware);
     }
 
-    async fn execute_reader(
+    async fn execute_reader_native(
         &self,
-        text: &str,
+        text: &Native,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         self.host
-            .run(text, parameters, |_query, _params| async {
+            .run(text.text(), parameters, |_query, _params| async {
                 Err(fail(&self.provider))
             })
             .await
     }
 
-    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
+    async fn execute_native(
+        &self,
+        text: &Native,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
         self.host
-            .run(text, parameters, |_query, _params| async {
+            .run(text.text(), parameters, |_query, _params| async {
                 Err(fail(&self.provider))
             })
             .await
@@ -74,20 +79,20 @@ macro_rules! named_stub_command {
                 self.inner.add_middleware(middleware);
             }
 
-            async fn execute_reader(
+            async fn execute_reader_native(
                 &self,
-                text: &str,
+                text: &$crate::Native,
                 parameters: Option<&[$crate::Parameter]>,
             ) -> $crate::Result<Box<dyn $crate::Reader>> {
-                self.inner.execute_reader(text, parameters).await
+                self.inner.execute_reader_native(text, parameters).await
             }
 
-            async fn execute(
+            async fn execute_native(
                 &self,
-                text: &str,
+                text: &$crate::Native,
                 parameters: Option<&[$crate::Parameter]>,
             ) -> $crate::Result<$crate::Response> {
-                self.inner.execute(text, parameters).await
+                self.inner.execute_native(text, parameters).await
             }
         }
     };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MockCommand,
+  Native,
   MockConnection,
   MockReader,
   RowTypeConverter,
@@ -57,15 +58,15 @@ describe("Command", () => {
 
   it("execute insert update and delete", async () => {
     const command = new MockCommand(new MockConnection());
-    await command.execute("insert", [
+    await command.executeNative(new Native("insert"), [
       { name: "id", value: 1 },
       { name: "name", value: "a" },
     ]);
-    await command.execute("update", [
+    await command.executeNative(new Native("update"), [
       { name: "id", value: 1 },
       { name: "name", value: "A" },
     ]);
-    await command.execute("delete", [{ name: "id", value: 1 }]);
+    await command.executeNative(new Native("delete"), [{ name: "id", value: 1 }]);
     expect(command.executeCalls.map((call) => call.text)).toEqual([
       "insert",
       "update",

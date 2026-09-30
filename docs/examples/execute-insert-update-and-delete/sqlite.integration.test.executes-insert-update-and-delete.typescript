@@ -2,7 +2,7 @@ const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await command.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
 await command.execute("INSERT INTO items (id, name) VALUES ($id, $name)", [
   { name: "id", value: 1 },
   { name: "name", value: "a" },

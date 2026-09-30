@@ -13,6 +13,7 @@ mod command;
 mod command_middleware;
 mod command_middleware_host;
 mod connection;
+mod native;
 mod console_command_middleware;
 pub mod converters;
 mod create;
@@ -148,6 +149,7 @@ pub use mappers::{
     IdentityMapper, MappedRow, MappedValue, Mapper, PluralizerMapper, RowTypeMapper,
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };
+pub use native::{n, Native};
 pub use mocks::{
     MockCommand, MockConnection, MockDatasource, MockDriver, MockReader, MockRepository,
     MockSelectStatement, MockTransaction, MockWhere,

@@ -3,7 +3,7 @@ use crate::filter::{matches, parse_filter};
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, IWhere, Parameter, Reader, Response, Result, Row, SelectInsertedIdStatement,
+    DatasourceError, IWhere, Native, Parameter, Reader, Response, Result, Row, SelectInsertedIdStatement,
     Statement, StatementEvaluator, StatementKind, Value, Where,
 };
 use std::sync::Arc;
@@ -26,6 +26,22 @@ impl MemoryCommand {
 impl Command for MemoryCommand {
     fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
         self.host.add_middleware(middleware);
+    }
+
+    async fn execute_reader_native(
+        &self,
+        text: &Native,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Box<dyn Reader>> {
+        self.execute_reader(text.text(), parameters).await
+    }
+
+    async fn execute_native(
+        &self,
+        text: &Native,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        self.execute(text.text(), parameters).await
     }
 
     async fn execute_reader(

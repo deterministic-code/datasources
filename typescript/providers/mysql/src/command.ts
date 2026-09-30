@@ -3,6 +3,7 @@ import {
   CommandMiddlewareHost,
   DatasourceError,
   ExecuteStoredProcedureStatement,
+  Native,
   ParameterDirection,
   ReturnStatement,
   SelectStatement,
@@ -32,11 +33,11 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     super();
   }
 
-  async executeReader(
-    text: string,
+  async executeReaderNative(
+    text: Native,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.run(text, parameters, async (query, params) => {
+    return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new ArrayReader([]), rows: [] };
       this.connection.ensureOpen();
       const statements = splitStatements(query);
@@ -53,7 +54,10 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.executeReader(new MysqlStatementFactory().transform(statement).getText(), parameters);
+    return this.executeReaderNative(
+      new Native(new MysqlStatementFactory().transform(statement).getText()),
+      parameters,
+    );
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
@@ -61,7 +65,10 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       return this.firstCell(statement, parameters);
     if (statement instanceof ExecuteStoredProcedureStatement && statement.name && outputs(parameters).length)
       return this.executeProcedure(statement.getText(), parameters);
-    return this.execute(new MysqlStatementFactory().transform(statement).getText(), parameters);
+    return this.executeNative(
+      new Native(new MysqlStatementFactory().transform(statement).getText()),
+      parameters,
+    );
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
@@ -78,8 +85,8 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     }
   }
 
-  async execute(text: string, parameters?: Parameter[]): Promise<Response> {
-    return this.run(text, parameters, async (query, params) => {
+  async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
+    return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new Response(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
       const result = await this.runSql(query, bindParameters(params), params);

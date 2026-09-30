@@ -2,7 +2,7 @@ var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
-await command.Execute("""
+await command.Execute(Native.N("""
     CREATE TABLE users (
         id INTEGER PRIMARY KEY,
         username TEXT,
@@ -10,7 +10,7 @@ await command.Execute("""
         contact_name1 TEXT,
         contact_name2 TEXT
     )
-    """);
+    """));
 await command.Execute(
     "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
 await using var reader = await command.ExecuteReader(

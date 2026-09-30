@@ -18,14 +18,14 @@ public sealed class NullWriteTests
     {
         var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         await connection.Open();
-        await connection.CreateCommand().Execute("""
+        await connection.CreateCommand().Execute(Native.N("""
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
                 username TEXT NOT NULL,
                 created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
                 updated BLOB NOT NULL DEFAULT X'0102'
             )
-            """);
+            """));
         var repo = new CRUDRepository<UserStamp>(connection, new CRUDRepositoryOptions<UserStamp> { Entity = "users" });
         var omitted = new UserStamp { username = "ada" };
         await repo.Create(omitted);

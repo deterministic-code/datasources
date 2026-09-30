@@ -2,7 +2,7 @@ const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await using reader = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
+await using reader = await command.executeReaderNative(new Native("SELECT 1 AS id; SELECT 2 AS id"));
 const first: { id: number }[] = [];
 while (await reader.next()) first.push(reader.current as { id: number });
 const moved = await reader.nextResult();

@@ -29,6 +29,7 @@ export { StatementEvaluator } from "./StatementEvaluator.ts";
 export { WhereText } from "./WhereText.ts";
 export { SelectStatement } from "./SelectStatement.ts";
 export { StatementParser } from "./StatementParser.ts";
+export { Native, n } from "./Native.ts";
 export { Subquery } from "./Subquery.ts";
 export { InsertStatement } from "./InsertStatement.ts";
 export { UpdateStatement } from "./UpdateStatement.ts";

@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, columnType, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlConnection } from "./connection.ts";
@@ -120,7 +120,7 @@ describe("MysqlConnection", () => {
     await connection.close();
     expect(client.ended).toBe(true);
     expect(() => connection.require()).toThrow("not open");
-    await expect(command.execute("x")).rejects.toThrow("not open");
+    await expect(command.executeNative(new Native("x"))).rejects.toThrow("not open");
   });
 
   it("connects through mysql2 and treats array results as row counts", async () => {
@@ -133,10 +133,10 @@ describe("MysqlConnection", () => {
 
     const { command, client, connection } = await opened("x");
     client.arrayResult = true;
-    expect(await command.execute("SELECT 1")).toMatchObject({ rowsAffected: 1, result: undefined });
+    expect(await command.executeNative(new Native("SELECT 1"))).toMatchObject({ rowsAffected: 1, result: undefined });
     client.arrayResult = false;
     client.header = {};
-    expect(await command.execute("UPDATE items")).toMatchObject({ rowsAffected: 0 });
+    expect(await command.executeNative(new Native("UPDATE items"))).toMatchObject({ rowsAffected: 0 });
     await connection.close();
     await connection.close();
   });
@@ -177,13 +177,13 @@ describe("MysqlCommand", () => {
     expect(reader.current).toEqual({ id: 1 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
-    expect(await (await command.executeReader(";")).next()).toBe(false);
+    expect(await (await command.executeReaderNative(new Native(";"))).next()).toBe(false);
     client.rows = [{ add_one: 5 }];
     const n = { name: "n", value: 4 };
     expect(await command.executeStatement(new ReturnStatement("add_one", [n]), [n]))
       .toEqual({ result: 5, rowsAffected: 1, parameters: [n] });
     client.rows = [];
-    expect(await command.execute("SELECT 1")).toEqual({
+    expect(await command.executeNative(new Native("SELECT 1"))).toEqual({
       result: undefined,
       rowsAffected: 0,
       parameters: undefined,
@@ -222,7 +222,7 @@ describe("MysqlCommand", () => {
       result: undefined,
     });
     client.arrayResult = false;
-    expect(await (await command.executeReader("SELECT 1")).next()).toBe(false);
+    expect(await (await command.executeReaderNative(new Native("SELECT 1"))).next()).toBe(false);
     expect(
       await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [
         { name: "result", direction: ParameterDirection.Output },
@@ -254,12 +254,12 @@ describe("Mysql datasource", () => {
     expect(command).toBeInstanceOf(MysqlCommand);
     expect(command.connection).toBe(connection);
     await command.execute("DELETE FROM items");
-    await command.executeReader("SELECT 1");
+    await command.executeReaderNative(new Native("SELECT 1"));
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(MysqlCommand);
     expect(implicit.connection).toBeInstanceOf(MysqlConnection);
     await implicit.execute("DELETE FROM items");
-    await implicit.executeReader("SELECT 1");
+    await implicit.executeReaderNative(new Native("SELECT 1"));
     const repo = ds.createRepository(untyped(), connection);
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);

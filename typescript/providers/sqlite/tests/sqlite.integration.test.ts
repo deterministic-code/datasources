@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   Datasource,
   DatasourceFactory,
+  Native,
   ReturnStatement,
   RowTypeConverter,
   TransformMapper,
@@ -89,7 +90,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+    await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
     await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
     await using reader = await command.executeReader("SELECT id, name FROM items");
     expect(await reader.next()).toBe(true);
@@ -102,7 +103,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.execute("CREATE TABLE settings (name TEXT, value TEXT)");
+    await command.executeNative(new Native("CREATE TABLE settings (name TEXT, value TEXT)"));
     await command.execute("INSERT INTO settings (name, value) VALUES ($name, $value)", [
       { name: "name", value: "theme" },
       { name: "value", value: "dark" },
@@ -120,7 +121,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+    await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
     await command.execute("INSERT INTO items (id, name) VALUES ($id, $name)", [
       { name: "id", value: 1 },
       { name: "name", value: "a" },
@@ -155,13 +156,13 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.execute(`CREATE TABLE users (
+    await command.executeNative(new Native(`CREATE TABLE users (
       id INTEGER PRIMARY KEY,
       username TEXT,
       email TEXT,
       contact_name1 TEXT,
       contact_name2 TEXT
-    )`);
+    )`));
     await command.execute(
       "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
     );
@@ -182,7 +183,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await using reader = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
+    await using reader = await command.executeReaderNative(new Native("SELECT 1 AS id; SELECT 2 AS id"));
     const first: { id: number }[] = [];
     while (await reader.next()) first.push(reader.current as { id: number });
     const moved = await reader.nextResult();

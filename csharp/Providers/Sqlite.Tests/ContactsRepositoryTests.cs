@@ -19,7 +19,7 @@ public class ContactsRepositoryTests
         foreach (var statement in SchemaSpec.Tables("contacts", Quote))
             await command.Execute(statement);
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
-            await command.Execute(sql);
+            await command.Execute(new Native(sql));
 
         var (eager, enriched) = await ContactsParity.Run(conn);
         ExpectContactsView.AssertSeed(eager, SeedContacts.Count);
@@ -57,7 +57,7 @@ public class ContactsRepositoryTests
         foreach (var statement in SchemaSpec.Tables("contacts", Quote))
             await command.Execute(statement);
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
-            await command.Execute(sql);
+            await command.Execute(new Native(sql));
 
         var rows = new List<Row>();
         await foreach (var row in new CRUDRepository<Row>(conn, new CRUDRepositoryOptions<Row>

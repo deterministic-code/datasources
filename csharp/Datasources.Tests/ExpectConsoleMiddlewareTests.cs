@@ -68,9 +68,9 @@ public sealed class ExpectConsoleMiddlewareTests
     sealed class RecordingCommand : CommandMiddlewareHost, ICommand
     {
         public IConnection Connection { get; } = new MockConnection();
-        public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+        public Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null) =>
             throw new NotSupportedException();
-        public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
+        public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>
             throw new NotSupportedException();
     }
 }

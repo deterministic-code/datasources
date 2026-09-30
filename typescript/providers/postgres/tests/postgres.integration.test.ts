@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  Native,
   ParameterDirection,
   ReturnStatement,
   ExecuteStoredProcedureStatement,
@@ -22,11 +23,11 @@ const url = (process.env.POSTGRES_URL ??=
 beforeAll(() => ensureCompose("postgres"), 120_000);
 
 async function readReturnValue(command: PostgresCommand) {
-  await command.execute(`
+  await command.executeNative(new Native(`
     CREATE FUNCTION add_one(n INT) RETURNS INT
     LANGUAGE sql
     AS $$ SELECT n + 1 $$
-  `);
+  `));
   const n = { name: "n", value: 4 };
   const ret = await command.executeStatement(new ReturnStatement("add_one", [n]), [n]);
   expect(ret.result).toBe(5);
@@ -78,7 +79,7 @@ describe("return and output parameters", () => {
       const connection = PostgresConnection.from({ DATASOURCE_URL: `${url}${url.includes("?") ? "&" : "?"}schema=${isolated.schema}` });
       await connection.open();
       const command = new PostgresCommand(connection);
-      await command.execute(`
+      await command.executeNative(new Native(`
         CREATE PROCEDURE bump(INOUT result INT)
         LANGUAGE plpgsql
         AS $$
@@ -86,7 +87,7 @@ describe("return and output parameters", () => {
           result := result + 1;
         END;
         $$
-      `);
+      `));
       const result = {
         name: "result",
         value: 4,

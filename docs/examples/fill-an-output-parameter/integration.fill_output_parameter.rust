@@ -1,7 +1,7 @@
 use datasources::{ExecuteStoredProcedureStatement, Parameter};
 command
-    .execute(
-        "CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END",
+    .execute_native(
+        &Native::new("CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END"),
         None,
     )
     .await

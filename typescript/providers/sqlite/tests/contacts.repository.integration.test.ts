@@ -13,7 +13,7 @@ import { addExtraContact } from "../../../datasources/src/tests/contact/extraCon
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { execute } from "@datasources/core";
+import { execute, Native } from "@datasources/core";
 import { tables } from "../../../schema-spec.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";
@@ -37,7 +37,7 @@ describe("contacts readonly repository", () => {
     for (const statement of tables("contacts", quote))
       await execute(command, statement);
     for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
-      await command.execute(sql);
+      await command.executeNative(new Native(sql));
 
     const { eager, enriched } = await contactsParity(connection, specVerbose());
     const mapped = contactWith(eager, 2, 1);
@@ -71,7 +71,7 @@ describe("contacts readonly repository", () => {
     for (const statement of tables("contacts", quote))
       await execute(command, statement);
     for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
-      await command.execute(sql);
+      await command.executeNative(new Native(sql));
 
     const contacts = new FlatToNestedMapper(contactsView).map(
       await collectAsync(

@@ -12,6 +12,7 @@ import {
   columnType,
   type IDriver,
   CreateTableStatement,
+  Native,
   ReturnStatement,
   SelectStatement,
   type Scalar,
@@ -154,9 +155,9 @@ describe("SqliteCommand", () => {
       parameters: [x],
     });
     db.rows = [];
-    expect(await command.execute("SELECT 1")).toEqual({ result: null, rowsAffected: 2 });
+    expect(await command.executeNative(new Native("SELECT 1"))).toEqual({ result: null, rowsAffected: 2 });
     db.omitRowid = true;
-    expect(await command.execute("INSERT INTO items DEFAULT VALUES")).toEqual({
+    expect(await command.executeNative(new Native("INSERT INTO items DEFAULT VALUES"))).toEqual({
       result: null,
       rowsAffected: 1,
     });
@@ -169,9 +170,9 @@ describe("SqliteCommand", () => {
     await reader.dispose();
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
-    expect(await (await command.executeReader(";")).next()).toBe(false);
+    expect(await (await command.executeReaderNative(new Native(";"))).next()).toBe(false);
     db.bySql = { "SELECT 1 AS id": [{ id: 1 }], "SELECT 2 AS id": [{ id: 2 }] };
-    const sets = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
+    const sets = await command.executeReaderNative(new Native("SELECT 1 AS id; SELECT 2 AS id"));
     const first: Cells[] = [];
     while (await sets.next()) first.push(sets.current!);
     const moved = await sets.nextResult();
@@ -201,7 +202,7 @@ describe("SqliteCommand", () => {
       { name: "id", column: null, table: null },
     ];
     db.rawRows = [[1, null]];
-    const qualified = await command.executeReader("SELECT a.id, id");
+    const qualified = await command.executeReaderNative(new Native("SELECT a.id, id"));
     expect(await qualified.next()).toBe(true);
     expect(qualified.current).toEqual({ "a.id": 1, id: null });
     expect(await qualified.next()).toBe(false);
@@ -209,7 +210,7 @@ describe("SqliteCommand", () => {
     db.columns = [{ name: "id", column: "id", table: "t" }];
     db.rawRows = undefined;
     db.rows = [{ id: 4 }];
-    const plain = await command.executeReader("SELECT id");
+    const plain = await command.executeReaderNative(new Native("SELECT id"));
     expect(await plain.next()).toBe(true);
     expect(plain.current).toEqual({ id: 4 });
     await plain.dispose();
@@ -240,12 +241,12 @@ describe("Sqlite datasource", () => {
     expect(command).toBeInstanceOf(SqliteCommand);
     expect(command.connection).toBe(connection);
     await command.execute("DELETE FROM items");
-    await command.executeReader("SELECT 1");
+    await command.executeReaderNative(new Native("SELECT 1"));
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(SqliteCommand);
     expect(implicit.connection).toBeInstanceOf(SqliteConnection);
     await implicit.execute("DELETE FROM items");
-    await implicit.executeReader("SELECT 1");
+    await implicit.executeReaderNative(new Native("SELECT 1"));
     const repo = ds.createRepository(untyped(), connection);
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);

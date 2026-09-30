@@ -2,6 +2,7 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   DeleteStatement,
+  Native,
   InsertStatement,
   SelectInsertedIdStatement,
   StatementEvaluator,
@@ -23,6 +24,14 @@ import { matches, parametersToObject, parseFilter } from "./filter.ts";
 export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: MemoryConnection) {
     super();
+  }
+
+  executeReaderNative(text: Native, parameters?: Parameter[]): Promise<IReader<Cells>> {
+    return this.executeReader(text.text, parameters);
+  }
+
+  executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
+    return this.execute(text.text, parameters);
   }
 
   async executeReader(

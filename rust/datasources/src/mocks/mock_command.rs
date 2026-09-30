@@ -3,6 +3,7 @@ use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::command_middleware_host::CommandMiddlewareHost;
 use crate::datasource_error::DatasourceError;
+use crate::native::Native;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
 use crate::response::Response;
@@ -54,13 +55,13 @@ impl Command for MockCommand {
         self.host.add_middleware(middleware);
     }
 
-    async fn execute_reader(
+    async fn execute_reader_native(
         &self,
-        text: &str,
+        text: &Native,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         self.host
-            .run(text, parameters, |query, params| async {
+            .run(text.text(), parameters, |query, params| async {
                 self.reader_logs
                     .lock()
                     .expect("mock")
@@ -89,12 +90,16 @@ impl Command for MockCommand {
             Some(inserted) => format!("{}.{}", inserted.table, inserted.column),
             _ => statement.get_text(),
         };
-        self.execute_reader(&text, parameters).await
+        self.execute_reader_native(&Native::new(text), parameters).await
     }
 
-    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
+    async fn execute_native(
+        &self,
+        text: &Native,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
         self.host
-            .run(text, parameters, |query, params| async {
+            .run(text.text(), parameters, |query, params| async {
                 self.execute_logs
                     .lock()
                     .expect("mock")

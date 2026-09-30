@@ -9,11 +9,11 @@ public static class Migrate
         var provider = command.Connection.Provider;
         foreach (var table in Schema.Tables(provider))
             await (provider == "sqlite"
-                ? command.Execute(IfNotExists(table.GetText()))
+                ? command.Execute(Native.N(IfNotExists(table.GetText())))
                 : command.Execute(table));
         if (command.Connection.Provider == "mysql")
             foreach (var sql in Schema.MysqlProcedures())
-                await command.Execute(sql);
+                await command.Execute(Native.N(sql));
     }
 
     public static string IfNotExists(string sql) =>
