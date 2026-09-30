@@ -142,7 +142,11 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         {
             if (!await reader.Next()) return;
             var row = Identified(Named(reader.Current ?? throw new DatasourceException("Reader current must be a row"), column, sqlColumn), column);
-            WriteId(target, IdValue(Mapper!.Map(ObjectConverter.Convert(RowConverter?.Convert(row) ?? row))));
+            var source = Mapper!.Map(ObjectConverter.Convert(RowConverter?.Convert(row) ?? row));
+            if (target is IDictionary dest && source is IDictionary src && src.Contains(column) && src[column] is { } cell && cell is not Value.Null)
+                dest[column] = cell;
+            else if (typeof(T).GetProperty(column) is { CanWrite: true } prop && prop.GetValue(source) is { } value)
+                prop.SetValue(target, value);
         }
         finally
         {
@@ -219,22 +223,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var row = ObjectConverter.ReverseConvert(Mapper!.ReverseMap(item));
         return RowConverter?.ReverseConvert(row) ?? row;
-    }
-
-    void WriteId(T target, Value id)
-    {
-        if (ids.Count != 1 || id is Value.Null) return;
-        var name = ids[0];
-        var row = new Row { [name] = id };
-        var patch = ObjectConverter.Convert(RowConverter?.Convert(row) ?? row);
-        if (target is IDictionary dest && patch is IDictionary src && src.Contains(name))
-        {
-            dest[name] = src[name];
-            return;
-        }
-        var prop = typeof(T).GetProperty(name);
-        if (prop is { CanWrite: true })
-            prop.SetValue(target, prop.GetValue(patch));
     }
 
     Value IdValue(T item)
