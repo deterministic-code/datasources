@@ -30,7 +30,18 @@ export const parts = <T>(
   const columnMappings = options.columnMappings ?? new IdentityMapper<string>();
   const rowsMapper = options.rowsMapper ?? new IdentityMapper<T>();
   const entity = entityMapper.map(options.entity ?? options.type?.name ?? "");
-  const columns = [...(options.readProperties ?? (options.type ? fieldNamesOf(options.type) : []))]
+  const names = options.readProperties ?? (options.type ? fieldNamesOf(options.type) : []);
+  if (objectConverter instanceof MetaDataRowTypeConverter && options.type) {
+    const instance = new options.type() as Record<string, unknown>;
+    objectConverter.references.clear();
+    objectConverter.referenceColumns = columnMappings;
+    for (const name of names) {
+      const value = instance[name];
+      if (value !== null && typeof value === "object" && !Array.isArray(value))
+        objectConverter.references.add(name);
+    }
+  }
+  const columns = [...names]
     .map((name) => columnMappings.map(name))
     .sort((left, right) => left.localeCompare(right));
   const crud = isCrud(options) ? options : undefined;

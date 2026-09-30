@@ -12,14 +12,13 @@ import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
 import { addExtraContact, extraContact } from "../../../datasources/src/tests/contact/extraContact.ts";
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { Contact } from "../../../datasources/src/tests/contact/Contact.ts";
-import { ContactBase } from "../../../datasources/src/tests/contact/ContactBase.ts";
 import { ContactSource } from "../../../datasources/src/tests/contact/ContactSource.ts";
 import { ContactType } from "../../../datasources/src/tests/contact/ContactType.ts";
 import { Address } from "../../../datasources/src/tests/contact/Address.ts";
 import { AddressType } from "../../../datasources/src/tests/contact/AddressType.ts";
 import { Phone } from "../../../datasources/src/tests/contact/Phone.ts";
 import { PhoneType } from "../../../datasources/src/tests/contact/PhoneType.ts";
-import { fieldNamesOf } from "../../../datasources/src/createCRUDRepositoryOptions.ts";
+import { columns, contactEntity, snake } from "../../../datasources/src/tests/contact/contactColumns.ts";
 import { Operator, Where } from "@datasources/core";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
@@ -62,14 +61,14 @@ describe("contacts readonly repository", () => {
       contactsServiceOf(connection),
       await contactLookupIds(connection),
     );
-    expect(extra.first_name).toBe("Extra");
-    expect(extra.addresses).toHaveLength(1);
-    expect(extra.addresses[0]?.line1).toBe("9 Extra");
-    expect(extra.addresses[0]?.contact_id).toBe(extra.id);
-    expect(extra.phones[0]?.number).toBe("555-extra");
-    expect(extra.phones[0]?.contact_id).toBe(extra.id);
-    expect(extra.addresses[0]?.address_type_name).toBe("Home");
-    expect(extra.phones[0]?.phone_type_name).toBe("Mobile");
+    expect(extra.FirstName).toBe("Extra");
+    expect(extra.Addresses).toHaveLength(1);
+    expect(extra.Addresses[0]?.Line1).toBe("9 Extra");
+    expect(extra.Addresses[0]?.Contact.Id).toBe(extra.Id);
+    expect(extra.Phones[0]?.Number).toBe("555-extra");
+    expect(extra.Phones[0]?.Contact.Id).toBe(extra.Id);
+    expect(extra.Addresses[0]?.AddressType.Name).toBe("Home");
+    expect(extra.Phones[0]?.PhoneType.Name).toBe("Mobile");
   });
 
   it("maps join rows to nested contacts", async () => {
@@ -100,60 +99,36 @@ describe("contacts readonly repository", () => {
 
     const contactsRepo = new CRUDRepository(connection, {
       type: Contact,
-      entity: "contacts_base",
-      readProperties: fieldNamesOf(ContactBase),
+      entityMapper: contactEntity,
+      columnMappings: columns,
+      ids: ["Id"],
     });
-    const typesRepo = new CRUDRepository(connection, { type: ContactType, entity: "contact_type" });
-    const sourcesRepo = new CRUDRepository(connection, { type: ContactSource, entity: "contact_source" });
-    const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, entity: "address_type" });
-    const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entity: "phone_type" });
-    const addressesRepo = new CRUDRepository(connection, {
-      type: Address,
-      entity: "address",
-      readProperties: [
-        "id", "uuid", "created", "updated", "version", "contact_id", "address_type_id",
-        "line1", "line2", "city", "region", "postal_code", "country",
-      ],
-    });
-    const phonesRepo = new CRUDRepository(connection, {
-      type: Phone,
-      entity: "phone",
-      readProperties: [
-        "id", "uuid", "created", "updated", "version", "contact_id", "phone_type_id", "number",
-      ],
-    });
-    addressesRepo.addEnriched(
-      { into: "address_type_name", from: "address_type_id", by: "id", select: "name" },
-      addressTypesRepo,
-    );
-    phonesRepo.addEnriched(
-      { into: "phone_type_name", from: "phone_type_id", by: "id", select: "name" },
-      phoneTypesRepo,
-    );
-    contactsRepo.addEnriched(
-      { into: "contact_type_name", from: "contact_type_id", by: "id", select: "name" },
-      typesRepo,
-    );
-    contactsRepo.addEnriched(
-      { into: "contact_source_name", from: "contact_source_id", by: "id", select: "name" },
-      sourcesRepo,
-    );
-    contactsRepo.addEnriched({ into: "addresses", from: "id", by: "contact_id", many: true }, addressesRepo);
-    contactsRepo.addEnriched({ into: "phones", from: "id", by: "contact_id", many: true }, phonesRepo);
+    const typesRepo = new CRUDRepository(connection, { type: ContactType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+    const sourcesRepo = new CRUDRepository(connection, { type: ContactSource, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+    const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+    const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+    const addressesRepo = new CRUDRepository(connection, { type: Address, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+    const phonesRepo = new CRUDRepository(connection, { type: Phone, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+    addressesRepo.addEnriched({ into: "AddressType", from: "AddressType", by: "Id" }, addressTypesRepo);
+    phonesRepo.addEnriched({ into: "PhoneType", from: "PhoneType", by: "Id" }, phoneTypesRepo);
+    contactsRepo.addEnriched({ into: "ContactType", from: "ContactType", by: "Id" }, typesRepo);
+    contactsRepo.addEnriched({ into: "ContactSource", from: "ContactSource", by: "Id" }, sourcesRepo);
+    contactsRepo.addEnriched({ into: "Addresses", from: "Id", by: "Contact", many: true }, addressesRepo);
+    contactsRepo.addEnriched({ into: "Phones", from: "Id", by: "Contact", many: true }, phonesRepo);
 
     const created = await contactsRepo.create(extraContact(await contactLookupIds(connection)));
-    const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("id", created.id)));
-    expect(created.id).toBeGreaterThan(0);
-    expect(loaded?.first_name).toBe("Extra");
-    expect(loaded?.contact_type_name).toBe("Person");
-    expect(loaded?.contact_source_name).toBe("Web");
-    expect(loaded?.addresses).toHaveLength(1);
-    expect(loaded?.addresses[0]?.line1).toBe("9 Extra");
-    expect(loaded?.addresses[0]?.address_type_name).toBe("Home");
-    expect(loaded?.addresses[0]?.contact_id).toBe(loaded?.id);
-    expect(loaded?.phones).toHaveLength(1);
-    expect(loaded?.phones[0]?.number).toBe("555-extra");
-    expect(loaded?.phones[0]?.phone_type_name).toBe("Mobile");
-    expect(loaded?.phones[0]?.contact_id).toBe(loaded?.id);
+    const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("Id", created.Id)));
+    expect(created.Id).toBeGreaterThan(0);
+    expect(loaded?.FirstName).toBe("Extra");
+    expect(loaded?.ContactType.Name).toBe("Person");
+    expect(loaded?.ContactSource.Name).toBe("Web");
+    expect(loaded?.Addresses).toHaveLength(1);
+    expect(loaded?.Addresses[0]?.Line1).toBe("9 Extra");
+    expect(loaded?.Addresses[0]?.AddressType.Name).toBe("Home");
+    expect(loaded?.Addresses[0]?.Contact.Id).toBe(loaded?.Id);
+    expect(loaded?.Phones).toHaveLength(1);
+    expect(loaded?.Phones[0]?.Number).toBe("555-extra");
+    expect(loaded?.Phones[0]?.PhoneType.Name).toBe("Mobile");
+    expect(loaded?.Phones[0]?.Contact.Id).toBe(loaded?.Id);
   });
 });

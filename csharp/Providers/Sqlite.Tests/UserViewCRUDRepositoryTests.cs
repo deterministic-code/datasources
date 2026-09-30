@@ -1,11 +1,18 @@
 using Datasources;
 using Datasources.SqlSpecs;
-using Datasources.Sqlite;
 
 namespace Datasources.Sqlite.Tests;
 
 public class UserViewCRUDRepositoryTests
 {
+    public UserViewCRUDRepositoryTests()
+    {
+        DatasourceFactory.Reset();
+        Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
+        Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
+        Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "sqlite");
+    }
+
     static readonly IMapper<string, string> Snake = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 
     sealed class UserView
@@ -118,7 +125,7 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task CreateUpdateAndDeleteSyncsLinkRows()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var ds = Datasource.Default;
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-view-links");
         var graph = await GraphAsync(connection);
@@ -195,7 +202,7 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task NullListClearsThatAssociation()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var ds = Datasource.Default;
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-view-links");
         var graph = await GraphAsync(connection);
@@ -233,7 +240,7 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task EmptyListClearsThatAssociation()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var ds = Datasource.Default;
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-view-links");
         var graph = await GraphAsync(connection);
@@ -271,7 +278,7 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task DuplicateRelatedIdsInsertOneRow()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var ds = Datasource.Default;
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-view-links");
         var graph = await GraphAsync(connection);
@@ -290,7 +297,7 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task MissingRelatedIdThrows()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var ds = Datasource.Default;
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-view-links");
         var graph = await GraphAsync(connection);
@@ -314,7 +321,7 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task LazyCreateAndUpdateSkipUnloadedCollectionsAndDeleteCascades()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var ds = Datasource.Default;
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-view-links");
         var graph = await GraphAsync(connection, new LazyWriteEnrichmentStrategy<UserView>());

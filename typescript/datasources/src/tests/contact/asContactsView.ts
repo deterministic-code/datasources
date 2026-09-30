@@ -1,3 +1,5 @@
+import type { Contact } from "./Contact.ts";
+
 type AddressView = { id: number; line1: string; city: string; address_type_name: string };
 type PhoneView = { id: number; number: string; phone_type_name: string };
 
@@ -13,6 +15,29 @@ export type ContactsView = {
 };
 
 const byId = (left: { id: number }, right: { id: number }) => left.id - right.id;
+
+export const fromContacts = (contacts: Contact[]): ContactsView[] =>
+  contacts
+    .map((contact) => ({
+      id: contact.Id,
+      first_name: contact.FirstName,
+      last_name: contact.LastName,
+      email: contact.Email,
+      contact_source_name: contact.ContactSource.Name,
+      contact_type_name: contact.ContactType.Name,
+      addresses: contact.Addresses.map((address) => ({
+        id: address.Id,
+        line1: address.Line1,
+        city: address.City,
+        address_type_name: address.AddressType.Name,
+      })).sort(byId),
+      phones: contact.Phones.map((phone) => ({
+        id: phone.Id,
+        number: phone.Number,
+        phone_type_name: phone.PhoneType.Name,
+      })).sort(byId),
+    }))
+    .sort(byId);
 
 export const asContactsView = (contacts: ContactsView[]): ContactsView[] =>
   [...contacts]

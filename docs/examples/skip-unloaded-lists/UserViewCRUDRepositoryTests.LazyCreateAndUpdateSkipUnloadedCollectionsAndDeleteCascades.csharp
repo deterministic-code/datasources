@@ -1,4 +1,4 @@
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var ds = Datasource.Default;
 var graph = await GraphAsync(connection, new LazyWriteEnrichmentStrategy<UserView>());
 var userViewRepo = Enrich(graph.UsersRepo, graph);
 

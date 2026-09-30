@@ -5,123 +5,49 @@ let sql = statements_of(&contact_seed("sqlite"));
 apply_sql(&command, &sql).await.unwrap();
 
 let field = super::converters::field;
-let named = [
-    "id",
-    "uuid",
-    "created",
-    "updated",
-    "version",
-    "name",
-    "description",
-];
+let named = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"];
 let address = [
-    "id",
-    "uuid",
-    "created",
-    "updated",
-    "version",
-    "contact_id",
-    "address_type_id",
-    "line1",
-    "line2",
-    "city",
-    "region",
-    "postal_code",
-    "country",
+    "Id", "Uuid", "Created", "Updated", "Version", "Contact", "AddressType", "Line1", "Line2",
+    "City", "Region", "PostalCode", "Country",
 ];
 let phone = [
-    "id",
-    "uuid",
-    "created",
-    "updated",
-    "version",
-    "contact_id",
-    "phone_type_id",
-    "number",
+    "Id", "Uuid", "Created", "Updated", "Version", "Contact", "PhoneType", "Number",
 ];
 let base = [
-    "id",
-    "uuid",
-    "created",
-    "updated",
-    "version",
-    "contact_source_id",
-    "contact_type_id",
-    "first_name",
-    "last_name",
-    "email",
-    "notes",
+    "Id", "Uuid", "Created", "Updated", "Version", "ContactSource", "ContactType", "FirstName",
+    "LastName", "Email", "Notes",
 ];
-let mut addresses_repo = contact_repo(conn.clone(), "address", &address, field);
+let mut addresses_repo = contact_repo(conn.clone(), "Address", &address, false, field);
 addresses_repo.add_enriched(
-    datasources::Enrichment::new(
-        "address_type_name",
-        "address_type_id",
-        "id",
-        Some("name".into()),
-        false,
-    ),
-    as_readonly(Arc::new(contact_repo(
-        conn.clone(),
-        "address_type",
-        &named,
-        field,
-    ))),
+    datasources::Enrichment::new("AddressType", "AddressType", "Id", None, false),
+    as_readonly(Arc::new(contact_repo(conn.clone(), "AddressType", &named, false, field))),
     None,
 );
-let mut phones_repo = contact_repo(conn.clone(), "phone", &phone, field);
+let mut phones_repo = contact_repo(conn.clone(), "Phone", &phone, false, field);
 phones_repo.add_enriched(
-    datasources::Enrichment::new(
-        "phone_type_name",
-        "phone_type_id",
-        "id",
-        Some("name".into()),
-        false,
-    ),
-    as_readonly(Arc::new(contact_repo(conn.clone(), "phone_type", &named, field))),
+    datasources::Enrichment::new("PhoneType", "PhoneType", "Id", None, false),
+    as_readonly(Arc::new(contact_repo(conn.clone(), "PhoneType", &named, false, field))),
     None,
 );
-let mut contacts_repo = contact_repo(conn.clone(), "contacts_base", &base, field);
+let mut contacts_repo = contact_repo(conn.clone(), "Contact", &base, true, field);
 contacts_repo
     .add_enriched(
-        datasources::Enrichment::new(
-            "contact_type_name",
-            "contact_type_id",
-            "id",
-            Some("name".into()),
-            false,
-        ),
-        as_readonly(Arc::new(contact_repo(
-            conn.clone(),
-            "contact_type",
-            &named,
-            field,
-        ))),
+        datasources::Enrichment::new("ContactType", "ContactType", "Id", None, false),
+        as_readonly(Arc::new(contact_repo(conn.clone(), "ContactType", &named, false, field))),
         None,
     )
     .add_enriched(
-        datasources::Enrichment::new(
-            "contact_source_name",
-            "contact_source_id",
-            "id",
-            Some("name".into()),
-            false,
-        ),
-        as_readonly(Arc::new(contact_repo(
-            conn.clone(),
-            "contact_source",
-            &named,
-            field,
-        ))),
+        datasources::Enrichment::new("ContactSource", "ContactSource", "Id", None, false),
+        as_readonly(Arc::new(contact_repo(conn.clone(), "ContactSource", &named, false, field))),
         None,
     )
     .add_enriched(
-        datasources::Enrichment::new("addresses", "id", "contact_id", None, true),
+        datasources::Enrichment::new("Addresses", "Id", "Contact", None, true),
         Arc::new(addresses_repo),
         None,
     )
     .add_enriched(
-        datasources::Enrichment::new("phones", "id", "contact_id", None, true),
+        datasources::Enrichment::new("Phones", "Id", "Contact", None, true),
         Arc::new(phones_repo),
         None,
     );

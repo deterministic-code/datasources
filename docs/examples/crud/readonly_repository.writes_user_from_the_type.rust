@@ -4,3 +4,32 @@ let mut created = datasources::Row::new();
 created.insert("username".into(), Value::from("ada"));
 created.insert("is_enabled".into(), Value::Bool(true));
 let mut created = users_repo.create(&mut created).await.unwrap();
+let by_id = users_repo
+    .read_single_by_id(created.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+let matches = users_repo
+    .read(
+        Some(&Where::binary("username", eq, "ada").and(
+            "is_enabled",
+            eq,
+            Value::Bool(true),
+        )),
+        None,
+    )
+    .await
+    .unwrap();
+created.insert("username".into(), Value::from("ada-v2"));
+let updated = users_repo.update(&created, None).await.unwrap();
+let renamed = users_repo
+    .read_single_by_id(created.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+let removed = users_repo.delete(&created, None).await.unwrap();
+let gone = users_repo
+    .read_single_by_id(created.get("id").unwrap())
+    .await
+    .unwrap();
+assert!(matches!(created.get("id"), Some(Value::Int(id)) if *id > 0));

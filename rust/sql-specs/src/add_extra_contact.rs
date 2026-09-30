@@ -23,45 +23,45 @@ pub async fn add_extra_contact(service: &CRUDRepository, ids: &ContactLookups) -
     let uuid = Value::Uuid(Uuid::new_v4());
     let created = service
         .create(&mut record(&[
-            ("uuid", uuid.clone()),
-            ("created", stamp.clone()),
-            ("updated", stamp.clone()),
-            ("version", version.clone()),
-            ("contact_source_id", Value::Int(ids.contact_source_id)),
-            ("contact_type_id", Value::Int(ids.contact_type_id)),
-            ("first_name", Value::from("Extra")),
-            ("last_name", Value::from("Contact")),
+            ("Uuid", uuid.clone()),
+            ("Created", stamp.clone()),
+            ("Updated", stamp.clone()),
+            ("Version", version.clone()),
+            ("ContactSource", Value::Int(ids.contact_source_id)),
+            ("ContactType", Value::Int(ids.contact_type_id)),
+            ("FirstName", Value::from("Extra")),
+            ("LastName", Value::from("Contact")),
             (
-                "addresses",
+                "Addresses",
                 encode_rows(&[record(&[
-                    ("uuid", Value::Uuid(Uuid::new_v4())),
-                    ("created", stamp.clone()),
-                    ("updated", stamp.clone()),
-                    ("version", version.clone()),
-                    ("address_type_id", Value::Int(ids.address_type_id)),
-                    ("line1", Value::from("9 Extra")),
-                    ("city", Value::from("Oslo")),
+                    ("Uuid", Value::Uuid(Uuid::new_v4())),
+                    ("Created", stamp.clone()),
+                    ("Updated", stamp.clone()),
+                    ("Version", version.clone()),
+                    ("AddressType", Value::Int(ids.address_type_id)),
+                    ("Line1", Value::from("9 Extra")),
+                    ("City", Value::from("Oslo")),
                 ])]),
             ),
             (
-                "phones",
+                "Phones",
                 encode_rows(&[record(&[
-                    ("uuid", Value::Uuid(Uuid::new_v4())),
-                    ("created", stamp.clone()),
-                    ("updated", stamp),
-                    ("version", version),
-                    ("phone_type_id", Value::Int(ids.phone_type_id)),
-                    ("number", Value::from("555-extra")),
+                    ("Uuid", Value::Uuid(Uuid::new_v4())),
+                    ("Created", stamp.clone()),
+                    ("Updated", stamp),
+                    ("Version", version),
+                    ("PhoneType", Value::Int(ids.phone_type_id)),
+                    ("Number", Value::from("555-extra")),
                 ])]),
             ),
         ]))
         .await?;
-    let Value::Int(id) = created.get("id").cloned().unwrap_or(Value::Null) else {
+    let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
         return Err(DatasourceError::message("expected insert id"));
     };
     service
         .read_single(
-            Some(&Where::new(Operator::equals("id", Value::Int(id)))),
+            Some(&Where::new(Operator::equals("Id", Value::Int(id)))),
             None,
         )
         .await?

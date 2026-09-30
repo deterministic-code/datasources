@@ -1,5 +1,6 @@
 use crate::converters::convert_schema::ConvertSchema;
 use crate::converters::type_converter::TypeConverter;
+use crate::mappers::{IdentityMapper, Mapper};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -9,6 +10,8 @@ pub struct MetaDataRowTypeConverter {
     columns: Vec<String>,
     pub types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
+    references: Vec<String>,
+    reference_columns: Box<dyn Mapper<String, String> + Send + Sync>,
 }
 
 impl MetaDataRowTypeConverter {
@@ -26,7 +29,19 @@ impl MetaDataRowTypeConverter {
             columns,
             types: HashMap::new(),
             fields: HashMap::new(),
+            references: Vec::new(),
+            reference_columns: Box::new(IdentityMapper::new()),
         }
+    }
+
+    pub fn with_references(
+        mut self,
+        references: Vec<String>,
+        columns: Box<dyn Mapper<String, String> + Send + Sync>,
+    ) -> Self {
+        self.references = references;
+        self.reference_columns = columns;
+        self
     }
 
     pub fn with_types(
@@ -66,6 +81,11 @@ impl MetaDataRowTypeConverter {
                     Some(field) if reverse => field.reverse_convert(&value)?,
                     Some(field) => field.convert(&value)?,
                     None => value,
+                };
+                let key = if reverse && self.references.iter().any(|name| name == &key) {
+                    Mapper::map(self.reference_columns.as_ref(), key)
+                } else {
+                    key
                 };
                 Ok((key, cell))
             })

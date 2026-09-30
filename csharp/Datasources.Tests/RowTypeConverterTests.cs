@@ -55,6 +55,18 @@ public class RowTypeConverterTests
         Assert.Equal(new Value.Text("a"), converter.ReverseConvert(dest)["display_name"]);
     }
 
+    sealed class Counted
+    {
+        public int id { get; set; }
+    }
+
+    [Fact]
+    public void AssignsIntegerCellToIntProperty()
+    {
+        var row = new MetaDataRowTypeConverter<Counted>().Convert(new Row { ["id"] = 1L });
+        Assert.Equal(1, row.id);
+    }
+
     [Fact]
     public void SkipsIndexersAndWriteOnlyProperties()
     {

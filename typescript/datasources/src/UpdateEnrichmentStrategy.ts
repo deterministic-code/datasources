@@ -49,7 +49,15 @@ export abstract class UpdateEnrichmentStrategy<T> {
   };
 
   protected stampCell = (related: object, by: string, key: Scalar | object | undefined): void => {
-    if (key !== undefined && key !== null && typeof key !== "object") Object.assign(related, { [by]: key });
+    if (key === undefined || key === null || typeof key === "object") return;
+    const current = (related as Props)[by];
+    if (current !== null && typeof current === "object" && !Array.isArray(current)) {
+      const target = current as Props;
+      const id = "Id" in target ? "Id" : "id";
+      target[id] = key;
+      return;
+    }
+    Object.assign(related, { [by]: key });
   };
 
   protected hasKey = (item: object, keys: readonly string[]): boolean =>

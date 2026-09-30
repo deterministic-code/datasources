@@ -18,6 +18,7 @@ use std::time::SystemTime;
 
 mod add_extra_contact;
 mod as_contacts_view;
+mod contact_columns;
 mod contact_lookup_ids;
 mod contact_lookups;
 mod contact_view;
@@ -33,6 +34,7 @@ mod seed_contacts;
 
 pub use add_extra_contact::add_extra_contact;
 pub use as_contacts_view::as_contacts_view;
+pub use contact_columns::{columns, contact_entity, references, snake};
 pub use contact_lookup_ids::contact_lookup_ids;
 pub use contact_lookups::ContactLookups;
 pub use contact_view::{AddressView, ContactView, PhoneView};

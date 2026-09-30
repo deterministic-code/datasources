@@ -77,14 +77,14 @@ describe("contacts readonly repository", () => {
         contactsServiceOf(connection),
         await contactLookupIds(connection),
       );
-      expect(extra.first_name).toBe("Extra");
-      expect(extra.addresses).toHaveLength(1);
-      expect(extra.addresses[0]?.line1).toBe("9 Extra");
-      expect(extra.addresses[0]?.contact_id).toBe(extra.id);
-      expect(extra.phones[0]?.number).toBe("555-extra");
-      expect(extra.phones[0]?.contact_id).toBe(extra.id);
-      expect(extra.addresses[0]?.address_type_name).toBe("Home");
-      expect(extra.phones[0]?.phone_type_name).toBe("Mobile");
+      expect(extra.FirstName).toBe("Extra");
+      expect(extra.Addresses).toHaveLength(1);
+      expect(extra.Addresses[0]?.Line1).toBe("9 Extra");
+      expect(extra.Addresses[0]?.Contact.Id).toBe(extra.Id);
+      expect(extra.Phones[0]?.Number).toBe("555-extra");
+      expect(extra.Phones[0]?.Contact.Id).toBe(extra.Id);
+      expect(extra.Addresses[0]?.AddressType.Name).toBe("Home");
+      expect(extra.Phones[0]?.PhoneType.Name).toBe("Mobile");
     } finally {
       await isolated.cleanup();
     }

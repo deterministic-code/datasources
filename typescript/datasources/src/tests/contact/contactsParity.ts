@@ -4,7 +4,7 @@ import type { Cells } from "../../converters/Cell.ts";
 import { FlatToNestedMapper } from "../../mappers/FlatToNestedMapper.ts";
 import type { IConnection } from "../../IConnection.ts";
 import { CRUDRepository } from "../../CRUDRepository.ts";
-import type { ContactsView } from "./asContactsView.ts";
+import { fromContacts, type ContactsView } from "./asContactsView.ts";
 import { contactsJoinQuery } from "./contactsJoinQuery.ts";
 import { contactsServiceOf } from "./contactsServiceOf.ts";
 import { contactsView } from "./contactsView.ts";
@@ -23,8 +23,8 @@ export const contactsParity = async (
         .read(contactsJoinQuery()),
     ),
   );
-  const enriched = await collectAsync(
-    contactsServiceOf(connection, verbose ? middleware : undefined).read(),
+  const enriched = fromContacts(
+    await collectAsync(contactsServiceOf(connection, verbose ? middleware : undefined).read()),
   );
   return { eager, enriched };
 };

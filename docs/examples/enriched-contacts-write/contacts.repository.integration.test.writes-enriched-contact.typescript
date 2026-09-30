@@ -6,46 +6,22 @@ for (const sql of statementsOf(readFileSync(seedPath, "utf8")))
 
 const contactsRepo = new CRUDRepository(connection, {
   type: Contact,
-  entity: "contacts_base",
-  readProperties: fieldNamesOf(ContactBase),
+  entityMapper: contactEntity,
+  columnMappings: columns,
+  ids: ["Id"],
 });
-const typesRepo = new CRUDRepository(connection, { type: ContactType, entity: "contact_type" });
-const sourcesRepo = new CRUDRepository(connection, { type: ContactSource, entity: "contact_source" });
-const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, entity: "address_type" });
-const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entity: "phone_type" });
-const addressesRepo = new CRUDRepository(connection, {
-  type: Address,
-  entity: "address",
-  readProperties: [
-    "id", "uuid", "created", "updated", "version", "contact_id", "address_type_id",
-    "line1", "line2", "city", "region", "postal_code", "country",
-  ],
-});
-const phonesRepo = new CRUDRepository(connection, {
-  type: Phone,
-  entity: "phone",
-  readProperties: [
-    "id", "uuid", "created", "updated", "version", "contact_id", "phone_type_id", "number",
-  ],
-});
-addressesRepo.addEnriched(
-  { into: "address_type_name", from: "address_type_id", by: "id", select: "name" },
-  addressTypesRepo,
-);
-phonesRepo.addEnriched(
-  { into: "phone_type_name", from: "phone_type_id", by: "id", select: "name" },
-  phoneTypesRepo,
-);
-contactsRepo.addEnriched(
-  { into: "contact_type_name", from: "contact_type_id", by: "id", select: "name" },
-  typesRepo,
-);
-contactsRepo.addEnriched(
-  { into: "contact_source_name", from: "contact_source_id", by: "id", select: "name" },
-  sourcesRepo,
-);
-contactsRepo.addEnriched({ into: "addresses", from: "id", by: "contact_id", many: true }, addressesRepo);
-contactsRepo.addEnriched({ into: "phones", from: "id", by: "contact_id", many: true }, phonesRepo);
+const typesRepo = new CRUDRepository(connection, { type: ContactType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+const sourcesRepo = new CRUDRepository(connection, { type: ContactSource, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+const addressesRepo = new CRUDRepository(connection, { type: Address, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+const phonesRepo = new CRUDRepository(connection, { type: Phone, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+addressesRepo.addEnriched({ into: "AddressType", from: "AddressType", by: "Id" }, addressTypesRepo);
+phonesRepo.addEnriched({ into: "PhoneType", from: "PhoneType", by: "Id" }, phoneTypesRepo);
+contactsRepo.addEnriched({ into: "ContactType", from: "ContactType", by: "Id" }, typesRepo);
+contactsRepo.addEnriched({ into: "ContactSource", from: "ContactSource", by: "Id" }, sourcesRepo);
+contactsRepo.addEnriched({ into: "Addresses", from: "Id", by: "Contact", many: true }, addressesRepo);
+contactsRepo.addEnriched({ into: "Phones", from: "Id", by: "Contact", many: true }, phonesRepo);
 
 const created = await contactsRepo.create(extraContact(await contactLookupIds(connection)));
-const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("id", created.id)));
+const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("Id", created.Id)));

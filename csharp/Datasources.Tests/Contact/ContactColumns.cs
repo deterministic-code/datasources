@@ -13,10 +13,12 @@ internal static class ContactColumns
         ["ContactType"] = "contact_type_id",
         ["ContactSource"] = "contact_source_id",
         ["PhoneType"] = "phone_type_id",
+        ["Line1"] = "line1",
+        ["Line2"] = "line2",
     });
 
     public static readonly IMapper<string, string> Columns = new TransformMapper<string, string>(
-        name => Snake.Map(References.Map(name)),
+        name => References.Map(name) is var mapped && mapped != name ? mapped : Snake.Map(name),
         name => References.ReverseMap(name) is var from && from != name ? from : Snake.ReverseMap(name));
 
     public static readonly IMapper<string, string> ContactEntity = new DictionaryMapper<string>(
