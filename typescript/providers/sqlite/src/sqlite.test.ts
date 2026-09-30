@@ -258,7 +258,7 @@ describe("Sqlite datasource", () => {
     expect(provider.columnType("int")).toBe("INTEGER");
     expect(provider.columnType("uuid")).toBe("TEXT");
     expect(provider.columnType("string")).toBe("TEXT");
-    expect(provider.columnType("bool")).toBe("INTEGER");
+    expect(provider.columnType("bool")).toBe("BOOLEAN");
     expect(provider.columnType("decimal")).toBe("NUMERIC");
     expect(provider.columnType("float")).toBe("REAL");
     expect(provider.columnType("datetime")).toBe("TEXT");

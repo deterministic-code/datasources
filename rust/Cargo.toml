@@ -20,4 +20,4 @@ async-trait = "0.1"
 datasources = { path = "datasources", version = "0.1.0" }
 tokio = { version = "1", features = ["macros", "rt"] }
 serde_json = "1"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["bundled", "column_decltype"] }

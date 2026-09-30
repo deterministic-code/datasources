@@ -12,7 +12,8 @@ pub struct SqliteDriver;
 
 pub(crate) fn column_sql(name: &str) -> Option<&'static str> {
     Some(match name {
-        "int" | "bool" => "INTEGER",
+        "int" => "INTEGER",
+        "bool" => "BOOLEAN",
         "uuid" | "string" | "datetime" => "TEXT",
         "decimal" => "NUMERIC",
         "float" => "REAL",
@@ -65,7 +66,7 @@ mod tests {
         assert_eq!(driver.column_type("int").unwrap(), "INTEGER");
         assert_eq!(driver.column_type("uuid").unwrap(), "TEXT");
         assert_eq!(driver.column_type("string").unwrap(), "TEXT");
-        assert_eq!(driver.column_type("bool").unwrap(), "INTEGER");
+        assert_eq!(driver.column_type("bool").unwrap(), "BOOLEAN");
         assert_eq!(driver.column_type("decimal").unwrap(), "NUMERIC");
         assert_eq!(driver.column_type("float").unwrap(), "REAL");
         assert_eq!(driver.column_type("datetime").unwrap(), "TEXT");

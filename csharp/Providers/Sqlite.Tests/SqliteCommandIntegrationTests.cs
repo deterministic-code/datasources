@@ -71,6 +71,23 @@ public class SqliteCommandIntegrationTests
     }
 
     [Fact]
+    public async Task ReadsBooleanAsBoolAndLeavesInteger()
+    {
+        var ds = Datasource.Default;
+        await using var connection = await ds.CreateConnection();
+        await connection.Open();
+        var command = connection.CreateCommand();
+        await command.Execute(Native.N("CREATE TABLE flags (enabled BOOLEAN, count INTEGER)"));
+        await command.Execute("INSERT INTO flags (enabled, count) VALUES (1, 1)");
+        await using var reader = await command.ExecuteReader(Native.N("SELECT enabled, count, 1 AS one FROM flags"));
+        Assert.True(await reader.Next());
+        var row = reader.Current!;
+        Assert.Equal(new Value.Bool(true), row["enabled"]);
+        Assert.Equal(new Value.Int(1), row["count"]);
+        Assert.Equal(new Value.Int(1), row["one"]);
+    }
+
+    [Fact]
     public async Task RunRawSql()
     {
         var ds = Datasource.Default;

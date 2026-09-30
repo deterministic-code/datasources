@@ -170,7 +170,7 @@ fn builds_schema() {
     assert_eq!(schema::qualified("mysql", "users.id"), "`users`.`id`");
     assert_eq!(
         user_table("sqlite"),
-        "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" TEXT, \"username\" TEXT, \"is_enabled\" INTEGER, \"balance\" NUMERIC, \"location\" REAL, \"created\" TEXT, \"version\" BLOB)"
+        "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" TEXT, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" REAL, \"created\" TEXT, \"version\" BLOB)"
     );
     assert_eq!(
         user_table("mysql"),

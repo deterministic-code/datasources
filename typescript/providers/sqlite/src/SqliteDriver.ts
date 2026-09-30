@@ -17,7 +17,7 @@ export const columnTypes: Record<string, string> = {
   int: "INTEGER",
   uuid: "TEXT",
   string: "TEXT",
-  bool: "INTEGER",
+  bool: "BOOLEAN",
   decimal: "NUMERIC",
   float: "REAL",
   datetime: "TEXT",

@@ -58,7 +58,7 @@ public class ReadonlyRepositoryIntegrationTests
         {
             id = (int)(long)from["id"].ToObject()!,
             username = (string)from["username"].ToObject()!,
-            is_enabled = (long)from["is_enabled"].ToObject()! != 0
+            is_enabled = (bool)from["is_enabled"].ToObject()!
         };
 
         public override Row ReverseConvert(User to) => new()

@@ -17,19 +17,25 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
         {
             var reader = await command.ExecuteReaderAsync();
             string[]? names = null;
+            bool[]? booleans = null;
             return new StreamingReader(
                 async () =>
                 {
                     if (!await reader.ReadAsync()) return null;
-                    names ??= ColumnNames(reader);
+                    if (names is null)
+                        (names, booleans) = Columns(reader);
                     var row = new Row();
                     for (var i = 0; i < reader.FieldCount; i++)
-                        row[names[i]] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                    {
+                        var cell = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                        row[names[i]] = booleans![i] ? SqliteRowTypeConverters.All["bool"].Convert(cell) : cell;
+                    }
                     return row;
                 },
                 async () =>
                 {
                     names = null;
+                    booleans = null;
                     return await reader.NextResultAsync();
                 },
                 async () =>
@@ -59,14 +65,18 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
         return new SqliteExecuteResult(Math.Max(rows, 0), Value.Null.Instance, parameters);
     }
 
-    static string[] ColumnNames(Microsoft.Data.Sqlite.SqliteDataReader reader)
+    static (string[] Names, bool[] Booleans) Columns(Microsoft.Data.Sqlite.SqliteDataReader reader)
     {
         var names = new string[reader.FieldCount];
+        var booleans = new bool[reader.FieldCount];
         for (var i = 0; i < names.Length; i++)
             names[i] = reader.GetName(i);
         var schema = reader.GetSchemaTable();
+        if (schema is null) return (names, booleans);
+        for (var i = 0; i < names.Length; i++)
+            booleans[i] = string.Equals(schema.Rows[i]["DataTypeName"]?.ToString(), "BOOLEAN", StringComparison.OrdinalIgnoreCase);
         var duplicated = names.GroupBy(name => name).Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet();
-        if (schema is null || duplicated.Count == 0) return names;
+        if (duplicated.Count == 0) return (names, booleans);
         for (var i = 0; i < names.Length; i++)
         {
             if (!duplicated.Contains(names[i])) continue;
@@ -75,7 +85,7 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
             if (!string.IsNullOrEmpty(table) && !string.IsNullOrEmpty(column))
                 names[i] = $"{table}.{column}";
         }
-        return names;
+        return (names, booleans);
     }
 
     SqliteCmd Bind(string sql, Row parameters)

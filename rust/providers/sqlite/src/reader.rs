@@ -1,7 +1,8 @@
 use crate::command::{as_params, bind_pairs, from_sql};
+use crate::converters::BoolConverter;
 use crate::connection::{map_err, SqliteConnection};
 use async_trait::async_trait;
-use datasources::{split_statements, DatasourceError, Reader, Result, Row, Value};
+use datasources::{split_statements, DatasourceError, Reader, Result, Row, TypeConverter, Value};
 use rusqlite::Connection as SqliteDb;
 use std::collections::HashMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -171,6 +172,11 @@ fn drive(
             .into_iter()
             .map(ToOwned::to_owned)
             .collect();
+        let declared: Vec<Option<String>> = stmt
+            .columns()
+            .into_iter()
+            .map(|column| column.decl_type().map(ToOwned::to_owned))
+            .collect();
         let mut rows = stmt.query(bound.as_slice()).map_err(map_err)?;
         if index == 0 {
             let _ = ans_tx.send(Answer::Ready);
@@ -180,7 +186,7 @@ fn drive(
                 Ok(Ask::Next) => {
                     let row = rows.next().map_err(map_err)?;
                     let mapped = match row {
-                        Some(row) => Some(map_row(&row, &names)?),
+                        Some(row) => Some(map_row(&row, &names, &declared)?),
                         None => None,
                     };
                     let _ = ans_tx.send(Answer::Row(mapped));
@@ -212,10 +218,16 @@ fn idle(ask_rx: &mpsc::Receiver<Ask>, ans_tx: &mpsc::Sender<Answer>) -> Result<(
     }
 }
 
-fn map_row(row: &rusqlite::Row<'_>, names: &[String]) -> Result<Row> {
+fn map_row(row: &rusqlite::Row<'_>, names: &[String], declared: &[Option<String>]) -> Result<Row> {
+    let converter = BoolConverter;
     let mut record = Row::new();
     for (index, name) in names.iter().enumerate() {
-        record.insert(name.clone(), from_sql(row.get_ref(index).map_err(map_err)?));
+        let value = from_sql(row.get_ref(index).map_err(map_err)?);
+        let value = match declared.get(index).and_then(Option::as_deref) {
+            Some(kind) if kind.eq_ignore_ascii_case("BOOLEAN") => converter.convert(&value)?,
+            _ => value,
+        };
+        record.insert(name.clone(), value);
     }
     Ok(record)
 }

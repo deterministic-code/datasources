@@ -3,7 +3,7 @@ class UserConverter extends TypeConverter<MappedUser, Cells> {
     const user = new MappedUser();
     user.id = from.id as number;
     user.username = from.username as string;
-    user.is_enabled = from.is_enabled === 1;
+    user.is_enabled = from.is_enabled === true;
     return user;
   };
 

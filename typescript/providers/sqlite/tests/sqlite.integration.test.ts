@@ -14,7 +14,7 @@ import {
   loadDialect,
   runSpec,
   specFiles,
-} from "../../sql-spec-runner.ts";
+} from "../../../sql-spec-runner.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
@@ -86,6 +86,18 @@ describe("command", () => {
     delete process.env.INSTALLED_PROVIDERS;
     delete process.env.DATASOURCE_URL;
     process.env.PROVIDER = "sqlite";
+  });
+
+  it("reads a boolean column as bool and leaves an integer", async () => {
+    const ds = Datasource.default;
+    await using connection = await ds.createConnection();
+    await connection.open();
+    const command = connection.createCommand();
+    await command.executeNative(new Native("CREATE TABLE flags (enabled BOOLEAN, count INTEGER)"));
+    await command.execute("INSERT INTO flags (enabled, count) VALUES (1, 1)");
+    await using reader = await command.executeReaderNative(new Native("SELECT enabled, count, 1 AS one FROM flags"));
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ enabled: true, count: 1, one: 1 });
   });
 
   it("runs raw sql", async () => {
