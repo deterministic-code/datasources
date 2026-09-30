@@ -83,7 +83,7 @@ The `Command` trait has no connection getter.
 
 ## Examples
 
-When present, one `###` heading per sample, optional prose, then `::: example`. Each fence points at a test or type by name (`path#Name`), not a line range. `npm run docs:examples` writes the usage sample — not the test method wrapper or equality asserts — into `docs/examples/<heading>/<File>.<Name>.<lang>`. The test path and line range live in `docs/examples/lines`. The transform renders the sample file. Do not paste a second fictional fence. A source icon opens the recorded line range from the repo. README links that range on GitHub. On a reference page those fences follow the page-level selector; they do not get their own tabs.
+When present, one `###` heading per sample, optional prose, then `::: example`. Each fence points at a test or type by name (`path#Name`), not a line range. `npm run docs:examples` writes the usage sample — not the test method wrapper or equality asserts — into `docs/examples/<heading>/<File>.<Name>.<lang>`. The test path and line range live in `docs/examples/lines`. The same command rewrites `docs/examples.md` as an index of those samples. The transform renders the sample file. Do not paste a second fictional fence. A source icon opens the recorded line range from the repo. README links that range on GitHub. On a reference page those fences follow the page-level selector; they do not get their own tabs.
 
 A new fence may use `path#Lstart-Lend` once. The command rewrites it to the region name and stores that slice. After that, `path#Name` is the pointer. Run `npm run docs:examples` after adding a sample. A Cursor hook runs it when a cited `.cs`, `.rs`, or `.ts` file changes.
 

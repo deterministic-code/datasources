@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { exampleCode } from "./example.mjs";
+import { parseToc, uniquePages } from "./toc.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DOC_FENCE = /(^~~~~[\s\S]*?^~~~~)/m;
@@ -47,6 +48,42 @@ export const snippetFile = ({ heading, sourcePath, name, lang }) =>
   `docs/examples/${slug(heading)}/${fileStem(sourcePath)}.${name}.${normalizeLang(lang)}`;
 
 export const LINES = "docs/examples/lines";
+export const EXAMPLES_PAGE = "docs/examples.md";
+
+const EXAMPLES_INTRO =
+  "Samples from the code reference. Open a link for the explanation and the C#, Rust, and TypeScript code.";
+
+export const renderExamplesPage = ({ pages, headings }) => {
+  const byDoc = new Map();
+  for (const heading of headings) {
+    const items = byDoc.get(heading.doc) ?? [];
+    if (!items.some((item) => item.title === heading.title)) items.push(heading);
+    byDoc.set(heading.doc, items);
+  }
+  const docOf = (path) => (path.startsWith("docs/") ? path : `docs/${path}`);
+  const groups = [];
+  const seen = new Set();
+  for (const page of uniquePages(pages)) {
+    const doc = docOf(page.path);
+    const items = byDoc.get(doc);
+    if (!items?.length) continue;
+    seen.add(doc);
+    groups.push({ title: page.title, doc, items });
+  }
+  for (const [doc, items] of byDoc) {
+    if (seen.has(doc)) continue;
+    groups.push({ title: doc.replace(/^docs\//, "").replace(/\.md$/, ""), doc, items });
+  }
+  const sections = groups
+    .map(
+      (group) =>
+        `## ${group.title}\n\n${group.items
+          .map((item) => `- [${item.title}](./${group.doc.replace(/^docs\//, "")}#${slug(item.title)})`)
+          .join("\n")}`,
+    )
+    .join("\n\n");
+  return `# Examples\n\n${EXAMPLES_INTRO}\n\n${sections}\n`;
+};
 
 const parseSnippet = (text) => {
   const match = norm(text).match(/^test: (\S+)\nlines: (\d+)-(\d+)\n\n([\s\S]*)$/);
@@ -569,6 +606,52 @@ const samplesIn = (markdown) => {
 
 const relPath = (file) => relative(root, resolve(file)).split("\\").join("/");
 
+const headingsIn = (base) => {
+  const headings = [];
+  for (const doc of walkMd(join(base, "docs"))) {
+    const docRel = relative(base, resolve(doc)).split("\\").join("/");
+    if (docRel === EXAMPLES_PAGE) continue;
+    const seen = new Set();
+    for (const sample of samplesIn(readFileSync(doc, "utf8"))) {
+      if (!sample.heading || seen.has(sample.heading)) continue;
+      seen.add(sample.heading);
+      headings.push({ doc: docRel, title: sample.heading });
+    }
+  }
+  return headings;
+};
+
+const exampleDirectories = (base) =>
+  new Set(
+    readdirSync(join(base, "docs/examples"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name),
+  );
+
+const directoryErrorsFor = (headings, directories) => {
+  const slugs = new Set(headings.map((heading) => slug(heading.title)));
+  const errors = [...directories]
+    .filter((dir) => !slugs.has(dir))
+    .sort()
+    .map((dir) => `docs/examples/${dir}: no ### heading`);
+  const seen = new Set();
+  for (const heading of headings) {
+    const key = slug(heading.title);
+    if (seen.has(key) || directories.has(key)) continue;
+    seen.add(key);
+    errors.push(`${heading.doc}: ${heading.title} has no docs/examples/${key} directory`);
+  }
+  return errors;
+};
+
+const readOptional = (path) => {
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return null;
+  }
+};
+
 export const syncExamples = ({ files, check = false, edits = null, base = root } = {}) => {
   const only = files?.length ? new Set(files.map((file) => relPath(file))) : null;
   const errors = [];
@@ -677,7 +760,18 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
         docEdits.set(doc, [...(docEdits.get(doc) ?? []), { index: sample.index, length: sample.spec.length, text: test }]);
     }
   }
-  if (check || errors.length) return { errors, count, changed: 0 };
+  if (errors.length) return { errors, count, changed: 0 };
+  const headings = headingsIn(base);
+  const pageText = renderExamplesPage({
+    pages: parseToc(readFileSync(join(base, "docs/toc.yaml"), "utf8")).pages,
+    headings,
+  });
+  if (check) {
+    const pageErrors = directoryErrorsFor(headings, exampleDirectories(base));
+    if (readOptional(join(base, EXAMPLES_PAGE)) !== pageText)
+      pageErrors.push("docs/examples.md is stale. Run npm run docs:examples.");
+    return { errors: pageErrors, count, changed: 0 };
+  }
   let changed = 0;
   for (const [relSnippet, text] of sampleWrites) {
     const path = join(base, relSnippet);
@@ -712,6 +806,13 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
     for (const edit of editsOfDoc.sort((a, b) => b.index - a.index))
       text = text.slice(0, edit.index) + edit.text + text.slice(edit.index + edit.length);
     writeFileSync(doc, text);
+    changed++;
+  }
+  const pageErrors = directoryErrorsFor(headings, exampleDirectories(base));
+  if (pageErrors.length) return { errors: pageErrors, count, changed };
+  const pagePath = join(base, EXAMPLES_PAGE);
+  if (readOptional(pagePath) !== pageText) {
+    writeFileSync(pagePath, pageText);
     changed++;
   }
   return { errors, count, changed };

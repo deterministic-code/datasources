@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { exampleCode } from "./example.mjs";
-import { applyEdits, findRegions, formatLines, locateSlice, parseLines, regionForRange } from "./sync-examples.mjs";
+import {
+  applyEdits,
+  findRegions,
+  formatLines,
+  locateSlice,
+  parseLines,
+  regionForRange,
+  renderExamplesPage,
+} from "./sync-examples.mjs";
 
 const csharp = `public class IdentityMapperTests
 {
@@ -145,6 +153,37 @@ test("keeps an it() body that contains a template", () => {
 test("keeps a fn that appears after the sample starts", () => {
   const raw = "let x = 1;\nfn helper() {\n    let y = 2;\n}";
   assert.equal(exampleCode(raw), raw);
+});
+
+test("lists examples in toc order with heading links", () => {
+  const pages = [
+    { path: "sections/command.md", title: "Command" },
+    { path: "sections/repository.md", title: "Repositories" },
+    { path: "sections/connection.md", title: "Connection" },
+  ];
+  const headings = [
+    { doc: "docs/sections/repository.md", title: "Simple readonly" },
+    { doc: "docs/sections/command.md", title: "Run raw SQL" },
+    { doc: "docs/sections/repository.md", title: "CRUD" },
+  ];
+  assert.equal(
+    renderExamplesPage({ pages, headings }),
+    [
+      "# Examples",
+      "",
+      "Samples from the code reference. Open a link for the explanation and the C#, Rust, and TypeScript code.",
+      "",
+      "## Command",
+      "",
+      "- [Run raw SQL](./sections/command.md#run-raw-sql)",
+      "",
+      "## Repositories",
+      "",
+      "- [Simple readonly](./sections/repository.md#simple-readonly)",
+      "- [CRUD](./sections/repository.md#crud)",
+      "",
+    ].join("\n"),
+  );
 });
 
 test("applies an edit inside the stored slice", () => {
