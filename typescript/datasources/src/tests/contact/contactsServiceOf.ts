@@ -21,7 +21,7 @@ export const contactsServiceOf = (
     const repo = new CRUDRepository(connection, {
       type,
       entityMapper: entity ?? snake,
-      columnMappings: columns,
+      propertyMappings: columns,
       ids: ["Id"],
     });
     return middleware ? repo.addMiddleware(middleware) : repo;

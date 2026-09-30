@@ -322,7 +322,7 @@ describe("ReadonlyRepository", () => {
     const usersConnection = await setup([{ user_type_id: admin.id }]);
     const usersRepo = new ReadonlyRepository(usersConnection, {
       type: View,
-      columnMappings: new DictionaryMapper([["UserType", "user_type_id"]]),
+      propertyMappings: new DictionaryMapper([["UserType", "user_type_id"]]),
     });
     usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "id", select: "name" }, typesRepo);
     const item = await usersRepo.readSingle();

@@ -100,15 +100,15 @@ describe("contacts readonly repository", () => {
     const contactsRepo = new CRUDRepository(connection, {
       type: Contact,
       entityMapper: contactEntity,
-      columnMappings: columns,
+      propertyMappings: columns,
       ids: ["Id"],
     });
-    const typesRepo = new CRUDRepository(connection, { type: ContactType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-    const sourcesRepo = new CRUDRepository(connection, { type: ContactSource, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-    const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-    const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-    const addressesRepo = new CRUDRepository(connection, { type: Address, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-    const phonesRepo = new CRUDRepository(connection, { type: Phone, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+    const typesRepo = new CRUDRepository(connection, { type: ContactType, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+    const sourcesRepo = new CRUDRepository(connection, { type: ContactSource, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+    const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+    const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+    const addressesRepo = new CRUDRepository(connection, { type: Address, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+    const phonesRepo = new CRUDRepository(connection, { type: Phone, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
     addressesRepo.addEnriched({ into: "AddressType", from: "AddressType", by: "Id" }, addressTypesRepo);
     phonesRepo.addEnriched({ into: "PhoneType", from: "PhoneType", by: "Id" }, phoneTypesRepo);
     contactsRepo.addEnriched({ into: "ContactType", from: "ContactType", by: "Id" }, typesRepo);

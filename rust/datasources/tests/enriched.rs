@@ -34,7 +34,7 @@ fn create_lookup_repo(connection: Arc<dyn Connection>, entity: &str) -> Readonly
     let mut options = ReadonlyRepositoryOptions::default();
     options.entity = entity.into();
     options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-    options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
     ReadonlyRepository::new(connection, options).unwrap()
 }
 
@@ -282,7 +282,7 @@ fn domain_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository 
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
     options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-    options.column_mappings = Box::new(contact_columns());
+    options.property_mappings = Box::new(contact_columns());
     options.object_converter = Some(Box::new(
         MetaDataRowTypeConverter::new(Vec::new())
             .with_references(contact_references(), Box::new(contact_columns())),

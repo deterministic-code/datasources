@@ -200,7 +200,7 @@ public class ReadonlyRepositoryTests
         var usersConnection = await Setup(new Row { ["user_type_id"] = admin["id"] });
         var usersRepo = new ReadonlyRepository<View>(usersConnection, new ReadonlyRepositoryOptions<View>
         {
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["UserType"] = "user_type_id",
             }),

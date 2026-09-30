@@ -2,7 +2,7 @@ use crate::bulk_command::BulkCommand;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::crud_repository::CRUDRepository;
+use crate::crud_repository::{writes, CRUDRepository};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
 use crate::enrichment_via::EnrichmentVia;
@@ -220,7 +220,7 @@ fn insert_command(repo: &CRUDRepository, item: &Row) -> Result<(String, Vec<Para
     let readonly = stored_repo(repo);
     let record = readonly.reverse_convert(item)?;
     let fields = params(repo, &record, false)?;
-    let statement = readonly.statements.insert(&fields);
+    let statement = writes(repo).insert(&fields);
     Ok((statement.get_text(), fields))
 }
 
@@ -243,7 +243,7 @@ fn update_command(
         (None, Some(clause)) => clause,
         _ => unreachable!(),
     };
-    let statement = readonly.statements.update(&fields, clause);
+    let statement = writes(repo).update(&fields, clause);
     let parameters = crate::UpdateStatement::parameter_list(&fields, Some(clause));
     Ok((statement.get_text(), parameters))
 }
@@ -261,7 +261,7 @@ fn delete_command(
         (None, Some(clause)) => clause,
         _ => unreachable!(),
     };
-    let statement = readonly.statements.delete(clause);
+    let statement = writes(repo).delete(clause);
     let parameters = clause.parameters();
     let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
         params(repo, &record, true)?
@@ -275,7 +275,7 @@ fn stored_row(repo: &CRUDRepository, item: &Row) -> Result<Row> {
     let readonly = stored_repo(repo);
     let record = readonly.reverse_convert(item)?;
     let mut row = Row::new();
-    for name in readonly.statements.columns() {
+    for name in readonly.statements.read_columns() {
         let value = record
             .iter()
             .find(|(key, _)| readonly.column(key) == *name && !repo.enrichment_into(key))

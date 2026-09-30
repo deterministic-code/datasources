@@ -108,7 +108,7 @@ mod tests {
         let mut options = create_crud_repository_options::<Account>();
         options.entity = "user".into();
         options.row_converter = Some(RowTypeConverter::of::<Account>());
-        options.column_mappings = Box::new(DictionaryMapper::new([
+        options.property_mappings = Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
         ]));

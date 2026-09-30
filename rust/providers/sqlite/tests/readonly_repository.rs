@@ -78,7 +78,7 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     .await;
     let mut options = create_crud_repository_options::<User>();
     options.entity_mapper = Box::new(snake_then_plural());
-    options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
     let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
     let by_id = repo
         .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
@@ -142,7 +142,7 @@ async fn maps_an_object_explicitly() {
     .await;
     let mut options = create_crud_repository_options::<User>();
     options.entity_mapper = Box::new(snake_then_plural());
-    options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
     options.object_converter = Some(Box::new(UserConverter));
     let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
     let user = users_repo
@@ -178,7 +178,7 @@ async fn reads_user_by_guid_username_and_created() {
         "UserAccount".to_string(),
         "user".to_string(),
     )]));
-    options.column_mappings = Box::new(DictionaryMapper::new([
+    options.property_mappings = Box::new(DictionaryMapper::new([
         ("Key".to_string(), "id".to_string()),
         ("Login".to_string(), "username".to_string()),
         ("Active".to_string(), "is_enabled".to_string()),
@@ -295,7 +295,7 @@ mod user_view {
         .await;
         let mut users_options = create_crud_repository_options::<UserAccount>();
         users_options.entity = "user".into();
-        users_options.column_mappings = Box::new(DictionaryMapper::new([
+        users_options.property_mappings = Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
             ("Active".to_string(), "is_enabled".to_string()),
@@ -306,7 +306,7 @@ mod user_view {
         type_options.entity = "UserType".into();
         type_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        type_options.column_mappings =
+        type_options.property_mappings =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         let mut users_repo =
             ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
@@ -352,7 +352,7 @@ mod users_view_roles {
         create_crud_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
         NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryOptions,
-        SelectStatement, SelectStatementOptions, Statement, Text, TransformMapper, TypeMap,
+        SelectStatement, SelectStatementOptions, TypeMap,
         TypeMapField, TypeMapGroup, Value, Where,
     };
     use std::sync::Arc;
@@ -410,23 +410,13 @@ mod users_view_roles {
         )
     }
 
-    fn roles_sql(statement: SelectStatement) -> SelectStatement {
-        let select = "SELECT user_roles.user_id AS user_id, roles.name AS name FROM user_roles INNER JOIN roles ON roles.id = user_roles.role_id";
-        let text = match statement.get_text().split_once(" WHERE ") {
-            Some((_, rest)) => format!("{select} WHERE {rest}"),
-            None => select.to_string(),
-        };
-        SelectStatement::text(text)
-    }
-
-    fn joined_users(query: SelectStatement) -> SelectStatement {
+    fn joined_users() -> SelectStatement {
         let joins = [
             Join::left("UserType", "UserType.Id", "User.UserTypeId"),
             Join::left("UserRole", "UserRole.UserId", "User.Key"),
             Join::left("Role", "Role.Id", "UserRole.RoleId"),
         ];
         SelectStatement::new(SelectStatementOptions {
-            where_clause: query.predicate(),
             joins: &joins,
             ..SelectStatementOptions::new(
                 "User",
@@ -471,7 +461,7 @@ mod users_view_roles {
             "UsersView".to_string(),
             "user".to_string(),
         )]));
-        users_options.column_mappings = Box::new(DictionaryMapper::new([
+        users_options.property_mappings = Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
             ("Active".to_string(), "is_enabled".to_string()),
@@ -481,18 +471,17 @@ mod users_view_roles {
         let mut type_options = create_crud_repository_options::<UserType>();
         type_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        type_options.column_mappings =
+        type_options.property_mappings =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         let mut role_options = create_crud_repository_options::<UserRole>();
         role_options.entity_mapper = Box::new(DictionaryMapper::new([(
             "UserRole".to_string(),
             "user_roles".to_string(),
         )]));
-        role_options.column_mappings = Box::new(DictionaryMapper::new([
+        role_options.property_mappings = Box::new(DictionaryMapper::new([
             ("UserId".to_string(), "user_id".to_string()),
             ("Name".to_string(), "name".to_string()),
         ]));
-        role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |statement| statement)));
         let mut users_repo =
             ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
         let types = ds.create_readonly_repository::<UserType>(
@@ -545,7 +534,7 @@ mod users_view_roles {
             ("UserRole".into(), "user_roles".into()),
             ("Role".into(), "roles".into()),
         ]));
-        options.column_mappings = Box::new(DictionaryMapper::new([
+        options.property_mappings = Box::new(DictionaryMapper::new([
             ("Key".into(), "id".into()),
             ("Login".into(), "username".into()),
             ("Active".into(), "is_enabled".into()),
@@ -557,7 +546,6 @@ mod users_view_roles {
             ("Name".into(), "roles.name".into()),
             ("Id".into(), "id".into()),
         ]));
-        options.select = Some(Arc::new(TransformMapper::new(joined_users, |query| query)));
         let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
         users_repo.add_enriched(
             datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
@@ -586,7 +574,8 @@ mod users_view_roles {
                 ),
             ))),
         );
-        let items = users_repo.read(None, None).await.unwrap();
+        let joined = joined_users();
+        let items = users_repo.read(Some(&joined), None).await.unwrap();
         let view = |login: &str| {
             items
                 .iter()
@@ -700,7 +689,7 @@ mod user_crud {
         let connection = open(ds).await;
         apply_schema(connection.as_ref(), "user-pascal").await.unwrap();
         let mut options = create_crud_repository_options::<User>();
-        options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         options.ids = vec!["Id".into()];
         let users_repo = CRUDRepository::new(connection, options).unwrap();
         let mut created = datasources::Row::new();
@@ -759,7 +748,7 @@ mod user_crud {
             "UsersView".to_string(),
             "user".to_string(),
         )]));
-        users_options.column_mappings = Box::new(DictionaryMapper::new([
+        users_options.property_mappings = Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
             ("Active".to_string(), "is_enabled".to_string()),
@@ -772,12 +761,12 @@ mod user_crud {
         let mut type_options = create_crud_repository_options::<UserType>();
         type_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        type_options.column_mappings = Box::new(casing);
+        type_options.property_mappings = Box::new(casing);
         type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
         let mut role_options = create_crud_repository_options::<UserRole>();
         role_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        role_options.column_mappings =
+        role_options.property_mappings =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
         let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
@@ -896,7 +885,7 @@ mod user_crud {
         let mut options = create_crud_repository_options::<Account>();
         let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
         options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        options.column_mappings = Box::new(casing);
+        options.property_mappings = Box::new(casing);
         options.ids = vec!["TenantId".into(), "Id".into()];
         options.row_converter = Some(RowTypeConverter::of::<Account>());
         let accounts_repo = CRUDRepository::new(connection, options).unwrap();

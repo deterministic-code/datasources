@@ -12,7 +12,7 @@ use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
-use crate::mappers::{Mapper, TransformMapper};
+use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -21,9 +21,8 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statements::ReturnStatement;
 use crate::stored_enrichment::StoredEnrichment;
-use crate::table_repository_builder::RepositoryBuilder;
+use crate::crud_repository_builder::CRUDRepositoryBuilder;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
@@ -38,16 +37,13 @@ pub struct CRUDRepository {
     readonly: ReadonlyRepository,
     ids: Vec<String>,
     write: Arc<dyn WriteEnrichmentStrategy>,
-    return_sql: Option<Arc<TransformMapper<String, String>>>,
 }
 
-impl RepositoryBuilder {
-    pub fn build(
-        connection: Arc<dyn Connection>,
-        options: CRUDRepositoryOptions,
-    ) -> Result<CRUDRepository> {
-        CRUDRepository::new(connection, options)
-    }
+pub(crate) fn writes(repo: &CRUDRepository) -> CRUDRepositoryStatements {
+    CRUDRepositoryStatements::new(
+        repo.readonly.statements.table().to_string(),
+        repo.readonly.statements.read_columns().to_vec(),
+    )
 }
 
 impl CRUDRepository {
@@ -60,24 +56,21 @@ impl CRUDRepository {
     }
 
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
-        let return_sql = options.return_.clone();
-        let mut repo = Self::from_built(RepositoryBuilder::parts_crud(connection, options)?);
-        repo.return_sql = return_sql;
+        let write = options.write.clone();
+        let mut repo = Self::from_built(CRUDRepositoryBuilder::parts(connection, options)?)?;
+        if let Some(write) = write {
+            repo.write = write;
+        }
         Ok(repo)
     }
 
-    fn from_built(mut built: BuiltRepository) -> Self {
+    fn from_built(built: BuiltRepository) -> Result<Self> {
         let id = built.ids.clone();
-        let write = built
-            .write
-            .take()
-            .unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default()));
-        Self {
+        Ok(Self {
             readonly: ReadonlyRepository::from_built(built),
             ids: id,
-            write,
-            return_sql: None,
-        }
+            write: Arc::new(DefaultWriteEnrichmentStrategy::default()),
+        })
     }
 
     pub fn memory(items: Vec<Row>) -> Self {
@@ -90,7 +83,6 @@ impl CRUDRepository {
             readonly: ReadonlyRepository::memory(items),
             ids,
             write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
-            return_sql: None,
         }
     }
 
@@ -288,7 +280,7 @@ impl CRUDRepository {
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
         let record = self.readonly.reverse_convert(stored)?;
         let fields = self.params(&record, false)?;
-        let statement = self.readonly.statements.insert(&fields);
+        let statement = writes(self).insert(&fields);
         let response = self
             .readonly
             .command()
@@ -301,22 +293,15 @@ impl CRUDRepository {
     }
 
     async fn copy_inserted_id(&self, item: &mut Row, fields: &[Parameter]) -> Result<()> {
+        let _ = fields;
         let column = self.ids[0].clone();
         let sql_column = self.readonly.column(&column);
-        let reader = if let Some(map) = &self.return_sql {
-            let built = ReturnStatement::new(&sql_column, fields);
-            let mapped = ReturnStatement::text(Mapper::map(map.as_ref(), built.get_text()));
-            self.readonly
-                .command()
-                .execute_reader_statement(&mapped, Some(fields))
-                .await?
-        } else {
-            let inserted = self.readonly.statements.select_inserted_id(&sql_column);
-            self.readonly
-                .command()
-                .execute_reader_statement(&inserted, None)
-                .await?
-        };
+        let inserted = writes(self).select_inserted_id(&sql_column);
+        let reader = self
+            .readonly
+            .command()
+            .execute_reader_statement(&inserted, None)
+            .await?;
         if !reader.next().await? {
             return Ok(());
         }
@@ -328,10 +313,7 @@ impl CRUDRepository {
             Some(converter) => converter.convert(&row)?,
             None => row,
         };
-        let mapped = Mapper::map(
-            &self.readonly.rows_mapper,
-            self.readonly.object_converter.convert(&cells)?,
-        );
+        let mapped = self.readonly.object_converter.convert(&cells)?;
         if let Some(value) = mapped.get(&column).filter(|value| **value != Value::Null) {
             item.insert(column, value.clone());
         }
@@ -380,7 +362,7 @@ impl CRUDRepository {
             (None, Some(clause)) => clause,
             _ => unreachable!(),
         };
-        let statement = self.readonly.statements.update(&fields, predicate);
+        let statement = writes(self).update(&fields, predicate);
         let parameters = crate::UpdateStatement::parameter_list(&fields, Some(predicate));
         self.readonly
             .command()
@@ -399,7 +381,7 @@ impl CRUDRepository {
             (None, Some(clause)) => clause,
             _ => unreachable!(),
         };
-        let statement = self.readonly.statements.delete(predicate);
+        let statement = writes(self).delete(predicate);
         let parameters = predicate.parameters();
         let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
             self.params(&record, true)?

@@ -5,16 +5,16 @@ import type { IWhere } from "./IWhere.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
-import type { IMapper } from "./mappers/IMapper.ts";
-import type { IReturnStatement } from "./statements/IReturnStatement.ts";
 import { Literal } from "./statements/Literal.ts";
-import { Operator, ReturnStatement, UpdateStatement, Where } from "./statements/index.ts";
+import { Operator, UpdateStatement, Where } from "./statements/index.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { createCRUDRepositoryOptions, defaultId, fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
-import { parts } from "./RepositoryBuilder.ts";
+import { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
+import type { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
+import type { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { enrichmentsOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { Enrichment } from "./Enrichment.ts";
@@ -63,8 +63,17 @@ const crudBuilt = <T>(
   connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
 ): BuiltRepository<T> =>
   typeof typeOrConnection === "function"
-    ? parts(connectionOrOptions as IConnection, createCRUDRepositoryOptions(typeOrConnection))
-    : parts(typeOrConnection, withIds(connectionOrOptions as CRUDRepositoryOptions<T>));
+    ? new CRUDRepositoryBuilder<T>().parts(
+        connectionOrOptions as IConnection,
+        createCRUDRepositoryOptions(typeOrConnection),
+      )
+    : new CRUDRepositoryBuilder<T>().parts(
+        typeOrConnection,
+        withIds(connectionOrOptions as CRUDRepositoryOptions<T>),
+      );
+
+const writesOf = (statements: ReadonlyRepositoryStatements): CRUDRepositoryStatements =>
+  statements as CRUDRepositoryStatements;
 
 const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T> =>
   "ids" in options
@@ -80,7 +89,6 @@ export class CRUDRepository<T = Cells>
 {
   readonly ids: readonly string[];
   private readonly write: IWriteEnrichmentStrategy<T>;
-  private readonly returnMapper?: IMapper<IReturnStatement, IReturnStatement>;
   private get useTransaction(): boolean {
     return this.write.useTransaction;
   }
@@ -97,7 +105,6 @@ export class CRUDRepository<T = Cells>
     this.ids = built.ids;
     const crud = typeof options === "object" && options !== null ? (options as CRUDRepositoryOptions<T>) : undefined;
     this.write = crud?.write ?? new DefaultWriteEnrichmentStrategy<T>();
-    this.returnMapper = crud?.return;
   }
 
   override addEnriched<TRelated extends object>(
@@ -179,22 +186,17 @@ export class CRUDRepository<T = Cells>
       this.cell,
       this.enrichmentInto,
     );
-    const response = await execute(this.command(), this.statements!.insert(fields), fields);
+    const response = await execute(this.command(), writesOf(this.statements!).insert(fields), fields);
     if (this.ids.length === 1) await this.copyInsertedId(item, fields);
     return response;
   };
 
   private copyInsertedId = async (target: T, fields: Field[]): Promise<void> => {
+    void fields;
     const column = this.ids[0]!;
     const sqlColumn = this.column(column);
-    const statement = this.returnMapper
-      ? this.returnMapper.map(new ReturnStatement(sqlColumn, fields))
-      : this.statements!.selectInsertedId(sqlColumn);
-    const reader = await executeReader(
-      this.command(),
-      statement,
-      statement instanceof ReturnStatement ? fields : undefined,
-    );
+    const statement = writesOf(this.statements!).selectInsertedId(sqlColumn);
+    const reader = await executeReader(this.command(), statement);
     try {
       if (!(await reader.next())) return;
       const current = reader.current;
@@ -205,7 +207,7 @@ export class CRUDRepository<T = Cells>
         this.objectConverter instanceof MetaDataRowTypeConverter
           ? this.objectConverter.convert(cells, this.type)
           : this.objectConverter!.convert(cells);
-      const value = scalarOf((this.mapper!.map(converted) as Props)[column]);
+      const value = scalarOf((converted as Props)[column]);
       if (value !== undefined) (target as Props)[column] = value;
     } finally {
       await reader.dispose();
@@ -220,13 +222,13 @@ export class CRUDRepository<T = Cells>
     const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell, this.enrichmentInto);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    return execute(this.command(), this.statements!.update(fields, where), UpdateStatement.parameterList(fields, where));
+    return execute(this.command(), writesOf(this.statements!).update(fields, where), UpdateStatement.parameterList(fields, where));
   };
 
   private remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
     const where = byWhere ? this.mapped(byWhere, false) : this.mapped(this.idWhere(record), true);
-    const statement = this.statements!.delete(where);
+    const statement = writesOf(this.statements!).delete(where);
     const listed = where.parameters ?? [];
     const parameters = listed.length
       ? listed
@@ -250,7 +252,7 @@ export class CRUDRepository<T = Cells>
   };
 
   private reverseConvert = (item: T): Cells => {
-    const row = this.objectConverter!.reverseConvert(this.mapper!.reverseMap(item));
+    const row = this.objectConverter!.reverseConvert(item);
     return this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
   };
 

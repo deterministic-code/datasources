@@ -1559,18 +1559,6 @@ fn collect_in_non_literal_panics() {
     .parameters();
 }
 
-#[test]
-fn return_mapper_rewrites_finished_sql() {
-    let mut options = CRUDRepositoryOptions::default();
-    options.return_ = Some(Arc::new(TransformMapper::new(
-        |text: String| format!("{text} /* mapped */"),
-        |text| text,
-    )));
-    let built = ReturnStatement::new("add", &[Parameter::new("id", 1_i64)]);
-    let text = Mapper::map(options.return_.as_ref().unwrap().as_ref(), built.get_text());
-    assert_eq!(text, "SELECT add($id) /* mapped */");
-}
-
 #[tokio::test]
 async fn executes_statement_helpers() {
     let command = MockCommand::new();
@@ -1827,117 +1815,6 @@ fn repository_entity_type() {
     assert_eq!(memory.entity_type(), TypeId::of::<Row>());
 }
 
-fn user_contacts_mapper() -> TransformMapper<Row, Row> {
-    TransformMapper::new(
-        |mut row: Row| {
-            let first = row.get("contact_name1").cloned().unwrap_or(Value::Null);
-            let second = row.get("contact_name2").cloned().unwrap_or(Value::Null);
-            row.insert(
-                "contacts".into(),
-                Value::from(format!(
-                    "{},{}",
-                    match first {
-                        Value::Text(text) => text,
-                        _ => String::new(),
-                    },
-                    match second {
-                        Value::Text(text) => text,
-                        _ => String::new(),
-                    }
-                )),
-            );
-            row
-        },
-        |mut row: Row| {
-            if let Some(Value::Text(contacts)) = row.remove("contacts") {
-                let mut parts = contacts.splitn(2, ',');
-                if let Some(first) = parts.next() {
-                    row.insert("contact_name1".into(), Value::from(first));
-                }
-                if let Some(second) = parts.next() {
-                    row.insert("contact_name2".into(), Value::from(second));
-                }
-            }
-            row
-        },
-    )
-}
-
-#[tokio::test]
-async fn table_repository_maps_after_row_converter() {
-    let command = Arc::new(MockCommand::new());
-    command
-        .reader_rows
-        .lock()
-        .unwrap()
-        .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
-    let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = CRUDRepositoryOptions::default();
-    options.entity = "users".into();
-    options.row_converter = Some(users_mapping());
-    options.rows_mapper = Box::new(TransformMapper::new(
-        |mut row: Row| {
-            if let Some(Value::Text(name)) = row.get("name").cloned() {
-                row.insert("name".into(), Value::from(name.to_uppercase()));
-            }
-            row
-        },
-        |mut row: Row| {
-            if let Some(Value::Text(name)) = row.get("name").cloned() {
-                row.insert("name".into(), Value::from(name.to_lowercase()));
-            }
-            row
-        },
-    ));
-    let repo = CRUDRepository::new(connection, options).unwrap();
-    let rows = repo.read(None, None).await.unwrap();
-    assert_eq!(rows[0]["name"], Value::from("A"));
-}
-
-#[tokio::test]
-async fn table_repository_maps_flat_row_into_contacts() {
-    let command = Arc::new(MockCommand::new());
-    command.reader_rows.lock().unwrap().push(record(&[
-        ("id", Value::Int(1)),
-        ("username", Value::from("bobby")),
-        ("email", Value::from("bob@asdf.com")),
-        ("contact_name1", Value::from("bob")),
-        ("contact_name2", Value::from("roberta")),
-    ]));
-    let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = CRUDRepositoryOptions::default();
-    options.entity = "users".into();
-    options.row_converter = Some(RowTypeConverter::of::<UserRow>());
-    options.rows_mapper = Box::new(user_contacts_mapper());
-    let repo = CRUDRepository::new(connection, options).unwrap();
-    let mut user = repo.read_single(None, None).await.unwrap().unwrap();
-    assert_eq!(user["username"], Value::from("bobby"));
-    assert_eq!(user["email"], Value::from("bob@asdf.com"));
-    assert_eq!(user["contacts"], Value::from("bob,roberta"));
-    assert_eq!(
-        command.reader_logs.lock().unwrap()[0].0,
-        "SELECT contact_name1, contact_name2, email, id, username FROM users"
-    );
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
-    let created = repo.create(&mut user).await.unwrap();
-    assert_eq!(created["id"], Value::Int(1));
-    assert_eq!(
-        command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO users (contact_name1, contact_name2, email, username) VALUES ($contact_name1, $contact_name2, $email, $username)"
-    );
-    let updated = repo.update(&user, None).await.unwrap();
-    assert_eq!(updated.rows_affected, 1);
-    assert!(!command.execute_logs.lock().unwrap()[1]
-        .0
-        .contains("contacts"));
-    let removed = repo.delete(&user, None).await.unwrap();
-    assert_eq!(removed.rows_affected, 1);
-    assert_eq!(
-        command.execute_logs.lock().unwrap()[2].0,
-        "DELETE FROM users WHERE id = $id"
-    );
-}
-
 #[tokio::test]
 async fn table_repository_crud_mapper() {
     let command = Arc::new(MockCommand::new());
@@ -1952,7 +1829,7 @@ async fn table_repository_crud_mapper() {
         },
         |name| name,
     ));
-    options.column_mappings = Box::new(TransformMapper::new(
+    options.property_mappings = Box::new(TransformMapper::new(
         |name: String| match name.as_str() {
             "id" => "user_id".into(),
             "name" => "full_name".into(),
@@ -1960,28 +1837,12 @@ async fn table_repository_crud_mapper() {
         },
         |name| name,
     ));
-    options.select = Some(Arc::new(TransformMapper::new(
-        |statement: SelectStatement| {
-            SelectStatement::text(format!("{} LIMIT 1", statement.get_text()))
-        },
-        |statement| statement,
-    )));
-    let returning = |text: String| format!("{text} RETURNING id");
-    options.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));
-    options.update = Some(Arc::new(TransformMapper::new(
-        |text: String| format!("{text} RETURNING id"),
-        |text| text,
-    )));
-    options.delete = Some(Arc::new(TransformMapper::new(
-        |text: String| format!("{text} RETURNING id"),
-        |text| text,
-    )));
     let repo = CRUDRepository::new(connection, options).unwrap();
     command.reader_rows.lock().unwrap().clear();
     assert!(repo.read_single(None, None).await.unwrap().is_none());
     assert_eq!(
         command.reader_logs.lock().unwrap()[0].0,
-        "SELECT full_name, user_id FROM people LIMIT 1"
+        "SELECT full_name, user_id FROM people"
     );
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let mut row = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
@@ -1989,34 +1850,20 @@ async fn table_repository_crud_mapper() {
     assert_eq!(created["id"], Value::Int(1));
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO people (full_name) VALUES ($full_name) RETURNING id"
+        "INSERT INTO people (full_name) VALUES ($full_name)"
     );
     let updated = repo.update(&row, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
-        "UPDATE people SET full_name = $full_name WHERE user_id = $user_id RETURNING id"
+        "UPDATE people SET full_name = $full_name WHERE user_id = $user_id"
     );
     let removed = repo.delete(&row, None).await.unwrap();
     assert_eq!(removed.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
-        "DELETE FROM people WHERE user_id = $user_id RETURNING id"
+        "DELETE FROM people WHERE user_id = $user_id"
     );
-}
-
-struct UserRow;
-
-impl ConvertSchema for UserRow {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("id", "INTEGER"),
-            ("username", "TEXT"),
-            ("email", "TEXT"),
-            ("contact_name1", "TEXT"),
-            ("contact_name2", "TEXT"),
-        ]
-    }
 }
 
 struct Item;

@@ -1,87 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { DeleteStatement } from "./statements/DeleteStatement.ts";
-import { InsertStatement } from "./statements/InsertStatement.ts";
-import { ReturnStatement } from "./statements/ReturnStatement.ts";
-import { SelectStatement } from "./statements/SelectStatement.ts";
 import { UpdateStatement } from "./statements/UpdateStatement.ts";
-import { statementsOf } from "./RepositoryStatements.ts";
-import { parts } from "./RepositoryBuilder.ts";
-import { TransformMapper } from "./mappers/TransformMapper.ts";
+import { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
+import { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
+import { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 
 describe("CRUDRepositoryOptions", () => {
   it("defaults are identity", () => {
-    const built = parts(new MockConnection(), { ids: ["id"], entity: "users", readProperties: ["id"] });
+    const read: CRUDRepositoryOptions = {
+      ids: ["id"],
+      entity: "users",
+      readProperties: ["id"],
+    };
+    const built = new CRUDRepositoryBuilder().parts(new MockConnection(), read);
     expect(built.statements.select().getText()).toBe("SELECT id FROM users");
-    expect(built.rowsMapper.map("x")).toBe("x");
-    expect(built.rowsMapper.reverseMap("x")).toBe("x");
-    expect(parts(new MockConnection(), { insert: undefined }).ids).toEqual(["id"]);
-    expect(
-      parts(new MockConnection(), {
-        type: class {
-          id = 0;
-        },
-        update: undefined,
-      }).ids,
-    ).toEqual(["id"]);
+    expect(built.propertyMappings.map("x")).toBe("x");
+    expect(built.propertyMappings.reverseMap("x")).toBe("x");
+    const withId: CRUDRepositoryOptions = { ids: ["id"] };
+    expect(new CRUDRepositoryBuilder().parts(new MockConnection(), withId).ids).toEqual(["id"]);
+    const fromType: CRUDRepositoryOptions<{ id: number }> = {
+      type: class {
+        id = 0;
+      },
+      ids: ["id"],
+    };
+    expect(new CRUDRepositoryBuilder<{ id: number }>().parts(new MockConnection(), fromType).ids).toEqual(["id"]);
+    expect(new ReadonlyRepositoryBuilder().parts(new MockConnection(), {}).ids).toEqual([]);
   });
 
-  it("rewrites each finished statement", () => {
-    const statements = statementsOf(
-      "users",
-      ["id", "name"],
-      new TransformMapper(
-        (query) => new SelectStatement(`${query.getText()} LIMIT 1`, query.where),
-        (query) => query,
-      ),
-      new TransformMapper(
-        (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
-        (insert) => insert,
-      ),
-      new TransformMapper(
-        (update) =>
-          new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
-        (update) => update,
-      ),
-      new TransformMapper(
-        (remove) => DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
-        (remove) => remove,
-      ),
-    );
-    expect(statements.select().getText()).toBe("SELECT id, name FROM users LIMIT 1");
+  it("uses the mapped table and columns", () => {
+    const statements = new CRUDRepositoryStatements("users", ["id", "name"]);
+    expect(statements.select().getText()).toBe("SELECT id, name FROM users");
     expect(statements.insert([{ name: "id", value: 1 }]).getText()).toBe(
-      "INSERT INTO users (id) VALUES ($id) RETURNING id",
+      "INSERT INTO users (id) VALUES ($id)",
     );
     expect(statements.update([{ name: "name", value: "a" }]).getText()).toBe(
-      "UPDATE users SET name = $name RETURNING id",
+      "UPDATE users SET name = $name",
     );
     expect(UpdateStatement.parameterList([{ name: "name", value: "a" }])).toEqual([
       { name: "name", value: "a" },
     ]);
-    expect(statements.delete().getText()).toBe("DELETE FROM users RETURNING id");
-  });
-
-  it("rewrites a finished return call", () => {
-    const options: CRUDRepositoryOptions = {
-      return: new TransformMapper(
-        (ret) => new ReturnStatement(`${ret.getText()} /* mapped */`),
-        (ret) => ret,
-      ),
-    };
-    const built = new ReturnStatement("add", [{ name: "id", value: 1 }]);
-    const statement = options.return?.map(built) ?? built;
-    expect(statement.getText()).toBe("SELECT add($id) /* mapped */");
-  });
-
-  it("maps rows through rowsMapper", () => {
-    const options: CRUDRepositoryOptions<{ name: string }> = {
-      rowsMapper: new TransformMapper(
-        (row) => ({ name: row.name.toUpperCase() }),
-        (row) => row,
-      ),
-    };
-    expect(options.rowsMapper?.map({ name: "a" }).name).toBe("A");
-    expect(options.rowsMapper?.reverseMap({ name: "A" }).name).toBe("A");
+    expect(statements.delete().getText()).toBe("DELETE FROM users");
+    const inserted = statements.selectInsertedId("id");
+    expect(inserted.table).toBe("users");
+    expect(inserted.column).toBe("id");
+    expect(() => inserted.getText()).toThrow("provider must implement SelectInsertIdStatement");
   });
 });

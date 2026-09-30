@@ -13,7 +13,7 @@ public sealed class ContactsRepository : CRUDRepository<ContactsView>
     public ContactGroupRepository Groups { get; }
     public ContactGroupMemberRepository Members { get; }
 
-    public ContactsRepository(IConnection connection) : base(connection, Options(connection.Provider))
+    public ContactsRepository(IConnection connection) : base(connection, Options())
     {
         Sources = new ContactSourceRepository(connection);
         Types = new ContactTypeRepository(connection);
@@ -46,14 +46,11 @@ public sealed class ContactsRepository : CRUDRepository<ContactsView>
         return this;
     }
 
-    static CRUDRepositoryOptions<ContactsView> Options(string provider) => new()
+    static CRUDRepositoryOptions<ContactsView> Options() => new()
     {
         Entity = "contacts",
         EntityMapper = Names.Tables,
-        ColumnMappings = Names.Columns,
+        PropertyMappings = Names.Columns,
         ReadProperties = ["id", "uuid", "created", "updated", "version", "contact_source_id", "contact_type_id", "first_name", "last_name", "email", "notes"],
-        Insert = provider == "mysql" ? MysqlCalls.Insert("add_contact") : null,
-        Update = provider == "mysql" ? MysqlCalls.Update("update_contact") : null,
-        Delete = provider == "mysql" ? MysqlCalls.Delete("delete_contact") : null
     };
 }

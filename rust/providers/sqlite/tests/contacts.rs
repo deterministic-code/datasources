@@ -102,7 +102,7 @@ fn contact_repo(
     } else {
         Box::new(snake())
     };
-    options.column_mappings = Box::new(columns());
+    options.property_mappings = Box::new(columns());
     let converters = [
         ("Uuid", "uuid"),
         ("Created", "datetime"),

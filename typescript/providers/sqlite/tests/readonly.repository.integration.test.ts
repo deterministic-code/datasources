@@ -76,7 +76,7 @@ describe("readonly repository", () => {
     `);
     const repo = ds.createReadonlyRepository(User, connection, {
       entityMapper: snakeThenPlural,
-      columnMappings: snake,
+      propertyMappings: snake,
     });
     const byId = await repo.readSingle(new Where("Id", eq, 1));
     const disabled: User[] = [];
@@ -100,7 +100,7 @@ describe("readonly repository", () => {
     `);
     const usersRepo = ds.createReadonlyRepository(MappedUser, connection, {
       entityMapper: snakeThenPlural,
-      columnMappings: snake,
+      propertyMappings: snake,
       objectConverter: new UserConverter(),
     });
     const user = await usersRepo.readSingle(new Where("Id", eq, 1));
@@ -121,7 +121,7 @@ describe("readonly repository", () => {
     `);
     const repo = ds.createReadonlyRepository(UserAccount, connection, {
       entityMapper: new DictionaryMapper([["UserAccount", "user"]]),
-      columnMappings: new DictionaryMapper([
+      propertyMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
         ["Active", "is_enabled"],
@@ -178,7 +178,7 @@ describe("user view", () => {
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
       entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-      columnMappings: new DictionaryMapper([
+      propertyMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
         ["Active", "is_enabled"],
@@ -188,7 +188,7 @@ describe("user view", () => {
     }) as ReadonlyRepository<UsersView>;
     const typesRepo = ds.createReadonlyRepository(UserType, connection, {
       entityMapper: casing,
-      columnMappings: casing,
+      propertyMappings: casing,
     });
     usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
     const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
@@ -221,7 +221,7 @@ describe("user crud", () => {
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const usersRepo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(User),
-      columnMappings: casing,
+      propertyMappings: casing,
       ids: ["Id"],
     });
     const created = await usersRepo.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
@@ -276,7 +276,7 @@ describe("users view crud", () => {
       ids: ["Key"],
       readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
       entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-      columnMappings: new DictionaryMapper([
+      propertyMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
         ["Active", "is_enabled"],
@@ -288,12 +288,12 @@ describe("users view crud", () => {
     const userTypesRepo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(UserType),
       entityMapper: casing,
-      columnMappings: casing,
+      propertyMappings: casing,
     });
     const userRolesRepo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(UserRole),
       entityMapper: casing,
-      columnMappings: casing,
+      propertyMappings: casing,
     });
     usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
     usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
@@ -355,7 +355,7 @@ describe("multi-tenant account", () => {
     const accountsRepo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(Account),
       entityMapper: casing,
-      columnMappings: casing,
+      propertyMappings: casing,
       ids: ["TenantId", "Id"],
     });
     const ada = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });

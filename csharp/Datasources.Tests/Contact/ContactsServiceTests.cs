@@ -69,14 +69,14 @@ public class ContactsServiceTests
         new(connection, new ReadonlyRepositoryOptions<T>
         {
             EntityMapper = ContactColumns.Snake,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
         });
 
     static CRUDRepository<T> Repo<T>(IConnection connection, IMapper<string, string>? entity = null) where T : new() =>
         new(connection, new CRUDRepositoryOptions<T>
         {
             EntityMapper = entity ?? ContactColumns.Snake,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
             Ids = ["Id"],
         });
 

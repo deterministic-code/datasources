@@ -102,7 +102,7 @@ public class UserViewCRUDRepositoryTests
             EntityMapper = typeof(T) == typeof(UserView)
                 ? new DictionaryMapper<string>(new Dictionary<string, string> { ["UserView"] = "users" })
                 : Plural,
-            ColumnMappings = Snake,
+            PropertyMappings = Snake,
             Ids = CreateCRUDRepositoryOptions.FromType<T>().Ids,
             ReadProperties = typeof(T) == typeof(UserView)
                 ? ["Id", "Username", "IsEnabled", "UserTypeId"]

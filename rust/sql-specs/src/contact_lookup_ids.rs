@@ -12,7 +12,7 @@ async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> 
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
     options.entity_mapper = Box::new(snake());
-    options.column_mappings = Box::new(columns());
+    options.property_mappings = Box::new(columns());
     options.row_converter = Some(RowTypeConverter::new(vec!["Id".into(), "Name".into()]));
     let repo = CRUDRepository::new(connection, options)?;
     let row = repo

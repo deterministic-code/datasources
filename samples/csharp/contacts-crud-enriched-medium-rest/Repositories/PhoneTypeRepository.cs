@@ -8,7 +8,7 @@ public sealed class PhoneTypeRepository : CRUDRepository<Lookup>
     {
         Entity = "phone_type",
         EntityMapper = Names.Tables,
-        ColumnMappings = Names.Columns,
+        PropertyMappings = Names.Columns,
         ReadProperties = ["id", "uuid", "created", "updated", "version", "name", "description"]
     })
     { }

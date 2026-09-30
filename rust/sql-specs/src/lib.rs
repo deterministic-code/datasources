@@ -78,6 +78,7 @@ struct TypeSpec {
 }
 
 #[derive(Deserialize, Default)]
+#[allow(dead_code)]
 struct CRUDMapperSpec {
     entity: Option<String>,
     #[serde(default, rename = "querySuffix")]
@@ -230,39 +231,6 @@ fn mapping_of(spec: &Spec, dialect: &RepositoryDialect) -> RowTypeConverter {
     RowTypeConverter::new(columns)
         .with_types((dialect.types)())
         .with_fields(fields_overlay(&spec.type_spec, dialect.field))
-}
-
-fn mappings_mapper(
-    mappings: &BTreeMap<String, BTreeMap<String, String>>,
-) -> TransformMapper<Row, Row> {
-    let nest = mappings.clone();
-    let flat = mappings.clone();
-    TransformMapper::new(
-        move |mut row: Row| {
-            for (nested, cols) in &nest {
-                if cols.len() != 1 {
-                    continue;
-                }
-                let col = cols.values().next().expect("mapping column");
-                if let Some(value) = row.remove(col) {
-                    row.insert(nested.clone(), value);
-                }
-            }
-            row
-        },
-        move |mut row: Row| {
-            for (nested, cols) in &flat {
-                if cols.len() != 1 {
-                    continue;
-                }
-                let col = cols.values().next().expect("mapping column");
-                if let Some(value) = row.remove(nested) {
-                    row.insert(col.clone(), value);
-                }
-            }
-            row
-        },
-    )
 }
 
 fn flatten_yaml(
@@ -431,23 +399,11 @@ fn physical_table(type_spec: &TypeSpec) -> String {
         .unwrap_or_else(|| type_spec.table.clone())
 }
 
-fn with_statement_sql(sql: String, write: bool, type_spec: &TypeSpec) -> String {
-    let Some(mapper) = &type_spec.crud_mapper else {
-        return sql;
-    };
-    let suffix = if write {
-        mapper.write_suffix.as_deref()
-    } else {
-        mapper.query_suffix.as_deref()
-    };
-    match suffix {
-        Some(suffix) => format!("{sql}{suffix}"),
-        None => sql,
-    }
+fn with_statement_sql(sql: String, _write: bool, _type_spec: &TypeSpec) -> String {
+    sql
 }
 
 fn apply_mappers(options: &mut CRUDRepositoryOptions, spec: &Spec, dialect: &RepositoryDialect) {
-    options.rows_mapper = Box::new(mappings_mapper(&spec.type_spec.mappings));
     let quote = dialect.quote;
     let Some(cfg) = &spec.type_spec.crud_mapper else {
         options.entity_mapper = Box::new(TransformMapper::new(
@@ -467,32 +423,6 @@ fn apply_mappers(options: &mut CRUDRepositoryOptions, spec: &Spec, dialect: &Rep
             move |name: String| quote(&name),
             |name| name,
         ));
-    }
-    if let Some(suffix) = &cfg.query_suffix {
-        let suffix = suffix.clone();
-        options.select = Some(Arc::new(TransformMapper::new(
-            move |statement: SelectStatement| {
-                SelectStatement::text(format!("{}{suffix}", statement.get_text()))
-            },
-            |statement| statement,
-        )));
-    }
-    if let Some(suffix) = &cfg.write_suffix {
-        let insert = suffix.clone();
-        options.insert = Some(Arc::new(TransformMapper::new(
-            move |text| format!("{text}{insert}"),
-            |text| text,
-        )));
-        let update = suffix.clone();
-        options.update = Some(Arc::new(TransformMapper::new(
-            move |text| format!("{text}{update}"),
-            |text| text,
-        )));
-        let delete = suffix.clone();
-        options.delete = Some(Arc::new(TransformMapper::new(
-            move |text| format!("{text}{delete}"),
-            |text| text,
-        )));
     }
 }
 

@@ -7,12 +7,10 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     readonly List<ICommandMiddleware> middlewares = [];
     readonly TypeConverter<Row, Row>? rowConverter;
     readonly TypeConverter<T, Row>? objectConverter;
-    readonly IMapper<string, string> columns = new IdentityMapper<string>();
-    IMapper<string, string> entities = new IdentityMapper<string>();
-    readonly RepositoryStatements? statements;
+    readonly StatementMappings statementMappings = new(new IdentityMapper<string>(), new IdentityMapper<string>());
+    readonly ReadonlyRepositoryStatements? statements;
 
     public Type Type => typeof(T);
-    protected IMapper<T, T>? Mapper { get; }
     protected IRepositoryTree Tree { get; }
     IReadOnlyList<StoredEnrichment> IEnrichmentHost.Enrichments => enrichments;
     protected bool Enriched => enrichments.Count > 0;
@@ -21,13 +19,10 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         this(connection, CreateCRUDRepositoryOptions.FromType<T>()) { }
 
     public ReadonlyRepository(IConnection connection, ReadonlyRepositoryOptions<T> options) :
-        this(RepositoryBuilder<T>.Parts(connection, options)) { }
+        this(new ReadonlyRepositoryBuilder<T>().Parts(connection, options)) { }
 
     public ReadonlyRepository(BuiltRepository<T> built) :
-        this(built.Connection, built.RowConverter, built.ObjectConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
-    {
-        entities = built.EntityMapper;
-    }
+        this(built.Connection, built.RowConverter, built.ObjectConverter, built.PropertyMappings, built.EntityMapper, built.Statements) { }
 
     protected ReadonlyRepository() =>
         Tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
@@ -36,15 +31,14 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         IConnection connection,
         TypeConverter<Row, Row>? rowConverter,
         TypeConverter<T, Row> objectConverter,
-        IMapper<T, T> mapper,
-        IMapper<string, string> columns,
-        RepositoryStatements statements)
+        IMapper<string, string> propertyMappers,
+        IMapper<string, string> entityMappers,
+        ReadonlyRepositoryStatements statements)
     {
         this.connection = connection;
         this.rowConverter = rowConverter;
         this.objectConverter = objectConverter;
-        Mapper = mapper;
-        this.columns = columns;
+        statementMappings = new StatementMappings(entityMappers, propertyMappers);
         this.statements = statements;
         Tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     }
@@ -88,7 +82,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
             (connection ?? throw new DatasourceException("Connection required")).CreateCommand(),
             (command, middleware) => command.AddMiddleware(middleware));
 
-    protected RepositoryStatements Statements =>
+    protected ReadonlyRepositoryStatements Statements =>
         statements ?? throw new DatasourceException("Statements required");
 
     protected TypeConverter<Row, Row>? RowConverter => rowConverter;
@@ -96,17 +90,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     protected TypeConverter<T, Row> ObjectConverter =>
         objectConverter ?? throw new DatasourceException("Object converter required");
 
-    protected string Column(string property)
-    {
-        var dot = LastDot(property);
-        if (dot < 0) return columns.Map(property);
-        var qualifier = property[..dot];
-        var name = property[(dot + 1)..];
-        var mapped = columns.Map(name);
-        if (mapped != name && mapped.Contains('.')) return mapped;
-        var table = entities.Map(qualifier);
-        return table == qualifier && mapped == name ? property : $"{table}.{mapped}";
-    }
+    protected string Column(string property) => statementMappings.Column(property);
 
     protected Value Cell(string property, Value value, bool fieldsApplied) =>
         fieldsApplied ? value : Field(property)?.ReverseConvert(value) ?? value;
@@ -116,9 +100,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         : null;
 
     private IWhere Stored(IWhere where, bool fieldsApplied = false) =>
-        where is Where clause
-            ? clause.Map(Column, (name, cell) => Cell(name, cell, fieldsApplied))
-            : where;
+        statementMappings.Apply(where, (name, cell) => Cell(name, cell, fieldsApplied)) ?? where;
 
     private IAsyncEnumerable<(T Item, Row? Source)> ReadTracked(IWhere where) =>
         ReadTracked(Compiled(Stored(where)));
@@ -127,30 +109,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
         Apply(ReadItems(query, parameters ?? (query as ISelectStatement)?.Where?.Parameters));
 
-    private IStatement? Mapped(IStatement? query) => query switch
-    {
-        SelectStatement { Table: { } table } select => new SelectStatement(new()
-        {
-            Distinct = select.Distinct,
-            Table = entities.Map(table),
-            Fields = [.. select.Fields.Select(Column)],
-            Where = Mapped(select.Where),
-            Joins = [.. select.Joins.Select(Mapped)],
-            GroupBy = [.. select.GroupBy.Select(Column)],
-            Having = Mapped(select.Having),
-            OrderBy = [.. select.OrderBy.Select(order => order with { Column = Column(order.Column) })],
-            Limit = select.Limit,
-            Offset = select.Offset,
-        }),
-        _ => query
-    };
-
-    private IWhere? Mapped(IWhere? where) => where is null ? null : Stored(where);
-
-    private Join Mapped(Join join) =>
-        join.On is { } on
-            ? join with { Table = entities.Map(join.Table), On = new Where(on).Map(Column, (name, cell) => Cell(name, cell, false)).Condition }
-            : join with { Table = entities.Map(join.Table) };
+    private IStatement? Mapped(IStatement? query) =>
+        statementMappings.Apply(query, (name, cell) => Cell(name, cell, false));
 
     private IAsyncEnumerable<(T Item, Row? Source)> Apply(IAsyncEnumerable<(T Item, Row? Source)> pairs) =>
         Enriched ? Sourced(pairs) : pairs;
@@ -173,7 +133,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     private async IAsyncEnumerable<(T Item, Row? Source)> ReadRows(IStatement? query, IReadOnlyList<Parameter>? parameters)
     {
         await foreach (var renamed in ReadSources(query, parameters))
-            yield return (Mapper!.Map(ObjectConverter.Convert(rowConverter?.Convert(renamed) ?? renamed)), renamed);
+            yield return (ObjectConverter.Convert(rowConverter?.Convert(renamed) ?? renamed), renamed);
     }
 
     private async IAsyncEnumerable<(T Item, Row? Source)> Sourced(IAsyncEnumerable<(T Item, Row? Source)> pairs)
@@ -216,26 +176,5 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     private Row Renamed(Row row) =>
         new(row.Select(pair => KeyValuePair.Create(Property(pair.Key), pair.Value)));
 
-    private string Property(string key)
-    {
-        var reversed = columns.ReverseMap(key);
-        if (reversed != key && columns.Map(reversed) == key) return reversed;
-        var dot = LastDot(key);
-        if (dot < 0) return reversed;
-        var column = key[(dot + 1)..];
-        var property = columns.ReverseMap(column);
-        return property != column && columns.Map(property) == column ? property : reversed;
-    }
-
-    static int LastDot(string name)
-    {
-        var quoted = false;
-        var dot = -1;
-        for (var i = 0; i < name.Length; i++)
-        {
-            if (name[i] == '"') quoted = !quoted;
-            if (name[i] == '.' && !quoted) dot = i;
-        }
-        return dot;
-    }
+    private string Property(string key) => statementMappings.Property(key);
 }
