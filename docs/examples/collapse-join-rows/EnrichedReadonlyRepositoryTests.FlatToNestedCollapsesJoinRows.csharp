@@ -1,0 +1,11 @@
+var person = new Row { ["type_name"] = "person" };
+var org = new Row { ["type_name"] = "org" };
+var connection = await Setup(person, org);
+IList<object> parents = [];
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+await new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
+{
+    Key = "id",
+    Fields = new Dictionary<string, TypeMapField> { ["id"] = "id", ["type_name"] = "type_name" }
+}).Apply(parentsRepo, new("type_name", "id", "id"), parents, [person, org]);
+var items = parents.Cast<Parent>();

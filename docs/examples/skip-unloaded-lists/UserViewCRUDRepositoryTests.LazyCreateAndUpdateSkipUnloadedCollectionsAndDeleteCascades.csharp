@@ -1,0 +1,39 @@
+var graph = await GraphAsync(new LazyWriteEnrichmentStrategy<UserView>());
+var userViewRepo = Enrich(graph.UsersRepo, graph);
+
+var created = await userViewRepo.Create(new UserView
+{
+    Username = "ada",
+    IsEnabled = true,
+    UserTypeId = graph.AdminType.Id,
+    Roles = null,
+    Groups = [graph.Engineering]
+});
+var createdRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var createdGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var skipped = await userViewRepo.Update(new UserView
+{
+    Id = created.Id,
+    Username = "ada",
+    IsEnabled = false,
+    UserTypeId = graph.AdminType.Id,
+    Roles = null,
+    Groups = null
+});
+var afterSkip = await userViewRepo.ReadSingleById(created.Id);
+var skippedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var skippedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var linked = await userViewRepo.Update(new UserView
+{
+    Id = created.Id,
+    Username = "ada",
+    IsEnabled = false,
+    UserTypeId = graph.AdminType.Id,
+    Roles = [graph.EditorRole],
+    Groups = null
+});
+var linkedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var linkedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var roles = await graph.RolesRepo.Read().ToListAsync();
+var groups = await graph.GroupsRepo.Read().ToListAsync();
+var removed = await userViewRepo.Delete(new UserView { Id = created.Id, Roles = null, Groups = null });

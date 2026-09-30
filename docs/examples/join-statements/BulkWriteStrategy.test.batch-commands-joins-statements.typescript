@@ -1,0 +1,6 @@
+const { repo, command } = open(Parent, new BatchCommandIBulkWriteStrategy<Parent>());
+await repo.createBulk([
+  Object.assign(new Parent(), { label: "a" }),
+  Object.assign(new Parent(), { label: "b" }),
+]);
+expect(command.executeCalls).toHaveLength(1);

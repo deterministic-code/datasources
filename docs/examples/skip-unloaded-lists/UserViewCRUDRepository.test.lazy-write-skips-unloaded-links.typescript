@@ -1,0 +1,30 @@
+const seeded = await graph(new LazyWriteEnrichmentStrategy());
+link(seeded.usersRepo, seeded);
+const created = await seeded.usersRepo.create(Object.assign(new UserView(), {
+  username: "ada",
+  is_enabled: true,
+  user_type_id: seeded.adminType.id,
+  roles: null,
+  groups: [seeded.engineering],
+}));
+const createdRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const createdGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const skipped = await seeded.usersRepo.update(Object.assign(new UserView(), {
+  id: created.id,
+  username: "ada",
+  is_enabled: false,
+  user_type_id: seeded.adminType.id,
+}));
+const afterSkip = await seeded.usersRepo.readSingleById(created.id);
+const skippedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const skippedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const linked = await seeded.usersRepo.update(Object.assign(new UserView(), {
+  id: created.id,
+  username: "ada",
+  is_enabled: false,
+  user_type_id: seeded.adminType.id,
+  roles: [seeded.editorRole],
+}));
+const linkedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const linkedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const removed = await seeded.usersRepo.delete(Object.assign(new UserView(), { id: created.id, roles: null, groups: null }));

@@ -192,7 +192,7 @@ Forwards to [CRUDRepository.add_enriched](./crud-repository.md#add_enrichedenric
 pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
 ```
 
-- `enrichment` — [Enrichment](./readonly-repository.md#enrichment)
+- `enrichment` — [Enrichment](./enrichment.md)
 - `via` — related repository. A CRUD repository is kept so `many` children can be written
 - `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
@@ -248,7 +248,7 @@ Bulk writes use `createBulk` only.
 Bulk writes use `create_bulk` only.
 :::
 
-Each item still runs the same deep persist as [CRUDRepository](./crud-repository.md). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
+Each item still runs the same deep persist as [CRUDRepository](./crud-repository.md). The list write goes through [IBulkWriteStrategy](./i-bulk-write-strategy.md). The default is [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
 
 ## Examples
 

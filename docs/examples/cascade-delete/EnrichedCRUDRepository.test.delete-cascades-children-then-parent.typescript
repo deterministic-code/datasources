@@ -1,0 +1,5 @@
+const connection = await setup();
+const parentsRepo = new CRUDRepository(Parent, connection);
+const childrenRepo = new CRUDRepository(Child, connection);
+const notesRepo = new CRUDRepository(Note, connection);
+const parent = await parentsRepo.create(new Parent());

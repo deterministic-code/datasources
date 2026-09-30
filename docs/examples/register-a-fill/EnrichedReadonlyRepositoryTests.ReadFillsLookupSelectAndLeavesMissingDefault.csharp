@@ -1,0 +1,11 @@
+var person = new Row { ["name"] = "person" };
+var gone = new Row { ["name"] = "gone" };
+var typesConnection = await Setup(person, gone);
+await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gone["id"])]);
+var connection = await Setup(
+    new Row { ["type_id"] = person["id"] },
+    new Row { ["type_id"] = gone["id"] });
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+var items = await parentsRepo.Read().ToListAsync();

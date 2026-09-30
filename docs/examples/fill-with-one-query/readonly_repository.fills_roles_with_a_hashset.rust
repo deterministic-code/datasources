@@ -1,0 +1,51 @@
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(ds, "user-roles-read", &seed()).await;
+let mut users_options = create_crud_repository_options::<UsersView>();
+users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+    "UsersView".to_string(),
+    "user".to_string(),
+)]));
+users_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+    ("UserType".to_string(), "user_type_id".to_string()),
+]));
+let mut type_options = create_crud_repository_options::<UserType>();
+type_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+type_options.column_mappings =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+let mut role_options = create_crud_repository_options::<UserRole>();
+role_options.entity = "user_roles".into();
+role_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("UserId".to_string(), "user_id".to_string()),
+    ("Name".to_string(), "name".to_string()),
+]));
+role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
+let mut users_repo =
+    ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
+let types = ds.create_readonly_repository::<UserType>(
+    Some(connection.clone()),
+    Some(type_options.read),
+);
+let roles =
+    ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
+let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
+users_repo.add_enriched(
+    datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), false),
+    types,
+    Some(strategy.clone()),
+);
+users_repo.add_enriched(
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    roles,
+    Some(strategy),
+);
+let users_view = users_repo
+    .read_single(Some(&Where::binary("Key", eq, ADA)), None)
+    .await
+    .unwrap()
+    .unwrap();

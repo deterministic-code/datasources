@@ -1,0 +1,7 @@
+const connection = await setup();
+const childrenRepo = new CRUDRepository(Child, connection);
+const parentsRepo = new CRUDRepository(connection, {
+  type: Parent,
+  write: new DefaultWriteEnrichmentStrategy(new SkipDelete()),
+});
+const parent = await parentsRepo.create(new Parent());

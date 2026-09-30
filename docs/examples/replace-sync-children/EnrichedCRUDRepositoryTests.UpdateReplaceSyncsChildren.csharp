@@ -1,0 +1,4 @@
+var connection = await Setup();
+var parentsRepo = new CRUDRepository<Parent>(connection);
+var childrenRepo = new CRUDRepository<Child>(connection);
+var parent = await parentsRepo.Create(new Parent { type_id = 0 });

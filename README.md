@@ -4937,7 +4937,7 @@ abstract class ReadonlyRepository<T> implements IReadonlyRepository<T>
 | Name | Description |
 | --- | --- |
 | [ReadonlyRepository(type)](#typescript-readonlyrepository-readonlyrepository-type) | Stores the item constructor. |
-| [ReadonlyRepository(inner, strategy?)](#typescript-readonlyrepository-readonlyrepository-inner-strategy) | Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#typescript-ienriched). |
+| [ReadonlyRepository(inner, strategy?)](#typescript-readonlyrepository-readonlyrepository-inner-strategy) | Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#ienriched). |
 
 **Properties**
 
@@ -4970,7 +4970,7 @@ constructor(type: Constructable<T>)
 
 ###### ReadonlyRepository(inner, strategy?) {#typescript-readonlyrepository-readonlyrepository-inner-strategy}
 
-Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#typescript-ienriched).
+Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#ienriched).
 
 **Definition**
 
@@ -5045,40 +5045,6 @@ type ReadonlyRepositoryOptions<T = Cells>
 | rowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | readColumns | SELECT column names. When omitted, public fields of `type` are used. |
 
-##### IEnriched {#typescript-ienriched}
-
-```typescript
-interface IEnriched<T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [addEnriched(enrichment, via, strategy?)](#typescript-ienriched-addenriched-enrichment-via-strategy) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write. |
-
-###### addEnriched(enrichment, via, strategy?) {#typescript-ienriched-addenriched-enrichment-via-strategy}
-
-Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
-
-**Definition**
-
-```typescript
-addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#typescript-enrichment) |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`this`
-
 ##### IRepositoryTree {#typescript-irepositorytree}
 
 ```typescript
@@ -5105,7 +5071,7 @@ interface IRepositoryTreeNode
 | propertyName | Destination property name. |
 | parent | Parent node, if any. |
 | items | Child nodes. |
-| enrichment | [Enrichment](#typescript-enrichment) for this node. |
+| enrichment | [Enrichment](#enrichment) for this node. |
 
 **Methods**
 
@@ -5154,82 +5120,6 @@ enrichFrom(parents: object[]): Promise<void>
 | Name | Description |
 | --- | --- |
 | `parents` | parent objects |
-
-##### Enrichment {#typescript-enrichment}
-
-```typescript
-type Enrichment
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| into | Destination property. |
-| from | Parent key. |
-| by | Related key. |
-| select | Optional related property to copy. |
-| many | Collect a list. |
-
-##### IReadonlyEnrichmentStrategy {#typescript-ireadonlyenrichmentstrategy}
-
-```typescript
-interface IReadonlyEnrichmentStrategy<T extends object>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [apply(via, enrichment, parents, sources?)](#typescript-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. |
-| [applyLinked(via, link, enrichment, parents, sources?)](#typescript-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
-
-###### apply(via, enrichment, parents, sources?) {#typescript-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
-
-Fills each parent from the related repository.
-
-**Definition**
-
-```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `enrichment` | [Enrichment](#typescript-enrichment) |
-| `parents` | parents to fill |
-| `sources` | optional source rows aligned with `parents` |
-
-**Returns**
-
-`Promise<void>`
-
-###### applyLinked(via, link, enrichment, parents, sources?) {#typescript-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources}
-
-Fills each parent by reading the link table, then the related repository.
-
-**Definition**
-
-```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
-| `enrichment` | [Enrichment](#typescript-enrichment) |
-| `parents` | parents to fill |
-| `sources` | optional source rows aligned with `parents` |
-
-**Returns**
-
-`Promise<void>`
 
 ##### C#
 
@@ -5296,7 +5186,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>
 
 | Name | Description |
 | --- | --- |
-| [ReadonlyRepository(inner, strategy)](#csharp-readonlyrepository-readonlyrepository-inner-strategy) | Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#csharp-ienriched). |
+| [ReadonlyRepository(inner, strategy)](#csharp-readonlyrepository-readonlyrepository-inner-strategy) | Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#ienriched). |
 
 **Properties**
 
@@ -5313,7 +5203,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>
 
 ###### ReadonlyRepository(inner, strategy) {#csharp-readonlyrepository-readonlyrepository-inner-strategy}
 
-Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#csharp-ienriched).
+Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#ienriched).
 
 **Definition**
 
@@ -5387,40 +5277,6 @@ public class ReadonlyRepositoryOptions<T> where T : new()
 | RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
 
-##### IEnriched {#csharp-ienriched}
-
-```csharp
-public interface IEnriched<T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [AddEnriched(enrichment, via, strategy)](#csharp-ienriched-addenriched-enrichment-via-strategy) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write. |
-
-###### AddEnriched(enrichment, via, strategy) {#csharp-ienriched-addenriched-enrichment-via-strategy}
-
-Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
-
-**Definition**
-
-```csharp
-IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#csharp-enrichment) |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-[IEnriched](#csharp-ienriched)`<T>`
-
 ##### IRepositoryTree {#csharp-irepositorytree}
 
 ```csharp
@@ -5447,131 +5303,6 @@ public interface IRepositoryTreeNode
 | PropertyName | Destination property name. |
 | Parent | Parent node, if any. |
 | Items | Child nodes. |
-| Enrichment | [Enrichment](#csharp-enrichment) for this node. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Include(via, into, from, by, select, many)](#csharp-irepositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
-| [EnrichFrom(parents)](#csharp-irepositorytreenode-enrichfrom-parents) | Fills `parents` from this node. |
-
-###### Include(via, into, from, by, select, many) {#csharp-irepositorytreenode-include-via-into-from-by-select-many}
-
-Adds a child node.
-
-**Definition**
-
-```csharp
-IRepositoryTreeNode Include<TRelated>(IReadonlyRepository<TRelated> via, string into, string from, string by, string? select = null, bool many = false)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `into` | destination property |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related property to copy |
-| `many` | collect a list |
-
-**Returns**
-
-[IRepositoryTreeNode](#csharp-irepositorytreenode)
-
-###### EnrichFrom(parents) {#csharp-irepositorytreenode-enrichfrom-parents}
-
-Fills `parents` from this node.
-
-**Definition**
-
-```csharp
-Task EnrichFrom(IReadOnlyList<object> parents)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `parents` | parent objects |
-
-##### Enrichment {#csharp-enrichment}
-
-```csharp
-public sealed record Enrichment
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Into | Destination property. |
-| From | Parent key. |
-| By | Related key. |
-| Select | Optional related property to copy. |
-| Many | Collect a list. |
-
-##### IReadonlyEnrichmentStrategy {#csharp-ireadonlyenrichmentstrategy}
-
-```csharp
-public interface IReadonlyEnrichmentStrategy<T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Apply(via, enrichment, parents, sources)](#csharp-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. |
-| [ApplyLinked(via, link, enrichment, parents, sources)](#csharp-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
-
-###### Apply(via, enrichment, parents, sources) {#csharp-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
-
-Fills each parent from the related repository.
-
-**Definition**
-
-```csharp
-Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `enrichment` | [Enrichment](#csharp-enrichment) |
-| `parents` | parents to fill |
-| `sources` | optional source rows aligned with `parents` |
-
-**Returns**
-
-`Task`
-
-###### ApplyLinked(via, link, enrichment, parents, sources) {#csharp-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources}
-
-Fills each parent by reading the link table, then the related repository.
-
-**Definition**
-
-```csharp
-Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
-| `enrichment` | [Enrichment](#csharp-enrichment) |
-| `parents` | parents to fill |
-| `sources` | optional source rows aligned with `parents` |
-
-**Returns**
-
-`Task`
 
 ##### Rust
 
@@ -5638,18 +5369,12 @@ pub struct ReadonlyRepository
 
 | Name | Description |
 | --- | --- |
-| [from_repository(inner)](#rust-readonlyrepository-from_repository-inner) | Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#rust-ienriched). |
+| [from_repository(inner)](#rust-readonlyrepository-from_repository-inner) | Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#ienriched). |
 | [with_strategy(inner, strategy)](#rust-readonlyrepository-with_strategy-inner-strategy) | Wraps an inner repository with an enrichment strategy. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [add_enriched(enrichment, via, strategy)](#rust-readonlyrepository-add_enriched-enrichment-via-strategy) | Adds a related fill. A related repository fills its own fields. Does not write. |
 
 ###### from_repository(inner) {#rust-readonlyrepository-from_repository-inner}
 
-Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#rust-ienriched).
+Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#ienriched).
 
 **Definition**
 
@@ -5682,33 +5407,11 @@ pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn Read
 | Name | Description |
 | --- | --- |
 | `inner` | [IReadonlyRepository](#rust-ireadonlyrepository) |
-| `strategy` | enrichment strategy |
+| `strategy` | [ReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy) |
 
 **Returns**
 
 [ReadonlyRepository](#rust-readonlyrepository)
-
-###### add_enriched(enrichment, via, strategy) {#rust-readonlyrepository-add_enriched-enrichment-via-strategy}
-
-Adds a related fill. A related repository fills its own fields. Does not write.
-
-**Definition**
-
-```rust
-pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#rust-enrichment) |
-| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository). The readonly path keeps the read repository only |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`&mut Self`
 
 ##### ReadonlyRepositoryOptions {#rust-readonlyrepositoryoptions}
 
@@ -5753,7 +5456,7 @@ pub struct RepositoryTreeNode
 | value | Related [ReadonlyRepository](#readonly-repository). |
 | property_name | Destination field name. |
 | items | Child nodes. |
-| enrichment | [Enrichment](#rust-enrichment) for this node. |
+| enrichment | [Enrichment](#enrichment) for this node. |
 
 **Methods**
 
@@ -5786,115 +5489,9 @@ pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from
 
 `&mut Self`
 
-##### Enrichment {#rust-enrichment}
-
-```rust
-pub struct Enrichment
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(into, from, by, select, many)](#rust-enrichment-new-into-from-by-select-many) | Builds an enrichment. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| into | Destination field. |
-| from | Parent key. |
-| by | Related key. |
-| select | Optional related field to copy. |
-| many | Collect a list. |
-
-###### new(into, from, by, select, many) {#rust-enrichment-new-into-from-by-select-many}
-
-Builds an enrichment.
-
-**Definition**
-
-```rust
-pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `into` | destination field |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related field to copy |
-| `many` | collect a list |
-
-**Returns**
-
-[Enrichment](#rust-enrichment)
-
-##### ReadonlyEnrichmentStrategy {#rust-readonlyenrichmentstrategy}
-
-```rust
-pub trait ReadonlyEnrichmentStrategy
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [apply(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. |
-| [apply_linked(via, link, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
-
-###### apply(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
-
-Fills each parent from the related repository.
-
-**Definition**
-
-```rust
-async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository) |
-| `enrichment` | [Enrichment](#rust-enrichment) |
-| `parents` | parents to fill |
-| `sources` | optional source rows aligned with `parents` |
-
-**Returns**
-
-`Result<()>`
-
-###### apply_linked(via, link, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources}
-
-Fills each parent by reading the link table, then the related repository.
-
-**Definition**
-
-```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository) |
-| `link` | [ICRUDRepository](#crud-repository) |
-| `enrichment` | [Enrichment](#rust-enrichment) |
-| `parents` | parents to fill |
-| `sources` | optional source rows aligned with `parents` |
-
-**Returns**
-
-`Result<()>`
-
 ### Remarks
 
-`AddEnriched` / `addEnriched` / `add_enriched` registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
+`AddEnriched` / `addEnriched` / `add_enriched` on [IEnriched](#ienriched) registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 
@@ -7220,7 +6817,7 @@ addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepos
 
 | Name | Description |
 | --- | --- |
-| `enrichment` | [Enrichment](#typescript-enrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
 | `via` | related repository. A CRUD repository is kept so `many` children can be written |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
@@ -7242,7 +6839,7 @@ addLinked<TRelated extends object, TLink extends object>(enrichment: Enrichment,
 
 | Name | Description |
 | --- | --- |
-| `enrichment` | [Enrichment](#typescript-enrichment) with `association` |
+| `enrichment` | [Enrichment](#enrichment) with `association` |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
 | `link` | [ICRUDRepository](#typescript-icrudrepository) that stores the association rows |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
@@ -7644,13 +7241,13 @@ public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyReposi
 
 | Name | Description |
 | --- | --- |
-| `enrichment` | [Enrichment](#csharp-enrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
 | `via` | related repository. A CRUD repository is kept so `many` children can be written |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
 **Returns**
 
-[IEnriched](#csharp-ienriched)`<T>`
+[IEnriched](#ienriched)`<T>`
 
 ###### AddLinked(enrichment, via, link, strategy) {#csharp-crudrepository-addlinked-enrichment-via-link-strategy}
 
@@ -7666,14 +7263,14 @@ public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyR
 
 | Name | Description |
 | --- | --- |
-| `enrichment` | [Enrichment](#csharp-enrichment) with `Association` |
+| `enrichment` | [Enrichment](#enrichment) with `Association` |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
 | `link` | [ICRUDRepository](#csharp-icrudrepository) that stores the association rows |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
 **Returns**
 
-[IEnriched](#csharp-ienriched)`<T>`
+[IEnriched](#ienriched)`<T>`
 
 ##### CRUDRepositoryOptions {#csharp-crudrepositoryoptions}
 
@@ -7904,7 +7501,7 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 
 | Name | Description |
 | --- | --- |
-| `enrichment` | [Enrichment](#rust-enrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
 | `via` | related repository. A CRUD repository is kept so `many` children can be written |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
@@ -7926,7 +7523,7 @@ pub fn add_linked(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, li
 
 | Name | Description |
 | --- | --- |
-| `enrichment` | [Enrichment](#rust-enrichment) with `association` |
+| `enrichment` | [Enrichment](#enrichment) with `association` |
 | `via` | related readonly repository |
 | `link` | [ICRUDRepository](#rust-icrudrepository) that stores the association rows |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
@@ -8010,13 +7607,13 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
-`AddEnriched` registers the same read fill as [ReadonlyRepository](#readonly-repository). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. `LazyWriteEnrichmentStrategy` skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+[AddEnriched](#ienriched) registers the same read fill as [ReadonlyRepository](#readonly-repository). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 
-`DefaultWriteEnrichmentStrategy` takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
+[DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
 
 - **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `by` from the parent `from`, then create children (and nested many).
-- **Update** — `DefaultUpdateEnrichmentStrategy` is the default. Write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest). `CascadeDeleteUpdateEnrichmentStrategy` deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
-- **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+- **Update** — [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) is the default. Write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest). [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
+- **Delete** — [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
 See [Bulk repository](#bulk-repository) for list writes.
 
@@ -9425,7 +9022,7 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 
 | Name | Description |
 | --- | --- |
-| `enrichment` | [Enrichment](#rust-enrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
 | `via` | related repository. A CRUD repository is kept so `many` children can be written |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
@@ -9509,7 +9106,7 @@ pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) ->
 >
 > Bulk writes use `create_bulk` only.
 
-Each item still runs the same deep persist as [CRUDRepository](#crud-repository). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
+Each item still runs the same deep persist as [CRUDRepository](#crud-repository). The list write goes through [IBulkWriteStrategy](#ibulkwritestrategy). The default is [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
 
 ### Examples
 
@@ -13471,7 +13068,7 @@ Collapses denormalized join rows into unique parents with unique children. Scala
 
 Nested group fields on a collection are omitted.
 
-This is a collapse mapper, not enrichment. Related fills after read use [Readonly repository](#ienriched).
+This is a collapse mapper, not enrichment. Related fills after read use [IEnriched](#ienriched).
 
 ### Examples
 
@@ -21057,6 +20654,5410 @@ let connection_string = DatasourceUrlParser::parse("Host=db;Port=1");
 const blank = DatasourceUrlParser.parse("");
 const text = DatasourceUrlParser.parse("not-a-url");
 const connectionString = DatasourceUrlParser.parse("Host=db;Port=1");
+```
+
+## Advanced
+
+Strategies that fill related fields on read and write nested rows or bulk lists. Repositories call these. A repository page covers the call. This group covers the strategy.
+
+### Enrichment
+
+- [IEnriched](#ienriched) — registers a related fill
+- [Enrichment](#enrichment) — one related fill
+- [IReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy) — fills parents on read
+- [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy) — reads each related key, and caches lookups
+- [HashsetOptimizedReadonlyEnrichmentStrategy](#hashsetoptimizedreadonlyenrichmentstrategy) — one `IN` query for the key set
+- [NestedToObjectEnrichmentStrategy](#nestedtoobjectenrichmentstrategy) — collapses join rows
+
+### Write
+
+- [IWriteEnrichmentStrategy](#iwriteenrichmentstrategy) — writes nested rows with the parent
+- [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) — cascade delete and replace-sync, with an optional transaction
+- [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) — skips a null list on create and update
+- [UpdateEnrichmentStrategy](#updateenrichmentstrategy) — how an update writes children and links
+- [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) — replace-syncs each many list
+- [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) — deletes children, then inserts the payload
+- [DeleteEnrichmentStrategy](#deleteenrichmentstrategy) — how a delete removes children and links
+- [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) — deletes nested rows, then children, then the parent
+
+### Bulk write
+
+- [IBulkWriteStrategy](#ibulkwritestrategy) — writes a list through a [Bulk repository](#bulk-repository)
+- [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) — one statement per row
+- [BatchCommandIBulkWriteStrategy](#batchcommandibulkwritestrategy) — joins the statements
+- [StoredProcedureBulkWriteStrategy](#storedprocedurebulkwritestrategy) — one JSON call to a stored procedure
+
+## IEnriched
+
+Registers a related fill on a repository. Fluent for siblings. A related repository fills its own fields. Does not write.
+
+### Classes
+
+##### TypeScript
+
+##### IEnriched {#typescript-ienriched}
+
+```typescript
+interface IEnriched<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [addEnriched(enrichment, via, strategy?)](#typescript-ienriched-addenriched-enrichment-via-strategy) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write. |
+
+###### addEnriched(enrichment, via, strategy?) {#typescript-ienriched-addenriched-enrichment-via-strategy}
+
+Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
+
+**Definition**
+
+```typescript
+addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#enrichment) |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `strategy` | optional [IReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy) |
+
+**Returns**
+
+`this`
+
+##### C#
+
+##### IEnriched {#csharp-ienriched}
+
+```csharp
+public interface IEnriched<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [AddEnriched(enrichment, via, strategy)](#csharp-ienriched-addenriched-enrichment-via-strategy) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write. |
+
+###### AddEnriched(enrichment, via, strategy) {#csharp-ienriched-addenriched-enrichment-via-strategy}
+
+Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
+
+**Definition**
+
+```csharp
+IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#enrichment) |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `strategy` | optional [IReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy) |
+
+**Returns**
+
+[IEnriched](#csharp-ienriched)`<T>`
+
+##### Rust
+
+##### ReadonlyRepository {#rust-readonlyrepository}
+
+```rust
+pub struct ReadonlyRepository
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [add_enriched(enrichment, via, strategy)](#rust-readonlyrepository-add_enriched-enrichment-via-strategy) | Adds a related fill. A related repository fills its own fields. Does not write. |
+
+###### add_enriched(enrichment, via, strategy) {#rust-readonlyrepository-add_enriched-enrichment-via-strategy}
+
+Adds a related fill. A related repository fills its own fields. Does not write.
+
+**Definition**
+
+```rust
+pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#enrichment) |
+| `via` | related [IReadonlyRepository](#readonly-repository). The readonly path keeps the read repository only |
+| `strategy` | optional [ReadonlyEnrichmentStrategy](#ireadonlyenrichmentstrategy) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy) |
+
+**Returns**
+
+`&mut Self`
+
+### Remarks
+
+Register the child repository's own fills on that repository:
+
+```
+childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
+parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+```
+
+Rust has no separate trait. `AddEnriched` / `addEnriched` / `add_enriched` is a method on [ReadonlyRepository](#readonly-repository) and [CRUDRepository](#crud-repository). With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
+
+### Examples
+
+#### Register a fill
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L35-L51)
+
+```csharp
+var person = new Row { ["name"] = "person" };
+var gone = new Row { ["name"] = "gone" };
+var typesConnection = await Setup(person, gone);
+await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gone["id"])]);
+var connection = await Setup(
+    new Row { ["type_id"] = person["id"] },
+    new Row { ["type_id"] = gone["id"] });
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+var items = await parentsRepo.Read().ToListAsync();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L124-L149)
+
+```rust
+let mut seeds = [
+    record(&[("name", Value::from("person"))]),
+    record(&[("name", Value::from("gone"))]),
+];
+let types_connection = setup(&mut seeds).await;
+let person = seeds[0].clone();
+let gone = seeds[1].clone();
+drop_row(&types_connection, &gone).await;
+let mut parents = [
+    record(&[("type_id", person.get("id").unwrap().clone())]),
+    record(&[("type_id", gone.get("id").unwrap().clone())]),
+];
+let connection = setup(&mut parents).await;
+let mut parents_repo = readonly(connection, "Parent");
+let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+parents_repo.add_enriched(
+    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    types_repo,
+    None,
+);
+let items = parents_repo.read(None, None).await.unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L84-L96)
+
+```typescript
+const person: Seed = { name: "person" };
+const gone: Seed = { name: "gone" };
+const typesConnection = await setup([person, gone]);
+await remove(typesConnection, gone);
+const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
+const parentsRepo = new ReadonlyRepository(Parent, connection);
+const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+const items = await collectAsync(parentsRepo.read());
+```
+
+## Enrichment
+
+One related fill. `into` is the destination property, `from` is the parent key, and `by` is the related key. `select` copies one related property. `many` collects a list. `association` names the junction columns for a link.
+
+### Classes
+
+##### TypeScript
+
+##### Enrichment {#typescript-enrichment}
+
+```typescript
+type Enrichment
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| into | Destination property. |
+| from | Parent key. |
+| by | Related key. |
+| select | Optional related property to copy. |
+| many | Collect a list. |
+| association | Junction columns for a link. See [Association](#typescript-association). |
+
+##### Association {#typescript-association}
+
+```typescript
+type Association
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| parent | Junction column that stores the parent key. |
+| related | Junction column that stores the related key. |
+
+##### C#
+
+##### Enrichment {#csharp-enrichment}
+
+```csharp
+public sealed record Enrichment
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Enrichment(into, from, by, select, many, association)](#csharp-enrichment-enrichment-into-from-by-select-many-association) | Builds one related fill. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Into | Destination property. |
+| From | Parent key. |
+| By | Related key. |
+| Select | Optional related property to copy. |
+| Many | Collect a list. |
+| Association | Junction columns for a link. See [Association](#csharp-association). |
+
+###### Enrichment(into, from, by, select, many, association) {#csharp-enrichment-enrichment-into-from-by-select-many-association}
+
+Builds one related fill.
+
+**Definition**
+
+```csharp
+public Enrichment(string into, string from, string by, string? select = null, bool many = false, Association? association = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `into` | destination property |
+| `from` | parent key |
+| `by` | related key |
+| `select` | optional related property to copy |
+| `many` | collect a list |
+| `association` | optional [Association](#csharp-association) |
+
+**Returns**
+
+[Enrichment](#csharp-enrichment)
+
+##### Association {#csharp-association}
+
+```csharp
+public sealed record Association
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Association(parent, related)](#csharp-association-association-parent-related) | Builds junction column names. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Parent | Junction column that stores the parent key. |
+| Related | Junction column that stores the related key. |
+
+###### Association(parent, related) {#csharp-association-association-parent-related}
+
+Builds junction column names.
+
+**Definition**
+
+```csharp
+public Association(string parent, string related)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `parent` | junction column that stores the parent key |
+| `related` | junction column that stores the related key |
+
+**Returns**
+
+[Association](#csharp-association)
+
+##### Rust
+
+##### Enrichment {#rust-enrichment}
+
+```rust
+pub struct Enrichment
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(into, from, by, select, many)](#rust-enrichment-new-into-from-by-select-many) | Builds an enrichment. `association` starts unset. |
+| [linked(association)](#rust-enrichment-linked-association) | Marks the fill as a many link and stores the junction columns. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| into | Destination field. |
+| from | Parent key. |
+| by | Related key. |
+| select | Optional related field to copy. |
+| many | Collect a list. |
+| association | Junction columns for a link. See [Association](#rust-association). |
+
+###### new(into, from, by, select, many) {#rust-enrichment-new-into-from-by-select-many}
+
+Builds an enrichment. `association` starts unset.
+
+**Definition**
+
+```rust
+pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `into` | destination field |
+| `from` | parent key |
+| `by` | related key |
+| `select` | optional related field to copy |
+| `many` | collect a list |
+
+**Returns**
+
+[Enrichment](#rust-enrichment)
+
+###### linked(association) {#rust-enrichment-linked-association}
+
+Marks the fill as a many link and stores the junction columns.
+
+**Definition**
+
+```rust
+pub fn linked(self, association: Association) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `association` | [Association](#rust-association) |
+
+**Returns**
+
+[Enrichment](#rust-enrichment)
+
+##### Association {#rust-association}
+
+```rust
+pub struct Association
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(parent, related)](#rust-association-new-parent-related) | Builds junction column names. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| parent | Junction column that stores the parent key. |
+| related | Junction column that stores the related key. |
+
+###### new(parent, related) {#rust-association-new-parent-related}
+
+Builds junction column names.
+
+**Definition**
+
+```rust
+pub fn new(parent: impl Into<String>, related: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `parent` | junction column that stores the parent key |
+| `related` | junction column that stores the related key |
+
+**Returns**
+
+[Association](#rust-association)
+
+### Remarks
+
+A lookup copies `select`, or the related row when `select` is omitted. A `many` list is walked. A `select` scalar is not. [AddLinked](#crud-repository) sets `association` and writes the junction. Pass the value to [IEnriched](#ienriched).
+
+### Examples
+
+#### Fill a lookup
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
+
+```csharp
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L139-L145)
+
+```rust
+let mut parents_repo = readonly(connection, "Parent");
+let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+parents_repo.add_enriched(
+    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    types_repo,
+    None,
+);
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
+
+```typescript
+const parentsRepo = new ReadonlyRepository(Parent, connection);
+const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+```
+
+## IReadonlyEnrichmentStrategy
+
+Fills each parent from a related repository. [IEnriched](#ienriched) uses one strategy per edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy).
+
+### Classes
+
+##### TypeScript
+
+##### IReadonlyEnrichmentStrategy {#typescript-ireadonlyenrichmentstrategy}
+
+```typescript
+interface IReadonlyEnrichmentStrategy<T extends object>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [apply(via, enrichment, parents, sources?)](#typescript-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. |
+| [applyLinked(via, link, enrichment, parents, sources?)](#typescript-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
+
+###### apply(via, enrichment, parents, sources?) {#typescript-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Fills each parent from the related repository.
+
+**Definition**
+
+```typescript
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Promise<void>`
+
+###### applyLinked(via, link, enrichment, parents, sources?) {#typescript-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources}
+
+Fills each parent by reading the link table, then the related repository.
+
+**Definition**
+
+```typescript
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### IReadonlyEnrichmentStrategy {#csharp-ireadonlyenrichmentstrategy}
+
+```csharp
+public interface IReadonlyEnrichmentStrategy<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Apply(via, enrichment, parents, sources)](#csharp-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. |
+| [ApplyLinked(via, link, enrichment, parents, sources)](#csharp-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
+
+###### Apply(via, enrichment, parents, sources) {#csharp-ireadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Fills each parent from the related repository.
+
+**Definition**
+
+```csharp
+Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Task`
+
+###### ApplyLinked(via, link, enrichment, parents, sources) {#csharp-ireadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources}
+
+Fills each parent by reading the link table, then the related repository.
+
+**Definition**
+
+```csharp
+Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### ReadonlyEnrichmentStrategy {#rust-readonlyenrichmentstrategy}
+
+```rust
+pub trait ReadonlyEnrichmentStrategy: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [apply(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. The default dispatches to `apply_lookup` or `apply_many`. |
+| [apply_lookup(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_lookup-via-enrichment-parents-sources) | Fills a scalar related value. The default reads one related row per distinct key. |
+| [apply_many(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_many-via-enrichment-parents-sources) | Fills a list. The default reads the related rows for each parent key. |
+| [apply_linked(via, link, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
+
+###### apply(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Fills each parent from the related repository. The default dispatches to `apply_lookup` or `apply_many`.
+
+**Definition**
+
+```rust
+async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Result<()>`
+
+###### apply_lookup(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_lookup-via-enrichment-parents-sources}
+
+Fills a scalar related value. The default reads one related row per distinct key.
+
+**Definition**
+
+```rust
+async fn apply_lookup(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Result<()>`
+
+###### apply_many(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_many-via-enrichment-parents-sources}
+
+Fills a list. The default reads the related rows for each parent key.
+
+**Definition**
+
+```rust
+async fn apply_many(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Result<()>`
+
+###### apply_linked(via, link, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources}
+
+Fills each parent by reading the link table, then the related repository.
+
+**Definition**
+
+```rust
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+Pass the strategy to [IEnriched](#ienriched) for one edge. The repository calls `Apply` / `apply` / `apply` after it reads the parents. `ApplyLinked` / `applyLinked` / `apply_linked` runs for an enrichment that has an [association](#association). A `many` list is walked. A `select` scalar is not. C# and TypeScript override the lookup and list fills on [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Rust overrides `apply_lookup` and `apply_many` on this trait.
+
+### Examples
+
+#### Fill a lookup
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
+
+```csharp
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L139-L145)
+
+```rust
+let mut parents_repo = readonly(connection, "Parent");
+let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+parents_repo.add_enriched(
+    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    types_repo,
+    None,
+);
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
+
+```typescript
+const parentsRepo = new ReadonlyRepository(Parent, connection);
+const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+```
+
+## DefaultReadonlyEnrichmentStrategy
+
+Default read fill. A lookup reads one related row per distinct key and caches it. A list reads the related rows for that parent key. A link reads the junction, then each related row.
+
+### Classes
+
+##### TypeScript
+
+##### DefaultReadonlyEnrichmentStrategy {#typescript-defaultreadonlyenrichmentstrategy}
+
+```typescript
+class DefaultReadonlyEnrichmentStrategy<T extends object> implements IReadonlyEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new DefaultReadonlyEnrichmentStrategy()](#typescript-defaultreadonlyenrichmentstrategy-new-defaultreadonlyenrichmentstrategy) | Builds the default read strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [apply(via, enrichment, parents, sources?)](#typescript-defaultreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills a lookup from a cached related row, or a list from the rows for that parent key. |
+| [applyLinked(via, link, enrichment, parents, sources?)](#typescript-defaultreadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources) | Reads the junction for each parent key, then each related row. |
+
+###### new DefaultReadonlyEnrichmentStrategy() {#typescript-defaultreadonlyenrichmentstrategy-new-defaultreadonlyenrichmentstrategy}
+
+Builds the default read strategy.
+
+**Definition**
+
+```typescript
+constructor()
+```
+
+**Returns**
+
+[DefaultReadonlyEnrichmentStrategy](#typescript-defaultreadonlyenrichmentstrategy)
+
+###### apply(via, enrichment, parents, sources?) {#typescript-defaultreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Fills a lookup from a cached related row, or a list from the rows for that parent key.
+
+**Definition**
+
+```typescript
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Promise<void>`
+
+###### applyLinked(via, link, enrichment, parents, sources?) {#typescript-defaultreadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources}
+
+Reads the junction for each parent key, then each related row.
+
+**Definition**
+
+```typescript
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### DefaultReadonlyEnrichmentStrategy {#csharp-defaultreadonlyenrichmentstrategy}
+
+```csharp
+public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<T> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DefaultReadonlyEnrichmentStrategy()](#csharp-defaultreadonlyenrichmentstrategy-defaultreadonlyenrichmentstrategy) | Builds the default read strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Apply(via, enrichment, parents, sources)](#csharp-defaultreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills a lookup from a cached related row, or a list from the rows for that parent key. |
+| [ApplyLinked(via, link, enrichment, parents, sources)](#csharp-defaultreadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources) | Reads the junction for each parent key, then each related row. |
+
+###### DefaultReadonlyEnrichmentStrategy() {#csharp-defaultreadonlyenrichmentstrategy-defaultreadonlyenrichmentstrategy}
+
+Builds the default read strategy.
+
+**Definition**
+
+```csharp
+public DefaultReadonlyEnrichmentStrategy()
+```
+
+**Returns**
+
+[DefaultReadonlyEnrichmentStrategy](#csharp-defaultreadonlyenrichmentstrategy)`<T>`
+
+###### Apply(via, enrichment, parents, sources) {#csharp-defaultreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Fills a lookup from a cached related row, or a list from the rows for that parent key.
+
+**Definition**
+
+```csharp
+public virtual Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Task`
+
+###### ApplyLinked(via, link, enrichment, parents, sources) {#csharp-defaultreadonlyenrichmentstrategy-applylinked-via-link-enrichment-parents-sources}
+
+Reads the junction for each parent key, then each related row.
+
+**Definition**
+
+```csharp
+public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### DefaultReadonlyEnrichmentStrategy {#rust-defaultreadonlyenrichmentstrategy}
+
+```rust
+pub struct DefaultReadonlyEnrichmentStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [apply(via, enrichment, parents, sources)](#rust-defaultreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills a lookup from a cached related row, or a list from the rows for that parent key. |
+| [apply_linked(via, link, enrichment, parents, sources)](#rust-defaultreadonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources) | Reads the junction for each parent key, then each related row. |
+
+###### apply(via, enrichment, parents, sources) {#rust-defaultreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Fills a lookup from a cached related row, or a list from the rows for that parent key.
+
+**Definition**
+
+```rust
+async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Result<()>`
+
+###### apply_linked(via, link, enrichment, parents, sources) {#rust-defaultreadonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources}
+
+Reads the junction for each parent key, then each related row.
+
+**Definition**
+
+```rust
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+[IEnriched](#ienriched) uses this strategy when the call omits one. A missing related row leaves the destination unset. [HashsetOptimizedReadonlyEnrichmentStrategy](#hashsetoptimizedreadonlyenrichmentstrategy) replaces the per-key reads with one `IN` query.
+
+### Examples
+
+#### Fill a lookup
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
+
+```csharp
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L139-L145)
+
+```rust
+let mut parents_repo = readonly(connection, "Parent");
+let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+parents_repo.add_enriched(
+    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    types_repo,
+    None,
+);
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
+
+```typescript
+const parentsRepo = new ReadonlyRepository(Parent, connection);
+const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+```
+
+## HashsetOptimizedReadonlyEnrichmentStrategy
+
+Read fill that loads every related row for the parent keys in one `IN` query, then assigns from that set. Lookups and lists both use that query.
+
+### Classes
+
+##### TypeScript
+
+##### HashsetOptimizedReadonlyEnrichmentStrategy {#typescript-hashsetoptimizedreadonlyenrichmentstrategy}
+
+```typescript
+class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object> extends DefaultReadonlyEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new HashsetOptimizedReadonlyEnrichmentStrategy()](#typescript-hashsetoptimizedreadonlyenrichmentstrategy-new-hashsetoptimizedreadonlyenrichmentstrategy) | Builds the batched read strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [apply(via, enrichment, parents, sources?)](#typescript-hashsetoptimizedreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills lookups and lists from one `IN` read of the related repository. |
+
+###### new HashsetOptimizedReadonlyEnrichmentStrategy() {#typescript-hashsetoptimizedreadonlyenrichmentstrategy-new-hashsetoptimizedreadonlyenrichmentstrategy}
+
+Builds the batched read strategy.
+
+**Definition**
+
+```typescript
+constructor()
+```
+
+**Returns**
+
+[HashsetOptimizedReadonlyEnrichmentStrategy](#typescript-hashsetoptimizedreadonlyenrichmentstrategy)
+
+###### apply(via, enrichment, parents, sources?) {#typescript-hashsetoptimizedreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Fills lookups and lists from one `IN` read of the related repository.
+
+**Definition**
+
+```typescript
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### HashsetOptimizedReadonlyEnrichmentStrategy {#csharp-hashsetoptimizedreadonlyenrichmentstrategy}
+
+```csharp
+public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReadonlyEnrichmentStrategy<T> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [HashsetOptimizedReadonlyEnrichmentStrategy()](#csharp-hashsetoptimizedreadonlyenrichmentstrategy-hashsetoptimizedreadonlyenrichmentstrategy) | Builds the batched read strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Apply(via, enrichment, parents, sources)](#csharp-hashsetoptimizedreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Inherited from [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Lookups and lists each use one `IN` read of the related repository. |
+
+###### HashsetOptimizedReadonlyEnrichmentStrategy() {#csharp-hashsetoptimizedreadonlyenrichmentstrategy-hashsetoptimizedreadonlyenrichmentstrategy}
+
+Builds the batched read strategy.
+
+**Definition**
+
+```csharp
+public HashsetOptimizedReadonlyEnrichmentStrategy()
+```
+
+**Returns**
+
+[HashsetOptimizedReadonlyEnrichmentStrategy](#csharp-hashsetoptimizedreadonlyenrichmentstrategy)`<T>`
+
+###### Apply(via, enrichment, parents, sources) {#csharp-hashsetoptimizedreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Inherited from [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Lookups and lists each use one `IN` read of the related repository.
+
+**Definition**
+
+```csharp
+public virtual Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### HashsetOptimizedReadonlyEnrichmentStrategy {#rust-hashsetoptimizedreadonlyenrichmentstrategy}
+
+```rust
+pub struct HashsetOptimizedReadonlyEnrichmentStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [apply(via, enrichment, parents, sources)](#rust-hashsetoptimizedreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills lookups and lists from one `IN` read of the related repository. |
+
+###### apply(via, enrichment, parents, sources) {#rust-hashsetoptimizedreadonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Fills lookups and lists from one `IN` read of the related repository.
+
+**Definition**
+
+```rust
+async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parents` | parents to fill |
+| `sources` | optional source rows aligned with `parents` |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+Pass it as the strategy on [IEnriched](#ienriched). Linked fills stay on [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). A parent with no key is skipped. A key with no related row leaves a lookup unset and a list empty.
+
+### Examples
+
+#### Fill with one query
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L53-L72)
+
+```csharp
+var person = new Row { ["name"] = "person" };
+var gone = new Row { ["name"] = "gone" };
+var typesConnection = await Setup(person, gone);
+await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gone["id"])]);
+var connection = await Setup(
+    new Row { ["type_id"] = person["id"] },
+    new Row { ["type_id"] = gone["id"] });
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+parentsRepo.AddEnriched(
+    new("type_name", "type_id", "id", "name"),
+    typesRepo,
+    new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
+var items = await parentsRepo.Read().ToListAsync();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L361-L423)
+
+```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(ds, "user-roles-read", &seed()).await;
+let mut users_options = create_crud_repository_options::<UsersView>();
+users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+    "UsersView".to_string(),
+    "user".to_string(),
+)]));
+users_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+    ("UserType".to_string(), "user_type_id".to_string()),
+]));
+let mut type_options = create_crud_repository_options::<UserType>();
+type_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+type_options.column_mappings =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+let mut role_options = create_crud_repository_options::<UserRole>();
+role_options.entity = "user_roles".into();
+role_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("UserId".to_string(), "user_id".to_string()),
+    ("Name".to_string(), "name".to_string()),
+]));
+role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
+let mut users_repo =
+    ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
+let types = ds.create_readonly_repository::<UserType>(
+    Some(connection.clone()),
+    Some(type_options.read),
+);
+let roles =
+    ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
+let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
+users_repo.add_enriched(
+    datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), false),
+    types,
+    Some(strategy.clone()),
+);
+users_repo.add_enriched(
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    roles,
+    Some(strategy),
+);
+let users_view = users_repo
+    .read_single(Some(&Where::binary("Key", eq, ADA)), None)
+    .await
+    .unwrap()
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L98-L114)
+
+```typescript
+const person: Seed = { name: "person" };
+const gone: Seed = { name: "gone" };
+const typesConnection = await setup([person, gone]);
+await remove(typesConnection, gone);
+const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
+const parentsRepo = new ReadonlyRepository(Parent, connection);
+const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+parentsRepo.addEnriched(
+  { into: "type_name", from: "type_id", by: "id", select: "name" },
+  typesRepo,
+  new HashsetOptimizedReadonlyEnrichmentStrategy(),
+);
+const items = await collectAsync(parentsRepo.read());
+```
+
+## NestedToObjectEnrichmentStrategy
+
+Read fill that collapses join rows into objects. It ignores the related repository and maps `sources` with a [TypeMap](#typemap).
+
+### Classes
+
+##### TypeScript
+
+##### NestedToObjectEnrichmentStrategy {#typescript-nestedtoobjectenrichmentstrategy}
+
+```typescript
+class NestedToObjectEnrichmentStrategy<T extends object> extends DefaultReadonlyEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new NestedToObjectEnrichmentStrategy(typeMap)](#typescript-nestedtoobjectenrichmentstrategy-new-nestedtoobjectenrichmentstrategy-typemap) | Builds a collapse strategy from a [TypeMap](#typescript-typemap). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [apply(via, enrichment, parents, sources?)](#typescript-nestedtoobjectenrichmentstrategy-apply-via-enrichment-parents-sources) | Replaces `parents` with the objects collapsed from `sources`. |
+
+###### new NestedToObjectEnrichmentStrategy(typeMap) {#typescript-nestedtoobjectenrichmentstrategy-new-nestedtoobjectenrichmentstrategy-typemap}
+
+Builds a collapse strategy from a [TypeMap](#typescript-typemap).
+
+**Definition**
+
+```typescript
+constructor(typeMap: TypeMap<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `typeMap` | [TypeMap](#typescript-typemap) used to collapse join rows |
+
+**Returns**
+
+[NestedToObjectEnrichmentStrategy](#typescript-nestedtoobjectenrichmentstrategy)
+
+###### apply(via, enrichment, parents, sources?) {#typescript-nestedtoobjectenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Replaces `parents` with the objects collapsed from `sources`.
+
+**Definition**
+
+```typescript
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | unused |
+| `enrichment` | unused |
+| `parents` | replaced with the collapsed objects |
+| `sources` | join rows aligned with the read |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### NestedToObjectEnrichmentStrategy {#csharp-nestedtoobjectenrichmentstrategy}
+
+```csharp
+public sealed class NestedToObjectEnrichmentStrategy<T> : DefaultReadonlyEnrichmentStrategy<T> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [NestedToObjectEnrichmentStrategy(typeMap)](#csharp-nestedtoobjectenrichmentstrategy-nestedtoobjectenrichmentstrategy-typemap) | Builds a collapse strategy from a [TypeMap](#csharp-typemap). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Apply(via, enrichment, parents, sources)](#csharp-nestedtoobjectenrichmentstrategy-apply-via-enrichment-parents-sources) | Replaces `parents` with the objects collapsed from `sources`. |
+
+###### NestedToObjectEnrichmentStrategy(typeMap) {#csharp-nestedtoobjectenrichmentstrategy-nestedtoobjectenrichmentstrategy-typemap}
+
+Builds a collapse strategy from a [TypeMap](#csharp-typemap).
+
+**Definition**
+
+```csharp
+public NestedToObjectEnrichmentStrategy(TypeMap typeMap)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `typeMap` | [TypeMap](#csharp-typemap) used to collapse join rows |
+
+**Returns**
+
+[NestedToObjectEnrichmentStrategy](#csharp-nestedtoobjectenrichmentstrategy)`<T>`
+
+###### Apply(via, enrichment, parents, sources) {#csharp-nestedtoobjectenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Replaces `parents` with the objects collapsed from `sources`.
+
+**Definition**
+
+```csharp
+public override Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | unused |
+| `enrichment` | unused |
+| `parents` | replaced with the collapsed objects |
+| `sources` | join rows aligned with the read |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### NestedToObjectEnrichmentStrategy {#rust-nestedtoobjectenrichmentstrategy}
+
+```rust
+pub struct NestedToObjectEnrichmentStrategy
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(type_map)](#rust-nestedtoobjectenrichmentstrategy-new-type_map) | Builds a collapse strategy from a [TypeMap](#rust-typemap). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [apply(via, enrichment, parents, sources)](#rust-nestedtoobjectenrichmentstrategy-apply-via-enrichment-parents-sources) | Replaces `parents` with the objects collapsed from `sources`. |
+
+###### new(type_map) {#rust-nestedtoobjectenrichmentstrategy-new-type_map}
+
+Builds a collapse strategy from a [TypeMap](#rust-typemap).
+
+**Definition**
+
+```rust
+pub fn new(type_map: TypeMap) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `type_map` | [TypeMap](#rust-typemap) used to collapse join rows |
+
+**Returns**
+
+[NestedToObjectEnrichmentStrategy](#rust-nestedtoobjectenrichmentstrategy)
+
+###### apply(via, enrichment, parents, sources) {#rust-nestedtoobjectenrichmentstrategy-apply-via-enrichment-parents-sources}
+
+Replaces `parents` with the objects collapsed from `sources`.
+
+**Definition**
+
+```rust
+async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | unused |
+| `enrichment` | unused |
+| `parents` | replaced with the collapsed objects |
+| `sources` | join rows aligned with the read |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+This is the read-side collapse. [FlatToNestedMapper](#flat-to-nested-mapper) is the mapper. Pass this strategy to [IEnriched](#ienriched) when the repository read is already a join. The related repository is not queried.
+
+### Examples
+
+#### Collapse join rows
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L176-L192)
+
+```csharp
+var person = new Row { ["type_name"] = "person" };
+var org = new Row { ["type_name"] = "org" };
+var connection = await Setup(person, org);
+IList<object> parents = [];
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+await new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
+{
+    Key = "id",
+    Fields = new Dictionary<string, TypeMapField> { ["id"] = "id", ["type_name"] = "type_name" }
+}).Apply(parentsRepo, new("type_name", "id", "id"), parents, [person, org]);
+var items = parents.Cast<Parent>();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L425-L502)
+
+```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(ds, "user-roles-read", &seed()).await;
+let command = Arc::new(SelectStatement::new(SelectStatementOptions {
+    joins: &[
+        Join::left("user_type", "user_type.id", "user.user_type_id"),
+        Join::left("user_roles", "user_roles.user_id", "user.id"),
+        Join::left("roles", "roles.id", "user_roles.role_id"),
+    ],
+    ..SelectStatementOptions::new(
+        "user",
+        &[
+            "user.id AS Key",
+            "user.username AS Login",
+            "user.is_enabled AS Active",
+            "user.created AS Opened",
+            "user_type.name AS UserType",
+            "user.id AS UserId",
+            "user_roles.role_id AS RoleId",
+            "roles.name AS RoleName",
+        ],
+    )
+}));
+let options = ReadonlyRepositoryOptions::default();
+let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
+users_repo.add_enriched(
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    Arc::new(ReadonlyRepository::memory(vec![])),
+    Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
+        TypeMap::new(
+            "Key",
+            vec![
+                ("Key".into(), TypeMapField::column("Key")),
+                ("Login".into(), TypeMapField::column("Login")),
+                ("Active".into(), TypeMapField::column("Active")),
+                ("Opened".into(), TypeMapField::column("Opened")),
+                ("UserType".into(), TypeMapField::column("UserType")),
+                (
+                    "Roles".into(),
+                    TypeMapField::Group(TypeMapGroup::new(
+                        "RoleId",
+                        vec![
+                            ("RoleId".into(), TypeMapField::column("RoleId")),
+                            ("UserId".into(), TypeMapField::column("UserId")),
+                            ("Name".into(), TypeMapField::column("RoleName")),
+                        ],
+                    )),
+                ),
+            ],
+        ),
+    ))),
+);
+let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
+let view = |login: &str| {
+    items
+        .iter()
+        .find(|item| item.get("Login") == Some(&Value::from(login)))
+        .unwrap()
+        .clone()
+};
+let ada = view("ada");
+let grace = view("grace");
+let lin = view("lin");
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L303-L316)
+
+```typescript
+const person: Seed = { type_name: "person" };
+const org: Seed = { type_name: "org" };
+const connection = await setup([person, org]);
+const parents: object[] = [];
+const parentsRepo = new ReadonlyRepository(Parent, connection);
+await new NestedToObjectEnrichmentStrategy<Parent>({
+  key: "id",
+  fields: { id: "id", type_name: "type_name" },
+}).apply(parentsRepo, { into: "type_name", from: "id", by: "id" }, parents, [person, org]);
+const items = parents as Parent[];
+```
+
+## IWriteEnrichmentStrategy
+
+Writes nested rows with a parent create, update, or delete. [CRUDRepository](#crud-repository) calls `Persist` / `persist` / `persist` after the parent write when the repository has enrichments.
+
+### Classes
+
+##### TypeScript
+
+##### IWriteEnrichmentStrategy {#typescript-iwriteenrichmentstrategy}
+
+```typescript
+interface IWriteEnrichmentStrategy<T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| useTransaction | When true, the parent write and nested persist commit together. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [persist(tree, items, mode)](#typescript-iwriteenrichmentstrategy-persist-tree-items-mode) | Writes each nested edge on `tree` for `items`. |
+
+###### persist(tree, items, mode) {#typescript-iwriteenrichmentstrategy-persist-tree-items-mode}
+
+Writes each nested edge on `tree` for `items`.
+
+**Definition**
+
+```typescript
+persist(tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [IRepositoryTree](#typescript-irepositorytree) |
+| `items` | parents to persist |
+| `mode` | [WriteMode](#typescript-writemode) |
+
+**Returns**
+
+`Promise<void>`
+
+##### WriteMode {#typescript-writemode}
+
+```typescript
+type WriteMode = "create" | "update" | "delete"
+```
+
+##### C#
+
+##### IWriteEnrichmentStrategy {#csharp-iwriteenrichmentstrategy}
+
+```csharp
+public interface IWriteEnrichmentStrategy<T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| UseTransaction | When true, the parent write and nested persist commit together. The interface default is false. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Persist(tree, items, mode)](#csharp-iwriteenrichmentstrategy-persist-tree-items-mode) | Writes each nested edge on `tree` for `items`. |
+
+###### Persist(tree, items, mode) {#csharp-iwriteenrichmentstrategy-persist-tree-items-mode}
+
+Writes each nested edge on `tree` for `items`.
+
+**Definition**
+
+```csharp
+Task Persist(IRepositoryTree tree, IList<T> items, WriteMode mode)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [IRepositoryTree](#csharp-irepositorytree) |
+| `items` | parents to persist |
+| `mode` | [WriteMode](#csharp-writemode) |
+
+**Returns**
+
+`Task`
+
+##### WriteMode {#csharp-writemode}
+
+```csharp
+public enum WriteMode
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Create | Write children and links after the parent insert. |
+| Update | Replace-sync or recreate children and links after the parent update. |
+| Delete | Remove children and links before the parent delete. |
+
+##### Rust
+
+##### WriteEnrichmentStrategy {#rust-writeenrichmentstrategy}
+
+```rust
+pub trait WriteEnrichmentStrategy: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [use_transaction()](#rust-writeenrichmentstrategy-use_transaction) | When true, the parent write and nested persist commit together. The default is false. |
+| [persist(tree, items, mode)](#rust-writeenrichmentstrategy-persist-tree-items-mode) | Writes each nested edge on `tree` for `items`. |
+
+###### use_transaction() {#rust-writeenrichmentstrategy-use_transaction}
+
+When true, the parent write and nested persist commit together. The default is false.
+
+**Definition**
+
+```rust
+fn use_transaction(&self) -> bool
+```
+
+**Returns**
+
+`bool`
+
+###### persist(tree, items, mode) {#rust-writeenrichmentstrategy-persist-tree-items-mode}
+
+Writes each nested edge on `tree` for `items`.
+
+**Definition**
+
+```rust
+async fn persist(&self, tree: &RepositoryTree, items: &mut [Row], mode: WriteMode) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [RepositoryTree](#rust-repositorytree) |
+| `items` | parents to persist |
+| `mode` | [WriteMode](#rust-writemode) |
+
+**Returns**
+
+`Result<()>`
+
+##### WriteMode {#rust-writemode}
+
+```rust
+pub enum WriteMode
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Create | Write children and links after the parent insert. |
+| Update | Replace-sync or recreate children and links after the parent update. |
+| Delete | Remove children and links before the parent delete. |
+
+### Remarks
+
+Set this as the repository `write` option. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) is the default. Lookups are filled on read and are not written. A `many` child list and a link are written. A bulk list uses one transaction for the whole list when `UseTransaction` / `useTransaction` / `use_transaction` is on.
+
+### Examples
+
+#### Roll back a bulk update
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L100-L119)
+
+```csharp
+var connection = await Setup();
+var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+{
+    Write = new DefaultWriteEnrichmentStrategy<Parent>(useTransaction: true),
+});
+var first = await parentsRepo.Create(new Parent { label = "a" });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L574-L621)
+
+```rust
+let connection = setup(&mut []).await;
+let mut options = CRUDRepositoryOptions::default();
+options.entity = "Parent".into();
+options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(
+    None, None, true,
+)));
+let parents = BulkCRUDRepository::new(connection, options).unwrap();
+let created = parents
+    .create_bulk(&mut [
+        record(&[("label", Value::from("a"))]),
+        record(&[("label", Value::from("b"))]),
+    ])
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L86-L109)
+
+```typescript
+const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
+  type: Parent,
+  write: new DefaultWriteEnrichmentStrategy(undefined, undefined, true),
+});
+const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
+```
+
+## DefaultWriteEnrichmentStrategy
+
+Default nested write. Create writes children and links after the parent. Update uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy). Delete uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy). Both can be replaced.
+
+### Classes
+
+##### TypeScript
+
+##### DefaultWriteEnrichmentStrategy {#typescript-defaultwriteenrichmentstrategy}
+
+```typescript
+class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new DefaultWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?)](#typescript-defaultwriteenrichmentstrategy-new-defaultwriteenrichmentstrategy-deletestrategy-updatestrategy-usetransaction) | Builds the default write strategy. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| useTransaction | When true, the parent write and nested persist commit together. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [persist(tree, items, mode)](#typescript-defaultwriteenrichmentstrategy-persist-tree-items-mode) | Walks each enrichment and writes children or links for `mode`. |
+
+###### new DefaultWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?) {#typescript-defaultwriteenrichmentstrategy-new-defaultwriteenrichmentstrategy-deletestrategy-updatestrategy-usetransaction}
+
+Builds the default write strategy.
+
+**Definition**
+
+```typescript
+constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: UpdateEnrichmentStrategy<T>, useTransaction?: boolean)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `deleteStrategy` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
+| `updateStrategy` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `useTransaction` | commit the parent write and nested persist together. Off by default |
+
+**Returns**
+
+[DefaultWriteEnrichmentStrategy](#typescript-defaultwriteenrichmentstrategy)
+
+###### persist(tree, items, mode) {#typescript-defaultwriteenrichmentstrategy-persist-tree-items-mode}
+
+Walks each enrichment and writes children or links for `mode`.
+
+**Definition**
+
+```typescript
+persist(tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [IRepositoryTree](#typescript-irepositorytree) |
+| `items` | parents to persist |
+| `mode` | [WriteMode](#typescript-writemode) |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### DefaultWriteEnrichmentStrategy {#csharp-defaultwriteenrichmentstrategy}
+
+```csharp
+public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DefaultWriteEnrichmentStrategy(delete, update, useTransaction)](#csharp-defaultwriteenrichmentstrategy-defaultwriteenrichmentstrategy-delete-update-usetransaction) | Builds the default write strategy. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| UseTransaction | When true, the parent write and nested persist commit together. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Persist(tree, items, mode)](#csharp-defaultwriteenrichmentstrategy-persist-tree-items-mode) | Walks each enrichment and writes children or links for `mode`. |
+
+###### DefaultWriteEnrichmentStrategy(delete, update, useTransaction) {#csharp-defaultwriteenrichmentstrategy-defaultwriteenrichmentstrategy-delete-update-usetransaction}
+
+Builds the default write strategy.
+
+**Definition**
+
+```csharp
+public DefaultWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, UpdateEnrichmentStrategy<T>? update = null, bool useTransaction = false)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
+| `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `useTransaction` | commit the parent write and nested persist together. Off by default |
+
+**Returns**
+
+[DefaultWriteEnrichmentStrategy](#csharp-defaultwriteenrichmentstrategy)`<T>`
+
+###### Persist(tree, items, mode) {#csharp-defaultwriteenrichmentstrategy-persist-tree-items-mode}
+
+Walks each enrichment and writes children or links for `mode`.
+
+**Definition**
+
+```csharp
+public Task Persist(IRepositoryTree tree, IList<T> items, WriteMode mode)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [IRepositoryTree](#csharp-irepositorytree) |
+| `items` | parents to persist |
+| `mode` | [WriteMode](#csharp-writemode) |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### DefaultWriteEnrichmentStrategy {#rust-defaultwriteenrichmentstrategy}
+
+```rust
+pub struct DefaultWriteEnrichmentStrategy
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(delete, update, use_transaction)](#rust-defaultwriteenrichmentstrategy-new-delete-update-use_transaction) | Builds the default write strategy. |
+| [lazy(delete, update, use_transaction)](#rust-defaultwriteenrichmentstrategy-lazy-delete-update-use_transaction) | Builds the same strategy and skips a null list on create and update. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) returns this. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [use_transaction()](#rust-defaultwriteenrichmentstrategy-use_transaction) | When true, the parent write and nested persist commit together. |
+| [persist(tree, items, mode)](#rust-defaultwriteenrichmentstrategy-persist-tree-items-mode) | Walks each enrichment and writes children or links for `mode`. |
+
+###### new(delete, update, use_transaction) {#rust-defaultwriteenrichmentstrategy-new-delete-update-use_transaction}
+
+Builds the default write strategy.
+
+**Definition**
+
+```rust
+pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, use_transaction: bool) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
+| `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `use_transaction` | commit the parent write and nested persist together |
+
+**Returns**
+
+[DefaultWriteEnrichmentStrategy](#rust-defaultwriteenrichmentstrategy)
+
+###### lazy(delete, update, use_transaction) {#rust-defaultwriteenrichmentstrategy-lazy-delete-update-use_transaction}
+
+Builds the same strategy and skips a null list on create and update. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) returns this.
+
+**Definition**
+
+```rust
+pub fn lazy(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, use_transaction: bool) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
+| `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `use_transaction` | commit the parent write and nested persist together |
+
+**Returns**
+
+[DefaultWriteEnrichmentStrategy](#rust-defaultwriteenrichmentstrategy)
+
+###### use_transaction() {#rust-defaultwriteenrichmentstrategy-use_transaction}
+
+When true, the parent write and nested persist commit together.
+
+**Definition**
+
+```rust
+fn use_transaction(&self) -> bool
+```
+
+**Returns**
+
+`bool`
+
+###### persist(tree, items, mode) {#rust-defaultwriteenrichmentstrategy-persist-tree-items-mode}
+
+Walks each enrichment and writes children or links for `mode`.
+
+**Definition**
+
+```rust
+async fn persist(&self, tree: &RepositoryTree, items: &mut [Row], mode: WriteMode) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [RepositoryTree](#rust-repositorytree) |
+| `items` | parents to persist |
+| `mode` | [WriteMode](#rust-writemode) |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+Set it on the repository `write` option. Create writes the parent, stamps each child's `by` from the parent `from`, then creates children and links. Update and delete delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) skips that null list. Nested writes join the transaction when they use the same connection.
+
+### Examples
+
+#### Roll back a bulk update
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L100-L119)
+
+```csharp
+var connection = await Setup();
+var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+{
+    Write = new DefaultWriteEnrichmentStrategy<Parent>(useTransaction: true),
+});
+var first = await parentsRepo.Create(new Parent { label = "a" });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L574-L621)
+
+```rust
+let connection = setup(&mut []).await;
+let mut options = CRUDRepositoryOptions::default();
+options.entity = "Parent".into();
+options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(
+    None, None, true,
+)));
+let parents = BulkCRUDRepository::new(connection, options).unwrap();
+let created = parents
+    .create_bulk(&mut [
+        record(&[("label", Value::from("a"))]),
+        record(&[("label", Value::from("b"))]),
+    ])
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L86-L109)
+
+```typescript
+const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
+  type: Parent,
+  write: new DefaultWriteEnrichmentStrategy(undefined, undefined, true),
+});
+const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
+```
+
+## LazyWriteEnrichmentStrategy
+
+Nested write that skips a null list on create and update. Delete still removes the junction rows and owned children. The rest matches [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy).
+
+### Classes
+
+##### TypeScript
+
+##### LazyWriteEnrichmentStrategy {#typescript-lazywriteenrichmentstrategy}
+
+```typescript
+class LazyWriteEnrichmentStrategy<T> extends DefaultWriteEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new LazyWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?)](#typescript-lazywriteenrichmentstrategy-new-lazywriteenrichmentstrategy-deletestrategy-updatestrategy-usetransaction) | Builds the lazy write strategy. |
+
+###### new LazyWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?) {#typescript-lazywriteenrichmentstrategy-new-lazywriteenrichmentstrategy-deletestrategy-updatestrategy-usetransaction}
+
+Builds the lazy write strategy.
+
+**Definition**
+
+```typescript
+constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: UpdateEnrichmentStrategy<T>, useTransaction?: boolean)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `deleteStrategy` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
+| `updateStrategy` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `useTransaction` | commit the parent write and nested persist together. Off by default |
+
+**Returns**
+
+[LazyWriteEnrichmentStrategy](#typescript-lazywriteenrichmentstrategy)
+
+##### C#
+
+##### LazyWriteEnrichmentStrategy {#csharp-lazywriteenrichmentstrategy}
+
+```csharp
+public sealed class LazyWriteEnrichmentStrategy<T> : DefaultWriteEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [LazyWriteEnrichmentStrategy(delete, update, useTransaction)](#csharp-lazywriteenrichmentstrategy-lazywriteenrichmentstrategy-delete-update-usetransaction) | Builds the lazy write strategy. |
+
+###### LazyWriteEnrichmentStrategy(delete, update, useTransaction) {#csharp-lazywriteenrichmentstrategy-lazywriteenrichmentstrategy-delete-update-usetransaction}
+
+Builds the lazy write strategy.
+
+**Definition**
+
+```csharp
+public LazyWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, UpdateEnrichmentStrategy<T>? update = null, bool useTransaction = false)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
+| `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `useTransaction` | commit the parent write and nested persist together. Off by default |
+
+**Returns**
+
+[LazyWriteEnrichmentStrategy](#csharp-lazywriteenrichmentstrategy)`<T>`
+
+##### Rust
+
+##### LazyWriteEnrichmentStrategy {#rust-lazywriteenrichmentstrategy}
+
+```rust
+pub struct LazyWriteEnrichmentStrategy
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(delete, update, use_transaction)](#rust-lazywriteenrichmentstrategy-new-delete-update-use_transaction) | Builds a [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) that skips a null list on create and update. |
+
+###### new(delete, update, use_transaction) {#rust-lazywriteenrichmentstrategy-new-delete-update-use_transaction}
+
+Builds a [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) that skips a null list on create and update.
+
+**Definition**
+
+```rust
+pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, use_transaction: bool) -> DefaultWriteEnrichmentStrategy
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
+| `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `use_transaction` | commit the parent write and nested persist together |
+
+**Returns**
+
+[DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy)
+
+### Remarks
+
+A null list on create or update leaves that association as it is. An empty list still clears it. Delete still removes junction rows and owned children. Set it as the repository `write` option.
+
+> **Rust**
+>
+> `new` returns [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy).
+
+### Examples
+
+#### Skip unloaded lists
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L301-L366)
+
+```csharp
+var graph = await GraphAsync(new LazyWriteEnrichmentStrategy<UserView>());
+var userViewRepo = Enrich(graph.UsersRepo, graph);
+
+var created = await userViewRepo.Create(new UserView
+{
+    Username = "ada",
+    IsEnabled = true,
+    UserTypeId = graph.AdminType.Id,
+    Roles = null,
+    Groups = [graph.Engineering]
+});
+var createdRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var createdGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var skipped = await userViewRepo.Update(new UserView
+{
+    Id = created.Id,
+    Username = "ada",
+    IsEnabled = false,
+    UserTypeId = graph.AdminType.Id,
+    Roles = null,
+    Groups = null
+});
+var afterSkip = await userViewRepo.ReadSingleById(created.Id);
+var skippedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var skippedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var linked = await userViewRepo.Update(new UserView
+{
+    Id = created.Id,
+    Username = "ada",
+    IsEnabled = false,
+    UserTypeId = graph.AdminType.Id,
+    Roles = [graph.EditorRole],
+    Groups = null
+});
+var linkedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var linkedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var roles = await graph.RolesRepo.Read().ToListAsync();
+var groups = await graph.GroupsRepo.Read().ToListAsync();
+var removed = await userViewRepo.Delete(new UserView { Id = created.Id, Roles = null, Groups = null });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L459-L560)
+
+```rust
+let (mut users, seeded) = open(Some(Arc::new(LazyWriteEnrichmentStrategy::new(
+    None, None, false,
+))))
+.await;
+link(&mut users, &seeded);
+let mut creating = record(&[
+    ("username", Value::from("ada")),
+    ("is_enabled", Value::Bool(true)),
+    ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
+    ("groups", encode_rows(&[seeded.engineering.clone()])),
+]);
+let created = users.create(&mut creating).await.unwrap();
+let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let next = record(&[
+    ("id", created.get("id").unwrap().clone()),
+    ("username", Value::from("ada")),
+    ("is_enabled", Value::Bool(false)),
+    ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
+]);
+let skipped = users.update(&next, None).await.unwrap();
+let after_skip = users
+    .read_single_by_id(created.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+let skipped_role_links = seeded.user_roles.read(None, None).await.unwrap();
+let skipped_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let linked_row = record(&[
+    ("id", created.get("id").unwrap().clone()),
+    ("username", Value::from("ada")),
+    ("is_enabled", Value::Bool(false)),
+    ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
+    ("roles", encode_rows(&[seeded.editor_role.clone()])),
+]);
+let linked = users.update(&linked_row, None).await.unwrap();
+let linked_role_links = seeded.user_roles.read(None, None).await.unwrap();
+let linked_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let removed = users
+    .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/UserViewCRUDRepository.test.ts#L248-L302)
+
+```typescript
+const seeded = await graph(new LazyWriteEnrichmentStrategy());
+link(seeded.usersRepo, seeded);
+const created = await seeded.usersRepo.create(Object.assign(new UserView(), {
+  username: "ada",
+  is_enabled: true,
+  user_type_id: seeded.adminType.id,
+  roles: null,
+  groups: [seeded.engineering],
+}));
+const createdRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const createdGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const skipped = await seeded.usersRepo.update(Object.assign(new UserView(), {
+  id: created.id,
+  username: "ada",
+  is_enabled: false,
+  user_type_id: seeded.adminType.id,
+}));
+const afterSkip = await seeded.usersRepo.readSingleById(created.id);
+const skippedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const skippedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const linked = await seeded.usersRepo.update(Object.assign(new UserView(), {
+  id: created.id,
+  username: "ada",
+  is_enabled: false,
+  user_type_id: seeded.adminType.id,
+  roles: [seeded.editorRole],
+}));
+const linkedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const linkedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const removed = await seeded.usersRepo.delete(Object.assign(new UserView(), { id: created.id, roles: null, groups: null }));
+```
+
+## UpdateEnrichmentStrategy
+
+How an update writes owned children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods. [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) replace-syncs. [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) deletes, then inserts.
+
+### Classes
+
+##### TypeScript
+
+##### UpdateEnrichmentStrategy {#typescript-updateenrichmentstrategy}
+
+```typescript
+abstract class UpdateEnrichmentStrategy<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [updateOwned(entry, enrichment, parent)](#typescript-updateenrichmentstrategy-updateowned-entry-enrichment-parent) | Writes the owned `many` list for one parent. |
+| [updateLinked(entry, enrichment, parent)](#typescript-updateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Writes the junction rows for one parent. |
+| [createChildren(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-createchildren-writer-enrichment-parent) | Stamps each child's `by` from the parent `from`, then creates the payload. |
+| [createLinks(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-createlinks-writer-enrichment-parent) | Inserts one junction row per related id. |
+
+###### updateOwned(entry, enrichment, parent) {#typescript-updateenrichmentstrategy-updateowned-entry-enrichment-parent}
+
+Writes the owned `many` list for one parent.
+
+**Definition**
+
+```typescript
+abstract updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+###### updateLinked(entry, enrichment, parent) {#typescript-updateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+
+Writes the junction rows for one parent.
+
+**Definition**
+
+```typescript
+abstract updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+###### createChildren(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-createchildren-writer-enrichment-parent}
+
+Stamps each child's `by` from the parent `from`, then creates the payload.
+
+**Definition**
+
+```typescript
+createChildren(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | child [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+###### createLinks(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-createlinks-writer-enrichment-parent}
+
+Inserts one junction row per related id.
+
+**Definition**
+
+```typescript
+createLinks(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | link [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+##### StoredEnrichment {#typescript-storedenrichment}
+
+```typescript
+class StoredEnrichment
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new StoredEnrichment(enrichment, apply, persist?, link?)](#typescript-storedenrichment-new-storedenrichment-enrichment-apply-persist-link) | Stores one edge. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| enrichment | The registered [Enrichment](#enrichment). |
+| persist | Child repository for an owned list. |
+| link | Junction repository for an association. |
+
+###### new StoredEnrichment(enrichment, apply, persist?, link?) {#typescript-storedenrichment-new-storedenrichment-enrichment-apply-persist-link}
+
+Stores one edge.
+
+**Definition**
+
+```typescript
+constructor(enrichment: Enrichment, apply: ApplyEnrichment, persist?: ICRUDRepository<object>, link?: ICRUDRepository<object>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#enrichment) |
+| `apply` | read fill for this edge |
+| `persist` | child [ICRUDRepository](#crud-repository) for an owned list |
+| `link` | junction [ICRUDRepository](#crud-repository) |
+
+**Returns**
+
+[StoredEnrichment](#typescript-storedenrichment)
+
+##### C#
+
+##### UpdateEnrichmentStrategy {#csharp-updateenrichmentstrategy}
+
+```csharp
+public abstract class UpdateEnrichmentStrategy<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [UpdateOwned(entry, enrichment, parent)](#csharp-updateenrichmentstrategy-updateowned-entry-enrichment-parent) | Writes the owned `many` list for one parent. |
+| [UpdateLinked(entry, enrichment, parent)](#csharp-updateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Writes the junction rows for one parent. |
+
+###### UpdateOwned(entry, enrichment, parent) {#csharp-updateenrichmentstrategy-updateowned-entry-enrichment-parent}
+
+Writes the owned `many` list for one parent.
+
+**Definition**
+
+```csharp
+public abstract Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+###### UpdateLinked(entry, enrichment, parent) {#csharp-updateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+
+Writes the junction rows for one parent.
+
+**Definition**
+
+```csharp
+public abstract Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+##### StoredEnrichment {#csharp-storedenrichment}
+
+```csharp
+public sealed class StoredEnrichment
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Enrichment | The registered [Enrichment](#enrichment). |
+
+##### Rust
+
+##### UpdateEnrichmentStrategy {#rust-updateenrichmentstrategy}
+
+```rust
+pub trait UpdateEnrichmentStrategy: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [update_owned(entry, enrichment, parent)](#rust-updateenrichmentstrategy-update_owned-entry-enrichment-parent) | Writes the owned `many` list for one parent. |
+| [update_linked(entry, enrichment, parent)](#rust-updateenrichmentstrategy-update_linked-entry-enrichment-parent) | Writes the junction rows for one parent. |
+
+###### update_owned(entry, enrichment, parent) {#rust-updateenrichmentstrategy-update_owned-entry-enrichment-parent}
+
+Writes the owned `many` list for one parent.
+
+**Definition**
+
+```rust
+async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+###### update_linked(entry, enrichment, parent) {#rust-updateenrichmentstrategy-update_linked-entry-enrichment-parent}
+
+Writes the junction rows for one parent.
+
+**Definition**
+
+```rust
+async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+##### StoredEnrichment {#rust-storedenrichment}
+
+```rust
+pub struct StoredEnrichment
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| enrichment | The registered [Enrichment](#enrichment). |
+| via | Related read repository. |
+| persist | Child repository for an owned list. |
+| link | Junction repository for an association. |
+| strategy | Read strategy for this edge. |
+
+### Remarks
+
+Create uses the same child and link inserts as an update of a new parent. A subclass implements the two update methods. TypeScript also exposes `createChildren` and `createLinks`. Pass a subclass to [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy).
+
+### Examples
+
+#### Replace children
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L129-L160)
+
+```csharp
+var connection = await Setup();
+var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+{
+    Write = new DefaultWriteEnrichmentStrategy<Parent>(update: new CascadeDeleteUpdateEnrichmentStrategy<Parent>()),
+});
+var childrenRepo = new CRUDRepository<Child>(connection);
+var notesRepo = new CRUDRepository<Note>(connection);
+var parent = await parentsRepo.Create(new Parent());
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L362-L441)
+
+```rust
+let connection = setup(&mut []).await;
+let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+    DefaultWriteEnrichmentStrategy::new(
+        None,
+        Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+        false,
+    ),
+));
+let mut children_repo = crud(connection.clone(), "Child");
+let notes = Arc::new(crud(connection, "Note"));
+let parent = parents
+    .create(&mut record(&[("label", Value::from("p"))]))
+    .await
+    .unwrap();
+assert!(num(&parent, "id") > 0);
+let parent_id = parent.get("id").unwrap().clone();
+let child = children_repo
+    .create(&mut record(&[
+        ("parent_id", parent_id.clone()),
+        ("label", Value::from("a")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&child, "id") > 0);
+let other = children_repo
+    .create(&mut record(&[("label", Value::from("other"))]))
+    .await
+    .unwrap();
+assert!(num(&other, "id") > 0);
+let child_id = child.get("id").unwrap().clone();
+let note = notes
+    .create(&mut record(&[
+        ("child_id", child_id.clone()),
+        ("text", Value::from("n")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&note, "id") > 0);
+children_repo.add_enriched(
+    Enrichment::new("notes", "id", "child_id", None, true),
+    notes.clone(),
+    None,
+);
+let children = Arc::new(children_repo);
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, true),
+    children.clone(),
+    None,
+);
+let updated = parents
+    .update(
+        &record(&[
+            ("id", parent_id.clone()),
+            ("label", Value::from("p")),
+            (
+                "children",
+                encode_rows(&[record(&[
+                    ("id", child_id.clone()),
+                    ("label", Value::from("fresh")),
+                ])]),
+            ),
+        ]),
+        None,
+    )
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L158-L186)
+
+```typescript
+const connection = await setup();
+const parentsRepo = new CRUDRepository<Parent>(connection, {
+  type: Parent,
+  write: new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
+});
+const childrenRepo = new CRUDRepository(Child, connection);
+const notesRepo = new CRUDRepository(Note, connection);
+const parent = await parentsRepo.create(new Parent());
+```
+
+## DefaultUpdateEnrichmentStrategy
+
+Replace-sync for an owned list and a link. Matching children update. Missing children delete. New children insert. A link is replaced the same way: junction rows that are gone are deleted, and new related ids are inserted.
+
+### Classes
+
+##### TypeScript
+
+##### DefaultUpdateEnrichmentStrategy {#typescript-defaultupdateenrichmentstrategy}
+
+```typescript
+class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new DefaultUpdateEnrichmentStrategy()](#typescript-defaultupdateenrichmentstrategy-new-defaultupdateenrichmentstrategy) | Builds the replace-sync update strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [updateOwned(entry, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updateowned-entry-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [updateLinked(entry, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Replaces the junction set for the parent key. |
+
+###### new DefaultUpdateEnrichmentStrategy() {#typescript-defaultupdateenrichmentstrategy-new-defaultupdateenrichmentstrategy}
+
+Builds the replace-sync update strategy.
+
+**Definition**
+
+```typescript
+constructor()
+```
+
+**Returns**
+
+[DefaultUpdateEnrichmentStrategy](#typescript-defaultupdateenrichmentstrategy)
+
+###### updateOwned(entry, enrichment, parent) {#typescript-defaultupdateenrichmentstrategy-updateowned-entry-enrichment-parent}
+
+Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
+
+**Definition**
+
+```typescript
+updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+###### updateLinked(entry, enrichment, parent) {#typescript-defaultupdateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+
+Replaces the junction set for the parent key.
+
+**Definition**
+
+```typescript
+updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### DefaultUpdateEnrichmentStrategy {#csharp-defaultupdateenrichmentstrategy}
+
+```csharp
+public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DefaultUpdateEnrichmentStrategy()](#csharp-defaultupdateenrichmentstrategy-defaultupdateenrichmentstrategy) | Builds the replace-sync update strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [UpdateOwned(entry, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updateowned-entry-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [UpdateLinked(entry, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Replaces the junction set for the parent key. |
+
+###### DefaultUpdateEnrichmentStrategy() {#csharp-defaultupdateenrichmentstrategy-defaultupdateenrichmentstrategy}
+
+Builds the replace-sync update strategy.
+
+**Definition**
+
+```csharp
+public DefaultUpdateEnrichmentStrategy()
+```
+
+**Returns**
+
+[DefaultUpdateEnrichmentStrategy](#csharp-defaultupdateenrichmentstrategy)`<T>`
+
+###### UpdateOwned(entry, enrichment, parent) {#csharp-defaultupdateenrichmentstrategy-updateowned-entry-enrichment-parent}
+
+Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
+
+**Definition**
+
+```csharp
+public override Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+###### UpdateLinked(entry, enrichment, parent) {#csharp-defaultupdateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+
+Replaces the junction set for the parent key.
+
+**Definition**
+
+```csharp
+public override Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### DefaultUpdateEnrichmentStrategy {#rust-defaultupdateenrichmentstrategy}
+
+```rust
+pub struct DefaultUpdateEnrichmentStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [update_owned(entry, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_owned-entry-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [update_linked(entry, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_linked-entry-enrichment-parent) | Replaces the junction set for the parent key. |
+
+###### update_owned(entry, enrichment, parent) {#rust-defaultupdateenrichmentstrategy-update_owned-entry-enrichment-parent}
+
+Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
+
+**Definition**
+
+```rust
+async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+###### update_linked(entry, enrichment, parent) {#rust-defaultupdateenrichmentstrategy-update_linked-entry-enrichment-parent}
+
+Replaces the junction set for the parent key.
+
+**Definition**
+
+```rust
+async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+This is the update strategy [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) uses when `update` is omitted. Identity comes from the child repository's id columns. A child with no id is created. Related rows that are only lookups stay.
+
+### Examples
+
+#### Replace-sync children
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L99-L127)
+
+```csharp
+var connection = await Setup();
+var parentsRepo = new CRUDRepository<Parent>(connection);
+var childrenRepo = new CRUDRepository<Child>(connection);
+var parent = await parentsRepo.Create(new Parent { type_id = 0 });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L291-L360)
+
+```rust
+let connection = setup(&mut []).await;
+let mut parents = crud(connection.clone(), "Parent");
+let children = Arc::new(crud(connection, "Child"));
+let parent = parents
+    .create(&mut record(&[("label", Value::from("p"))]))
+    .await
+    .unwrap();
+assert!(num(&parent, "id") > 0);
+let parent_id = parent.get("id").unwrap().clone();
+let kept = children
+    .create(&mut record(&[
+        ("parent_id", parent_id.clone()),
+        ("label", Value::from("a")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&kept, "id") > 0);
+let dropped = children
+    .create(&mut record(&[
+        ("parent_id", parent_id.clone()),
+        ("label", Value::from("b")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&dropped, "id") > 0);
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, true),
+    children.clone(),
+    None,
+);
+let updated = parents
+    .update(
+        &record(&[
+            ("id", parent_id.clone()),
+            ("label", Value::from("p")),
+            (
+                "children",
+                encode_rows(&[
+                    record(&[
+                        ("id", kept.get("id").unwrap().clone()),
+                        ("label", Value::from("aa")),
+                    ]),
+                    record(&[("label", Value::from("c"))]),
+                ]),
+            ),
+        ]),
+        None,
+    )
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L132-L156)
+
+```typescript
+const connection = await setup();
+const parentsRepo = new CRUDRepository(Parent, connection);
+const childrenRepo = new CRUDRepository(Child, connection);
+const parent = await parentsRepo.create(new Parent());
+```
+
+## CascadeDeleteUpdateEnrichmentStrategy
+
+Update that deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related lookup rows stay.
+
+### Classes
+
+##### TypeScript
+
+##### CascadeDeleteUpdateEnrichmentStrategy {#typescript-cascadedeleteupdateenrichmentstrategy}
+
+```typescript
+class CascadeDeleteUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new CascadeDeleteUpdateEnrichmentStrategy()](#typescript-cascadedeleteupdateenrichmentstrategy-new-cascadedeleteupdateenrichmentstrategy) | Builds the delete-then-insert update strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [updateOwned(entry, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updateowned-entry-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [updateLinked(entry, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
+
+###### new CascadeDeleteUpdateEnrichmentStrategy() {#typescript-cascadedeleteupdateenrichmentstrategy-new-cascadedeleteupdateenrichmentstrategy}
+
+Builds the delete-then-insert update strategy.
+
+**Definition**
+
+```typescript
+constructor()
+```
+
+**Returns**
+
+[CascadeDeleteUpdateEnrichmentStrategy](#typescript-cascadedeleteupdateenrichmentstrategy)
+
+###### updateOwned(entry, enrichment, parent) {#typescript-cascadedeleteupdateenrichmentstrategy-updateowned-entry-enrichment-parent}
+
+Deletes every existing child for the parent key, then inserts the payload.
+
+**Definition**
+
+```typescript
+updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+###### updateLinked(entry, enrichment, parent) {#typescript-cascadedeleteupdateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+
+Deletes every junction row for the parent key, then inserts the payload ids.
+
+**Definition**
+
+```typescript
+updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### CascadeDeleteUpdateEnrichmentStrategy {#csharp-cascadedeleteupdateenrichmentstrategy}
+
+```csharp
+public sealed class CascadeDeleteUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CascadeDeleteUpdateEnrichmentStrategy()](#csharp-cascadedeleteupdateenrichmentstrategy-cascadedeleteupdateenrichmentstrategy) | Builds the delete-then-insert update strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [UpdateOwned(entry, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updateowned-entry-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [UpdateLinked(entry, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
+
+###### CascadeDeleteUpdateEnrichmentStrategy() {#csharp-cascadedeleteupdateenrichmentstrategy-cascadedeleteupdateenrichmentstrategy}
+
+Builds the delete-then-insert update strategy.
+
+**Definition**
+
+```csharp
+public CascadeDeleteUpdateEnrichmentStrategy()
+```
+
+**Returns**
+
+[CascadeDeleteUpdateEnrichmentStrategy](#csharp-cascadedeleteupdateenrichmentstrategy)`<T>`
+
+###### UpdateOwned(entry, enrichment, parent) {#csharp-cascadedeleteupdateenrichmentstrategy-updateowned-entry-enrichment-parent}
+
+Deletes every existing child for the parent key, then inserts the payload.
+
+**Definition**
+
+```csharp
+public override Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+###### UpdateLinked(entry, enrichment, parent) {#csharp-cascadedeleteupdateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+
+Deletes every junction row for the parent key, then inserts the payload ids.
+
+**Definition**
+
+```csharp
+public override Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### CascadeDeleteUpdateEnrichmentStrategy {#rust-cascadedeleteupdateenrichmentstrategy}
+
+```rust
+pub struct CascadeDeleteUpdateEnrichmentStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [update_owned(entry, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_owned-entry-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [update_linked(entry, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_linked-entry-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
+
+###### update_owned(entry, enrichment, parent) {#rust-cascadedeleteupdateenrichmentstrategy-update_owned-entry-enrichment-parent}
+
+Deletes every existing child for the parent key, then inserts the payload.
+
+**Definition**
+
+```rust
+async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+###### update_linked(entry, enrichment, parent) {#rust-cascadedeleteupdateenrichmentstrategy-update_linked-entry-enrichment-parent}
+
+Deletes every junction row for the parent key, then inserts the payload ids.
+
+**Definition**
+
+```rust
+async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+Pass it as the `update` argument of [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy). Existing child ids are not reused. [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) keeps matching ids.
+
+### Examples
+
+#### Recreate children
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L129-L160)
+
+```csharp
+var connection = await Setup();
+var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+{
+    Write = new DefaultWriteEnrichmentStrategy<Parent>(update: new CascadeDeleteUpdateEnrichmentStrategy<Parent>()),
+});
+var childrenRepo = new CRUDRepository<Child>(connection);
+var notesRepo = new CRUDRepository<Note>(connection);
+var parent = await parentsRepo.Create(new Parent());
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L362-L441)
+
+```rust
+let connection = setup(&mut []).await;
+let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+    DefaultWriteEnrichmentStrategy::new(
+        None,
+        Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+        false,
+    ),
+));
+let mut children_repo = crud(connection.clone(), "Child");
+let notes = Arc::new(crud(connection, "Note"));
+let parent = parents
+    .create(&mut record(&[("label", Value::from("p"))]))
+    .await
+    .unwrap();
+assert!(num(&parent, "id") > 0);
+let parent_id = parent.get("id").unwrap().clone();
+let child = children_repo
+    .create(&mut record(&[
+        ("parent_id", parent_id.clone()),
+        ("label", Value::from("a")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&child, "id") > 0);
+let other = children_repo
+    .create(&mut record(&[("label", Value::from("other"))]))
+    .await
+    .unwrap();
+assert!(num(&other, "id") > 0);
+let child_id = child.get("id").unwrap().clone();
+let note = notes
+    .create(&mut record(&[
+        ("child_id", child_id.clone()),
+        ("text", Value::from("n")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&note, "id") > 0);
+children_repo.add_enriched(
+    Enrichment::new("notes", "id", "child_id", None, true),
+    notes.clone(),
+    None,
+);
+let children = Arc::new(children_repo);
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, true),
+    children.clone(),
+    None,
+);
+let updated = parents
+    .update(
+        &record(&[
+            ("id", parent_id.clone()),
+            ("label", Value::from("p")),
+            (
+                "children",
+                encode_rows(&[record(&[
+                    ("id", child_id.clone()),
+                    ("label", Value::from("fresh")),
+                ])]),
+            ),
+        ]),
+        None,
+    )
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L158-L186)
+
+```typescript
+const connection = await setup();
+const parentsRepo = new CRUDRepository<Parent>(connection, {
+  type: Parent,
+  write: new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
+});
+const childrenRepo = new CRUDRepository(Child, connection);
+const notesRepo = new CRUDRepository(Note, connection);
+const parent = await parentsRepo.create(new Parent());
+```
+
+## DeleteEnrichmentStrategy
+
+How a delete removes owned children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods before the parent row is deleted. [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) is the default.
+
+### Classes
+
+##### TypeScript
+
+##### DeleteEnrichmentStrategy {#typescript-deleteenrichmentstrategy}
+
+```typescript
+abstract class DeleteEnrichmentStrategy<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [deleteOwned(entry, enrichment, parent, deleteNested)](#typescript-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Removes the owned `many` list for one parent. |
+| [deleteLinked(entry, enrichment, parent)](#typescript-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Removes the junction rows for one parent. |
+| [load(writer, enrichment, parent)](#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent) | Reads the owned rows whose `by` matches the parent `from`. |
+| [loadLinks(writer, column, key)](#typescript-deleteenrichmentstrategy-loadlinks-writer-column-key) | Reads junction rows whose `column` equals `key`. |
+
+###### deleteOwned(entry, enrichment, parent, deleteNested) {#typescript-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
+
+Removes the owned `many` list for one parent.
+
+**Definition**
+
+```typescript
+abstract deleteOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+| `deleteNested` | deletes nested rows of the children before the children themselves |
+
+**Returns**
+
+`Promise<void>`
+
+###### deleteLinked(entry, enrichment, parent) {#typescript-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent}
+
+Removes the junction rows for one parent.
+
+**Definition**
+
+```typescript
+abstract deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+###### load(writer, enrichment, parent) {#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent}
+
+Reads the owned rows whose `by` matches the parent `from`.
+
+**Definition**
+
+```typescript
+static load(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<object[]>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | child [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<object[]>`
+
+###### loadLinks(writer, column, key) {#typescript-deleteenrichmentstrategy-loadlinks-writer-column-key}
+
+Reads junction rows whose `column` equals `key`.
+
+**Definition**
+
+```typescript
+static loadLinks(writer: ICRUDRepository<object>, column: string, key: Scalar): Promise<object[]>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | link [ICRUDRepository](#crud-repository) |
+| `column` | junction column |
+| `key` | parent key |
+
+**Returns**
+
+`Promise<object[]>`
+
+##### C#
+
+##### DeleteEnrichmentStrategy {#csharp-deleteenrichmentstrategy}
+
+```csharp
+public abstract class DeleteEnrichmentStrategy<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [DeleteOwned(entry, enrichment, parent, deleteNested)](#csharp-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Removes the owned `many` list for one parent. |
+| [DeleteLinked(entry, enrichment, parent)](#csharp-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Removes the junction rows for one parent. |
+
+###### DeleteOwned(entry, enrichment, parent, deleteNested) {#csharp-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
+
+Removes the owned `many` list for one parent.
+
+**Definition**
+
+```csharp
+public abstract Task DeleteOwned(StoredEnrichment entry, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+| `deleteNested` | deletes nested rows of the children before the children themselves |
+
+**Returns**
+
+`Task`
+
+###### DeleteLinked(entry, enrichment, parent) {#csharp-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent}
+
+Removes the junction rows for one parent.
+
+**Definition**
+
+```csharp
+public abstract Task DeleteLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### DeleteEnrichmentStrategy {#rust-deleteenrichmentstrategy}
+
+```rust
+pub trait DeleteEnrichmentStrategy: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [delete_owned(entry, enrichment, parent, delete_nested)](#rust-deleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested) | Removes the owned `many` list for one parent. |
+| [delete_linked(entry, enrichment, parent)](#rust-deleteenrichmentstrategy-delete_linked-entry-enrichment-parent) | Removes the junction rows for one parent. |
+
+###### delete_owned(entry, enrichment, parent, delete_nested) {#rust-deleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested}
+
+Removes the owned `many` list for one parent.
+
+**Definition**
+
+```rust
+async fn delete_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+| `delete_nested` | deletes nested rows of the children before the children themselves |
+
+**Returns**
+
+`Result<()>`
+
+###### delete_linked(entry, enrichment, parent) {#rust-deleteenrichmentstrategy-delete_linked-entry-enrichment-parent}
+
+Removes the junction rows for one parent.
+
+**Definition**
+
+```rust
+async fn delete_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+Pass a subclass as the `delete` argument of [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy). A strategy that leaves `DeleteOwned` / `deleteOwned` / `delete_owned` empty keeps the children when the parent is deleted. The default [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) loads existing children by foreign key and does not trust the payload lists.
+
+### Examples
+
+#### Skip child deletes
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L218-L236)
+
+```csharp
+var connection = await Setup();
+var childrenRepo = new CRUDRepository<Child>(connection);
+var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+{
+    Write = new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()),
+});
+var parent = await parentsRepo.Create(new Parent());
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/delete_enrichment_strategy.rs#L77-L102)
+
+```rust
+let write = Arc::new(DefaultWriteEnrichmentStrategy::new(
+    Some(Arc::new(SkipDelete)),
+    None,
+    false,
+));
+let children = Arc::new(CRUDRepository::memory(vec![]));
+let mut parents = CRUDRepository::memory_with(vec![], Some(write));
+let mut parent = Row::new();
+let created = parents.create(&mut parent).await.unwrap();
+let mut child = Row::new();
+child.insert("parent_id".into(), created.get("id").unwrap().clone());
+child.insert("label".into(), Value::from("a"));
+children.create(&mut child).await.unwrap();
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, true),
+    children.clone(),
+    None,
+);
+parents.delete(&created, None).await.unwrap();
+let left = children.read(None, None).await.unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L249-L265)
+
+```typescript
+const connection = await setup();
+const childrenRepo = new CRUDRepository(Child, connection);
+const parentsRepo = new CRUDRepository(connection, {
+  type: Parent,
+  write: new DefaultWriteEnrichmentStrategy(new SkipDelete()),
+});
+const parent = await parentsRepo.create(new Parent());
+```
+
+## CascadeDeleteEnrichmentStrategy
+
+Default delete. Deletes nested `many` rows first, then children, then the parent delete continues. Loads existing children by foreign key. Does not trust payload lists. Junction rows for a link are deleted and the related rows stay.
+
+### Classes
+
+##### TypeScript
+
+##### CascadeDeleteEnrichmentStrategy {#typescript-cascadedeleteenrichmentstrategy}
+
+```typescript
+class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new CascadeDeleteEnrichmentStrategy()](#typescript-cascadedeleteenrichmentstrategy-new-cascadedeleteenrichmentstrategy) | Builds the cascade delete strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [deleteOwned(entry, enrichment, parent, deleteNested)](#typescript-cascadedeleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [deleteLinked(entry, enrichment, parent)](#typescript-cascadedeleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
+
+###### new CascadeDeleteEnrichmentStrategy() {#typescript-cascadedeleteenrichmentstrategy-new-cascadedeleteenrichmentstrategy}
+
+Builds the cascade delete strategy.
+
+**Definition**
+
+```typescript
+constructor()
+```
+
+**Returns**
+
+[CascadeDeleteEnrichmentStrategy](#typescript-cascadedeleteenrichmentstrategy)
+
+###### deleteOwned(entry, enrichment, parent, deleteNested) {#typescript-cascadedeleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
+
+Loads children by foreign key, deletes their nested rows, then deletes the children.
+
+**Definition**
+
+```typescript
+deleteOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+| `deleteNested` | deletes nested rows of the children before the children themselves |
+
+**Returns**
+
+`Promise<void>`
+
+###### deleteLinked(entry, enrichment, parent) {#typescript-cascadedeleteenrichmentstrategy-deletelinked-entry-enrichment-parent}
+
+Deletes junction rows for the parent key. Related rows stay.
+
+**Definition**
+
+```typescript
+deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### CascadeDeleteEnrichmentStrategy {#csharp-cascadedeleteenrichmentstrategy}
+
+```csharp
+public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CascadeDeleteEnrichmentStrategy()](#csharp-cascadedeleteenrichmentstrategy-cascadedeleteenrichmentstrategy) | Builds the cascade delete strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [DeleteOwned(entry, enrichment, parent, deleteNested)](#csharp-cascadedeleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [DeleteLinked(entry, enrichment, parent)](#csharp-cascadedeleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
+
+###### CascadeDeleteEnrichmentStrategy() {#csharp-cascadedeleteenrichmentstrategy-cascadedeleteenrichmentstrategy}
+
+Builds the cascade delete strategy.
+
+**Definition**
+
+```csharp
+public CascadeDeleteEnrichmentStrategy()
+```
+
+**Returns**
+
+[CascadeDeleteEnrichmentStrategy](#csharp-cascadedeleteenrichmentstrategy)`<T>`
+
+###### DeleteOwned(entry, enrichment, parent, deleteNested) {#csharp-cascadedeleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
+
+Loads children by foreign key, deletes their nested rows, then deletes the children.
+
+**Definition**
+
+```csharp
+public override Task DeleteOwned(StoredEnrichment entry, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+| `deleteNested` | deletes nested rows of the children before the children themselves |
+
+**Returns**
+
+`Task`
+
+###### DeleteLinked(entry, enrichment, parent) {#csharp-cascadedeleteenrichmentstrategy-deletelinked-entry-enrichment-parent}
+
+Deletes junction rows for the parent key. Related rows stay.
+
+**Definition**
+
+```csharp
+public override Task DeleteLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### CascadeDeleteEnrichmentStrategy {#rust-cascadedeleteenrichmentstrategy}
+
+```rust
+pub struct CascadeDeleteEnrichmentStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [delete_owned(entry, enrichment, parent, delete_nested)](#rust-cascadedeleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [delete_linked(entry, enrichment, parent)](#rust-cascadedeleteenrichmentstrategy-delete_linked-entry-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
+
+###### delete_owned(entry, enrichment, parent, delete_nested) {#rust-cascadedeleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested}
+
+Loads children by foreign key, deletes their nested rows, then deletes the children.
+
+**Definition**
+
+```rust
+async fn delete_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+| `delete_nested` | deletes nested rows of the children before the children themselves |
+
+**Returns**
+
+`Result<()>`
+
+###### delete_linked(entry, enrichment, parent) {#rust-cascadedeleteenrichmentstrategy-delete_linked-entry-enrichment-parent}
+
+Deletes junction rows for the parent key. Related rows stay.
+
+**Definition**
+
+```rust
+async fn delete_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+[DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) uses this when `delete` is omitted. The parent row is deleted by the repository after `Persist` / `persist` / `persist` returns.
+
+### Examples
+
+#### Cascade delete
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L194-L216)
+
+```csharp
+var connection = await Setup();
+var parentsRepo = new CRUDRepository<Parent>(connection);
+var childrenRepo = new CRUDRepository<Child>(connection);
+var notesRepo = new CRUDRepository<Note>(connection);
+var parent = await parentsRepo.Create(new Parent());
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L623-L683)
+
+```rust
+let connection = setup(&mut []).await;
+let parents = crud(connection.clone(), "Parent");
+let mut children_repo = crud(connection.clone(), "Child");
+let notes = Arc::new(crud(connection, "Note"));
+let parent = parents
+    .create(&mut record(&[("label", Value::from("p"))]))
+    .await
+    .unwrap();
+assert!(num(&parent, "id") > 0);
+let parent_id = parent.get("id").unwrap().clone();
+let child = children_repo
+    .create(&mut record(&[
+        ("parent_id", parent_id.clone()),
+        ("label", Value::from("a")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&child, "id") > 0);
+let child_id = child.get("id").unwrap().clone();
+let note = notes
+    .create(&mut record(&[
+        ("child_id", child_id),
+        ("text", Value::from("n")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&note, "id") > 0);
+let other = notes
+    .create(&mut record(&[
+        ("text", Value::from("other")),
+        ("label", Value::from("keep")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&other, "id") > 0);
+children_repo.add_enriched(
+    Enrichment::new("notes", "id", "child_id", None, true),
+    notes.clone(),
+    None,
+);
+let children = Arc::new(children_repo);
+let mut parents = parents;
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, true),
+    children.clone(),
+    None,
+);
+let removed = parents
+    .delete(&record(&[("id", parent_id)]), None)
+    .await
+    .unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L227-L247)
+
+```typescript
+const connection = await setup();
+const parentsRepo = new CRUDRepository(Parent, connection);
+const childrenRepo = new CRUDRepository(Child, connection);
+const notesRepo = new CRUDRepository(Note, connection);
+const parent = await parentsRepo.create(new Parent());
+```
+
+## IBulkWriteStrategy
+
+Writes a list of rows for a [BulkCRUDRepository](#bulk-repository). Create, update, and delete each receive the items and the repository. The default is [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy).
+
+### Classes
+
+##### TypeScript
+
+##### IBulkWriteStrategy {#typescript-ibulkwritestrategy}
+
+```typescript
+interface IBulkWriteStrategy<T extends object>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(items, repo)](#typescript-ibulkwritestrategy-create-items-repo) | Inserts `items`. |
+| [update(items, byWhere, repo)](#typescript-ibulkwritestrategy-update-items-bywhere-repo) | Updates `items`. |
+| [delete(items, byWhere, repo)](#typescript-ibulkwritestrategy-delete-items-bywhere-repo) | Deletes `items`. |
+
+###### create(items, repo) {#typescript-ibulkwritestrategy-create-items-repo}
+
+Inserts `items`.
+
+**Definition**
+
+```typescript
+create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+###### update(items, byWhere, repo) {#typescript-ibulkwritestrategy-update-items-bywhere-repo}
+
+Updates `items`.
+
+**Definition**
+
+```typescript
+update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+###### delete(items, byWhere, repo) {#typescript-ibulkwritestrategy-delete-items-bywhere-repo}
+
+Deletes `items`.
+
+**Definition**
+
+```typescript
+delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+##### C#
+
+##### IBulkWriteStrategy {#csharp-ibulkwritestrategy}
+
+```csharp
+public interface IBulkWriteStrategy<T> where T : new()
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(items, repo)](#csharp-ibulkwritestrategy-create-items-repo) | Inserts `items`. |
+| [Update(items, byWhere, repo)](#csharp-ibulkwritestrategy-update-items-bywhere-repo) | Updates `items`. |
+| [Delete(items, byWhere, repo)](#csharp-ibulkwritestrategy-delete-items-bywhere-repo) | Deletes `items`. |
+
+###### Create(items, repo) {#csharp-ibulkwritestrategy-create-items-repo}
+
+Inserts `items`.
+
+**Definition**
+
+```csharp
+Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+###### Update(items, byWhere, repo) {#csharp-ibulkwritestrategy-update-items-bywhere-repo}
+
+Updates `items`.
+
+**Definition**
+
+```csharp
+Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+###### Delete(items, byWhere, repo) {#csharp-ibulkwritestrategy-delete-items-bywhere-repo}
+
+Deletes `items`.
+
+**Definition**
+
+```csharp
+Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+##### Rust
+
+##### BulkWriteStrategy {#rust-bulkwritestrategy}
+
+```rust
+pub trait BulkWriteStrategy: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(items, repo)](#rust-bulkwritestrategy-create-items-repo) | Inserts `items`. |
+| [update(items, by_where, repo)](#rust-bulkwritestrategy-update-items-by_where-repo) | Updates `items`. |
+| [delete(items, by_where, repo)](#rust-bulkwritestrategy-delete-items-by_where-repo) | Deletes `items`. |
+
+###### create(items, repo) {#rust-bulkwritestrategy-create-items-repo}
+
+Inserts `items`.
+
+**Definition**
+
+```rust
+async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+###### update(items, by_where, repo) {#rust-bulkwritestrategy-update-items-by_where-repo}
+
+Updates `items`.
+
+**Definition**
+
+```rust
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `by_where` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+###### delete(items, by_where, repo) {#rust-bulkwritestrategy-delete-items-by_where-repo}
+
+Deletes `items`.
+
+**Definition**
+
+```rust
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `by_where` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+### Remarks
+
+Pass the strategy to the bulk repository constructor. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) runs one statement per row. [BatchCommandIBulkWriteStrategy](#batchcommandibulkwritestrategy) joins those statements. [StoredProcedureBulkWriteStrategy](#storedprocedurebulkwritestrategy) sends one JSON payload. An empty list does not execute. Nested persist still follows the repository write strategy.
+
+### Examples
+
+#### One statement per row
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkWriteStrategyTests.cs#L25-L40)
+
+```csharp
+var (repo, command) = Repo(new SingleCommandIBulkWriteStrategy<Parent>());
+command.Response = new Response(new Value.Int(9), 1);
+await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
+await repo.Update([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
+await repo.Delete([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L28-L69)
+
+```rust
+let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
+*command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1, None);
+let mut created = [
+    row(&[("label", Value::from("a"))]),
+    row(&[("label", Value::from("b"))]),
+];
+repo.create_bulk(&mut created).await.unwrap();
+repo.update_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from("a"))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from("b"))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+repo.delete_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from("a"))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from("b"))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+let logs = command.execute_logs.lock().unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L35-L57)
+
+```typescript
+const { repo, command } = open(Parent, new SingleCommandIBulkWriteStrategy<Parent>());
+command.response = { result: 9, rowsAffected: 1 };
+await repo.createBulk([
+  Object.assign(new Parent(), { label: "a" }),
+  Object.assign(new Parent(), { label: "b" }),
+]);
+await repo.updateBulk([
+  Object.assign(new Parent(), { id: 1, label: "a" }),
+  Object.assign(new Parent(), { id: 2, label: "b" }),
+]);
+await repo.deleteBulk([
+  Object.assign(new Parent(), { id: 1, label: "a" }),
+  Object.assign(new Parent(), { id: 2, label: "b" }),
+]);
+expect(command.executeCalls).toHaveLength(6);
+```
+
+## SingleCommandIBulkWriteStrategy
+
+Bulk write that runs one insert, update, or delete per row. This is the bulk repository default.
+
+### Classes
+
+##### TypeScript
+
+##### SingleCommandIBulkWriteStrategy {#typescript-singlecommandibulkwritestrategy}
+
+```typescript
+class SingleCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new SingleCommandIBulkWriteStrategy()](#typescript-singlecommandibulkwritestrategy-new-singlecommandibulkwritestrategy) | Builds the per-row bulk strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(items, repo)](#typescript-singlecommandibulkwritestrategy-create-items-repo) | Inserts each item with its own statement. The result is the last insert. |
+| [update(items, byWhere, repo)](#typescript-singlecommandibulkwritestrategy-update-items-bywhere-repo) | Updates each item with its own statement. Rows affected are summed. |
+| [delete(items, byWhere, repo)](#typescript-singlecommandibulkwritestrategy-delete-items-bywhere-repo) | Deletes each item with its own statement. Rows affected are summed. |
+
+###### new SingleCommandIBulkWriteStrategy() {#typescript-singlecommandibulkwritestrategy-new-singlecommandibulkwritestrategy}
+
+Builds the per-row bulk strategy.
+
+**Definition**
+
+```typescript
+constructor()
+```
+
+**Returns**
+
+[SingleCommandIBulkWriteStrategy](#typescript-singlecommandibulkwritestrategy)
+
+###### create(items, repo) {#typescript-singlecommandibulkwritestrategy-create-items-repo}
+
+Inserts each item with its own statement. The result is the last insert.
+
+**Definition**
+
+```typescript
+create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+###### update(items, byWhere, repo) {#typescript-singlecommandibulkwritestrategy-update-items-bywhere-repo}
+
+Updates each item with its own statement. Rows affected are summed.
+
+**Definition**
+
+```typescript
+update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+###### delete(items, byWhere, repo) {#typescript-singlecommandibulkwritestrategy-delete-items-bywhere-repo}
+
+Deletes each item with its own statement. Rows affected are summed.
+
+**Definition**
+
+```typescript
+delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+##### C#
+
+##### SingleCommandIBulkWriteStrategy {#csharp-singlecommandibulkwritestrategy}
+
+```csharp
+public sealed class SingleCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [SingleCommandIBulkWriteStrategy()](#csharp-singlecommandibulkwritestrategy-singlecommandibulkwritestrategy) | Builds the per-row bulk strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(items, repo)](#csharp-singlecommandibulkwritestrategy-create-items-repo) | Inserts each item with its own statement. The result is the last insert. |
+| [Update(items, byWhere, repo)](#csharp-singlecommandibulkwritestrategy-update-items-bywhere-repo) | Updates each item with its own statement. Rows affected are summed. |
+| [Delete(items, byWhere, repo)](#csharp-singlecommandibulkwritestrategy-delete-items-bywhere-repo) | Deletes each item with its own statement. Rows affected are summed. |
+
+###### SingleCommandIBulkWriteStrategy() {#csharp-singlecommandibulkwritestrategy-singlecommandibulkwritestrategy}
+
+Builds the per-row bulk strategy.
+
+**Definition**
+
+```csharp
+public SingleCommandIBulkWriteStrategy()
+```
+
+**Returns**
+
+[SingleCommandIBulkWriteStrategy](#csharp-singlecommandibulkwritestrategy)`<T>`
+
+###### Create(items, repo) {#csharp-singlecommandibulkwritestrategy-create-items-repo}
+
+Inserts each item with its own statement. The result is the last insert.
+
+**Definition**
+
+```csharp
+public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+###### Update(items, byWhere, repo) {#csharp-singlecommandibulkwritestrategy-update-items-bywhere-repo}
+
+Updates each item with its own statement. Rows affected are summed.
+
+**Definition**
+
+```csharp
+public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+###### Delete(items, byWhere, repo) {#csharp-singlecommandibulkwritestrategy-delete-items-bywhere-repo}
+
+Deletes each item with its own statement. Rows affected are summed.
+
+**Definition**
+
+```csharp
+public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+##### Rust
+
+##### SingleCommandIBulkWriteStrategy {#rust-singlecommandibulkwritestrategy}
+
+```rust
+pub struct SingleCommandIBulkWriteStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(items, repo)](#rust-singlecommandibulkwritestrategy-create-items-repo) | Inserts each item with its own statement. The result is the last insert. |
+| [update(items, by_where, repo)](#rust-singlecommandibulkwritestrategy-update-items-by_where-repo) | Updates each item with its own statement. Rows affected are summed. |
+| [delete(items, by_where, repo)](#rust-singlecommandibulkwritestrategy-delete-items-by_where-repo) | Deletes each item with its own statement. Rows affected are summed. |
+
+###### create(items, repo) {#rust-singlecommandibulkwritestrategy-create-items-repo}
+
+Inserts each item with its own statement. The result is the last insert.
+
+**Definition**
+
+```rust
+async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+###### update(items, by_where, repo) {#rust-singlecommandibulkwritestrategy-update-items-by_where-repo}
+
+Updates each item with its own statement. Rows affected are summed.
+
+**Definition**
+
+```rust
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `by_where` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+###### delete(items, by_where, repo) {#rust-singlecommandibulkwritestrategy-delete-items-by_where-repo}
+
+Deletes each item with its own statement. Rows affected are summed.
+
+**Definition**
+
+```rust
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `by_where` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+### Remarks
+
+Each row still runs the repository's nested persist. An empty list returns no result and does not execute.
+
+### Examples
+
+#### One statement per row
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkWriteStrategyTests.cs#L25-L40)
+
+```csharp
+var (repo, command) = Repo(new SingleCommandIBulkWriteStrategy<Parent>());
+command.Response = new Response(new Value.Int(9), 1);
+await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
+await repo.Update([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
+await repo.Delete([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L28-L69)
+
+```rust
+let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
+*command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1, None);
+let mut created = [
+    row(&[("label", Value::from("a"))]),
+    row(&[("label", Value::from("b"))]),
+];
+repo.create_bulk(&mut created).await.unwrap();
+repo.update_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from("a"))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from("b"))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+repo.delete_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from("a"))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from("b"))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+let logs = command.execute_logs.lock().unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L35-L57)
+
+```typescript
+const { repo, command } = open(Parent, new SingleCommandIBulkWriteStrategy<Parent>());
+command.response = { result: 9, rowsAffected: 1 };
+await repo.createBulk([
+  Object.assign(new Parent(), { label: "a" }),
+  Object.assign(new Parent(), { label: "b" }),
+]);
+await repo.updateBulk([
+  Object.assign(new Parent(), { id: 1, label: "a" }),
+  Object.assign(new Parent(), { id: 2, label: "b" }),
+]);
+await repo.deleteBulk([
+  Object.assign(new Parent(), { id: 1, label: "a" }),
+  Object.assign(new Parent(), { id: 2, label: "b" }),
+]);
+expect(command.executeCalls).toHaveLength(6);
+```
+
+## BatchCommandIBulkWriteStrategy
+
+Bulk write that joins one statement per row into a single batch, separated by `;`. Parameters are renamed so names do not collide.
+
+### Classes
+
+##### TypeScript
+
+##### BatchCommandIBulkWriteStrategy {#typescript-batchcommandibulkwritestrategy}
+
+```typescript
+class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new BatchCommandIBulkWriteStrategy()](#typescript-batchcommandibulkwritestrategy-new-batchcommandibulkwritestrategy) | Builds the batched statement strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(items, repo)](#typescript-batchcommandibulkwritestrategy-create-items-repo) | Sends every insert as one batched command. |
+| [update(items, byWhere, repo)](#typescript-batchcommandibulkwritestrategy-update-items-bywhere-repo) | Sends every update as one batched command. |
+| [delete(items, byWhere, repo)](#typescript-batchcommandibulkwritestrategy-delete-items-bywhere-repo) | Sends every delete as one batched command. |
+
+###### new BatchCommandIBulkWriteStrategy() {#typescript-batchcommandibulkwritestrategy-new-batchcommandibulkwritestrategy}
+
+Builds the batched statement strategy.
+
+**Definition**
+
+```typescript
+constructor()
+```
+
+**Returns**
+
+[BatchCommandIBulkWriteStrategy](#typescript-batchcommandibulkwritestrategy)
+
+###### create(items, repo) {#typescript-batchcommandibulkwritestrategy-create-items-repo}
+
+Sends every insert as one batched command.
+
+**Definition**
+
+```typescript
+create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+###### update(items, byWhere, repo) {#typescript-batchcommandibulkwritestrategy-update-items-bywhere-repo}
+
+Sends every update as one batched command.
+
+**Definition**
+
+```typescript
+update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+###### delete(items, byWhere, repo) {#typescript-batchcommandibulkwritestrategy-delete-items-bywhere-repo}
+
+Sends every delete as one batched command.
+
+**Definition**
+
+```typescript
+delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+##### C#
+
+##### BatchCommandIBulkWriteStrategy {#csharp-batchcommandibulkwritestrategy}
+
+```csharp
+public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [BatchCommandIBulkWriteStrategy()](#csharp-batchcommandibulkwritestrategy-batchcommandibulkwritestrategy) | Builds the batched statement strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(items, repo)](#csharp-batchcommandibulkwritestrategy-create-items-repo) | Sends every insert as one batched command. |
+| [Update(items, byWhere, repo)](#csharp-batchcommandibulkwritestrategy-update-items-bywhere-repo) | Sends every update as one batched command. |
+| [Delete(items, byWhere, repo)](#csharp-batchcommandibulkwritestrategy-delete-items-bywhere-repo) | Sends every delete as one batched command. |
+
+###### BatchCommandIBulkWriteStrategy() {#csharp-batchcommandibulkwritestrategy-batchcommandibulkwritestrategy}
+
+Builds the batched statement strategy.
+
+**Definition**
+
+```csharp
+public BatchCommandIBulkWriteStrategy()
+```
+
+**Returns**
+
+[BatchCommandIBulkWriteStrategy](#csharp-batchcommandibulkwritestrategy)`<T>`
+
+###### Create(items, repo) {#csharp-batchcommandibulkwritestrategy-create-items-repo}
+
+Sends every insert as one batched command.
+
+**Definition**
+
+```csharp
+public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+###### Update(items, byWhere, repo) {#csharp-batchcommandibulkwritestrategy-update-items-bywhere-repo}
+
+Sends every update as one batched command.
+
+**Definition**
+
+```csharp
+public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+###### Delete(items, byWhere, repo) {#csharp-batchcommandibulkwritestrategy-delete-items-bywhere-repo}
+
+Sends every delete as one batched command.
+
+**Definition**
+
+```csharp
+public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `byWhere` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+##### Rust
+
+##### BatchCommandIBulkWriteStrategy {#rust-batchcommandibulkwritestrategy}
+
+```rust
+pub struct BatchCommandIBulkWriteStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(items, repo)](#rust-batchcommandibulkwritestrategy-create-items-repo) | Sends every insert as one batched command. |
+| [update(items, by_where, repo)](#rust-batchcommandibulkwritestrategy-update-items-by_where-repo) | Sends every update as one batched command. |
+| [delete(items, by_where, repo)](#rust-batchcommandibulkwritestrategy-delete-items-by_where-repo) | Sends every delete as one batched command. |
+
+###### create(items, repo) {#rust-batchcommandibulkwritestrategy-create-items-repo}
+
+Sends every insert as one batched command.
+
+**Definition**
+
+```rust
+async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+###### update(items, by_where, repo) {#rust-batchcommandibulkwritestrategy-update-items-by_where-repo}
+
+Sends every update as one batched command.
+
+**Definition**
+
+```rust
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `by_where` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+###### delete(items, by_where, repo) {#rust-batchcommandibulkwritestrategy-delete-items-by_where-repo}
+
+Sends every delete as one batched command.
+
+**Definition**
+
+```rust
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `by_where` | optional [IWhere](#where) applied with each item |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+### Remarks
+
+An empty list does not execute. The provider must accept several statements in one command. Nested persist still runs through the repository write strategy, separate from this batch.
+
+### Examples
+
+#### Join statements
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkWriteStrategyTests.cs#L42-L69)
+
+```csharp
+var (repo, command) = Repo(new BatchCommandIBulkWriteStrategy<Parent>());
+await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
+Assert.Single(command.ExecuteCalls);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L71-L131)
+
+```rust
+let (repo, command) = parents(Arc::new(BatchCommandIBulkWriteStrategy));
+let mut created = [
+    row(&[("label", Value::from("a"))]),
+    row(&[("label", Value::from("b"))]),
+];
+repo.create_bulk(&mut created).await.unwrap();
+{
+    let logs = command.execute_logs.lock().unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L59-L94)
+
+```typescript
+const { repo, command } = open(Parent, new BatchCommandIBulkWriteStrategy<Parent>());
+await repo.createBulk([
+  Object.assign(new Parent(), { label: "a" }),
+  Object.assign(new Parent(), { label: "b" }),
+]);
+expect(command.executeCalls).toHaveLength(1);
+```
+
+## StoredProcedureBulkWriteStrategy
+
+Bulk write that sends the rows as one JSON `payload` argument to a stored procedure. Create, update, and delete each name their own procedure.
+
+### Classes
+
+##### TypeScript
+
+##### StoredProcedureBulkWriteStrategy {#typescript-storedprocedurebulkwritestrategy}
+
+```typescript
+class StoredProcedureBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new StoredProcedureBulkWriteStrategy(createName, updateName, deleteName)](#typescript-storedprocedurebulkwritestrategy-new-storedprocedurebulkwritestrategy-createname-updatename-deletename) | Builds the procedure strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(items, repo)](#typescript-storedprocedurebulkwritestrategy-create-items-repo) | Calls the create procedure with a JSON `payload` of the rows. |
+| [update(items, byWhere, repo)](#typescript-storedprocedurebulkwritestrategy-update-items-bywhere-repo) | Calls the update procedure with a JSON `payload` of the rows. |
+| [delete(items, byWhere, repo)](#typescript-storedprocedurebulkwritestrategy-delete-items-bywhere-repo) | Calls the delete procedure with a JSON `payload` of the rows. |
+
+###### new StoredProcedureBulkWriteStrategy(createName, updateName, deleteName) {#typescript-storedprocedurebulkwritestrategy-new-storedprocedurebulkwritestrategy-createname-updatename-deletename}
+
+Builds the procedure strategy.
+
+**Definition**
+
+```typescript
+constructor(createName: string, updateName: string, deleteName: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `createName` | procedure for insert |
+| `updateName` | procedure for update |
+| `deleteName` | procedure for delete |
+
+**Returns**
+
+[StoredProcedureBulkWriteStrategy](#typescript-storedprocedurebulkwritestrategy)
+
+###### create(items, repo) {#typescript-storedprocedurebulkwritestrategy-create-items-repo}
+
+Calls the create procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```typescript
+create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+###### update(items, byWhere, repo) {#typescript-storedprocedurebulkwritestrategy-update-items-bywhere-repo}
+
+Calls the update procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```typescript
+update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `byWhere` | unused |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+###### delete(items, byWhere, repo) {#typescript-storedprocedurebulkwritestrategy-delete-items-bywhere-repo}
+
+Calls the delete procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```typescript
+delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `byWhere` | unused |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#typescript-response)
+
+##### C#
+
+##### StoredProcedureBulkWriteStrategy {#csharp-storedprocedurebulkwritestrategy}
+
+```csharp
+public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [StoredProcedureBulkWriteStrategy(create, update, delete)](#csharp-storedprocedurebulkwritestrategy-storedprocedurebulkwritestrategy-create-update-delete) | Builds the procedure strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(items, repo)](#csharp-storedprocedurebulkwritestrategy-create-items-repo) | Calls the create procedure with a JSON `payload` of the rows. |
+| [Update(items, byWhere, repo)](#csharp-storedprocedurebulkwritestrategy-update-items-bywhere-repo) | Calls the update procedure with a JSON `payload` of the rows. |
+| [Delete(items, byWhere, repo)](#csharp-storedprocedurebulkwritestrategy-delete-items-bywhere-repo) | Calls the delete procedure with a JSON `payload` of the rows. |
+
+###### StoredProcedureBulkWriteStrategy(create, update, delete) {#csharp-storedprocedurebulkwritestrategy-storedprocedurebulkwritestrategy-create-update-delete}
+
+Builds the procedure strategy.
+
+**Definition**
+
+```csharp
+public StoredProcedureBulkWriteStrategy(string create, string update, string delete)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `create` | procedure for insert |
+| `update` | procedure for update |
+| `delete` | procedure for delete |
+
+**Returns**
+
+[StoredProcedureBulkWriteStrategy](#csharp-storedprocedurebulkwritestrategy)`<T>`
+
+###### Create(items, repo) {#csharp-storedprocedurebulkwritestrategy-create-items-repo}
+
+Calls the create procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```csharp
+public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+###### Update(items, byWhere, repo) {#csharp-storedprocedurebulkwritestrategy-update-items-bywhere-repo}
+
+Calls the update procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```csharp
+public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `byWhere` | unused |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+###### Delete(items, byWhere, repo) {#csharp-storedprocedurebulkwritestrategy-delete-items-bywhere-repo}
+
+Calls the delete procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```csharp
+public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `byWhere` | unused |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+[Response](#csharp-response)
+
+##### Rust
+
+##### StoredProcedureBulkWriteStrategy {#rust-storedprocedurebulkwritestrategy}
+
+```rust
+pub struct StoredProcedureBulkWriteStrategy
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(create, update, delete)](#rust-storedprocedurebulkwritestrategy-new-create-update-delete) | Builds the procedure strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(items, repo)](#rust-storedprocedurebulkwritestrategy-create-items-repo) | Calls the create procedure with a JSON `payload` of the rows. |
+| [update(items, by_where, repo)](#rust-storedprocedurebulkwritestrategy-update-items-by_where-repo) | Calls the update procedure with a JSON `payload` of the rows. |
+| [delete(items, by_where, repo)](#rust-storedprocedurebulkwritestrategy-delete-items-by_where-repo) | Calls the delete procedure with a JSON `payload` of the rows. |
+
+###### new(create, update, delete) {#rust-storedprocedurebulkwritestrategy-new-create-update-delete}
+
+Builds the procedure strategy.
+
+**Definition**
+
+```rust
+pub fn new(create: impl Into<String>, update: impl Into<String>, delete: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `create` | procedure for insert |
+| `update` | procedure for update |
+| `delete` | procedure for delete |
+
+**Returns**
+
+[StoredProcedureBulkWriteStrategy](#rust-storedprocedurebulkwritestrategy)
+
+###### create(items, repo) {#rust-storedprocedurebulkwritestrategy-create-items-repo}
+
+Calls the create procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```rust
+async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to insert |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+###### update(items, by_where, repo) {#rust-storedprocedurebulkwritestrategy-update-items-by_where-repo}
+
+Calls the update procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```rust
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to update |
+| `by_where` | unused |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+###### delete(items, by_where, repo) {#rust-storedprocedurebulkwritestrategy-delete-items-by_where-repo}
+
+Calls the delete procedure with a JSON `payload` of the rows.
+
+**Definition**
+
+```rust
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | rows to delete |
+| `by_where` | unused |
+| `repo` | [BulkCRUDRepository](#bulk-repository) |
+
+**Returns**
+
+`Result<Response>`
+
+### Remarks
+
+The payload is a JSON array of objects, one object per row, with column names in order. An empty list does not execute. The procedure is an [ExecuteStoredProcedureStatement](#execute-stored-procedure-statement) with a single `payload` parameter.
+
+### Examples
+
+#### One JSON call
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkWriteStrategyTests.cs#L71-L95)
+
+```csharp
+var (repo, command) = Repo(new StoredProcedureBulkWriteStrategy<Parent>(
+    "bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"));
+await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
+Assert.Single(command.ExecuteCalls);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L133-L181)
+
+```rust
+let (repo, command) = parents(Arc::new(StoredProcedureBulkWriteStrategy::new(
+    "bulk_create_parent",
+    "bulk_update_parent",
+    "bulk_delete_parent",
+)));
+let mut created = [
+    row(&[("label", Value::from("a"))]),
+    row(&[("label", Value::from("b"))]),
+];
+repo.create_bulk(&mut created).await.unwrap();
+repo.update_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from("a"))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from("b"))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+repo.delete_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from(""))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from(""))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+let logs = command.execute_logs.lock().unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L96-L129)
+
+```typescript
+const { repo, command } = open(
+  Parent,
+  new StoredProcedureBulkWriteStrategy<Parent>("bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"),
+);
+await repo.createBulk([
+  Object.assign(new Parent(), { label: "a" }),
+  Object.assign(new Parent(), { label: "b" }),
+]);
+expect(command.executeCalls).toHaveLength(1);
 ```
 
 ## Command Line (CLI)

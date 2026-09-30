@@ -1,0 +1,3 @@
+var (repo, command) = Repo(new BatchCommandIBulkWriteStrategy<Parent>());
+await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
+Assert.Single(command.ExecuteCalls);
