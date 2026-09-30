@@ -1,22 +1,26 @@
-# RowTypeConverter
+# Metadata Row Type Converter
 
-TypeConverter for a row. Holds {{Types|types|types}} and {{Fields|fields|fields}}. {{Convert|convert|convert}} uses {{Fields[name]|fields[name]|fields[name]}}. {{Types|types|types}} is the provider catalog merge and is unused at convert time.
+Default object converter. Read order is the renamed row, then {{RowConverter|rowConverter|row_converter}} when one is set, then this converter, then the rows mapper.
+
+{{RowConverter|rowConverter|row_converter}} is the `Row` to `Row` cell step. Omitted, that step is skipped and the renamed row is passed through. This converter still runs. It assigns the row onto `T`. A handwritten object converter assigns each column and does not reflect.
+
+{{Types|types|types}} is the provider catalog. {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}} use {{Fields|fields|fields}}.
 
 ## Classes
 
 ::: reference
 ### typescript
-#### RowTypeConverter
+#### MetaDataRowTypeConverter
 
 ```typescript
-class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
+class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
 ```
 
 **Constructor**
 
-##### RowTypeConverter(types, fields)
+##### MetaDataRowTypeConverter(types, fields)
 
-Builds a row converter. Convert uses [fields](#rowtypeconverter-fields), not [types](#rowtypeconverter-types).
+Builds the default object converter. Convert uses [fields](#metadatarowtypeconverter-fields), not [types](#metadatarowtypeconverter-types).
 
 ```typescript
 constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<string, TypeConverter<Cell, Cell>>)
@@ -47,7 +51,7 @@ fields: Record<string, TypeConverter<Cell, Cell>>
 
 ##### convert(row, type?)
 
-Converts each cell through [fields](#rowtypeconverter-fields). Optional `type` constructs a destination instance.
+Assigns cells onto `T`. Optional `type` constructs the destination. A field converter replaces that cell.
 
 ```typescript
 convert(row: Cells, type?: Constructable<T>): T
@@ -60,7 +64,7 @@ convert(row: Cells, type?: Constructable<T>): T
 
 ##### reverseConvert(row)
 
-Reverse-converts each cell through [fields](#rowtypeconverter-fields). Skips array values.
+Reverse-converts each cell through [fields](#metadatarowtypeconverter-fields). Skips array values.
 
 ```typescript
 reverseConvert(row: T): Cells
@@ -71,20 +75,20 @@ reverseConvert(row: T): Cells
 **Returns** `Cells`
 
 ### csharp
-#### RowTypeConverter
+#### MetaDataRowTypeConverter
 
 ```csharp
-public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
+public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T : new()
 ```
 
 **Constructor**
 
-##### RowTypeConverter(types, fields)
+##### MetaDataRowTypeConverter(types, fields)
 
-Builds a row converter. Convert uses [Fields](#rowtypeconverter-fields), not [Types](#rowtypeconverter-types).
+Builds the default object converter. Convert assigns public scalar properties, or every key when `T` is a dictionary.
 
 ```csharp
-public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
+public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
 ```
 
 - `types` — provider catalog; unused at convert time
@@ -97,7 +101,7 @@ public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>
 Provider type catalog. Convert does not read this map.
 
 ```csharp
-Dictionary<string, TypeConverter<Value, Value>> Types { get; set; }
+public Dictionary<string, TypeConverter<Value, Value>> Types { get; set; }
 ```
 
 ##### Fields
@@ -105,14 +109,14 @@ Dictionary<string, TypeConverter<Value, Value>> Types { get; set; }
 Per-column converters. Convert uses `Fields[name]`.
 
 ```csharp
-Dictionary<string, TypeConverter<Value, Value>> Fields { get; set; }
+public Dictionary<string, TypeConverter<Value, Value>> Fields { get; set; }
 ```
 
 **Methods**
 
 ##### Convert(from)
 
-Converts a row to `T`. Applies [Fields](#rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys).
+Assigns each cell onto a new `T`. A property is set only when the cell is already that type.
 
 ```csharp
 public override T Convert(Row from)
@@ -124,7 +128,7 @@ public override T Convert(Row from)
 
 ##### ReverseConvert(to)
 
-Reverse-converts `T` to a row through [Fields](#rowtypeconverter-fields).
+Writes public scalar properties back to a row through [Fields](#metadatarowtypeconverter-fields).
 
 ```csharp
 public override Row ReverseConvert(T to)
@@ -135,35 +139,35 @@ public override Row ReverseConvert(T to)
 **Returns** `Row`
 
 ### rust
-#### RowTypeConverter
+#### MetaDataRowTypeConverter
 
 ```rust
-pub struct RowTypeConverter
+pub struct MetaDataRowTypeConverter
 ```
 
 **Constructor**
 
 ##### new(columns)
 
-Builds a row converter for the given columns.
+Builds an object converter. An empty column list copies every cell. A non-empty list copies those columns and drops the rest.
 
 ```rust
 pub fn new(columns: Vec<String>) -> Self
 ```
 
-- `columns` — column names
+- `columns` — schema column names; empty copies every cell
 
-**Returns** [RowTypeConverter](#rowtypeconverter)
+**Returns** [MetaDataRowTypeConverter](#metadatarowtypeconverter)
 
 ##### of()
 
-Builds a converter from `T: ConvertSchema`.
+Builds a converter from `T: ConvertSchema`. Convert copies those columns.
 
 ```rust
 pub fn of<T: ConvertSchema>() -> Self
 ```
 
-**Returns** [RowTypeConverter](#rowtypeconverter)
+**Returns** [MetaDataRowTypeConverter](#metadatarowtypeconverter)
 
 **Properties**
 
@@ -187,7 +191,7 @@ pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
 
 ##### with_types(types)
 
-Merges a provider catalog into [types](#rowtypeconverter-types).
+Merges a provider catalog into [types](#metadatarowtypeconverter-types).
 
 ```rust
 pub fn with_types(self, types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
@@ -195,11 +199,11 @@ pub fn with_types(self, types: HashMap<String, Box<dyn TypeConverter<Value, Valu
 
 - `types` — provider catalog; unused at convert time
 
-**Returns** [RowTypeConverter](#rowtypeconverter)
+**Returns** [MetaDataRowTypeConverter](#metadatarowtypeconverter)
 
 ##### with_fields(fields)
 
-Merges per-column converters into [fields](#rowtypeconverter-fields).
+Merges per-column converters into [fields](#metadatarowtypeconverter-fields).
 
 ```rust
 pub fn with_fields(self, fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
@@ -207,11 +211,11 @@ pub fn with_fields(self, fields: HashMap<String, Box<dyn TypeConverter<Value, Va
 
 - `fields` — per-column TypeConverter
 
-**Returns** [RowTypeConverter](#rowtypeconverter)
+**Returns** [MetaDataRowTypeConverter](#metadatarowtypeconverter)
 
 ##### convert(row)
 
-Converts each cell through [fields](#rowtypeconverter-fields).
+Copies schema columns, or every cell when the column list is empty. A field converter replaces that cell.
 
 ```rust
 pub fn convert(&self, row: &Row) -> Result<Row>
@@ -223,7 +227,7 @@ pub fn convert(&self, row: &Row) -> Result<Row>
 
 ##### reverse_convert(row)
 
-Reverse-converts each cell through [fields](#rowtypeconverter-fields).
+Reverse-converts the same columns through [fields](#metadatarowtypeconverter-fields).
 
 ```rust
 pub fn reverse_convert(&self, row: &Row) -> Result<Row>
@@ -236,9 +240,7 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 ## Remarks
 
-{{Types|types|types}} is the provider catalog merge. {{Convert|convert|convert}} and {{ReverseConvert|reverseConvert|reverse_convert}} only consult {{Fields|fields|fields}}.
-
-Repository read is convert, then map. See [TransformMapper](./transform-mapper.md) and [CRUD repository](./crud-repository.md).
+The repository uses this converter when {{ObjectConverter|objectConverter|object_converter}} is omitted. {{RowConverter|rowConverter|row_converter}} stays the cell step. Rust rows are `Row`, so this converter is `Row` to `Row`. `of::<T>()` copies the `ConvertSchema` columns. The repository default has an empty column list and copies every cell.
 
 ## Examples
 
@@ -247,7 +249,7 @@ Repository read is convert, then map. See [TransformMapper](./transform-mapper.m
 ::: example
 ```csharp csharp/Datasources.Tests/RowTypeConverterTests.cs#ConvertAndReverseConvertRoundTrip
 ```
-```rust rust/datasources/src/converters/row_type_converter.rs#type_converter_round_trips_rows
+```rust rust/datasources/src/converters/metadata_row_type_converter.rs#copies_schema_columns_and_drops_the_rest
 ```
 ```typescript typescript/datasources/src/converters/RowTypeConverter.test.ts#convert-and-reverseconvert-round-trip
 ```

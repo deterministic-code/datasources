@@ -182,7 +182,7 @@ See [Mappers](#mappers) for `TransformMapper`, `FlatToNestedMapper`, and [Readon
 
 ### Type Converters
 
-`TypeConverter` is only `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert`. Attach field converters on `RowTypeConverter` when the native provider cannot map the type.
+`TypeConverter` is only `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert`. Attach field converters on `MetaDataRowTypeConverter` when the native provider cannot map the type.
 
 ##### C#
 
@@ -193,7 +193,7 @@ sealed class FlagConverter : TypeConverter<Value, Value>
     public override Value ReverseConvert(Value to) => to;
 }
 
-var rows = new RowTypeConverter<Item>(fields: new Dictionary<string, TypeConverter<Value, Value>>
+var rows = new MetaDataRowTypeConverter<Item>(fields: new Dictionary<string, TypeConverter<Value, Value>>
 {
     ["flag"] = new FlagConverter()
 });
@@ -216,7 +216,7 @@ impl TypeConverter<Value, Value> for FlagConverter {
     }
 }
 
-let rows = RowTypeConverter::new(vec!["flag".into()]).with_fields(HashMap::from([(
+let rows = MetaDataRowTypeConverter::new(vec!["flag".into()]).with_fields(HashMap::from([(
     "flag".into(),
     Arc::new(FlagConverter) as Arc<dyn TypeConverter<Value, Value>>,
 )]));
@@ -231,7 +231,7 @@ class FlagConverter extends TypeConverter {
   reverseConvert = (value: Cell): Cell => value;
 }
 
-const rows = new RowTypeConverter({}, { flag: new FlagConverter() });
+const rows = new MetaDataRowTypeConverter({}, { flag: new FlagConverter() });
 const item = rows.convert(row);
 ```
 
@@ -300,7 +300,7 @@ TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See
 
 ### Convert a row
 
-TODO: `RowTypeConverter` convert / reverse-convert, or attach a field converter. See [RowTypeConverter](#row-type-converter).
+TODO: `MetaDataRowTypeConverter` convert / reverse-convert, or attach a field converter. See [MetaDataRowTypeConverter](#metadata-row-type-converter).
 
 ## Datasource
 
@@ -2865,7 +2865,7 @@ Use `AddMiddleware` / `addMiddleware` / `add_middleware` to add low-level diagno
 >
 > The `Command` trait has no connection getter. Stub `create_command` stores the optional connection on the named type; working dialects still construct their own typed connection.
 
-`ExecuteReader` / `executeReader` / `execute_reader` returns a [Reader](#reader) for the first result set. Convert with [RowTypeConverter](#row-type-converter), then map with a [Mapper](#mappers).
+`ExecuteReader` / `executeReader` / `execute_reader` returns a [Reader](#reader) for the first result set. Convert with [MetaDataRowTypeConverter](#metadata-row-type-converter), then map with a [Mapper](#mappers).
 
 [Parameter](#parameter) defaults to [Input](#parameterdirection). [Output](#parameterdirection), [InputOutput](#parameterdirection), and [ReturnValue](#parameterdirection) are filled on [Response.Parameters](#response-parameters) after `Execute` / `execute` / `execute`. A [ReturnValue](#parameterdirection) is copied onto [Response.Result](#response-result) when `Result` would otherwise be null.
 
@@ -4636,7 +4636,7 @@ for await (const row of repo.read(new Where("username", eq, "grace").and("is_ena
 
 Create omits `id`, then writes the inserted id onto the user. Update and delete use that id.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L428-L455)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L424-L451)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -4671,7 +4671,7 @@ const created = await usersRepo.create(Object.assign(new User(), { username: "ad
 
 `UsersView` maps onto `user`. Create writes the user and its roles. Read fills `UserType` and `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L549-L621)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L545-L617)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -5040,7 +5040,8 @@ type ReadonlyRepositoryOptions<T = Cells>
 | columnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
 | select | Rewrites the finished select. Omitted leaves the statement unchanged. |
 | rowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
-| rowConverter | Row [TypeConverter](#type-converters). |
+| rowConverter | `Cells` to `Cells`. Omitted leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
+| objectConverter | `Cells` to `T`, after `rowConverter`. Omitted assigns the row onto `T`. |
 | type | Item constructor. Supplies the default entity name and column list. |
 | rowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | readColumns | SELECT column names. When omitted, public fields of `type` are used. |
@@ -5429,7 +5430,8 @@ pub struct ReadonlyRepositoryOptions
 | column_mappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
 | select | Rewrites finished select SQL. `None` leaves the statement unchanged. |
 | rows_mapper | Maps each converted row. Default is [IdentityMapper](#identity-mapper). |
-| row_converter | Row [RowTypeConverter](#row-type-converter). |
+| row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
+| object_converter | `Row` to `Row`, after `row_converter`. Omitted copies every cell. `of::<T>()` copies the `ConvertSchema` columns. |
 | row_type_converters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 
 ##### RepositoryTree {#rust-repositorytree}
@@ -5649,7 +5651,7 @@ for await (const row of repo.read(new Where("username", eq, "grace").and("is_ena
 
 `UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](#change-casing-mapper) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L173-L214)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L169-L210)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -5820,7 +5822,7 @@ const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
 
 #### Read a user by guid, username, and created
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L100-L137)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L96-L133)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -6203,7 +6205,7 @@ parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: 
 
 The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](#flat-to-nested-mapper) groups each user's `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L308-L385)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L304-L381)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -6876,7 +6878,8 @@ type BuiltRepository<T = Cells>
 | Name | Description |
 | --- | --- |
 | connection | Open [IConnection](#connection). |
-| rowConverter | Row [TypeConverter](#type-converters). |
+| rowConverter | `Cells` to `Cells`. Omitted leaves each cell unchanged. |
+| objectConverter | `Cells` to `T`, after `rowConverter`. Default is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
 | rowsMapper | Read-row [Mapper](#mappers). |
 | statements | SQL fragments. |
 | ids | Id column names. |
@@ -7597,7 +7600,8 @@ pub struct BuiltRepository
 | Name | Description |
 | --- | --- |
 | connection | [Connection](#connection). |
-| row_converter | [RowTypeConverter](#row-type-converter). |
+| row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. |
+| object_converter | `Row` to `Row`, after `row_converter`. Default is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
 | rows_mapper | Read-row [Mapper](#mappers). |
 | statements | SQL fragments. |
 | ids | Id column names. |
@@ -7624,7 +7628,7 @@ See [Bulk repository](#bulk-repository) for list writes.
 
 The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L428-L455)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L424-L451)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -7969,7 +7973,7 @@ roles and groups remain
 
 `account` is identified by `tenant_id` and `id`. The same `id` in another tenant is a different row. `ReadSingleById` / `readSingleById` / `read_single_by_id`, update, and delete take both keys. Create omits every configured id column, so this sample seeds the rows.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L479-L508)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L475-L504)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -8438,7 +8442,7 @@ const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("id",
 
 `UsersView` maps onto `user`. `Key` is `id`, `Login` is `username`, and `UserTypeId` is `user_type_id`. `UserType` is the enriched name and is not a column. Create writes the generated id back onto `Key`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L549-L621)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L545-L617)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -13658,27 +13662,31 @@ Repository read is convert, then map. See [TransformMapper](#transform-mapper) a
 
 ### See also
 
-- [RowTypeConverter](#row-type-converter)
+- [MetaDataRowTypeConverter](#metadata-row-type-converter)
 
-## RowTypeConverter
+## Metadata Row Type Converter
 
-TypeConverter for a row. Holds `Types` / `types` / `types` and `Fields` / `fields` / `fields`. `Convert` / `convert` / `convert` uses `Fields[name]` / `fields[name]` / `fields[name]`. `Types` / `types` / `types` is the provider catalog merge and is unused at convert time.
+Default object converter. Read order is the renamed row, then `RowConverter` / `rowConverter` / `row_converter` when one is set, then this converter, then the rows mapper.
+
+`RowConverter` / `rowConverter` / `row_converter` is the `Row` to `Row` cell step. Omitted, that step is skipped and the renamed row is passed through. This converter still runs. It assigns the row onto `T`. A handwritten object converter assigns each column and does not reflect.
+
+`Types` / `types` / `types` is the provider catalog. `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert` use `Fields` / `fields` / `fields`.
 
 ### Classes
 
 ##### TypeScript
 
-##### RowTypeConverter {#typescript-rowtypeconverter}
+##### MetaDataRowTypeConverter {#typescript-metadatarowtypeconverter}
 
 ```typescript
-class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
+class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [RowTypeConverter(types, fields)](#typescript-rowtypeconverter-rowtypeconverter-types-fields) | Builds a row converter. Convert uses [fields](#typescript-rowtypeconverter-fields), not [types](#typescript-rowtypeconverter-types). |
+| [MetaDataRowTypeConverter(types, fields)](#typescript-metadatarowtypeconverter-metadatarowtypeconverter-types-fields) | Builds the default object converter. Convert uses [fields](#typescript-metadatarowtypeconverter-fields), not [types](#typescript-metadatarowtypeconverter-types). |
 
 **Properties**
 
@@ -13691,12 +13699,12 @@ class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
 
 | Name | Description |
 | --- | --- |
-| [convert(row, type?)](#typescript-rowtypeconverter-convert-row-type) | Converts each cell through [fields](#typescript-rowtypeconverter-fields). Optional `type` constructs a destination instance. |
-| [reverseConvert(row)](#typescript-rowtypeconverter-reverseconvert-row) | Reverse-converts each cell through [fields](#typescript-rowtypeconverter-fields). Skips array values. |
+| [convert(row, type?)](#typescript-metadatarowtypeconverter-convert-row-type) | Assigns cells onto `T`. Optional `type` constructs the destination. A field converter replaces that cell. |
+| [reverseConvert(row)](#typescript-metadatarowtypeconverter-reverseconvert-row) | Reverse-converts each cell through [fields](#typescript-metadatarowtypeconverter-fields). Skips array values. |
 
-###### RowTypeConverter(types, fields) {#typescript-rowtypeconverter-rowtypeconverter-types-fields}
+###### MetaDataRowTypeConverter(types, fields) {#typescript-metadatarowtypeconverter-metadatarowtypeconverter-types-fields}
 
-Builds a row converter. Convert uses [fields](#typescript-rowtypeconverter-fields), not [types](#typescript-rowtypeconverter-types).
+Builds the default object converter. Convert uses [fields](#typescript-metadatarowtypeconverter-fields), not [types](#typescript-metadatarowtypeconverter-types).
 
 **Definition**
 
@@ -13711,9 +13719,9 @@ constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<s
 | `types` | provider catalog; unused at convert time |
 | `fields` | per-column TypeConverter |
 
-###### convert(row, type?) {#typescript-rowtypeconverter-convert-row-type}
+###### convert(row, type?) {#typescript-metadatarowtypeconverter-convert-row-type}
 
-Converts each cell through [fields](#typescript-rowtypeconverter-fields). Optional `type` constructs a destination instance.
+Assigns cells onto `T`. Optional `type` constructs the destination. A field converter replaces that cell.
 
 **Definition**
 
@@ -13732,9 +13740,9 @@ convert(row: Cells, type?: Constructable<T>): T
 
 `T`
 
-###### reverseConvert(row) {#typescript-rowtypeconverter-reverseconvert-row}
+###### reverseConvert(row) {#typescript-metadatarowtypeconverter-reverseconvert-row}
 
-Reverse-converts each cell through [fields](#typescript-rowtypeconverter-fields). Skips array values.
+Reverse-converts each cell through [fields](#typescript-metadatarowtypeconverter-fields). Skips array values.
 
 **Definition**
 
@@ -13754,17 +13762,17 @@ reverseConvert(row: T): Cells
 
 ##### C#
 
-##### RowTypeConverter {#csharp-rowtypeconverter}
+##### MetaDataRowTypeConverter {#csharp-metadatarowtypeconverter}
 
 ```csharp
-public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
+public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T : new()
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [RowTypeConverter(types, fields)](#csharp-rowtypeconverter-rowtypeconverter-types-fields) | Builds a row converter. Convert uses [Fields](#csharp-rowtypeconverter-fields), not [Types](#csharp-rowtypeconverter-types). |
+| [MetaDataRowTypeConverter(types, fields)](#csharp-metadatarowtypeconverter-metadatarowtypeconverter-types-fields) | Builds the default object converter. Convert assigns public scalar properties, or every key when `T` is a dictionary. |
 
 **Properties**
 
@@ -13777,17 +13785,17 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
 
 | Name | Description |
 | --- | --- |
-| [Convert(from)](#csharp-rowtypeconverter-convert-from) | Converts a row to `T`. Applies [Fields](#csharp-rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys). |
-| [ReverseConvert(to)](#csharp-rowtypeconverter-reverseconvert-to) | Reverse-converts `T` to a row through [Fields](#csharp-rowtypeconverter-fields). |
+| [Convert(from)](#csharp-metadatarowtypeconverter-convert-from) | Assigns each cell onto a new `T`. A property is set only when the cell is already that type. |
+| [ReverseConvert(to)](#csharp-metadatarowtypeconverter-reverseconvert-to) | Writes public scalar properties back to a row through [Fields](#csharp-metadatarowtypeconverter-fields). |
 
-###### RowTypeConverter(types, fields) {#csharp-rowtypeconverter-rowtypeconverter-types-fields}
+###### MetaDataRowTypeConverter(types, fields) {#csharp-metadatarowtypeconverter-metadatarowtypeconverter-types-fields}
 
-Builds a row converter. Convert uses [Fields](#csharp-rowtypeconverter-fields), not [Types](#csharp-rowtypeconverter-types).
+Builds the default object converter. Convert assigns public scalar properties, or every key when `T` is a dictionary.
 
 **Definition**
 
 ```csharp
-public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
+public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
 ```
 
 **Parameters**
@@ -13797,9 +13805,9 @@ public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>
 | `types` | provider catalog; unused at convert time |
 | `fields` | per-column TypeConverter |
 
-###### Convert(from) {#csharp-rowtypeconverter-convert-from}
+###### Convert(from) {#csharp-metadatarowtypeconverter-convert-from}
 
-Converts a row to `T`. Applies [Fields](#csharp-rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys).
+Assigns each cell onto a new `T`. A property is set only when the cell is already that type.
 
 **Definition**
 
@@ -13817,9 +13825,9 @@ public override T Convert(Row from)
 
 `T`
 
-###### ReverseConvert(to) {#csharp-rowtypeconverter-reverseconvert-to}
+###### ReverseConvert(to) {#csharp-metadatarowtypeconverter-reverseconvert-to}
 
-Reverse-converts `T` to a row through [Fields](#csharp-rowtypeconverter-fields).
+Writes public scalar properties back to a row through [Fields](#csharp-metadatarowtypeconverter-fields).
 
 **Definition**
 
@@ -13839,18 +13847,18 @@ public override Row ReverseConvert(T to)
 
 ##### Rust
 
-##### RowTypeConverter {#rust-rowtypeconverter}
+##### MetaDataRowTypeConverter {#rust-metadatarowtypeconverter}
 
 ```rust
-pub struct RowTypeConverter
+pub struct MetaDataRowTypeConverter
 ```
 
 **Constructor**
 
 | Name | Description |
 | --- | --- |
-| [new(columns)](#rust-rowtypeconverter-new-columns) | Builds a row converter for the given columns. |
-| [of()](#rust-rowtypeconverter-of) | Builds a converter from `T: ConvertSchema`. |
+| [new(columns)](#rust-metadatarowtypeconverter-new-columns) | Builds an object converter. An empty column list copies every cell. A non-empty list copies those columns and drops the rest. |
+| [of()](#rust-metadatarowtypeconverter-of) | Builds a converter from `T: ConvertSchema`. Convert copies those columns. |
 
 **Properties**
 
@@ -13863,14 +13871,14 @@ pub struct RowTypeConverter
 
 | Name | Description |
 | --- | --- |
-| [with_types(types)](#rust-rowtypeconverter-with_types-types) | Merges a provider catalog into [types](#rust-rowtypeconverter-types). |
-| [with_fields(fields)](#rust-rowtypeconverter-with_fields-fields) | Merges per-column converters into [fields](#rust-rowtypeconverter-fields). |
-| [convert(row)](#rust-rowtypeconverter-convert-row) | Converts each cell through [fields](#rust-rowtypeconverter-fields). |
-| [reverse_convert(row)](#rust-rowtypeconverter-reverse_convert-row) | Reverse-converts each cell through [fields](#rust-rowtypeconverter-fields). |
+| [with_types(types)](#rust-metadatarowtypeconverter-with_types-types) | Merges a provider catalog into [types](#rust-metadatarowtypeconverter-types). |
+| [with_fields(fields)](#rust-metadatarowtypeconverter-with_fields-fields) | Merges per-column converters into [fields](#rust-metadatarowtypeconverter-fields). |
+| [convert(row)](#rust-metadatarowtypeconverter-convert-row) | Copies schema columns, or every cell when the column list is empty. A field converter replaces that cell. |
+| [reverse_convert(row)](#rust-metadatarowtypeconverter-reverse_convert-row) | Reverse-converts the same columns through [fields](#rust-metadatarowtypeconverter-fields). |
 
-###### new(columns) {#rust-rowtypeconverter-new-columns}
+###### new(columns) {#rust-metadatarowtypeconverter-new-columns}
 
-Builds a row converter for the given columns.
+Builds an object converter. An empty column list copies every cell. A non-empty list copies those columns and drops the rest.
 
 **Definition**
 
@@ -13882,15 +13890,15 @@ pub fn new(columns: Vec<String>) -> Self
 
 | Name | Description |
 | --- | --- |
-| `columns` | column names |
+| `columns` | schema column names; empty copies every cell |
 
 **Returns**
 
-[RowTypeConverter](#rust-rowtypeconverter)
+[MetaDataRowTypeConverter](#rust-metadatarowtypeconverter)
 
-###### of() {#rust-rowtypeconverter-of}
+###### of() {#rust-metadatarowtypeconverter-of}
 
-Builds a converter from `T: ConvertSchema`.
+Builds a converter from `T: ConvertSchema`. Convert copies those columns.
 
 **Definition**
 
@@ -13900,11 +13908,11 @@ pub fn of<T: ConvertSchema>() -> Self
 
 **Returns**
 
-[RowTypeConverter](#rust-rowtypeconverter)
+[MetaDataRowTypeConverter](#rust-metadatarowtypeconverter)
 
-###### with_types(types) {#rust-rowtypeconverter-with_types-types}
+###### with_types(types) {#rust-metadatarowtypeconverter-with_types-types}
 
-Merges a provider catalog into [types](#rust-rowtypeconverter-types).
+Merges a provider catalog into [types](#rust-metadatarowtypeconverter-types).
 
 **Definition**
 
@@ -13920,11 +13928,11 @@ pub fn with_types(self, types: HashMap<String, Box<dyn TypeConverter<Value, Valu
 
 **Returns**
 
-[RowTypeConverter](#rust-rowtypeconverter)
+[MetaDataRowTypeConverter](#rust-metadatarowtypeconverter)
 
-###### with_fields(fields) {#rust-rowtypeconverter-with_fields-fields}
+###### with_fields(fields) {#rust-metadatarowtypeconverter-with_fields-fields}
 
-Merges per-column converters into [fields](#rust-rowtypeconverter-fields).
+Merges per-column converters into [fields](#rust-metadatarowtypeconverter-fields).
 
 **Definition**
 
@@ -13940,11 +13948,11 @@ pub fn with_fields(self, fields: HashMap<String, Box<dyn TypeConverter<Value, Va
 
 **Returns**
 
-[RowTypeConverter](#rust-rowtypeconverter)
+[MetaDataRowTypeConverter](#rust-metadatarowtypeconverter)
 
-###### convert(row) {#rust-rowtypeconverter-convert-row}
+###### convert(row) {#rust-metadatarowtypeconverter-convert-row}
 
-Converts each cell through [fields](#rust-rowtypeconverter-fields).
+Copies schema columns, or every cell when the column list is empty. A field converter replaces that cell.
 
 **Definition**
 
@@ -13962,9 +13970,9 @@ pub fn convert(&self, row: &Row) -> Result<Row>
 
 `Result<Row>`
 
-###### reverse_convert(row) {#rust-rowtypeconverter-reverse_convert-row}
+###### reverse_convert(row) {#rust-metadatarowtypeconverter-reverse_convert-row}
 
-Reverse-converts each cell through [fields](#rust-rowtypeconverter-fields).
+Reverse-converts the same columns through [fields](#rust-metadatarowtypeconverter-fields).
 
 **Definition**
 
@@ -13984,33 +13992,36 @@ pub fn reverse_convert(&self, row: &Row) -> Result<Row>
 
 ### Remarks
 
-`Types` / `types` / `types` is the provider catalog merge. `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert` only consult `Fields` / `fields` / `fields`.
-
-Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [CRUD repository](#crud-repository).
+The repository uses this converter when `ObjectConverter` / `objectConverter` / `object_converter` is omitted. `RowConverter` / `rowConverter` / `row_converter` stays the cell step. Rust rows are `Row`, so this converter is `Row` to `Row`. `of::<T>()` copies the `ConvertSchema` columns. The repository default has an empty column list and copies every cell.
 
 ### Examples
 
 #### Convert a row
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L28-L46)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L28-L47)
 
 ```csharp
+var created = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
 var converter = new MetaDataRowTypeConverter<User>();
 var user = converter.Convert(new Row
 {
-    ["Id"] = 7,
+    ["Id"] = 7L,
     ["Username"] = "ada",
-    ["IsEnabled"] = 1,
-    ["Created"] = "2020-01-02T03:04:05.000Z"
+    ["IsEnabled"] = true,
+    ["Created"] = created
 });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L101-L108)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L95-L108)
 
 ```rust
-let converter = RowTypeConverter::new(vec!["id".into(), "name".into()]);
-let row = record(&[("id", Value::Int(7)), ("name", Value::from("ada"))]);
-let dest = converter.convert(&row).unwrap();
+let converter = MetaDataRowTypeConverter::of::<User>();
+let row = record(&[
+    ("id", Value::Int(1)),
+    ("name", Value::from("ada")),
+    ("extra", Value::from("no")),
+]);
+let converted = converter.convert(&row).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L13-L18)

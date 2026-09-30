@@ -1,5 +1,6 @@
 use crate::built_repository::BuiltRepository;
 use crate::connection::Connection;
+use crate::converters::MetaDataRowTypeConverter;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::mappers::{Mapper, TransformMapper};
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
@@ -51,9 +52,12 @@ fn assemble(
         select,
         rows_mapper,
         row_converter,
+        object_converter,
         row_type_converters,
     } = options;
     let row_converter = row_converter.map(|mapping| mapping.with_types(row_type_converters));
+    let object_converter =
+        object_converter.unwrap_or_else(|| MetaDataRowTypeConverter::new(Vec::new()));
     let mut names: Vec<String> = row_converter
         .as_ref()
         .map(|converter| {
@@ -68,6 +72,7 @@ fn assemble(
     Ok(BuiltRepository {
         connection,
         row_converter,
+        object_converter,
         rows_mapper,
         column_mappings,
         statements: RepositoryStatements::with_mappers(

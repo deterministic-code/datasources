@@ -143,4 +143,4 @@ Repository read is convert, then map. See [TransformMapper](./transform-mapper.m
 
 ## See also
 
-- [RowTypeConverter](./row-type-converter.md)
+- [MetaDataRowTypeConverter](./metadata-row-type-converter.md)

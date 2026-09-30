@@ -155,10 +155,18 @@ rowsMapper?: IMapper<T, T>
 
 ##### rowConverter
 
-Row [TypeConverter](./type-converters.md).
+`Cells` to `Cells`. Omitted leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](./metadata-row-type-converter.md).
 
 ```typescript
-rowConverter?: TypeConverter<T, Cells>
+rowConverter?: TypeConverter<Cells, Cells>
+```
+
+##### objectConverter
+
+`Cells` to `T`, after `rowConverter`. Omitted assigns the row onto `T`.
+
+```typescript
+objectConverter?: TypeConverter<T, Cells>
 ```
 
 ##### type
@@ -622,10 +630,18 @@ pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>
 
 ##### row_converter
 
-Row [RowTypeConverter](./row-type-converter.md).
+`Row` to `Row` cell step. `None` leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](./metadata-row-type-converter.md).
 
 ```rust
 pub row_converter: Option<RowTypeConverter>
+```
+
+##### object_converter
+
+`Row` to `Row`, after `row_converter`. Omitted copies every cell. `of::<T>()` copies the `ConvertSchema` columns.
+
+```rust
+pub object_converter: Option<MetaDataRowTypeConverter>
 ```
 
 ##### row_type_converters

@@ -108,8 +108,9 @@ pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
 pub use console_command_middleware::{format_elapsed, utc_iso_millis, ConsoleCommandMiddleware};
 pub use converters::{
-    Casing, ChangeCasingConverter, ConvertSchema, PluralizerConverter, RegexConverter,
-    ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter,
+    Casing, ChangeCasingConverter, ConvertSchema, MetaDataRowTypeConverter, PluralizerConverter,
+    RegexConverter, ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter,
+    TypeConverter,
 };
 pub use create::{create, default};
 pub use create_crud_repository_options::create_crud_repository_options;
