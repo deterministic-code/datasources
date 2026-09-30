@@ -2,8 +2,6 @@
 
 Register a repository, then create by that type. Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
 
-{{Type|type|entity_type}} is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name.
-
 ## Classes
 
 ::: reference
