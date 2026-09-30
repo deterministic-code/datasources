@@ -29,10 +29,8 @@ impl SqliteConnection {
     }
 
     pub fn from_options(options: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
-        let filename = options.and_then(|o| {
-            o.get("DATASOURCE_URL")
-                .and_then(|url| sqlite_filename(url))
-        });
+        let filename =
+            options.and_then(|o| o.get("DATASOURCE_URL").and_then(|url| sqlite_filename(url)));
         Arc::new(SqliteConnection::new(filename))
     }
 

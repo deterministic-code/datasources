@@ -155,11 +155,69 @@ async fn next_result(&self) -> Result<bool>
 
 ## Remarks
 
-{{ExecuteReader|executeReader|execute_reader}} returns a reader for the first result set. {{Next|next|next}} reads that set. {{NextResult|nextResult|next_result}} advances to the next set. Rows stay unread until {{Next|next|next}}. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
+{{ExecuteReader|executeReader|execute_reader}} returns a reader for the first result set. {{Next|next|next}} reads that set. {{NextResult|nextResult|next_result}} advances to the next set. Rows stay unread until {{Next|next|next}}.
 
 Dispose the reader with `await using`. Rust drops it.
 
 ## Examples
+
+### Read a row
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunRawSql
+```
+```rust rust/providers/sqlite/tests/command.rs#run_raw_sql
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#runs-raw-sql
+```
+
+```output [Row]
+{
+  id: 1,
+  name: 'ada'
+}
+```
+:::
+
+### Read with case mapping
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ReadWithCaseMapping
+```
+```rust rust/providers/sqlite/tests/command.rs#read_with_case_mapping
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#reads-with-case-mapping
+```
+
+```output [Row]
+{
+  UserId: 1,
+  FirstName: 'Ada'
+}
+```
+:::
+
+### Type conversion and flat to nested
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ReadFlatRowsToNested
+```
+```rust rust/providers/sqlite/tests/command.rs#read_flat_rows_to_nested
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#reads-flat-rows-to-nested
+```
+
+```output [User]
+{
+  id: 1,
+  username: 'bobby',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+:::
 
 ### Read multiple results returned in a single command
 

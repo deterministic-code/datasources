@@ -130,7 +130,8 @@ impl Command for SqliteCommand {
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         let text = SqliteStatementFactory.transform(statement).get_text();
-        self.execute_reader_native(&Native::new(text), parameters).await
+        self.execute_reader_native(&Native::new(text), parameters)
+            .await
     }
 
     async fn execute_statement(

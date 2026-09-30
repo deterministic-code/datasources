@@ -1,0 +1,48 @@
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute_native(
+        &Native::new("CREATE TABLE users (id INTEGER, username TEXT, contact_name TEXT)"),
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')",
+        None,
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT id, username, contact_name FROM users", None)
+    .await
+    .unwrap();
+let mut rows = Vec::new();
+while reader.next().await.unwrap() {
+    rows.push(reader.current().unwrap());
+}
+let mapper = FlatToNestedMapper::new(TypeMap::new(
+    "id",
+    vec![
+        ("id".into(), TypeMapField::column("id")),
+        ("username".into(), TypeMapField::column("username")),
+        (
+            "contacts".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "contact_name",
+                vec![("name".into(), TypeMapField::column("contact_name"))],
+            )),
+        ),
+    ],
+));
+let nested = Mapper::map(&mapper, rows);

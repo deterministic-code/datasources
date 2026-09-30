@@ -1,5 +1,7 @@
 use datasources::{
-    default, ConvertSchema, Mapper, Native, Parameter, Row, RowTypeConverter, TransformMapper, Value,
+    default, Casing, ChangeCasingMapper, ConvertSchema, FlatToNestedMapper, MappedRow, MappedValue,
+    Mapper, Native, Parameter, Row, RowTypeConverter, TransformMapper, TypeMap, TypeMapField,
+    TypeMapGroup, Value,
 };
 
 struct NameValue;
@@ -122,6 +124,109 @@ async fn run_raw_sql() {
     assert_eq!(row.get("id"), Some(&Value::Int(1)));
     assert_eq!(row.get("name"), Some(&Value::from("ada")));
     assert!(!reader.next().await.unwrap());
+}
+
+#[tokio::test]
+async fn read_with_case_mapping() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = ds.create_connection().await.unwrap();
+    connection.open().await.unwrap();
+    let command = connection.create_command();
+    command
+        .execute_native(
+            &Native::new("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"),
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute(
+            "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",
+            None,
+        )
+        .await
+        .unwrap();
+    let reader = command
+        .execute_reader("SELECT user_id, first_name FROM contacts", None)
+        .await
+        .unwrap();
+    let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+    let mut mapped = Row::new();
+    while reader.next().await.unwrap() {
+        mapped.clear();
+        for (key, value) in reader.current().unwrap() {
+            mapped.insert(Mapper::reverse_map(&casing, key), value);
+        }
+    }
+    assert_eq!(mapped.get("UserId"), Some(&Value::Int(1)));
+    assert_eq!(mapped.get("FirstName"), Some(&Value::from("Ada")));
+}
+
+#[tokio::test]
+async fn read_flat_rows_to_nested() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = ds.create_connection().await.unwrap();
+    connection.open().await.unwrap();
+    let command = connection.create_command();
+    command
+        .execute_native(
+            &Native::new("CREATE TABLE users (id INTEGER, username TEXT, contact_name TEXT)"),
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute(
+            "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute(
+            "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')",
+            None,
+        )
+        .await
+        .unwrap();
+    let reader = command
+        .execute_reader("SELECT id, username, contact_name FROM users", None)
+        .await
+        .unwrap();
+    let mut rows = Vec::new();
+    while reader.next().await.unwrap() {
+        rows.push(reader.current().unwrap());
+    }
+    let mapper = FlatToNestedMapper::new(TypeMap::new(
+        "id",
+        vec![
+            ("id".into(), TypeMapField::column("id")),
+            ("username".into(), TypeMapField::column("username")),
+            (
+                "contacts".into(),
+                TypeMapField::Group(TypeMapGroup::new(
+                    "contact_name",
+                    vec![("name".into(), TypeMapField::column("contact_name"))],
+                )),
+            ),
+        ],
+    ));
+    let nested = Mapper::map(&mapper, rows);
+    assert_eq!(nested.len(), 1);
+    assert_eq!(nested[0].get("id"), Some(&MappedValue::Cell(Value::Int(1))));
+    assert_eq!(
+        nested[0].get("username"),
+        Some(&MappedValue::Cell(Value::from("bobby")))
+    );
+    assert_eq!(
+        nested[0].get("contacts"),
+        Some(&MappedValue::Many(vec![
+            MappedRow::from([("name".into(), MappedValue::Cell(Value::from("bob")))]),
+            MappedRow::from([("name".into(), MappedValue::Cell(Value::from("roberta")),)]),
+        ]))
+    );
 }
 
 #[tokio::test]

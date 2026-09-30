@@ -98,16 +98,28 @@ mod tests {
         let command = SqliteCommand::new(conn.clone());
         command.execute("", None).await.unwrap();
         command
-            .execute_native(&datasources::Native::new("CREATE TABLE t (id INTEGER)"), None)
+            .execute_native(
+                &datasources::Native::new("CREATE TABLE t (id INTEGER)"),
+                None,
+            )
             .await
             .unwrap();
         command
-            .execute_native(&datasources::Native::new("INSERT INTO t (id) VALUES (1) RETURNING id"), None)
+            .execute_native(
+                &datasources::Native::new("INSERT INTO t (id) VALUES (1) RETURNING id"),
+                None,
+            )
             .await
             .unwrap();
-        command.execute_reader_native(&datasources::Native::new("SELECT 1"), None).await.unwrap();
+        command
+            .execute_reader_native(&datasources::Native::new("SELECT 1"), None)
+            .await
+            .unwrap();
         let sets = command
-            .execute_reader_native(&datasources::Native::new("SELECT 1 AS id; SELECT 2 AS id"), None)
+            .execute_reader_native(
+                &datasources::Native::new("SELECT 1 AS id; SELECT 2 AS id"),
+                None,
+            )
             .await
             .unwrap();
         let mut first = Vec::new();
@@ -174,18 +186,27 @@ mod tests {
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None);
         assert!(command.execute("DELETE FROM items", None).await.is_err());
-        assert!(command.execute_reader_native(&datasources::Native::new("SELECT 1"), None).await.is_err());
+        assert!(command
+            .execute_reader_native(&datasources::Native::new("SELECT 1"), None)
+            .await
+            .is_err());
         ds.create_repository::<Cells>(None, None);
         let factory = BuiltDatasource::new("sqlite", Arc::new(With(None)), None);
         factory.create_connection().await.unwrap();
         let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
         assert!(bound.execute("DELETE FROM items", None).await.is_err());
-        assert!(bound.execute_reader_native(&datasources::Native::new("SELECT 1"), None).await.is_err());
+        assert!(bound
+            .execute_reader_native(&datasources::Native::new("SELECT 1"), None)
+            .await
+            .is_err());
         (&factory as &dyn Datasource)
             .create_repository::<Cells>(Some(factory.create_connection().await.unwrap()), None);
 
         let closed = Arc::new(SqliteConnection::new(None));
-        assert!(SqliteCommand::new(closed).execute_native(&datasources::Native::new("x"), None).await.is_err());
+        assert!(SqliteCommand::new(closed)
+            .execute_native(&datasources::Native::new("x"), None)
+            .await
+            .is_err());
     }
 
     #[tokio::test]

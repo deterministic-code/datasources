@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  ChangeCasingMapper,
   Datasource,
   DatasourceFactory,
+  FlatToNestedMapper,
   Native,
   ReturnStatement,
   RowTypeConverter,
   TransformMapper,
+  type Cells,
 } from "@datasources/core";
 import {
   loadDialect,
@@ -93,9 +96,61 @@ describe("command", () => {
     await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
     await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
     await using reader = await command.executeReader("SELECT id, name FROM items");
-    expect(await reader.next()).toBe(true);
-    expect(reader.current).toEqual({ id: 1, name: "ada" });
+    let row: Cells | undefined;
+    if (await reader.next()) row = reader.current;
+    expect(row).toEqual({ id: 1, name: "ada" });
     expect(await reader.next()).toBe(false);
+  });
+
+  it("reads with case mapping", async () => {
+    const ds = Datasource.default;
+    await using connection = await ds.createConnection();
+    await connection.open();
+    const command = connection.createCommand();
+    await command.executeNative(
+      new Native("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"),
+    );
+    await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+    await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
+    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+    let mapped: Cells | undefined;
+    while (await reader.next()) {
+      const row: Cells = {};
+      for (const [key, value] of Object.entries(reader.current!)) row[casing.reverseMap(key)] = value;
+      mapped = row;
+    }
+    expect(mapped).toEqual({ UserId: 1, FirstName: "Ada" });
+  });
+
+  it("reads flat rows to nested", async () => {
+    const ds = Datasource.default;
+    await using connection = await ds.createConnection();
+    await connection.open();
+    const command = connection.createCommand();
+    await command.executeNative(
+      new Native("CREATE TABLE users (id INTEGER, username TEXT, contact_name TEXT)"),
+    );
+    await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
+    await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+    await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
+    const rows: Cells[] = [];
+    while (await reader.next()) rows.push(reader.current!);
+    const mapper = new FlatToNestedMapper<{
+      id: number;
+      username: string;
+      contacts: { name: string }[];
+    }>({
+      key: "id",
+      fields: {
+        id: "id",
+        username: "username",
+        contacts: { key: "contact_name", fields: { name: "contact_name" } },
+      },
+    });
+    const nested = mapper.map(rows);
+    expect(nested).toEqual([
+      { id: 1, username: "bobby", contacts: [{ name: "bob" }, { name: "roberta" }] },
+    ]);
   });
 
   it("runs executeReader and returns NameValue", async () => {

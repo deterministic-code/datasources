@@ -1,8 +1,8 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use datasources::{
-    utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Native,
-    IsolationLevel, Parameter, Reader, Transaction, Value,
+    utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
+    IsolationLevel, Native, Parameter, Reader, Transaction, Value,
 };
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
@@ -307,7 +307,10 @@ async fn run(path: &std::path::Path, dialect: &DialectFile) {
                 }
             }
         } else {
-            match target.execute_reader_native(&Native::new(&sql), Some(&args)).await {
+            match target
+                .execute_reader_native(&Native::new(&sql), Some(&args))
+                .await
+            {
                 Ok(reader) => {
                     assert!(
                         expected_error.is_none(),

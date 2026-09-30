@@ -1,0 +1,9 @@
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
+await using reader = await command.executeReader("SELECT id, name FROM items");
+let row: Cells | undefined;
+if (await reader.next()) row = reader.current;

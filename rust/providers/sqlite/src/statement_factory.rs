@@ -24,16 +24,19 @@ impl Transformed<'_> {
 
 impl SqliteStatementFactory {
     pub fn transform<'a>(&self, statement: &'a dyn Statement) -> Transformed<'a> {
-        if let Some(inserted) = statement.as_any().downcast_ref::<SelectInsertedIdStatement>() {
+        if let Some(inserted) = statement
+            .as_any()
+            .downcast_ref::<SelectInsertedIdStatement>()
+        {
             return Transformed::Select(SelectStatement::text(format!(
                 "SELECT last_insert_rowid() AS {}",
                 inserted.column
             )));
         }
         match statement.as_any().downcast_ref::<CreateTableStatement>() {
-            Some(create) if create.table.is_some() => Transformed::Create(CreateTableStatement::text(
-                SqliteCreateTableStatementRenderer.render(create),
-            )),
+            Some(create) if create.table.is_some() => Transformed::Create(
+                CreateTableStatement::text(SqliteCreateTableStatementRenderer.render(create)),
+            ),
             _ => Transformed::Same(statement),
         }
     }

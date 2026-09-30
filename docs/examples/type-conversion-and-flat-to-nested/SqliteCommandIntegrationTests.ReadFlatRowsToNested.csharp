@@ -1,0 +1,32 @@
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute(Native.N("""
+    CREATE TABLE users (
+        id INTEGER,
+        username TEXT,
+        contact_name TEXT
+    )
+    """));
+await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
+await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
+var rows = new List<Row>();
+while (await reader.Next())
+    rows.Add(reader.Current!);
+var mapper = new FlatToNestedMapper(new TypeMap
+{
+    Key = "id",
+    Fields = new Dictionary<string, TypeMapField>
+    {
+        ["id"] = "id",
+        ["username"] = "username",
+        ["contacts"] = new TypeMapGroup
+        {
+            Key = "contact_name",
+            Fields = new Dictionary<string, TypeMapField> { ["name"] = "contact_name" },
+        },
+    },
+});
+var nested = mapper.Map(rows);

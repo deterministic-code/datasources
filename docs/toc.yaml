@@ -23,53 +23,6 @@ pages:
   - path: sections/reader.md
     title: Reader
     group: Code Reference
-  - path: sections/statements.md
-    title: Statements
-    group: Code Reference
-  - path: sections/select-statement.md
-    title: Select Statement
-    group: Code Reference
-    parent: Statements
-  - path: sections/insert-statement.md
-    title: Insert Statement
-    group: Code Reference
-    parent: Statements
-  - path: sections/update-statement.md
-    title: Update Statement
-    group: Code Reference
-    parent: Statements
-  - path: sections/delete-statement.md
-    title: Delete Statement
-    group: Code Reference
-    parent: Statements
-  - path: sections/create-table-statement.md
-    title: Create Table Statement
-    group: Code Reference
-    parent: Statements
-  - path: sections/create-index-statement.md
-    title: Create Index Statement
-    group: Code Reference
-    parent: Statements
-  - path: sections/execute-stored-procedure-statement.md
-    title: Execute Stored Procedure Statement
-    group: Code Reference
-    parent: Statements
-  - path: sections/return-statement.md
-    title: Return Statement
-    group: Code Reference
-    parent: Statements
-  - path: sections/where-clause.md
-    title: Where
-    group: Code Reference
-    parent: Statements
-  - path: sections/expressions.md
-    title: Expressions
-    group: Code Reference
-    parent: Statements
-  - path: sections/statement-evaluator.md
-    title: Statement Evaluator
-    group: Code Reference
-    parent: Statements
   - path: sections/repository.md
     title: Repositories
     group: Code Reference
@@ -119,6 +72,53 @@ pages:
     title: Row Type Converter
     group: Code Reference
     parent: Type Converters
+  - path: sections/statements.md
+    title: Statements
+    group: Code Reference
+  - path: sections/select-statement.md
+    title: Select Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/insert-statement.md
+    title: Insert Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/update-statement.md
+    title: Update Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/delete-statement.md
+    title: Delete Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/create-table-statement.md
+    title: Create Table Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/create-index-statement.md
+    title: Create Index Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/execute-stored-procedure-statement.md
+    title: Execute Stored Procedure Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/return-statement.md
+    title: Return Statement
+    group: Code Reference
+    parent: Statements
+  - path: sections/where-clause.md
+    title: Where
+    group: Code Reference
+    parent: Statements
+  - path: sections/expressions.md
+    title: Expressions
+    group: Code Reference
+    parent: Statements
+  - path: sections/statement-evaluator.md
+    title: Statement Evaluator
+    group: Code Reference
+    parent: Statements
   - path: sections/other.md
     title: Other
     group: Code Reference
