@@ -1,2 +1,2 @@
-const converter = new MetaDataRowTypeConverter({}, { flag: new OnlyOne() });
+const converter = new MetaDataRowTypeConverter({ flag: new OnlyOne() });
 const dest = converter.convert({ flag: 1, name: "a" });

@@ -1,22 +1,16 @@
 using System.Collections;
-using System.Globalization;
 using System.Reflection;
 
 namespace Datasources;
 
 public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T : new()
 {
-    public Dictionary<string, TypeConverter<Value, Value>> Types { get; set; } = [];
     public Dictionary<string, TypeConverter<Value, Value>> Fields { get; set; } = [];
     public HashSet<string> References { get; } = [];
     public IMapper<string, string> ReferenceColumns { get; set; } = new IdentityMapper<string>();
 
-    public MetaDataRowTypeConverter(
-        IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null,
-        IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
+    public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
     {
-        if (types is not null)
-            Types = new(types);
         if (fields is not null)
             Fields = new(fields);
     }
@@ -43,9 +37,9 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
             var cell = Converted(key, value, reverse: false);
             var underlying = Nullable.GetUnderlyingType(prop.PropertyType);
             var type = underlying ?? prop.PropertyType;
-            var fitted = Fit(cell.ToObject(), type);
-            if (fitted is null ? underlying is not null || !type.IsValueType : type.IsInstanceOfType(fitted))
-                prop.SetValue(target, fitted);
+            var raw = cell.ToObject();
+            if (raw is null ? underlying is not null || !type.IsValueType : type.IsInstanceOfType(raw))
+                prop.SetValue(target, raw);
         }
         return target;
     }
@@ -99,14 +93,6 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
 
     TypeConverter<Value, Value>? Converter(string key) =>
         Fields.TryGetValue(key, out var field) ? field : null;
-
-    static object? Fit(object? raw, Type type) => (raw, type) switch
-    {
-        (long number, _) when type == typeof(int) && number is >= int.MinValue and <= int.MaxValue => (int)number,
-        (string text, _) when type == typeof(Guid) && Guid.TryParse(text, out var id) => id,
-        (string text, _) when type == typeof(DateTime) && DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) => date,
-        _ => raw
-    };
 
     static bool IsColumn(Type type)
     {

@@ -18,7 +18,7 @@ describe("MetaDataRowTypeConverter", () => {
   });
 
   it("lets field converters override", () => {
-    const converter = new MetaDataRowTypeConverter({}, { flag: new OnlyOne() });
+    const converter = new MetaDataRowTypeConverter({ flag: new OnlyOne() });
     const dest = converter.convert({ flag: 1, name: "a" });
     expect(dest.flag).toBe(true);
     expect(dest.name).toBe("a");
@@ -26,7 +26,7 @@ describe("MetaDataRowTypeConverter", () => {
   });
 
   it("can construct a typed destination", () => {
-    const converter = new MetaDataRowTypeConverter({}, { flag: new OnlyOne() });
+    const converter = new MetaDataRowTypeConverter({ flag: new OnlyOne() });
     class Item {
       flag = false;
     }

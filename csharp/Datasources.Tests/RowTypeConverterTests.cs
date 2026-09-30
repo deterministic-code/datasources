@@ -61,10 +61,10 @@ public class RowTypeConverterTests
     }
 
     [Fact]
-    public void AssignsIntegerCellToIntProperty()
+    public void LeavesIntPropertyWhenCellIsLong()
     {
         var row = new MetaDataRowTypeConverter<Counted>().Convert(new Row { ["id"] = 1L });
-        Assert.Equal(1, row.id);
+        Assert.Equal(0, row.id);
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class RowTypeConverterTests
             ["IsEnabled"] = 2,
             ["Created"] = new DateTime(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc)
         };
-        var converter = new MetaDataRowTypeConverter<User>(null, new Dictionary<string, TypeConverter<Value, Value>>
+        var converter = new MetaDataRowTypeConverter<User>(new Dictionary<string, TypeConverter<Value, Value>>
         {
             ["IsEnabled"] = new OnlyOne()
         });
@@ -103,7 +103,7 @@ public class RowTypeConverterTests
     [Fact]
     public void AppliesFieldOverrideOnDictionaryRows()
     {
-        var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
+        var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dictionary<string, TypeConverter<Value, Value>>
         {
             ["flag"] = new OnlyOne()
         });
