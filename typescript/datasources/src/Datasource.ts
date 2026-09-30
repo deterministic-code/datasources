@@ -11,6 +11,7 @@ import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
+import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 
 export class Datasource implements IDatasource {
@@ -37,7 +38,7 @@ export class Datasource implements IDatasource {
   ): CRUDRepositoryOptions<T> => {
     const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
-    const rows = options?.rowConverter ?? this.driver.rowConverter(columnsOf(type));
+    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, columnsOf(type));
     return options === undefined
       ? { ...built, rowTypeConverters: types, rowConverter: rows }
       : "ids" in options ||

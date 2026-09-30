@@ -29,7 +29,7 @@ public sealed class Datasource(
     {
         var built = CreateCRUDRepositoryOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
-        var rows = driver.RowConverter(Columns(typeof(T)));
+        var rows = RowTypeConverter.From(types, Columns(typeof(T)));
         return options switch
         {
             null => new()
