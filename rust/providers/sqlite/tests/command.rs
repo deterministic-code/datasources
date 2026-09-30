@@ -98,6 +98,38 @@ fn user_contacts_mapper() -> TransformMapper<Row, User> {
 }
 
 #[tokio::test]
+async fn reads_boolean_as_bool_and_leaves_integer() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = ds.create_connection().await.unwrap();
+    connection.open().await.unwrap();
+    let command = connection.create_command();
+    command
+        .execute_native(
+            &Native::new("CREATE TABLE flags (enabled BOOLEAN, count INTEGER)"),
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute("INSERT INTO flags (enabled, count) VALUES (1, 1)", None)
+        .await
+        .unwrap();
+    let reader = command
+        .execute_reader_native(
+            &Native::new("SELECT enabled, count, 1 AS one FROM flags"),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(reader.next().await.unwrap());
+    let row = reader.current().unwrap();
+    assert_eq!(row.get("enabled"), Some(&Value::Bool(true)));
+    assert_eq!(row.get("count"), Some(&Value::Int(1)));
+    assert_eq!(row.get("one"), Some(&Value::Int(1)));
+}
+
+#[tokio::test]
 async fn run_raw_sql() {
     let _guard = super::env_lock();
     let ds = default().unwrap();

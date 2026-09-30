@@ -77,10 +77,10 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
         .await
         .unwrap();
     assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
-    assert_eq!(by_id.get("is_enabled"), Some(&Value::Int(1)));
+    assert_eq!(by_id.get("is_enabled"), Some(&Value::Bool(true)));
     assert_eq!(disabled.len(), 1);
     assert_eq!(disabled[0].get("id"), Some(&Value::Int(2)));
-    assert_eq!(disabled[0].get("is_enabled"), Some(&Value::Int(0)));
+    assert_eq!(disabled[0].get("is_enabled"), Some(&Value::Bool(false)));
 }
 
 struct UserConverter;
@@ -89,7 +89,7 @@ impl TypeConverter<Row, Row> for UserConverter {
     fn convert(&self, from: &Row) -> Result<Row> {
         let mut row = from.clone();
         let enabled = match row.get("is_enabled") {
-            Some(Value::Int(flag)) => Value::Bool(*flag != 0),
+            Some(Value::Bool(flag)) => Value::Bool(*flag),
             Some(value) => value.clone(),
             None => Value::Null,
         };
@@ -188,7 +188,7 @@ async fn reads_user_by_guid_username_and_created() {
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
     assert_eq!(by_id.get("Key"), Some(&Value::from(ADA)));
-    assert_eq!(by_id.get("Active"), Some(&Value::Int(1)));
+    assert_eq!(by_id.get("Active"), Some(&Value::Bool(true)));
     assert_eq!(
         by_id.get("Opened"),
         Some(&Value::from("2020-01-01T00:00:00.000Z"))
@@ -318,7 +318,7 @@ mod user_view {
         assert_eq!(users_view.get("UserType"), Some(&Value::from("admin")));
         assert_eq!(users_view.get("Login"), Some(&Value::from("ada")));
         assert_eq!(users_view.get("Key"), Some(&Value::from(ADA)));
-        assert_eq!(users_view.get("Active"), Some(&Value::Int(1)));
+        assert_eq!(users_view.get("Active"), Some(&Value::Bool(true)));
         assert_eq!(
             users_view.get("Opened"),
             Some(&Value::from("2020-01-01T00:00:00.000Z"))
@@ -653,7 +653,7 @@ mod user_crud {
         assert_eq!(created.get("id"), Some(&Value::Int(1)));
         assert_eq!(by_id.get("id"), Some(&Value::Int(1)));
         assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
-        assert_eq!(by_id.get("is_enabled"), Some(&Value::Int(1)));
+        assert_eq!(by_id.get("is_enabled"), Some(&Value::Bool(true)));
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].get("username"), Some(&Value::from("ada")));
         assert_eq!(renamed.get("username"), Some(&Value::from("ada-v2")));

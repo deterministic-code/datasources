@@ -14,7 +14,7 @@ public sealed class SqliteDriver : IDriver
         new Dictionary<string, string>
         {
             ["int"] = "INTEGER",
-            ["bool"] = "INTEGER",
+            ["bool"] = "BOOLEAN",
             ["uuid"] = "TEXT",
             ["string"] = "TEXT",
             ["datetime"] = "TEXT",

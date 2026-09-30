@@ -2873,7 +2873,7 @@ Use `AddMiddleware` / `addMiddleware` / `add_middleware` to add low-level diagno
 
 #### Run raw SQL
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L73-L88)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L90-L105)
 
 ```csharp
 var ds = Datasource.Default;
@@ -2897,7 +2897,7 @@ if (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L100-L127)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L132-L159)
 
 ```rust
 let ds = default().unwrap();
@@ -2932,7 +2932,7 @@ let row = reader.current().unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L91-L103)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L103-L115)
 
 ```typescript
 const ds = Datasource.default;
@@ -2957,7 +2957,7 @@ if (await reader.next()) row = reader.current;
 
 #### Run ExecuteReader and return NameValue
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L154-L172)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L171-L189)
 
 ```csharp
 sealed class NameValue
@@ -2990,7 +2990,7 @@ while (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L9-L13) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L232-L265)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L9-L13) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L264-L297)
 
 ```rust
 impl ConvertSchema for NameValue {
@@ -3038,7 +3038,7 @@ while reader.next().await.unwrap() {
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L25-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L156-L172)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L25-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L168-L184)
 
 ```typescript
 class NameValue {
@@ -3072,7 +3072,7 @@ while (await reader.next()) items.push(converter.convert(reader.current!, NameVa
 
 #### Execute insert, update, and delete
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L23-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L174-L209)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L23-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L191-L226)
 
 ```csharp
 sealed class Item
@@ -3127,7 +3127,7 @@ Item? gone = null;
 null
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L267-L337)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L299-L369)
 
 ```rust
 impl ConvertSchema for Item {
@@ -3217,7 +3217,7 @@ let updated = updated.unwrap();
 None
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L30-L33) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L174-L207)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L30-L33) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L186-L219)
 
 ```typescript
 class Item {
@@ -3273,7 +3273,7 @@ undefined
 
 #### Map flat contacts
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L44-L54) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L211-L239)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L44-L54) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L228-L256)
 
 ```csharp
 sealed class User
@@ -3341,7 +3341,7 @@ while (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L48-L98) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L339-L390)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L48-L98) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L371-L422)
 
 ```rust
 fn text_of(row: &Row, key: &str) -> String {
@@ -3449,7 +3449,7 @@ let user = user.unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L48-L63) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L209-L234)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L48-L63) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L221-L246)
 
 ```typescript
 class Contact {
@@ -3878,7 +3878,7 @@ Dispose the reader with `await using`. Rust drops it.
 
 #### Read a row
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L73-L88)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L90-L105)
 
 ```csharp
 var ds = Datasource.Default;
@@ -3902,7 +3902,7 @@ if (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L100-L127)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L132-L159)
 
 ```rust
 let ds = default().unwrap();
@@ -3937,7 +3937,7 @@ let row = reader.current().unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L91-L103)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L103-L115)
 
 ```typescript
 const ds = Datasource.default;
@@ -3962,7 +3962,7 @@ if (await reader.next()) row = reader.current;
 
 #### Read with case mapping
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L90-L111)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L107-L128)
 
 ```csharp
 var ds = Datasource.Default;
@@ -3992,7 +3992,7 @@ while (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L129-L164)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L161-L196)
 
 ```rust
 let ds = default().unwrap();
@@ -4036,7 +4036,7 @@ while reader.next().await.unwrap() {
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L105-L123)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L117-L135)
 
 ```typescript
 const ds = Datasource.default;
@@ -4068,7 +4068,7 @@ while (await reader.next()) {
 
 #### Type conversion and flat to nested
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L113-L152)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L130-L169)
 
 ```csharp
 var ds = Datasource.Default;
@@ -4118,7 +4118,7 @@ var nested = mapper.Map(rows);
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L166-L230)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L198-L262)
 
 ```rust
 let ds = default().unwrap();
@@ -4184,7 +4184,7 @@ let nested = Mapper::map(&mapper, rows);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L125-L154)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L137-L166)
 
 ```typescript
 const ds = Datasource.default;
@@ -4229,7 +4229,7 @@ const nested = mapper.map(rows);
 
 #### Read multiple results returned in a single command
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L241-L261)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L258-L278)
 
 ```csharp
 var ds = Datasource.Default;
@@ -4263,7 +4263,7 @@ var again = await reader.NextResult();
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L392-L417)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L424-L449)
 
 ```rust
 let ds = default().unwrap();
@@ -4304,7 +4304,7 @@ assert!(!again);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L236-L252)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L248-L264)
 
 ```typescript
 const ds = Datasource.default;
@@ -5660,7 +5660,7 @@ sealed class UserConverter : TypeConverter<User, Row>
     {
         id = (int)(long)from["id"].ToObject()!,
         username = (string)from["username"].ToObject()!,
-        is_enabled = (long)from["is_enabled"].ToObject()! != 0
+        is_enabled = (bool)from["is_enabled"].ToObject()!
     };
 
     public override Row ReverseConvert(User to) => new()
@@ -5705,7 +5705,7 @@ impl TypeConverter<Row, Row> for UserConverter {
     fn convert(&self, from: &Row) -> Result<Row> {
         let mut row = from.clone();
         let enabled = match row.get("is_enabled") {
-            Some(Value::Int(flag)) => Value::Bool(*flag != 0),
+            Some(Value::Bool(flag)) => Value::Bool(*flag),
             Some(value) => value.clone(),
             None => Value::Null,
         };
@@ -5766,7 +5766,7 @@ class UserConverter extends TypeConverter<MappedUser, Cells> {
     const user = new MappedUser();
     user.id = from.id as number;
     user.username = from.username as string;
-    user.is_enabled = from.is_enabled === 1;
+    user.is_enabled = from.is_enabled === true;
     return user;
   };
 

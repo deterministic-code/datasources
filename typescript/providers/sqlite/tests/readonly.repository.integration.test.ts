@@ -26,7 +26,7 @@ const lin = "33333333-3333-3333-3333-333333333333";
 class User {
   id = 0;
   username = "";
-  is_enabled = 0;
+  is_enabled = false;
 }
 
 class MappedUser {
@@ -40,7 +40,7 @@ class UserConverter extends TypeConverter<MappedUser, Cells> {
     const user = new MappedUser();
     user.id = from.id as number;
     user.username = from.username as string;
-    user.is_enabled = from.is_enabled === 1;
+    user.is_enabled = from.is_enabled === true;
     return user;
   };
 
@@ -54,7 +54,7 @@ class UserConverter extends TypeConverter<MappedUser, Cells> {
 class UserAccount {
   Key = "";
   Login = "";
-  Active = 0;
+  Active = false;
   Opened = "";
 }
 
@@ -74,10 +74,10 @@ describe("readonly repository", () => {
     for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
       disabled.push(row);
     expect(byId?.username).toBe("ada");
-    expect(byId?.is_enabled).toBe(1);
+    expect(byId?.is_enabled).toBe(true);
     expect(disabled.length).toBe(1);
     expect(disabled[0]?.id).toBe(2);
-    expect(disabled[0]?.is_enabled).toBe(0);
+    expect(disabled[0]?.is_enabled).toBe(false);
   });
 
   it("maps an object explicitly", async () => {
@@ -126,7 +126,7 @@ describe("readonly repository", () => {
       later.push(row);
     expect(byId?.Login).toBe("ada");
     expect(byId?.Key).toBe(ada);
-    expect(byId?.Active).toBe(1);
+    expect(byId?.Active).toBe(true);
     expect(byId?.Opened).toBe("2020-01-01T00:00:00.000Z");
     expect(byLogin.length).toBe(1);
     expect(byLogin[0]?.Login).toBe("ada");
@@ -144,7 +144,7 @@ describe("user view", () => {
   class UsersView {
     Key = "";
     Login = "";
-    Active = 0;
+    Active = false;
     Opened = "";
     UserType = "";
   }
@@ -181,7 +181,7 @@ describe("user view", () => {
     expect(usersView?.UserType).toBe("admin");
     expect(usersView?.Login).toBe("ada");
     expect(usersView?.Key).toBe(ada);
-    expect(usersView?.Active).toBe(1);
+    expect(usersView?.Active).toBe(true);
     expect(usersView?.Opened).toBe("2020-01-01T00:00:00.000Z");
     expect(usersView === undefined || !("UserTypeId" in usersView)).toBe(true);
   });
@@ -219,7 +219,7 @@ describe("user crud", () => {
     expect(removed.rowsAffected).toBe(1);
     const gone = await usersRepo.readSingleById(created.id);
     expect(created.id).toBe(1);
-    expect(byId).toEqual({ id: 1, username: "ada", is_enabled: 1 });
+    expect(byId).toEqual({ id: 1, username: "ada", is_enabled: true });
     expect(matches.map((row) => row.username)).toEqual(["ada"]);
     expect(renamed?.username).toBe("ada-v2");
     expect(gone).toBeUndefined();

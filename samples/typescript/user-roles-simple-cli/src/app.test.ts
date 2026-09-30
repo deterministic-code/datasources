@@ -120,7 +120,7 @@ describe("schema", () => {
     expect(qualified("sqlite", "users.id")).toBe('"users"."id"');
     expect(qualified("mysql", "users.id")).toBe("`users`.`id`");
     expect(userTable("sqlite")).toBe(
-      'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" TEXT, "username" TEXT, "is_enabled" INTEGER, "balance" NUMERIC, "location" REAL, "created" TEXT, "version" BLOB)',
+      'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" TEXT, "username" TEXT, "is_enabled" BOOLEAN, "balance" NUMERIC, "location" REAL, "created" TEXT, "version" BLOB)',
     );
     expect(userTable("mysql")).toBe(
       "CREATE TABLE `user` (`id` INT PRIMARY KEY, `uuid` CHAR(36), `username` TEXT, `is_enabled` TINYINT, `balance` DECIMAL(18,4), `location` DOUBLE, `created` TEXT, `version` BLOB)",

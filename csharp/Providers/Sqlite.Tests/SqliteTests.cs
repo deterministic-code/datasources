@@ -69,7 +69,7 @@ public class SqliteTests
         Assert.Equal("INTEGER", driver.ColumnType("int"));
         Assert.Equal("TEXT", driver.ColumnType("uuid"));
         Assert.Equal("TEXT", driver.ColumnType("string"));
-        Assert.Equal("INTEGER", driver.ColumnType("bool"));
+        Assert.Equal("BOOLEAN", driver.ColumnType("bool"));
         Assert.Equal("NUMERIC", driver.ColumnType("decimal"));
         Assert.Equal("REAL", driver.ColumnType("float"));
         Assert.Equal("TEXT", driver.ColumnType("datetime"));

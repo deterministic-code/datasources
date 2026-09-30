@@ -2,7 +2,7 @@ impl TypeConverter<Row, Row> for UserConverter {
     fn convert(&self, from: &Row) -> Result<Row> {
         let mut row = from.clone();
         let enabled = match row.get("is_enabled") {
-            Some(Value::Int(flag)) => Value::Bool(*flag != 0),
+            Some(Value::Bool(flag)) => Value::Bool(*flag),
             Some(value) => value.clone(),
             None => Value::Null,
         };
