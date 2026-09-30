@@ -7,9 +7,9 @@ await Execute(connection, """
     """);
 var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
-    EntityMapper = new PluralizerMapper(),
-    ReadProperties = ["id", "username", "is_enabled"],
+    EntityMapper = SnakeThenPlural(),
+    ColumnMappings = Snake,
     ObjectConverter = new UserConverter()
 });
 
-var user = await usersRepo.ReadSingle(new Where("id", eq, 1));
+var user = await usersRepo.ReadSingle(new Where("Id", eq, 1));

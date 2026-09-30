@@ -60,45 +60,45 @@ let stamp = Value::DateTime(
 );
 let version = Value::Binary(vec![]);
 let mut created = contact_row(&[
-    ("uuid", Value::Uuid(uuid::Uuid::new_v4())),
-    ("created", stamp.clone()),
-    ("updated", stamp.clone()),
-    ("version", version.clone()),
-    ("contact_source_id", Value::Int(ids.contact_source_id)),
-    ("contact_type_id", Value::Int(ids.contact_type_id)),
-    ("first_name", Value::from("Extra")),
-    ("last_name", Value::from("Contact")),
+    ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
+    ("Created", stamp.clone()),
+    ("Updated", stamp.clone()),
+    ("Version", version.clone()),
+    ("ContactSource", Value::Int(ids.contact_source_id)),
+    ("ContactType", Value::Int(ids.contact_type_id)),
+    ("FirstName", Value::from("Extra")),
+    ("LastName", Value::from("Contact")),
     (
-        "addresses",
+        "Addresses",
         encode_rows(&[contact_row(&[
-            ("uuid", Value::Uuid(uuid::Uuid::new_v4())),
-            ("created", stamp.clone()),
-            ("updated", stamp.clone()),
-            ("version", version.clone()),
-            ("address_type_id", Value::Int(ids.address_type_id)),
-            ("line1", Value::from("9 Extra")),
-            ("city", Value::from("Oslo")),
+            ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
+            ("Created", stamp.clone()),
+            ("Updated", stamp.clone()),
+            ("Version", version.clone()),
+            ("AddressType", Value::Int(ids.address_type_id)),
+            ("Line1", Value::from("9 Extra")),
+            ("City", Value::from("Oslo")),
         ])]),
     ),
     (
-        "phones",
+        "Phones",
         encode_rows(&[contact_row(&[
-            ("uuid", Value::Uuid(uuid::Uuid::new_v4())),
-            ("created", stamp.clone()),
-            ("updated", stamp),
-            ("version", version),
-            ("phone_type_id", Value::Int(ids.phone_type_id)),
-            ("number", Value::from("555-extra")),
+            ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
+            ("Created", stamp.clone()),
+            ("Updated", stamp),
+            ("Version", version),
+            ("PhoneType", Value::Int(ids.phone_type_id)),
+            ("Number", Value::from("555-extra")),
         ])]),
     ),
 ]);
 let created = contacts_repo.create(&mut created).await.unwrap();
-let Value::Int(id) = created.get("id").cloned().unwrap_or(Value::Null) else {
+let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
     panic!("expected insert id");
 };
 let loaded = contacts_repo
     .read_single(
-        Some(&Where::new(Operator::equals("id", Value::Int(id)))),
+        Some(&Where::new(Operator::equals("Id", Value::Int(id)))),
         None,
     )
     .await

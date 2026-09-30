@@ -58,6 +58,7 @@ fn assemble(
     let row_converter = row_converter.map(|mapping| mapping.with_types(row_type_converters));
     let object_converter = object_converter
         .unwrap_or_else(|| Box::new(MetaDataRowTypeConverter::new(Vec::new())));
+    let table = Mapper::map(&entity_mapper, entity);
     let mut names: Vec<String> = row_converter
         .as_ref()
         .map(|converter| {
@@ -75,8 +76,9 @@ fn assemble(
         object_converter,
         rows_mapper,
         column_mappings,
+        entity_mapper,
         statements: RepositoryStatements::with_mappers(
-            Mapper::map(&entity_mapper, entity),
+            table,
             names,
             select,
             insert,

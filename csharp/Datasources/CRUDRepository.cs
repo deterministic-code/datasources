@@ -18,8 +18,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     private CRUDRepository(
         BuiltRepository<T> built,
         IWriteEnrichmentStrategy<T>? write = null,
-        IMapper<IReturnStatement, IReturnStatement>? returnMapper = null) : base(
-        built.Connection, built.RowConverter, built.ObjectConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
+        IMapper<IReturnStatement, IReturnStatement>? returnMapper = null) : base(built)
     {
         ids = built.Ids;
         this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();

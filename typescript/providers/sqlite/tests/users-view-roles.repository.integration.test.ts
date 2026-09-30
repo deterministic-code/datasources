@@ -86,7 +86,7 @@ describe("users view roles", () => {
       columnMappings: casing,
     });
     const rolesRepo = ds.createReadonlyRepository(UserRole, connection, {
-      entity: "user_roles",
+      entityMapper: new DictionaryMapper([["UserRole", "user_roles"]]),
       columnMappings: new DictionaryMapper([
         ["UserId", "user_id"],
         ["Name", "name"],

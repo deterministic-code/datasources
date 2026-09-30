@@ -6,10 +6,11 @@ await Execute(connection, """
     """);
 var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
-    EntityMapper = new PluralizerMapper(),
+    EntityMapper = SnakeThenPlural(),
+    ColumnMappings = Snake,
 });
 
-var byId = await repo.ReadSingle(new Where("id", eq, 1));
+var byId = await repo.ReadSingle(new Where("Id", eq, 1));
 var disabled = new List<User>();
-await foreach (var row in repo.Read(new Where("username", eq, "grace").And("is_enabled", eq, 0)))
+await foreach (var row in repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq, 0)))
     disabled.Add(row);

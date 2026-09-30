@@ -10,11 +10,12 @@ execute_sql(
 )
 .await;
 let mut options = create_crud_repository_options::<User>();
-options.entity_mapper = Box::new(PluralizerMapper::new());
+options.entity_mapper = Box::new(snake_then_plural());
+options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 options.object_converter = Some(Box::new(UserConverter));
 let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let user = users_repo
-    .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
+    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
     .await
     .unwrap()
     .unwrap();

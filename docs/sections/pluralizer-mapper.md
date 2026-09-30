@@ -119,7 +119,7 @@ fn reverse_map(&self, value: String) -> String
 
 ## Remarks
 
-Use this as [EntityMapper](./readonly-repository.md#entitymapper) when the type name is singular and the table name is its plural. A lowercase plural table is [ChangeCasingMapper](./change-casing-mapper.md) then `PluralizerMapper`. Setting {{Entity|entity|entity}} skips the mapper.
+Use this as [EntityMapper](./readonly-repository.md#entitymapper) when the type name is singular and the table name is its plural. A lowercase plural table is [ChangeCasingMapper](./change-casing-mapper.md) then `PluralizerMapper`. The builder maps {{Entity|entity|entity}}, and defaults it to the type name.
 
 ## Examples
 

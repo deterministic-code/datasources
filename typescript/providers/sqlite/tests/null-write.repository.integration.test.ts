@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { CRUDRepository, Datasource, createCRUDRepositoryOptions, type IConnection } from "@datasources/core";
+import { CRUDRepository, ChangeCasingMapper, Datasource, createCRUDRepositoryOptions, type IConnection } from "@datasources/core";
 import { applySchema } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 class Item {
-  id = 0;
-  name = "";
-  created: Date | null = null;
-  version: Uint8Array | null = null;
+  Id = 0;
+  Name = "";
+  Created: Date | null = null;
+  Version: Uint8Array | null = null;
 }
 
 const open = async (): Promise<IConnection> => {
@@ -23,29 +23,35 @@ describe("null write", () => {
   it("omits null datetime and version", async () => {
     const connection = await open();
     await applySchema(connection, "null-write-item");
-    const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(Item), entity: "item" });
-    const omitted = await repo.create(Object.assign(new Item(), { name: "ada" }));
-    expect(omitted.id).toBeGreaterThan(0);
-    const stored = await repo.readSingleById(omitted.id);
-    omitted.name = "ada-v2";
+    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+    const repo = new CRUDRepository(connection, {
+      ...createCRUDRepositoryOptions(Item),
+      entityMapper: casing,
+      columnMappings: casing,
+      ids: ["Id"],
+    });
+    const omitted = await repo.create(Object.assign(new Item(), { Name: "ada" }));
+    expect(omitted.Id).toBeGreaterThan(0);
+    const stored = await repo.readSingleById(omitted.Id);
+    omitted.Name = "ada-v2";
     const updated = await repo.update(omitted);
     expect(updated.rowsAffected).toBe(1);
-    const kept = await repo.readSingleById(omitted.id);
+    const kept = await repo.readSingleById(omitted.Id);
     const explicit = Object.assign(new Item(), {
-      name: "grace",
-      created: new Date("2024-06-01T00:00:00.000Z"),
-      version: new Uint8Array([9, 9]),
+      Name: "grace",
+      Created: new Date("2024-06-01T00:00:00.000Z"),
+      Version: new Uint8Array([9, 9]),
     });
     const writtenCreate = await repo.create(explicit);
-    expect(writtenCreate.id).toBeGreaterThan(0);
-    const written = await repo.readSingleById(explicit.id);
+    expect(writtenCreate.Id).toBeGreaterThan(0);
+    const written = await repo.readSingleById(explicit.Id);
 
-    expect(stored?.created).toBe("2020-01-01T00:00:00.000Z");
-    expect(bytes(stored?.version ?? null)).toEqual([1, 2]);
-    expect(kept?.name).toBe("ada-v2");
-    expect(kept?.created).toBe(stored?.created);
-    expect(bytes(kept?.version ?? null)).toEqual(bytes(stored?.version ?? null));
-    expect(written?.created).toBe("2024-06-01T00:00:00.000Z");
-    expect(bytes(written?.version ?? null)).toEqual([9, 9]);
+    expect(stored?.Created).toBe("2020-01-01T00:00:00.000Z");
+    expect(bytes(stored?.Version ?? null)).toEqual([1, 2]);
+    expect(kept?.Name).toBe("ada-v2");
+    expect(kept?.Created).toBe(stored?.Created);
+    expect(bytes(kept?.Version ?? null)).toEqual(bytes(stored?.Version ?? null));
+    expect(written?.Created).toBe("2024-06-01T00:00:00.000Z");
+    expect(bytes(written?.Version ?? null)).toEqual([9, 9]);
   });
 });

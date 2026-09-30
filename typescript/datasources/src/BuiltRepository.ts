@@ -11,6 +11,7 @@ export type BuiltRepository<T = Cells> = {
   objectConverter: TypeConverter<T, Cells>;
   rowsMapper: IMapper<T, T>;
   columnMappings: IMapper<string, string>;
+  entityMapper: IMapper<string, string>;
   statements: RepositoryStatements;
   readColumns: string[];
   ids: string[];

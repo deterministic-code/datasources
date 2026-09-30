@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   CRUDRepository,
   ChangeCasingMapper, Datasource,
-  DatasourceFactory,
   DictionaryMapper,
   PluralizerMapper,
   ReadonlyRepository,
+  TransformMapper,
   TypeConverter,
   Where,
   type Cells,
@@ -24,30 +24,36 @@ const grace = "22222222-2222-2222-2222-222222222222";
 const lin = "33333333-3333-3333-3333-333333333333";
 
 class User {
-  id = 0;
-  username = "";
-  is_enabled = false;
+  Id = 0;
+  Username = "";
+  IsEnabled = false;
 }
 
 class MappedUser {
-  id = 0;
-  username = "";
-  is_enabled = false;
+  Id = 0;
+  Username = "";
+  IsEnabled = false;
 }
+
+const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
+const snakeThenPlural = new TransformMapper(
+  (name: string) => new PluralizerMapper().map(snake.map(name)),
+  (name: string) => snake.reverseMap(new PluralizerMapper().reverseMap(name)),
+);
 
 class UserConverter extends TypeConverter<MappedUser, Cells> {
   convert = (from: Cells): MappedUser => {
     const user = new MappedUser();
-    user.id = from.id as number;
-    user.username = from.username as string;
-    user.is_enabled = from.is_enabled === true;
+    user.Id = from.Id as number;
+    user.Username = from.Username as string;
+    user.IsEnabled = from.IsEnabled === true;
     return user;
   };
 
   reverseConvert = (to: MappedUser): Cells => ({
-    id: to.id,
-    username: to.username,
-    is_enabled: to.is_enabled ? 1 : 0,
+    Id: to.Id,
+    Username: to.Username,
+    IsEnabled: to.IsEnabled ? 1 : 0,
   });
 }
 
@@ -69,17 +75,18 @@ describe("readonly repository", () => {
         (2, 'grace', 0);
     `);
     const repo = ds.createReadonlyRepository(User, connection, {
-      entityMapper: new PluralizerMapper(),
+      entityMapper: snakeThenPlural,
+      columnMappings: snake,
     });
-    const byId = await repo.readSingle(new Where("id", eq, 1));
+    const byId = await repo.readSingle(new Where("Id", eq, 1));
     const disabled: User[] = [];
-    for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
+    for await (const row of repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)))
       disabled.push(row);
-    expect(byId?.username).toBe("ada");
-    expect(byId?.is_enabled).toBe(true);
+    expect(byId?.Username).toBe("ada");
+    expect(byId?.IsEnabled).toBe(true);
     expect(disabled.length).toBe(1);
-    expect(disabled[0]?.id).toBe(2);
-    expect(disabled[0]?.is_enabled).toBe(false);
+    expect(disabled[0]?.Id).toBe(2);
+    expect(disabled[0]?.IsEnabled).toBe(false);
   });
 
   it("maps an object explicitly", async () => {
@@ -92,15 +99,14 @@ describe("readonly repository", () => {
         (2, 'grace', 0);
     `);
     const usersRepo = ds.createReadonlyRepository(MappedUser, connection, {
-      entity: "User",
-      entityMapper: new PluralizerMapper(),
-      readProperties: ["id", "username", "is_enabled"],
+      entityMapper: snakeThenPlural,
+      columnMappings: snake,
       objectConverter: new UserConverter(),
     });
-    const user = await usersRepo.readSingle(new Where("id", eq, 1));
-    expect(user?.id).toBe(1);
-    expect(user?.username).toBe("ada");
-    expect(user?.is_enabled).toBe(true);
+    const user = await usersRepo.readSingle(new Where("Id", eq, 1));
+    expect(user?.Id).toBe(1);
+    expect(user?.Username).toBe("ada");
+    expect(user?.IsEnabled).toBe(true);
   });
 
   it("reads user by guid username and created", async () => {
@@ -114,7 +120,7 @@ describe("readonly repository", () => {
         ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
     `);
     const repo = ds.createReadonlyRepository(UserAccount, connection, {
-      entity: "user",
+      entityMapper: new DictionaryMapper([["UserAccount", "user"]]),
       columnMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
@@ -208,35 +214,32 @@ const executeSql = async (connection: IConnection, sql: string): Promise<void> =
 };
 
 describe("user crud", () => {
-  beforeEach(() => {
-    DatasourceFactory.reset();
-    DatasourceFactory.register("sqlite", new SqliteDriver());
-    delete process.env.INSTALLED_PROVIDERS;
-    delete process.env.DATASOURCE_URL;
-    process.env.PROVIDER = "sqlite";
-  });
-
   it("writes a user from the type", async () => {
-    const ds = Datasource.default;
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds);
     await applySchema(connection, "user-pascal");
-    const usersRepo = new CRUDRepository(User, connection);
-    const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
-    const byId = await usersRepo.readSingleById(created.id);
+    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+    const usersRepo = new CRUDRepository(connection, {
+      ...createCRUDRepositoryOptions(User),
+      columnMappings: casing,
+      ids: ["Id"],
+    });
+    const created = await usersRepo.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
+    const byId = await usersRepo.readSingleById(created.Id);
     const matches: User[] = [];
-    for await (const row of usersRepo.read(new Where("username", eq, "ada").and("is_enabled", eq, true)))
+    for await (const row of usersRepo.read(new Where("Username", eq, "ada").and("IsEnabled", eq, true)))
       matches.push(row);
-    created.username = "ada-v2";
+    created.Username = "ada-v2";
     const updated = await usersRepo.update(created);
-    const renamed = await usersRepo.readSingleById(created.id);
+    const renamed = await usersRepo.readSingleById(created.Id);
     const removed = await usersRepo.delete(created);
-    const gone = await usersRepo.readSingleById(created.id);
-    expect(created.id).toBeGreaterThan(0);
+    const gone = await usersRepo.readSingleById(created.Id);
+    expect(created.Id).toBeGreaterThan(0);
     expect(updated.rowsAffected).toBe(1);
     expect(removed.rowsAffected).toBe(1);
-    expect(byId).toEqual({ id: created.id, username: "ada", is_enabled: true });
-    expect(matches.map((row) => row.username)).toEqual(["ada"]);
-    expect(renamed?.username).toBe("ada-v2");
+    expect(byId).toEqual({ Id: created.Id, Username: "ada", IsEnabled: true });
+    expect(matches.map((row) => row.Username)).toEqual(["ada"]);
+    expect(renamed?.Username).toBe("ada-v2");
     expect(gone).toBeUndefined();
   });
 });
@@ -334,9 +337,9 @@ describe("users view crud", () => {
 
 describe("multi-tenant account", () => {
   class Account {
-    tenant_id = 0;
-    id = 0;
-    name = "";
+    TenantId = 0;
+    Id = 0;
+    Name = "";
   }
 
   it("reads updates and deletes by tenant and id", async () => {
@@ -348,24 +351,26 @@ describe("multi-tenant account", () => {
         (1, 1, 'ada'),
         (2, 1, 'grace');
     `);
+    const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const accountsRepo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(Account),
-      entity: "account",
-      ids: ["tenant_id", "id"],
+      entityMapper: casing,
+      columnMappings: casing,
+      ids: ["TenantId", "Id"],
     });
-    const ada = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
-    ada!.name = "ada-v2";
+    const ada = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });
+    ada!.Name = "ada-v2";
     const updated = await accountsRepo.update(ada!);
-    const renamed = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
+    const renamed = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });
     const removed = await accountsRepo.delete(ada!);
-    const gone = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
-    const graceRow = await accountsRepo.readSingleById({ tenant_id: 2, id: 1 });
+    const gone = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });
+    const graceRow = await accountsRepo.readSingleById({ TenantId: 2, Id: 1 });
     expect(updated.rowsAffected).toBe(1);
     expect(removed.rowsAffected).toBe(1);
-    expect(renamed?.name).toBe("ada-v2");
-    expect(renamed?.tenant_id).toBe(1);
+    expect(renamed?.Name).toBe("ada-v2");
+    expect(renamed?.TenantId).toBe(1);
     expect(gone).toBeUndefined();
-    expect(graceRow?.name).toBe("grace");
-    expect(graceRow?.tenant_id).toBe(2);
+    expect(graceRow?.Name).toBe("grace");
+    expect(graceRow?.TenantId).toBe(2);
   });
 });

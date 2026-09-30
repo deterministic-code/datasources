@@ -1,15 +1,15 @@
 class UserConverter extends TypeConverter<MappedUser, Cells> {
   convert = (from: Cells): MappedUser => {
     const user = new MappedUser();
-    user.id = from.id as number;
-    user.username = from.username as string;
-    user.is_enabled = from.is_enabled === true;
+    user.Id = from.Id as number;
+    user.Username = from.Username as string;
+    user.IsEnabled = from.IsEnabled === true;
     return user;
   };
 
   reverseConvert = (to: MappedUser): Cells => ({
-    id: to.id,
-    username: to.username,
-    is_enabled: to.is_enabled ? 1 : 0,
+    Id: to.Id,
+    Username: to.Username,
+    IsEnabled: to.IsEnabled ? 1 : 0,
   });
 }
