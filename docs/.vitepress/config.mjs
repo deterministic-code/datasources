@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
 import { dialectsVitePlugin, transformDialects } from "../../scripts/dialects.mjs";
+import { viewSourceMiddleware } from "../../scripts/view-source.mjs";
 import { nestSidebar, parseToc, sidebarTitle } from "../../scripts/toc.mjs";
 import { fontSizeBoot } from "./theme/fontSize.js";
 
@@ -42,6 +43,7 @@ const redirects = {
 const watchToc = () => ({
   name: "watch-toc",
   configureServer(server) {
+    server.middlewares.use(viewSourceMiddleware);
     server.watcher.add(tocPath);
     server.watcher.on("all", (event, file) => {
       if (event !== "change" && event !== "add") return;
@@ -56,6 +58,9 @@ const watchToc = () => ({
       res.setHeader("Location", to);
       res.end();
     });
+  },
+  configurePreviewServer(server) {
+    server.middlewares.use(viewSourceMiddleware);
   },
 });
 

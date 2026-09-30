@@ -230,3 +230,6 @@ export const readRange = (spec, base = root) => {
 };
 
 export const blobUrl = ({ path, from, to }) => `${REPO}/blob/${BRANCH}/${path}#L${from}-L${to}`;
+
+export const sourceHref = ({ path, from, to }) =>
+  `/view-source?path=${encodeURIComponent(path)}&from=${from}&to=${to}`;
