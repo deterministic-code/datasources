@@ -352,8 +352,8 @@ mod users_view_roles {
         create_crud_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
         NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryOptions,
-        SelectStatement, SelectStatementOptions, TransformMapper, TypeMap, TypeMapField,
-        TypeMapGroup, Value, Where,
+        SelectStatement, SelectStatementOptions, Statement, Text, TransformMapper, TypeMap,
+        TypeMapField, TypeMapGroup, Value, Where,
     };
     use std::sync::Arc;
 
@@ -410,12 +410,38 @@ mod users_view_roles {
         )
     }
 
-    fn roles_sql(sql: String) -> String {
+    fn roles_sql(statement: SelectStatement) -> SelectStatement {
         let select = "SELECT user_roles.user_id AS user_id, roles.name AS name FROM user_roles INNER JOIN roles ON roles.id = user_roles.role_id";
-        match sql.split_once(" WHERE ") {
+        let text = match statement.get_text().split_once(" WHERE ") {
             Some((_, rest)) => format!("{select} WHERE {rest}"),
             None => select.to_string(),
-        }
+        };
+        SelectStatement::text(text)
+    }
+
+    fn joined_users(query: SelectStatement) -> SelectStatement {
+        let joins = [
+            Join::left("UserType", "UserType.Id", "user.user_type_id"),
+            Join::left("UserRole", "UserRole.UserId", "UsersView.Key"),
+            Join::left("Role", "Role.Id", "UserRole.RoleId"),
+        ];
+        SelectStatement::new(SelectStatementOptions {
+            where_clause: query.predicate(),
+            joins: &joins,
+            ..SelectStatementOptions::new(
+                "UsersView",
+                &[
+                    "UsersView.Key",
+                    "UsersView.Login",
+                    "UsersView.Active",
+                    "UsersView.Opened",
+                    "UsersView.UserType",
+                    "UserRole.UserId",
+                    "UserRole.RoleId",
+                    "Role.Name",
+                ],
+            )
+        })
     }
 
     fn role_names(value: &Value) -> Vec<String> {
@@ -436,7 +462,9 @@ mod users_view_roles {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
         let connection = open(ds).await;
-        apply_schema(connection.as_ref(), "user-roles-read").await.unwrap();
+        apply_schema(connection.as_ref(), "user-roles-read")
+            .await
+            .unwrap();
         execute_sql(&connection, &seed()).await;
         let mut users_options = create_crud_repository_options::<UsersView>();
         users_options.entity_mapper = Box::new(DictionaryMapper::new([(
@@ -464,7 +492,7 @@ mod users_view_roles {
             ("UserId".to_string(), "user_id".to_string()),
             ("Name".to_string(), "name".to_string()),
         ]));
-        role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
+        role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |statement| statement)));
         let mut users_repo =
             ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
         let types = ds.create_readonly_repository::<UserType>(
@@ -505,29 +533,30 @@ mod users_view_roles {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
         let connection = open(ds).await;
-        apply_schema(connection.as_ref(), "user-roles-read").await.unwrap();
+        apply_schema(connection.as_ref(), "user-roles-read")
+            .await
+            .unwrap();
         execute_sql(&connection, &seed()).await;
-        let command = Arc::new(SelectStatement::new(SelectStatementOptions {
-            joins: &[
-                Join::left("user_type", "user_type.id", "user.user_type_id"),
-                Join::left("user_roles", "user_roles.user_id", "user.id"),
-                Join::left("roles", "roles.id", "user_roles.role_id"),
-            ],
-            ..SelectStatementOptions::new(
-                "user",
-                &[
-                    "user.id AS Key",
-                    "user.username AS Login",
-                    "user.is_enabled AS Active",
-                    "user.created AS Opened",
-                    "user_type.name AS UserType",
-                    "user.id AS UserId",
-                    "user_roles.role_id AS RoleId",
-                    "roles.name AS RoleName",
-                ],
-            )
-        }));
-        let options = ReadonlyRepositoryOptions::default();
+        let mut options = ReadonlyRepositoryOptions::default();
+        options.entity = "UsersView".into();
+        options.entity_mapper = Box::new(DictionaryMapper::new([
+            ("UsersView".into(), "user".into()),
+            ("UserType".into(), "user_type".into()),
+            ("UserRole".into(), "user_roles".into()),
+            ("Role".into(), "roles".into()),
+        ]));
+        options.column_mappings = Box::new(DictionaryMapper::new([
+            ("Key".into(), "id".into()),
+            ("Login".into(), "username".into()),
+            ("Active".into(), "is_enabled".into()),
+            ("Opened".into(), "created".into()),
+            ("UserType".into(), "user_type.name".into()),
+            ("UserId".into(), "user_id".into()),
+            ("RoleId".into(), "role_id".into()),
+            ("Name".into(), "roles.name".into()),
+            ("Id".into(), "id".into()),
+        ]));
+        options.select = Some(Arc::new(TransformMapper::new(joined_users, |query| query)));
         let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
         users_repo.add_enriched(
             datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
@@ -548,7 +577,7 @@ mod users_view_roles {
                                 vec![
                                     ("RoleId".into(), TypeMapField::column("RoleId")),
                                     ("UserId".into(), TypeMapField::column("UserId")),
-                                    ("Name".into(), TypeMapField::column("RoleName")),
+                                    ("Name".into(), TypeMapField::column("Name")),
                                 ],
                             )),
                         ),
@@ -556,7 +585,7 @@ mod users_view_roles {
                 ),
             ))),
         );
-        let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
+        let items = users_repo.read(None, None).await.unwrap();
         let view = |login: &str| {
             items
                 .iter()

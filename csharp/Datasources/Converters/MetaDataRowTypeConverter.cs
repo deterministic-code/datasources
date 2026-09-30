@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Globalization;
 using System.Reflection;
 
 namespace Datasources;
@@ -42,10 +43,7 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
             var cell = Converted(key, value, reverse: false);
             var underlying = Nullable.GetUnderlyingType(prop.PropertyType);
             var type = underlying ?? prop.PropertyType;
-            var raw = cell.ToObject();
-            var fitted = raw is long number && type == typeof(int) && number is >= int.MinValue and <= int.MaxValue
-                ? (int)number
-                : raw;
+            var fitted = Fit(cell.ToObject(), type);
             if (fitted is null ? underlying is not null || !type.IsValueType : type.IsInstanceOfType(fitted))
                 prop.SetValue(target, fitted);
         }
@@ -101,6 +99,14 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
 
     TypeConverter<Value, Value>? Converter(string key) =>
         Fields.TryGetValue(key, out var field) ? field : null;
+
+    static object? Fit(object? raw, Type type) => (raw, type) switch
+    {
+        (long number, _) when type == typeof(int) && number is >= int.MinValue and <= int.MaxValue => (int)number,
+        (string text, _) when type == typeof(Guid) && Guid.TryParse(text, out var id) => id,
+        (string text, _) when type == typeof(DateTime) && DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) => date,
+        _ => raw
+    };
 
     static bool IsColumn(Type type)
     {
