@@ -369,6 +369,59 @@ async fn fill_output_parameter(command: &dyn Command) {
     );
 }
 
+async fn call_procedure_returns_two_results(command: &dyn Command) {
+    use datasources::ExecuteStoredProcedureStatement;
+    command
+        .execute_native(
+            &Native::new("CREATE PROCEDURE two_ids() BEGIN SELECT 1 AS id; SELECT 2 AS id; END"),
+            None,
+        )
+        .await
+        .unwrap();
+    let reader = command
+        .execute_reader_statement(&ExecuteStoredProcedureStatement::new("two_ids", &[]), None)
+        .await
+        .unwrap();
+    let mut first = Vec::new();
+    while reader.next().await.unwrap() {
+        first.push(reader.current());
+    }
+    let moved = reader.next_result().await.unwrap();
+    let mut second = Vec::new();
+    while reader.next().await.unwrap() {
+        second.push(reader.current());
+    }
+    let again = reader.next_result().await.unwrap();
+    assert_eq!(moved, true);
+    assert_eq!(again, false);
+    assert_eq!(first[0].as_ref().unwrap().get("id"), Some(&Value::Int(1)));
+    assert_eq!(second[0].as_ref().unwrap().get("id"), Some(&Value::Int(2)));
+}
+
+#[tokio::test]
+async fn call_procedure_returns_two_results_from_mysql() {
+    let Ok(base) = std::env::var("MYSQL_URL") else {
+        return;
+    };
+    let name = format!("ds_{}", uuid_name());
+    let mut admin = Conn::from_url(base.clone()).await.unwrap();
+    admin
+        .query_drop(format!("CREATE DATABASE `{name}`"))
+        .await
+        .unwrap();
+    drop(admin);
+    let url = replace_db(&base, &name);
+    let conn = Arc::new(MysqlConnection::new(Some(url)));
+    conn.open().await.unwrap();
+    let command = MysqlCommand::new(conn);
+    call_procedure_returns_two_results(&command).await;
+    let mut admin = Conn::from_url(base).await.unwrap();
+    admin
+        .query_drop(format!("DROP DATABASE `{name}`"))
+        .await
+        .ok();
+}
+
 #[tokio::test]
 async fn output_parameter() {
     let Ok(base) = std::env::var("MYSQL_URL") else {

@@ -22,6 +22,7 @@ public class MysqlCommandIntegrationTests
             await conn.Open();
             var command = new MysqlCommand(conn);
             await FillOutputParameter(command);
+            await CallProcedureReturnsTwoResults(command);
             await command.Execute(Native.N("""
                 CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC
                 RETURN n + 1
@@ -75,6 +76,30 @@ public class MysqlCommandIntegrationTests
         var result = new Parameter("result", ParameterDirection.Output);
         var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [start, result]), [start, result]);
         Assert.Equal(new Value.Int(5), call.Parameters![1].Value);
+    }
+
+    static async Task CallProcedureReturnsTwoResults(ICommand command)
+    {
+        await command.Execute(Native.N("""
+            CREATE PROCEDURE two_ids()
+            BEGIN
+              SELECT 1 AS id;
+              SELECT 2 AS id;
+            END
+            """));
+        await using var reader = await command.ExecuteReader(new ExecuteStoredProcedureStatement("two_ids", []));
+        var first = new List<Row>();
+        while (await reader.Next())
+            first.Add(reader.Current!);
+        var moved = await reader.NextResult();
+        var second = new List<Row>();
+        while (await reader.Next())
+            second.Add(reader.Current!);
+        var again = await reader.NextResult();
+        Assert.True(moved);
+        Assert.False(again);
+        Assert.Equal(new Value.Int(1), first[0]["id"]);
+        Assert.Equal(new Value.Int(2), second[0]["id"]);
     }
 
     static async Task<(string Url, Func<Task> Cleanup)> Isolate(string baseUrl)

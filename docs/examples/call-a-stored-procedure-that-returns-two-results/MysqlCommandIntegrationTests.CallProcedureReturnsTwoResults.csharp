@@ -1,0 +1,16 @@
+await command.Execute(Native.N("""
+    CREATE PROCEDURE two_ids()
+    BEGIN
+      SELECT 1 AS id;
+      SELECT 2 AS id;
+    END
+    """));
+await using var reader = await command.ExecuteReader(new ExecuteStoredProcedureStatement("two_ids", []));
+var first = new List<Row>();
+while (await reader.Next())
+    first.Add(reader.Current!);
+var moved = await reader.NextResult();
+var second = new List<Row>();
+while (await reader.Next())
+    second.Add(reader.Current!);
+var again = await reader.NextResult();

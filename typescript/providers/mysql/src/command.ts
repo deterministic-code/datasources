@@ -10,6 +10,7 @@ import {
   Response,
   splitStatements,
   statementReader,
+  StreamingReader,
   type Cells,
   type ICommand,
   type IReader,
@@ -43,6 +44,11 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       const statements = splitStatements(query);
       if (statements.length === 0) return { value: new ArrayReader([]), rows: [] };
       const bound = bindParameters(params);
+      if (statements.some((sql) => /^\s*call\b/i.test(sql))) {
+        const sets: Cells[][] = [];
+        for (const sql of statements) sets.push(...(await this.callResults(sql, bound)));
+        return { value: resultSetsReader(sets), rows: [] };
+      }
       return {
         value: statementReader(statements, (sql) => this.query(sql, bound)),
         rows: [],
@@ -146,4 +152,28 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
   private query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {
     return this.connection.require().queryRows(toMysql(sql), params);
   }
+
+  private async callResults(sql: string, params?: Record<string, Scalar>): Promise<Cells[][]> {
+    const [result] = await this.connection.require().query(toMysql(sql), params);
+    if (!Array.isArray(result)) return [[]];
+    return result.filter((item): item is Cells[] => Array.isArray(item));
+  }
 }
+
+const resultSetsReader = (sets: Cells[][]): StreamingReader => {
+  let set = 0;
+  let row = 0;
+  return new StreamingReader(
+    async () => {
+      const current = sets[set]?.[row];
+      if (current === undefined) return undefined;
+      row += 1;
+      return current;
+    },
+    async () => {
+      set += 1;
+      row = 0;
+      return set < sets.length;
+    },
+  );
+};

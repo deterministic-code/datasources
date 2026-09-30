@@ -246,3 +246,26 @@ Dispose the reader with `await using`. Rust drops it.
 ### rust
 There is no `using`. The reader is dropped at the end of the scope.
 :::
+
+### Call a stored procedure that returns two results
+
+::: example
+```csharp csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#CallProcedureReturnsTwoResults
+```
+```rust rust/providers/mysql/tests/integration.rs#call_procedure_returns_two_results
+```
+```typescript typescript/providers/mysql/tests/mysql.integration.test.ts#callProcedureReturnsTwoResults
+```
+
+```output [First result]
+{
+  id: 1
+}
+```
+
+```output [Second result]
+{
+  id: 2
+}
+```
+:::

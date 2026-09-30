@@ -150,31 +150,101 @@ async fn drive(
     }
     let mut index = 0;
     loop {
-        let mut stream = conn
-            .exec_stream(to_mysql(&statements[index]), named_params(params))
-            .await
-            .map_err(map_err)?;
-        loop {
-            match ask_rx.recv().await {
-                Some(Ask::Next) => {
-                    let row = pull(Pin::new(&mut stream)).await.map_err(map_err)?;
-                    let _ = ans_tx.send(Answer::Row(row.map(row_record)));
-                }
-                Some(Ask::NextResult) => break,
-                _ => {
-                    drain(Pin::new(&mut stream)).await.map_err(map_err)?;
-                    return Ok(());
+        if is_call(&statements[index]) {
+            let sets = call_sets(conn, &statements[index], params).await?;
+            if serve_sets(&sets, &mut ask_rx, ans_tx).await? {
+                return Ok(());
+            }
+        } else {
+            let mut stream = conn
+                .exec_stream(to_mysql(&statements[index]), named_params(params))
+                .await
+                .map_err(map_err)?;
+            loop {
+                match ask_rx.recv().await {
+                    Some(Ask::Next) => {
+                        let row = pull(Pin::new(&mut stream)).await.map_err(map_err)?;
+                        let _ = ans_tx.send(Answer::Row(row.map(row_record)));
+                    }
+                    Some(Ask::NextResult) => break,
+                    _ => {
+                        drain(Pin::new(&mut stream)).await.map_err(map_err)?;
+                        return Ok(());
+                    }
                 }
             }
+            drain(Pin::new(&mut stream)).await.map_err(map_err)?;
         }
-        drain(Pin::new(&mut stream)).await.map_err(map_err)?;
-        drop(stream);
         index += 1;
         if index >= statements.len() {
             let _ = ans_tx.send(Answer::More(false));
             return idle(&mut ask_rx, ans_tx).await;
         }
         let _ = ans_tx.send(Answer::More(true));
+    }
+}
+
+fn is_call(sql: &str) -> bool {
+    let rest = sql.trim_start();
+    let Some(word) = rest.get(..4) else {
+        return false;
+    };
+    word.eq_ignore_ascii_case("call")
+        && rest
+            .as_bytes()
+            .get(4)
+            .is_some_and(|byte| byte.is_ascii_whitespace() || *byte == b'(')
+}
+
+async fn call_sets(
+    conn: &mut Conn,
+    sql: &str,
+    params: &HashMap<String, Value>,
+) -> Result<Vec<Vec<Row>>> {
+    let mut result = conn
+        .exec_iter(to_mysql(sql), named_params(params))
+        .await
+        .map_err(map_err)?;
+    let mut sets = Vec::new();
+    while let Some(mut stream) = result.stream().await.map_err(map_err)? {
+        let mut rows = Vec::new();
+        while let Some(row) = pull(Pin::new(&mut stream)).await.map_err(map_err)? {
+            rows.push(row_record(row));
+        }
+        if !rows.is_empty() {
+            sets.push(rows);
+        }
+    }
+    Ok(sets)
+}
+
+async fn serve_sets(
+    sets: &[Vec<Row>],
+    ask_rx: &mut UnboundedReceiver<Ask>,
+    ans_tx: &UnboundedSender<Answer>,
+) -> Result<bool> {
+    let mut set = 0;
+    let mut row = 0;
+    loop {
+        match ask_rx.recv().await {
+            Some(Ask::Next) => {
+                let current = sets.get(set).and_then(|rows| rows.get(row)).cloned();
+                if current.is_some() {
+                    row += 1;
+                }
+                let _ = ans_tx.send(Answer::Row(current));
+            }
+            Some(Ask::NextResult) => {
+                set += 1;
+                row = 0;
+                if set < sets.len() {
+                    let _ = ans_tx.send(Answer::More(true));
+                } else {
+                    return Ok(false);
+                }
+            }
+            _ => return Ok(true),
+        }
     }
 }
 
